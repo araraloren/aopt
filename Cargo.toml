@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "getopt-rs",
+    "simple-find-file"
+]
