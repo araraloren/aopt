@@ -45,4 +45,8 @@ impl<'a, 'b, 'c> ParserPattern<'a, 'b, 'c> {
     pub fn left_chars(&self) -> Skip<Chars> {
         self.pattern.chars().skip(self.current)
     }
+
+    pub fn len(&self) -> usize {
+        self.pattern.len()
+    }
 }
