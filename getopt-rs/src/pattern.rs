@@ -1,52 +1,70 @@
 
 
-use std::borrow::Cow;
 use std::str::Chars;
 use std::iter::Skip;
+use std::usize;
 
 use crate::str::Str;
 
 #[derive(Debug)]
-pub struct ParserPattern<'a, 'b, 'c> {
-    pattern: &'a str,
+pub struct ParserPattern<'pat, 'vec, 'pre> {
+    pattern: &'pat str,
 
-    support_prefix: &'b Vec<Str<'c>>,
-
-    current: usize,
+    support_prefix: &'vec Vec<Str<'pre>>,
 }
 
-impl<'a, 'b, 'c> ParserPattern<'a, 'b, 'c> {
-    pub fn new(pattern: &'a str, prefix: &'b Vec<Str<'c>>) -> Self {
+impl<'pat, 'vec, 'pre> ParserPattern<'pat, 'vec, 'pre> {
+    pub fn new(pattern: &'pat str, prefix: &'vec Vec<Str<'pre>>) -> Self {
         Self {
             pattern,
             support_prefix: prefix,
-            current: 0,
         }
     }
 
-    pub fn get_pattern(&self) -> &'a str {
+    pub fn get_prefixs(&self) -> &'vec Vec<Str<'pre>> {
+        self.support_prefix
+    }
+
+    pub fn get_pattern(&self) -> &'pat str {
         self.pattern
     }
 
-    pub fn is_end(&self) -> bool {
-        self.current == self.pattern.len()
-    }
-
-    pub fn inc_current(&mut self, len: usize) -> &mut Self {
-        self.current += len;
-        self
-    }
-
-    pub fn set_current(&mut self, cur: usize) -> &mut Self {
-        self.current = cur;
-        self
-    }
-
-    pub fn left_chars(&self) -> Skip<Chars> {
-        self.pattern.chars().skip(self.current)
+    pub fn left_chars(&self, skip_len: usize) -> Skip<Chars> {
+        self.pattern.chars().skip(skip_len)
     }
 
     pub fn len(&self) -> usize {
         self.pattern.len()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ParseIndex(usize, usize);
+
+impl ParseIndex {
+    pub fn new(len: usize) -> Self {
+        Self(0, len)
+    }
+
+    pub fn get(&self) -> usize {
+        self.0
+    }
+
+    pub fn is_end(&self) -> bool {
+        self.0 == self.1
+    }
+
+    pub fn inc(&mut self, len: usize) -> &mut Self {
+        self.0 += len;
+        self
+    }
+
+    pub fn set(&mut self, cur: usize) -> &mut Self {
+        self.0 = cur;
+        self
+    }
+
+    pub fn len(&self) -> usize {
+        self.1
     }
 }
