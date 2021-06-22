@@ -5,6 +5,8 @@ use supercow::Supercow;
 /// hold the string value .
 /// 
 /// ```no_run
+/// use getopt_rs::str::Str;
+/// 
 /// fn cow_string_example() {
 ///    #[derive(Debug)]
 ///    struct Holder<'a> {

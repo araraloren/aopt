@@ -2,7 +2,6 @@
 use crate::str::Str;
 use crate::err::Result;
 
-
 #[derive(Debug, Clone, Hash, Default)]
 pub struct Argument<'a, 'b> {
     pub current: Option<Str<'a>>,

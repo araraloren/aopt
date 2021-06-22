@@ -10,6 +10,11 @@ pub enum Error {
 	#[error("invalid option string: `{0}`")]
 	InvalidOptionStr(String),
 
+	// for parse argument
+
+	#[error("parse the option string failed: `{0}`")]
+	InvalidArgAsOption(String),
+
 	#[error("can not get string with range: {:?} .. {:?}", beg, end)]
 	InvalidStrRange{
 		beg: usize,

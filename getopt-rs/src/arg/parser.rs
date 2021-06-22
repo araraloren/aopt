@@ -3,6 +3,25 @@ use crate::str::Str;
 use crate::err::{Result, Error};
 use crate::pattern::{ParseIndex, ParserPattern};
 
+pub fn parse_argument<'pat, 'vec, 'pre>(pattern: &'pat str, prefix: &'vec Vec<Str<'pre>>) -> Result<DataKeeper<'pat, 'vec>> {
+    let pattern = ParserPattern::new(pattern, prefix);
+    let mut index = ParseIndex::new(pattern.len());
+    let mut data_keeper = DataKeeper::default();
+
+    let res = State::default().parse(&mut index, &pattern, &mut data_keeper)?;
+
+    if res {
+        // must have prefix and name, prefix can be null string `""`
+        if data_keeper.prefix.is_some() {
+            if data_keeper.name.is_some() {
+                return Ok(data_keeper);
+            }
+        }        
+    }
+    
+    Err(Error::InvalidArgAsOption(String::from(pattern.get_pattern())))
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum State {
     PreCheck,
@@ -70,6 +89,7 @@ impl State {
                 unreachable!("The end state can't going on!");
             }
         }
+
         *self = next_state
     }
 
@@ -79,9 +99,8 @@ impl State {
         pattern: & ParserPattern<'pat, 'vec, 'pre>,
         data_keeper: &mut DataKeeper<'pat, 'vec>,
     ) -> Result<bool> {
-        let state = self.clone();
+        if self != Self::End {
 
-        if index.is_end() && state != Self::End {
             self.self_transition(index, pattern);
 
             let next_state = self.clone();
@@ -104,6 +123,7 @@ impl State {
                     let mut temp_index = index.get();
                     let start = temp_index;
 
+                    // get the chars until we meet '=' or reach the end
                     for ch in pattern.left_chars(temp_index) {
                         temp_index += 1;
                         if ch == '=' {
@@ -113,6 +133,7 @@ impl State {
                                              .ok_or(Error::InvalidStrRange { beg: start, end: temp_index - 1 })?
                             ));
                             index.set(temp_index - 1);
+                            break;
                         }
                         else if temp_index == index.len() {
                             if temp_index - start > 1 {
@@ -122,6 +143,7 @@ impl State {
                                                  .ok_or(Error::InvalidStrRange { beg: start, end: temp_index })?
                                 ));
                                 index.set(temp_index);
+                                break;
                             }
                         }
                     }
@@ -130,6 +152,7 @@ impl State {
                     index.inc(1);
                 }
                 Self::Value => {
+                    // if we are here, the left chars is value
                     data_keeper.value = Some(Str::borrowed(
                         pattern.get_pattern()
                                      .get(index.get() ..)
@@ -150,8 +173,44 @@ impl State {
 
 #[cfg(test)]
 mod test {
+    use crate::str::Str;
+    use crate::arg::parser::parse_argument;
+
     #[test]
     fn test_for_input_parser() {
+        let test_cases = vec![
+            ("", None),
+            ("--abc", Some((Some("--"), Some("abc"), None, false))),
+            ("--cde=123", Some((Some("--"), Some("cde"), Some("123"), false))),
+        ];
 
+        let prefixs = vec![
+            Str::borrowed("--"),
+            Str::borrowed("-"),
+        ];
+
+        for case in test_cases.iter() {
+            try_to_verify_one_task(case.0, &prefixs,case.1);
+        }
+    }
+
+    fn try_to_verify_one_task(pattern: &str, prefix: &Vec<Str<'_>>, except: Option<(Option<&str>, Option<&str>, Option<&str>, bool)>) {
+        let ret = parse_argument(pattern, prefix);
+        
+        if let Ok(dk) = ret {
+            assert!(except.is_some());
+
+            let default = Str::borrowed("");
+
+            if let Some(except) = except {
+                assert_eq!(except.0.unwrap_or(""), dk.prefix.unwrap_or(default.clone()).as_ref());
+                assert_eq!(except.1.unwrap_or(""), dk.name.unwrap_or(default.clone()).as_ref());
+                assert_eq!(except.2.unwrap_or(""), dk.value.unwrap_or(default.clone()).as_ref());
+                assert_eq!(except.3, dk.disable);
+            }
+        }
+        else {
+            assert!(except.is_none());
+        }
     }
 }

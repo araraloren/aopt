@@ -1,11 +1,12 @@
 
-
 use std::str::Chars;
 use std::iter::Skip;
 use std::usize;
 
 use crate::str::Str;
 
+/// Pattern holder of the user input command line
+/// and create info string of option.
 #[derive(Debug)]
 pub struct ParserPattern<'pat, 'vec, 'pre> {
     pattern: &'pat str,
