@@ -11,6 +11,7 @@ pub fn parse_argument<'pat, 'vec, 'pre>(pattern: &'pat str, prefix: &'vec Vec<St
     let res = State::default().parse(&mut index, &pattern, &mut data_keeper)?;
 
     if res {
+        debug!("With pattern: {:?}, parse result -> {:?}", pattern.get_pattern(), data_keeper);
         // must have prefix and name, prefix can be null string `""`
         if data_keeper.prefix.is_some() {
             if data_keeper.name.is_some() {
@@ -90,6 +91,8 @@ impl State {
             }
         }
 
+        debug!("Transition from {:?} --to--> {:?}", self, next_state);
+
         *self = next_state
     }
 
@@ -100,7 +103,8 @@ impl State {
         data_keeper: &mut DataKeeper<'pat, 'vec>,
     ) -> Result<bool> {
         if self != Self::End {
-
+            debug!("Current state = {:?}, {:?}, parse pattern = {:?}", self, index, pattern);
+            
             self.self_transition(index, pattern);
 
             let next_state = self.clone();
@@ -127,24 +131,28 @@ impl State {
                     for ch in pattern.left_chars(temp_index) {
                         temp_index += 1;
                         if ch == '=' {
-                            data_keeper.name = Some(Str::borrowed(
-                                pattern.get_pattern()
-                                             .get(start .. temp_index - 1)
-                                             .ok_or(Error::InvalidStrRange { beg: start, end: temp_index - 1 })?
-                            ));
-                            index.set(temp_index - 1);
+                            // the name not include '=', so > 1
+                            if temp_index - start > 1 {
+                                data_keeper.name = Some(Str::borrowed(
+                                    pattern.get_pattern()
+                                                .get(start .. temp_index - 1)
+                                                .ok_or(Error::InvalidStrRange { beg: start, end: temp_index - 1 })?
+                                ));
+                                index.set(temp_index - 1);
+                            }
                             break;
                         }
                         else if temp_index == index.len() {
-                            if temp_index - start > 1 {
+                            // all the chars if name
+                            if temp_index - start >= 1 {
                                 data_keeper.name = Some(Str::borrowed(
                                     pattern.get_pattern()
                                                  .get(start .. temp_index)
                                                  .ok_or(Error::InvalidStrRange { beg: start, end: temp_index })?
                                 ));
                                 index.set(temp_index);
-                                break;
                             }
+                            break;
                         }
                     }
                 }
@@ -152,13 +160,18 @@ impl State {
                     index.inc(1);
                 }
                 Self::Value => {
-                    // if we are here, the left chars is value
-                    data_keeper.value = Some(Str::borrowed(
-                        pattern.get_pattern()
-                                     .get(index.get() ..)
-                                     .ok_or(Error::InvalidStrRange { beg: index.get(), end: index.len() })?
-                    ));
-                    index.set(index.len());
+                    if ! index.is_end() {
+                        // if we are here, the left chars is value
+                        data_keeper.value = Some(Str::borrowed(
+                            pattern.get_pattern()
+                                        .get(index.get() ..)
+                                        .ok_or(Error::InvalidStrRange { beg: index.get(), end: index.len() })?
+                        ));
+                        index.set(index.len());
+                    }
+                    else {
+                        return Err(Error::InvalidArgArgument(String::from(pattern.get_pattern())));
+                    }
                 }
                 _ => { }
             }
@@ -180,13 +193,31 @@ mod test {
     fn test_for_input_parser() {
         let test_cases = vec![
             ("", None),
-            ("--abc", Some((Some("--"), Some("abc"), None, false))),
-            ("--cde=123", Some((Some("--"), Some("cde"), Some("123"), false))),
+
+            ("-a", Some((Some("-"), Some("a"), None, false))),
+            ("-/a", Some((Some("-"), Some("a"), None, true))),
+            ("-a=b", Some((Some("-"), Some("a"), Some("b"), false))),
+
+            ("--foo", Some((Some("--"), Some("foo"), None, false))),
+            ("--/foo", Some((Some("--"), Some("foo"), None, true))),
+            ("--foo=bar", Some((Some("--"), Some("foo"), Some("bar"), false))),
+
+            ("a", Some((Some(""), Some("a"), None, false))),
+            ("/a", Some((Some(""), Some("a"), None, true))),
+            ("a=b", Some((Some(""), Some("a"), Some("b"), false))),
+
+            ("foo", Some((Some(""), Some("foo"), None, false))),
+            ("/foo", Some((Some(""), Some("foo"), None, true))),
+            ("foo=bar", Some((Some(""), Some("foo"), Some("bar"), false))),
+
+            ("--=bar", None),
+            ("-foo=", None),
         ];
 
         let prefixs = vec![
             Str::borrowed("--"),
             Str::borrowed("-"),
+            Str::borrowed(""),
         ];
 
         for case in test_cases.iter() {
@@ -196,7 +227,7 @@ mod test {
 
     fn try_to_verify_one_task(pattern: &str, prefix: &Vec<Str<'_>>, except: Option<(Option<&str>, Option<&str>, Option<&str>, bool)>) {
         let ret = parse_argument(pattern, prefix);
-        
+
         if let Ok(dk) = ret {
             assert!(except.is_some());
 

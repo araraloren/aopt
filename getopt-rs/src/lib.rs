@@ -5,10 +5,20 @@ pub mod err;
 
 pub(crate) mod pattern;
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+#[macro_use]
+extern crate log;
+
+pub mod tools {
+    use simplelog::{Config, CombinedLogger, SimpleLogger};
+    use log::LevelFilter;
+
+    pub fn initialize_log() -> std::result::Result<(), log::SetLoggerError> {
+        CombinedLogger::init(vec![
+            SimpleLogger::new(LevelFilter::Warn, Config::default()),
+            SimpleLogger::new(LevelFilter::Error, Config::default()),
+            SimpleLogger::new(LevelFilter::Debug, Config::default()),
+            SimpleLogger::new(LevelFilter::Info, Config::default()),
+            SimpleLogger::new(LevelFilter::Trace, Config::default()),
+        ])
     }
 }

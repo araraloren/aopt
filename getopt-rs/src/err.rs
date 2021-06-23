@@ -20,6 +20,9 @@ pub enum Error {
 		beg: usize,
 		end: usize,
 	},
+
+	#[error("option string with '=' need an value after it: `{0}`")]
+	InvalidArgArgument(String),
 }
 
 
