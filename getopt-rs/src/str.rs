@@ -1,5 +1,5 @@
 
-use supercow::Supercow;
+use std::borrow::Cow;
 
 /// All the inner struct will using this type
 /// hold the string value .
@@ -16,7 +16,7 @@ use supercow::Supercow;
 ///    impl<'a, 'b: 'a> Holder<'a> {
 ///        pub fn new(data: &'b str) -> Self {
 ///            Self {
-///                data: Str::borrowed(data),
+///                data: Str::Borrowed(data),
 ///            }
 ///        }
 ///    }
@@ -26,5 +26,5 @@ use supercow::Supercow;
 ///    dbg!(Holder::new(s.as_ref()));
 /// }
 /// ```
-pub type Str<'a> = Supercow<'a, String, str>;
+pub type Str<'a> = Cow<'a, str>;
 

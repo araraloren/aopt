@@ -2,21 +2,20 @@
 use crate::str::Str;
 use crate::err::Result;
 
-#[derive(Debug, Clone, Hash, Default)]
-pub struct Argument<'a, 'b> {
-    pub current: Option<Str<'a>>,
+use super::parser::DataKeeper;
+use super::parser::parse_argument;
 
-    pub next: Option<Str<'a>>,
+#[derive(Debug, Clone, Default)]
+pub struct Argument<'str, 'pre> {
+    pub current: Option<Str<'str>>,
+
+    pub next: Option<Str<'str>>,
     
-    prefix: Option<Str<'b>>,
-
-    name: Option<Str<'a>>,
-
-    value: Option<Str<'a>>,
+    data_keeper: DataKeeper<'str, 'pre>,
 }
 
-impl<'a, 'b, 'c: 'a> Argument<'a, 'b> {
-    pub fn new(current: Option<Str<'c>>, next: Option<Str<'c>>) -> Self {
+impl<'str, 'pre> Argument<'str, 'pre> {
+    pub fn new(current: Option<Str<'str>>, next: Option<Str<'str>>) -> Self {
         Self {
             current,
             next,
@@ -24,25 +23,41 @@ impl<'a, 'b, 'c: 'a> Argument<'a, 'b> {
         }
     }
 
-    pub fn get_prefix(&self) -> Option<&Str<'b>> {
-        self.prefix.as_ref()
+    pub fn get_prefix(&self) -> Option<&Str<'pre>> {
+        self.data_keeper.prefix.as_ref()
     }
 
-    pub fn get_name(&self) -> Option<&Str<'a>> {
-        self.name.as_ref()
+    pub fn get_name(&self) -> Option<&Str<'str>> {
+        self.data_keeper.name.as_ref()
     }
 
-    pub fn get_value(&self) -> Option<&Str<'a>> {
-        self.value.as_ref()
+    pub fn get_value(&self) -> Option<&Str<'str>> {
+        self.data_keeper.value.as_ref()
+    }
+
+    pub fn is_disabled(&self) -> bool {
+        self.data_keeper.disable
     }
 
     #[cfg(not(feature="async"))]
-    pub fn parse(&mut self, prefix: &Vec<Str<'b>>) -> Result<bool> {
-        Ok(true)
+    pub fn parse<'x>(&mut self, prefix: &'pre Vec<Str<'x>>) -> Result<bool> {
+        if let Some(pattern) = &self.current {
+            self.data_keeper = parse_argument(pattern.as_ref(), prefix)?;
+            Ok(true)
+        }
+        else {
+            Ok(false)
+        }
     }
 
     #[cfg(feature="async")]
     pub async fn parse(&mut self, prefix: &Vec<Str<'b>>) -> Result<bool> {
-        Ok(true)
+        if let Some(pattern) = &self.current {
+            self.data_keeper = parse_argument(pattern.as_ref(), prefix)?;
+            Ok(true)
+        }
+        else {
+            Ok(false)
+        }
     }
 }
