@@ -6,15 +6,15 @@ use super::parser::DataKeeper;
 use super::parser::parse_argument;
 
 #[derive(Debug, Clone, Default)]
-pub struct Argument<'str, 'pre> {
+pub struct Argument<'str, 'nv, 'pre> {
     pub current: Option<Str<'str>>,
 
     pub next: Option<Str<'str>>,
     
-    data_keeper: DataKeeper<'str, 'pre>,
+    data_keeper: DataKeeper<'nv, 'pre>,
 }
 
-impl<'str, 'pre> Argument<'str, 'pre> {
+impl<'str, 'nv, 'pre> Argument<'str, 'nv, 'pre> {
     pub fn new(current: Option<Str<'str>>, next: Option<Str<'str>>) -> Self {
         Self {
             current,
@@ -27,11 +27,11 @@ impl<'str, 'pre> Argument<'str, 'pre> {
         self.data_keeper.prefix.as_ref()
     }
 
-    pub fn get_name(&self) -> Option<&Str<'str>> {
+    pub fn get_name(&self) -> Option<&Str<'nv>> {
         self.data_keeper.name.as_ref()
     }
 
-    pub fn get_value(&self) -> Option<&Str<'str>> {
+    pub fn get_value(&self) -> Option<&Str<'nv>> {
         self.data_keeper.value.as_ref()
     }
 
