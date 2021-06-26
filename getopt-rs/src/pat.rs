@@ -3,26 +3,24 @@ use std::str::Chars;
 use std::iter::Skip;
 use std::usize;
 
-use crate::str::Str;
-
 /// Pattern holder of the user input command line
 /// and create info string of option.
 #[derive(Debug)]
-pub struct ParserPattern<'pat, 'vec, 'pre> {
+pub struct ParserPattern<'pat, 'pre> {
     pattern: &'pat str,
 
-    support_prefix: &'vec Vec<Str<'pre>>,
+    support_prefix: &'pre Vec<String>,
 }
 
-impl<'pat, 'vec, 'pre> ParserPattern<'pat, 'vec, 'pre> {
-    pub fn new(pattern: &'pat str, prefix: &'vec Vec<Str<'pre>>) -> Self {
+impl<'pat, 'pre> ParserPattern<'pat, 'pre> {
+    pub fn new(pattern: &'pat str, prefix: &'pre Vec<String>) -> Self {
         Self {
             pattern,
             support_prefix: prefix,
         }
     }
 
-    pub fn get_prefixs(&self) -> &'vec Vec<Str<'pre>> {
+    pub fn get_prefixs(&self) -> &'pre Vec<String> {
         self.support_prefix
     }
 

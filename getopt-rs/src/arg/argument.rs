@@ -1,21 +1,20 @@
 
-use crate::str::Str;
 use crate::err::Result;
 
 use super::parser::DataKeeper;
 use super::parser::parse_argument;
 
 #[derive(Debug, Clone, Default)]
-pub struct Argument<'str, 'nv, 'pre> {
-    pub current: Option<Str<'str>>,
+pub struct Argument<'pre> {
+    pub current: Option<String>,
 
-    pub next: Option<Str<'str>>,
+    pub next: Option<String>,
     
-    data_keeper: DataKeeper<'nv, 'pre>,
+    data_keeper: DataKeeper<'pre>,
 }
 
-impl<'str, 'nv, 'pre> Argument<'str, 'nv, 'pre> {
-    pub fn new(current: Option<Str<'str>>, next: Option<Str<'str>>) -> Self {
+impl<'pre> Argument<'pre> {
+    pub fn new(current: Option<String>, next: Option<String>) -> Self {
         Self {
             current,
             next,
@@ -23,15 +22,15 @@ impl<'str, 'nv, 'pre> Argument<'str, 'nv, 'pre> {
         }
     }
 
-    pub fn get_prefix(&self) -> Option<&Str<'pre>> {
-        self.data_keeper.prefix.as_ref()
+    pub fn get_prefix(&self) -> Option<&'pre String> {
+        self.data_keeper.prefix.clone()
     }
 
-    pub fn get_name(&self) -> Option<&Str<'nv>> {
+    pub fn get_name(&self) -> Option<&String> {
         self.data_keeper.name.as_ref()
     }
 
-    pub fn get_value(&self) -> Option<&Str<'nv>> {
+    pub fn get_value(&self) -> Option<&String> {
         self.data_keeper.value.as_ref()
     }
 
@@ -40,7 +39,7 @@ impl<'str, 'nv, 'pre> Argument<'str, 'nv, 'pre> {
     }
 
     #[cfg(not(feature="async"))]
-    pub fn parse<'x>(&mut self, prefix: &'pre Vec<Str<'x>>) -> Result<bool> {
+    pub fn parse(&mut self, prefix: &'pre Vec<String>) -> Result<bool> {
         if let Some(pattern) = &self.current {
             self.data_keeper = parse_argument(pattern.as_ref(), prefix)?;
             Ok(true)
@@ -51,7 +50,7 @@ impl<'str, 'nv, 'pre> Argument<'str, 'nv, 'pre> {
     }
 
     #[cfg(feature="async")]
-    pub async fn parse(&mut self, prefix: &Vec<Str<'b>>) -> Result<bool> {
+    pub async fn parse(&mut self, prefix: &'pre Vec<String>) -> Result<bool> {
         if let Some(pattern) = &self.current {
             self.data_keeper = parse_argument(pattern.as_ref(), prefix)?;
             Ok(true)

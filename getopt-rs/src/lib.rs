@@ -1,10 +1,13 @@
 
 pub mod arg;
-pub mod str;
 pub mod err;
 pub mod opt;
+pub mod uid;
+pub mod ctx;
+pub mod set;
+pub mod proc;
 
-pub(crate) mod pattern;
+pub(crate) mod pat;
 
 #[macro_use]
 extern crate log;

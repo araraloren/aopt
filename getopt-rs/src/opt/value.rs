@@ -1,5 +1,6 @@
 
 use std::any::Any;
+use std::fmt::Debug;
 use std::convert::From;
 
 #[derive(Debug)]
@@ -184,5 +185,99 @@ impl Value {
             Self::Any(v) => v.as_mut().downcast_mut::<T>(),
             _ => None,
         }
+    }
+
+    pub fn is_int(&self) -> bool {
+        match self {
+            Self::Int(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_uint(&self) -> bool {
+        match self {
+            Self::Uint(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_flt(&self) -> bool {
+        match self {
+            Self::Flt(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_str(&self) -> bool {
+        match self {
+            Self::Str(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_bool(&self) -> bool {
+        match self {
+            Self::Bool(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_vec(&self) -> bool {
+        match self {
+            Self::Array(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_any(&self) -> bool {
+        match self {
+            Self::Any(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_null(&self) -> bool {
+        match self {
+            Self::Null => true,
+            _ => false,
+        }
+    }
+}
+
+impl Clone for Value {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Null | Self::Any(_) => {
+                Self::Null
+            }
+            Self::Int(v) => {
+                Self::Int(*v)
+            }
+            Self::Uint(v) => {
+                Self::Uint(*v)
+            }
+            Self::Flt(v) => {
+                Self::Flt(*v)
+            }
+            Self::Str(v) => {
+                Self::Str(v.clone())
+            }
+            Self::Bool(v) => {
+                Self::Bool(*v)
+            }
+            Self::Array(v) => {
+                Self::Array(v.clone())
+            }
+        }
+    }
+}
+
+pub struct CloneHelper(Box<dyn Fn (&dyn Any) -> Box<dyn Any>>);
+
+impl Debug for CloneHelper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AnyCloneHelper")
+         .field("Fn", &String::from("..."))
+         .finish()
     }
 }

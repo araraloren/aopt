@@ -7,16 +7,15 @@ use std::convert::From;
 use std::iter::Iterator;
 use std::slice::{Iter, IterMut};
 
-use crate::str::Str;
 use argument::Argument;
 
 #[derive(Debug, Default)]
-pub struct ArgStream<'str, 'nv, 'pre>{
-    args: Vec<Argument<'str, 'nv, 'pre>>,
+pub struct ArgStream<'pre>{
+    args: Vec<Argument<'pre>>,
     index: usize,
 }
 
-impl<'str, 'nv, 'pre> ArgStream<'str, 'nv, 'pre> {
+impl<'pre> ArgStream<'pre> {
     pub fn new(args: impl Iterator<Item = String>) -> Self {
         Self {
             args: Self::iterator_to_args(args),
@@ -29,15 +28,15 @@ impl<'str, 'nv, 'pre> ArgStream<'str, 'nv, 'pre> {
         self
     }
 
-    pub fn iter(&self) -> Iter<'_, Argument<'str, 'nv, 'pre>> {
+    pub fn iter(&self) -> Iter<'_, Argument<'pre>> {
         self.args.iter()
     }
 
-    pub fn iter_mut(&mut self) -> IterMut<'_, Argument<'str, 'nv, 'pre>> {
+    pub fn iter_mut(&mut self) -> IterMut<'_, Argument<'pre>> {
         self.args.iter_mut()
     }
 
-    fn iterator_to_args<Iter>(mut iter: Iter) -> Vec<Argument<'str, 'nv, 'pre>> where Iter: Iterator<Item=String> {
+    fn iterator_to_args<Iter>(mut iter: Iter) -> Vec<Argument<'pre>> where Iter: Iterator<Item=String> {
         let mut ret = vec![];
         let mut current = iter.next();
 
@@ -50,12 +49,12 @@ impl<'str, 'nv, 'pre> ArgStream<'str, 'nv, 'pre> {
         ret
     }
 
-    fn map_one_item(item: Option<String>) -> Option<Str<'str>> {
-        item.map_or(None, |v|Some(Str::owned(v)))
+    fn map_one_item(item: Option<String>) -> Option<String> {
+        item.map_or(None, |v|Some(String::from(v)))
     }
 }
 
-impl<'str, 'nv, 'pre, Iter: Iterator<Item=String>> From<Iter> for ArgStream<'str, 'nv, 'pre> {
+impl<'str, 'nv, 'pre, Iter: Iterator<Item=String>> From<Iter> for ArgStream<'pre> {
     fn from(iter: Iter) -> Self {
         Self {
             args: Self::iterator_to_args(iter),
@@ -69,7 +68,6 @@ impl<'str, 'nv, 'pre, Iter: Iterator<Item=String>> From<Iter> for ArgStream<'str
 mod test {
 
     use super::ArgStream;
-    use super::Str;
 
     #[test]
     fn make_sure_arg_stream_work() {
@@ -102,7 +100,7 @@ mod test {
 
             testing_one_iterator(
                 ArgStream::new(data),
-                &vec![Str::borrowed("--"), Str::borrowed("-")],
+                &vec![String::from("--"), String::from("-")],
                 &data_check,
                 &check,
             );
@@ -138,19 +136,19 @@ mod test {
 
             testing_one_iterator(
                 ArgStream::new(data),
-                &vec![Str::borrowed("+"), Str::borrowed("")],
+                &vec![String::from("+"), String::from("")],
                 &data_check,
                 &check,
             );
         }
     }
 
-    fn testing_one_iterator<'str, 'nv, 'pre, 'x, 'vec: 'pre>(
-        mut argstream: ArgStream<'str, 'nv, 'pre>,
-        prefixs: &'vec Vec<Str<'x>>,
+    fn testing_one_iterator<'pre, 'vec: 'pre>(
+        mut argstream: ArgStream<'pre>,
+        prefixs: &'vec Vec<String>,
         data_check: &Vec<String>,
         check: &Vec<Vec<&str>>) {
-        let default_str = Str::borrowed("");
+        let default_str = String::from("");
         let default_data = String::from("");
         let default_item = "";
 
