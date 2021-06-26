@@ -11,7 +11,6 @@ pub enum Error {
 	InvalidOptionStr(String),
 
 	// for parse argument
-
 	#[error("parse the option string failed: `{0}`")]
 	InvalidArgAsOption(String),
 
@@ -23,6 +22,9 @@ pub enum Error {
 
 	#[error("option string with '=' need an value after it: `{0}`")]
 	InvalidArgArgument(String),
+
+	// for option value
+	
 }
 
 

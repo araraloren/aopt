@@ -2,6 +2,7 @@
 pub mod arg;
 pub mod str;
 pub mod err;
+pub mod opt;
 
 pub(crate) mod pattern;
 
