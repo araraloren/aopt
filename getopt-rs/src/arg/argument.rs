@@ -1,6 +1,5 @@
 
-use crate::err::Result;
-
+use crate::err::{Error, Result};
 use super::parser::DataKeeper;
 use super::parser::parse_argument;
 
@@ -42,21 +41,29 @@ impl<'pre> Argument<'pre> {
     pub fn parse(&mut self, prefix: &'pre Vec<String>) -> Result<bool> {
         if let Some(pattern) = &self.current {
             self.data_keeper = parse_argument(pattern.as_ref(), prefix)?;
-            Ok(true)
+
+            // must have prefix and name
+            if self.data_keeper.prefix.is_some() {
+                if self.data_keeper.name.is_some() {
+                    return Ok(true);
+                }
+            }
         }
-        else {
-            Ok(false)
-        }
+        Err(Error::NotOptionArgument)
     }
 
     #[cfg(feature="async")]
     pub async fn parse(&mut self, prefix: &'pre Vec<String>) -> Result<bool> {
         if let Some(pattern) = &self.current {
             self.data_keeper = parse_argument(pattern.as_ref(), prefix)?;
-            Ok(true)
+
+            // must have prefix and name
+            if self.data_keeper.prefix.is_some() {
+                if self.data_keeper.name.is_some() {
+                    return Ok(true);
+                }
+            }
         }
-        else {
-            Ok(false)
-        }
+        Err(Error::NotAOptionArgument)
     }
 }

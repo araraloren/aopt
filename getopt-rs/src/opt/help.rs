@@ -1,5 +1,5 @@
 
-use crate::opt::Opt;
+use super::Opt;
 
 #[derive(Debug, Clone, Default)]
 pub struct HelpInfo {

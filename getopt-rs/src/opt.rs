@@ -3,6 +3,7 @@ pub mod help;
 pub mod style;
 pub mod value;
 pub mod index;
+pub mod parser;
 pub mod callback;
 
 use std::fmt::Debug;

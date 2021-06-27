@@ -1,7 +1,7 @@
 
 use crate::err::Result;
 use crate::err::Error;
-use crate::opt::index::Index;
+use super::index::Index;
 use crate::pat::{ParserPattern, ParseIndex};
 
 pub fn parse_option_str<'pre>(pattern: &str, prefix: &'pre Vec<String>) -> Result<DataKeeper<'pre>> {
@@ -17,7 +17,7 @@ pub fn parse_option_str<'pre>(pattern: &str, prefix: &'pre Vec<String>) -> Resul
         return Ok(data_keeper);
     }
     
-    Err(Error::InvalidOptionStr(String::from(pattern.get_pattern())))
+    Err(Error::InvalidOptionCreateString(String::from(pattern.get_pattern())))
 }
     
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -89,7 +89,7 @@ impl Default for State {
     }
 }
 
-impl<'a, 'b, 'c> State {
+impl State {
     pub fn self_transition<'pat, 'vec, 'pre>(&mut self, index: &ParseIndex, pattern: &ParserPattern<'pat, 'pre>) {
         let mut next_state = Self::End;
 
@@ -182,7 +182,7 @@ impl<'a, 'b, 'c> State {
                                 data_keeper.name = Some(
                                     pattern.get_pattern()
                                         .get(start .. cur_index - 1)
-                                        .ok_or(Error::InvalidStrRange { beg: start, end: cur_index - 1})?
+                                        .ok_or(Error::InvalidStringRange { beg: start, end: cur_index - 1})?
                                         .to_owned()
                                 );
                                 index.set(cur_index - 1);
@@ -193,7 +193,7 @@ impl<'a, 'b, 'c> State {
                                 data_keeper.name = Some(
                                     pattern.get_pattern()
                                         .get(start .. cur_index)
-                                        .ok_or(Error::InvalidStrRange { beg: start, end: cur_index})?
+                                        .ok_or(Error::InvalidStringRange { beg: start, end: cur_index})?
                                         .to_owned()
                                 );
                                 index.set(cur_index);
@@ -216,7 +216,7 @@ impl<'a, 'b, 'c> State {
                                 data_keeper.type_name = Some(
                                     pattern.get_pattern()
                                         .get(start .. cur_index - 1)
-                                        .ok_or(Error::InvalidStrRange { beg: start, end: cur_index - 1 })?
+                                        .ok_or(Error::InvalidStringRange { beg: start, end: cur_index - 1 })?
                                         .to_owned()
                                 );
                                 index.set(cur_index - 1);
@@ -227,7 +227,7 @@ impl<'a, 'b, 'c> State {
                                 data_keeper.type_name = Some(
                                     pattern.get_pattern()
                                         .get(start .. cur_index)
-                                        .ok_or(Error::InvalidStrRange { beg: start, end: cur_index})?
+                                        .ok_or(Error::InvalidStringRange { beg: start, end: cur_index})?
                                         .to_owned()
                                 );
                                 index.set(cur_index);
@@ -313,7 +313,7 @@ impl<'a, 'b, 'c> State {
                 }
                 State::End => {
                     if !index.is_end() {
-                        return Err(Error::InvalidOptionStr(format!("{}", pattern.get_pattern())));
+                        return Err(Error::InvalidOptionCreateString(format!("{}", pattern.get_pattern())));
                     }
                 }
                 _ => {}
@@ -329,7 +329,7 @@ impl<'a, 'b, 'c> State {
 
 #[cfg(test)]
 mod test {
-    use crate::set::parser::parse_option_str;
+    use super::parse_option_str;
     use crate::opt::index::Index;
 
     #[test]

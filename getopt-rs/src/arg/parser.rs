@@ -11,15 +11,9 @@ pub fn parse_argument<'pre>(pattern: &str, prefix: &'pre Vec<String>) -> Result<
 
     if res {
         debug!("With pattern: {:?}, parse result -> {:?}", pattern.get_pattern(), data_keeper);
-        // must have prefix and name, prefix can be null string `""`
-        if data_keeper.prefix.is_some() {
-            if data_keeper.name.is_some() {
-                return Ok(data_keeper);
-            }
-        }        
+        return Ok(data_keeper);        
     }
-    
-    Err(Error::InvalidArgAsOption(String::from(pattern.get_pattern())))
+    Err(Error::NotOptionArgument)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -129,7 +123,7 @@ impl State {
                                 data_keeper.name = Some(
                                     pattern.get_pattern()
                                                 .get(start .. temp_index - 1)
-                                                .ok_or(Error::InvalidStrRange { beg: start, end: temp_index - 1 })?
+                                                .ok_or(Error::InvalidStringRange { beg: start, end: temp_index - 1 })?
                                                 .to_owned()
                                 );
                                 index.set(temp_index - 1);
@@ -142,7 +136,7 @@ impl State {
                                 data_keeper.name = Some(
                                     pattern.get_pattern()
                                                  .get(start .. temp_index)
-                                                 .ok_or(Error::InvalidStrRange { beg: start, end: temp_index })?
+                                                 .ok_or(Error::InvalidStringRange { beg: start, end: temp_index })?
                                                  .to_owned()
                                 );
                                 index.set(temp_index);
@@ -160,13 +154,13 @@ impl State {
                         data_keeper.value = Some(
                             pattern.get_pattern()
                                         .get(index.get() ..)
-                                        .ok_or(Error::InvalidStrRange { beg: index.get(), end: index.len() })?
+                                        .ok_or(Error::InvalidStringRange { beg: index.get(), end: index.len() })?
                                         .to_owned()
                         );
                         index.set(index.len());
                     }
                     else {
-                        return Err(Error::InvalidArgArgument(String::from(pattern.get_pattern())));
+                        return Err(Error::RequireValueForArgument(String::from(pattern.get_pattern())));
                     }
                 }
                 _ => { }

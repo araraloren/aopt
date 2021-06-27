@@ -7,7 +7,8 @@ use crate::opt::{
     help::HelpInfo
 };
 use crate::uid::Uid;
-use crate::err::Result;
+use crate::err::{Error, Result};
+use crate::opt::parser::parse_option_str;
 
 pub trait Creator {
     fn get_type_name(&self) -> &'static str;
@@ -194,5 +195,27 @@ impl CreateInfo {
 
     pub fn get_help_info_mut(&mut self) -> &mut HelpInfo {
         &mut self.help
+    }
+
+    pub fn parse(pattern: &str, prefix: &Vec<String>) -> Result<Self> {
+        let mut data_keeper = parse_option_str(pattern, prefix)?;
+        let index = data_keeper.gen_index();
+        
+        if data_keeper.prefix.is_some() {
+            if data_keeper.name.is_some() {
+                if data_keeper.type_name.is_some() {
+                    return Ok(Self {
+                        prefix: data_keeper.prefix.unwrap().clone(),
+                        name: data_keeper.name.take().unwrap(),
+                        type_name: data_keeper.type_name.take().unwrap(),
+                        index,
+                        deactivate_style: data_keeper.deactivate,
+                        optional: ! data_keeper.optional,
+                        .. Self::default()
+                    })
+                }
+            }
+        }
+        Err(Error::InvalidOptionCreateString(String::from(pattern)))
     }
 }

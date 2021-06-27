@@ -53,6 +53,14 @@ impl Generator for UidGenerator {
     }
 }
 
+impl From<u64> for UidGenerator {
+    fn from(v: u64) -> Self {
+        Self {
+            uid: v.into()
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::uid::UidGenerator;
