@@ -51,7 +51,7 @@ impl Default for State {
 }
 
 impl State {
-    pub fn self_transition<'pat, 'vec, 'pre>(&mut self, index: &ParseIndex, pattern: &ParserPattern<'pat, 'pre>) {
+    pub fn self_transition<'pat, 'pre>(&mut self, index: &ParseIndex, pattern: &ParserPattern<'pat, 'pre>) {
         let mut next_state = Self::End;
 
         match self.clone() {
@@ -186,37 +186,72 @@ mod test {
 
     #[test]
     fn test_for_input_parser() {
-        let test_cases = vec![
-            ("", None),
+        { // test 1
+            let test_cases = vec![
+                ("", None),
 
-            ("-a", Some((Some("-"), Some("a"), None, false))),
-            ("-/a", Some((Some("-"), Some("a"), None, true))),
-            ("-a=b", Some((Some("-"), Some("a"), Some("b"), false))),
+                ("-a", Some((Some("-"), Some("a"), None, false))),
+                ("-/a", Some((Some("-"), Some("a"), None, true))),
+                ("-a=b", Some((Some("-"), Some("a"), Some("b"), false))),
 
-            ("--foo", Some((Some("--"), Some("foo"), None, false))),
-            ("--/foo", Some((Some("--"), Some("foo"), None, true))),
-            ("--foo=bar", Some((Some("--"), Some("foo"), Some("bar"), false))),
+                ("--foo", Some((Some("--"), Some("foo"), None, false))),
+                ("--/foo", Some((Some("--"), Some("foo"), None, true))),
+                ("--foo=bar", Some((Some("--"), Some("foo"), Some("bar"), false))),
 
-            ("a", Some((Some(""), Some("a"), None, false))),
-            ("/a", Some((Some(""), Some("a"), None, true))),
-            ("a=b", Some((Some(""), Some("a"), Some("b"), false))),
+                ("a", Some((Some(""), Some("a"), None, false))),
+                ("/a", Some((Some(""), Some("a"), None, true))),
+                ("a=b", Some((Some(""), Some("a"), Some("b"), false))),
 
-            ("foo", Some((Some(""), Some("foo"), None, false))),
-            ("/foo", Some((Some(""), Some("foo"), None, true))),
-            ("foo=bar", Some((Some(""), Some("foo"), Some("bar"), false))),
+                ("foo", Some((Some(""), Some("foo"), None, false))),
+                ("/foo", Some((Some(""), Some("foo"), None, true))),
+                ("foo=bar", Some((Some(""), Some("foo"), Some("bar"), false))),
 
-            ("--=bar", None),
-            ("-foo=", None),
-        ];
+                ("--=bar", None),
+                ("-foo=", None),
+            ];
 
-        let prefixs = vec![
-            String::from("--"),
-            String::from("-"),
-            String::from(""),
-        ];
+            let prefixs = vec![
+                String::from("--"),
+                String::from("-"),
+                String::from(""),
+            ];
 
-        for case in test_cases.iter() {
-            try_to_verify_one_task(case.0, &prefixs,case.1);
+            for case in test_cases.iter() {
+                try_to_verify_one_task(case.0, &prefixs,case.1);
+            }
+        }
+        { // test 2
+            let test_cases = vec![
+                ("", None),
+
+                ("-a", Some((Some("-"), Some("a"), None, false))),
+                ("-/a", Some((Some("-"), Some("a"), None, true))),
+                ("-a=b", Some((Some("-"), Some("a"), Some("b"), false))),
+
+                ("--foo", Some((Some("--"), Some("foo"), None, false))),
+                ("--/foo", Some((Some("--"), Some("foo"), None, true))),
+                ("--foo=bar", Some((Some("--"), Some("foo"), Some("bar"), false))),
+
+                ("a", None),
+                ("/a", None),
+                ("a=b", None),
+
+                ("foo", None),
+                ("/foo", None),
+                ("foo=bar", None),
+
+                ("--=bar", None),
+                ("-foo=", None),
+            ];
+
+            let prefixs = vec![
+                String::from("--"),
+                String::from("-"),
+            ];
+
+            for case in test_cases.iter() {
+                try_to_verify_one_task(case.0, &prefixs,case.1);
+            }
         }
     }
 

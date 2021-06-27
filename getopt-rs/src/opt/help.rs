@@ -40,7 +40,7 @@ impl HelpInfo {
                 if opt.get_optional() { "[" } else { "<" },
                 opt.get_prefix(),
                 opt.get_name(),
-                opt.get_type(),
+                opt.get_type_name(),
                 if opt.get_optional() { "]" } else { ">" },
             ),
         }

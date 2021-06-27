@@ -23,8 +23,8 @@ pub enum Error {
 	#[error("option string with '=' need an value after it: `{0}`")]
 	InvalidArgArgument(String),
 
-	// for option value
-	
+	#[error("invalid option index value: `{0}`")]
+	InavlidOptionIndexValue(String),
 }
 
 

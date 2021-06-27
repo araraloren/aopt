@@ -4,7 +4,6 @@ pub mod style;
 pub mod value;
 pub mod index;
 pub mod callback;
-pub mod builder;
 
 use std::fmt::Debug;
 
@@ -13,9 +12,10 @@ use crate::uid::Uid;
 use crate::opt::value::Value as OptValue;
 use crate::opt::index::Index as OptIndex;
 use crate::opt::help::HelpInfo;
+use crate::opt::callback::CallbackType;
 
 pub trait Type {
-    fn get_type(&self) -> &'static str;
+    fn get_type_name(&self) -> &'static str;
 
     fn is_deactivate_style(&self) -> bool;
 
@@ -28,6 +28,16 @@ pub trait Identifier {
     fn get_uid(&self) -> Uid;
 
     fn set_uid(&mut self, uid: Uid);
+}
+
+pub trait Callback {
+    fn get_callback_type(&self) -> &CallbackType;
+
+    fn set_callback_type(&mut self, callback_type: CallbackType);
+
+    fn is_need_invoke(&self) -> bool;
+
+    fn set_invoke(&mut self, invoke: bool);
 }
 
 pub trait Name {
@@ -97,6 +107,7 @@ pub trait Help {
 pub trait Opt: Type +
                Identifier +
                Name +
+               Callback +
                Alias +
                Optional +
                Value +
