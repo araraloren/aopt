@@ -1,13 +1,29 @@
 
-pub mod creator;
+pub mod info;
 pub mod filter;
+pub mod commit;
 
 use std::fmt::Debug;
+use std::ops::{Index, IndexMut};
+use std::slice::{Iter, IterMut};
 
-use crate::proc::Subscriber;
-use creator::{ Creator, CreateInfo };
+use self::info::{FilterInfo, CreateInfo, OptionInfo};
+use self::commit::Commit;
+use self::filter::{Filter, FilterMut};
+use crate::proc::{Proc, Subscriber};
+use crate::uid::Uid;
+use crate::opt::Opt;
+use crate::err::Result;
 
-pub trait Set: Debug {
+pub trait Creator {
+    fn get_type_name(&self) -> &'static str;
+
+    fn is_support_deactivate_style(&self) -> bool;
+
+    fn create_with(&self, id: Uid, create_info: CreateInfo) -> Result<Box<dyn Opt>>;
+}
+
+pub trait Set: Debug { // + Index<Uid, Output = dyn Opt> + IndexMut<Uid> {
     fn add_creator(&mut self, creator: Box<dyn Creator>) -> bool;
 
     fn app_creator(&mut self, creator: Vec<Box<dyn Creator>>) -> bool;
@@ -16,11 +32,160 @@ pub trait Set: Debug {
 
     fn get_creator(&self, opt_type: &str) -> Option<&dyn Creator>;
 
+
     fn add_opt(&mut self, opt_str: &str) -> Result<Commit>;
+
+    fn add_opt_ci(&mut self, ci: CreateInfo) -> Result<Uid>;
+
+    fn add_opt_raw(&mut self, opt: Box<dyn Opt>) -> Result<Uid>;
+
+    
+    fn get_opt(&self, id: Uid) -> Option<&Box<dyn Opt>>;
+
+    fn get_opt_mut(&mut self, id: Uid) -> Option<&mut Box<dyn Opt>>;
+
+    fn len(&self) -> usize;
+
+    fn iter(&self) -> Iter<Box<dyn Opt>>;
+
+    fn iter_mut(&mut self) -> IterMut<Box<dyn Opt>>;
+
+
+    fn filter(&self, opt_str: &str) -> Result<Filter>;
+
+    fn filter_mut(&mut self, opt_str: &str) -> Result<FilterMut>;
+
+
+    fn set_prefix(&mut self, prefix: Vec<String>);
+
+    fn app_prefix(&mut self, prefix: String);
+
+    fn get_prefix(&self) -> &Vec<String>;
+
+
+    #[doc(hidden)]
+    fn get_opt_by_index(&self, index: usize) -> Option<&Box<dyn Opt>>;
+
+    #[doc(hidden)]
+    fn get_opt_mut_by_index(&mut self, index: usize) -> Option<&mut Box<dyn Opt>>;
+
+    #[doc(hidden)]
+    fn find_by_filter(&self, info: &FilterInfo) -> Option<&Box<dyn Opt>>;
+
+    #[doc(hidden)]
+    fn find_mut_by_filter(&mut self, info: &FilterInfo) -> Option<&mut Box<dyn Opt>>;
+
+    #[doc(hidden)]
+    fn find_all_by_filter(&self, info: &FilterInfo) -> Vec<&Box<dyn Opt>>;
+
+    #[doc(hidden)]
+    fn find_all_mut_by_filter(&mut self, info: &FilterInfo) -> Vec<&mut Box<dyn Opt>>;
 }
 
-impl<T: Set> Subscriber for T {
-    fn subscribe_from(&self, publisher: &mut dyn crate::proc::Publisher<dyn crate::proc::Proc>) {
-        
+#[derive(Debug)]
+pub struct DefaultSet;
+
+impl Set for DefaultSet {
+    fn add_creator(&mut self, creator: Box<dyn Creator>) -> bool {
+        todo!()
+    }
+
+    fn app_creator(&mut self, creator: Vec<Box<dyn Creator>>) -> bool {
+        todo!()
+    }
+
+    fn rem_creator(&mut self, opt_type: &str) -> bool {
+        todo!()
+    }
+
+    fn get_creator(&self, opt_type: &str) -> Option<&dyn Creator> {
+        todo!()
+    }
+
+    fn add_opt(&mut self, opt_str: &str) -> Result<Commit> {
+        todo!()
+    }
+
+    fn add_opt_ci(&mut self, ci: CreateInfo) -> Result<Uid> {
+        todo!()
+    }
+
+    fn add_opt_raw(&mut self, opt: Box<dyn Opt>) -> Result<Uid> {
+        todo!()
+    }
+
+    fn get_opt(&self, id: Uid) -> Option<&Box<dyn Opt>> {
+        todo!()
+    }
+
+    fn get_opt_mut(&mut self, id: Uid) -> Option<&mut Box<dyn Opt>> {
+        todo!()
+    }
+
+    fn len(&self) -> usize {
+        todo!()
+    }
+
+    fn iter(&self) -> Iter<Box<dyn Opt>> {
+        todo!()
+    }
+
+    fn iter_mut(&mut self) -> IterMut<Box<dyn Opt>> {
+        todo!()
+    }
+
+    fn filter(&self, opt_str: &str) -> Result<Filter> {
+        todo!()
+    }
+
+    fn filter_mut(&mut self, opt_str: &str) -> Result<FilterMut> {
+        todo!()
+    }
+
+    fn set_prefix(&mut self, prefix: Vec<String>) {
+        todo!()
+    }
+
+    fn app_prefix(&mut self, prefix: String) {
+        todo!()
+    }
+
+    fn get_prefix(&self) -> &Vec<String> {
+        todo!()
+    }
+
+    fn get_opt_by_index(&self, index: usize) -> Option<&Box<dyn Opt>> {
+        todo!()
+    }
+
+    fn get_opt_mut_by_index(&mut self, index: usize) -> Option<&mut Box<dyn Opt>> {
+        todo!()
+    }
+
+    fn find_by_filter(&self, info: &FilterInfo) -> Option<&Box<dyn Opt>> {
+        todo!()
+    }
+
+    fn find_mut_by_filter(&mut self, info: &FilterInfo) -> Option<&mut Box<dyn Opt>> {
+        todo!()
+    }
+
+    fn find_all_by_filter(&self, info: &FilterInfo) -> Vec<&Box<dyn Opt>> {
+        todo!()
+    }
+
+    fn find_all_mut_by_filter(&mut self, info: &FilterInfo) -> Vec<&mut Box<dyn Opt>> {
+        todo!()
+    }
+}
+
+impl<P: Proc, S: Set> Subscriber<P> for S {
+    fn subscribe_from(&self, publisher: &mut dyn crate::proc::Publisher<P>) {
+        for opt in self.iter() {
+            publisher.reg_subscriber(
+                Box::new(
+                    OptionInfo::from(opt.get_uid())
+            ))
+        }
     }
 }

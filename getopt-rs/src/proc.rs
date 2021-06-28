@@ -28,12 +28,12 @@ pub trait Publisher<M: Message> {
     fn clean(&mut self);
 }
 
-pub trait Subscriber {
-    fn subscribe_from(&self, publisher: &mut dyn Publisher<dyn Proc>);
+pub trait Subscriber<M: Message> {
+    fn subscribe_from(&self, publisher: &mut dyn Publisher<M>);
 }
 
 #[async_trait(?Send)]
-pub trait Proc: Debug + Message {
+pub trait Proc: Debug {
     fn uid(&self) -> Uid;
 
     fn app_ctx(&mut self, ctx: Box<dyn Context>);
@@ -49,4 +49,10 @@ pub trait Proc: Debug + Message {
     fn is_matched(&self) -> bool;
 
     fn len(&self) -> usize;
+}
+
+impl<T: Proc> Message for T {
+    fn msg_uid(&self) -> Uid {
+        self.uid()
+    }
 }
