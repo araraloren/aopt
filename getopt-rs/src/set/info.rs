@@ -202,8 +202,8 @@ impl CreateInfo {
                         name: data_keeper.name.take().unwrap(),
                         type_name: data_keeper.type_name.take().unwrap(),
                         index,
-                        deactivate_style: data_keeper.deactivate,
-                        optional: ! data_keeper.optional,
+                        deactivate_style: data_keeper.deactivate.unwrap_or(false),
+                        optional: ! data_keeper.optional.unwrap_or(false),
                         .. Self::default()
                     })
                 }
@@ -308,9 +308,30 @@ impl FilterInfo {
         self.index.is_some()
     }
 
+    pub fn parse(pattern: &str, prefix: &Vec<String>) -> Result<Self> {
+        let mut data_keeper = parse_option_str(pattern, prefix)?;
+        let has_index = data_keeper.has_index();
+        let index = data_keeper.gen_index();
+        
+        Ok(Self {
+            prefix: data_keeper.prefix.map(|v|v.clone()),
+            name: data_keeper.name,
+            type_name: data_keeper.type_name,
+            index: if has_index { Some(index) } else { None },
+            deactivate_style: data_keeper.deactivate,
+            optional: data_keeper.optional,
+        })
+    }
+
     pub fn match_opt(&self, opt: &dyn Opt) -> bool {
         let mut ret = true;
 
+        if ret && self.has_deactivate_style() {
+            ret = ret && (self.get_deactivate_style() == opt.is_deactivate_style());
+        }
+        if ret && self.has_optional() {
+            ret = ret && (self.get_optional() == opt.get_optional());
+        }
         if ret && self.has_type_name() {
             ret = ret && (self.get_type_name() == opt.get_type_name());
         }

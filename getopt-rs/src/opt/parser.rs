@@ -45,9 +45,9 @@ pub struct DataKeeper<'pre> {
 
     pub type_name: Option<String>,
 
-    pub deactivate: bool,
+    pub deactivate: Option<bool>,
 
-    pub optional: bool,
+    pub optional: Option<bool>,
 
     pub forward_index: Option<u64>,
 
@@ -80,6 +80,18 @@ impl<'pre> DataKeeper<'pre> {
         else {
             Index::default()
         }
+    }
+
+    pub fn has_index(&mut self) -> bool {
+        self.forward_index.is_some()
+        ||
+        self.backward_index.is_some()
+        ||
+        self.anywhere.is_some()
+        ||
+        self.list.len() > 0
+        ||
+        self.except.len() > 0
     }
 }
 
@@ -237,11 +249,11 @@ impl State {
                     }
                 }
                 State::Deactivate => {
-                    data_keeper.deactivate = true;
+                    data_keeper.deactivate = Some(true);
                     index.inc(1);
                 }
                 State::Optional => {
-                    data_keeper.optional = true;
+                    data_keeper.optional = Some(true);
                     index.inc(1);
                 }
                 State::Index => {
@@ -820,8 +832,8 @@ mod test {
                 assert_eq!(except.1.unwrap_or(""), dk.name.unwrap_or(default.clone()));
                 assert_eq!(except.2.unwrap_or(""), dk.type_name.unwrap_or(default.clone()));
                 assert_eq!(except.3, index);
-                assert_eq!(except.4, dk.deactivate);
-                assert_eq!(!except.5, dk.optional);
+                assert_eq!(except.4, dk.deactivate.unwrap_or(false));
+                assert_eq!(!except.5, dk.optional.unwrap_or(false));
             }
         }
         else {

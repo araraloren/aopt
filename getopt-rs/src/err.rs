@@ -22,6 +22,9 @@ pub enum Error {
 
 	#[error("invalid option index value: `{0}`")]
 	InavlidOptionIndexValue(String),
+
+	#[error("not support option type name `{0}`")]
+	InvalidOptionTypeName(String),
 }
 
 
