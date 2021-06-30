@@ -81,7 +81,7 @@ impl CallbackType {
 }
 
 #[async_trait::async_trait(?Send)]
-pub trait IndexCallback: Debug {
+pub trait ValueCallback: Debug {
     #[cfg(not(feature="async"))]
     fn call(&mut self, uid: Uid, set: &dyn Set) -> Result<bool>;
 
@@ -90,7 +90,7 @@ pub trait IndexCallback: Debug {
 }
 
 #[async_trait::async_trait(?Send)]
-pub trait IndexMutCallback: Debug {
+pub trait ValueMutCallback: Debug {
     #[cfg(not(feature="async"))]
     fn call(&mut self, uid: Uid, set: &mut dyn Set) -> Result<bool>;
 
@@ -99,7 +99,7 @@ pub trait IndexMutCallback: Debug {
 }
 
 #[async_trait::async_trait(?Send)]
-pub trait ValueCallback: Debug {
+pub trait IndexCallback: Debug {
     #[cfg(not(feature="async"))]
     fn call(&mut self, uid: Uid, set: &dyn Set, arg: &String) -> Result<bool>;
 
@@ -108,7 +108,7 @@ pub trait ValueCallback: Debug {
 }
 
 #[async_trait::async_trait(?Send)]
-pub trait ValueMutCallback: Debug {
+pub trait IndexMutCallback: Debug {
     #[cfg(not(feature="async"))]
     fn call(&mut self, uid: Uid, set: &mut dyn Set, arg: &String) -> Result<bool>;
 
@@ -132,4 +132,91 @@ pub trait MainMutCallback: Debug {
 
     #[cfg(feature="async")]
     async fn call(&mut self, uid: Uid, set: &mut dyn Set, args: &Vec<String>) -> Result<bool>;
+}
+
+#[derive(Debug)]
+pub enum Callback {
+    Value(Box<dyn ValueCallback>),
+
+    ValueMut(Box<dyn ValueMutCallback>),
+
+    Index(Box<dyn IndexCallback>),
+
+    IndexMut(Box<dyn IndexMutCallback>),
+
+    Main(Box<dyn MainCallback>),
+
+    MainMut(Box<dyn MainMutCallback>),
+
+    Null,
+}
+
+impl Default for Callback {
+    fn default() -> Self {
+        Self::Null
+    }
+}
+
+impl Callback {
+    pub fn match_callback(&self, callback_type: CallbackType) -> bool {
+        match self {
+            Callback::Value(_) => {
+                callback_type == CallbackType::Value
+            },
+            Callback::ValueMut(_) => {
+                callback_type == CallbackType::ValueMut
+            },
+            Callback::Index(_) => {
+                callback_type == CallbackType::Index
+            },
+            Callback::IndexMut(_) => {
+                callback_type == CallbackType::IndexMut
+            },
+            Callback::Main(_) =>  {
+                callback_type == CallbackType::Main
+            },
+            Callback::MainMut(_) => {
+                callback_type == CallbackType::MainMut
+            },
+            Callback::Null => {
+                false
+            },
+        }
+    }
+}
+
+impl From<Box<dyn ValueCallback>> for Callback {
+    fn from(cb: Box<dyn ValueCallback>) -> Self {
+        Callback::Value(cb)
+    }
+}
+
+impl From<Box<dyn ValueMutCallback>> for Callback {
+    fn from(cb: Box<dyn ValueMutCallback>) -> Self {
+        Callback::ValueMut(cb)
+    }
+}
+
+impl From<Box<dyn IndexCallback>> for Callback {
+    fn from(cb: Box<dyn IndexCallback>) -> Self {
+        Callback::Index(cb)
+    }
+}
+
+impl From<Box<dyn IndexMutCallback>> for Callback {
+    fn from(cb: Box<dyn IndexMutCallback>) -> Self {
+        Callback::IndexMut(cb)
+    }
+}
+
+impl From<Box<dyn MainCallback>> for Callback {
+    fn from(cb: Box<dyn MainCallback>) -> Self {
+        Callback::Main(cb)
+    }
+}
+
+impl From<Box<dyn MainMutCallback>> for Callback {
+    fn from(cb: Box<dyn MainMutCallback>) -> Self {
+        Callback::MainMut(cb)
+    }
 }
