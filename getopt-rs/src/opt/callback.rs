@@ -1,9 +1,8 @@
-
-use std::fmt::Debug;
 use async_trait::async_trait;
+use std::fmt::Debug;
 
-use crate::opt::Opt;
 use crate::err::Result;
+use crate::opt::Opt;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum CallbackType {

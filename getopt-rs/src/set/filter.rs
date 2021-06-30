@@ -1,4 +1,3 @@
-
 use super::info::FilterInfo;
 use super::Set;
 use crate::opt::index::Index;
@@ -13,9 +12,7 @@ pub struct Filter<'a> {
 
 impl<'a> Filter<'a> {
     pub fn new(set: &'a dyn Set, info: FilterInfo) -> Self {
-        Self {
-            set, info,
-        }
+        Self { set, info }
     }
 
     pub fn set_deactivate_style(&mut self, deactivate_style: bool) -> &mut Self {
@@ -66,9 +63,7 @@ pub struct FilterMut<'a> {
 
 impl<'a> FilterMut<'a> {
     pub fn new(set: &'a mut dyn Set, info: FilterInfo) -> Self {
-        Self {
-            set, info,
-        }
+        Self { set, info }
     }
 
     pub fn set_deactivate_style(&mut self, deactivate_style: bool) -> &mut Self {

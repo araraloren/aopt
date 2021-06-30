@@ -1,16 +1,15 @@
-
 pub mod argument;
 pub mod parser;
 
-use std::fmt::Debug;
 use std::convert::From;
+use std::fmt::Debug;
 use std::iter::Iterator;
 use std::slice::{Iter, IterMut};
 
 use argument::Argument;
 
 #[derive(Debug, Default)]
-pub struct ArgStream<'pre>{
+pub struct ArgStream<'pre> {
     args: Vec<Argument<'pre>>,
     index: usize,
 }
@@ -36,25 +35,31 @@ impl<'pre> ArgStream<'pre> {
         self.args.iter_mut()
     }
 
-    fn iterator_to_args<Iter>(mut iter: Iter) -> Vec<Argument<'pre>> where Iter: Iterator<Item=String> {
+    fn iterator_to_args<Iter>(mut iter: Iter) -> Vec<Argument<'pre>>
+    where
+        Iter: Iterator<Item = String>,
+    {
         let mut ret = vec![];
         let mut current = iter.next();
 
         while current.is_some() {
             let next = iter.next();
 
-            ret.push(Argument::new(Self::map_one_item(current),Self::map_one_item(next.clone())));
+            ret.push(Argument::new(
+                Self::map_one_item(current),
+                Self::map_one_item(next.clone()),
+            ));
             current = next;
         }
         ret
     }
 
     fn map_one_item(item: Option<String>) -> Option<String> {
-        item.map_or(None, |v|Some(String::from(v)))
+        item.map_or(None, |v| Some(String::from(v)))
     }
 }
 
-impl<'str, 'nv, 'pre, Iter: Iterator<Item=String>> From<Iter> for ArgStream<'pre> {
+impl<'str, 'nv, 'pre, Iter: Iterator<Item = String>> From<Iter> for ArgStream<'pre> {
     fn from(iter: Iter) -> Self {
         Self {
             args: Self::iterator_to_args(iter),
@@ -63,7 +68,6 @@ impl<'str, 'nv, 'pre, Iter: Iterator<Item=String>> From<Iter> for ArgStream<'pre
     }
 }
 
-
 #[cfg(test)]
 mod test {
 
@@ -71,7 +75,8 @@ mod test {
 
     #[test]
     fn make_sure_arg_stream_work() {
-        { // test1
+        {
+            // test1
             let data = [
                 "cpp",
                 "-d",
@@ -83,7 +88,9 @@ mod test {
                 "--compile",
                 "--wget",
                 "https://example.com/template.cpp",
-            ].iter().map(|&v|String::from(v));
+            ]
+            .iter()
+            .map(|&v| String::from(v));
             let data_check = data.clone().collect();
             let check = vec![
                 vec![],
@@ -105,7 +112,8 @@ mod test {
                 &check,
             );
         }
-        { // test2
+        {
+            // test2
             let data = [
                 "c",
                 "+d",
@@ -118,7 +126,9 @@ mod test {
                 "+compile",
                 "+wget",
                 "https://example.com/template.c",
-            ].iter().map(|&v|String::from(v));
+            ]
+            .iter()
+            .map(|&v| String::from(v));
             let data_check = data.clone().collect();
             let check = vec![
                 vec!["", "c"],
@@ -147,25 +157,35 @@ mod test {
         mut argstream: ArgStream<'pre>,
         prefixs: &'vec Vec<String>,
         data_check: &Vec<String>,
-        check: &Vec<Vec<&str>>) {
+        check: &Vec<Vec<&str>>,
+    ) {
         let default_str = String::from("");
         let default_data = String::from("");
         let default_item = "";
 
         for ((index, arg), check_item) in argstream.iter_mut().enumerate().zip(check.iter()) {
             assert_eq!(
-                arg.current.as_ref().unwrap_or(&default_str), 
+                arg.current.as_ref().unwrap_or(&default_str),
                 data_check.get(index).unwrap_or(&default_data)
             );
             assert_eq!(
-                arg.next.as_ref().unwrap_or(&default_str), 
+                arg.next.as_ref().unwrap_or(&default_str),
                 data_check.get(index + 1).unwrap_or(&default_data)
             );
             if let Ok(ret) = arg.parse(prefixs) {
                 if ret {
-                    assert_eq!(arg.get_prefix().unwrap_or(&default_str), check_item.get(0).unwrap_or(&default_item));
-                    assert_eq!(arg.get_name().unwrap_or(&default_str), check_item.get(1).unwrap_or(&default_item));
-                    assert_eq!(arg.get_value().unwrap_or(&default_str), check_item.get(2).unwrap_or(&default_item));
+                    assert_eq!(
+                        arg.get_prefix().unwrap_or(&default_str),
+                        check_item.get(0).unwrap_or(&default_item)
+                    );
+                    assert_eq!(
+                        arg.get_name().unwrap_or(&default_str),
+                        check_item.get(1).unwrap_or(&default_item)
+                    );
+                    assert_eq!(
+                        arg.get_value().unwrap_or(&default_str),
+                        check_item.get(2).unwrap_or(&default_item)
+                    );
                 }
             }
         }

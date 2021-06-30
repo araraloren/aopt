@@ -1,4 +1,3 @@
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Index {
     Forward(u64),
@@ -73,7 +72,7 @@ impl Index {
                     }
                 }
             }
-            _ => { }
+            _ => {}
         }
         None
     }

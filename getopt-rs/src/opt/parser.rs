@@ -1,10 +1,12 @@
-
-use crate::err::Result;
-use crate::err::Error;
 use super::index::Index;
-use crate::pat::{ParserPattern, ParseIndex};
+use crate::err::Error;
+use crate::err::Result;
+use crate::pat::{ParseIndex, ParserPattern};
 
-pub fn parse_option_str<'pre>(pattern: &str, prefix: &'pre Vec<String>) -> Result<DataKeeper<'pre>> {
+pub fn parse_option_str<'pre>(
+    pattern: &str,
+    prefix: &'pre Vec<String>,
+) -> Result<DataKeeper<'pre>> {
     let pattern = ParserPattern::new(pattern, prefix);
     let mut index = ParseIndex::new(pattern.len());
     let mut data_keeper = DataKeeper::default();
@@ -12,14 +14,20 @@ pub fn parse_option_str<'pre>(pattern: &str, prefix: &'pre Vec<String>) -> Resul
     let res = State::default().parse(&mut index, &pattern, &mut data_keeper)?;
 
     if res {
-        debug!("With pattern: {:?}, parse result -> {:?}", pattern.get_pattern(), data_keeper);
-        // don't check anything 
+        debug!(
+            "With pattern: {:?}, parse result -> {:?}",
+            pattern.get_pattern(),
+            data_keeper
+        );
+        // don't check anything
         return Ok(data_keeper);
     }
-    
-    Err(Error::InvalidOptionCreateString(String::from(pattern.get_pattern())))
+
+    Err(Error::InvalidOptionCreateString(String::from(
+        pattern.get_pattern(),
+    )))
 }
-    
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum State {
     PreCheck,
@@ -64,34 +72,25 @@ impl<'pre> DataKeeper<'pre> {
     pub fn gen_index(&mut self) -> Index {
         if self.forward_index.is_some() {
             Index::forward(self.forward_index.unwrap())
-        }
-        else if self.backward_index.is_some() {
+        } else if self.backward_index.is_some() {
             Index::backward(self.backward_index.unwrap())
-        }
-        else if self.anywhere.unwrap_or(false) {
+        } else if self.anywhere.unwrap_or(false) {
             Index::anywhere()
-        }
-        else if self.list.len() > 0 {
+        } else if self.list.len() > 0 {
             Index::list(std::mem::take(&mut self.list))
-        }
-        else if self.except.len() > 0 {
+        } else if self.except.len() > 0 {
             Index::except(std::mem::take(&mut self.except))
-        }
-        else {
+        } else {
             Index::default()
         }
     }
 
     pub fn has_index(&mut self) -> bool {
         self.forward_index.is_some()
-        ||
-        self.backward_index.is_some()
-        ||
-        self.anywhere.is_some()
-        ||
-        self.list.len() > 0
-        ||
-        self.except.len() > 0
+            || self.backward_index.is_some()
+            || self.anywhere.is_some()
+            || self.list.len() > 0
+            || self.except.len() > 0
     }
 }
 
@@ -102,7 +101,11 @@ impl Default for State {
 }
 
 impl State {
-    pub fn self_transition<'pat, 'vec, 'pre>(&mut self, index: &ParseIndex, pattern: &ParserPattern<'pat, 'pre>) {
+    pub fn self_transition<'pat, 'vec, 'pre>(
+        &mut self,
+        index: &ParseIndex,
+        pattern: &ParserPattern<'pat, 'pre>,
+    ) {
         let mut next_state = Self::End;
 
         match self.clone() {
@@ -149,10 +152,10 @@ impl State {
                     State::FowradIndex
                 };
             }
-            State::FowradIndex | State::BackwardIndex | State::List | State::Except => { },
+            State::FowradIndex | State::BackwardIndex | State::List | State::Except => {}
             State::End => {
                 unreachable!("The end state can't going on!");
-            },
+            }
         }
 
         debug!("Transition from {:?} --to--> {:?}", self, next_state);
@@ -163,11 +166,14 @@ impl State {
     pub fn parse<'pat, 'pre>(
         mut self,
         index: &mut ParseIndex,
-        pattern: & ParserPattern<'pat, 'pre>,
+        pattern: &ParserPattern<'pat, 'pre>,
         data_keeper: &mut DataKeeper<'pre>,
     ) -> Result<bool> {
         if self != State::End {
-            debug!("Current state = {:?}, {:?}, parse pattern = {:?}", self, index, pattern);
+            debug!(
+                "Current state = {:?}, {:?}, parse pattern = {:?}",
+                self, index, pattern
+            );
 
             self.self_transition(index, pattern);
 
@@ -192,10 +198,14 @@ impl State {
                         if ch == '=' || ch == '!' || ch == '/' || ch == '@' {
                             if cur_index - start > 1 {
                                 data_keeper.name = Some(
-                                    pattern.get_pattern()
-                                        .get(start .. cur_index - 1)
-                                        .ok_or(Error::InvalidStringRange { beg: start, end: cur_index - 1})?
-                                        .to_owned()
+                                    pattern
+                                        .get_pattern()
+                                        .get(start..cur_index - 1)
+                                        .ok_or(Error::InvalidStringRange {
+                                            beg: start,
+                                            end: cur_index - 1,
+                                        })?
+                                        .to_owned(),
                                 );
                                 index.set(cur_index - 1);
                             }
@@ -203,10 +213,14 @@ impl State {
                         } else if cur_index == index.len() {
                             if cur_index - start >= 1 {
                                 data_keeper.name = Some(
-                                    pattern.get_pattern()
-                                        .get(start .. cur_index)
-                                        .ok_or(Error::InvalidStringRange { beg: start, end: cur_index})?
-                                        .to_owned()
+                                    pattern
+                                        .get_pattern()
+                                        .get(start..cur_index)
+                                        .ok_or(Error::InvalidStringRange {
+                                            beg: start,
+                                            end: cur_index,
+                                        })?
+                                        .to_owned(),
                                 );
                                 index.set(cur_index);
                             }
@@ -226,10 +240,14 @@ impl State {
                         if ch == '!' || ch == '/' || ch == '@' {
                             if cur_index - start > 1 {
                                 data_keeper.type_name = Some(
-                                    pattern.get_pattern()
-                                        .get(start .. cur_index - 1)
-                                        .ok_or(Error::InvalidStringRange { beg: start, end: cur_index - 1 })?
-                                        .to_owned()
+                                    pattern
+                                        .get_pattern()
+                                        .get(start..cur_index - 1)
+                                        .ok_or(Error::InvalidStringRange {
+                                            beg: start,
+                                            end: cur_index - 1,
+                                        })?
+                                        .to_owned(),
                                 );
                                 index.set(cur_index - 1);
                             }
@@ -237,10 +255,14 @@ impl State {
                         } else if cur_index == index.len() {
                             if cur_index - start >= 1 {
                                 data_keeper.type_name = Some(
-                                    pattern.get_pattern()
-                                        .get(start .. cur_index)
-                                        .ok_or(Error::InvalidStringRange { beg: start, end: cur_index})?
-                                        .to_owned()
+                                    pattern
+                                        .get_pattern()
+                                        .get(start..cur_index)
+                                        .ok_or(Error::InvalidStringRange {
+                                            beg: start,
+                                            end: cur_index,
+                                        })?
+                                        .to_owned(),
                                 );
                                 index.set(cur_index);
                             }
@@ -262,12 +284,12 @@ impl State {
                 State::FowradIndex => {
                     let (_, index_part) = pattern.get_pattern().split_at(index.get());
 
-                    let ret = index_part.parse::<u64>()
-                                                    .map_err(|e| Error::InavlidOptionIndexValue(format!("{:?}", e)))?;
+                    let ret = index_part
+                        .parse::<u64>()
+                        .map_err(|e| Error::InavlidOptionIndexValue(format!("{:?}", e)))?;
                     if ret > 0 {
                         data_keeper.forward_index = Some(ret);
-                    }
-                    else {
+                    } else {
                         data_keeper.anywhere = Some(true);
                     }
                     index.set(index.len());
@@ -275,12 +297,12 @@ impl State {
                 State::BackwardIndex => {
                     let (_, index_part) = pattern.get_pattern().split_at(index.get() + 1);
 
-                    let ret = index_part.parse::<u64>()
-                                                    .map_err(|e| Error::InavlidOptionIndexValue(format!("{:?}", e)))?;
+                    let ret = index_part
+                        .parse::<u64>()
+                        .map_err(|e| Error::InavlidOptionIndexValue(format!("{:?}", e)))?;
                     if ret > 0 {
                         data_keeper.backward_index = Some(ret);
-                    }
-                    else {
+                    } else {
                         data_keeper.anywhere = Some(true);
                     }
                     index.set(index.len());
@@ -291,22 +313,30 @@ impl State {
                     if index_part.starts_with("+[") {
                         let index_part = pattern
                             .get_pattern()
-                            .get(index.get() + 2 .. index.len() - 1)
+                            .get(index.get() + 2..index.len() - 1)
                             .unwrap();
 
                         data_keeper.list = index_part
                             .split(',')
-                            .map(|v| v.trim().parse::<u64>().map_err(|e| Error::InavlidOptionIndexValue(format!("{:?}", e))))
+                            .map(|v| {
+                                v.trim()
+                                    .parse::<u64>()
+                                    .map_err(|e| Error::InavlidOptionIndexValue(format!("{:?}", e)))
+                            })
                             .collect::<Result<Vec<u64>>>()?;
                     } else {
                         let index_part = pattern
                             .get_pattern()
-                            .get(index.get() + 1 .. index.len() - 1)
+                            .get(index.get() + 1..index.len() - 1)
                             .unwrap();
 
                         data_keeper.list = index_part
                             .split(',')
-                            .map(|v| v.trim().parse::<u64>().map_err(|e| Error::InavlidOptionIndexValue(format!("{:?}", e))))
+                            .map(|v| {
+                                v.trim()
+                                    .parse::<u64>()
+                                    .map_err(|e| Error::InavlidOptionIndexValue(format!("{:?}", e)))
+                            })
                             .collect::<Result<Vec<u64>>>()?;
                     }
                     index.set(index.len());
@@ -314,26 +344,32 @@ impl State {
                 State::Except => {
                     let index_part = pattern
                         .get_pattern()
-                        .get(index.get() + 2 .. index.len() - 1)
+                        .get(index.get() + 2..index.len() - 1)
                         .unwrap();
 
                     data_keeper.except = index_part
                         .split(',')
-                        .map(|v| v.trim().parse::<u64>().map_err(|e| Error::InavlidOptionIndexValue(format!("{:?}", e))))
+                        .map(|v| {
+                            v.trim()
+                                .parse::<u64>()
+                                .map_err(|e| Error::InavlidOptionIndexValue(format!("{:?}", e)))
+                        })
                         .collect::<Result<Vec<u64>>>()?;
                     index.set(index.len());
                 }
                 State::End => {
                     if !index.is_end() {
-                        return Err(Error::InvalidOptionCreateString(format!("{}", pattern.get_pattern())));
+                        return Err(Error::InvalidOptionCreateString(format!(
+                            "{}",
+                            pattern.get_pattern()
+                        )));
                     }
                 }
                 _ => {}
             }
-            
+
             next_state.parse(index, pattern, data_keeper)
-        }
-        else {
+        } else {
             Ok(true)
         }
     }
@@ -346,478 +382,4593 @@ mod test {
 
     #[test]
     fn test_for_input_parser() {
-        {// test 1
+        {
+            // test 1
             let test_cases = vec![
                 ("", Some((None, None, None, Index::default(), false, true))),
-                ("o=b", Some((None, Some("o"), Some("b"), Index::default(), false, true))),
-                ("o=b!", Some((None, Some("o"), Some("b"), Index::default(), false, false))),
-                ("o=b/", Some((None, Some("o"), Some("b"), Index::default(), true, true))),
-                ("o=b!/", Some((None, Some("o"), Some("b"), Index::default(), true, false))),
-                ("o=b/!", Some((None, Some("o"), Some("b"), Index::default(), true, false))),
-                ("-o=b", Some((Some("-"), Some("o"), Some("b"), Index::default(), false, true))),
-                ("-o=b!", Some((Some("-"), Some("o"), Some("b"), Index::default(), false, false))),
-                ("-o=b/", Some((Some("-"), Some("o"), Some("b"), Index::default(), true, true))),
-                ("-o=b!/", Some((Some("-"), Some("o"), Some("b"), Index::default(), true, false))),
-                ("-o=b/!", Some((Some("-"), Some("o"), Some("b"), Index::default(), true, false))),
-                ("--o=b", Some((Some("--"), Some("o"), Some("b"), Index::default(), false, true))),
-                ("--o=b!", Some((Some("--"), Some("o"), Some("b"), Index::default(), false, false))),
-                ("--o=b/", Some((Some("--"), Some("o"), Some("b"), Index::default(), true, true))),
-                ("--o=b!/", Some((Some("--"), Some("o"), Some("b"), Index::default(), true, false))),
-                ("--o=b/!", Some((Some("--"), Some("o"), Some("b"), Index::default(), true, false))),
-                ("=b", Some((None, None, Some("b"), Index::default(), false, true))),
-                ("=b!", Some((None, None, Some("b"), Index::default(), false, false))),
-                ("=b/", Some((None, None, Some("b"), Index::default(), true, true))),
-                ("=b!/", Some((None, None, Some("b"), Index::default(), true, false))),
-                ("=b/!", Some((None, None, Some("b"), Index::default(), true, false))),
-                ("o=b@1", Some((None, Some("o"), Some("b"), Index::forward(1), false, true))),
-                ("o=b@-1", Some((None, Some("o"), Some("b"), Index::backward(1), false, true))),
-                ("o=b@+42", Some((None, Some("o"), Some("b"), Index::forward(42), false, true))),
-                ("o=b@[1, 2, 3]", Some((None, Some("o"), Some("b"), Index::list(vec![1, 2, 3]), false, true))),
-                ("o=b@+[4, 5, 12]", Some((None, Some("o"), Some("b"), Index::list(vec![4, 5, 12]), false, true))),
-                ("o=b@-[1, 2, 4]", Some((None, Some("o"), Some("b"), Index::except(vec![1, 2, 4]), false, true))),
-                ("-o=b@1", Some((Some("-"), Some("o"), Some("b"), Index::forward(1), false, true))),
-                ("-o=b@-1", Some((Some("-"), Some("o"), Some("b"), Index::backward(1), false, true))),
-                ("-o=b@+42", Some((Some("-"), Some("o"), Some("b"), Index::forward(42), false, true))),
-                ("-o=b@[1, 2, 3]", Some((Some("-"), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), false, true))),
-                ("-o=b@+[4, 5, 12]", Some((Some("-"), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), false, true))),
-                ("-o=b@-[1, 2, 4]", Some((Some("-"), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), false, true))),
-                ("--o=b@1", Some((Some("--"), Some("o"), Some("b"), Index::forward(1), false, true))),
-                ("--o=b@-1", Some((Some("--"), Some("o"), Some("b"), Index::backward(1), false, true))),
-                ("--o=b@+42", Some((Some("--"), Some("o"), Some("b"), Index::forward(42), false, true))),
-                ("--o=b@[1, 2, 3]", Some((Some("--"), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), false, true))),
-                ("--o=b@+[4, 5, 12]", Some((Some("--"), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), false, true))),
-                ("--o=b@-[1, 2, 4]", Some((Some("--"), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), false, true))),
-                ("o=b!@1", Some((None, Some("o"), Some("b"), Index::forward(1), false, false))),
-                ("o=b!@-1", Some((None, Some("o"), Some("b"), Index::backward(1), false, false))),
-                ("o=b!@+42", Some((None, Some("o"), Some("b"), Index::forward(42), false, false))),
-                ("o=b!@[1, 2, 3]", Some((None, Some("o"), Some("b"), Index::list(vec![1, 2, 3]), false, false))),
-                ("o=b!@+[4, 5, 12]", Some((None, Some("o"), Some("b"), Index::list(vec![4, 5, 12]), false, false))),
-                ("o=b!@-[1, 2, 4]", Some((None, Some("o"), Some("b"), Index::except(vec![1, 2, 4]), false, false))),
-                ("-o=b!@1", Some((Some("-"), Some("o"), Some("b"), Index::forward(1), false, false))),
-                ("-o=b!@-1", Some((Some("-"), Some("o"), Some("b"), Index::backward(1), false, false))),
-                ("-o=b!@+42", Some((Some("-"), Some("o"), Some("b"), Index::forward(42), false, false))),
-                ("-o=b!@[1, 2, 3]", Some((Some("-"), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), false, false))),
-                ("-o=b!@+[4, 5, 12]", Some((Some("-"), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), false, false))),
-                ("-o=b!@-[1, 2, 4]", Some((Some("-"), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), false, false))),
-                ("--o=b!@1", Some((Some("--"), Some("o"), Some("b"), Index::forward(1), false, false))),
-                ("--o=b!@-1", Some((Some("--"), Some("o"), Some("b"), Index::backward(1), false, false))),
-                ("--o=b!@+42", Some((Some("--"), Some("o"), Some("b"), Index::forward(42), false, false))),
-                ("--o=b!@[1, 2, 3]", Some((Some("--"), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), false, false))),
-                ("--o=b!@+[4, 5, 12]", Some((Some("--"), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), false, false))),
-                ("--o=b!@-[1, 2, 4]", Some((Some("--"), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), false, false))),
-                ("o=b/@1", Some((None, Some("o"), Some("b"), Index::forward(1), true, true))),
-                ("o=b/@-1", Some((None, Some("o"), Some("b"), Index::backward(1), true, true))),
-                ("o=b/@+42", Some((None, Some("o"), Some("b"), Index::forward(42), true, true))),
-                ("o=b/@[1, 2, 3]", Some((None, Some("o"), Some("b"), Index::list(vec![1, 2, 3]), true, true))),
-                ("o=b/@+[4, 5, 12]", Some((None, Some("o"), Some("b"), Index::list(vec![4, 5, 12]), true, true))),
-                ("o=b/@-[1, 2, 4]", Some((None, Some("o"), Some("b"), Index::except(vec![1, 2, 4]), true, true))),
-                ("-o=b/@1", Some((Some("-"), Some("o"), Some("b"), Index::forward(1), true, true))),
-                ("-o=b/@-1", Some((Some("-"), Some("o"), Some("b"), Index::backward(1), true, true))),
-                ("-o=b/@+42", Some((Some("-"), Some("o"), Some("b"), Index::forward(42), true, true))),
-                ("-o=b/@[1, 2, 3]", Some((Some("-"), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), true, true))),
-                ("-o=b/@+[4, 5, 12]", Some((Some("-"), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), true, true))),
-                ("-o=b/@-[1, 2, 4]", Some((Some("-"), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), true, true))),
-                ("--o=b/@1", Some((Some("--"), Some("o"), Some("b"), Index::forward(1), true, true))),
-                ("--o=b/@-1", Some((Some("--"), Some("o"), Some("b"), Index::backward(1), true, true))),
-                ("--o=b/@+42", Some((Some("--"), Some("o"), Some("b"), Index::forward(42), true, true))),
-                ("--o=b/@[1, 2, 3]", Some((Some("--"), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), true, true))),
-                ("--o=b/@+[4, 5, 12]", Some((Some("--"), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), true, true))),
-                ("--o=b/@-[1, 2, 4]", Some((Some("--"), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), true, true))),
-                ("o=b!/@1", Some((None, Some("o"), Some("b"), Index::forward(1), true, false))),
-                ("o=b!/@-1", Some((None, Some("o"), Some("b"), Index::backward(1), true, false))),
-                ("o=b!/@+42", Some((None, Some("o"), Some("b"), Index::forward(42), true, false))),
-                ("o=b!/@[1, 2, 3]", Some((None, Some("o"), Some("b"), Index::list(vec![1, 2, 3]), true, false))),
-                ("o=b!/@+[4, 5, 12]", Some((None, Some("o"), Some("b"), Index::list(vec![4, 5, 12]), true, false))),
-                ("o=b!/@-[1, 2, 4]", Some((None, Some("o"), Some("b"), Index::except(vec![1, 2, 4]), true, false))),
-                ("-o=b!/@1", Some((Some("-"), Some("o"), Some("b"), Index::forward(1), true, false))),
-                ("-o=b!/@-1", Some((Some("-"), Some("o"), Some("b"), Index::backward(1), true, false))),
-                ("-o=b!/@+42", Some((Some("-"), Some("o"), Some("b"), Index::forward(42), true, false))),
-                ("-o=b!/@[1, 2, 3]", Some((Some("-"), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), true, false))),
-                ("-o=b!/@+[4, 5, 12]", Some((Some("-"), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), true, false))),
-                ("-o=b!/@-[1, 2, 4]", Some((Some("-"), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), true, false))),
-                ("--o=b!/@1", Some((Some("--"), Some("o"), Some("b"), Index::forward(1), true, false))),
-                ("--o=b!/@-1", Some((Some("--"), Some("o"), Some("b"), Index::backward(1), true, false))),
-                ("--o=b!/@+42", Some((Some("--"), Some("o"), Some("b"), Index::forward(42), true, false))),
-                ("--o=b!/@[1, 2, 3]", Some((Some("--"), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), true, false))),
-                ("--o=b!/@+[4, 5, 12]", Some((Some("--"), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), true, false))),
-                ("--o=b!/@-[1, 2, 4]", Some((Some("--"), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), true, false))),
-                ("o=b/!@1", Some((None, Some("o"), Some("b"), Index::forward(1), true, false))),
-                ("o=b/!@-1", Some((None, Some("o"), Some("b"), Index::backward(1), true, false))),
-                ("o=b/!@+42", Some((None, Some("o"), Some("b"), Index::forward(42), true, false))),
-                ("o=b/!@[1, 2, 3]", Some((None, Some("o"), Some("b"), Index::list(vec![1, 2, 3]), true, false))),
-                ("o=b/!@+[4, 5, 12]", Some((None, Some("o"), Some("b"), Index::list(vec![4, 5, 12]), true, false))),
-                ("o=b/!@-[1, 2, 4]", Some((None, Some("o"), Some("b"), Index::except(vec![1, 2, 4]), true, false))),
-                ("-o=b/!@1", Some((Some("-"), Some("o"), Some("b"), Index::forward(1), true, false))),
-                ("-o=b/!@-1", Some((Some("-"), Some("o"), Some("b"), Index::backward(1), true, false))),
-                ("-o=b/!@+42", Some((Some("-"), Some("o"), Some("b"), Index::forward(42), true, false))),
-                ("-o=b/!@[1, 2, 3]", Some((Some("-"), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), true, false))),
-                ("-o=b/!@+[4, 5, 12]", Some((Some("-"), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), true, false))),
-                ("-o=b/!@-[1, 2, 4]", Some((Some("-"), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), true, false))),
-                ("--o=b/!@1", Some((Some("--"), Some("o"), Some("b"), Index::forward(1), true, false))),
-                ("--o=b/!@-1", Some((Some("--"), Some("o"), Some("b"), Index::backward(1), true, false))),
-                ("--o=b/!@+42", Some((Some("--"), Some("o"), Some("b"), Index::forward(42), true, false))),
-                ("--o=b/!@[1, 2, 3]", Some((Some("--"), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), true, false))),
-                ("--o=b/!@+[4, 5, 12]", Some((Some("--"), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), true, false))),
-                ("--o=b/!@-[1, 2, 4]", Some((Some("--"), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), true, false))),
-                ("option=bar", Some((None, Some("option"), Some("bar"), Index::default(), false, true))),
-                ("option=bar!", Some((None, Some("option"), Some("bar"), Index::default(), false, false))),
-                ("option=bar/", Some((None, Some("option"), Some("bar"), Index::default(), true, true))),
-                ("option=bar!/", Some((None, Some("option"), Some("bar"), Index::default(), true, false))),
-                ("option=bar/!", Some((None, Some("option"), Some("bar"), Index::default(), true, false))),
-                ("-option=bar", Some((Some("-"), Some("option"), Some("bar"), Index::default(), false, true))),
-                ("-option=bar!", Some((Some("-"), Some("option"), Some("bar"), Index::default(), false, false))),
-                ("-option=bar/", Some((Some("-"), Some("option"), Some("bar"), Index::default(), true, true))),
-                ("-option=bar!/", Some((Some("-"), Some("option"), Some("bar"), Index::default(), true, false))),
-                ("-option=bar/!", Some((Some("-"), Some("option"), Some("bar"), Index::default(), true, false))),
-                ("--option=bar", Some((Some("--"), Some("option"), Some("bar"), Index::default(), false, true))),
-                ("--option=bar!", Some((Some("--"), Some("option"), Some("bar"), Index::default(), false, false))),
-                ("--option=bar/", Some((Some("--"), Some("option"), Some("bar"), Index::default(), true, true))),
-                ("--option=bar!/", Some((Some("--"), Some("option"), Some("bar"), Index::default(), true, false))),
-                ("--option=bar/!", Some((Some("--"), Some("option"), Some("bar"), Index::default(), true, false))),
-                ("=bar", Some((None, None, Some("bar"), Index::default(), false, true))),
-                ("=bar!", Some((None, None, Some("bar"), Index::default(), false, false))),
-                ("=bar/", Some((None, None, Some("bar"), Index::default(), true, true))),
-                ("=bar!/", Some((None, None, Some("bar"), Index::default(), true, false))),
-                ("=bar/!", Some((None, None, Some("bar"), Index::default(), true, false))),
-                ("option=bar@1", Some((None, Some("option"), Some("bar"), Index::forward(1), false, true))),
-                ("option=bar@-1", Some((None, Some("option"), Some("bar"), Index::backward(1), false, true))),
-                ("option=bar@+42", Some((None, Some("option"), Some("bar"), Index::forward(42), false, true))),
-                ("option=bar@[1, 2, 3]", Some((None, Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), false, true))),
-                ("option=bar@+[4, 5, 12]", Some((None, Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), false, true))),
-                ("option=bar@-[1, 2, 4]", Some((None, Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), false, true))),
-                ("-option=bar@1", Some((Some("-"), Some("option"), Some("bar"), Index::forward(1), false, true))),
-                ("-option=bar@-1", Some((Some("-"), Some("option"), Some("bar"), Index::backward(1), false, true))),
-                ("-option=bar@+42", Some((Some("-"), Some("option"), Some("bar"), Index::forward(42), false, true))),
-                ("-option=bar@[1, 2, 3]", Some((Some("-"), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), false, true))),
-                ("-option=bar@+[4, 5, 12]", Some((Some("-"), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), false, true))),
-                ("-option=bar@-[1, 2, 4]", Some((Some("-"), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), false, true))),
-                ("--option=bar@1", Some((Some("--"), Some("option"), Some("bar"), Index::forward(1), false, true))),
-                ("--option=bar@-1", Some((Some("--"), Some("option"), Some("bar"), Index::backward(1), false, true))),
-                ("--option=bar@+42", Some((Some("--"), Some("option"), Some("bar"), Index::forward(42), false, true))),
-                ("--option=bar@[1, 2, 3]", Some((Some("--"), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), false, true))),
-                ("--option=bar@+[4, 5, 12]", Some((Some("--"), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), false, true))),
-                ("--option=bar@-[1, 2, 4]", Some((Some("--"), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), false, true))),
-                ("option=bar!@1", Some((None, Some("option"), Some("bar"), Index::forward(1), false, false))),
-                ("option=bar!@-1", Some((None, Some("option"), Some("bar"), Index::backward(1), false, false))),
-                ("option=bar!@+42", Some((None, Some("option"), Some("bar"), Index::forward(42), false, false))),
-                ("option=bar!@[1, 2, 3]", Some((None, Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), false, false))),
-                ("option=bar!@+[4, 5, 12]", Some((None, Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), false, false))),
-                ("option=bar!@-[1, 2, 4]", Some((None, Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), false, false))),
-                ("-option=bar!@1", Some((Some("-"), Some("option"), Some("bar"), Index::forward(1), false, false))),
-                ("-option=bar!@-1", Some((Some("-"), Some("option"), Some("bar"), Index::backward(1), false, false))),
-                ("-option=bar!@+42", Some((Some("-"), Some("option"), Some("bar"), Index::forward(42), false, false))),
-                ("-option=bar!@[1, 2, 3]", Some((Some("-"), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), false, false))),
-                ("-option=bar!@+[4, 5, 12]", Some((Some("-"), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), false, false))),
-                ("-option=bar!@-[1, 2, 4]", Some((Some("-"), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), false, false))),
-                ("--option=bar!@1", Some((Some("--"), Some("option"), Some("bar"), Index::forward(1), false, false))),
-                ("--option=bar!@-1", Some((Some("--"), Some("option"), Some("bar"), Index::backward(1), false, false))),
-                ("--option=bar!@+42", Some((Some("--"), Some("option"), Some("bar"), Index::forward(42), false, false))),
-                ("--option=bar!@[1, 2, 3]", Some((Some("--"), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), false, false))),
-                ("--option=bar!@+[4, 5, 12]", Some((Some("--"), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), false, false))),
-                ("--option=bar!@-[1, 2, 4]", Some((Some("--"), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), false, false))),
-                ("option=bar/@1", Some((None, Some("option"), Some("bar"), Index::forward(1), true, true))),
-                ("option=bar/@-1", Some((None, Some("option"), Some("bar"), Index::backward(1), true, true))),
-                ("option=bar/@+42", Some((None, Some("option"), Some("bar"), Index::forward(42), true, true))),
-                ("option=bar/@[1, 2, 3]", Some((None, Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), true, true))),
-                ("option=bar/@+[4, 5, 12]", Some((None, Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), true, true))),
-                ("option=bar/@-[1, 2, 4]", Some((None, Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), true, true))),
-                ("-option=bar/@1", Some((Some("-"), Some("option"), Some("bar"), Index::forward(1), true, true))),
-                ("-option=bar/@-1", Some((Some("-"), Some("option"), Some("bar"), Index::backward(1), true, true))),
-                ("-option=bar/@+42", Some((Some("-"), Some("option"), Some("bar"), Index::forward(42), true, true))),
-                ("-option=bar/@[1, 2, 3]", Some((Some("-"), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), true, true))),
-                ("-option=bar/@+[4, 5, 12]", Some((Some("-"), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), true, true))),
-                ("-option=bar/@-[1, 2, 4]", Some((Some("-"), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), true, true))),
-                ("--option=bar/@1", Some((Some("--"), Some("option"), Some("bar"), Index::forward(1), true, true))),
-                ("--option=bar/@-1", Some((Some("--"), Some("option"), Some("bar"), Index::backward(1), true, true))),
-                ("--option=bar/@+42", Some((Some("--"), Some("option"), Some("bar"), Index::forward(42), true, true))),
-                ("--option=bar/@[1, 2, 3]", Some((Some("--"), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), true, true))),
-                ("--option=bar/@+[4, 5, 12]", Some((Some("--"), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), true, true))),
-                ("--option=bar/@-[1, 2, 4]", Some((Some("--"), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), true, true))),
-                ("option=bar!/@1", Some((None, Some("option"), Some("bar"), Index::forward(1), true, false))),
-                ("option=bar!/@-1", Some((None, Some("option"), Some("bar"), Index::backward(1), true, false))),
-                ("option=bar!/@+42", Some((None, Some("option"), Some("bar"), Index::forward(42), true, false))),
-                ("option=bar!/@[1, 2, 3]", Some((None, Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), true, false))),
-                ("option=bar!/@+[4, 5, 12]", Some((None, Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), true, false))),
-                ("option=bar!/@-[1, 2, 4]", Some((None, Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), true, false))),
-                ("-option=bar!/@1", Some((Some("-"), Some("option"), Some("bar"), Index::forward(1), true, false))),
-                ("-option=bar!/@-1", Some((Some("-"), Some("option"), Some("bar"), Index::backward(1), true, false))),
-                ("-option=bar!/@+42", Some((Some("-"), Some("option"), Some("bar"), Index::forward(42), true, false))),
-                ("-option=bar!/@[1, 2, 3]", Some((Some("-"), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), true, false))),
-                ("-option=bar!/@+[4, 5, 12]", Some((Some("-"), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), true, false))),
-                ("-option=bar!/@-[1, 2, 4]", Some((Some("-"), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), true, false))),
-                ("--option=bar!/@1", Some((Some("--"), Some("option"), Some("bar"), Index::forward(1), true, false))),
-                ("--option=bar!/@-1", Some((Some("--"), Some("option"), Some("bar"), Index::backward(1), true, false))),
-                ("--option=bar!/@+42", Some((Some("--"), Some("option"), Some("bar"), Index::forward(42), true, false))),
-                ("--option=bar!/@[1, 2, 3]", Some((Some("--"), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), true, false))),
-                ("--option=bar!/@+[4, 5, 12]", Some((Some("--"), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), true, false))),
-                ("--option=bar!/@-[1, 2, 4]", Some((Some("--"), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), true, false))),
-                ("option=bar/!@1", Some((None, Some("option"), Some("bar"), Index::forward(1), true, false))),
-                ("option=bar/!@-1", Some((None, Some("option"), Some("bar"), Index::backward(1), true, false))),
-                ("option=bar/!@+42", Some((None, Some("option"), Some("bar"), Index::forward(42), true, false))),
-                ("option=bar/!@[1, 2, 3]", Some((None, Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), true, false))),
-                ("option=bar/!@+[4, 5, 12]", Some((None, Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), true, false))),
-                ("option=bar/!@-[1, 2, 4]", Some((None, Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), true, false))),
-                ("-option=bar/!@1", Some((Some("-"), Some("option"), Some("bar"), Index::forward(1), true, false))),
-                ("-option=bar/!@-1", Some((Some("-"), Some("option"), Some("bar"), Index::backward(1), true, false))),
-                ("-option=bar/!@+42", Some((Some("-"), Some("option"), Some("bar"), Index::forward(42), true, false))),
-                ("-option=bar/!@[1, 2, 3]", Some((Some("-"), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), true, false))),
-                ("-option=bar/!@+[4, 5, 12]", Some((Some("-"), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), true, false))),
-                ("-option=bar/!@-[1, 2, 4]", Some((Some("-"), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), true, false))),
-                ("--option=bar/!@1", Some((Some("--"), Some("option"), Some("bar"), Index::forward(1), true, false))),
-                ("--option=bar/!@-1", Some((Some("--"), Some("option"), Some("bar"), Index::backward(1), true, false))),
-                ("--option=bar/!@+42", Some((Some("--"), Some("option"), Some("bar"), Index::forward(42), true, false))),
-                ("--option=bar/!@[1, 2, 3]", Some((Some("--"), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), true, false))),
-                ("--option=bar/!@+[4, 5, 12]", Some((Some("--"), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), true, false))),
-                ("--option=bar/!@-[1, 2, 4]", Some((Some("--"), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), true, false))),
+                (
+                    "o=b",
+                    Some((None, Some("o"), Some("b"), Index::default(), false, true)),
+                ),
+                (
+                    "o=b!",
+                    Some((None, Some("o"), Some("b"), Index::default(), false, false)),
+                ),
+                (
+                    "o=b/",
+                    Some((None, Some("o"), Some("b"), Index::default(), true, true)),
+                ),
+                (
+                    "o=b!/",
+                    Some((None, Some("o"), Some("b"), Index::default(), true, false)),
+                ),
+                (
+                    "o=b/!",
+                    Some((None, Some("o"), Some("b"), Index::default(), true, false)),
+                ),
+                (
+                    "-o=b",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b!",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b/",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b!/",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b/!",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b!",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b/",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b!/",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b/!",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "=b",
+                    Some((None, None, Some("b"), Index::default(), false, true)),
+                ),
+                (
+                    "=b!",
+                    Some((None, None, Some("b"), Index::default(), false, false)),
+                ),
+                (
+                    "=b/",
+                    Some((None, None, Some("b"), Index::default(), true, true)),
+                ),
+                (
+                    "=b!/",
+                    Some((None, None, Some("b"), Index::default(), true, false)),
+                ),
+                (
+                    "=b/!",
+                    Some((None, None, Some("b"), Index::default(), true, false)),
+                ),
+                (
+                    "o=b@1",
+                    Some((None, Some("o"), Some("b"), Index::forward(1), false, true)),
+                ),
+                (
+                    "o=b@-1",
+                    Some((None, Some("o"), Some("b"), Index::backward(1), false, true)),
+                ),
+                (
+                    "o=b@+42",
+                    Some((None, Some("o"), Some("b"), Index::forward(42), false, true)),
+                ),
+                (
+                    "o=b@[1, 2, 3]",
+                    Some((
+                        None,
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "o=b@+[4, 5, 12]",
+                    Some((
+                        None,
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "o=b@-[1, 2, 4]",
+                    Some((
+                        None,
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b@1",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b@-1",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b@+42",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b@[1, 2, 3]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b@+[4, 5, 12]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b@-[1, 2, 4]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b@1",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b@-1",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b@+42",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b@[1, 2, 3]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b@+[4, 5, 12]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b@-[1, 2, 4]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "o=b!@1",
+                    Some((None, Some("o"), Some("b"), Index::forward(1), false, false)),
+                ),
+                (
+                    "o=b!@-1",
+                    Some((None, Some("o"), Some("b"), Index::backward(1), false, false)),
+                ),
+                (
+                    "o=b!@+42",
+                    Some((None, Some("o"), Some("b"), Index::forward(42), false, false)),
+                ),
+                (
+                    "o=b!@[1, 2, 3]",
+                    Some((
+                        None,
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b!@+[4, 5, 12]",
+                    Some((
+                        None,
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b!@-[1, 2, 4]",
+                    Some((
+                        None,
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!@1",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!@-1",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!@+42",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!@[1, 2, 3]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!@+[4, 5, 12]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!@-[1, 2, 4]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!@1",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!@-1",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!@+42",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!@[1, 2, 3]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!@+[4, 5, 12]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!@-[1, 2, 4]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b/@1",
+                    Some((None, Some("o"), Some("b"), Index::forward(1), true, true)),
+                ),
+                (
+                    "o=b/@-1",
+                    Some((None, Some("o"), Some("b"), Index::backward(1), true, true)),
+                ),
+                (
+                    "o=b/@+42",
+                    Some((None, Some("o"), Some("b"), Index::forward(42), true, true)),
+                ),
+                (
+                    "o=b/@[1, 2, 3]",
+                    Some((
+                        None,
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "o=b/@+[4, 5, 12]",
+                    Some((
+                        None,
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "o=b/@-[1, 2, 4]",
+                    Some((
+                        None,
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b/@1",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b/@-1",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b/@+42",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b/@[1, 2, 3]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b/@+[4, 5, 12]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b/@-[1, 2, 4]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b/@1",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b/@-1",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b/@+42",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b/@[1, 2, 3]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b/@+[4, 5, 12]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b/@-[1, 2, 4]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "o=b!/@1",
+                    Some((None, Some("o"), Some("b"), Index::forward(1), true, false)),
+                ),
+                (
+                    "o=b!/@-1",
+                    Some((None, Some("o"), Some("b"), Index::backward(1), true, false)),
+                ),
+                (
+                    "o=b!/@+42",
+                    Some((None, Some("o"), Some("b"), Index::forward(42), true, false)),
+                ),
+                (
+                    "o=b!/@[1, 2, 3]",
+                    Some((
+                        None,
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b!/@+[4, 5, 12]",
+                    Some((
+                        None,
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b!/@-[1, 2, 4]",
+                    Some((
+                        None,
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!/@1",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!/@-1",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!/@+42",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!/@[1, 2, 3]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!/@+[4, 5, 12]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!/@-[1, 2, 4]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!/@1",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!/@-1",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!/@+42",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!/@[1, 2, 3]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!/@+[4, 5, 12]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!/@-[1, 2, 4]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b/!@1",
+                    Some((None, Some("o"), Some("b"), Index::forward(1), true, false)),
+                ),
+                (
+                    "o=b/!@-1",
+                    Some((None, Some("o"), Some("b"), Index::backward(1), true, false)),
+                ),
+                (
+                    "o=b/!@+42",
+                    Some((None, Some("o"), Some("b"), Index::forward(42), true, false)),
+                ),
+                (
+                    "o=b/!@[1, 2, 3]",
+                    Some((
+                        None,
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b/!@+[4, 5, 12]",
+                    Some((
+                        None,
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b/!@-[1, 2, 4]",
+                    Some((
+                        None,
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b/!@1",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b/!@-1",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b/!@+42",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b/!@[1, 2, 3]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b/!@+[4, 5, 12]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b/!@-[1, 2, 4]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b/!@1",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b/!@-1",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b/!@+42",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b/!@[1, 2, 3]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b/!@+[4, 5, 12]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b/!@-[1, 2, 4]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar!",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar/",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar!/",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar/!",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar!",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar/",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar!/",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar/!",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar!",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar/",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar!/",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar/!",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "=bar",
+                    Some((None, None, Some("bar"), Index::default(), false, true)),
+                ),
+                (
+                    "=bar!",
+                    Some((None, None, Some("bar"), Index::default(), false, false)),
+                ),
+                (
+                    "=bar/",
+                    Some((None, None, Some("bar"), Index::default(), true, true)),
+                ),
+                (
+                    "=bar!/",
+                    Some((None, None, Some("bar"), Index::default(), true, false)),
+                ),
+                (
+                    "=bar/!",
+                    Some((None, None, Some("bar"), Index::default(), true, false)),
+                ),
+                (
+                    "option=bar@1",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar@-1",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar@+42",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar@[1, 2, 3]",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar@+[4, 5, 12]",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar@-[1, 2, 4]",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar@1",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar@-1",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar@+42",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar@[1, 2, 3]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar@+[4, 5, 12]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar@-[1, 2, 4]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar@1",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar@-1",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar@+42",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar@[1, 2, 3]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar@+[4, 5, 12]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar@-[1, 2, 4]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar!@1",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar!@-1",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar!@+42",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar!@[1, 2, 3]",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar!@+[4, 5, 12]",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar!@-[1, 2, 4]",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!@1",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!@-1",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!@+42",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!@[1, 2, 3]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!@+[4, 5, 12]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!@-[1, 2, 4]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!@1",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!@-1",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!@+42",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!@[1, 2, 3]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!@+[4, 5, 12]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!@-[1, 2, 4]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar/@1",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar/@-1",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar/@+42",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar/@[1, 2, 3]",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar/@+[4, 5, 12]",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar/@-[1, 2, 4]",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar/@1",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar/@-1",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar/@+42",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar/@[1, 2, 3]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar/@+[4, 5, 12]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar/@-[1, 2, 4]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar/@1",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar/@-1",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar/@+42",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar/@[1, 2, 3]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar/@+[4, 5, 12]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar/@-[1, 2, 4]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar!/@1",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar!/@-1",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar!/@+42",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar!/@[1, 2, 3]",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar!/@+[4, 5, 12]",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar!/@-[1, 2, 4]",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!/@1",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!/@-1",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!/@+42",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!/@[1, 2, 3]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!/@+[4, 5, 12]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!/@-[1, 2, 4]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!/@1",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!/@-1",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!/@+42",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!/@[1, 2, 3]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!/@+[4, 5, 12]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!/@-[1, 2, 4]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar/!@1",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar/!@-1",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar/!@+42",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar/!@[1, 2, 3]",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar/!@+[4, 5, 12]",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar/!@-[1, 2, 4]",
+                    Some((
+                        None,
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar/!@1",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar/!@-1",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar/!@+42",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar/!@[1, 2, 3]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar/!@+[4, 5, 12]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar/!@-[1, 2, 4]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar/!@1",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar/!@-1",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar/!@+42",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar/!@[1, 2, 3]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar/!@+[4, 5, 12]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar/!@-[1, 2, 4]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
             ];
 
-            let prefixs = vec![
-                String::from("--"),
-                String::from("-"),
-            ];
+            let prefixs = vec![String::from("--"), String::from("-")];
 
             for case in test_cases.iter() {
-                try_to_verify_one_task(case.0, &prefixs,&case.1);
+                try_to_verify_one_task(case.0, &prefixs, &case.1);
             }
         }
-        {// test 2
+        {
+            // test 2
             let test_cases = vec![
-                ("", Some((Some(""), None, None, Index::default(), false, true))),
-                ("o=b", Some((Some(""), Some("o"), Some("b"), Index::default(), false, true))),
-                ("o=b!", Some((Some(""), Some("o"), Some("b"), Index::default(), false, false))),
-                ("o=b/", Some((Some(""), Some("o"), Some("b"), Index::default(), true, true))),
-                ("o=b!/", Some((Some(""), Some("o"), Some("b"), Index::default(), true, false))),
-                ("o=b/!", Some((Some(""), Some("o"), Some("b"), Index::default(), true, false))),
-                ("-o=b", Some((Some("-"), Some("o"), Some("b"), Index::default(), false, true))),
-                ("-o=b!", Some((Some("-"), Some("o"), Some("b"), Index::default(), false, false))),
-                ("-o=b/", Some((Some("-"), Some("o"), Some("b"), Index::default(), true, true))),
-                ("-o=b!/", Some((Some("-"), Some("o"), Some("b"), Index::default(), true, false))),
-                ("-o=b/!", Some((Some("-"), Some("o"), Some("b"), Index::default(), true, false))),
-                ("--o=b", Some((Some("--"), Some("o"), Some("b"), Index::default(), false, true))),
-                ("--o=b!", Some((Some("--"), Some("o"), Some("b"), Index::default(), false, false))),
-                ("--o=b/", Some((Some("--"), Some("o"), Some("b"), Index::default(), true, true))),
-                ("--o=b!/", Some((Some("--"), Some("o"), Some("b"), Index::default(), true, false))),
-                ("--o=b/!", Some((Some("--"), Some("o"), Some("b"), Index::default(), true, false))),
-                ("=b", Some((Some(""), None, Some("b"), Index::default(), false, true))),
-                ("=b!", Some((Some(""), None, Some("b"), Index::default(), false, false))),
-                ("=b/", Some((Some(""), None, Some("b"), Index::default(), true, true))),
-                ("=b!/", Some((Some(""), None, Some("b"), Index::default(), true, false))),
-                ("=b/!", Some((Some(""), None, Some("b"), Index::default(), true, false))),
-                ("o=b@1", Some((Some(""), Some("o"), Some("b"), Index::forward(1), false, true))),
-                ("o=b@-1", Some((Some(""), Some("o"), Some("b"), Index::backward(1), false, true))),
-                ("o=b@+42", Some((Some(""), Some("o"), Some("b"), Index::forward(42), false, true))),
-                ("o=b@[1, 2, 3]", Some((Some(""), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), false, true))),
-                ("o=b@+[4, 5, 12]", Some((Some(""), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), false, true))),
-                ("o=b@-[1, 2, 4]", Some((Some(""), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), false, true))),
-                ("-o=b@1", Some((Some("-"), Some("o"), Some("b"), Index::forward(1), false, true))),
-                ("-o=b@-1", Some((Some("-"), Some("o"), Some("b"), Index::backward(1), false, true))),
-                ("-o=b@+42", Some((Some("-"), Some("o"), Some("b"), Index::forward(42), false, true))),
-                ("-o=b@[1, 2, 3]", Some((Some("-"), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), false, true))),
-                ("-o=b@+[4, 5, 12]", Some((Some("-"), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), false, true))),
-                ("-o=b@-[1, 2, 4]", Some((Some("-"), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), false, true))),
-                ("--o=b@1", Some((Some("--"), Some("o"), Some("b"), Index::forward(1), false, true))),
-                ("--o=b@-1", Some((Some("--"), Some("o"), Some("b"), Index::backward(1), false, true))),
-                ("--o=b@+42", Some((Some("--"), Some("o"), Some("b"), Index::forward(42), false, true))),
-                ("--o=b@[1, 2, 3]", Some((Some("--"), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), false, true))),
-                ("--o=b@+[4, 5, 12]", Some((Some("--"), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), false, true))),
-                ("--o=b@-[1, 2, 4]", Some((Some("--"), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), false, true))),
-                ("o=b!@1", Some((Some(""), Some("o"), Some("b"), Index::forward(1), false, false))),
-                ("o=b!@-1", Some((Some(""), Some("o"), Some("b"), Index::backward(1), false, false))),
-                ("o=b!@+42", Some((Some(""), Some("o"), Some("b"), Index::forward(42), false, false))),
-                ("o=b!@[1, 2, 3]", Some((Some(""), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), false, false))),
-                ("o=b!@+[4, 5, 12]", Some((Some(""), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), false, false))),
-                ("o=b!@-[1, 2, 4]", Some((Some(""), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), false, false))),
-                ("-o=b!@1", Some((Some("-"), Some("o"), Some("b"), Index::forward(1), false, false))),
-                ("-o=b!@-1", Some((Some("-"), Some("o"), Some("b"), Index::backward(1), false, false))),
-                ("-o=b!@+42", Some((Some("-"), Some("o"), Some("b"), Index::forward(42), false, false))),
-                ("-o=b!@[1, 2, 3]", Some((Some("-"), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), false, false))),
-                ("-o=b!@+[4, 5, 12]", Some((Some("-"), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), false, false))),
-                ("-o=b!@-[1, 2, 4]", Some((Some("-"), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), false, false))),
-                ("--o=b!@1", Some((Some("--"), Some("o"), Some("b"), Index::forward(1), false, false))),
-                ("--o=b!@-1", Some((Some("--"), Some("o"), Some("b"), Index::backward(1), false, false))),
-                ("--o=b!@+42", Some((Some("--"), Some("o"), Some("b"), Index::forward(42), false, false))),
-                ("--o=b!@[1, 2, 3]", Some((Some("--"), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), false, false))),
-                ("--o=b!@+[4, 5, 12]", Some((Some("--"), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), false, false))),
-                ("--o=b!@-[1, 2, 4]", Some((Some("--"), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), false, false))),
-                ("o=b/@1", Some((Some(""), Some("o"), Some("b"), Index::forward(1), true, true))),
-                ("o=b/@-1", Some((Some(""), Some("o"), Some("b"), Index::backward(1), true, true))),
-                ("o=b/@+42", Some((Some(""), Some("o"), Some("b"), Index::forward(42), true, true))),
-                ("o=b/@[1, 2, 3]", Some((Some(""), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), true, true))),
-                ("o=b/@+[4, 5, 12]", Some((Some(""), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), true, true))),
-                ("o=b/@-[1, 2, 4]", Some((Some(""), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), true, true))),
-                ("-o=b/@1", Some((Some("-"), Some("o"), Some("b"), Index::forward(1), true, true))),
-                ("-o=b/@-1", Some((Some("-"), Some("o"), Some("b"), Index::backward(1), true, true))),
-                ("-o=b/@+42", Some((Some("-"), Some("o"), Some("b"), Index::forward(42), true, true))),
-                ("-o=b/@[1, 2, 3]", Some((Some("-"), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), true, true))),
-                ("-o=b/@+[4, 5, 12]", Some((Some("-"), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), true, true))),
-                ("-o=b/@-[1, 2, 4]", Some((Some("-"), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), true, true))),
-                ("--o=b/@1", Some((Some("--"), Some("o"), Some("b"), Index::forward(1), true, true))),
-                ("--o=b/@-1", Some((Some("--"), Some("o"), Some("b"), Index::backward(1), true, true))),
-                ("--o=b/@+42", Some((Some("--"), Some("o"), Some("b"), Index::forward(42), true, true))),
-                ("--o=b/@[1, 2, 3]", Some((Some("--"), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), true, true))),
-                ("--o=b/@+[4, 5, 12]", Some((Some("--"), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), true, true))),
-                ("--o=b/@-[1, 2, 4]", Some((Some("--"), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), true, true))),
-                ("o=b!/@1", Some((Some(""), Some("o"), Some("b"), Index::forward(1), true, false))),
-                ("o=b!/@-1", Some((Some(""), Some("o"), Some("b"), Index::backward(1), true, false))),
-                ("o=b!/@+42", Some((Some(""), Some("o"), Some("b"), Index::forward(42), true, false))),
-                ("o=b!/@[1, 2, 3]", Some((Some(""), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), true, false))),
-                ("o=b!/@+[4, 5, 12]", Some((Some(""), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), true, false))),
-                ("o=b!/@-[1, 2, 4]", Some((Some(""), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), true, false))),
-                ("-o=b!/@1", Some((Some("-"), Some("o"), Some("b"), Index::forward(1), true, false))),
-                ("-o=b!/@-1", Some((Some("-"), Some("o"), Some("b"), Index::backward(1), true, false))),
-                ("-o=b!/@+42", Some((Some("-"), Some("o"), Some("b"), Index::forward(42), true, false))),
-                ("-o=b!/@[1, 2, 3]", Some((Some("-"), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), true, false))),
-                ("-o=b!/@+[4, 5, 12]", Some((Some("-"), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), true, false))),
-                ("-o=b!/@-[1, 2, 4]", Some((Some("-"), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), true, false))),
-                ("--o=b!/@1", Some((Some("--"), Some("o"), Some("b"), Index::forward(1), true, false))),
-                ("--o=b!/@-1", Some((Some("--"), Some("o"), Some("b"), Index::backward(1), true, false))),
-                ("--o=b!/@+42", Some((Some("--"), Some("o"), Some("b"), Index::forward(42), true, false))),
-                ("--o=b!/@[1, 2, 3]", Some((Some("--"), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), true, false))),
-                ("--o=b!/@+[4, 5, 12]", Some((Some("--"), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), true, false))),
-                ("--o=b!/@-[1, 2, 4]", Some((Some("--"), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), true, false))),
-                ("o=b/!@1", Some((Some(""), Some("o"), Some("b"), Index::forward(1), true, false))),
-                ("o=b/!@-1", Some((Some(""), Some("o"), Some("b"), Index::backward(1), true, false))),
-                ("o=b/!@+42", Some((Some(""), Some("o"), Some("b"), Index::forward(42), true, false))),
-                ("o=b/!@[1, 2, 3]", Some((Some(""), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), true, false))),
-                ("o=b/!@+[4, 5, 12]", Some((Some(""), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), true, false))),
-                ("o=b/!@-[1, 2, 4]", Some((Some(""), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), true, false))),
-                ("-o=b/!@1", Some((Some("-"), Some("o"), Some("b"), Index::forward(1), true, false))),
-                ("-o=b/!@-1", Some((Some("-"), Some("o"), Some("b"), Index::backward(1), true, false))),
-                ("-o=b/!@+42", Some((Some("-"), Some("o"), Some("b"), Index::forward(42), true, false))),
-                ("-o=b/!@[1, 2, 3]", Some((Some("-"), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), true, false))),
-                ("-o=b/!@+[4, 5, 12]", Some((Some("-"), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), true, false))),
-                ("-o=b/!@-[1, 2, 4]", Some((Some("-"), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), true, false))),
-                ("--o=b/!@1", Some((Some("--"), Some("o"), Some("b"), Index::forward(1), true, false))),
-                ("--o=b/!@-1", Some((Some("--"), Some("o"), Some("b"), Index::backward(1), true, false))),
-                ("--o=b/!@+42", Some((Some("--"), Some("o"), Some("b"), Index::forward(42), true, false))),
-                ("--o=b/!@[1, 2, 3]", Some((Some("--"), Some("o"), Some("b"), Index::list(vec![1, 2, 3]), true, false))),
-                ("--o=b/!@+[4, 5, 12]", Some((Some("--"), Some("o"), Some("b"), Index::list(vec![4, 5, 12]), true, false))),
-                ("--o=b/!@-[1, 2, 4]", Some((Some("--"), Some("o"), Some("b"), Index::except(vec![1, 2, 4]), true, false))),
-                ("option=bar", Some((Some(""), Some("option"), Some("bar"), Index::default(), false, true))),
-                ("option=bar!", Some((Some(""), Some("option"), Some("bar"), Index::default(), false, false))),
-                ("option=bar/", Some((Some(""), Some("option"), Some("bar"), Index::default(), true, true))),
-                ("option=bar!/", Some((Some(""), Some("option"), Some("bar"), Index::default(), true, false))),
-                ("option=bar/!", Some((Some(""), Some("option"), Some("bar"), Index::default(), true, false))),
-                ("-option=bar", Some((Some("-"), Some("option"), Some("bar"), Index::default(), false, true))),
-                ("-option=bar!", Some((Some("-"), Some("option"), Some("bar"), Index::default(), false, false))),
-                ("-option=bar/", Some((Some("-"), Some("option"), Some("bar"), Index::default(), true, true))),
-                ("-option=bar!/", Some((Some("-"), Some("option"), Some("bar"), Index::default(), true, false))),
-                ("-option=bar/!", Some((Some("-"), Some("option"), Some("bar"), Index::default(), true, false))),
-                ("--option=bar", Some((Some("--"), Some("option"), Some("bar"), Index::default(), false, true))),
-                ("--option=bar!", Some((Some("--"), Some("option"), Some("bar"), Index::default(), false, false))),
-                ("--option=bar/", Some((Some("--"), Some("option"), Some("bar"), Index::default(), true, true))),
-                ("--option=bar!/", Some((Some("--"), Some("option"), Some("bar"), Index::default(), true, false))),
-                ("--option=bar/!", Some((Some("--"), Some("option"), Some("bar"), Index::default(), true, false))),
-                ("=bar", Some((Some(""), None, Some("bar"), Index::default(), false, true))),
-                ("=bar!", Some((Some(""), None, Some("bar"), Index::default(), false, false))),
-                ("=bar/", Some((Some(""), None, Some("bar"), Index::default(), true, true))),
-                ("=bar!/", Some((Some(""), None, Some("bar"), Index::default(), true, false))),
-                ("=bar/!", Some((Some(""), None, Some("bar"), Index::default(), true, false))),
-                ("option=bar@1", Some((Some(""), Some("option"), Some("bar"), Index::forward(1), false, true))),
-                ("option=bar@-1", Some((Some(""), Some("option"), Some("bar"), Index::backward(1), false, true))),
-                ("option=bar@+42", Some((Some(""), Some("option"), Some("bar"), Index::forward(42), false, true))),
-                ("option=bar@[1, 2, 3]", Some((Some(""), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), false, true))),
-                ("option=bar@+[4, 5, 12]", Some((Some(""), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), false, true))),
-                ("option=bar@-[1, 2, 4]", Some((Some(""), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), false, true))),
-                ("-option=bar@1", Some((Some("-"), Some("option"), Some("bar"), Index::forward(1), false, true))),
-                ("-option=bar@-1", Some((Some("-"), Some("option"), Some("bar"), Index::backward(1), false, true))),
-                ("-option=bar@+42", Some((Some("-"), Some("option"), Some("bar"), Index::forward(42), false, true))),
-                ("-option=bar@[1, 2, 3]", Some((Some("-"), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), false, true))),
-                ("-option=bar@+[4, 5, 12]", Some((Some("-"), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), false, true))),
-                ("-option=bar@-[1, 2, 4]", Some((Some("-"), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), false, true))),
-                ("--option=bar@1", Some((Some("--"), Some("option"), Some("bar"), Index::forward(1), false, true))),
-                ("--option=bar@-1", Some((Some("--"), Some("option"), Some("bar"), Index::backward(1), false, true))),
-                ("--option=bar@+42", Some((Some("--"), Some("option"), Some("bar"), Index::forward(42), false, true))),
-                ("--option=bar@[1, 2, 3]", Some((Some("--"), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), false, true))),
-                ("--option=bar@+[4, 5, 12]", Some((Some("--"), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), false, true))),
-                ("--option=bar@-[1, 2, 4]", Some((Some("--"), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), false, true))),
-                ("option=bar!@1", Some((Some(""), Some("option"), Some("bar"), Index::forward(1), false, false))),
-                ("option=bar!@-1", Some((Some(""), Some("option"), Some("bar"), Index::backward(1), false, false))),
-                ("option=bar!@+42", Some((Some(""), Some("option"), Some("bar"), Index::forward(42), false, false))),
-                ("option=bar!@[1, 2, 3]", Some((Some(""), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), false, false))),
-                ("option=bar!@+[4, 5, 12]", Some((Some(""), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), false, false))),
-                ("option=bar!@-[1, 2, 4]", Some((Some(""), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), false, false))),
-                ("-option=bar!@1", Some((Some("-"), Some("option"), Some("bar"), Index::forward(1), false, false))),
-                ("-option=bar!@-1", Some((Some("-"), Some("option"), Some("bar"), Index::backward(1), false, false))),
-                ("-option=bar!@+42", Some((Some("-"), Some("option"), Some("bar"), Index::forward(42), false, false))),
-                ("-option=bar!@[1, 2, 3]", Some((Some("-"), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), false, false))),
-                ("-option=bar!@+[4, 5, 12]", Some((Some("-"), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), false, false))),
-                ("-option=bar!@-[1, 2, 4]", Some((Some("-"), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), false, false))),
-                ("--option=bar!@1", Some((Some("--"), Some("option"), Some("bar"), Index::forward(1), false, false))),
-                ("--option=bar!@-1", Some((Some("--"), Some("option"), Some("bar"), Index::backward(1), false, false))),
-                ("--option=bar!@+42", Some((Some("--"), Some("option"), Some("bar"), Index::forward(42), false, false))),
-                ("--option=bar!@[1, 2, 3]", Some((Some("--"), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), false, false))),
-                ("--option=bar!@+[4, 5, 12]", Some((Some("--"), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), false, false))),
-                ("--option=bar!@-[1, 2, 4]", Some((Some("--"), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), false, false))),
-                ("option=bar/@1", Some((Some(""), Some("option"), Some("bar"), Index::forward(1), true, true))),
-                ("option=bar/@-1", Some((Some(""), Some("option"), Some("bar"), Index::backward(1), true, true))),
-                ("option=bar/@+42", Some((Some(""), Some("option"), Some("bar"), Index::forward(42), true, true))),
-                ("option=bar/@[1, 2, 3]", Some((Some(""), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), true, true))),
-                ("option=bar/@+[4, 5, 12]", Some((Some(""), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), true, true))),
-                ("option=bar/@-[1, 2, 4]", Some((Some(""), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), true, true))),
-                ("-option=bar/@1", Some((Some("-"), Some("option"), Some("bar"), Index::forward(1), true, true))),
-                ("-option=bar/@-1", Some((Some("-"), Some("option"), Some("bar"), Index::backward(1), true, true))),
-                ("-option=bar/@+42", Some((Some("-"), Some("option"), Some("bar"), Index::forward(42), true, true))),
-                ("-option=bar/@[1, 2, 3]", Some((Some("-"), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), true, true))),
-                ("-option=bar/@+[4, 5, 12]", Some((Some("-"), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), true, true))),
-                ("-option=bar/@-[1, 2, 4]", Some((Some("-"), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), true, true))),
-                ("--option=bar/@1", Some((Some("--"), Some("option"), Some("bar"), Index::forward(1), true, true))),
-                ("--option=bar/@-1", Some((Some("--"), Some("option"), Some("bar"), Index::backward(1), true, true))),
-                ("--option=bar/@+42", Some((Some("--"), Some("option"), Some("bar"), Index::forward(42), true, true))),
-                ("--option=bar/@[1, 2, 3]", Some((Some("--"), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), true, true))),
-                ("--option=bar/@+[4, 5, 12]", Some((Some("--"), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), true, true))),
-                ("--option=bar/@-[1, 2, 4]", Some((Some("--"), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), true, true))),
-                ("option=bar!/@1", Some((Some(""), Some("option"), Some("bar"), Index::forward(1), true, false))),
-                ("option=bar!/@-1", Some((Some(""), Some("option"), Some("bar"), Index::backward(1), true, false))),
-                ("option=bar!/@+42", Some((Some(""), Some("option"), Some("bar"), Index::forward(42), true, false))),
-                ("option=bar!/@[1, 2, 3]", Some((Some(""), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), true, false))),
-                ("option=bar!/@+[4, 5, 12]", Some((Some(""), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), true, false))),
-                ("option=bar!/@-[1, 2, 4]", Some((Some(""), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), true, false))),
-                ("-option=bar!/@1", Some((Some("-"), Some("option"), Some("bar"), Index::forward(1), true, false))),
-                ("-option=bar!/@-1", Some((Some("-"), Some("option"), Some("bar"), Index::backward(1), true, false))),
-                ("-option=bar!/@+42", Some((Some("-"), Some("option"), Some("bar"), Index::forward(42), true, false))),
-                ("-option=bar!/@[1, 2, 3]", Some((Some("-"), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), true, false))),
-                ("-option=bar!/@+[4, 5, 12]", Some((Some("-"), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), true, false))),
-                ("-option=bar!/@-[1, 2, 4]", Some((Some("-"), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), true, false))),
-                ("--option=bar!/@1", Some((Some("--"), Some("option"), Some("bar"), Index::forward(1), true, false))),
-                ("--option=bar!/@-1", Some((Some("--"), Some("option"), Some("bar"), Index::backward(1), true, false))),
-                ("--option=bar!/@+42", Some((Some("--"), Some("option"), Some("bar"), Index::forward(42), true, false))),
-                ("--option=bar!/@[1, 2, 3]", Some((Some("--"), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), true, false))),
-                ("--option=bar!/@+[4, 5, 12]", Some((Some("--"), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), true, false))),
-                ("--option=bar!/@-[1, 2, 4]", Some((Some("--"), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), true, false))),
-                ("option=bar/!@1", Some((Some(""), Some("option"), Some("bar"), Index::forward(1), true, false))),
-                ("option=bar/!@-1", Some((Some(""), Some("option"), Some("bar"), Index::backward(1), true, false))),
-                ("option=bar/!@+42", Some((Some(""), Some("option"), Some("bar"), Index::forward(42), true, false))),
-                ("option=bar/!@[1, 2, 3]", Some((Some(""), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), true, false))),
-                ("option=bar/!@+[4, 5, 12]", Some((Some(""), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), true, false))),
-                ("option=bar/!@-[1, 2, 4]", Some((Some(""), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), true, false))),
-                ("-option=bar/!@1", Some((Some("-"), Some("option"), Some("bar"), Index::forward(1), true, false))),
-                ("-option=bar/!@-1", Some((Some("-"), Some("option"), Some("bar"), Index::backward(1), true, false))),
-                ("-option=bar/!@+42", Some((Some("-"), Some("option"), Some("bar"), Index::forward(42), true, false))),
-                ("-option=bar/!@[1, 2, 3]", Some((Some("-"), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), true, false))),
-                ("-option=bar/!@+[4, 5, 12]", Some((Some("-"), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), true, false))),
-                ("-option=bar/!@-[1, 2, 4]", Some((Some("-"), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), true, false))),
-                ("--option=bar/!@1", Some((Some("--"), Some("option"), Some("bar"), Index::forward(1), true, false))),
-                ("--option=bar/!@-1", Some((Some("--"), Some("option"), Some("bar"), Index::backward(1), true, false))),
-                ("--option=bar/!@+42", Some((Some("--"), Some("option"), Some("bar"), Index::forward(42), true, false))),
-                ("--option=bar/!@[1, 2, 3]", Some((Some("--"), Some("option"), Some("bar"), Index::list(vec![1, 2, 3]), true, false))),
-                ("--option=bar/!@+[4, 5, 12]", Some((Some("--"), Some("option"), Some("bar"), Index::list(vec![4, 5, 12]), true, false))),
-                ("--option=bar/!@-[1, 2, 4]", Some((Some("--"), Some("option"), Some("bar"), Index::except(vec![1, 2, 4]), true, false))),
+                (
+                    "",
+                    Some((Some(""), None, None, Index::default(), false, true)),
+                ),
+                (
+                    "o=b",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "o=b!",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b/",
+                    Some((Some(""), Some("o"), Some("b"), Index::default(), true, true)),
+                ),
+                (
+                    "o=b!/",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b/!",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b!",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b/",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b!/",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b/!",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b!",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b/",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b!/",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b/!",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "=b",
+                    Some((Some(""), None, Some("b"), Index::default(), false, true)),
+                ),
+                (
+                    "=b!",
+                    Some((Some(""), None, Some("b"), Index::default(), false, false)),
+                ),
+                (
+                    "=b/",
+                    Some((Some(""), None, Some("b"), Index::default(), true, true)),
+                ),
+                (
+                    "=b!/",
+                    Some((Some(""), None, Some("b"), Index::default(), true, false)),
+                ),
+                (
+                    "=b/!",
+                    Some((Some(""), None, Some("b"), Index::default(), true, false)),
+                ),
+                (
+                    "o=b@1",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "o=b@-1",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "o=b@+42",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "o=b@[1, 2, 3]",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "o=b@+[4, 5, 12]",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "o=b@-[1, 2, 4]",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b@1",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b@-1",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b@+42",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b@[1, 2, 3]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b@+[4, 5, 12]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b@-[1, 2, 4]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b@1",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b@-1",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b@+42",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b@[1, 2, 3]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b@+[4, 5, 12]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b@-[1, 2, 4]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "o=b!@1",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b!@-1",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b!@+42",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b!@[1, 2, 3]",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b!@+[4, 5, 12]",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b!@-[1, 2, 4]",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!@1",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!@-1",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!@+42",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!@[1, 2, 3]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!@+[4, 5, 12]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!@-[1, 2, 4]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!@1",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!@-1",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!@+42",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!@[1, 2, 3]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!@+[4, 5, 12]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!@-[1, 2, 4]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b/@1",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "o=b/@-1",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "o=b/@+42",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "o=b/@[1, 2, 3]",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "o=b/@+[4, 5, 12]",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "o=b/@-[1, 2, 4]",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b/@1",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b/@-1",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b/@+42",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b/@[1, 2, 3]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b/@+[4, 5, 12]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-o=b/@-[1, 2, 4]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b/@1",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b/@-1",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b/@+42",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b/@[1, 2, 3]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b/@+[4, 5, 12]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--o=b/@-[1, 2, 4]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "o=b!/@1",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b!/@-1",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b!/@+42",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b!/@[1, 2, 3]",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b!/@+[4, 5, 12]",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b!/@-[1, 2, 4]",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!/@1",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!/@-1",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!/@+42",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!/@[1, 2, 3]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!/@+[4, 5, 12]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b!/@-[1, 2, 4]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!/@1",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!/@-1",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!/@+42",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!/@[1, 2, 3]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!/@+[4, 5, 12]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b!/@-[1, 2, 4]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b/!@1",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b/!@-1",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b/!@+42",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b/!@[1, 2, 3]",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b/!@+[4, 5, 12]",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "o=b/!@-[1, 2, 4]",
+                    Some((
+                        Some(""),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b/!@1",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b/!@-1",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b/!@+42",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b/!@[1, 2, 3]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b/!@+[4, 5, 12]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-o=b/!@-[1, 2, 4]",
+                    Some((
+                        Some("-"),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b/!@1",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b/!@-1",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b/!@+42",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b/!@[1, 2, 3]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b/!@+[4, 5, 12]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--o=b/!@-[1, 2, 4]",
+                    Some((
+                        Some("--"),
+                        Some("o"),
+                        Some("b"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar!",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar/",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar!/",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar/!",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar!",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar/",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar!/",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar/!",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar!",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar/",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar!/",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar/!",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::default(),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "=bar",
+                    Some((Some(""), None, Some("bar"), Index::default(), false, true)),
+                ),
+                (
+                    "=bar!",
+                    Some((Some(""), None, Some("bar"), Index::default(), false, false)),
+                ),
+                (
+                    "=bar/",
+                    Some((Some(""), None, Some("bar"), Index::default(), true, true)),
+                ),
+                (
+                    "=bar!/",
+                    Some((Some(""), None, Some("bar"), Index::default(), true, false)),
+                ),
+                (
+                    "=bar/!",
+                    Some((Some(""), None, Some("bar"), Index::default(), true, false)),
+                ),
+                (
+                    "option=bar@1",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar@-1",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar@+42",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar@[1, 2, 3]",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar@+[4, 5, 12]",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar@-[1, 2, 4]",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar@1",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar@-1",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar@+42",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar@[1, 2, 3]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar@+[4, 5, 12]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar@-[1, 2, 4]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar@1",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar@-1",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar@+42",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar@[1, 2, 3]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar@+[4, 5, 12]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar@-[1, 2, 4]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar!@1",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar!@-1",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar!@+42",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar!@[1, 2, 3]",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar!@+[4, 5, 12]",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar!@-[1, 2, 4]",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!@1",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!@-1",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!@+42",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!@[1, 2, 3]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!@+[4, 5, 12]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!@-[1, 2, 4]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!@1",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!@-1",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!@+42",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!@[1, 2, 3]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!@+[4, 5, 12]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!@-[1, 2, 4]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        false,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar/@1",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar/@-1",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar/@+42",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar/@[1, 2, 3]",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar/@+[4, 5, 12]",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar/@-[1, 2, 4]",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar/@1",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar/@-1",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar/@+42",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar/@[1, 2, 3]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar/@+[4, 5, 12]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "-option=bar/@-[1, 2, 4]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar/@1",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar/@-1",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar/@+42",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar/@[1, 2, 3]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar/@+[4, 5, 12]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "--option=bar/@-[1, 2, 4]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        true,
+                    )),
+                ),
+                (
+                    "option=bar!/@1",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar!/@-1",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar!/@+42",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar!/@[1, 2, 3]",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar!/@+[4, 5, 12]",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar!/@-[1, 2, 4]",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!/@1",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!/@-1",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!/@+42",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!/@[1, 2, 3]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!/@+[4, 5, 12]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar!/@-[1, 2, 4]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!/@1",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!/@-1",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!/@+42",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!/@[1, 2, 3]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!/@+[4, 5, 12]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar!/@-[1, 2, 4]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar/!@1",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar/!@-1",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar/!@+42",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar/!@[1, 2, 3]",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar/!@+[4, 5, 12]",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "option=bar/!@-[1, 2, 4]",
+                    Some((
+                        Some(""),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar/!@1",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar/!@-1",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar/!@+42",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar/!@[1, 2, 3]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar/!@+[4, 5, 12]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "-option=bar/!@-[1, 2, 4]",
+                    Some((
+                        Some("-"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar/!@1",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar/!@-1",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::backward(1),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar/!@+42",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::forward(42),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar/!@[1, 2, 3]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![1, 2, 3]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar/!@+[4, 5, 12]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::list(vec![4, 5, 12]),
+                        true,
+                        false,
+                    )),
+                ),
+                (
+                    "--option=bar/!@-[1, 2, 4]",
+                    Some((
+                        Some("--"),
+                        Some("option"),
+                        Some("bar"),
+                        Index::except(vec![1, 2, 4]),
+                        true,
+                        false,
+                    )),
+                ),
             ];
 
-            let prefixs = vec![
-                String::from("--"),
-                String::from("-"),
-                String::from(""),
-            ];
+            let prefixs = vec![String::from("--"), String::from("-"), String::from("")];
 
             for case in test_cases.iter() {
-                try_to_verify_one_task(case.0, &prefixs,&case.1);
+                try_to_verify_one_task(case.0, &prefixs, &case.1);
             }
         }
     }
 
-    fn try_to_verify_one_task(pattern: &str, prefix: &Vec<String>, except: &Option<(Option<&str>, Option<&str>, Option<&str>, Index, bool, bool)>) {
+    fn try_to_verify_one_task(
+        pattern: &str,
+        prefix: &Vec<String>,
+        except: &Option<(Option<&str>, Option<&str>, Option<&str>, Index, bool, bool)>,
+    ) {
         let ret = parse_option_str(pattern, prefix);
 
         if let Ok(mut dk) = ret {
@@ -830,13 +4981,15 @@ mod test {
 
                 assert_eq!(except.0.unwrap_or(""), dk.prefix.unwrap_or(&default));
                 assert_eq!(except.1.unwrap_or(""), dk.name.unwrap_or(default.clone()));
-                assert_eq!(except.2.unwrap_or(""), dk.type_name.unwrap_or(default.clone()));
+                assert_eq!(
+                    except.2.unwrap_or(""),
+                    dk.type_name.unwrap_or(default.clone())
+                );
                 assert_eq!(except.3, index);
                 assert_eq!(except.4, dk.deactivate.unwrap_or(false));
                 assert_eq!(!except.5, dk.optional.unwrap_or(false));
             }
-        }
-        else {
+        } else {
             assert!(except.is_none());
         }
     }

@@ -28,9 +28,7 @@ pub struct UidGenerator {
 
 impl UidGenerator {
     pub fn new(uid: Uid) -> Self {
-        Self {
-            uid,
-        }
+        Self { uid }
     }
 }
 
@@ -55,16 +53,14 @@ impl Generator for UidGenerator {
 
 impl From<u64> for UidGenerator {
     fn from(v: u64) -> Self {
-        Self {
-            uid: v.into()
-        }
+        Self { uid: v.into() }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::uid::UidGenerator;
     use crate::uid::Generator;
+    use crate::uid::UidGenerator;
 
     #[test]
     fn make_sure_uid_work() {

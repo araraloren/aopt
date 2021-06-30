@@ -1,7 +1,6 @@
-
 use std::any::Any;
-use std::fmt::Debug;
 use std::convert::From;
+use std::fmt::Debug;
 
 #[derive(Debug)]
 pub enum Value {
@@ -247,37 +246,23 @@ impl Value {
 impl Clone for Value {
     fn clone(&self) -> Self {
         match self {
-            Self::Null | Self::Any(_) => {
-                Self::Null
-            }
-            Self::Int(v) => {
-                Self::Int(*v)
-            }
-            Self::Uint(v) => {
-                Self::Uint(*v)
-            }
-            Self::Flt(v) => {
-                Self::Flt(*v)
-            }
-            Self::Str(v) => {
-                Self::Str(v.clone())
-            }
-            Self::Bool(v) => {
-                Self::Bool(*v)
-            }
-            Self::Array(v) => {
-                Self::Array(v.clone())
-            }
+            Self::Null | Self::Any(_) => Self::Null,
+            Self::Int(v) => Self::Int(*v),
+            Self::Uint(v) => Self::Uint(*v),
+            Self::Flt(v) => Self::Flt(*v),
+            Self::Str(v) => Self::Str(v.clone()),
+            Self::Bool(v) => Self::Bool(*v),
+            Self::Array(v) => Self::Array(v.clone()),
         }
     }
 }
 
-pub struct CloneHelper(Box<dyn Fn (&dyn Any) -> Box<dyn Any>>);
+pub struct CloneHelper(Box<dyn Fn(&dyn Any) -> Box<dyn Any>>);
 
 impl Debug for CloneHelper {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AnyCloneHelper")
-         .field("Fn", &String::from("..."))
-         .finish()
+            .field("Fn", &String::from("..."))
+            .finish()
     }
 }

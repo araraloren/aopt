@@ -1,14 +1,13 @@
-
-use crate::err::{Error, Result};
-use super::parser::DataKeeper;
 use super::parser::parse_argument;
+use super::parser::DataKeeper;
+use crate::err::{Error, Result};
 
 #[derive(Debug, Clone, Default)]
 pub struct Argument<'pre> {
     pub current: Option<String>,
 
     pub next: Option<String>,
-    
+
     data_keeper: DataKeeper<'pre>,
 }
 
@@ -17,7 +16,7 @@ impl<'pre> Argument<'pre> {
         Self {
             current,
             next,
-            .. Self::default()
+            ..Self::default()
         }
     }
 
@@ -37,7 +36,7 @@ impl<'pre> Argument<'pre> {
         self.data_keeper.disable
     }
 
-    #[cfg(not(feature="async"))]
+    #[cfg(not(feature = "async"))]
     pub fn parse(&mut self, prefix: &'pre Vec<String>) -> Result<bool> {
         if let Some(pattern) = &self.current {
             self.data_keeper = parse_argument(pattern.as_ref(), prefix)?;
@@ -52,7 +51,7 @@ impl<'pre> Argument<'pre> {
         Err(Error::NotOptionArgument)
     }
 
-    #[cfg(feature="async")]
+    #[cfg(feature = "async")]
     pub async fn parse(&mut self, prefix: &'pre Vec<String>) -> Result<bool> {
         if let Some(pattern) = &self.current {
             self.data_keeper = parse_argument(pattern.as_ref(), prefix)?;

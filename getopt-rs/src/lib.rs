@@ -1,11 +1,10 @@
-
 pub mod arg;
+pub mod ctx;
 pub mod err;
 pub mod opt;
-pub mod uid;
-pub mod ctx;
-pub mod set;
 pub mod proc;
+pub mod set;
+pub mod uid;
 
 pub(crate) mod pat;
 
@@ -13,8 +12,8 @@ pub(crate) mod pat;
 extern crate log;
 
 pub mod tools {
-    use simplelog::{Config, CombinedLogger, SimpleLogger};
     use log::LevelFilter;
+    use simplelog::{CombinedLogger, Config, SimpleLogger};
 
     pub fn initialize_log() -> std::result::Result<(), log::SetLoggerError> {
         CombinedLogger::init(vec![

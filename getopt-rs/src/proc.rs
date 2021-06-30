@@ -1,11 +1,10 @@
-
-use std::fmt::Debug;
 use async_trait::async_trait;
+use std::fmt::Debug;
 
-use crate::opt::Opt;
-use crate::err::{Result, Error};
-use crate::uid::Uid;
 use crate::ctx::Context;
+use crate::err::{Error, Result};
+use crate::opt::Opt;
+use crate::uid::Uid;
 
 pub trait Message: Debug {
     fn msg_uid(&self) -> Uid;
@@ -17,10 +16,10 @@ pub trait Info: Debug {
 
 #[async_trait(?Send)]
 pub trait Publisher<M: Message> {
-    #[cfg(not(feature="async"))]
+    #[cfg(not(feature = "async"))]
     fn publish(&mut self, msg: M) -> Result<bool>;
 
-    #[cfg(feature="async")]
+    #[cfg(feature = "async")]
     async fn publish(&mut self, msg: M) -> Result<bool>;
 
     fn reg_subscriber(&mut self, info: Box<dyn Info>);
@@ -40,10 +39,10 @@ pub trait Proc: Debug {
 
     fn get_ctx(&self, index: usize) -> Option<&Box<dyn Context>>;
 
-    #[cfg(not(feature="async"))]
+    #[cfg(not(feature = "async"))]
     fn process(&mut self, opt: &mut dyn Opt) -> Result<Option<u64>>;
 
-    #[cfg(feature="async")]
+    #[cfg(feature = "async")]
     async fn process(&mut self, opt: &mut dyn Opt) -> Result<Option<u64>>;
 
     fn is_matched(&self) -> bool;

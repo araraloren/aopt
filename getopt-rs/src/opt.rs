@@ -1,19 +1,18 @@
-
+pub mod callback;
 pub mod help;
-pub mod style;
-pub mod value;
 pub mod index;
 pub mod parser;
-pub mod callback;
+pub mod style;
+pub mod value;
 
 use std::fmt::Debug;
 
 use crate::err::Result;
-use crate::uid::Uid;
-use crate::opt::value::Value as OptValue;
-use crate::opt::index::Index as OptIndex;
-use crate::opt::help::HelpInfo;
 use crate::opt::callback::CallbackType;
+use crate::opt::help::HelpInfo;
+use crate::opt::index::Index as OptIndex;
+use crate::opt::value::Value as OptValue;
+use crate::uid::Uid;
 
 pub trait Type {
     fn get_type_name(&self) -> &'static str;
@@ -105,14 +104,7 @@ pub trait Help {
     fn get_help(&self) -> &HelpInfo;
 }
 
-pub trait Opt: Type +
-               Identifier +
-               Name +
-               Callback +
-               Alias +
-               Optional +
-               Value +
-               Index +
-               Help +
-               Debug
-            { }
+pub trait Opt:
+    Type + Identifier + Name + Callback + Alias + Optional + Value + Index + Help + Debug
+{
+}

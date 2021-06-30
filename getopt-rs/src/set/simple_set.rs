@@ -1,11 +1,10 @@
-
 use std::collections::HashMap;
 
+use super::{Commit, Filter, FilterMut, Uid};
+use super::{CreateInfo, Creator, FilterInfo, Set};
+use super::{Index, IndexMut, Iter, IterMut};
+use crate::err::{Error, Result};
 use crate::opt::Opt;
-use crate::err::{Result, Error};
-use super::{Set, Creator, CreateInfo, FilterInfo};
-use super::{Commit, Uid, Filter, FilterMut};
-use super::{Iter, IterMut, Index, IndexMut};
 
 #[derive(Debug, Default)]
 pub struct SimpleSet {
@@ -41,7 +40,8 @@ impl Set for SimpleSet {
     }
 
     fn add_opt(&mut self, opt_str: &str) -> Result<Commit> {
-        Ok(Commit::new(self, CreateInfo::parse(opt_str, self.get_prefix())?))
+        let info = CreateInfo::parse(opt_str, self.get_prefix())?;
+        Ok(Commit::new(self, info))
     }
 
     fn add_opt_ci(&mut self, ci: CreateInfo) -> Result<Uid> {
@@ -54,9 +54,10 @@ impl Set for SimpleSet {
                 self.opt.push(opt);
                 Ok(uid)
             }
-            None => {
-                Err(Error::InvalidOptionTypeName(format!("{}", ci.get_type_name())))
-            }
+            None => Err(Error::InvalidOptionTypeName(format!(
+                "{}",
+                ci.get_type_name()
+            ))),
         }
     }
 
@@ -90,47 +91,75 @@ impl Set for SimpleSet {
     }
 
     fn filter(&self, opt_str: &str) -> Result<Filter> {
-        Ok(Filter::new(self, FilterInfo::parse(opt_str, self.get_prefix())?))
+        Ok(Filter::new(
+            self,
+            FilterInfo::parse(opt_str, self.get_prefix())?,
+        ))
     }
 
     fn filter_mut(&mut self, opt_str: &str) -> Result<FilterMut> {
-        
+        let info = FilterInfo::parse(opt_str, self.get_prefix())?;
+        Ok(FilterMut::new(self, info))
     }
 
     fn set_prefix(&mut self, prefix: Vec<String>) {
-        todo!()
+        self.prefix = prefix;
     }
 
     fn app_prefix(&mut self, prefix: String) {
-        todo!()
+        self.prefix.push(prefix);
     }
 
     fn get_prefix(&self) -> &Vec<String> {
-        todo!()
+        &self.prefix
     }
 
     fn get_opt_by_index(&self, index: usize) -> Option<&Box<dyn Opt>> {
-        todo!()
+        self.opt.get(index)
     }
 
     fn get_opt_mut_by_index(&mut self, index: usize) -> Option<&mut Box<dyn Opt>> {
-        todo!()
+        self.opt.get_mut(index)
     }
 
     fn find_by_filter(&self, info: &FilterInfo) -> Option<&Box<dyn Opt>> {
-        todo!()
+        for opt in self.opt.iter() {
+            if info.match_opt(opt.as_ref()) {
+                return Some(opt);
+            }
+        }
+        None
     }
 
     fn find_mut_by_filter(&mut self, info: &FilterInfo) -> Option<&mut Box<dyn Opt>> {
-        todo!()
+        for opt in self.opt.iter_mut() {
+            if info.match_opt(opt.as_ref()) {
+                return Some(opt);
+            }
+        }
+        None
     }
 
     fn find_all_by_filter(&self, info: &FilterInfo) -> Vec<&Box<dyn Opt>> {
-        todo!()
+        let mut ret = vec![];
+
+        for opt in self.opt.iter() {
+            if info.match_opt(opt.as_ref()) {
+                ret.push(opt);
+            }
+        }
+        ret
     }
 
     fn find_all_mut_by_filter(&mut self, info: &FilterInfo) -> Vec<&mut Box<dyn Opt>> {
-        todo!()
+        let mut ret = vec![];
+
+        for opt in self.opt.iter_mut() {
+            if info.match_opt(opt.as_ref()) {
+                ret.push(opt);
+            }
+        }
+        ret
     }
 }
 

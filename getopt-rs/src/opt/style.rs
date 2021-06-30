@@ -1,4 +1,3 @@
-
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum Style {
     Boolean,

@@ -1,4 +1,3 @@
-
 use super::Opt;
 
 #[derive(Debug, Clone, Default)]
@@ -9,9 +8,7 @@ pub struct HelpInfo {
 
 impl HelpInfo {
     pub fn new(hint: String, help: String) -> Self {
-        Self {
-            hint, help,
-        }
+        Self { hint, help }
     }
 
     pub fn get_hint(&self) -> &str {

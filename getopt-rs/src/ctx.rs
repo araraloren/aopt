@@ -1,8 +1,7 @@
-
 use std::fmt::Debug;
 
-use crate::opt::{Opt, style::Style};
-use crate::err::{Result, Error};
+use crate::err::{Error, Result};
+use crate::opt::{style::Style, Opt};
 
 pub trait Context: Debug {
     fn match_opt(&self, opt: &dyn Opt) -> bool;

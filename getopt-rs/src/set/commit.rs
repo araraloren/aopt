@@ -1,10 +1,9 @@
-
-use crate::opt::index::Index;
-use crate::opt::value::Value;
+use super::info::CreateInfo;
+use super::{Result, Set, Uid};
 use crate::opt::callback::CallbackType;
 use crate::opt::help::HelpInfo;
-use super::info::CreateInfo;
-use super::{Uid, Set, Result};
+use crate::opt::index::Index;
+use crate::opt::value::Value;
 
 #[derive(Debug)]
 pub struct Commit<'a> {
@@ -15,9 +14,7 @@ pub struct Commit<'a> {
 
 impl<'a> Commit<'a> {
     pub fn new(set: &'a mut dyn Set, info: CreateInfo) -> Self {
-        Self {
-            set, info,
-        }
+        Self { set, info }
     }
 
     pub fn set_deactivate_style(&mut self, deactivate_style: bool) -> &mut Self {
@@ -28,7 +25,7 @@ impl<'a> Commit<'a> {
     pub fn set_optional(&mut self, optional: bool) -> &mut Self {
         self.info.set_optional(optional);
         self
-    }    
+    }
 
     pub fn set_type_name(&mut self, type_name: String) -> &mut Self {
         self.info.set_type_name(type_name);

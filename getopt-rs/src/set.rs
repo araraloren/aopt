@@ -1,20 +1,19 @@
-
-pub mod info;
-pub mod filter;
 pub mod commit;
+pub mod filter;
+pub mod info;
 pub mod simple_set;
 
 use std::fmt::Debug;
 use std::ops::{Index, IndexMut};
 use std::slice::{Iter, IterMut};
 
-use self::info::{FilterInfo, CreateInfo, OptionInfo};
 use self::commit::Commit;
 use self::filter::{Filter, FilterMut};
+use self::info::{CreateInfo, FilterInfo, OptionInfo};
+use crate::err::Result;
+use crate::opt::Opt;
 use crate::proc::{Proc, Subscriber};
 use crate::uid::Uid;
-use crate::opt::Opt;
-use crate::err::Result;
 
 pub trait Creator: Debug {
     fn get_type_name(&self) -> &'static str;
@@ -35,14 +34,12 @@ pub trait Set: Debug + Index<Uid, Output = Box<dyn Opt>> + IndexMut<Uid> {
 
     fn get_creator(&self, opt_type: &str) -> Option<&Box<dyn Creator>>;
 
-
     fn add_opt(&mut self, opt_str: &str) -> Result<Commit>;
 
     fn add_opt_ci(&mut self, ci: CreateInfo) -> Result<Uid>;
 
     fn add_opt_raw(&mut self, opt: Box<dyn Opt>) -> Result<Uid>;
 
-    
     fn get_opt(&self, id: Uid) -> Option<&Box<dyn Opt>>;
 
     fn get_opt_mut(&mut self, id: Uid) -> Option<&mut Box<dyn Opt>>;
@@ -53,18 +50,15 @@ pub trait Set: Debug + Index<Uid, Output = Box<dyn Opt>> + IndexMut<Uid> {
 
     fn iter_mut(&mut self) -> IterMut<Box<dyn Opt>>;
 
-
     fn filter(&self, opt_str: &str) -> Result<Filter>;
 
     fn filter_mut(&mut self, opt_str: &str) -> Result<FilterMut>;
-
 
     fn set_prefix(&mut self, prefix: Vec<String>);
 
     fn app_prefix(&mut self, prefix: String);
 
     fn get_prefix(&self) -> &Vec<String>;
-
 
     #[doc(hidden)]
     fn get_opt_by_index(&self, index: usize) -> Option<&Box<dyn Opt>>;
@@ -88,10 +82,7 @@ pub trait Set: Debug + Index<Uid, Output = Box<dyn Opt>> + IndexMut<Uid> {
 impl<P: Proc, S: Set> Subscriber<P> for S {
     fn subscribe_from(&self, publisher: &mut dyn crate::proc::Publisher<P>) {
         for opt in self.iter() {
-            publisher.reg_subscriber(
-                Box::new(
-                    OptionInfo::from(opt.get_uid())
-            ))
+            publisher.reg_subscriber(Box::new(OptionInfo::from(opt.get_uid())))
         }
     }
 }
