@@ -113,66 +113,30 @@ impl Set for SimpleSet {
     fn get_prefix(&self) -> &Vec<String> {
         &self.prefix
     }
-
-    fn get_opt_by_index(&self, index: usize) -> Option<&Box<dyn Opt>> {
-        self.opt.get(index)
-    }
-
-    fn get_opt_mut_by_index(&mut self, index: usize) -> Option<&mut Box<dyn Opt>> {
-        self.opt.get_mut(index)
-    }
-
-    fn find_by_filter(&self, info: &FilterInfo) -> Option<&Box<dyn Opt>> {
-        for opt in self.opt.iter() {
-            if info.match_opt(opt.as_ref()) {
-                return Some(opt);
-            }
-        }
-        None
-    }
-
-    fn find_mut_by_filter(&mut self, info: &FilterInfo) -> Option<&mut Box<dyn Opt>> {
-        for opt in self.opt.iter_mut() {
-            if info.match_opt(opt.as_ref()) {
-                return Some(opt);
-            }
-        }
-        None
-    }
-
-    fn find_all_by_filter(&self, info: &FilterInfo) -> Vec<&Box<dyn Opt>> {
-        let mut ret = vec![];
-
-        for opt in self.opt.iter() {
-            if info.match_opt(opt.as_ref()) {
-                ret.push(opt);
-            }
-        }
-        ret
-    }
-
-    fn find_all_mut_by_filter(&mut self, info: &FilterInfo) -> Vec<&mut Box<dyn Opt>> {
-        let mut ret = vec![];
-
-        for opt in self.opt.iter_mut() {
-            if info.match_opt(opt.as_ref()) {
-                ret.push(opt);
-            }
-        }
-        ret
-    }
 }
 
 impl Index<Uid> for SimpleSet {
     type Output = Box<dyn Opt>;
 
     fn index(&self, index: Uid) -> &Self::Output {
-        self.get_opt_by_index(index as usize).unwrap()
+        self.get_opt(index).unwrap()
     }
 }
 
 impl IndexMut<Uid> for SimpleSet {
     fn index_mut(&mut self, index: Uid) -> &mut Self::Output {
-        self.get_opt_mut_by_index(index as usize).unwrap()
+        self.get_opt_mut(index).unwrap()
+    }
+}
+
+impl AsRef<[Box<dyn Opt>]> for SimpleSet {
+    fn as_ref(&self) -> &[Box<dyn Opt>] {
+        self.opt.as_ref()
+    }
+}
+
+impl AsMut<[Box<dyn Opt>]> for SimpleSet {
+    fn as_mut(&mut self) -> &mut [Box<dyn Opt>] {
+        self.opt.as_mut()
     }
 }

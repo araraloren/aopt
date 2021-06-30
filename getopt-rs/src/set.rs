@@ -23,7 +23,13 @@ pub trait Creator: Debug {
     fn create_with(&self, id: Uid, create_info: CreateInfo) -> Result<Box<dyn Opt>>;
 }
 
-pub trait Set: Debug + Index<Uid, Output = Box<dyn Opt>> + IndexMut<Uid> {
+pub trait Set:
+    Debug
+    + Index<Uid, Output = Box<dyn Opt>>
+    + IndexMut<Uid>
+    + AsRef<[Box<dyn Opt>]>
+    + AsMut<[Box<dyn Opt>]>
+{
     fn has_creator(&self, type_name: &str) -> bool;
 
     fn add_creator(&mut self, creator: Box<dyn Creator>);
@@ -59,24 +65,6 @@ pub trait Set: Debug + Index<Uid, Output = Box<dyn Opt>> + IndexMut<Uid> {
     fn app_prefix(&mut self, prefix: String);
 
     fn get_prefix(&self) -> &Vec<String>;
-
-    #[doc(hidden)]
-    fn get_opt_by_index(&self, index: usize) -> Option<&Box<dyn Opt>>;
-
-    #[doc(hidden)]
-    fn get_opt_mut_by_index(&mut self, index: usize) -> Option<&mut Box<dyn Opt>>;
-
-    #[doc(hidden)]
-    fn find_by_filter(&self, info: &FilterInfo) -> Option<&Box<dyn Opt>>;
-
-    #[doc(hidden)]
-    fn find_mut_by_filter(&mut self, info: &FilterInfo) -> Option<&mut Box<dyn Opt>>;
-
-    #[doc(hidden)]
-    fn find_all_by_filter(&self, info: &FilterInfo) -> Vec<&Box<dyn Opt>>;
-
-    #[doc(hidden)]
-    fn find_all_mut_by_filter(&mut self, info: &FilterInfo) -> Vec<&mut Box<dyn Opt>>;
 }
 
 impl<P: Proc, S: Set> Subscriber<P> for S {
