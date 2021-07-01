@@ -20,7 +20,7 @@ pub trait Creator: Debug {
 
     fn is_support_deactivate_style(&self) -> bool;
 
-    fn create_with(&self, id: Uid, create_info: CreateInfo) -> Result<Box<dyn Opt>>;
+    fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>>;
 }
 
 pub trait Set:
@@ -64,7 +64,7 @@ pub trait Set:
 
     fn app_prefix(&mut self, prefix: String);
 
-    fn get_prefix(&self) -> &Vec<String>;
+    fn get_prefix(&self) -> &[String];
 }
 
 impl<P: Proc, S: Set> Subscriber<P> for S {

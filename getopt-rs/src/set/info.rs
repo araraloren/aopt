@@ -7,6 +7,8 @@ use crate::uid::Uid;
 
 #[derive(Debug, Clone, Default)]
 pub struct CreateInfo {
+    uid: Uid,
+
     deactivate_style: bool,
 
     optional: bool,
@@ -29,6 +31,11 @@ pub struct CreateInfo {
 }
 
 impl CreateInfo {
+    pub fn set_uid(&mut self, uid: Uid) -> &mut Self {
+        self.uid = uid;
+        self
+    }
+
     pub fn set_deactivate_style(&mut self, deactivate_style: bool) -> &mut Self {
         self.deactivate_style = deactivate_style;
         self
@@ -102,6 +109,10 @@ impl CreateInfo {
     pub fn clr_alias(&mut self) -> &mut Self {
         self.alias.clear();
         self
+    }
+
+    pub fn get_uid(&self) -> Uid {
+        self.uid
     }
 
     pub fn get_deactivate_style(&self) -> bool {
@@ -184,7 +195,7 @@ impl CreateInfo {
         &mut self.help
     }
 
-    pub fn parse(pattern: &str, prefix: &Vec<String>) -> Result<Self> {
+    pub fn parse(pattern: &str, prefix: &[String]) -> Result<Self> {
         let data_keeper = parse_option_str(pattern, prefix)?;
 
         if data_keeper.prefix.is_some() {
@@ -309,7 +320,7 @@ impl FilterInfo {
         self.index.is_some()
     }
 
-    pub fn parse(pattern: &str, prefix: &Vec<String>) -> Result<Self> {
+    pub fn parse(pattern: &str, prefix: &[String]) -> Result<Self> {
         Ok(parse_option_str(pattern, prefix)?.into())
     }
 

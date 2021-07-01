@@ -1,7 +1,7 @@
 use crate::err::{Error, Result};
 use crate::pat::{ParseIndex, ParserPattern};
 
-pub fn parse_argument<'pre>(pattern: &str, prefix: &'pre Vec<String>) -> Result<DataKeeper<'pre>> {
+pub fn parse_argument<'pre>(pattern: &str, prefix: &'pre[String]) -> Result<DataKeeper<'pre>> {
     let pattern = ParserPattern::new(pattern, prefix);
     let mut index = ParseIndex::new(pattern.len());
     let mut data_keeper = DataKeeper::default();
@@ -200,7 +200,7 @@ mod test {
         {
             // test 1
             let test_cases = vec![
-                ("", None),
+                ("", Some((Some(""), Some(""), None, false))),
                 ("-a", Some((Some("-"), Some("a"), None, false))),
                 ("-/a", Some((Some("-"), Some("a"), None, true))),
                 ("-a=b", Some((Some("-"), Some("a"), Some("b"), false))),
@@ -216,7 +216,7 @@ mod test {
                 ("foo", Some((Some(""), Some("foo"), None, false))),
                 ("/foo", Some((Some(""), Some("foo"), None, true))),
                 ("foo=bar", Some((Some(""), Some("foo"), Some("bar"), false))),
-                ("--=bar", None),
+                ("--=bar", Some((Some("--"), Some(""), Some("bar"), false))),
                 ("-foo=", None),
             ];
 
@@ -229,7 +229,7 @@ mod test {
         {
             // test 2
             let test_cases = vec![
-                ("", None),
+                ("", Some((Some(""), Some(""), None, false))),
                 ("-a", Some((Some("-"), Some("a"), None, false))),
                 ("-/a", Some((Some("-"), Some("a"), None, true))),
                 ("-a=b", Some((Some("-"), Some("a"), Some("b"), false))),
@@ -239,13 +239,13 @@ mod test {
                     "--foo=bar",
                     Some((Some("--"), Some("foo"), Some("bar"), false)),
                 ),
-                ("a", None),
-                ("/a", None),
-                ("a=b", None),
-                ("foo", None),
-                ("/foo", None),
-                ("foo=bar", None),
-                ("--=bar", None),
+                ("a", Some((Some(""), Some("a"), None, false))),
+                ("/a", Some((Some(""), Some("a"), None, true))),
+                ("a=b", Some((Some(""), Some("a"), Some("b"), false))),
+                ("foo", Some((Some(""), Some("foo"), None, false))),
+                ("/foo", Some((Some(""), Some("foo"), None, true))),
+                ("foo=bar", Some((Some(""), Some("foo"), Some("bar"), false))),
+                ("--=bar", Some((Some("--"), Some(""), Some("bar"), false))),
                 ("-foo=", None),
             ];
 
@@ -266,6 +266,10 @@ mod test {
 
         if let Ok(dk) = ret {
             assert!(except.is_some());
+
+            if except.is_none() {
+                panic!("----> {:?}", except);
+            }
 
             let default = String::from("");
 

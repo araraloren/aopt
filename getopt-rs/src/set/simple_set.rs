@@ -46,10 +46,13 @@ impl Set for SimpleSet {
 
     fn add_opt_ci(&mut self, ci: CreateInfo) -> Result<Uid> {
         let uid = self.opt.len() as Uid;
+        let mut ci = ci;
 
         match self.get_creator(ci.get_type_name()) {
             Some(creator) => {
-                let opt = creator.create_with(uid, ci)?;
+                ci.set_uid(uid);
+                
+                let opt = creator.create_with(ci)?;
 
                 self.opt.push(opt);
                 Ok(uid)
@@ -110,7 +113,7 @@ impl Set for SimpleSet {
         self.prefix.push(prefix);
     }
 
-    fn get_prefix(&self) -> &Vec<String> {
+    fn get_prefix(&self) -> &[String] {
         &self.prefix
     }
 }

@@ -37,7 +37,7 @@ impl<'pre> Argument<'pre> {
     }
 
     #[cfg(not(feature = "async"))]
-    pub fn parse(&mut self, prefix: &'pre Vec<String>) -> Result<bool> {
+    pub fn parse(&mut self, prefix: &'pre[String]) -> Result<bool> {
         if let Some(pattern) = &self.current {
             self.data_keeper = parse_argument(pattern.as_ref(), prefix)?;
 
@@ -52,7 +52,7 @@ impl<'pre> Argument<'pre> {
     }
 
     #[cfg(feature = "async")]
-    pub async fn parse(&mut self, prefix: &'pre Vec<String>) -> Result<bool> {
+    pub async fn parse(&mut self, prefix: &'pre[String]) -> Result<bool> {
         if let Some(pattern) = &self.current {
             self.data_keeper = parse_argument(pattern.as_ref(), prefix)?;
 

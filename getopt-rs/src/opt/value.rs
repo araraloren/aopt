@@ -63,6 +63,12 @@ impl From<Vec<String>> for Value {
     }
 }
 
+impl<'a> From<&'a[String]> for Value {
+    fn from(v: &'a [String]) -> Self {
+        Self::Array(v.to_vec())
+    }
+}
+
 impl Default for Value {
     fn default() -> Self {
         Self::Null
@@ -112,6 +118,13 @@ impl Value {
     pub fn as_vec(&self) -> Option<&Vec<String>> {
         match self {
             Self::Array(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    pub fn as_slice(&self) -> Option<&[String]> {
+        match self {
+            Self::Array(v) => Some(v.as_ref()),
             _ => None,
         }
     }
@@ -168,6 +181,13 @@ impl Value {
     pub fn as_vec_mut(&mut self) -> Option<&mut Vec<String>> {
         match self {
             Self::Array(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    pub fn as_slice_mut(&mut self) -> Option<&mut [String]> {
+        match self {
+            Self::Array(v) => Some(v.as_mut()),
             _ => None,
         }
     }

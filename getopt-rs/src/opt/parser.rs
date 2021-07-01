@@ -5,7 +5,7 @@ use crate::pat::{ParseIndex, ParserPattern};
 
 pub fn parse_option_str<'pre>(
     pattern: &str,
-    prefix: &'pre Vec<String>,
+    prefix: &'pre[String],
 ) -> Result<DataKeeper<'pre>> {
     let pattern = ParserPattern::new(pattern, prefix);
     let mut index = ParseIndex::new(pattern.len());
@@ -381,7 +381,7 @@ mod test {
     use crate::opt::index::Index;
 
     #[test]
-    fn test_for_input_parser() {
+    fn test_option_str_parser() {
         {
             // test 1
             let test_cases = vec![

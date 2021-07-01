@@ -5,6 +5,9 @@ pub mod parser;
 pub mod style;
 pub mod value;
 
+// options mod
+pub mod bool;
+
 use std::fmt::Debug;
 
 use crate::err::Result;
