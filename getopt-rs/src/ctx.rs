@@ -5,12 +5,12 @@ pub mod nonopt;
 pub mod opt;
 
 use crate::err::Result;
-use crate::opt::{Style, Opt};
+use crate::opt::{Opt, Style};
 use crate::uid::Uid;
 
 pub use self::delay::DelayContext;
-pub use self::opt::OptContext;
 pub use self::nonopt::NonOptContext;
+pub use self::opt::OptContext;
 
 pub trait Context: Debug {
     fn get_uid(&self) -> Uid;

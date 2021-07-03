@@ -1,3 +1,6 @@
+pub mod seq;
+pub mod single;
+
 use std::fmt::Debug;
 
 use crate::ctx::Context;
@@ -34,15 +37,15 @@ pub trait Subscriber<M: Message> {
 pub trait Proc: Debug {
     fn uid(&self) -> Uid;
 
-    fn app_ctx(&mut self, ctx: Box<dyn Context>);
+    fn add_ctx(&mut self, ctx: Box<dyn Context>);
 
     fn get_ctx(&self, index: usize) -> Option<&Box<dyn Context>>;
 
     #[cfg(not(feature = "async"))]
-    fn process(&mut self, opt: &mut dyn Opt) -> Result<Option<u64>>;
+    fn process(&mut self, opt: &mut dyn Opt) -> Result<Option<usize>>;
 
     #[cfg(feature = "async")]
-    async fn process(&mut self, opt: &mut dyn Opt) -> Result<Option<u64>>;
+    async fn process(&mut self, opt: &mut dyn Opt) -> Result<Option<usize>>;
 
     fn is_matched(&self) -> bool;
 
