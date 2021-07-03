@@ -7,13 +7,14 @@ use std::fmt::Debug;
 use std::ops::{Index, IndexMut};
 use std::slice::{Iter, IterMut};
 
-use self::commit::Commit;
-use self::filter::{Filter, FilterMut};
-use self::info::{CreateInfo, FilterInfo, OptionInfo};
 use crate::err::Result;
 use crate::opt::Opt;
 use crate::proc::{Proc, Subscriber};
 use crate::uid::Uid;
+
+pub use self::commit::Commit;
+pub use self::filter::{Filter, FilterMut};
+pub use self::info::{CreateInfo, FilterInfo, OptionInfo};
 
 pub trait Creator: Debug {
     fn get_type_name(&self) -> &'static str;

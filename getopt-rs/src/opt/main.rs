@@ -23,7 +23,7 @@ pub struct MainOpt {
 
     value: OptValue,
 
-    callback_type: CallbackType,
+    need_invoke: bool,
 
     help_info: HelpInfo,
 }
@@ -36,7 +36,7 @@ impl From<CreateInfo> for MainOpt {
             uid: ci.get_uid(),
             name: take(ci.get_name_mut()),
             value: OptValue::from(false),
-            callback_type: ci.get_callback_type().clone(),
+            need_invoke: false,
             help_info: take(ci.get_help_info_mut()),
         }
     }
@@ -88,28 +88,12 @@ impl Identifier for MainOpt {
 }
 
 impl Callback for MainOpt {
-    fn get_callback_type(&self) -> &CallbackType {
-        &self.callback_type
-    }
-
-    fn set_callback_type(&mut self, callback_type: CallbackType) {
-        self.callback_type = callback_type;
-    }
-
     fn is_need_invoke(&self) -> bool {
-        !self.callback_type.is_null()
+        self.need_invoke
     }
 
-    fn set_invoke(&mut self, invoke: bool, mutbale: bool) {
-        self.callback_type = if invoke {
-            if mutbale {
-                CallbackType::MainMut
-            } else {
-                CallbackType::Main
-            }
-        } else {
-            CallbackType::default()
-        }
+    fn set_invoke(&mut self, invoke: bool) {
+        self.need_invoke = invoke;
     }
 
     fn is_accept_callback_type(&self, callback_type: CallbackType) -> bool {
@@ -280,14 +264,11 @@ mod test {
         main.set_uid(42);
         assert_eq!(main.get_uid(), 42);
 
-        assert_eq!(main.get_callback_type(), &CallbackType::default());
         assert_eq!(main.is_need_invoke(), false);
-        main.set_invoke(true, false);
-        assert_eq!(main.get_callback_type(), &CallbackType::Main);
+        main.set_invoke(true);
         assert_eq!(main.is_need_invoke(), true);
-        main.set_invoke(true, true);
-        assert_eq!(main.get_callback_type(), &CallbackType::MainMut);
-        assert_eq!(main.is_need_invoke(), true);
+        assert_eq!(main.is_accept_callback_type(CallbackType::Main), true);
+        assert_eq!(main.is_accept_callback_type(CallbackType::MainMut), true);
 
         // main not support alias
         main.add_alias("-".to_owned(), "m".to_owned());

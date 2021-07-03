@@ -36,4 +36,7 @@ pub enum Error {
 
     #[error("option type `{0}` need an valid prefix")]
     NeedValidPrefix(&'static str),
+
+    #[error("option `{0}` need an argument")]
+    RequiredArgumentOfOption(String),
 }

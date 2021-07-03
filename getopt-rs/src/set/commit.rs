@@ -1,6 +1,5 @@
 use super::info::CreateInfo;
 use super::{Result, Set, Uid};
-use crate::opt::callback::CallbackType;
 use crate::opt::help::HelpInfo;
 use crate::opt::index::Index;
 use crate::opt::value::Value;
@@ -49,11 +48,6 @@ impl<'a> Commit<'a> {
 
     pub fn set_default_value(&mut self, value: Value) -> &mut Self {
         self.info.set_default_value(value);
-        self
-    }
-
-    pub fn set_callback_type(&mut self, callback_type: CallbackType) -> &mut Self {
-        self.info.set_callback_type(callback_type);
         self
     }
 

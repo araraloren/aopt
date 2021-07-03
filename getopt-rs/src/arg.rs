@@ -6,7 +6,7 @@ use std::fmt::Debug;
 use std::iter::Iterator;
 use std::slice::{Iter, IterMut};
 
-use argument::Argument;
+pub use argument::Argument;
 
 #[derive(Debug, Default)]
 pub struct ArgStream<'pre> {

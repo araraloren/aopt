@@ -29,7 +29,7 @@ pub struct PosOpt {
 
     index: OptIndex,
 
-    callback_type: CallbackType,
+    need_invoke: bool,
 
     help_info: HelpInfo,
 }
@@ -45,7 +45,7 @@ impl From<CreateInfo> for PosOpt {
             optional: ci.get_optional(),
             value: OptValue::from(false),
             index: take(ci.get_index_mut()),
-            callback_type: ci.get_callback_type().clone(),
+            need_invoke: false,
             help_info: take(ci.get_help_info_mut()),
         }
     }
@@ -97,34 +97,22 @@ impl Identifier for PosOpt {
 }
 
 impl Callback for PosOpt {
-    fn get_callback_type(&self) -> &CallbackType {
-        &self.callback_type
-    }
-
-    fn set_callback_type(&mut self, callback_type: CallbackType) {
-        self.callback_type = callback_type;
-    }
-
     fn is_need_invoke(&self) -> bool {
-        !self.callback_type.is_null()
+        self.need_invoke
     }
 
-    fn set_invoke(&mut self, invoke: bool, mutbale: bool) {
-        self.callback_type = if invoke {
-            if mutbale {
-                CallbackType::PosMut
-            } else {
-                CallbackType::Pos
-            }
-        } else {
-            CallbackType::default()
-        }
+    fn set_invoke(&mut self, invoke: bool) {
+        self.need_invoke = invoke;
     }
 
     fn is_accept_callback_type(&self, callback_type: CallbackType) -> bool {
-        match callback_type {
-            CallbackType::Pos | CallbackType::PosMut => true,
-            _ => false,
+        if self.is_need_invoke() {
+            match callback_type {
+                CallbackType::Pos | CallbackType::PosMut => true,
+                _ => false,
+            }
+        } else {
+            false
         }
     }
 }
@@ -300,14 +288,11 @@ mod test {
         pos.set_uid(42);
         assert_eq!(pos.get_uid(), 42);
 
-        assert_eq!(pos.get_callback_type(), &CallbackType::default());
         assert_eq!(pos.is_need_invoke(), false);
-        pos.set_invoke(true, false);
-        assert_eq!(pos.get_callback_type(), &CallbackType::Pos);
+        pos.set_invoke(true);
         assert_eq!(pos.is_need_invoke(), true);
-        pos.set_invoke(true, true);
-        assert_eq!(pos.get_callback_type(), &CallbackType::PosMut);
-        assert_eq!(pos.is_need_invoke(), true);
+        assert_eq!(pos.is_accept_callback_type(CallbackType::Pos), true);
+        assert_eq!(pos.is_accept_callback_type(CallbackType::PosMut), true);
 
         // pos not support alias
         pos.add_alias("-".to_owned(), "m".to_owned());

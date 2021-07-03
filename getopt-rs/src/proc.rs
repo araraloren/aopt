@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use std::fmt::Debug;
 
 use crate::ctx::Context;
@@ -14,7 +13,7 @@ pub trait Info: Debug {
     fn uid(&self) -> Uid;
 }
 
-#[async_trait(?Send)]
+#[async_trait::async_trait(?Send)]
 pub trait Publisher<M: Message> {
     #[cfg(not(feature = "async"))]
     fn publish(&mut self, msg: M) -> Result<bool>;
@@ -31,7 +30,7 @@ pub trait Subscriber<M: Message> {
     fn subscribe_from(&self, publisher: &mut dyn Publisher<M>);
 }
 
-#[async_trait(?Send)]
+#[async_trait::async_trait(?Send)]
 pub trait Proc: Debug {
     fn uid(&self) -> Uid;
 

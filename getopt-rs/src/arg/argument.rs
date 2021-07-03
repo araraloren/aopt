@@ -21,7 +21,7 @@ impl<'pre> Argument<'pre> {
     }
 
     pub fn get_prefix(&self) -> Option<&'pre String> {
-        self.data_keeper.prefix.clone()
+        self.data_keeper.prefix
     }
 
     pub fn get_name(&self) -> Option<&String> {

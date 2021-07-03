@@ -33,7 +33,7 @@ pub struct BoolOpt {
 
     alias: Vec<(String, String)>,
 
-    callback_type: CallbackType,
+    need_invoke: bool,
 
     help_info: HelpInfo,
 }
@@ -51,7 +51,7 @@ impl From<CreateInfo> for BoolOpt {
             default_value: take(ci.get_default_value_mut()),
             deactivate_style: ci.get_support_deactivate_style(),
             alias: take(ci.get_alias_mut()),
-            callback_type: ci.get_callback_type().clone(),
+            need_invoke: false,
             help_info: take(ci.get_help_info_mut()),
         }
     }
@@ -101,28 +101,12 @@ impl Identifier for BoolOpt {
 }
 
 impl Callback for BoolOpt {
-    fn get_callback_type(&self) -> &CallbackType {
-        &self.callback_type
-    }
-
-    fn set_callback_type(&mut self, callback_type: CallbackType) {
-        self.callback_type = callback_type;
-    }
-
     fn is_need_invoke(&self) -> bool {
-        !self.callback_type.is_null()
+        self.need_invoke
     }
 
-    fn set_invoke(&mut self, invoke: bool, mutbale: bool) {
-        self.callback_type = if invoke {
-            if mutbale {
-                CallbackType::Opt
-            } else {
-                CallbackType::OptMut
-            }
-        } else {
-            CallbackType::default()
-        }
+    fn set_invoke(&mut self, invoke: bool) {
+        self.need_invoke = invoke;
     }
 
     fn is_accept_callback_type(&self, callback_type: CallbackType) -> bool {

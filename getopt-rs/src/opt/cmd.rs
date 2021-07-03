@@ -25,7 +25,7 @@ pub struct CmdOpt {
 
     index: OptIndex,
 
-    callback_type: CallbackType,
+    need_invoke: bool,
 
     help_info: HelpInfo,
 }
@@ -39,7 +39,7 @@ impl From<CreateInfo> for CmdOpt {
             name: take(ci.get_name_mut()),
             value: OptValue::from(false),
             index: OptIndex::Forward(1),
-            callback_type: ci.get_callback_type().clone(),
+            need_invoke: false,
             help_info: take(ci.get_help_info_mut()),
         }
     }
@@ -91,28 +91,12 @@ impl Identifier for CmdOpt {
 }
 
 impl Callback for CmdOpt {
-    fn get_callback_type(&self) -> &CallbackType {
-        &self.callback_type
-    }
-
-    fn set_callback_type(&mut self, callback_type: CallbackType) {
-        self.callback_type = callback_type;
-    }
-
     fn is_need_invoke(&self) -> bool {
-        !self.callback_type.is_null()
+        self.need_invoke
     }
 
-    fn set_invoke(&mut self, invoke: bool, mutbale: bool) {
-        self.callback_type = if invoke {
-            if mutbale {
-                CallbackType::MainMut
-            } else {
-                CallbackType::Main
-            }
-        } else {
-            CallbackType::default()
-        }
+    fn set_invoke(&mut self, invoke: bool) {
+        self.need_invoke = invoke;
     }
 
     fn is_accept_callback_type(&self, callback_type: CallbackType) -> bool {
@@ -290,13 +274,10 @@ mod test {
         cmd.set_uid(42);
         assert_eq!(cmd.get_uid(), 42);
 
-        assert_eq!(cmd.get_callback_type(), &CallbackType::default());
         assert_eq!(cmd.is_need_invoke(), false);
-        cmd.set_invoke(true, false);
-        assert_eq!(cmd.get_callback_type(), &CallbackType::Main);
-        assert_eq!(cmd.is_need_invoke(), true);
-        cmd.set_invoke(true, true);
-        assert_eq!(cmd.get_callback_type(), &CallbackType::MainMut);
+        cmd.set_invoke(true);
+        assert_eq!(cmd.is_accept_callback_type(CallbackType::Main), true);
+        assert_eq!(cmd.is_accept_callback_type(CallbackType::MainMut), true);
         assert_eq!(cmd.is_need_invoke(), true);
 
         // cmd not support alias

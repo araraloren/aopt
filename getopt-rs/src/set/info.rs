@@ -1,7 +1,7 @@
 use crate::err::{Error, Result};
 use crate::opt::parser::parse_option_str;
 use crate::opt::parser::DataKeeper;
-use crate::opt::{callback::CallbackType, help::HelpInfo, index::Index, value::Value, Opt};
+use crate::opt::{index::Index, value::Value, HelpInfo, Opt};
 use crate::proc::Info;
 use crate::uid::Uid;
 
@@ -24,8 +24,6 @@ pub struct CreateInfo {
     value: Value,
 
     alias: Vec<(String, String)>,
-
-    callback_type: CallbackType,
 
     help: HelpInfo,
 }
@@ -68,11 +66,6 @@ impl CreateInfo {
 
     pub fn set_default_value(&mut self, value: Value) -> &mut Self {
         self.value = value;
-        self
-    }
-
-    pub fn set_callback_type(&mut self, callback_type: CallbackType) -> &mut Self {
-        self.callback_type = callback_type;
         self
     }
 
@@ -147,10 +140,6 @@ impl CreateInfo {
         &self.value
     }
 
-    pub fn get_callback_type(&self) -> &CallbackType {
-        &self.callback_type
-    }
-
     pub fn get_help_info(&self) -> &HelpInfo {
         &self.help
     }
@@ -185,10 +174,6 @@ impl CreateInfo {
 
     pub fn get_default_value_mut(&mut self) -> &mut Value {
         &mut self.value
-    }
-
-    pub fn get_callback_type_mut(&mut self) -> &mut CallbackType {
-        &mut self.callback_type
     }
 
     pub fn get_help_info_mut(&mut self) -> &mut HelpInfo {

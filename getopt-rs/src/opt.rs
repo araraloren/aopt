@@ -20,11 +20,14 @@ pub mod uint;
 use std::fmt::Debug;
 
 use crate::err::{Error, Result};
-use crate::opt::callback::CallbackType;
-use crate::opt::help::HelpInfo;
-use crate::opt::index::Index as OptIndex;
-use crate::opt::value::Value as OptValue;
 use crate::uid::Uid;
+
+pub use self::callback::CallbackType;
+pub use self::help::HelpInfo;
+pub use self::index::Index as OptIndex;
+pub use self::parser::{parse_option_str, DataKeeper};
+pub use self::style::Style;
+pub use self::value::Value as OptValue;
 
 pub trait Type {
     fn get_type_name(&self) -> &'static str;
@@ -47,13 +50,9 @@ pub trait Identifier {
 }
 
 pub trait Callback {
-    fn get_callback_type(&self) -> &CallbackType;
-
-    fn set_callback_type(&mut self, callback_type: CallbackType);
-
     fn is_need_invoke(&self) -> bool;
 
-    fn set_invoke(&mut self, invoke: bool, mutbale: bool);
+    fn set_invoke(&mut self, invoke: bool);
 
     fn is_accept_callback_type(&self, callback_type: CallbackType) -> bool;
 }
