@@ -3,10 +3,7 @@ use crate::err::Error;
 use crate::err::Result;
 use crate::pat::{ParseIndex, ParserPattern};
 
-pub fn parse_option_str<'pre>(
-    pattern: &str,
-    prefix: &'pre[String],
-) -> Result<DataKeeper<'pre>> {
+pub fn parse_option_str<'pre>(pattern: &str, prefix: &'pre [String]) -> Result<DataKeeper<'pre>> {
     let pattern = ParserPattern::new(pattern, prefix);
     let mut index = ParseIndex::new(pattern.len());
     let mut data_keeper = DataKeeper::default();

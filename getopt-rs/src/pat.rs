@@ -7,18 +7,18 @@ use std::str::Chars;
 pub struct ParserPattern<'pat, 'pre> {
     pattern: &'pat str,
 
-    support_prefix: &'pre[String],
+    support_prefix: &'pre [String],
 }
 
 impl<'pat, 'pre> ParserPattern<'pat, 'pre> {
-    pub fn new(pattern: &'pat str, prefix: &'pre[String]) -> Self {
+    pub fn new(pattern: &'pat str, prefix: &'pre [String]) -> Self {
         Self {
             pattern,
             support_prefix: prefix,
         }
     }
 
-    pub fn get_prefixs(&self) -> &'pre[String] {
+    pub fn get_prefixs(&self) -> &'pre [String] {
         self.support_prefix
     }
 

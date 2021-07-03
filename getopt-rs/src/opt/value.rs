@@ -63,7 +63,7 @@ impl From<Vec<String>> for Value {
     }
 }
 
-impl<'a> From<&'a[String]> for Value {
+impl<'a> From<&'a [String]> for Value {
     fn from(v: &'a [String]) -> Self {
         Self::Array(v.to_vec())
     }
@@ -270,8 +270,8 @@ impl Value {
         match self {
             Self::Array(v) => {
                 v.push(string);
-            },
-            _ => { },
+            }
+            _ => {}
         }
         self
     }

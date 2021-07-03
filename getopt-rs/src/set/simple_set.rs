@@ -51,7 +51,7 @@ impl Set for SimpleSet {
         match self.get_creator(ci.get_type_name()) {
             Some(creator) => {
                 ci.set_uid(uid);
-                
+
                 let opt = creator.create_with(ci)?;
 
                 self.opt.push(opt);

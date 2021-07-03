@@ -6,16 +6,16 @@ pub mod style;
 pub mod value;
 
 // options mod
-pub mod bool;
-pub mod str;
 pub mod array;
-pub mod int;
-pub mod uint;
-pub mod flt;
-pub mod pos;
+pub mod bool;
 pub mod cmd;
-pub mod main;
 pub mod example;
+pub mod flt;
+pub mod int;
+pub mod main;
+pub mod pos;
+pub mod str;
+pub mod uint;
 
 use std::fmt::Debug;
 
@@ -135,4 +135,4 @@ pub trait Opt:
 {
 }
 
-pub trait NonOpt: Opt { }
+pub trait NonOpt: Opt {}

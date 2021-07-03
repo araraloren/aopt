@@ -132,7 +132,7 @@ impl CreateInfo {
     }
 
     pub fn get_prefix(&self) -> &Option<String> {
-        & self.prefix
+        &self.prefix
     }
 
     pub fn get_index(&self) -> &Index {
@@ -213,7 +213,7 @@ impl<'pre> From<DataKeeper<'pre>> for CreateInfo {
         let index = data_keeper.gen_index();
 
         Self {
-            prefix: data_keeper.prefix.map(|v|v.clone()),
+            prefix: data_keeper.prefix.map(|v| v.clone()),
             name: data_keeper.name.take().unwrap(),
             type_name: data_keeper.type_name.take().unwrap(),
             index,

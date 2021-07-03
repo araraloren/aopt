@@ -1,14 +1,13 @@
-
 use std::mem::take;
 
-use super::*;
+use super::help::HelpInfo;
+use super::index::Index as OptIndex;
 use super::style::Style;
 use super::value::Value as OptValue;
-use super::index::Index as OptIndex;
-use super::help::HelpInfo;
-use crate::uid::Uid;
+use super::*;
 use crate::set::info::CreateInfo;
 use crate::set::Creator;
+use crate::uid::Uid;
 
 pub mod path {
     use super::*;
@@ -17,7 +16,7 @@ pub mod path {
         "p"
     }
 
-    pub trait Path: Opt { }
+    pub trait Path: Opt {}
 
     #[derive(Debug)]
     pub struct PathOpt {
@@ -43,7 +42,7 @@ pub mod path {
     impl From<CreateInfo> for PathOpt {
         fn from(ci: CreateInfo) -> Self {
             let mut ci = ci;
-            
+
             Self {
                 uid: ci.get_uid(),
                 name: take(ci.get_name_mut()),
@@ -58,9 +57,9 @@ pub mod path {
         }
     }
 
-    impl Path for PathOpt { }
+    impl Path for PathOpt {}
 
-    impl Opt for PathOpt { }
+    impl Opt for PathOpt {}
 
     impl Type for PathOpt {
         fn get_type_name(&self) -> &'static str {
@@ -81,8 +80,7 @@ pub mod path {
         fn check(&self) -> Result<bool> {
             if !(self.get_optional() || self.has_value()) {
                 Err(Error::ForceRequiredOption(self.get_hint().to_owned()))
-            }
-            else {
+            } else {
                 Ok(true)
             }
         }
@@ -112,19 +110,17 @@ pub mod path {
         }
 
         fn is_need_invoke(&self) -> bool {
-            ! self.callback_type.is_null()
+            !self.callback_type.is_null()
         }
 
         fn set_invoke(&mut self, invoke: bool, mutbale: bool) {
             self.callback_type = if invoke {
                 if mutbale {
                     CallbackType::Opt
-                }
-                else {
+                } else {
                     CallbackType::OptMut
                 }
-            }
-            else {
+            } else {
                 CallbackType::default()
             }
         }
@@ -132,7 +128,7 @@ pub mod path {
         fn is_accept_callback_type(&self, callback_type: CallbackType) -> bool {
             match callback_type {
                 CallbackType::Opt | CallbackType::OptMut => true,
-                _ => false
+                _ => false,
             }
         }
     }
@@ -196,9 +192,10 @@ pub mod path {
         }
 
         fn match_alias(&self, prefix: &str, name: &str) -> bool {
-            self.alias.iter()
-                    .find(|&v| v.0 == prefix && v.1 == name)
-                    .is_some()    
+            self.alias
+                .iter()
+                .find(|&v| v.0 == prefix && v.1 == name)
+                .is_some()
         }
     }
 
@@ -275,8 +272,10 @@ pub mod path {
 
         fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>> {
             if create_info.get_support_deactivate_style() {
-                if ! self.is_support_deactivate_style() {
-                    return Err(Error::NotSupportDeactivateStyle(create_info.get_name().to_owned()))
+                if !self.is_support_deactivate_style() {
+                    return Err(Error::NotSupportDeactivateStyle(
+                        create_info.get_name().to_owned(),
+                    ));
                 }
             }
             if create_info.get_prefix().is_none() {
@@ -286,7 +285,7 @@ pub mod path {
             assert_eq!(create_info.get_type_name(), self.get_type_name());
 
             let opt: PathOpt = create_info.into();
-            
+
             Ok(Box::new(opt))
         }
     }

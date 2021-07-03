@@ -1,20 +1,19 @@
-
 use std::mem::take;
 
-use super::*;
+use super::help::HelpInfo;
+use super::index::Index as OptIndex;
 use super::style::Style;
 use super::value::Value as OptValue;
-use super::index::Index as OptIndex;
-use super::help::HelpInfo;
-use crate::uid::Uid;
+use super::*;
 use crate::set::info::CreateInfo;
 use crate::set::Creator;
+use crate::uid::Uid;
 
 pub fn current_type() -> &'static str {
     "u"
 }
 
-pub trait Uint: Opt { }
+pub trait Uint: Opt {}
 
 #[derive(Debug)]
 pub struct UintOpt {
@@ -40,7 +39,7 @@ pub struct UintOpt {
 impl From<CreateInfo> for UintOpt {
     fn from(ci: CreateInfo) -> Self {
         let mut ci = ci;
-        
+
         Self {
             uid: ci.get_uid(),
             name: take(ci.get_name_mut()),
@@ -55,9 +54,9 @@ impl From<CreateInfo> for UintOpt {
     }
 }
 
-impl Uint for UintOpt { }
+impl Uint for UintOpt {}
 
-impl Opt for UintOpt { }
+impl Opt for UintOpt {}
 
 impl Type for UintOpt {
     fn get_type_name(&self) -> &'static str {
@@ -78,8 +77,7 @@ impl Type for UintOpt {
     fn check(&self) -> Result<bool> {
         if !(self.get_optional() || self.has_value()) {
             Err(Error::ForceRequiredOption(self.get_hint().to_owned()))
-        }
-        else {
+        } else {
             Ok(true)
         }
     }
@@ -109,19 +107,17 @@ impl Callback for UintOpt {
     }
 
     fn is_need_invoke(&self) -> bool {
-        ! self.callback_type.is_null()
+        !self.callback_type.is_null()
     }
 
     fn set_invoke(&mut self, invoke: bool, mutbale: bool) {
         self.callback_type = if invoke {
             if mutbale {
                 CallbackType::Opt
-            }
-            else {
+            } else {
                 CallbackType::OptMut
             }
-        }
-        else {
+        } else {
             CallbackType::default()
         }
     }
@@ -129,7 +125,7 @@ impl Callback for UintOpt {
     fn is_accept_callback_type(&self, callback_type: CallbackType) -> bool {
         match callback_type {
             CallbackType::Opt | CallbackType::OptMut => true,
-            _ => false
+            _ => false,
         }
     }
 }
@@ -193,9 +189,10 @@ impl Alias for UintOpt {
     }
 
     fn match_alias(&self, prefix: &str, name: &str) -> bool {
-        self.alias.iter()
-                  .find(|&v| v.0 == prefix && v.1 == name)
-                  .is_some()    
+        self.alias
+            .iter()
+            .find(|&v| v.0 == prefix && v.1 == name)
+            .is_some()
     }
 }
 
@@ -231,12 +228,9 @@ impl Value for UintOpt {
     }
 
     fn parse_value(&self, string: &str) -> Result<OptValue> {
-        Ok(OptValue::from(
-            string.parse::<u64>()
-                  .map_err(|e| {
-                      Error::ParseOptionValueFailed(String::from(string), format!("{:?}", e))
-                  })?
-        ))
+        Ok(OptValue::from(string.parse::<u64>().map_err(|e| {
+            Error::ParseOptionValueFailed(String::from(string), format!("{:?}", e))
+        })?))
     }
 
     fn has_value(&self) -> bool {
@@ -276,8 +270,10 @@ impl Creator for UintCreator {
 
     fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>> {
         if create_info.get_support_deactivate_style() {
-            if ! self.is_support_deactivate_style() {
-                return Err(Error::NotSupportDeactivateStyle(create_info.get_name().to_owned()))
+            if !self.is_support_deactivate_style() {
+                return Err(Error::NotSupportDeactivateStyle(
+                    create_info.get_name().to_owned(),
+                ));
             }
         }
         if create_info.get_prefix().is_none() {
@@ -287,7 +283,7 @@ impl Creator for UintCreator {
         assert_eq!(create_info.get_type_name(), self.get_type_name());
 
         let opt: UintOpt = create_info.into();
-        
+
         Ok(Box::new(opt))
     }
 }
