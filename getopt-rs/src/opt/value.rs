@@ -261,6 +261,20 @@ impl Value {
             _ => false,
         }
     }
+
+    pub fn reset(&mut self) {
+        *self = Self::Null;
+    }
+
+    pub fn app_str(&mut self, string: String) -> &mut Self {
+        match self {
+            Self::Array(v) => {
+                v.push(string);
+            },
+            _ => { },
+        }
+        self
+    }
 }
 
 impl Clone for Value {

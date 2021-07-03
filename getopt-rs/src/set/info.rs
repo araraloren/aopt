@@ -9,7 +9,7 @@ use crate::uid::Uid;
 pub struct CreateInfo {
     uid: Uid,
 
-    deactivate_style: bool,
+    support_deactivate_style: bool,
 
     optional: bool,
 
@@ -17,7 +17,7 @@ pub struct CreateInfo {
 
     name: String,
 
-    prefix: String,
+    prefix: Option<String>,
 
     index: Index,
 
@@ -36,8 +36,8 @@ impl CreateInfo {
         self
     }
 
-    pub fn set_deactivate_style(&mut self, deactivate_style: bool) -> &mut Self {
-        self.deactivate_style = deactivate_style;
+    pub fn set_support_deactivate_style(&mut self, deactivate_style: bool) -> &mut Self {
+        self.support_deactivate_style = deactivate_style;
         self
     }
 
@@ -57,7 +57,7 @@ impl CreateInfo {
     }
 
     pub fn set_prefix(&mut self, prefix: String) -> &mut Self {
-        self.prefix = prefix;
+        self.prefix = Some(prefix);
         self
     }
 
@@ -115,8 +115,8 @@ impl CreateInfo {
         self.uid
     }
 
-    pub fn get_deactivate_style(&self) -> bool {
-        self.deactivate_style
+    pub fn get_support_deactivate_style(&self) -> bool {
+        self.support_deactivate_style
     }
 
     pub fn get_optional(&self) -> bool {
@@ -127,12 +127,12 @@ impl CreateInfo {
         &self.type_name
     }
 
-    pub fn get_name(&self) -> &String {
+    pub fn get_name(&self) -> &str {
         &self.name
     }
 
-    pub fn get_prefix(&self) -> &String {
-        &self.prefix
+    pub fn get_prefix(&self) -> &Option<String> {
+        & self.prefix
     }
 
     pub fn get_index(&self) -> &Index {
@@ -156,7 +156,7 @@ impl CreateInfo {
     }
 
     pub fn get_deactivate_style_mut(&mut self) -> &mut bool {
-        &mut self.deactivate_style
+        &mut self.support_deactivate_style
     }
 
     pub fn get_optional_mut(&mut self) -> &mut bool {
@@ -171,7 +171,7 @@ impl CreateInfo {
         &mut self.name
     }
 
-    pub fn get_prefix_mut(&mut self) -> &mut String {
+    pub fn get_prefix_mut(&mut self) -> &mut Option<String> {
         &mut self.prefix
     }
 
@@ -198,11 +198,9 @@ impl CreateInfo {
     pub fn parse(pattern: &str, prefix: &[String]) -> Result<Self> {
         let data_keeper = parse_option_str(pattern, prefix)?;
 
-        if data_keeper.prefix.is_some() {
-            if data_keeper.name.is_some() {
-                if data_keeper.type_name.is_some() {
-                    return Ok(data_keeper.into());
-                }
+        if data_keeper.name.is_some() {
+            if data_keeper.type_name.is_some() {
+                return Ok(data_keeper.into());
             }
         }
         Err(Error::InvalidOptionCreateString(String::from(pattern)))
@@ -215,11 +213,11 @@ impl<'pre> From<DataKeeper<'pre>> for CreateInfo {
         let index = data_keeper.gen_index();
 
         Self {
-            prefix: data_keeper.prefix.unwrap().clone(),
+            prefix: data_keeper.prefix.map(|v|v.clone()),
             name: data_keeper.name.take().unwrap(),
             type_name: data_keeper.type_name.take().unwrap(),
             index,
-            deactivate_style: data_keeper.deactivate.unwrap_or(false),
+            support_deactivate_style: data_keeper.deactivate.unwrap_or(false),
             optional: !data_keeper.optional.unwrap_or(false),
             ..Self::default()
         }
@@ -284,11 +282,11 @@ impl FilterInfo {
         self.type_name.as_ref().unwrap()
     }
 
-    pub fn get_name(&self) -> &String {
+    pub fn get_name(&self) -> &str {
         self.name.as_ref().unwrap()
     }
 
-    pub fn get_prefix(&self) -> &String {
+    pub fn get_prefix(&self) -> &str {
         self.prefix.as_ref().unwrap()
     }
 
@@ -342,7 +340,7 @@ impl FilterInfo {
             if !matched {
                 if let Some(alias) = opt.get_alias().as_ref() {
                     for item in alias.iter() {
-                        if item.0 == self.get_prefix() {
+                        if &item.0 == self.get_prefix() {
                             matched = true;
                             break;
                         }
@@ -357,7 +355,7 @@ impl FilterInfo {
             if !matched {
                 if let Some(alias) = opt.get_alias().as_ref() {
                     for item in alias.iter() {
-                        if item.1 == self.get_name() {
+                        if &item.1 == self.get_name() {
                             matched = true;
                             break;
                         }
@@ -367,7 +365,9 @@ impl FilterInfo {
             ret = ret && matched;
         }
         if ret && self.has_index() {
-            ret = ret && (self.get_index() == opt.get_index());
+            if let Some(index) = opt.get_index() {
+                ret = ret && (self.get_index() == index);
+            }
         }
         ret
     }

@@ -11,12 +11,12 @@ impl HelpInfo {
         Self { hint, help }
     }
 
-    pub fn get_hint(&self) -> &str {
-        self.hint.as_ref()
+    pub fn get_hint(&self) -> &String {
+        &self.hint
     }
 
-    pub fn get_help(&self) -> &str {
-        self.help.as_ref()
+    pub fn get_help(&self) -> &String {
+        &self.help
     }
 
     pub fn set_hint<T: Into<String>>(&mut self, hint: T) -> &mut Self {

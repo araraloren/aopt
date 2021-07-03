@@ -1,21 +1,19 @@
-use async_trait::async_trait;
+
 use std::fmt::Debug;
 
-use crate::arg;
 use crate::err::{Error, Result};
-use crate::opt::Opt;
 use crate::set::Set;
 use crate::uid::Uid;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum CallbackType {
-    Index, 
+    Opt, 
 
-    IndexMut,
+    OptMut,
 
-    Value,
+    Pos,
 
-    ValueMut,
+    PosMut,
 
     Main,
 
@@ -31,30 +29,30 @@ impl Default for CallbackType {
 }
 
 impl CallbackType {
-    pub fn is_index(&self) -> bool {
+    pub fn is_opt(&self) -> bool {
         match self {
-            Self::Index => true,
+            Self::Opt => true,
             _ => false,
         }
     }
 
-    pub fn is_index_mut(&self) -> bool {
+    pub fn is_opt_mut(&self) -> bool {
         match self {
-            Self::IndexMut => true,
+            Self::OptMut => true,
             _ => false,
         }
     }
 
-    pub fn is_value(&self) -> bool {
+    pub fn is_cmd(&self) -> bool {
         match self {
-            Self::Value => true,
+            Self::Pos => true,
             _ => false,
         }
     }
 
-    pub fn is_value_mut(&self) -> bool {
+    pub fn is_cmd_mut(&self) -> bool {
         match self {
-            Self::ValueMut => true,
+            Self::PosMut => true,
             _ => false,
         }
     }
@@ -82,7 +80,7 @@ impl CallbackType {
 }
 
 #[async_trait::async_trait(?Send)]
-pub trait ValueCallback: Debug {
+pub trait CmdCallback: Debug {
     #[cfg(not(feature="async"))]
     fn call(&mut self, uid: Uid, set: &dyn Set) -> Result<bool>;
 
@@ -91,7 +89,7 @@ pub trait ValueCallback: Debug {
 }
 
 #[async_trait::async_trait(?Send)]
-pub trait ValueMutCallback: Debug {
+pub trait CmdMutCallback: Debug {
     #[cfg(not(feature="async"))]
     fn call(&mut self, uid: Uid, set: &mut dyn Set) -> Result<bool>;
 
@@ -100,7 +98,7 @@ pub trait ValueMutCallback: Debug {
 }
 
 #[async_trait::async_trait(?Send)]
-pub trait IndexCallback: Debug {
+pub trait OptCallback: Debug {
     #[cfg(not(feature="async"))]
     fn call(&mut self, uid: Uid, set: &dyn Set, arg: &String) -> Result<bool>;
 
@@ -109,7 +107,7 @@ pub trait IndexCallback: Debug {
 }
 
 #[async_trait::async_trait(?Send)]
-pub trait IndexMutCallback: Debug {
+pub trait OptMutCallback: Debug {
     #[cfg(not(feature="async"))]
     fn call(&mut self, uid: Uid, set: &mut dyn Set, arg: &String) -> Result<bool>;
 
@@ -137,13 +135,13 @@ pub trait MainMutCallback: Debug {
 
 #[derive(Debug)]
 pub enum Callback {
-    Value(Box<dyn ValueCallback>),
+    Cmd(Box<dyn CmdCallback>),
 
-    ValueMut(Box<dyn ValueMutCallback>),
+    CmdMut(Box<dyn CmdMutCallback>),
 
-    Index(Box<dyn IndexCallback>),
+    Opt(Box<dyn OptCallback>),
 
-    IndexMut(Box<dyn IndexMutCallback>),
+    OptMut(Box<dyn OptMutCallback>),
 
     Main(Box<dyn MainCallback>),
 
@@ -161,17 +159,17 @@ impl Default for Callback {
 impl Callback {
     pub fn match_callback(&self, callback_type: CallbackType) -> bool {
         match self {
-            Callback::Value(_) => {
-                callback_type == CallbackType::Value
+            Callback::Cmd(_) => {
+                callback_type == CallbackType::Pos
             },
-            Callback::ValueMut(_) => {
-                callback_type == CallbackType::ValueMut
+            Callback::CmdMut(_) => {
+                callback_type == CallbackType::PosMut
             },
-            Callback::Index(_) => {
-                callback_type == CallbackType::Index
+            Callback::Opt(_) => {
+                callback_type == CallbackType::Opt
             },
-            Callback::IndexMut(_) => {
-                callback_type == CallbackType::IndexMut
+            Callback::OptMut(_) => {
+                callback_type == CallbackType::OptMut
             },
             Callback::Main(_) =>  {
                 callback_type == CallbackType::Main
@@ -188,11 +186,11 @@ impl Callback {
     #[cfg(not(feature="async"))]
     pub fn call(&mut self, uid: Uid, set: &dyn Set, args: &[String]) -> Result<bool> {
         match self {
-            Callback::Value(v) => {
+            Callback::Cmd(v) => {
                 v.as_mut()
                  .call(uid, set)
             },
-            Callback::Index(v) => {
+            Callback::Opt(v) => {
                 v.as_mut()
                  .call(uid, set, &args[0])
             },
@@ -209,11 +207,11 @@ impl Callback {
     #[cfg(not(feature="async"))]
     pub fn call_mut(&mut self, uid: Uid, set: &mut dyn Set, args: &[String]) -> Result<bool> {
         match self {
-            Callback::ValueMut(v) => {
+            Callback::CmdMut(v) => {
                 v.as_mut()
                  .call(uid, set)
             },
-            Callback::IndexMut(v) => {
+            Callback::OptMut(v) => {
                 v.as_mut()
                  .call(uid, set, &args[0])
             },
@@ -230,12 +228,12 @@ impl Callback {
     #[cfg(feature="async")]
     pub async fn call(&mut self, uid: Uid, set: &dyn Set, args: &[String]) -> Result<bool> {
         match self {
-            Callback::Value(v) => {
+            Callback::Cmd(v) => {
                 v.as_mut()
                  .call(uid, set)
                  .await
             },
-            Callback::Index(v) => {
+            Callback::Opt(v) => {
                 v.as_mut()
                  .call(uid, set, &args[0])
                  .await
@@ -254,12 +252,12 @@ impl Callback {
     #[cfg(feature="async")]
     pub async fn call_mut(&mut self, uid: Uid, set: &mut dyn Set, args: &[String]) -> Result<bool> {
         match self {
-            Callback::ValueMut(v) => {
+            Callback::CmdMut(v) => {
                 v.as_mut()
                  .call(uid, set)
                  .await
             },
-            Callback::IndexMut(v) => {
+            Callback::OptMut(v) => {
                 v.as_mut()
                  .call(uid, set, &args[0])
                  .await
@@ -276,27 +274,27 @@ impl Callback {
     }
 }
 
-impl From<Box<dyn ValueCallback>> for Callback {
-    fn from(cb: Box<dyn ValueCallback>) -> Self {
-        Callback::Value(cb)
+impl From<Box<dyn CmdCallback>> for Callback {
+    fn from(cb: Box<dyn CmdCallback>) -> Self {
+        Callback::Cmd(cb)
     }
 }
 
-impl From<Box<dyn ValueMutCallback>> for Callback {
-    fn from(cb: Box<dyn ValueMutCallback>) -> Self {
-        Callback::ValueMut(cb)
+impl From<Box<dyn CmdMutCallback>> for Callback {
+    fn from(cb: Box<dyn CmdMutCallback>) -> Self {
+        Callback::CmdMut(cb)
     }
 }
 
-impl From<Box<dyn IndexCallback>> for Callback {
-    fn from(cb: Box<dyn IndexCallback>) -> Self {
-        Callback::Index(cb)
+impl From<Box<dyn OptCallback>> for Callback {
+    fn from(cb: Box<dyn OptCallback>) -> Self {
+        Callback::Opt(cb)
     }
 }
 
-impl From<Box<dyn IndexMutCallback>> for Callback {
-    fn from(cb: Box<dyn IndexMutCallback>) -> Self {
-        Callback::IndexMut(cb)
+impl From<Box<dyn OptMutCallback>> for Callback {
+    fn from(cb: Box<dyn OptMutCallback>) -> Self {
+        Callback::OptMut(cb)
     }
 }
 
@@ -314,104 +312,104 @@ impl From<Box<dyn MainMutCallback>> for Callback {
 
 
 #[cfg(not(feature="async"))]
-pub struct SimpleValueCallback<T: 'static + FnMut(Uid, &dyn Set) -> Result<bool>>(T);
+pub struct SimpleCmdCallback<T: 'static + FnMut(Uid, &dyn Set) -> Result<bool>>(T);
 
 #[cfg(not(feature="async"))]
-impl<T: 'static + FnMut(Uid, &dyn Set) -> Result<bool>> SimpleValueCallback<T> {
+impl<T: 'static + FnMut(Uid, &dyn Set) -> Result<bool>> SimpleCmdCallback<T> {
     pub fn new(cb: T) -> Self {
         Self(cb)
     }
 }
 
 #[cfg(not(feature="async"))]
-impl<T: 'static + FnMut(Uid, &dyn Set) -> Result<bool>> Debug for SimpleValueCallback<T> {
+impl<T: 'static + FnMut(Uid, &dyn Set) -> Result<bool>> Debug for SimpleCmdCallback<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SimpleValueCallback")
+        f.debug_struct("SimpleCmdCallback")
          .field("FnMut", &String::from("..."))
          .finish()
     }
 }
 
 #[cfg(not(feature="async"))]
-impl<T: 'static + FnMut(Uid, &dyn Set) -> Result<bool>> ValueCallback for SimpleValueCallback<T> {
+impl<T: 'static + FnMut(Uid, &dyn Set) -> Result<bool>> CmdCallback for SimpleCmdCallback<T> {
     fn call(&mut self, uid: Uid, set: &dyn Set) -> Result<bool> {
         self.0(uid, set)
     }
 }
 
 #[cfg(not(feature="async"))]
-pub struct SimpleValueMutCallback<T: 'static + FnMut(Uid, &mut dyn Set) -> Result<bool>>(T);
+pub struct SimpleCmdMutCallback<T: 'static + FnMut(Uid, &mut dyn Set) -> Result<bool>>(T);
 
 #[cfg(not(feature="async"))]
-impl<T: 'static + FnMut(Uid, &mut dyn Set) -> Result<bool>> SimpleValueMutCallback<T> {
+impl<T: 'static + FnMut(Uid, &mut dyn Set) -> Result<bool>> SimpleCmdMutCallback<T> {
     pub fn new(cb: T) -> Self {
         Self(cb)
     }
 }
 
 #[cfg(not(feature="async"))]
-impl<T: 'static + FnMut(Uid, &mut dyn Set) -> Result<bool>> Debug for SimpleValueMutCallback<T> {
+impl<T: 'static + FnMut(Uid, &mut dyn Set) -> Result<bool>> Debug for SimpleCmdMutCallback<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SimpleValueMutCallback")
+        f.debug_struct("SimpleCmdMutCallback")
          .field("FnMut", &String::from("..."))
          .finish()
     }
 }
 
 #[cfg(not(feature="async"))]
-impl<T: 'static + FnMut(Uid, &mut dyn Set) -> Result<bool>> ValueMutCallback for SimpleValueMutCallback<T> {
+impl<T: 'static + FnMut(Uid, &mut dyn Set) -> Result<bool>> CmdMutCallback for SimpleCmdMutCallback<T> {
     fn call(&mut self, uid: Uid, set: &mut dyn Set) -> Result<bool> {
         self.0(uid, set)
     }
 }
 
 #[cfg(not(feature="async"))]
-pub struct SimpleIndexCallback<T: 'static + FnMut(Uid, &dyn Set, &String) -> Result<bool>>(T);
+pub struct SimpleOptCallback<T: 'static + FnMut(Uid, &dyn Set, &String) -> Result<bool>>(T);
 
 #[cfg(not(feature="async"))]
-impl<T: 'static + FnMut(Uid, &dyn Set, &String) -> Result<bool>> SimpleIndexCallback<T> {
+impl<T: 'static + FnMut(Uid, &dyn Set, &String) -> Result<bool>> SimpleOptCallback<T> {
     pub fn new(cb: T) -> Self {
         Self(cb)
     }
 }
 
 #[cfg(not(feature="async"))]
-impl<T: 'static + FnMut(Uid, &dyn Set, &String) -> Result<bool>> Debug for SimpleIndexCallback<T> {
+impl<T: 'static + FnMut(Uid, &dyn Set, &String) -> Result<bool>> Debug for SimpleOptCallback<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SimpleIndexCallback")
+        f.debug_struct("SimpleOptCallback")
          .field("FnMut", &String::from("..."))
          .finish()
     }
 }
 
 #[cfg(not(feature="async"))]
-impl<T: 'static + FnMut(Uid, &dyn Set, &String) -> Result<bool>> IndexCallback for SimpleIndexCallback<T> {
+impl<T: 'static + FnMut(Uid, &dyn Set, &String) -> Result<bool>> OptCallback for SimpleOptCallback<T> {
     fn call(&mut self, uid: Uid, set: &dyn Set, arg: &String) -> Result<bool> {
         self.0(uid, set, arg)
     }
 }
 
 #[cfg(not(feature="async"))]
-pub struct SimpleIndexMutCallback<T: 'static + FnMut(Uid, &mut dyn Set, &String) -> Result<bool>>(T);
+pub struct SimpleOptMutCallback<T: 'static + FnMut(Uid, &mut dyn Set, &String) -> Result<bool>>(T);
 
 #[cfg(not(feature="async"))]
-impl<T: 'static + FnMut(Uid, &mut dyn Set, &String) -> Result<bool>> SimpleIndexMutCallback<T> {
+impl<T: 'static + FnMut(Uid, &mut dyn Set, &String) -> Result<bool>> SimpleOptMutCallback<T> {
     pub fn new(cb: T) -> Self {
         Self(cb)
     }
 }
 
 #[cfg(not(feature="async"))]
-impl<T: 'static + FnMut(Uid, &mut dyn Set, &String) -> Result<bool>> Debug for SimpleIndexMutCallback<T> {
+impl<T: 'static + FnMut(Uid, &mut dyn Set, &String) -> Result<bool>> Debug for SimpleOptMutCallback<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SimpleIndexMutCallback")
+        f.debug_struct("SimpleOptMutCallback")
          .field("FnMut", &String::from("..."))
          .finish()
     }
 }
 
 #[cfg(not(feature="async"))]
-impl<T: 'static + FnMut(Uid, &mut dyn Set, &String) -> Result<bool>> IndexMutCallback for SimpleIndexMutCallback<T> {
+impl<T: 'static + FnMut(Uid, &mut dyn Set, &String) -> Result<bool>> OptMutCallback for SimpleOptMutCallback<T> {
     fn call(&mut self, uid: Uid, set: &mut dyn Set, arg: &String) -> Result<bool> {
         self.0(uid, set, arg)
     }
@@ -430,7 +428,7 @@ impl<T: 'static + FnMut(Uid, &dyn Set, &[String]) -> Result<bool>> SimpleMainCal
 #[cfg(not(feature="async"))]
 impl<T: 'static + FnMut(Uid, &dyn Set, &[String]) -> Result<bool>> Debug for SimpleMainCallback<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SimpleIndexMutCallback")
+        f.debug_struct("SimpleMainCallback")
          .field("FnMut", &String::from("..."))
          .finish()
     }
@@ -456,7 +454,7 @@ impl<T: 'static + FnMut(Uid, &mut dyn Set, &[String]) -> Result<bool>> SimpleMai
 #[cfg(not(feature="async"))]
 impl<T: 'static + FnMut(Uid, &mut dyn Set, &[String]) -> Result<bool>> Debug for SimpleMainMutCallback<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SimpleIndexMutCallback")
+        f.debug_struct("SimpleMainMutCallback")
          .field("FnMut", &String::from("..."))
          .finish()
     }

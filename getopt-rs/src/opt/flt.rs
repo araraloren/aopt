@@ -11,13 +11,13 @@ use crate::set::info::CreateInfo;
 use crate::set::Creator;
 
 pub fn current_type() -> &'static str {
-    "b"
+    "f"
 }
 
-pub trait Bool: Opt { }
+pub trait Flt: Opt { }
 
 #[derive(Debug)]
-pub struct BoolOpt {
+pub struct FltOpt {
     uid: Uid,
 
     name: String,
@@ -30,8 +30,6 @@ pub struct BoolOpt {
 
     default_value: OptValue,
 
-    deactivate_style: bool,
-
     alias: Vec<(String, String)>,
 
     callback_type: CallbackType,
@@ -39,7 +37,7 @@ pub struct BoolOpt {
     help_info: HelpInfo,
 }
 
-impl From<CreateInfo> for BoolOpt {
+impl From<CreateInfo> for FltOpt {
     fn from(ci: CreateInfo) -> Self {
         let mut ci = ci;
         
@@ -50,7 +48,6 @@ impl From<CreateInfo> for BoolOpt {
             optional: ci.get_optional(),
             value: OptValue::default(),
             default_value: take(ci.get_default_value_mut()),
-            deactivate_style: ci.get_support_deactivate_style(),
             alias: take(ci.get_alias_mut()),
             callback_type: ci.get_callback_type().clone(),
             help_info: take(ci.get_help_info_mut()),
@@ -58,22 +55,22 @@ impl From<CreateInfo> for BoolOpt {
     }
 }
 
-impl Bool for BoolOpt { }
+impl Flt for FltOpt { }
 
-impl Opt for BoolOpt { }
+impl Opt for FltOpt { }
 
-impl Type for BoolOpt {
+impl Type for FltOpt {
     fn get_type_name(&self) -> &'static str {
         current_type()
     }
 
     fn is_deactivate_style(&self) -> bool {
-        self.deactivate_style
+        false
     }
 
     fn match_style(&self, style: Style) -> bool {
         match style {
-            Style::Boolean | Style::Multiple => true,
+            Style::Argument => true,
             _ => false,
         }
     }
@@ -92,7 +89,7 @@ impl Type for BoolOpt {
     }
 }
 
-impl Identifier for BoolOpt {
+impl Identifier for FltOpt {
     fn get_uid(&self) -> Uid {
         self.uid
     }
@@ -102,7 +99,7 @@ impl Identifier for BoolOpt {
     }
 }
 
-impl Callback for BoolOpt {
+impl Callback for FltOpt {
     fn get_callback_type(&self) -> &CallbackType {
         &self.callback_type
     }
@@ -137,7 +134,7 @@ impl Callback for BoolOpt {
     }
 }
 
-impl Name for BoolOpt {
+impl Name for FltOpt {
     fn get_name(&self) -> &str {
         &self.name
     }
@@ -163,7 +160,7 @@ impl Name for BoolOpt {
     }
 }
 
-impl Optional for BoolOpt {
+impl Optional for FltOpt {
     fn get_optional(&self) -> bool {
         self.optional
     }
@@ -177,7 +174,7 @@ impl Optional for BoolOpt {
     }
 }
 
-impl Alias for BoolOpt {
+impl Alias for FltOpt {
     fn get_alias(&self) -> Option<&Vec<(String, String)>> {
         Some(&self.alias)
     }
@@ -202,7 +199,7 @@ impl Alias for BoolOpt {
     }
 }
 
-impl Index for BoolOpt {
+impl Index for FltOpt {
     fn get_index(&self) -> Option<&OptIndex> {
         None
     }
@@ -216,7 +213,7 @@ impl Index for BoolOpt {
     }
 }
 
-impl Value for BoolOpt {
+impl Value for FltOpt {
     fn get_value(&self) -> &OptValue {
         &self.value
     }
@@ -233,12 +230,17 @@ impl Value for BoolOpt {
         self.default_value = value;
     }
 
-    fn parse_value(&self, _string: &str) -> Result<OptValue> {
-        Ok(OptValue::from(! self.is_deactivate_style()))
+    fn parse_value(&self, string: &str) -> Result<OptValue> {
+        Ok(OptValue::from(
+            string.parse::<f64>()
+                  .map_err(|e| {
+                      Error::ParseOptionValueFailed(String::from(string), format!("{:?}", e))
+                  })?
+        ))
     }
 
     fn has_value(&self) -> bool {
-        self.get_value().as_bool() != self.get_default_value().as_bool()
+        self.get_value().is_flt()
     }
 
     fn reset_value(&mut self) {
@@ -246,7 +248,7 @@ impl Value for BoolOpt {
     }
 }
 
-impl Help for BoolOpt {
+impl Help for FltOpt {
     fn set_hint(&mut self, hint: String) {
         self.help_info.set_hint(hint);
     }
@@ -261,15 +263,15 @@ impl Help for BoolOpt {
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct BoolCreator;
+pub struct FltCreator;
 
-impl Creator for BoolCreator {
+impl Creator for FltCreator {
     fn get_type_name(&self) -> &'static str {
         current_type()
     }
 
     fn is_support_deactivate_style(&self) -> bool {
-        true
+        false
     }
 
     fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>> {
@@ -284,8 +286,8 @@ impl Creator for BoolCreator {
 
         assert_eq!(create_info.get_type_name(), self.get_type_name());
 
-        let opt: BoolOpt = create_info.into();
-
+        let opt: FltOpt = create_info.into();
+        
         Ok(Box::new(opt))
     }
 }

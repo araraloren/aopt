@@ -24,4 +24,16 @@ pub enum Error {
 
     #[error("can not invoke with callback type `{0}`")]
     InvalidCallbackType(String),
+
+    #[error("the option `{0}` is force required")]
+    ForceRequiredOption(String),
+
+    #[error("option type is not support deactivate style: `{0}`")]
+    NotSupportDeactivateStyle(String),
+
+    #[error("parse option value `{0}` failed: `{1}`")]
+    ParseOptionValueFailed(String, String),
+
+    #[error("option type `{0}` need an valid prefix")]
+    NeedValidPrefix(&'static str),
 }

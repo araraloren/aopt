@@ -18,7 +18,7 @@ impl<'a> Commit<'a> {
     }
 
     pub fn set_deactivate_style(&mut self, deactivate_style: bool) -> &mut Self {
-        self.info.set_deactivate_style(deactivate_style);
+        self.info.set_support_deactivate_style(deactivate_style);
         self
     }
 

@@ -44,7 +44,7 @@ impl Index {
                 let offset = *offset;
 
                 if offset <= total {
-                    return Some(total);
+                    return Some(offset);
                 }
             }
             Self::Backward(offset) => {
