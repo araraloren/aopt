@@ -81,7 +81,7 @@ where
         Ok(proc.is_matched())
     }
 
-    #[cfg(eature = "async")]
+    #[cfg(feature = "async")]
     async fn publish(&mut self, msg: &mut P, set: &mut S) -> Result<bool> {
         let proc = msg;
 

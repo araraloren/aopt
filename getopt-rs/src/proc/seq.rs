@@ -71,7 +71,7 @@ impl Proc for SequenceProc {
     fn is_matched(&self) -> bool {
         self.context
             .iter()
-            .fold(true, |acc, x| acc || x.is_matched())
+            .fold(true, |acc, x| acc && x.is_matched())
     }
 
     fn is_comsume_argument(&self) -> bool {
