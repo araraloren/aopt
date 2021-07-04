@@ -10,6 +10,9 @@ use crate::opt::Opt;
 use crate::set::Set;
 use crate::uid::Uid;
 
+pub use seq::SequenceProc;
+pub use single::SingleProc;
+
 pub trait Message: Debug {
     fn msg_uid(&self) -> Uid;
 }

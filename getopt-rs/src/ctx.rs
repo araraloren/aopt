@@ -6,15 +6,12 @@ pub mod opt;
 
 use crate::err::Result;
 use crate::opt::{Opt, Style};
-use crate::uid::Uid;
 
 pub use self::delay::DelayContext;
 pub use self::nonopt::NonOptContext;
 pub use self::opt::OptContext;
 
 pub trait Context: Debug {
-    fn get_uid(&self) -> Uid;
-
     fn match_opt(&self, opt: &dyn Opt) -> bool;
 
     fn process_opt(&mut self, opt: &mut dyn Opt) -> Result<bool>;

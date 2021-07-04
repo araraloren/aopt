@@ -73,12 +73,12 @@ impl Set for SimpleSet {
         Ok(uid)
     }
 
-    fn get_opt(&self, id: Uid) -> Option<&Box<dyn Opt>> {
-        self.opt.get(id as usize)
+    fn get_opt(&self, uid: Uid) -> Option<&Box<dyn Opt>> {
+        self.opt.get(uid as usize)
     }
 
-    fn get_opt_mut(&mut self, id: Uid) -> Option<&mut Box<dyn Opt>> {
-        self.opt.get_mut(id as usize)
+    fn get_opt_mut(&mut self, uid: Uid) -> Option<&mut Box<dyn Opt>> {
+        self.opt.get_mut(uid as usize)
     }
 
     fn len(&self) -> usize {

@@ -1,15 +1,10 @@
-use std::borrow::Cow;
-
 use super::Context;
 use crate::err::Result;
 use crate::opt::{Opt, Style};
-use crate::uid::Uid;
 
 #[derive(Debug)]
-pub struct NonOptContext<'name> {
-    uid: Uid,
-
-    name: Cow<'name, str>,
+pub struct NonOptContext {
+    name: String,
 
     style: Style,
 
@@ -20,10 +15,9 @@ pub struct NonOptContext<'name> {
     matched_index: Option<usize>,
 }
 
-impl<'name> NonOptContext<'name> {
-    pub fn new(uid: Uid, name: Cow<'name, str>, style: Style, total: u64, current: u64) -> Self {
+impl NonOptContext {
+    pub fn new(name: String, style: Style, total: u64, current: u64) -> Self {
         Self {
-            uid,
             name,
             style,
             total,
@@ -33,17 +27,13 @@ impl<'name> NonOptContext<'name> {
     }
 }
 
-impl<'name> Context for NonOptContext<'name> {
-    fn get_uid(&self) -> Uid {
-        self.uid
-    }
-
+impl Context for NonOptContext {
     fn match_opt(&self, opt: &dyn Opt) -> bool {
         let mut matched = opt.match_style(self.style);
         debug!(
-            "Matching option<{}> <-> nonopt context<{}>",
+            "Matching option<{}> <-> nonopt context<{:?}>",
             opt.get_uid(),
-            self.get_uid()
+            self
         );
         if matched {
             matched = matched

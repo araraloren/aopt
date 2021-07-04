@@ -47,9 +47,9 @@ pub trait Set:
 
     fn add_opt_raw(&mut self, opt: Box<dyn Opt>) -> Result<Uid>;
 
-    fn get_opt(&self, id: Uid) -> Option<&Box<dyn Opt>>;
+    fn get_opt(&self, uid: Uid) -> Option<&Box<dyn Opt>>;
 
-    fn get_opt_mut(&mut self, id: Uid) -> Option<&mut Box<dyn Opt>>;
+    fn get_opt_mut(&mut self, uid: Uid) -> Option<&mut Box<dyn Opt>>;
 
     fn len(&self) -> usize;
 

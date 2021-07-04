@@ -31,6 +31,9 @@ pub enum Error {
     #[error("option type is not support deactivate style: `{0}`")]
     NotSupportDeactivateStyle(String),
 
+    #[error("pos option `{0}` index can not be null")]
+    ForceRequiredOptionIndex(String),
+
     #[error("parse option value `{0}` failed: `{1}`")]
     ParseOptionValueFailed(String, String),
 
@@ -42,4 +45,10 @@ pub enum Error {
 
     #[error("inavlid return value type, except `{0}` found `{1}`")]
     InvalidReturnValueOfCallback(String, String),
+
+    #[error("invalid option callback data: `{0}`")]
+    InvalidOptionCallbackData(String),
+
+    #[error("the option @{0} is force required: `{1}`")]
+    ForceRequiredPostionOption(u64, String),
 }

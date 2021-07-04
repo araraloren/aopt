@@ -1,5 +1,11 @@
+pub mod check;
+pub mod forward;
+pub mod gen_style;
+
 use std::fmt::Debug;
-use std::slice::Iter;
+
+pub(crate) use std::collections::hash_map::Iter as HashMapIter;
+pub(crate) use std::slice::Iter as SliceIter;
 
 use crate::err::Result;
 use crate::opt::{OptCallback, OptValue};
@@ -7,18 +13,31 @@ use crate::proc::{Info, Message, Proc, Publisher};
 use crate::set::Set;
 use crate::uid::Uid;
 
+pub use gen_style::GenStyle;
+
 #[async_trait::async_trait(?Send)]
 pub trait Parser<S>: Debug
 where
     S: Set,
+    Self: Sized,
 {
     #[cfg(not(feature = "async"))]
-    fn parse(&mut self, set: S, iter: impl Iterator<Item = String>) -> Result<Option<bool>>;
+    fn parse(
+        &mut self,
+        set: S,
+        iter: impl Iterator<Item = String>,
+    ) -> Result<Option<ReturnValue<S>>>;
 
     #[cfg(feature = "async")]
-    async fn parse(&mut self, set: S, iter: impl Iterator<Item = String>) -> Result<Option<bool>>;
+    async fn parse(
+        &mut self,
+        set: S,
+        iter: impl Iterator<Item = String>,
+    ) -> Result<Option<ReturnValue<S>>>;
 
     fn add_callback(&mut self, uid: Uid, callback: OptCallback);
+
+    fn callback_iter(&self) -> HashMapIter<'_, Uid, OptCallback>;
 
     #[cfg(not(feature = "async"))]
     fn invoke_callback(&self, uid: Uid, set: &mut S, noa_index: usize) -> Result<Option<OptValue>>;
@@ -31,15 +50,23 @@ where
         noa_index: usize,
     ) -> Result<Option<OptValue>>;
 
-    fn pre_check(&self) -> Result<bool>;
+    fn pre_check(&self, set: &S) -> Result<bool> {
+        check::default_pre_check(set, self)
+    }
 
-    fn check_opt(&self) -> Result<bool>;
+    fn check_opt(&self, set: &S) -> Result<bool> {
+        check::default_opt_check(set, self)
+    }
 
-    fn check_nonopt(&self) -> Result<bool>;
+    fn check_nonopt(&self, set: &S) -> Result<bool> {
+        check::default_nonopt_check(set, self)
+    }
 
-    fn post_check(&self) -> Result<bool>;
+    fn post_check(&self, set: &S) -> Result<bool> {
+        check::default_post_check(set, self)
+    }
 
-    fn subscriber_iter(&self) -> Iter<'_, Box<dyn Info>>;
+    fn subscriber_iter(&self) -> SliceIter<'_, Box<dyn Info>>;
 
     fn reg_subscriber(&mut self, info: Box<dyn Info>);
 
@@ -117,7 +144,13 @@ where
         T::clr_subscriber(self);
     }
 
-    fn subscriber_iter(&self) -> Iter<'_, Box<dyn Info>> {
+    fn subscriber_iter(&self) -> SliceIter<'_, Box<dyn Info>> {
         T::subscriber_iter(&self)
     }
+}
+
+#[derive(Debug, Default)]
+pub struct ReturnValue<S: Set> {
+    pub noa: Vec<String>,
+    pub set: S,
 }

@@ -38,6 +38,13 @@ impl Index {
         Self::Null
     }
 
+    pub fn is_null(&self) -> bool {
+        match self {
+            Self::Null => true,
+            _ => false,
+        }
+    }
+
     pub fn calc_index(&self, total: u64, current: u64) -> Option<u64> {
         match self {
             Self::Forward(offset) => {

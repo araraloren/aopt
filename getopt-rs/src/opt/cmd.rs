@@ -203,7 +203,7 @@ impl Value for CmdOpt {
     }
 
     fn has_value(&self) -> bool {
-        self.get_value().is_bool() && *self.get_value().as_bool().unwrap()
+        !self.get_value().is_null()
     }
 
     fn reset_value(&mut self) {

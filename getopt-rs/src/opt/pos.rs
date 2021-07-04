@@ -217,7 +217,7 @@ impl Value for PosOpt {
     }
 
     fn has_value(&self) -> bool {
-        self.get_value().is_bool() && *self.get_value().as_bool().unwrap()
+        !self.get_value().is_null()
     }
 
     fn reset_value(&mut self) {
@@ -258,6 +258,11 @@ impl Creator for PosCreator {
                     create_info.get_name().to_owned(),
                 ));
             }
+        }
+        if create_info.get_index().is_null() {
+            return Err(Error::ForceRequiredOptionIndex(
+                create_info.get_name().to_owned(),
+            ));
         }
 
         assert_eq!(create_info.get_type_name(), self.get_type_name());

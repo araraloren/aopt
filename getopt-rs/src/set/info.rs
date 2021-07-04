@@ -1,7 +1,7 @@
 use crate::err::{Error, Result};
 use crate::opt::parser::parse_option_str;
 use crate::opt::parser::DataKeeper;
-use crate::opt::{index::Index, value::Value, HelpInfo, Opt};
+use crate::opt::{HelpInfo, Opt, OptIndex, OptValue};
 use crate::proc::Info;
 use crate::uid::Uid;
 
@@ -19,9 +19,9 @@ pub struct CreateInfo {
 
     prefix: Option<String>,
 
-    index: Index,
+    index: OptIndex,
 
-    value: Value,
+    value: OptValue,
 
     alias: Vec<(String, String)>,
 
@@ -59,12 +59,12 @@ impl CreateInfo {
         self
     }
 
-    pub fn set_index(&mut self, index: Index) -> &mut Self {
+    pub fn set_index(&mut self, index: OptIndex) -> &mut Self {
         self.index = index;
         self
     }
 
-    pub fn set_default_value(&mut self, value: Value) -> &mut Self {
+    pub fn set_default_value(&mut self, value: OptValue) -> &mut Self {
         self.value = value;
         self
     }
@@ -128,7 +128,7 @@ impl CreateInfo {
         &self.prefix
     }
 
-    pub fn get_index(&self) -> &Index {
+    pub fn get_index(&self) -> &OptIndex {
         &self.index
     }
 
@@ -136,7 +136,7 @@ impl CreateInfo {
         self.alias.as_ref()
     }
 
-    pub fn get_default_value(&self) -> &Value {
+    pub fn get_default_value(&self) -> &OptValue {
         &self.value
     }
 
@@ -164,7 +164,7 @@ impl CreateInfo {
         &mut self.prefix
     }
 
-    pub fn get_index_mut(&mut self) -> &mut Index {
+    pub fn get_index_mut(&mut self) -> &mut OptIndex {
         &mut self.index
     }
 
@@ -172,7 +172,7 @@ impl CreateInfo {
         self.alias.as_mut()
     }
 
-    pub fn get_default_value_mut(&mut self) -> &mut Value {
+    pub fn get_default_value_mut(&mut self) -> &mut OptValue {
         &mut self.value
     }
 
@@ -221,7 +221,7 @@ pub struct FilterInfo {
 
     prefix: Option<String>,
 
-    index: Option<Index>,
+    index: Option<OptIndex>,
 }
 
 impl FilterInfo {
@@ -250,7 +250,7 @@ impl FilterInfo {
         self
     }
 
-    pub fn set_index(&mut self, index: Index) -> &mut Self {
+    pub fn set_index(&mut self, index: OptIndex) -> &mut Self {
         self.index = Some(index);
         self
     }
@@ -275,7 +275,7 @@ impl FilterInfo {
         self.prefix.as_ref().unwrap()
     }
 
-    pub fn get_index(&self) -> &Index {
+    pub fn get_index(&self) -> &OptIndex {
         self.index.as_ref().unwrap()
     }
 

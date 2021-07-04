@@ -20,16 +20,16 @@ impl<'pre> Argument<'pre> {
         }
     }
 
-    pub fn get_prefix(&self) -> Option<&'pre String> {
-        self.data_keeper.prefix
+    pub fn get_prefix(&self) -> &Option<&'pre String> {
+        &self.data_keeper.prefix
     }
 
-    pub fn get_name(&self) -> Option<&String> {
-        self.data_keeper.name.as_ref()
+    pub fn get_name(&self) -> &Option<String> {
+        &self.data_keeper.name
     }
 
-    pub fn get_value(&self) -> Option<&String> {
-        self.data_keeper.value.as_ref()
+    pub fn get_value(&self) -> &Option<String> {
+        &self.data_keeper.value
     }
 
     pub fn is_disabled(&self) -> bool {

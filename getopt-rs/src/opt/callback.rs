@@ -79,6 +79,34 @@ impl CallbackType {
     }
 }
 
+impl From<Callback> for CallbackType {
+    fn from(cb: Callback) -> Self {
+        match cb {
+            Callback::Cmd(_) => CallbackType::Pos,
+            Callback::CmdMut(_) => CallbackType::PosMut,
+            Callback::Opt(_) => CallbackType::Opt,
+            Callback::OptMut(_) => CallbackType::OptMut,
+            Callback::Main(_) => CallbackType::Main,
+            Callback::MainMut(_) => CallbackType::MainMut,
+            Callback::Null => CallbackType::Null,
+        }
+    }
+}
+
+impl<'a> From<&'a Callback> for CallbackType {
+    fn from(cb: &'a Callback) -> Self {
+        match cb {
+            Callback::Cmd(_) => CallbackType::Pos,
+            Callback::CmdMut(_) => CallbackType::PosMut,
+            Callback::Opt(_) => CallbackType::Opt,
+            Callback::OptMut(_) => CallbackType::OptMut,
+            Callback::Main(_) => CallbackType::Main,
+            Callback::MainMut(_) => CallbackType::MainMut,
+            Callback::Null => CallbackType::Null,
+        }
+    }
+}
+
 #[async_trait::async_trait(?Send)]
 pub trait CmdCallback: Debug {
     #[cfg(not(feature = "async"))]

@@ -179,11 +179,11 @@ mod test {
                         check_item.get(0).unwrap_or(&default_item)
                     );
                     assert_eq!(
-                        arg.get_name().unwrap_or(&default_str),
+                        arg.get_name().as_ref().unwrap_or(&default_str),
                         check_item.get(1).unwrap_or(&default_item)
                     );
                     assert_eq!(
-                        arg.get_value().unwrap_or(&default_str),
+                        arg.get_value().as_ref().unwrap_or(&default_str),
                         check_item.get(2).unwrap_or(&default_item)
                     );
                 }

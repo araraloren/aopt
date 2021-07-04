@@ -1,19 +1,14 @@
-use std::borrow::Cow;
-
 use super::Context;
 use crate::err::{Error, Result};
 use crate::opt::{Opt, Style};
-use crate::uid::Uid;
 
 #[derive(Debug)]
-pub struct DelayContext<'arg, 'pre, 'name> {
-    uid: Uid,
+pub struct DelayContext {
+    prefix: String,
 
-    prefix: Cow<'pre, str>,
+    name: String,
 
-    name: Cow<'name, str>,
-
-    argument: &'arg Option<String>,
+    argument: Option<String>,
 
     style: Style,
 
@@ -22,17 +17,15 @@ pub struct DelayContext<'arg, 'pre, 'name> {
     matched_index: Option<usize>,
 }
 
-impl<'arg, 'pre, 'name> DelayContext<'arg, 'pre, 'name> {
+impl DelayContext {
     pub fn new(
-        uid: Uid,
-        prefix: Cow<'pre, str>,
-        name: Cow<'name, str>,
-        argument: &'arg Option<String>,
+        prefix: String,
+        name: String,
+        argument: Option<String>,
         style: Style,
         consume_arg: bool,
     ) -> Self {
         Self {
-            uid,
             prefix,
             name,
             argument,
@@ -43,18 +36,14 @@ impl<'arg, 'pre, 'name> DelayContext<'arg, 'pre, 'name> {
     }
 }
 
-impl<'arg, 'pre, 'name> Context for DelayContext<'arg, 'pre, 'name> {
-    fn get_uid(&self) -> Uid {
-        self.uid
-    }
-
+impl Context for DelayContext {
     fn match_opt(&self, opt: &dyn Opt) -> bool {
         let mut matched = opt.match_style(self.style);
 
         debug!(
-            "Matching option<{}> <-> opt context<{}>",
+            "Matching option<{}> <-> opt context<{:?}>",
             opt.get_uid(),
-            self.get_uid()
+            self
         );
         if matched {
             matched = matched
@@ -73,7 +62,7 @@ impl<'arg, 'pre, 'name> Context for DelayContext<'arg, 'pre, 'name> {
             )));
         }
         self.matched_index = Some(0);
-        if let Some(_value) = self.argument {
+        if let Some(_value) = &self.argument {
             // don't set value here, because this is using for a delay parse
             // opt.set_value(opt.parse_value(value)?);
             opt.set_invoke(true);
@@ -90,7 +79,7 @@ impl<'arg, 'pre, 'name> Context for DelayContext<'arg, 'pre, 'name> {
     }
 
     fn get_next_argument(&self) -> &Option<String> {
-        self.argument
+        &self.argument
     }
 
     fn is_comsume_argument(&self) -> bool {
