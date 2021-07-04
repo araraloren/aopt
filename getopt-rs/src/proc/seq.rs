@@ -74,6 +74,10 @@ impl Proc for SequenceProc {
             .fold(true, |acc, x| acc || x.is_matched())
     }
 
+    fn is_comsume_argument(&self) -> bool {
+        self.consoume_argument
+    }
+
     fn len(&self) -> usize {
         self.context.len()
     }

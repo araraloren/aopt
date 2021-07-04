@@ -112,6 +112,19 @@ impl Callback for StrOpt {
             _ => false,
         }
     }
+
+    fn set_callback_ret(&mut self, ret: Option<OptValue>) -> Result<()> {
+        if let Some(ret) = ret {
+            if !ret.is_str() {
+                return Err(Error::InvalidReturnValueOfCallback(
+                    "OptValue::Bool".to_owned(),
+                    format!("{:?}", ret),
+                ));
+            }
+            self.set_value(ret);
+        }
+        Ok(())
+    }
 }
 
 impl Name for StrOpt {

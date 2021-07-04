@@ -102,6 +102,13 @@ impl Callback for MainOpt {
             _ => false,
         }
     }
+
+    fn set_callback_ret(&mut self, ret: Option<OptValue>) -> Result<()> {
+        if let Some(ret) = ret {
+            self.set_value(ret);
+        }
+        Ok(())
+    }
 }
 
 impl Name for MainOpt {

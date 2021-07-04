@@ -83,6 +83,10 @@ impl Proc for SingleProc {
             .unwrap_or(false)
     }
 
+    fn is_comsume_argument(&self) -> bool {
+        self.consoume_argument
+    }
+
     fn len(&self) -> usize {
         1
     }

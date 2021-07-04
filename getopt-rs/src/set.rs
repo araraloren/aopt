@@ -68,8 +68,8 @@ pub trait Set:
     fn get_prefix(&self) -> &[String];
 }
 
-impl<P: Proc, S: Set> Subscriber<P> for S {
-    fn subscribe_from(&self, publisher: &mut dyn crate::proc::Publisher<P>) {
+impl<P: Proc, S: Set> Subscriber<P, S> for S {
+    fn subscribe_from(&self, publisher: &mut dyn crate::proc::Publisher<P, S>) {
         for opt in self.iter() {
             publisher.reg_subscriber(Box::new(OptionInfo::from(opt.get_uid())))
         }

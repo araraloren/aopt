@@ -119,6 +119,19 @@ pub mod path {
                 false
             }
         }
+
+        fn set_callback_ret(&mut self, ret: Option<OptValue>) -> Result<()> {
+            if let Some(ret) = ret {
+                if !ret.is_any() {
+                    return Err(Error::InvalidReturnValueOfCallback(
+                        "OptValue::Any".to_owned(),
+                        format!("{:?}", ret),
+                    ));
+                }
+                self.set_value(ret);
+            }
+            Ok(())
+        }
     }
 
     impl Name for PathOpt {

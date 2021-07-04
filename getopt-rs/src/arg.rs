@@ -59,8 +59,8 @@ impl<'pre> ArgStream<'pre> {
     }
 }
 
-impl<'str, 'nv, 'pre, Iter: Iterator<Item = String>> From<Iter> for ArgStream<'pre> {
-    fn from(iter: Iter) -> Self {
+impl<'str, 'nv, 'pre, It: Iterator<Item = String>> From<It> for ArgStream<'pre> {
+    fn from(iter: It) -> Self {
         Self {
             args: Self::iterator_to_args(iter),
             index: 0,

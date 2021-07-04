@@ -39,4 +39,7 @@ pub enum Error {
 
     #[error("option `{0}` need an argument")]
     RequiredArgumentOfOption(String),
+
+    #[error("inavlid return value type, except `{0}` found `{1}`")]
+    InvalidReturnValueOfCallback(String, String),
 }

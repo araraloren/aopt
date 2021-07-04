@@ -2,6 +2,7 @@ pub mod arg;
 pub mod ctx;
 pub mod err;
 pub mod opt;
+pub mod parser;
 pub mod proc;
 pub mod set;
 pub mod uid;

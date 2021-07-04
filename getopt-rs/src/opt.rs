@@ -22,7 +22,7 @@ use std::fmt::Debug;
 use crate::err::{Error, Result};
 use crate::uid::Uid;
 
-pub use self::callback::CallbackType;
+pub use self::callback::{Callback as OptCallback, CallbackType};
 pub use self::help::HelpInfo;
 pub use self::index::Index as OptIndex;
 pub use self::parser::{parse_option_str, DataKeeper};
@@ -55,6 +55,8 @@ pub trait Callback {
     fn set_invoke(&mut self, invoke: bool);
 
     fn is_accept_callback_type(&self, callback_type: CallbackType) -> bool;
+
+    fn set_callback_ret(&mut self, ret: Option<OptValue>) -> Result<()>;
 }
 
 pub trait Name {

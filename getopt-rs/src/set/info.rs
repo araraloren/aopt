@@ -375,7 +375,7 @@ impl<'pre> From<DataKeeper<'pre>> for FilterInfo {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default, Clone)]
 pub struct OptionInfo {
     uid: Uid,
 }

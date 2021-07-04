@@ -112,6 +112,19 @@ impl Callback for IntOpt {
             _ => false,
         }
     }
+
+    fn set_callback_ret(&mut self, ret: Option<OptValue>) -> Result<()> {
+        if let Some(ret) = ret {
+            if !ret.is_int() {
+                return Err(Error::InvalidReturnValueOfCallback(
+                    "OptValue::Int".to_owned(),
+                    format!("{:?}", ret),
+                ));
+            }
+            self.set_value(ret);
+        }
+        Ok(())
+    }
 }
 
 impl Name for IntOpt {
