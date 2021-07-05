@@ -9,7 +9,7 @@ use crate::uid::Uid;
 pub fn default_pre_check<S: Set, P: Parser<S>>(set: &S, parser: &P) -> Result<bool> {
     for (uid, callback) in parser.callback_iter() {
         if let Some(opt) = set.get_opt(*uid) {
-            if !opt.is_accept_callback_type(callback.into()) {
+            if !opt.is_accept_callback_type(callback.borrow().to_callback_type()) {
                 return Err(Error::InvalidOptionCallbackData(format!(
                     "invalid callback type {:?}",
                     callback

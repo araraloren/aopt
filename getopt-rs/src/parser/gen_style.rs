@@ -3,7 +3,7 @@ use crate::ctx::{Context, DelayContext, NonOptContext, OptContext};
 use crate::opt::Style;
 use crate::proc::Proc;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum GenStyle {
     GSEqualWithValue,
 
@@ -32,8 +32,8 @@ pub enum GenStyle {
     GSNonCmd,
 }
 
-impl<'arg, 'pre> GenStyle {
-    pub fn gen_opt<P: Proc + Default>(&self, arg: &'arg Argument<'pre>) -> Option<P> {
+impl<'pre> GenStyle {
+    pub fn gen_opt<P: Proc + Default>(&self, arg: &Argument<'pre>) -> Option<P> {
         let mut ret: Vec<Box<dyn Context>> = vec![];
 
         match self {

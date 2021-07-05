@@ -61,7 +61,7 @@ pub trait Proc: Debug {
     fn len(&self) -> usize;
 }
 
-impl<T: Proc> Message for T {
+impl Message for Box<dyn Proc> {
     fn msg_uid(&self) -> Uid {
         self.uid()
     }

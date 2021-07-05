@@ -2,6 +2,7 @@ pub mod check;
 pub mod forward;
 pub mod gen_style;
 
+use std::cell::RefCell;
 use std::fmt::Debug;
 
 pub(crate) use std::collections::hash_map::Iter as HashMapIter;
@@ -37,14 +38,16 @@ where
 
     fn add_callback(&mut self, uid: Uid, callback: OptCallback);
 
-    fn callback_iter(&self) -> HashMapIter<'_, Uid, OptCallback>;
+    fn get_callback(&self, uid: Uid) -> Option<&RefCell<OptCallback>>;
+
+    fn callback_iter(&self) -> HashMapIter<'_, Uid, RefCell<OptCallback>>;
 
     #[cfg(not(feature = "async"))]
     fn invoke_callback(&self, uid: Uid, set: &mut S, noa_index: usize) -> Result<Option<OptValue>>;
 
     #[cfg(feature = "async")]
     async fn invoke_callback(
-        &self,
+        &mut self,
         uid: Uid,
         set: &mut S,
         noa_index: usize,
@@ -75,13 +78,12 @@ where
     fn reset(&mut self);
 }
 
-impl<S, P, T: Parser<S>> Publisher<P, S> for T
+impl<S, T: Parser<S>> Publisher<Box<dyn Proc>, S> for T
 where
     S: Set,
-    P: Proc,
 {
     #[cfg(not(feature = "async"))]
-    fn publish(&mut self, msg: &mut P, set: &mut S) -> Result<bool> {
+    fn publish(&mut self, msg: &mut Box<dyn Proc>, set: &mut S) -> Result<bool> {
         let proc = msg;
 
         debug!("Got message<{}>: {:?}", &proc.msg_uid(), &proc);

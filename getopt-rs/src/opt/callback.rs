@@ -43,14 +43,14 @@ impl CallbackType {
         }
     }
 
-    pub fn is_cmd(&self) -> bool {
+    pub fn is_pos(&self) -> bool {
         match self {
             Self::Pos => true,
             _ => false,
         }
     }
 
-    pub fn is_cmd_mut(&self) -> bool {
+    pub fn is_pos_mut(&self) -> bool {
         match self {
             Self::PosMut => true,
             _ => false,
@@ -81,25 +81,17 @@ impl CallbackType {
 
 impl From<Callback> for CallbackType {
     fn from(cb: Callback) -> Self {
-        match cb {
-            Callback::Cmd(_) => CallbackType::Pos,
-            Callback::CmdMut(_) => CallbackType::PosMut,
-            Callback::Opt(_) => CallbackType::Opt,
-            Callback::OptMut(_) => CallbackType::OptMut,
-            Callback::Main(_) => CallbackType::Main,
-            Callback::MainMut(_) => CallbackType::MainMut,
-            Callback::Null => CallbackType::Null,
-        }
+        (&cb).into()
     }
 }
 
 impl<'a> From<&'a Callback> for CallbackType {
     fn from(cb: &'a Callback) -> Self {
         match cb {
-            Callback::Cmd(_) => CallbackType::Pos,
-            Callback::CmdMut(_) => CallbackType::PosMut,
             Callback::Opt(_) => CallbackType::Opt,
             Callback::OptMut(_) => CallbackType::OptMut,
+            Callback::Pos(_) => CallbackType::Pos,
+            Callback::PosMut(_) => CallbackType::PosMut,
             Callback::Main(_) => CallbackType::Main,
             Callback::MainMut(_) => CallbackType::MainMut,
             Callback::Null => CallbackType::Null,
@@ -108,7 +100,7 @@ impl<'a> From<&'a Callback> for CallbackType {
 }
 
 #[async_trait::async_trait(?Send)]
-pub trait CmdCallback: Debug {
+pub trait OptCallback: Debug {
     #[cfg(not(feature = "async"))]
     fn call(&mut self, uid: Uid, set: &dyn Set) -> Result<Option<OptValue>>;
 
@@ -117,7 +109,7 @@ pub trait CmdCallback: Debug {
 }
 
 #[async_trait::async_trait(?Send)]
-pub trait CmdMutCallback: Debug {
+pub trait OptMutCallback: Debug {
     #[cfg(not(feature = "async"))]
     fn call(&mut self, uid: Uid, set: &mut dyn Set) -> Result<Option<OptValue>>;
 
@@ -126,7 +118,7 @@ pub trait CmdMutCallback: Debug {
 }
 
 #[async_trait::async_trait(?Send)]
-pub trait OptCallback: Debug {
+pub trait PosCallback: Debug {
     #[cfg(not(feature = "async"))]
     fn call(&mut self, uid: Uid, set: &dyn Set, arg: &String) -> Result<Option<OptValue>>;
 
@@ -135,7 +127,7 @@ pub trait OptCallback: Debug {
 }
 
 #[async_trait::async_trait(?Send)]
-pub trait OptMutCallback: Debug {
+pub trait PosMutCallback: Debug {
     #[cfg(not(feature = "async"))]
     fn call(&mut self, uid: Uid, set: &mut dyn Set, arg: &String) -> Result<Option<OptValue>>;
 
@@ -169,13 +161,13 @@ pub trait MainMutCallback: Debug {
 
 #[derive(Debug)]
 pub enum Callback {
-    Cmd(Box<dyn CmdCallback>),
-
-    CmdMut(Box<dyn CmdMutCallback>),
-
     Opt(Box<dyn OptCallback>),
 
     OptMut(Box<dyn OptMutCallback>),
+
+    Pos(Box<dyn PosCallback>),
+
+    PosMut(Box<dyn PosMutCallback>),
 
     Main(Box<dyn MainCallback>),
 
@@ -191,12 +183,24 @@ impl Default for Callback {
 }
 
 impl Callback {
+    pub fn is_mut(&self) -> bool {
+        match self {
+            Callback::Opt(_) | Callback::Pos(_) | Callback::Main(_) => false,
+            Callback::OptMut(_) | Callback::PosMut(_) | Callback::MainMut(_) => true,
+            Callback::Null => false,
+        }
+    }
+
+    pub fn to_callback_type(&self) -> CallbackType {
+        self.into()
+    }
+
     pub fn match_callback(&self, callback_type: CallbackType) -> bool {
         match self {
-            Callback::Cmd(_) => callback_type == CallbackType::Pos,
-            Callback::CmdMut(_) => callback_type == CallbackType::PosMut,
-            Callback::Opt(_) => callback_type == CallbackType::Opt,
-            Callback::OptMut(_) => callback_type == CallbackType::OptMut,
+            Callback::Opt(_) => callback_type == CallbackType::Pos,
+            Callback::OptMut(_) => callback_type == CallbackType::PosMut,
+            Callback::Pos(_) => callback_type == CallbackType::Opt,
+            Callback::PosMut(_) => callback_type == CallbackType::OptMut,
             Callback::Main(_) => callback_type == CallbackType::Main,
             Callback::MainMut(_) => callback_type == CallbackType::MainMut,
             Callback::Null => false,
@@ -206,8 +210,8 @@ impl Callback {
     #[cfg(not(feature = "async"))]
     pub fn call(&mut self, uid: Uid, set: &dyn Set, args: &[String]) -> Result<Option<OptValue>> {
         match self {
-            Callback::Cmd(v) => v.as_mut().call(uid, set),
-            Callback::Opt(v) => v.as_mut().call(uid, set, &args[0]),
+            Callback::Opt(v) => v.as_mut().call(uid, set),
+            Callback::Pos(v) => v.as_mut().call(uid, set, &args[0]),
             Callback::Main(v) => v.as_mut().call(uid, set, args),
             other => Err(Error::InvalidCallbackType(format!("{:?}", other))),
         }
@@ -221,8 +225,8 @@ impl Callback {
         args: &[String],
     ) -> Result<Option<OptValue>> {
         match self {
-            Callback::CmdMut(v) => v.as_mut().call(uid, set),
-            Callback::OptMut(v) => v.as_mut().call(uid, set, &args[0]),
+            Callback::OptMut(v) => v.as_mut().call(uid, set),
+            Callback::PosMut(v) => v.as_mut().call(uid, set, &args[0]),
             Callback::MainMut(v) => v.as_mut().call(uid, set, args),
             other => Err(Error::InvalidCallbackType(format!("{:?}", other))),
         }
@@ -259,18 +263,6 @@ impl Callback {
     }
 }
 
-impl From<Box<dyn CmdCallback>> for Callback {
-    fn from(cb: Box<dyn CmdCallback>) -> Self {
-        Callback::Cmd(cb)
-    }
-}
-
-impl From<Box<dyn CmdMutCallback>> for Callback {
-    fn from(cb: Box<dyn CmdMutCallback>) -> Self {
-        Callback::CmdMut(cb)
-    }
-}
-
 impl From<Box<dyn OptCallback>> for Callback {
     fn from(cb: Box<dyn OptCallback>) -> Self {
         Callback::Opt(cb)
@@ -280,6 +272,18 @@ impl From<Box<dyn OptCallback>> for Callback {
 impl From<Box<dyn OptMutCallback>> for Callback {
     fn from(cb: Box<dyn OptMutCallback>) -> Self {
         Callback::OptMut(cb)
+    }
+}
+
+impl From<Box<dyn PosCallback>> for Callback {
+    fn from(cb: Box<dyn PosCallback>) -> Self {
+        Callback::Pos(cb)
+    }
+}
+
+impl From<Box<dyn PosMutCallback>> for Callback {
+    fn from(cb: Box<dyn PosMutCallback>) -> Self {
+        Callback::PosMut(cb)
     }
 }
 
@@ -296,81 +300,17 @@ impl From<Box<dyn MainMutCallback>> for Callback {
 }
 
 #[cfg(not(feature = "async"))]
-pub struct SimpleCmdCallback<T: 'static + FnMut(Uid, &dyn Set) -> Result<Option<OptValue>>>(T);
+pub struct SimpleOptCallback<T: 'static + FnMut(Uid, &dyn Set) -> Result<Option<OptValue>>>(T);
 
 #[cfg(not(feature = "async"))]
-impl<T: 'static + FnMut(Uid, &dyn Set) -> Result<Option<OptValue>>> SimpleCmdCallback<T> {
+impl<T: 'static + FnMut(Uid, &dyn Set) -> Result<Option<OptValue>>> SimpleOptCallback<T> {
     pub fn new(cb: T) -> Self {
         Self(cb)
     }
 }
 
 #[cfg(not(feature = "async"))]
-impl<T: 'static + FnMut(Uid, &dyn Set) -> Result<Option<OptValue>>> Debug for SimpleCmdCallback<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SimpleCmdCallback")
-            .field("FnMut", &String::from("..."))
-            .finish()
-    }
-}
-
-#[cfg(not(feature = "async"))]
-impl<T: 'static + FnMut(Uid, &dyn Set) -> Result<Option<OptValue>>> CmdCallback
-    for SimpleCmdCallback<T>
-{
-    fn call(&mut self, uid: Uid, set: &dyn Set) -> Result<Option<OptValue>> {
-        self.0(uid, set)
-    }
-}
-
-#[cfg(not(feature = "async"))]
-pub struct SimpleCmdMutCallback<T: 'static + FnMut(Uid, &mut dyn Set) -> Result<Option<OptValue>>>(
-    T,
-);
-
-#[cfg(not(feature = "async"))]
-impl<T: 'static + FnMut(Uid, &mut dyn Set) -> Result<Option<OptValue>>> SimpleCmdMutCallback<T> {
-    pub fn new(cb: T) -> Self {
-        Self(cb)
-    }
-}
-
-#[cfg(not(feature = "async"))]
-impl<T: 'static + FnMut(Uid, &mut dyn Set) -> Result<Option<OptValue>>> Debug
-    for SimpleCmdMutCallback<T>
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SimpleCmdMutCallback")
-            .field("FnMut", &String::from("..."))
-            .finish()
-    }
-}
-
-#[cfg(not(feature = "async"))]
-impl<T: 'static + FnMut(Uid, &mut dyn Set) -> Result<Option<OptValue>>> CmdMutCallback
-    for SimpleCmdMutCallback<T>
-{
-    fn call(&mut self, uid: Uid, set: &mut dyn Set) -> Result<Option<OptValue>> {
-        self.0(uid, set)
-    }
-}
-
-#[cfg(not(feature = "async"))]
-pub struct SimpleOptCallback<T: 'static + FnMut(Uid, &dyn Set, &String) -> Result<Option<OptValue>>>(
-    T,
-);
-
-#[cfg(not(feature = "async"))]
-impl<T: 'static + FnMut(Uid, &dyn Set, &String) -> Result<Option<OptValue>>> SimpleOptCallback<T> {
-    pub fn new(cb: T) -> Self {
-        Self(cb)
-    }
-}
-
-#[cfg(not(feature = "async"))]
-impl<T: 'static + FnMut(Uid, &dyn Set, &String) -> Result<Option<OptValue>>> Debug
-    for SimpleOptCallback<T>
-{
+impl<T: 'static + FnMut(Uid, &dyn Set) -> Result<Option<OptValue>>> Debug for SimpleOptCallback<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SimpleOptCallback")
             .field("FnMut", &String::from("..."))
@@ -379,30 +319,28 @@ impl<T: 'static + FnMut(Uid, &dyn Set, &String) -> Result<Option<OptValue>>> Deb
 }
 
 #[cfg(not(feature = "async"))]
-impl<T: 'static + FnMut(Uid, &dyn Set, &String) -> Result<Option<OptValue>>> OptCallback
+impl<T: 'static + FnMut(Uid, &dyn Set) -> Result<Option<OptValue>>> OptCallback
     for SimpleOptCallback<T>
 {
-    fn call(&mut self, uid: Uid, set: &dyn Set, arg: &String) -> Result<Option<OptValue>> {
-        self.0(uid, set, arg)
+    fn call(&mut self, uid: Uid, set: &dyn Set) -> Result<Option<OptValue>> {
+        self.0(uid, set)
     }
 }
 
 #[cfg(not(feature = "async"))]
-pub struct SimpleOptMutCallback<
-    T: 'static + FnMut(Uid, &mut dyn Set, &String) -> Result<Option<OptValue>>,
->(T);
+pub struct SimpleOptMutCallback<T: 'static + FnMut(Uid, &mut dyn Set) -> Result<Option<OptValue>>>(
+    T,
+);
 
 #[cfg(not(feature = "async"))]
-impl<T: 'static + FnMut(Uid, &mut dyn Set, &String) -> Result<Option<OptValue>>>
-    SimpleOptMutCallback<T>
-{
+impl<T: 'static + FnMut(Uid, &mut dyn Set) -> Result<Option<OptValue>>> SimpleOptMutCallback<T> {
     pub fn new(cb: T) -> Self {
         Self(cb)
     }
 }
 
 #[cfg(not(feature = "async"))]
-impl<T: 'static + FnMut(Uid, &mut dyn Set, &String) -> Result<Option<OptValue>>> Debug
+impl<T: 'static + FnMut(Uid, &mut dyn Set) -> Result<Option<OptValue>>> Debug
     for SimpleOptMutCallback<T>
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -413,8 +351,74 @@ impl<T: 'static + FnMut(Uid, &mut dyn Set, &String) -> Result<Option<OptValue>>>
 }
 
 #[cfg(not(feature = "async"))]
-impl<T: 'static + FnMut(Uid, &mut dyn Set, &String) -> Result<Option<OptValue>>> OptMutCallback
+impl<T: 'static + FnMut(Uid, &mut dyn Set) -> Result<Option<OptValue>>> OptMutCallback
     for SimpleOptMutCallback<T>
+{
+    fn call(&mut self, uid: Uid, set: &mut dyn Set) -> Result<Option<OptValue>> {
+        self.0(uid, set)
+    }
+}
+
+#[cfg(not(feature = "async"))]
+pub struct SimplePosCallback<T: 'static + FnMut(Uid, &dyn Set, &String) -> Result<Option<OptValue>>>(
+    T,
+);
+
+#[cfg(not(feature = "async"))]
+impl<T: 'static + FnMut(Uid, &dyn Set, &String) -> Result<Option<OptValue>>> SimplePosCallback<T> {
+    pub fn new(cb: T) -> Self {
+        Self(cb)
+    }
+}
+
+#[cfg(not(feature = "async"))]
+impl<T: 'static + FnMut(Uid, &dyn Set, &String) -> Result<Option<OptValue>>> Debug
+    for SimplePosCallback<T>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SimplePosCallback")
+            .field("FnMut", &String::from("..."))
+            .finish()
+    }
+}
+
+#[cfg(not(feature = "async"))]
+impl<T: 'static + FnMut(Uid, &dyn Set, &String) -> Result<Option<OptValue>>> PosCallback
+    for SimplePosCallback<T>
+{
+    fn call(&mut self, uid: Uid, set: &dyn Set, arg: &String) -> Result<Option<OptValue>> {
+        self.0(uid, set, arg)
+    }
+}
+
+#[cfg(not(feature = "async"))]
+pub struct SimplePosMutCallback<
+    T: 'static + FnMut(Uid, &mut dyn Set, &String) -> Result<Option<OptValue>>,
+>(T);
+
+#[cfg(not(feature = "async"))]
+impl<T: 'static + FnMut(Uid, &mut dyn Set, &String) -> Result<Option<OptValue>>>
+    SimplePosMutCallback<T>
+{
+    pub fn new(cb: T) -> Self {
+        Self(cb)
+    }
+}
+
+#[cfg(not(feature = "async"))]
+impl<T: 'static + FnMut(Uid, &mut dyn Set, &String) -> Result<Option<OptValue>>> Debug
+    for SimplePosMutCallback<T>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SimplePosMutCallback")
+            .field("FnMut", &String::from("..."))
+            .finish()
+    }
+}
+
+#[cfg(not(feature = "async"))]
+impl<T: 'static + FnMut(Uid, &mut dyn Set, &String) -> Result<Option<OptValue>>> PosMutCallback
+    for SimplePosMutCallback<T>
 {
     fn call(&mut self, uid: Uid, set: &mut dyn Set, arg: &String) -> Result<Option<OptValue>> {
         self.0(uid, set, arg)
