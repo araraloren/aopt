@@ -62,11 +62,9 @@ impl Context for DelayContext {
             )));
         }
         self.matched_index = Some(0);
-        if let Some(_value) = &self.argument {
-            // don't set value here, because this is using for a delay parse
-            // opt.set_value(opt.parse_value(value)?);
-            opt.set_invoke(true);
-        }
+        // don't set value here, because this is using for a delay parse
+        // opt.set_value(opt.parse_value(value)?);
+        opt.set_invoke(true);
         Ok(true)
     }
 
