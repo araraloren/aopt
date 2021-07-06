@@ -109,7 +109,7 @@ impl Set for SimpleSet {
         self.prefix = prefix;
     }
 
-    fn app_prefix(&mut self, prefix: String) {
+    fn add_prefix(&mut self, prefix: String) {
         self.prefix.push(prefix);
     }
 

@@ -62,10 +62,13 @@ impl Context for OptContext {
             )));
         }
         self.matched_index = Some(0);
-        if let Some(value) = &self.argument {
-            opt.set_value(opt.parse_value(value.as_str())?);
-            opt.set_invoke(true);
+        let mut value = &String::default();
+        if let Some(v) = &self.argument {
+            value = v;
         }
+        opt.set_value(opt.parse_value(value.as_str())?);
+        opt.set_invoke(true);
+        debug!("after setting ==> {:?}", opt);
         Ok(true)
     }
 

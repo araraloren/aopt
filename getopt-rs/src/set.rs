@@ -15,6 +15,7 @@ use crate::uid::Uid;
 pub use self::commit::Commit;
 pub use self::filter::{Filter, FilterMut};
 pub use self::info::{CreateInfo, FilterInfo, OptionInfo};
+pub use self::simple_set::SimpleSet;
 
 pub trait Creator: Debug {
     fn get_type_name(&self) -> &'static str;
@@ -63,7 +64,7 @@ pub trait Set:
 
     fn set_prefix(&mut self, prefix: Vec<String>);
 
-    fn app_prefix(&mut self, prefix: String);
+    fn add_prefix(&mut self, prefix: String);
 
     fn get_prefix(&self) -> &[String];
 }

@@ -1,14 +1,13 @@
-use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::ops::{Deref, DerefMut};
+use std::ops::DerefMut;
 
 use super::GenStyle;
 use super::{HashMapIter, SliceIter};
 use super::{Parser, ReturnValue};
 use crate::arg::ArgStream;
-use crate::err::{Error, Result};
+use crate::err::Result;
 use crate::opt::{OptCallback, OptValue};
 use crate::proc::{Info, Proc, SequenceProc, SingleProc, Subscriber};
 use crate::set::Set;
@@ -79,43 +78,203 @@ where
 
         let mut argstream = ArgStream::from(iter);
         let mut set = set;
+        let mut iter = argstream.iter_mut();
+
+        // copy the prefix, so we don't need borrow set
         let prefix: Vec<String> = set.get_prefix().iter().map(|v| v.clone()).collect();
 
         set.subscribe_from(self);
         self.pre_check(&set)?;
 
-        while let Some(arg) = argstream.iter_mut().next() {
-            let mut proc: Option<Box<dyn Proc>> = None;
+        // iterate the Arguments, generate option context
+        // send it to Publisher
+        debug!("Start process option ...");
+        while let Some(arg) = iter.next() {
+            let mut matched = false;
 
+            debug!("Get next Argument => {:?}", &arg);
             if let Ok(ret) = arg.parse(&prefix) {
                 if ret {
+                    debug!(" ... parsed: {:?}", &arg);
                     for gen_style in self.gen_style_order.clone() {
                         if let Some(ret) = gen_style.gen_opt::<SequenceProc>(arg) {
-                            proc = Some(Box::new(ret));
+                            let mut proc: Box<dyn Proc> = Box::new(ret);
+
+                            if let Ok(_) = self.publish(&mut proc, &mut set) {
+                                if proc.is_matched() && proc.is_comsume_argument() {
+                                    matched = true;
+                                }
+                            }
                         }
                     }
                 }
             }
-
-            if let Some(proc) = proc.as_mut() {
-                if let Ok(ret) = self.publish(proc, &mut set) {
-                    if ret {}
+            if matched {
+                iter.next();
+            } else {
+                if let Some(noa) = &arg.current {
+                    self.noa.push(noa.clone());
                 }
             }
         }
+
+        self.check_opt(&set)?;
+
+        let noa_count = self.noa.len();
+
+        if noa_count > 0 {
+            let gen_style = GenStyle::GSNonCmd;
+
+            debug!("Start process {:?} ...", &gen_style);
+            if let Some(ret) = gen_style.gen_nonopt::<SingleProc>(&self.noa[0], noa_count as u64, 1)
+            {
+                let mut proc: Box<dyn Proc> = Box::new(ret);
+
+                if let Ok(ret) = self.publish(&mut proc, &mut set) {
+                    debug!("ret = {:?}", ret);
+                }
+            }
+
+            let gen_style = GenStyle::GSNonPos;
+
+            debug!("Start process {:?} ...", &gen_style);
+            for index in 1..=noa_count {
+                if let Some(ret) = gen_style.gen_nonopt::<SingleProc>(
+                    &self.noa[index - 1],
+                    noa_count as u64,
+                    index as u64,
+                ) {
+                    let mut proc: Box<dyn Proc> = Box::new(ret);
+
+                    if let Ok(ret) = self.publish(&mut proc, &mut set) {
+                        debug!("ret = {:?}", ret);
+                    }
+                }
+            }
+        }
+
+        self.check_nonopt(&set)?;
+
+        let gen_style = GenStyle::GSNonMain;
+
+        debug!("Start process {:?} ...", &gen_style);
+        if let Some(ret) = gen_style.gen_nonopt::<SingleProc>(&String::new(), noa_count as u64, 1) {
+            let mut proc: Box<dyn Proc> = Box::new(ret);
+
+            if let Ok(ret) = self.publish(&mut proc, &mut set) {
+                debug!("ret = {:?}", ret);
+            }
+        }
+
+        self.post_check(&set)?;
+
+        Ok(Some(ReturnValue {
+            set: set,
+            noa: &self.noa,
+        }))
+    }
+
+    #[cfg(feature = "async")]
+    async fn parse(
+        &mut self,
+        set: S,
+        iter: impl Iterator<Item = String>,
+    ) -> Result<Option<ReturnValue<S>>> {
+        use crate::proc::Publisher;
+
+        let mut argstream = ArgStream::from(iter);
+        let mut set = set;
+        let mut iter = argstream.iter_mut();
+
+        // copy the prefix, so we don't need borrow set
+        let prefix: Vec<String> = set.get_prefix().iter().map(|v| v.clone()).collect();
+
+        set.subscribe_from(self);
+        self.pre_check(&set)?;
+
+        // iterate the Arguments, generate option context
+        // send it to Publisher
+        debug!("Start process option ...");
+        while let Some(arg) = iter.next() {
+            let mut matched = false;
+
+            debug!("Get next Argument => {:?}", &arg);
+            if let Ok(ret) = arg.parse(&prefix) {
+                if ret {
+                    debug!(" ... parsed: {:?}", &arg);
+                    for gen_style in self.gen_style_order.clone() {
+                        if let Some(ret) = gen_style.gen_opt::<SequenceProc>(arg) {
+                            let mut proc: Box<dyn Proc> = Box::new(ret);
+
+                            if let Ok(_) = self.publish(&mut proc, &mut set) {
+                                if proc.is_matched() && proc.is_comsume_argument() {
+                                    matched = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if matched {
+                iter.next();
+            } else {
+                if let Some(noa) = &arg.current {
+                    self.noa.push(noa.clone());
+                }
+            }
+        }
+
+        self.check_opt(&set)?;
+
+        let noa_count = self.noa.len();
+
+        if noa_count > 0 {
+            let gen_style = GenStyle::GSNonCmd;
+
+            debug!("Start process {:?} ...", &gen_style);
+            if let Some(ret) = gen_style.gen_nonopt::<SingleProc>(&self.noa[0], noa_count as u64, 1)
+            {
+                let mut proc: Box<dyn Proc> = Box::new(ret);
+
+                if let Ok(ret) = self.publish(&mut proc, &mut set) {
+                    debug!("ret = {:?}", ret);
+                }
+            }
+
+            let gen_style = GenStyle::GSNonPos;
+
+            debug!("Start process {:?} ...", &gen_style);
+            for index in 1..=noa_count {
+                if let Some(ret) = gen_style.gen_nonopt::<SingleProc>(
+                    &self.noa[index - 1],
+                    noa_count as u64,
+                    index as u64,
+                ) {
+                    let mut proc: Box<dyn Proc> = Box::new(ret);
+
+                    if let Ok(ret) = self.publish(&mut proc, &mut set) {
+                        debug!("ret = {:?}", ret);
+                    }
+                }
+            }
+        }
+
+        self.check_nonopt(&set)?;
+
+        let gen_style = GenStyle::GSNonMain;
+
+        debug!("Start process {:?} ...", &gen_style);
+        if let Some(ret) = gen_style.gen_nonopt::<SingleProc>(&String::new(), noa_count as u64, 1) {
+            let mut proc: Box<dyn Proc> = Box::new(ret);
+
+            if let Ok(ret) = self.publish(&mut proc, &mut set) {
+                debug!("ret = {:?}", ret);
+            }
+        }
+
+        self.post_check(&set)?;
+
         Ok(None)
-    }
-
-    fn add_callback(&mut self, uid: Uid, callback: OptCallback) {
-        self.callback.insert(uid, RefCell::new(callback));
-    }
-
-    fn callback_iter(&self) -> HashMapIter<'_, Uid, RefCell<OptCallback>> {
-        self.callback.iter()
-    }
-
-    fn get_callback(&self, uid: Uid) -> Option<&RefCell<OptCallback>> {
-        self.callback.get(&uid)
     }
 
     #[cfg(not(feature = "async"))]
@@ -134,6 +293,41 @@ where
         } else {
             Ok(None)
         }
+    }
+
+    #[cfg(feature = "async")]
+    async fn invoke_callback(
+        &self,
+        uid: Uid,
+        set: &mut S,
+        noa_index: usize,
+    ) -> Result<Option<OptValue>> {
+        if let Some(callback) = self.callback.get(&uid) {
+            debug!("calling callback of option<{}>", uid);
+            match callback.borrow_mut().deref_mut() {
+                OptCallback::Opt(cb) => cb.as_mut().call(uid, set).await,
+                OptCallback::OptMut(cb) => cb.as_mut().call(uid, set).await,
+                OptCallback::Pos(cb) => cb.as_mut().call(uid, set, &self.noa[noa_index]).await,
+                OptCallback::PosMut(cb) => cb.as_mut().call(uid, set, &self.noa[noa_index]).await,
+                OptCallback::Main(cb) => cb.as_mut().call(uid, set, &self.noa).await,
+                OptCallback::MainMut(cb) => cb.as_mut().call(uid, set, &self.noa).await,
+                OptCallback::Null => Ok(None),
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn add_callback(&mut self, uid: Uid, callback: OptCallback) {
+        self.callback.insert(uid, RefCell::new(callback));
+    }
+
+    fn get_callback(&self, uid: Uid) -> Option<&RefCell<OptCallback>> {
+        self.callback.get(&uid)
+    }
+
+    fn callback_iter(&self) -> HashMapIter<'_, Uid, RefCell<OptCallback>> {
+        self.callback.iter()
     }
 
     fn subscriber_iter(&self) -> SliceIter<'_, Box<dyn Info>> {

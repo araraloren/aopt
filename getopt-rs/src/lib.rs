@@ -22,7 +22,7 @@ pub mod tools {
             SimpleLogger::new(LevelFilter::Error, Config::default()),
             SimpleLogger::new(LevelFilter::Debug, Config::default()),
             SimpleLogger::new(LevelFilter::Info, Config::default()),
-            SimpleLogger::new(LevelFilter::Trace, Config::default()),
+            //SimpleLogger::new(LevelFilter::Trace, Config::default()),
         ])
     }
 }
