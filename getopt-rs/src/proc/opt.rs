@@ -5,15 +5,15 @@ use crate::proc::Proc;
 use crate::uid::Uid;
 
 #[derive(Debug, Default)]
-pub struct SingleProc {
+pub struct OptCtxProc {
     uid: Uid,
 
-    context: Option<Box<dyn Context>>,
+    context: Vec<Box<dyn Context>>,
 
     consoume_argument: bool,
 }
 
-impl From<Uid> for SingleProc {
+impl From<Uid> for OptCtxProc {
     fn from(uid: Uid) -> Self {
         Self {
             uid,
@@ -23,26 +23,22 @@ impl From<Uid> for SingleProc {
 }
 
 #[async_trait::async_trait(?Send)]
-impl Proc for SingleProc {
+impl Proc for OptCtxProc {
     fn uid(&self) -> Uid {
         self.uid
     }
 
     fn add_ctx(&mut self, ctx: Box<dyn Context>) {
-        self.context = Some(ctx);
+        self.context.push(ctx);
     }
 
     fn get_ctx(&self, index: usize) -> Option<&Box<dyn Context>> {
-        if index == 0 {
-            self.context.as_ref()
-        } else {
-            None
-        }
+        self.context.get(index)
     }
 
     #[cfg(not(feature = "async"))]
     fn process(&mut self, opt: &mut dyn Opt) -> Result<Option<usize>> {
-        if let Some(ctx) = self.context.as_mut() {
+        for ctx in self.context.iter_mut() {
             if !ctx.is_matched() {
                 if ctx.match_opt(opt) {
                     if ctx.process_opt(opt)? {
@@ -51,8 +47,6 @@ impl Proc for SingleProc {
                         return Ok(ctx.get_matched_index());
                     }
                 }
-            } else {
-                return Ok(ctx.get_matched_index());
             }
         }
         Ok(None)
@@ -60,7 +54,7 @@ impl Proc for SingleProc {
 
     #[cfg(feature = "async")]
     async fn process(&mut self, opt: &mut dyn Opt) -> Result<Option<usize>> {
-        if let Some(ctx) = self.context.as_mut() {
+        for ctx in self.context.iter_mut() {
             if !ctx.is_matched() {
                 if ctx.match_opt(opt) {
                     if ctx.process_opt(opt)? {
@@ -69,8 +63,6 @@ impl Proc for SingleProc {
                         return Ok(ctx.get_matched_index());
                     }
                 }
-            } else {
-                return Ok(ctx.get_matched_index());
             }
         }
         Ok(None)
@@ -78,16 +70,19 @@ impl Proc for SingleProc {
 
     fn is_matched(&self) -> bool {
         self.context
-            .as_ref()
-            .map(|v| v.is_matched())
-            .unwrap_or(false)
+            .iter()
+            .fold(true, |acc, x| acc && x.is_matched())
     }
 
     fn is_comsume_argument(&self) -> bool {
         self.consoume_argument
     }
 
+    fn is_quit(&self) -> bool {
+        self.is_matched()
+    }
+
     fn len(&self) -> usize {
-        1
+        self.context.len()
     }
 }

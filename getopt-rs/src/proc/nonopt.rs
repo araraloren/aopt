@@ -5,15 +5,15 @@ use crate::proc::Proc;
 use crate::uid::Uid;
 
 #[derive(Debug, Default)]
-pub struct SequenceProc {
+pub struct NonOptCtxProc {
     uid: Uid,
 
-    context: Vec<Box<dyn Context>>,
+    context: Option<Box<dyn Context>>,
 
     consoume_argument: bool,
 }
 
-impl From<Uid> for SequenceProc {
+impl From<Uid> for NonOptCtxProc {
     fn from(uid: Uid) -> Self {
         Self {
             uid,
@@ -23,22 +23,26 @@ impl From<Uid> for SequenceProc {
 }
 
 #[async_trait::async_trait(?Send)]
-impl Proc for SequenceProc {
+impl Proc for NonOptCtxProc {
     fn uid(&self) -> Uid {
         self.uid
     }
 
     fn add_ctx(&mut self, ctx: Box<dyn Context>) {
-        self.context.push(ctx);
+        self.context = Some(ctx);
     }
 
     fn get_ctx(&self, index: usize) -> Option<&Box<dyn Context>> {
-        self.context.get(index)
+        if index == 0 {
+            self.context.as_ref()
+        } else {
+            None
+        }
     }
 
     #[cfg(not(feature = "async"))]
     fn process(&mut self, opt: &mut dyn Opt) -> Result<Option<usize>> {
-        for ctx in self.context.iter_mut() {
+        if let Some(ctx) = self.context.as_mut() {
             if !ctx.is_matched() {
                 if ctx.match_opt(opt) {
                     if ctx.process_opt(opt)? {
@@ -47,6 +51,8 @@ impl Proc for SequenceProc {
                         return Ok(ctx.get_matched_index());
                     }
                 }
+            } else {
+                return Ok(ctx.get_matched_index());
             }
         }
         Ok(None)
@@ -54,7 +60,7 @@ impl Proc for SequenceProc {
 
     #[cfg(feature = "async")]
     async fn process(&mut self, opt: &mut dyn Opt) -> Result<Option<usize>> {
-        for ctx in self.context.iter_mut() {
+        if let Some(ctx) = self.context.as_mut() {
             if !ctx.is_matched() {
                 if ctx.match_opt(opt) {
                     if ctx.process_opt(opt)? {
@@ -63,6 +69,8 @@ impl Proc for SequenceProc {
                         return Ok(ctx.get_matched_index());
                     }
                 }
+            } else {
+                return Ok(ctx.get_matched_index());
             }
         }
         Ok(None)
@@ -70,15 +78,20 @@ impl Proc for SequenceProc {
 
     fn is_matched(&self) -> bool {
         self.context
-            .iter()
-            .fold(true, |acc, x| acc && x.is_matched())
+            .as_ref()
+            .map(|v| v.is_matched())
+            .unwrap_or(false)
     }
 
     fn is_comsume_argument(&self) -> bool {
         self.consoume_argument
     }
 
+    fn is_quit(&self) -> bool {
+        false
+    }
+
     fn len(&self) -> usize {
-        self.context.len()
+        1
     }
 }

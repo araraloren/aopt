@@ -1,5 +1,5 @@
-use getopt_rs::opt::bool::BoolCreator;
-use getopt_rs::opt::int::IntCreator;
+use getopt_rs::opt::opt::BoolCreator;
+use getopt_rs::opt::opt::IntCreator;
 use getopt_rs::parser::{ForwardParser, Parser};
 use getopt_rs::set::{Set, SimpleSet};
 use getopt_rs::uid::UidGenerator;

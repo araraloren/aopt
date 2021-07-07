@@ -1,22 +1,18 @@
 use std::mem::take;
 
-use super::help::HelpInfo;
-use super::index::Index as OptIndex;
-use super::style::Style;
-use super::value::Value as OptValue;
-use super::*;
-use crate::set::info::CreateInfo;
+use crate::opt::*;
+use crate::set::CreateInfo;
 use crate::set::Creator;
 use crate::uid::Uid;
 
 pub fn current_type() -> &'static str {
-    "s"
+    "a"
 }
 
-pub trait Str: Opt {}
+pub trait Array: Opt {}
 
 #[derive(Debug)]
-pub struct StrOpt {
+pub struct ArrayOpt {
     uid: Uid,
 
     name: String,
@@ -36,7 +32,7 @@ pub struct StrOpt {
     help_info: HelpInfo,
 }
 
-impl From<CreateInfo> for StrOpt {
+impl From<CreateInfo> for ArrayOpt {
     fn from(ci: CreateInfo) -> Self {
         let mut ci = ci;
 
@@ -54,11 +50,11 @@ impl From<CreateInfo> for StrOpt {
     }
 }
 
-impl Str for StrOpt {}
+impl Array for ArrayOpt {}
 
-impl Opt for StrOpt {}
+impl Opt for ArrayOpt {}
 
-impl Type for StrOpt {
+impl Type for ArrayOpt {
     fn get_type_name(&self) -> &'static str {
         current_type()
     }
@@ -87,7 +83,7 @@ impl Type for StrOpt {
     }
 }
 
-impl Identifier for StrOpt {
+impl Identifier for ArrayOpt {
     fn get_uid(&self) -> Uid {
         self.uid
     }
@@ -97,7 +93,7 @@ impl Identifier for StrOpt {
     }
 }
 
-impl Callback for StrOpt {
+impl Callback for ArrayOpt {
     fn is_need_invoke(&self) -> bool {
         self.need_invoke
     }
@@ -115,9 +111,9 @@ impl Callback for StrOpt {
 
     fn set_callback_ret(&mut self, ret: Option<OptValue>) -> Result<()> {
         if let Some(ret) = ret {
-            if !ret.is_str() {
+            if !ret.is_vec() {
                 return Err(Error::InvalidReturnValueOfCallback(
-                    "OptValue::Bool".to_owned(),
+                    "OptValue::Vec".to_owned(),
                     format!("{:?}", ret),
                 ));
             }
@@ -127,7 +123,7 @@ impl Callback for StrOpt {
     }
 }
 
-impl Name for StrOpt {
+impl Name for ArrayOpt {
     fn get_name(&self) -> &str {
         &self.name
     }
@@ -153,7 +149,7 @@ impl Name for StrOpt {
     }
 }
 
-impl Optional for StrOpt {
+impl Optional for ArrayOpt {
     fn get_optional(&self) -> bool {
         self.optional
     }
@@ -167,7 +163,7 @@ impl Optional for StrOpt {
     }
 }
 
-impl Alias for StrOpt {
+impl Alias for ArrayOpt {
     fn get_alias(&self) -> Option<&Vec<(String, String)>> {
         Some(&self.alias)
     }
@@ -193,7 +189,7 @@ impl Alias for StrOpt {
     }
 }
 
-impl Index for StrOpt {
+impl Index for ArrayOpt {
     fn get_index(&self) -> Option<&OptIndex> {
         None
     }
@@ -207,7 +203,7 @@ impl Index for StrOpt {
     }
 }
 
-impl Value for StrOpt {
+impl Value for ArrayOpt {
     fn get_value(&self) -> &OptValue {
         &self.value
     }
@@ -217,7 +213,18 @@ impl Value for StrOpt {
     }
 
     fn set_value(&mut self, value: OptValue) {
-        self.value = value;
+        let mut value = value;
+
+        if value.is_vec() {
+            if self.value.is_vec() {
+                self.value
+                    .as_vec_mut()
+                    .unwrap()
+                    .append(value.as_vec_mut().unwrap())
+            } else {
+                self.value = value;
+            }
+        }
     }
 
     fn set_default_value(&mut self, value: OptValue) {
@@ -225,11 +232,13 @@ impl Value for StrOpt {
     }
 
     fn parse_value(&self, string: &str) -> Result<OptValue> {
-        Ok(OptValue::from(string))
+        let mut real_value = OptValue::from(vec![]);
+        real_value.app_str(String::from(string));
+        Ok(real_value)
     }
 
     fn has_value(&self) -> bool {
-        self.get_value().is_str()
+        self.get_value().is_vec()
     }
 
     fn reset_value(&mut self) {
@@ -237,7 +246,7 @@ impl Value for StrOpt {
     }
 }
 
-impl Help for StrOpt {
+impl Help for ArrayOpt {
     fn set_hint(&mut self, hint: String) {
         self.help_info.set_hint(hint);
     }
@@ -252,9 +261,9 @@ impl Help for StrOpt {
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct StrCreator;
+pub struct ArrayCreator;
 
-impl Creator for StrCreator {
+impl Creator for ArrayCreator {
     fn get_type_name(&self) -> &'static str {
         current_type()
     }
@@ -277,7 +286,7 @@ impl Creator for StrCreator {
 
         assert_eq!(create_info.get_type_name(), self.get_type_name());
 
-        let opt: StrOpt = create_info.into();
+        let opt: ArrayOpt = create_info.into();
 
         Ok(Box::new(opt))
     }

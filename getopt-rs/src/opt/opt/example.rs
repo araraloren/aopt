@@ -1,11 +1,7 @@
 use std::mem::take;
 
-use super::help::HelpInfo;
-use super::index::Index as OptIndex;
-use super::style::Style;
-use super::value::Value as OptValue;
-use super::*;
-use crate::set::info::CreateInfo;
+use crate::opt::*;
+use crate::set::CreateInfo;
 use crate::set::Creator;
 use crate::uid::Uid;
 

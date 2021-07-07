@@ -1,34 +1,32 @@
 use std::mem::take;
 
-use super::help::HelpInfo;
-use super::index::Index as OptIndex;
-use super::style::Style;
-use super::value::Value as OptValue;
-use super::*;
-use crate::set::info::CreateInfo;
+use super::NonOpt;
+use crate::opt::*;
+use crate::set::CreateInfo;
 use crate::set::Creator;
 use crate::uid::Uid;
 
 pub fn current_type() -> &'static str {
-    "m"
+    "c"
 }
-
-pub trait Main: NonOpt {}
+pub trait Cmd: NonOpt {}
 
 #[derive(Debug)]
-pub struct MainOpt {
+pub struct CmdOpt {
     uid: Uid,
 
     name: String,
 
     value: OptValue,
 
+    index: OptIndex,
+
     need_invoke: bool,
 
     help_info: HelpInfo,
 }
 
-impl From<CreateInfo> for MainOpt {
+impl From<CreateInfo> for CmdOpt {
     fn from(ci: CreateInfo) -> Self {
         let mut ci = ci;
 
@@ -36,19 +34,20 @@ impl From<CreateInfo> for MainOpt {
             uid: ci.get_uid(),
             name: take(ci.get_name_mut()),
             value: OptValue::from(false),
+            index: OptIndex::Forward(1),
             need_invoke: false,
             help_info: take(ci.get_help_info_mut()),
         }
     }
 }
 
-impl Main for MainOpt {}
+impl Cmd for CmdOpt {}
 
-impl Opt for MainOpt {}
+impl Opt for CmdOpt {}
 
-impl NonOpt for MainOpt {}
+impl NonOpt for CmdOpt {}
 
-impl Type for MainOpt {
+impl Type for CmdOpt {
     fn get_type_name(&self) -> &'static str {
         current_type()
     }
@@ -59,7 +58,7 @@ impl Type for MainOpt {
 
     fn match_style(&self, style: Style) -> bool {
         match style {
-            Style::Main => true,
+            Style::Cmd => true,
             _ => false,
         }
     }
@@ -77,7 +76,7 @@ impl Type for MainOpt {
     }
 }
 
-impl Identifier for MainOpt {
+impl Identifier for CmdOpt {
     fn get_uid(&self) -> Uid {
         self.uid
     }
@@ -87,7 +86,7 @@ impl Identifier for MainOpt {
     }
 }
 
-impl Callback for MainOpt {
+impl Callback for CmdOpt {
     fn is_need_invoke(&self) -> bool {
         self.need_invoke
     }
@@ -111,7 +110,7 @@ impl Callback for MainOpt {
     }
 }
 
-impl Name for MainOpt {
+impl Name for CmdOpt {
     fn get_name(&self) -> &str {
         &self.name
     }
@@ -126,8 +125,8 @@ impl Name for MainOpt {
 
     fn set_prefix(&mut self, _string: String) {}
 
-    fn match_name(&self, _name: &str) -> bool {
-        true
+    fn match_name(&self, name: &str) -> bool {
+        self.get_name() == name
     }
 
     fn match_prefix(&self, _prefix: &str) -> bool {
@@ -135,9 +134,9 @@ impl Name for MainOpt {
     }
 }
 
-impl Optional for MainOpt {
+impl Optional for CmdOpt {
     fn get_optional(&self) -> bool {
-        true
+        false
     }
 
     fn set_optional(&mut self, _optional: bool) {}
@@ -147,7 +146,7 @@ impl Optional for MainOpt {
     }
 }
 
-impl Alias for MainOpt {
+impl Alias for CmdOpt {
     fn get_alias(&self) -> Option<&Vec<(String, String)>> {
         None
     }
@@ -161,19 +160,26 @@ impl Alias for MainOpt {
     }
 }
 
-impl Index for MainOpt {
+impl Index for CmdOpt {
     fn get_index(&self) -> Option<&OptIndex> {
-        None
+        Some(&self.index)
     }
 
-    fn set_index(&mut self, _: OptIndex) {}
+    fn set_index(&mut self, _index: OptIndex) {}
 
-    fn match_index(&self, _total: u64, _current: u64) -> bool {
-        true
+    fn match_index(&self, total: u64, current: u64) -> bool {
+        match self.get_index() {
+            Some(realindex) => match realindex.calc_index(total, current) {
+                Some(realindex) => return realindex == current,
+                None => {}
+            },
+            None => {}
+        }
+        false
     }
 }
 
-impl Value for MainOpt {
+impl Value for CmdOpt {
     fn get_value(&self) -> &OptValue {
         &self.value
     }
@@ -201,7 +207,7 @@ impl Value for MainOpt {
     }
 }
 
-impl Help for MainOpt {
+impl Help for CmdOpt {
     fn set_hint(&mut self, hint: String) {
         self.help_info.set_hint(hint);
     }
@@ -216,9 +222,9 @@ impl Help for MainOpt {
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct MainCreator;
+pub struct CmdCreator;
 
-impl Creator for MainCreator {
+impl Creator for CmdCreator {
     fn get_type_name(&self) -> &'static str {
         current_type()
     }
@@ -238,7 +244,7 @@ impl Creator for MainCreator {
 
         assert_eq!(create_info.get_type_name(), self.get_type_name());
 
-        let opt: MainOpt = create_info.into();
+        let opt: CmdOpt = create_info.into();
 
         Ok(Box::new(opt))
     }
@@ -249,83 +255,85 @@ mod test {
     use super::*;
 
     #[test]
-    fn make_type_main_work() {
-        let creator = MainCreator::default();
+    fn make_type_cmd_work() {
+        let creator = CmdCreator::default();
 
         assert_eq!(creator.get_type_name(), current_type());
-        // main not support deactivate style
+        // cmd not support deactivate style
         assert_eq!(creator.is_support_deactivate_style(), false);
 
-        let mut ci = CreateInfo::parse("main=m", &[]).unwrap();
+        let mut ci = CreateInfo::parse("cmd=c", &[]).unwrap();
 
         ci.set_uid(1);
 
-        let mut main = creator.create_with(ci).unwrap();
+        let mut cmd = creator.create_with(ci).unwrap();
 
-        assert_eq!(main.get_type_name(), current_type());
-        assert_eq!(main.is_deactivate_style(), false);
-        assert_eq!(main.match_style(Style::Main), true);
-        assert_eq!(main.check().is_err(), false);
+        assert_eq!(cmd.get_type_name(), current_type());
+        assert_eq!(cmd.is_deactivate_style(), false);
+        assert_eq!(cmd.match_style(Style::Cmd), true);
+        assert_eq!(cmd.check().is_err(), true);
 
-        assert_eq!(main.get_uid(), 1);
-        main.set_uid(42);
-        assert_eq!(main.get_uid(), 42);
+        assert_eq!(cmd.get_uid(), 1);
+        cmd.set_uid(42);
+        assert_eq!(cmd.get_uid(), 42);
 
-        assert_eq!(main.is_need_invoke(), false);
-        main.set_invoke(true);
-        assert_eq!(main.is_need_invoke(), true);
-        assert_eq!(main.is_accept_callback_type(CallbackType::Main), true);
-        assert_eq!(main.is_accept_callback_type(CallbackType::MainMut), true);
+        assert_eq!(cmd.is_need_invoke(), false);
+        cmd.set_invoke(true);
+        assert_eq!(cmd.is_accept_callback_type(CallbackType::Main), true);
+        assert_eq!(cmd.is_accept_callback_type(CallbackType::MainMut), true);
+        assert_eq!(cmd.is_need_invoke(), true);
 
-        // main not support alias
-        main.add_alias("-".to_owned(), "m".to_owned());
-        assert_eq!(main.get_alias(), None);
-        assert_eq!(main.match_alias("-", "m"), false);
-        main.rem_alias("-", "m");
-        assert_eq!(main.get_alias(), None);
+        // cmd not support alias
+        cmd.add_alias("-".to_owned(), "m".to_owned());
+        assert_eq!(cmd.get_alias(), None);
+        assert_eq!(cmd.match_alias("-", "m"), false);
+        cmd.rem_alias("-", "m");
+        assert_eq!(cmd.get_alias(), None);
 
-        assert_eq!(main.get_index(), None);
-        assert_eq!(main.match_index(6, 1), true);
-        assert_eq!(main.match_index(6, 3), true);
-        main.set_index(OptIndex::forward(1));
-        assert_eq!(main.get_index(), None);
-        assert_eq!(main.match_index(6, 9), true);
+        assert_eq!(cmd.get_index(), Some(&OptIndex::forward(1)));
+        assert_eq!(cmd.match_index(6, 1), true);
+        assert_eq!(cmd.match_index(6, 2), false);
+        cmd.set_index(OptIndex::forward(3));
+        assert_eq!(cmd.match_index(6, 1), true);
+        assert_eq!(cmd.match_index(6, 3), false);
+        assert_eq!(cmd.get_index(), Some(&OptIndex::forward(1)));
+        assert_eq!(cmd.match_index(6, 9), false);
 
-        assert_eq!(main.get_name(), "main");
-        assert_eq!(main.get_prefix(), "");
-        assert_eq!(main.match_name("www"), true);
-        assert_eq!(main.match_name("main"), true);
-        assert_eq!(main.match_prefix("--"), false);
-        assert_eq!(main.match_prefix(""), false);
-        main.set_name(String::from("main1"));
-        main.set_prefix(String::from("+"));
-        assert_eq!(main.match_name("www"), true);
-        assert_eq!(main.match_name("main1"), true);
-        assert_eq!(main.get_name(), "main1");
-        assert_eq!(main.match_prefix("+"), false);
-        assert_eq!(main.match_prefix(""), false);
+        assert_eq!(cmd.get_name(), "cmd");
+        assert_eq!(cmd.get_prefix(), "");
+        assert_eq!(cmd.match_name("www"), false);
+        assert_eq!(cmd.match_name("cmd"), true);
+        assert_eq!(cmd.match_prefix("--"), false);
+        assert_eq!(cmd.match_prefix(""), false);
+        cmd.set_name(String::from("cmd1"));
+        cmd.set_prefix(String::from("+"));
+        assert_eq!(cmd.match_name("www"), false);
+        assert_eq!(cmd.match_name("cmd1"), true);
+        assert_eq!(cmd.get_name(), "cmd1");
+        assert_eq!(cmd.match_prefix("+"), false);
+        assert_eq!(cmd.match_prefix(""), false);
 
-        assert_eq!(main.get_optional(), true);
-        assert_eq!(main.match_optional(true), true);
-        main.set_optional(false);
-        assert_eq!(main.get_optional(), true);
-        assert_eq!(main.match_optional(true), true);
-        assert_eq!(main.check().is_err(), false);
+        assert_eq!(cmd.get_optional(), false);
+        assert_eq!(cmd.match_optional(true), false);
+        cmd.set_optional(true);
+        assert_eq!(cmd.get_optional(), false);
+        assert_eq!(cmd.match_optional(false), true);
+        assert_eq!(cmd.check().is_err(), true);
 
-        assert_eq!(main.get_value().as_bool(), OptValue::from(false).as_bool());
-        assert_eq!(main.get_default_value().is_null(), true);
-        assert_eq!(main.has_value(), false);
-        let value = main.parse_value("");
+        assert_eq!(cmd.get_value().as_bool(), OptValue::from(false).as_bool());
+        assert_eq!(cmd.get_default_value().is_null(), true);
+        assert_eq!(cmd.has_value(), false);
+        let value = cmd.parse_value("");
         assert_eq!(value.is_ok(), true);
         let value = value.unwrap();
         assert_eq!(value.is_bool(), true);
-        main.set_value(value);
-        assert_eq!(main.get_value().as_bool(), OptValue::from(true).as_bool());
-        main.set_default_value(OptValue::from(false));
-        assert_eq!(main.get_default_value().is_null(), true);
-        main.reset_value();
-        assert_eq!(main.get_value().as_bool(), OptValue::from(false).as_bool());
+        cmd.set_value(value);
+        assert_eq!(cmd.get_value().as_bool(), OptValue::from(true).as_bool());
+        cmd.set_default_value(OptValue::from(false));
+        assert_eq!(cmd.get_default_value().is_null(), true);
+        cmd.reset_value();
+        assert_eq!(cmd.get_value().as_bool(), OptValue::from(false).as_bool());
 
-        assert_eq!(main.as_ref().as_any().is::<MainOpt>(), true);
+        assert_eq!(cmd.as_ref().as_any().is::<CmdOpt>(), true);
     }
 }

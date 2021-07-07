@@ -1,21 +1,11 @@
 pub mod callback;
 pub mod help;
 pub mod index;
+pub mod nonopt;
+pub mod opt;
 pub mod parser;
 pub mod style;
 pub mod value;
-
-// options mod
-pub mod array;
-pub mod bool;
-pub mod cmd;
-pub mod example;
-pub mod flt;
-pub mod int;
-pub mod main;
-pub mod pos;
-pub mod str;
-pub mod uint;
 
 use std::fmt::Debug;
 
@@ -135,5 +125,3 @@ pub trait Opt:
     Type + Identifier + Name + Callback + Alias + Optional + Value + Index + Help + Debug
 {
 }
-
-pub trait NonOpt: Opt {}

@@ -129,6 +129,8 @@ where
             }
             if proc.is_matched() {
                 debug!("Proc<{}> matched", proc.msg_uid());
+            }
+            if proc.is_quit() {
                 break;
             }
         }
@@ -157,6 +159,8 @@ where
             }
             if proc.is_matched() {
                 debug!("Proc<{}> matched", proc.msg_uid());
+            }
+            if proc.is_quit() {
                 break;
             }
         }

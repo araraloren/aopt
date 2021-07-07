@@ -1,5 +1,5 @@
-pub mod seq;
-pub mod single;
+pub mod nonopt;
+pub mod opt;
 
 use std::fmt::Debug;
 use std::slice::Iter;
@@ -10,8 +10,8 @@ use crate::opt::Opt;
 use crate::set::Set;
 use crate::uid::Uid;
 
-pub use seq::SequenceProc;
-pub use single::SingleProc;
+pub use nonopt::NonOptCtxProc;
+pub use opt::OptCtxProc;
 
 pub trait Message: Debug {
     fn msg_uid(&self) -> Uid;
@@ -57,6 +57,8 @@ pub trait Proc: Debug {
     fn is_matched(&self) -> bool;
 
     fn is_comsume_argument(&self) -> bool;
+
+    fn is_quit(&self) -> bool;
 
     fn len(&self) -> usize;
 }

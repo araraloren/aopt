@@ -1,22 +1,18 @@
 use std::mem::take;
 
-use super::help::HelpInfo;
-use super::index::Index as OptIndex;
-use super::style::Style;
-use super::value::Value as OptValue;
-use super::*;
-use crate::set::info::CreateInfo;
+use crate::opt::*;
+use crate::set::CreateInfo;
 use crate::set::Creator;
 use crate::uid::Uid;
 
 pub fn current_type() -> &'static str {
-    "i"
+    "s"
 }
 
-pub trait Int: Opt {}
+pub trait Str: Opt {}
 
 #[derive(Debug)]
-pub struct IntOpt {
+pub struct StrOpt {
     uid: Uid,
 
     name: String,
@@ -36,7 +32,7 @@ pub struct IntOpt {
     help_info: HelpInfo,
 }
 
-impl From<CreateInfo> for IntOpt {
+impl From<CreateInfo> for StrOpt {
     fn from(ci: CreateInfo) -> Self {
         let mut ci = ci;
 
@@ -54,11 +50,11 @@ impl From<CreateInfo> for IntOpt {
     }
 }
 
-impl Int for IntOpt {}
+impl Str for StrOpt {}
 
-impl Opt for IntOpt {}
+impl Opt for StrOpt {}
 
-impl Type for IntOpt {
+impl Type for StrOpt {
     fn get_type_name(&self) -> &'static str {
         current_type()
     }
@@ -87,7 +83,7 @@ impl Type for IntOpt {
     }
 }
 
-impl Identifier for IntOpt {
+impl Identifier for StrOpt {
     fn get_uid(&self) -> Uid {
         self.uid
     }
@@ -97,7 +93,7 @@ impl Identifier for IntOpt {
     }
 }
 
-impl Callback for IntOpt {
+impl Callback for StrOpt {
     fn is_need_invoke(&self) -> bool {
         self.need_invoke
     }
@@ -115,9 +111,9 @@ impl Callback for IntOpt {
 
     fn set_callback_ret(&mut self, ret: Option<OptValue>) -> Result<()> {
         if let Some(ret) = ret {
-            if !ret.is_int() {
+            if !ret.is_str() {
                 return Err(Error::InvalidReturnValueOfCallback(
-                    "OptValue::Int".to_owned(),
+                    "OptValue::Str".to_owned(),
                     format!("{:?}", ret),
                 ));
             }
@@ -127,7 +123,7 @@ impl Callback for IntOpt {
     }
 }
 
-impl Name for IntOpt {
+impl Name for StrOpt {
     fn get_name(&self) -> &str {
         &self.name
     }
@@ -153,7 +149,7 @@ impl Name for IntOpt {
     }
 }
 
-impl Optional for IntOpt {
+impl Optional for StrOpt {
     fn get_optional(&self) -> bool {
         self.optional
     }
@@ -167,7 +163,7 @@ impl Optional for IntOpt {
     }
 }
 
-impl Alias for IntOpt {
+impl Alias for StrOpt {
     fn get_alias(&self) -> Option<&Vec<(String, String)>> {
         Some(&self.alias)
     }
@@ -193,7 +189,7 @@ impl Alias for IntOpt {
     }
 }
 
-impl Index for IntOpt {
+impl Index for StrOpt {
     fn get_index(&self) -> Option<&OptIndex> {
         None
     }
@@ -207,7 +203,7 @@ impl Index for IntOpt {
     }
 }
 
-impl Value for IntOpt {
+impl Value for StrOpt {
     fn get_value(&self) -> &OptValue {
         &self.value
     }
@@ -225,13 +221,11 @@ impl Value for IntOpt {
     }
 
     fn parse_value(&self, string: &str) -> Result<OptValue> {
-        Ok(OptValue::from(string.parse::<i64>().map_err(|e| {
-            Error::ParseOptionValueFailed(String::from(string), format!("{:?}", e))
-        })?))
+        Ok(OptValue::from(string))
     }
 
     fn has_value(&self) -> bool {
-        self.get_value().is_int()
+        self.get_value().is_str()
     }
 
     fn reset_value(&mut self) {
@@ -239,7 +233,7 @@ impl Value for IntOpt {
     }
 }
 
-impl Help for IntOpt {
+impl Help for StrOpt {
     fn set_hint(&mut self, hint: String) {
         self.help_info.set_hint(hint);
     }
@@ -254,9 +248,9 @@ impl Help for IntOpt {
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct IntCreator;
+pub struct StrCreator;
 
-impl Creator for IntCreator {
+impl Creator for StrCreator {
     fn get_type_name(&self) -> &'static str {
         current_type()
     }
@@ -279,7 +273,7 @@ impl Creator for IntCreator {
 
         assert_eq!(create_info.get_type_name(), self.get_type_name());
 
-        let opt: IntOpt = create_info.into();
+        let opt: StrOpt = create_info.into();
 
         Ok(Box::new(opt))
     }

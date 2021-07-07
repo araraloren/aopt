@@ -9,7 +9,7 @@ use super::{Parser, ReturnValue};
 use crate::arg::ArgStream;
 use crate::err::Result;
 use crate::opt::{OptCallback, OptValue};
-use crate::proc::{Info, Proc, SequenceProc, SingleProc, Subscriber};
+use crate::proc::{Info, NonOptCtxProc, OptCtxProc, Proc, Subscriber};
 use crate::set::Set;
 use crate::uid::{Generator, Uid};
 
@@ -97,7 +97,7 @@ where
                 if ret {
                     debug!(" ... parsed: {:?}", &arg);
                     for gen_style in self.gen_style_order.clone() {
-                        if let Some(ret) = gen_style.gen_opt::<SequenceProc>(arg) {
+                        if let Some(ret) = gen_style.gen_opt::<OptCtxProc>(arg) {
                             let mut proc: Box<dyn Proc> = Box::new(ret);
 
                             if let Ok(_) = self.publish(&mut proc, &mut set) {
@@ -126,7 +126,8 @@ where
             let gen_style = GenStyle::GSNonCmd;
 
             debug!("Start process {:?} ...", &gen_style);
-            if let Some(ret) = gen_style.gen_nonopt::<SingleProc>(&self.noa[0], noa_count as u64, 1)
+            if let Some(ret) =
+                gen_style.gen_nonopt::<NonOptCtxProc>(&self.noa[0], noa_count as u64, 1)
             {
                 let mut proc: Box<dyn Proc> = Box::new(ret);
 
@@ -139,7 +140,7 @@ where
 
             debug!("Start process {:?} ...", &gen_style);
             for index in 1..=noa_count {
-                if let Some(ret) = gen_style.gen_nonopt::<SingleProc>(
+                if let Some(ret) = gen_style.gen_nonopt::<NonOptCtxProc>(
                     &self.noa[index - 1],
                     noa_count as u64,
                     index as u64,
@@ -158,7 +159,9 @@ where
         let gen_style = GenStyle::GSNonMain;
 
         debug!("Start process {:?} ...", &gen_style);
-        if let Some(ret) = gen_style.gen_nonopt::<SingleProc>(&String::new(), noa_count as u64, 1) {
+        if let Some(ret) =
+            gen_style.gen_nonopt::<NonOptCtxProc>(&String::new(), noa_count as u64, 1)
+        {
             let mut proc: Box<dyn Proc> = Box::new(ret);
 
             if let Ok(ret) = self.publish(&mut proc, &mut set) {
@@ -203,7 +206,7 @@ where
                 if ret {
                     debug!(" ... parsed: {:?}", &arg);
                     for gen_style in self.gen_style_order.clone() {
-                        if let Some(ret) = gen_style.gen_opt::<SequenceProc>(arg) {
+                        if let Some(ret) = gen_style.gen_opt::<OptCtxProc>(arg) {
                             let mut proc: Box<dyn Proc> = Box::new(ret);
 
                             if let Ok(_) = self.publish(&mut proc, &mut set) {
@@ -232,7 +235,8 @@ where
             let gen_style = GenStyle::GSNonCmd;
 
             debug!("Start process {:?} ...", &gen_style);
-            if let Some(ret) = gen_style.gen_nonopt::<SingleProc>(&self.noa[0], noa_count as u64, 1)
+            if let Some(ret) =
+                gen_style.gen_nonopt::<NonOptCtxProc>(&self.noa[0], noa_count as u64, 1)
             {
                 let mut proc: Box<dyn Proc> = Box::new(ret);
 
@@ -245,7 +249,7 @@ where
 
             debug!("Start process {:?} ...", &gen_style);
             for index in 1..=noa_count {
-                if let Some(ret) = gen_style.gen_nonopt::<SingleProc>(
+                if let Some(ret) = gen_style.gen_nonopt::<NonOptCtxProc>(
                     &self.noa[index - 1],
                     noa_count as u64,
                     index as u64,
@@ -264,7 +268,9 @@ where
         let gen_style = GenStyle::GSNonMain;
 
         debug!("Start process {:?} ...", &gen_style);
-        if let Some(ret) = gen_style.gen_nonopt::<SingleProc>(&String::new(), noa_count as u64, 1) {
+        if let Some(ret) =
+            gen_style.gen_nonopt::<NonOptCtxProc>(&String::new(), noa_count as u64, 1)
+        {
             let mut proc: Box<dyn Proc> = Box::new(ret);
 
             if let Ok(ret) = self.publish(&mut proc, &mut set) {

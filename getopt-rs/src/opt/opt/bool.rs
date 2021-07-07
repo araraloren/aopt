@@ -1,22 +1,18 @@
 use std::mem::take;
 
-use super::help::HelpInfo;
-use super::index::Index as OptIndex;
-use super::style::Style;
-use super::value::Value as OptValue;
-use super::*;
-use crate::set::info::CreateInfo;
+use crate::opt::*;
+use crate::set::CreateInfo;
 use crate::set::Creator;
 use crate::uid::Uid;
 
 pub fn current_type() -> &'static str {
-    "a"
+    "b"
 }
 
-pub trait Array: Opt {}
+pub trait Bool: Opt {}
 
 #[derive(Debug)]
-pub struct ArrayOpt {
+pub struct BoolOpt {
     uid: Uid,
 
     name: String,
@@ -29,6 +25,8 @@ pub struct ArrayOpt {
 
     default_value: OptValue,
 
+    deactivate_style: bool,
+
     alias: Vec<(String, String)>,
 
     need_invoke: bool,
@@ -36,7 +34,7 @@ pub struct ArrayOpt {
     help_info: HelpInfo,
 }
 
-impl From<CreateInfo> for ArrayOpt {
+impl From<CreateInfo> for BoolOpt {
     fn from(ci: CreateInfo) -> Self {
         let mut ci = ci;
 
@@ -47,6 +45,7 @@ impl From<CreateInfo> for ArrayOpt {
             optional: ci.get_optional(),
             value: OptValue::default(),
             default_value: take(ci.get_default_value_mut()),
+            deactivate_style: ci.get_support_deactivate_style(),
             alias: take(ci.get_alias_mut()),
             need_invoke: false,
             help_info: take(ci.get_help_info_mut()),
@@ -54,22 +53,22 @@ impl From<CreateInfo> for ArrayOpt {
     }
 }
 
-impl Array for ArrayOpt {}
+impl Bool for BoolOpt {}
 
-impl Opt for ArrayOpt {}
+impl Opt for BoolOpt {}
 
-impl Type for ArrayOpt {
+impl Type for BoolOpt {
     fn get_type_name(&self) -> &'static str {
         current_type()
     }
 
     fn is_deactivate_style(&self) -> bool {
-        false
+        self.deactivate_style
     }
 
     fn match_style(&self, style: Style) -> bool {
         match style {
-            Style::Argument => true,
+            Style::Boolean | Style::Multiple => true,
             _ => false,
         }
     }
@@ -87,7 +86,7 @@ impl Type for ArrayOpt {
     }
 }
 
-impl Identifier for ArrayOpt {
+impl Identifier for BoolOpt {
     fn get_uid(&self) -> Uid {
         self.uid
     }
@@ -97,7 +96,7 @@ impl Identifier for ArrayOpt {
     }
 }
 
-impl Callback for ArrayOpt {
+impl Callback for BoolOpt {
     fn is_need_invoke(&self) -> bool {
         self.need_invoke
     }
@@ -115,9 +114,9 @@ impl Callback for ArrayOpt {
 
     fn set_callback_ret(&mut self, ret: Option<OptValue>) -> Result<()> {
         if let Some(ret) = ret {
-            if !ret.is_vec() {
+            if !ret.is_bool() {
                 return Err(Error::InvalidReturnValueOfCallback(
-                    "OptValue::Vec".to_owned(),
+                    "OptValue::Bool".to_owned(),
                     format!("{:?}", ret),
                 ));
             }
@@ -127,7 +126,7 @@ impl Callback for ArrayOpt {
     }
 }
 
-impl Name for ArrayOpt {
+impl Name for BoolOpt {
     fn get_name(&self) -> &str {
         &self.name
     }
@@ -153,7 +152,7 @@ impl Name for ArrayOpt {
     }
 }
 
-impl Optional for ArrayOpt {
+impl Optional for BoolOpt {
     fn get_optional(&self) -> bool {
         self.optional
     }
@@ -167,7 +166,7 @@ impl Optional for ArrayOpt {
     }
 }
 
-impl Alias for ArrayOpt {
+impl Alias for BoolOpt {
     fn get_alias(&self) -> Option<&Vec<(String, String)>> {
         Some(&self.alias)
     }
@@ -193,7 +192,7 @@ impl Alias for ArrayOpt {
     }
 }
 
-impl Index for ArrayOpt {
+impl Index for BoolOpt {
     fn get_index(&self) -> Option<&OptIndex> {
         None
     }
@@ -207,7 +206,7 @@ impl Index for ArrayOpt {
     }
 }
 
-impl Value for ArrayOpt {
+impl Value for BoolOpt {
     fn get_value(&self) -> &OptValue {
         &self.value
     }
@@ -217,32 +216,19 @@ impl Value for ArrayOpt {
     }
 
     fn set_value(&mut self, value: OptValue) {
-        let mut value = value;
-
-        if value.is_vec() {
-            if self.value.is_vec() {
-                self.value
-                    .as_vec_mut()
-                    .unwrap()
-                    .append(value.as_vec_mut().unwrap())
-            } else {
-                self.value = value;
-            }
-        }
+        self.value = value;
     }
 
     fn set_default_value(&mut self, value: OptValue) {
         self.default_value = value;
     }
 
-    fn parse_value(&self, string: &str) -> Result<OptValue> {
-        let mut real_value = OptValue::from(vec![]);
-        real_value.app_str(String::from(string));
-        Ok(real_value)
+    fn parse_value(&self, _string: &str) -> Result<OptValue> {
+        Ok(OptValue::from(!self.is_deactivate_style()))
     }
 
     fn has_value(&self) -> bool {
-        self.get_value().is_vec()
+        self.get_value().as_bool() != self.get_default_value().as_bool()
     }
 
     fn reset_value(&mut self) {
@@ -250,7 +236,7 @@ impl Value for ArrayOpt {
     }
 }
 
-impl Help for ArrayOpt {
+impl Help for BoolOpt {
     fn set_hint(&mut self, hint: String) {
         self.help_info.set_hint(hint);
     }
@@ -265,15 +251,15 @@ impl Help for ArrayOpt {
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct ArrayCreator;
+pub struct BoolCreator;
 
-impl Creator for ArrayCreator {
+impl Creator for BoolCreator {
     fn get_type_name(&self) -> &'static str {
         current_type()
     }
 
     fn is_support_deactivate_style(&self) -> bool {
-        false
+        true
     }
 
     fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>> {
@@ -290,7 +276,7 @@ impl Creator for ArrayCreator {
 
         assert_eq!(create_info.get_type_name(), self.get_type_name());
 
-        let opt: ArrayOpt = create_info.into();
+        let opt: BoolOpt = create_info.into();
 
         Ok(Box::new(opt))
     }
