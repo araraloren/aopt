@@ -1,6 +1,7 @@
 use crate::ctx::Context;
 use crate::err::Result;
 use crate::opt::Opt;
+use crate::opt::Style;
 use crate::proc::Proc;
 use crate::uid::Uid;
 
@@ -42,17 +43,22 @@ impl Proc for NonOptCtxProc {
 
     #[cfg(not(feature = "async"))]
     fn process(&mut self, opt: &mut dyn Opt) -> Result<Option<usize>> {
-        if let Some(ctx) = self.context.as_mut() {
-            if !ctx.is_matched() {
-                if ctx.match_opt(opt) {
-                    if ctx.process_opt(opt)? {
-                        self.consoume_argument =
-                            self.consoume_argument || ctx.is_comsume_argument();
-                        return Ok(ctx.get_matched_index());
+        if opt.match_style(Style::Cmd)
+            || opt.match_style(Style::Main)
+            || opt.match_style(Style::Pos)
+        {
+            if let Some(ctx) = self.context.as_mut() {
+                if !ctx.is_matched() {
+                    if ctx.match_opt(opt) {
+                        if ctx.process_opt(opt)? {
+                            self.consoume_argument =
+                                self.consoume_argument || ctx.is_comsume_argument();
+                            return Ok(ctx.get_matched_index());
+                        }
                     }
+                } else {
+                    return Ok(ctx.get_matched_index());
                 }
-            } else {
-                return Ok(ctx.get_matched_index());
             }
         }
         Ok(None)
@@ -60,17 +66,22 @@ impl Proc for NonOptCtxProc {
 
     #[cfg(feature = "async")]
     async fn process(&mut self, opt: &mut dyn Opt) -> Result<Option<usize>> {
-        if let Some(ctx) = self.context.as_mut() {
-            if !ctx.is_matched() {
-                if ctx.match_opt(opt) {
-                    if ctx.process_opt(opt)? {
-                        self.consoume_argument =
-                            self.consoume_argument || ctx.is_comsume_argument();
-                        return Ok(ctx.get_matched_index());
+        if opt.match_style(Style::Cmd)
+            || opt.match_style(Style::Main)
+            || opt.match_style(Style::Pos)
+        {
+            if let Some(ctx) = self.context.as_mut() {
+                if !ctx.is_matched() {
+                    if ctx.match_opt(opt) {
+                        if ctx.process_opt(opt)? {
+                            self.consoume_argument =
+                                self.consoume_argument || ctx.is_comsume_argument();
+                            return Ok(ctx.get_matched_index());
+                        }
                     }
+                } else {
+                    return Ok(ctx.get_matched_index());
                 }
-            } else {
-                return Ok(ctx.get_matched_index());
             }
         }
         Ok(None)
@@ -87,8 +98,14 @@ impl Proc for NonOptCtxProc {
         self.consoume_argument
     }
 
-    fn is_quit(&self) -> bool {
+    fn quit(&self) -> bool {
         false
+    }
+
+    fn reset(&mut self) {
+        if let Some(ctx) = self.context.as_mut() {
+            ctx.set_matched_index(None);
+        }
     }
 
     fn len(&self) -> usize {

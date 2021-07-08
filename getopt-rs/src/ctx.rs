@@ -18,6 +18,8 @@ pub trait Context: Debug {
 
     fn get_matched_index(&self) -> Option<usize>;
 
+    fn set_matched_index(&mut self, index: Option<usize>);
+
     fn get_style(&self) -> Style;
 
     fn get_next_argument(&self) -> &Option<String>;

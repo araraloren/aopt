@@ -70,7 +70,7 @@ pub fn default_nonopt_check<S: Set, P: Parser<S>>(set: &S, _parser: &P) -> Resul
             let mut cmd_count = 0;
             let mut cmd_valid = false;
             let mut pos_valid = false;
-            let mut value_valid = false;
+            let mut force_valid = true;
 
             for uid in uids {
                 let opt = set.get_opt(*uid).unwrap();
@@ -87,54 +87,36 @@ pub fn default_nonopt_check<S: Set, P: Parser<S>>(set: &S, _parser: &P) -> Resul
                 } else if opt.match_style(Style::Pos) {
                     let opt_valid = opt.check().unwrap_or(false);
 
-                    pos_valid = pos_valid || opt_valid;
-                    if opt_valid {
-                        value_valid = value_valid || opt.has_value();
-                        // check if any the POS has a value
-                        if value_valid {
-                            break;
-                        }
+                    pos_valid = pos_valid && opt_valid;
+                    if !opt_valid && !opt.get_optional() {
+                        force_valid = false;
+                        names.push(opt.get_hint().to_owned());
                     }
-                    names.push(opt.get_hint().to_owned());
                 }
             }
-            // any of CMD
-            // or
-            // any of POS set
+            // if we have CMD, then the CMD must be set or any POS is set
             if cmd_count > 0 {
-                valid = cmd_valid || value_valid;
+                valid = cmd_valid || (pos_valid && force_valid);
             } else {
-                // any of POS is set
-                // or
-                // all the POS is optional
-                valid = value_valid || pos_valid;
+                // if all nonopt @1 are POS, it's normally like @2..
+                valid = pos_valid;
             }
         } else {
             // <pos1> [pos2] [pos3] [pos4] [pos5]
-            // if any of POS is force required,
-            // must set one POS an current position
+            // if any of POS is force required, then it must set by user
             let mut pos_valid = false;
-            let mut value_valid = false;
 
             for uid in uids {
                 let opt = set.get_opt(*uid).unwrap();
                 let opt_valid = opt.check().unwrap_or(false);
 
-                pos_valid = pos_valid || opt_valid;
-                // if POS is invalid, it must be force required but not set by user
-                if opt_valid {
-                    value_valid = value_valid || opt.has_value();
-                    // if any POS is set, break out
-                    if value_valid {
-                        break;
-                    }
+                pos_valid = pos_valid && opt_valid;
+                if !opt_valid {
+                    names.push(opt.get_hint().to_owned());
                 }
-                names.push(opt.get_hint().to_owned());
             }
-            // any of POS is set
-            // or
-            // all the POS is optional
-            valid = value_valid || pos_valid;
+            // the forced POS must be set
+            valid = pos_valid;
         }
         if !valid {
             return Err(Error::ForceRequiredPostionOption(

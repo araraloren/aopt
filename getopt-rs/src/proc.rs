@@ -58,7 +58,9 @@ pub trait Proc: Debug {
 
     fn is_comsume_argument(&self) -> bool;
 
-    fn is_quit(&self) -> bool;
+    fn quit(&self) -> bool;
+
+    fn reset(&mut self);
 
     fn len(&self) -> usize;
 }

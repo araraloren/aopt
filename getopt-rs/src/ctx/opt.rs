@@ -76,6 +76,10 @@ impl Context for OptContext {
         self.matched_index
     }
 
+    fn set_matched_index(&mut self, index: Option<usize>) {
+        self.matched_index = index;
+    }
+
     fn get_style(&self) -> Style {
         self.style
     }

@@ -78,8 +78,12 @@ impl Proc for OptCtxProc {
         self.consoume_argument
     }
 
-    fn is_quit(&self) -> bool {
+    fn quit(&self) -> bool {
         self.is_matched()
+    }
+
+    fn reset(&mut self) {
+        todo!()
     }
 
     fn len(&self) -> usize {
