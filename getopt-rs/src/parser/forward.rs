@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::marker::PhantomData;
 use std::ops::DerefMut;
 
 use super::GenStyle;
@@ -14,9 +15,10 @@ use crate::set::Set;
 use crate::uid::{Generator, Uid};
 
 #[derive(Debug)]
-pub struct ForwardParser<G>
+pub struct ForwardParser<S, G>
 where
     G: Generator + Debug + Default,
+    S: Set + Default,
 {
     uid_gen: G,
 
@@ -27,11 +29,14 @@ where
     noa: Vec<String>,
 
     gen_style_order: Vec<GenStyle>,
+
+    marker: PhantomData<S>,
 }
 
-impl<G> Default for ForwardParser<G>
+impl<S, G> Default for ForwardParser<S, G>
 where
     G: Generator + Debug + Default,
+    S: Set + Default,
 {
     fn default() -> Self {
         Self {
@@ -46,13 +51,15 @@ where
                 GenStyle::GSMultipleOption,
                 GenStyle::GSEmbeddedValue,
             ],
+            marker: PhantomData::default(),
         }
     }
 }
 
-impl<G> ForwardParser<G>
+impl<S, G> ForwardParser<S, G>
 where
     G: Generator + Debug + Default,
+    S: Set + Default,
 {
     pub fn new(uid_gen: G) -> Self {
         Self {
@@ -63,7 +70,7 @@ where
 }
 
 #[async_trait::async_trait(?Send)]
-impl<S, G> Parser<S> for ForwardParser<G>
+impl<S, G> Parser<S> for ForwardParser<S, G>
 where
     S: Set + Default,
     G: Generator + Debug + Default,

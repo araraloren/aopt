@@ -105,7 +105,7 @@ where
 
 impl<S, T: Parser<S>> Publisher<Box<dyn Proc>, S> for T
 where
-    S: Set,
+    S: Set + Default,
 {
     #[cfg(not(feature = "async"))]
     fn publish(&mut self, msg: &mut Box<dyn Proc>, set: &mut S) -> Result<bool> {

@@ -82,9 +82,7 @@ impl Proc for OptCtxProc {
         self.is_matched()
     }
 
-    fn reset(&mut self) {
-        todo!()
-    }
+    fn reset(&mut self) { }
 
     fn len(&self) -> usize {
         self.context.len()

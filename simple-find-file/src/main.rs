@@ -1,12 +1,13 @@
 use getopt_rs::opt::nonopt::*;
 use getopt_rs::opt::opt::*;
+use getopt_rs::opt::*;
 use getopt_rs::parser::{ForwardParser, Parser};
 use getopt_rs::set::{Set, SimpleSet};
 use getopt_rs::uid::UidGenerator;
 
 fn main() {
     let mut set = SimpleSet::default();
-    let mut parser = ForwardParser::<UidGenerator>::default();
+    let mut parser = ForwardParser::<SimpleSet, UidGenerator>::default();
 
     set.add_creator(Box::new(IntCreator::default()));
     set.add_creator(Box::new(BoolCreator::default()));
@@ -20,7 +21,7 @@ fn main() {
     set.add_prefix(String::from("--"));
     set.add_prefix(String::from("-"));
 
-    getopt_rs::tools::initialize_log().unwrap();
+    // getopt_rs::tools::initialize_log().unwrap();
 
     if let Ok(mut commit) = set.add_opt("cpp=c") {
         commit.set_help("run in cpp mode".to_string());
@@ -38,9 +39,19 @@ fn main() {
         commit.set_help("pass -E to compiler.".to_string());
         commit.commit().unwrap();
     }
-    if let Ok(mut commit) = set.add_opt("-D=s") {
+    if let Ok(mut commit) = set.add_opt("-D=a") {
         commit.set_help("pass -D<value> to compiler.".to_string());
-        commit.commit().unwrap();
+        let id = commit.commit().unwrap();
+        parser.add_callback(
+            id,
+            OptCallback::Opt(Box::new(callback::SimpleOptCallback::new(|id, set| {
+                println!(
+                    "user want define a macro {:?}",
+                    set.get_opt(id).unwrap().get_value().as_slice().unwrap().last()
+                );
+                Ok(None)
+            }))),
+        );
     }
 
     let mut args = &mut ["c", "a", "ops"].iter().map(|&v| String::from(v));
