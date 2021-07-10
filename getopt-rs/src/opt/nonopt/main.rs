@@ -28,13 +28,14 @@ pub struct MainOpt {
 impl From<CreateInfo> for MainOpt {
     fn from(ci: CreateInfo) -> Self {
         let mut ci = ci;
+        let help_info = HelpInfo::from(&mut ci);
 
         Self {
             uid: ci.get_uid(),
             name: take(ci.get_name_mut()),
             value: OptValue::from(false),
             need_invoke: false,
-            help_info: take(ci.get_help_info_mut()),
+            help_info,
         }
     }
 }

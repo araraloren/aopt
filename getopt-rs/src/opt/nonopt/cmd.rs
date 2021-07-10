@@ -29,6 +29,7 @@ pub struct CmdOpt {
 impl From<CreateInfo> for CmdOpt {
     fn from(ci: CreateInfo) -> Self {
         let mut ci = ci;
+        let help_info = HelpInfo::from(&mut ci);
 
         Self {
             uid: ci.get_uid(),
@@ -36,7 +37,7 @@ impl From<CreateInfo> for CmdOpt {
             value: OptValue::from(false),
             index: OptIndex::Forward(1),
             need_invoke: false,
-            help_info: take(ci.get_help_info_mut()),
+            help_info,
         }
     }
 }

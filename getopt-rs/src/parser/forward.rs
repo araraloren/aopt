@@ -351,5 +351,8 @@ where
     fn reset(&mut self) {
         self.uid_gen.reset();
         self.noa.clear();
+        // don't know why this not working
+        // self.clr_subscriber();
+        self.subscriber_info.clear();
     }
 }

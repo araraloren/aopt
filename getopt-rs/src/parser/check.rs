@@ -6,6 +6,7 @@ use crate::opt::Style;
 use crate::set::Set;
 use crate::uid::Uid;
 
+/// Check the callback type in  parser .
 pub fn default_pre_check<S: Set, P: Parser<S>>(set: &S, parser: &P) -> Result<bool> {
     for (uid, callback) in parser.callback_iter() {
         if let Some(opt) = set.get_opt(*uid) {

@@ -34,6 +34,7 @@ pub struct PosOpt {
 impl From<CreateInfo> for PosOpt {
     fn from(ci: CreateInfo) -> Self {
         let mut ci = ci;
+        let help_info = HelpInfo::from(&mut ci);
 
         Self {
             uid: ci.get_uid(),
@@ -43,7 +44,7 @@ impl From<CreateInfo> for PosOpt {
             value: OptValue::from(false),
             index: take(ci.get_index_mut()),
             need_invoke: false,
-            help_info: take(ci.get_help_info_mut()),
+            help_info,
         }
     }
 }

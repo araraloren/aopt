@@ -37,6 +37,7 @@ pub struct BoolOpt {
 impl From<CreateInfo> for BoolOpt {
     fn from(ci: CreateInfo) -> Self {
         let mut ci = ci;
+        let help_info = HelpInfo::from(&mut ci);
 
         Self {
             uid: ci.get_uid(),
@@ -48,7 +49,7 @@ impl From<CreateInfo> for BoolOpt {
             deactivate_style: ci.get_support_deactivate_style(),
             alias: take(ci.get_alias_mut()),
             need_invoke: false,
-            help_info: take(ci.get_help_info_mut()),
+            help_info,
         }
     }
 }
