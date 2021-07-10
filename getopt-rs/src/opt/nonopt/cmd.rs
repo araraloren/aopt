@@ -34,7 +34,7 @@ impl From<CreateInfo> for CmdOpt {
         Self {
             uid: ci.get_uid(),
             name: take(ci.get_name_mut()),
-            value: OptValue::from(false),
+            value: OptValue::Null,
             index: OptIndex::Forward(1),
             need_invoke: false,
             help_info,
@@ -193,6 +193,7 @@ impl Value for CmdOpt {
         self.value = value;
     }
 
+    /// Can't change the default value of non-opt
     fn set_default_value(&mut self, _value: OptValue) {}
 
     fn parse_value(&self, _string: &str) -> Result<OptValue> {
@@ -204,7 +205,7 @@ impl Value for CmdOpt {
     }
 
     fn reset_value(&mut self) {
-        self.value = OptValue::from(false);
+        self.value = self.get_default_value().clone();
     }
 }
 
@@ -321,7 +322,7 @@ mod test {
         assert_eq!(cmd.match_optional(false), true);
         assert_eq!(cmd.check().is_err(), true);
 
-        assert_eq!(cmd.get_value().as_bool(), OptValue::from(false).as_bool());
+        assert_eq!(cmd.get_value().is_null(), true);
         assert_eq!(cmd.get_default_value().is_null(), true);
         assert_eq!(cmd.has_value(), false);
         let value = cmd.parse_value("");
@@ -333,7 +334,7 @@ mod test {
         cmd.set_default_value(OptValue::from(false));
         assert_eq!(cmd.get_default_value().is_null(), true);
         cmd.reset_value();
-        assert_eq!(cmd.get_value().as_bool(), OptValue::from(false).as_bool());
+        assert_eq!(cmd.get_value().is_null(), true);
 
         assert_eq!(cmd.as_ref().as_any().is::<CmdOpt>(), true);
     }

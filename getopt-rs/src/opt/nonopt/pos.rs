@@ -41,7 +41,7 @@ impl From<CreateInfo> for PosOpt {
             name: take(ci.get_name_mut()),
             prefix: String::from(""),
             optional: ci.get_optional(),
-            value: OptValue::from(false),
+            value: OptValue::Null,
             index: take(ci.get_index_mut()),
             need_invoke: false,
             help_info,
@@ -219,7 +219,7 @@ impl Value for PosOpt {
     }
 
     fn reset_value(&mut self) {
-        self.value = OptValue::from(false);
+        self.value = self.get_default_value().clone();
     }
 }
 
@@ -341,7 +341,7 @@ mod test {
         assert_eq!(pos.match_optional(true), false);
         assert_eq!(pos.check().is_err(), true);
 
-        assert_eq!(pos.get_value().as_bool(), OptValue::from(false).as_bool());
+        assert_eq!(pos.get_value().is_null(), true);
         assert_eq!(pos.get_default_value().is_null(), true);
         assert_eq!(pos.has_value(), false);
         let value = pos.parse_value("");
@@ -353,7 +353,7 @@ mod test {
         pos.set_default_value(OptValue::from(false));
         assert_eq!(pos.get_default_value().is_null(), true);
         pos.reset_value();
-        assert_eq!(pos.get_value().as_bool(), OptValue::from(false).as_bool());
+        assert_eq!(pos.get_value().is_null(), true);
 
         assert_eq!(pos.as_ref().as_any().is::<PosOpt>(), true);
     }

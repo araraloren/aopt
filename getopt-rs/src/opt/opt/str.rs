@@ -230,7 +230,7 @@ impl Value for StrOpt {
     }
 
     fn reset_value(&mut self) {
-        self.value.reset();
+        self.value = self.get_default_value().clone();
     }
 }
 

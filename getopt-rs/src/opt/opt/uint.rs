@@ -232,7 +232,7 @@ impl Value for UintOpt {
     }
 
     fn reset_value(&mut self) {
-        self.value.reset();
+        self.value = self.get_default_value().clone();
     }
 }
 

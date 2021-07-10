@@ -95,6 +95,12 @@ pub fn default_nonopt_check<S: Set, P: Parser<S>>(set: &S, _parser: &P) -> Resul
                     }
                 }
             }
+
+            debug!(
+                "In default nonopt-check: cmd_valid={} pos_valid={} force_valid={}",
+                cmd_valid, pos_valid, force_valid
+            );
+
             // if we have CMD, then the CMD must be set or any POS is set
             if cmd_count > 0 {
                 valid = cmd_valid || (pos_valid && force_valid);
@@ -116,6 +122,7 @@ pub fn default_nonopt_check<S: Set, P: Parser<S>>(set: &S, _parser: &P) -> Resul
                     names.push(opt.get_hint().to_owned());
                 }
             }
+            debug!("In default nonopt-check: pos_valid={}", pos_valid);
             // the forced POS must be set
             valid = pos_valid;
         }

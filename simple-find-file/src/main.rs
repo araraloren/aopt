@@ -31,14 +31,21 @@ fn main() {
         commit.commit().unwrap();
     }
     if let Ok(mut commit) = set.add_opt("-S=b") {
+        commit.set_help("pass -S to compiler.".to_string());
         commit.commit().unwrap();
     }
     if let Ok(mut commit) = set.add_opt("-E=b") {
+        commit.set_help("pass -E to compiler.".to_string());
         commit.commit().unwrap();
     }
-    let ret = parser
-        .parse(set, &mut ["c", "a", "ops"].iter().map(|&v| String::from(v)))
-        .unwrap();
+    if let Ok(mut commit) = set.add_opt("-D=s") {
+        commit.set_help("pass -D<value> to compiler.".to_string());
+        commit.commit().unwrap();
+    }
+
+    let mut args = &mut ["c", "a", "ops"].iter().map(|&v| String::from(v));
+
+    let ret = parser.parse(set, &mut std::env::args().skip(1)).unwrap();
 
     if let Some(ret) = ret {
         dbg!(ret);

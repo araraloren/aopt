@@ -33,7 +33,7 @@ impl From<CreateInfo> for MainOpt {
         Self {
             uid: ci.get_uid(),
             name: take(ci.get_name_mut()),
-            value: OptValue::from(false),
+            value: OptValue::Null,
             need_invoke: false,
             help_info,
         }
@@ -195,7 +195,7 @@ impl Value for MainOpt {
     }
 
     fn reset_value(&mut self) {
-        self.value = OptValue::from(false);
+        self.value = self.get_default_value().clone();
     }
 }
 
@@ -310,7 +310,7 @@ mod test {
         assert_eq!(main.match_optional(true), true);
         assert_eq!(main.check().is_err(), false);
 
-        assert_eq!(main.get_value().as_bool(), OptValue::from(false).as_bool());
+        assert_eq!(main.get_value().is_null(), true);
         assert_eq!(main.get_default_value().is_null(), true);
         assert_eq!(main.has_value(), false);
         let value = main.parse_value("");
@@ -322,7 +322,7 @@ mod test {
         main.set_default_value(OptValue::from(false));
         assert_eq!(main.get_default_value().is_null(), true);
         main.reset_value();
-        assert_eq!(main.get_value().as_bool(), OptValue::from(false).as_bool());
+        assert_eq!(main.get_value().is_null(), true);
 
         assert_eq!(main.as_ref().as_any().is::<MainOpt>(), true);
     }

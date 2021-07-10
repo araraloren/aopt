@@ -23,6 +23,8 @@ pub struct CreateInfo {
 
     value: OptValue,
 
+    has_value: bool,
+
     alias: Vec<(String, String)>,
 
     help: HelpInfo,
