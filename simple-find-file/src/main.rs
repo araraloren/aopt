@@ -30,16 +30,24 @@ fn main() {
         let id = commit.commit().unwrap();
         parser.add_callback(
             id,
-            OptCallback::Main(Box::new(callback::SimpleMainCallback::new(|_id, set, _| {
-                let std = set.filter("std").unwrap().find().unwrap().get_value().as_str().unwrap();
-                
-                if ! check_compiler_std(std, "cpp") {
-                    report_an_error(format!("Unsupport standard version for c++: {}", std))
-                }
-                else {
-                    Ok(None)
-                }
-            }))),
+            OptCallback::Main(Box::new(callback::SimpleMainCallback::new(
+                |_id, set, _| {
+                    let std = set
+                        .filter("std")
+                        .unwrap()
+                        .find()
+                        .unwrap()
+                        .get_value()
+                        .as_str()
+                        .unwrap();
+
+                    if !check_compiler_std(std, "cpp") {
+                        report_an_error(format!("Unsupport standard version for c++: {}", std))
+                    } else {
+                        Ok(None)
+                    }
+                },
+            ))),
         );
     }
     if let Ok(mut commit) = set.add_opt("c=c") {
@@ -47,16 +55,24 @@ fn main() {
         let id = commit.commit().unwrap();
         parser.add_callback(
             id,
-            OptCallback::Main(Box::new(callback::SimpleMainCallback::new(|_id, set, _| {
-                let std = set.filter("std").unwrap().find().unwrap().get_value().as_str().unwrap();
+            OptCallback::Main(Box::new(callback::SimpleMainCallback::new(
+                |_id, set, _| {
+                    let std = set
+                        .filter("std")
+                        .unwrap()
+                        .find()
+                        .unwrap()
+                        .get_value()
+                        .as_str()
+                        .unwrap();
 
-                if ! check_compiler_std(std, "c") {
-                    report_an_error(format!("Unsupport standard version for c++: {}", std))
-                }
-                else {
-                    Ok(None)
-                }
-            }))),
+                    if !check_compiler_std(std, "c") {
+                        report_an_error(format!("Unsupport standard version for c++: {}", std))
+                    } else {
+                        Ok(None)
+                    }
+                },
+            ))),
         );
     }
     if let Ok(mut commit) = set.add_opt("-S=b") {
@@ -181,28 +197,12 @@ fn main() {
 
 fn check_compiler_std(std: &str, compiler: &str) -> bool {
     let cpp_std: Vec<&str> = vec![
-        "c++98",
-        "c++03",
-        "c++11", "c++0x",
-        "c++14", "c++1y",
-        "c++17", "c++1z",
-        "c++20", "c++2a",
+        "c++98", "c++03", "c++11", "c++0x", "c++14", "c++1y", "c++17", "c++1z", "c++20", "c++2a",
     ];
-    let c_std: Vec<&str> = vec![
-        "c89",
-        "c90",
-        "c99",
-        "c11",
-        "c17",
-        "c2x",
-    ];
+    let c_std: Vec<&str> = vec!["c89", "c90", "c99", "c11", "c17", "c2x"];
     match compiler {
-        "c" => {
-            c_std.contains(&std)
-        }
-        "cpp" => {
-            cpp_std.contains(&std)
-        }
-        _ => { false }
+        "c" => c_std.contains(&std),
+        "cpp" => cpp_std.contains(&std),
+        _ => false,
     }
 }
