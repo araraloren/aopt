@@ -107,10 +107,12 @@ impl Set for SimpleSet {
 
     fn set_prefix(&mut self, prefix: Vec<String>) {
         self.prefix = prefix;
+        self.prefix.sort_by(|a, b| b.len().cmp(&a.len()));
     }
 
     fn add_prefix(&mut self, prefix: String) {
         self.prefix.push(prefix);
+        self.prefix.sort_by(|a, b| b.len().cmp(&a.len()));
     }
 
     fn get_prefix(&self) -> &[String] {
