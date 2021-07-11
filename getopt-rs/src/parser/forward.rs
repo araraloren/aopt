@@ -108,7 +108,7 @@ where
                         if let Some(ret) = gen_style.gen_opt::<OptCtxProc>(arg) {
                             let mut proc: Box<dyn Proc> = Box::new(ret);
 
-                            if let Ok(_) = self.publish(&mut proc, &mut set) {
+                            if self.publish(&mut proc, &mut set)? {
                                 if proc.is_matched() {
                                     matched = true;
                                 }
@@ -146,9 +146,7 @@ where
             {
                 let mut proc: Box<dyn Proc> = Box::new(ret);
 
-                if let Ok(ret) = self.publish(&mut proc, &mut set) {
-                    debug!("ret = {:?}", ret);
-                }
+                self.publish(&mut proc, &mut set)?;
             }
 
             let gen_style = GenStyle::GSNonPos;
@@ -162,9 +160,7 @@ where
                 ) {
                     let mut proc: Box<dyn Proc> = Box::new(ret);
 
-                    if let Ok(ret) = self.publish(&mut proc, &mut set) {
-                        debug!("ret = {:?}", ret);
-                    }
+                    self.publish(&mut proc, &mut set)?;
                 }
             }
         }
@@ -179,9 +175,7 @@ where
         {
             let mut proc: Box<dyn Proc> = Box::new(ret);
 
-            if let Ok(ret) = self.publish(&mut proc, &mut set) {
-                debug!("ret = {:?}", ret);
-            }
+            self.publish(&mut proc, &mut set)?;
         }
 
         self.post_check(&set)?;

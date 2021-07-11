@@ -123,6 +123,7 @@ where
                     let ret = self.invoke_callback(info.uid(), set, noa_index)?;
                     let opt = set.get_opt_mut(info.uid()).unwrap();
 
+                    debug!("Get return value of option {:?} = {:?}", info.uid(), ret);
                     // need try to borrow opt once more, cause the borrow check
                     opt.set_callback_ret(ret)?;
                 }

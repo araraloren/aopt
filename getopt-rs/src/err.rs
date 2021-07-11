@@ -51,4 +51,11 @@ pub enum Error {
 
     #[error("the option @{0} is force required: `{1}`")]
     ForceRequiredPostionOption(u64, String),
+
+    #[error("{0}")]
+    ReportError(String),
+}
+
+pub fn report_an_error<T>(error_description: String) -> Result<T> {
+    Err(Error::ReportError(error_description))
 }
