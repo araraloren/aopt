@@ -98,6 +98,7 @@ where
         debug!("Start process option ...");
         while let Some(arg) = iter.next() {
             let mut matched = false;
+            let mut consume = false;
 
             debug!("Get next Argument => {:?}", &arg);
             if let Ok(ret) = arg.parse(&prefix) {
@@ -108,17 +109,24 @@ where
                             let mut proc: Box<dyn Proc> = Box::new(ret);
 
                             if let Ok(_) = self.publish(&mut proc, &mut set) {
-                                if proc.is_matched() && proc.is_comsume_argument() {
+                                if proc.is_matched() {
                                     matched = true;
+                                }
+                                if proc.is_comsume_argument() {
+                                    consume = true;
+                                }
+                                if matched {
+                                    break;
                                 }
                             }
                         }
                     }
                 }
             }
-            if matched {
+            if matched && consume {
                 iter.next();
-            } else {
+            } else if !matched {
+                debug!("!!! Not matching {:?}", &arg);
                 if let Some(noa) = &arg.current {
                     self.noa.push(noa.clone());
                 }
@@ -286,7 +294,7 @@ where
         }
 
         self.post_check(&set)?;
-
+        todo!();
         Ok(None)
     }
 
