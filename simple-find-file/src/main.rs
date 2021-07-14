@@ -32,20 +32,18 @@ fn main() {
             id,
             OptCallback::Main(Box::new(callback::SimpleMainCallback::new(
                 |_id, set, _| {
-                    let std = set
-                        .filter("std")
-                        .unwrap()
-                        .find()
-                        .unwrap()
-                        .get_value()
-                        .as_str()
-                        .unwrap();
-
-                    if !check_compiler_std(std, "cpp") {
-                        report_an_error(format!("Unsupport standard version for c++: {}", std))
-                    } else {
-                        Ok(None)
+                    let mut ret = Ok(None);
+                    if let Some(std) = set.filter("std").unwrap().find() {
+                        if let Some(std) = std.get_value().as_str() {
+                            if !check_compiler_std(std, "cpp") {
+                                ret = report_an_error(format!(
+                                    "Unsupport standard version for c++: {}",
+                                    std
+                                ));
+                            }
+                        }
                     }
+                    ret
                 },
             ))),
         );
@@ -185,6 +183,24 @@ fn main() {
     if let Ok(mut commit) = set.add_opt("-std=s") {
         commit.set_help("pass -std=<value> to compiler.".to_string());
         commit.commit().unwrap();
+    }
+    if let Ok(mut commit) = set.add_opt("temp=p@*") {
+        commit.set_help("pass --flag to compiler.".to_string());
+        commit.set_name("--".to_string());
+        let id = commit.commit().unwrap();
+        parser.add_callback(
+            id,
+            OptCallback::PosMut(Box::new(callback::SimplePosMutCallback::new(
+                |id, set, arg, index| {
+                    if let Ok(mut commit) = set.add_opt("-run=b") {
+                        commit
+                            .set_help("run the executable binary after code generate.".to_string());
+                        commit.commit().unwrap();
+                    }
+                    Ok(None)
+                },
+            ))),
+        );
     }
     let mut args = &mut ["c", "a", "ops"].iter().map(|&v| String::from(v));
 

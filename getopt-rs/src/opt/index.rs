@@ -8,6 +8,10 @@ pub enum Index {
 
     Except(Vec<u64>),
 
+    Greater(u64),
+
+    Less(u64),
+
     AnyWhere,
 
     Null,
@@ -28,6 +32,14 @@ impl Index {
 
     pub fn except(list: Vec<u64>) -> Self {
         Self::Except(list)
+    }
+
+    pub fn greater(index: u64) -> Self {
+        Self::Greater(index)
+    }
+
+    pub fn less(index: u64) -> Self {
+        Self::Less(index)
     }
 
     pub fn anywhere() -> Self {
@@ -78,6 +90,23 @@ impl Index {
                         return Some(current);
                     }
                 }
+            }
+            Self::Greater(offset) => {
+                let offset = *offset;
+
+                if offset <= total && offset < current {
+                    return Some(current);
+                }
+            }
+            Self::Less(offset) => {
+                let offset = *offset;
+
+                if offset <= total && offset > current {
+                    return Some(current);
+                }
+            }
+            Self::AnyWhere => {
+                return Some(current);
             }
             _ => {}
         }

@@ -104,13 +104,9 @@ impl Callback for PosOpt {
     }
 
     fn is_accept_callback_type(&self, callback_type: CallbackType) -> bool {
-        if self.is_need_invoke() {
-            match callback_type {
-                CallbackType::Pos | CallbackType::PosMut => true,
-                _ => false,
-            }
-        } else {
-            false
+        match callback_type {
+            CallbackType::Pos | CallbackType::PosMut => true,
+            _ => false,
         }
     }
 

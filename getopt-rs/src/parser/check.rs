@@ -12,8 +12,9 @@ pub fn default_pre_check<S: Set, P: Parser<S>>(set: &S, parser: &P) -> Result<bo
         if let Some(opt) = set.get_opt(*uid) {
             if !opt.is_accept_callback_type(callback.borrow().to_callback_type()) {
                 return Err(Error::InvalidOptionCallbackData(format!(
-                    "invalid callback type {:?}",
-                    callback
+                    "invalid callback type of option {}: {:?}",
+                    opt.get_hint(),
+                    callback.borrow().to_callback_type()
                 )));
             }
         } else {
@@ -70,7 +71,7 @@ pub fn default_nonopt_check<S: Set, P: Parser<S>>(set: &S, _parser: &P) -> Resul
         if index == &1 || index == &0 {
             let mut cmd_count = 0;
             let mut cmd_valid = false;
-            let mut pos_valid = false;
+            let mut pos_valid = true;
             let mut force_valid = true;
 
             for uid in uids {
@@ -111,7 +112,7 @@ pub fn default_nonopt_check<S: Set, P: Parser<S>>(set: &S, _parser: &P) -> Resul
         } else {
             // <pos1> [pos2] [pos3] [pos4] [pos5]
             // if any of POS is force required, then it must set by user
-            let mut pos_valid = false;
+            let mut pos_valid = true;
 
             for uid in uids {
                 let opt = set.get_opt(*uid).unwrap();
