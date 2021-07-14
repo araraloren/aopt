@@ -299,8 +299,14 @@ where
             match callback.borrow_mut().deref_mut() {
                 OptCallback::Opt(cb) => cb.as_mut().call(uid, set),
                 OptCallback::OptMut(cb) => cb.as_mut().call(uid, set),
-                OptCallback::Pos(cb) => cb.as_mut().call(uid, set, &self.noa[noa_index]),
-                OptCallback::PosMut(cb) => cb.as_mut().call(uid, set, &self.noa[noa_index]),
+                OptCallback::Pos(cb) => {
+                    cb.as_mut()
+                        .call(uid, set, &self.noa[noa_index - 1], noa_index as u64)
+                }
+                OptCallback::PosMut(cb) => {
+                    cb.as_mut()
+                        .call(uid, set, &self.noa[noa_index - 1], noa_index as u64)
+                }
                 OptCallback::Main(cb) => cb.as_mut().call(uid, set, &self.noa),
                 OptCallback::MainMut(cb) => cb.as_mut().call(uid, set, &self.noa),
                 OptCallback::Null => Ok(None),

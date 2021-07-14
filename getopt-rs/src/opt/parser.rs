@@ -39,6 +39,9 @@ pub enum State {
     BackwardIndex,
     List,
     Except,
+    AnyWhere,
+    Greater,
+    Less,
     End,
 }
 
@@ -63,6 +66,10 @@ pub struct DataKeeper<'pre> {
     pub list: Vec<u64>,
 
     pub except: Vec<u64>,
+
+    pub greater: Option<u64>,
+
+    pub less: Option<u64>,
 }
 
 impl<'pre> DataKeeper<'pre> {
@@ -77,6 +84,10 @@ impl<'pre> DataKeeper<'pre> {
             Index::list(std::mem::take(&mut self.list))
         } else if self.except.len() > 0 {
             Index::except(std::mem::take(&mut self.except))
+        } else if self.greater.is_some() {
+            Index::greater(self.greater.unwrap())
+        } else if self.less.is_some() {
+            Index::less(self.less.unwrap())
         } else {
             Index::default()
         }
@@ -88,6 +99,8 @@ impl<'pre> DataKeeper<'pre> {
             || self.anywhere.is_some()
             || self.list.len() > 0
             || self.except.len() > 0
+            || self.greater.is_some()
+            || self.less.is_some()
     }
 }
 
@@ -98,6 +111,10 @@ impl Default for State {
 }
 
 impl State {
+    pub fn anywhere_symbol() -> &'static str {
+        "*"
+    }
+
     pub fn self_transition<'pat, 'vec, 'pre>(
         &mut self,
         index: &ParseIndex,
@@ -145,11 +162,23 @@ impl State {
                     State::Except
                 } else if index_part.starts_with("-") {
                     State::BackwardIndex
+                } else if index_part == Self::anywhere_symbol() {
+                    State::AnyWhere
+                } else if index_part.starts_with(">") {
+                    State::Greater
+                } else if index_part.starts_with("<") {
+                    State::Less
                 } else {
                     State::FowradIndex
                 };
             }
-            State::FowradIndex | State::BackwardIndex | State::List | State::Except => {}
+            State::FowradIndex
+            | State::BackwardIndex
+            | State::List
+            | State::Except
+            | State::AnyWhere
+            | State::Greater
+            | State::Less => {}
             State::End => {
                 unreachable!("The end state can't going on!");
             }
@@ -352,6 +381,28 @@ impl State {
                                 .map_err(|e| Error::InavlidOptionIndexValue(format!("{:?}", e)))
                         })
                         .collect::<Result<Vec<u64>>>()?;
+                    index.set(index.len());
+                }
+                State::AnyWhere => {
+                    data_keeper.anywhere = Some(true);
+                    index.set(index.len());
+                }
+                State::Greater => {
+                    let (_, index_part) = pattern.get_pattern().split_at(index.get());
+
+                    let ret = index_part
+                        .parse::<u64>()
+                        .map_err(|e| Error::InavlidOptionIndexValue(format!("{:?}", e)))?;
+                    data_keeper.greater = Some(ret);
+                    index.set(index.len());
+                }
+                State::Less => {
+                    let (_, index_part) = pattern.get_pattern().split_at(index.get());
+
+                    let ret = index_part
+                        .parse::<u64>()
+                        .map_err(|e| Error::InavlidOptionIndexValue(format!("{:?}", e)))?;
+                    data_keeper.less = Some(ret);
                     index.set(index.len());
                 }
                 State::End => {
