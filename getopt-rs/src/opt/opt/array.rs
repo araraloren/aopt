@@ -209,6 +209,10 @@ impl Value for ArrayOpt {
         &self.value
     }
 
+    fn get_value_mut(&mut self) -> &mut OptValue {
+        &mut self.value
+    }
+
     fn get_default_value(&self) -> &OptValue {
         &self.default_value
     }

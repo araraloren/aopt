@@ -84,6 +84,8 @@ pub trait Optional {
 pub trait Value {
     fn get_value(&self) -> &OptValue;
 
+    fn get_value_mut(&mut self) -> &mut OptValue;
+
     fn get_default_value(&self) -> &OptValue;
 
     fn set_value(&mut self, value: OptValue);
