@@ -48,9 +48,12 @@ impl Context for NonOptContext {
         self.matched_index = Some(self.current as usize);
         debug!("Set data of option<{}>", opt.get_uid());
         // try to set value here happy some check
-        // in parser, we will set the value to return value of callback
-        opt.set_value(opt.parse_value("")?);
-        opt.set_invoke(true);
+        // in parser, we will set the value to return value of callback.
+        // the non-opt can be reentered, so check if it has a value
+        if ! opt.has_value() {
+            opt.set_value(opt.parse_value("")?);
+            opt.set_invoke(true);
+        }
         Ok(true)
     }
 
