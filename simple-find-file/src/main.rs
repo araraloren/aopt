@@ -185,19 +185,30 @@ fn main() {
         commit.commit().unwrap();
     }
     if let Ok(mut commit) = set.add_opt("temp=p@*") {
-        commit.set_help("pass --flag to compiler.".to_string());
+        commit.set_help("pass all the arguments after'--' to compiler.".to_string());
         commit.set_name("--".to_string());
         let id = commit.commit().unwrap();
         parser.add_callback(
             id,
             OptCallback::PosMut(Box::new(callback::SimplePosMutCallback::new(
-                |id, set, arg, index| {
-                    if let Ok(mut commit) = set.add_opt("-run=b") {
-                        commit
-                            .set_help("run the executable binary after code generate.".to_string());
-                        commit.commit().unwrap();
-                    }
-                    Ok(None)
+                |id, set, arg, _index| {
+                    // collect the arguments after --
+                    let mut value = std::mem::take(set.get_opt_mut(id).unwrap().get_value_mut());
+                    let ret = Ok(
+                        if value.is_vec() {
+                            value.as_vec_mut().unwrap().push(arg.clone());
+                            Some(value)
+                        }
+                        else if (arg == "--") && (!value.is_vec()) {
+                            value = OptValue::from(vec![]);
+                            Some(value)
+                        }
+                        else {
+                            Some(value)
+                        }
+                    );
+                    println!("----> {:?}", ret);
+                    ret
                 },
             ))),
         );
