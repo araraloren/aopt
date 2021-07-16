@@ -36,7 +36,6 @@ impl<'pre> Argument<'pre> {
         self.data_keeper.disable
     }
 
-    #[cfg(not(feature = "async"))]
     pub fn parse(&mut self, prefix: &'pre [String]) -> Result<bool> {
         if let Some(pattern) = &self.current {
             self.data_keeper = parse_argument(pattern.as_ref(), prefix)?;
@@ -49,20 +48,5 @@ impl<'pre> Argument<'pre> {
             }
         }
         Err(Error::NotOptionArgument)
-    }
-
-    #[cfg(feature = "async")]
-    pub async fn parse(&mut self, prefix: &'pre [String]) -> Result<bool> {
-        if let Some(pattern) = &self.current {
-            self.data_keeper = parse_argument(pattern.as_ref(), prefix)?;
-
-            // must have prefix and name
-            if self.data_keeper.prefix.is_some() {
-                if self.data_keeper.name.is_some() {
-                    return Ok(true);
-                }
-            }
-        }
-        Err(Error::NotAOptionArgument)
     }
 }

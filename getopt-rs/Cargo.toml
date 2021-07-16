@@ -10,8 +10,6 @@ edition = "2018"
 thiserror = "1.0"
 log = "0.4"
 simplelog = "0.10"
-async-trait = "0.1"
 supercow = "0.1"
 
 [features]
-async = []

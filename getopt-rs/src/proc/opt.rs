@@ -22,7 +22,6 @@ impl From<Uid> for OptCtxProc {
     }
 }
 
-#[async_trait::async_trait(?Send)]
 impl Proc for OptCtxProc {
     fn uid(&self) -> Uid {
         self.uid
@@ -36,24 +35,7 @@ impl Proc for OptCtxProc {
         self.context.get(index)
     }
 
-    #[cfg(not(feature = "async"))]
     fn process(&mut self, opt: &mut dyn Opt) -> Result<Option<usize>> {
-        for ctx in self.context.iter_mut() {
-            if !ctx.is_matched() {
-                if ctx.match_opt(opt) {
-                    if ctx.process_opt(opt)? {
-                        self.consoume_argument =
-                            self.consoume_argument || ctx.is_comsume_argument();
-                        return Ok(ctx.get_matched_index());
-                    }
-                }
-            }
-        }
-        Ok(None)
-    }
-
-    #[cfg(feature = "async")]
-    async fn process(&mut self, opt: &mut dyn Opt) -> Result<Option<usize>> {
         for ctx in self.context.iter_mut() {
             if !ctx.is_matched() {
                 if ctx.match_opt(opt) {

@@ -194,19 +194,15 @@ fn main() {
                 |id, set, arg, _index| {
                     // collect the arguments after --
                     let mut value = std::mem::take(set.get_opt_mut(id).unwrap().get_value_mut());
-                    let ret = Ok(
-                        if value.is_vec() {
-                            value.as_vec_mut().unwrap().push(arg.clone());
-                            Some(value)
-                        }
-                        else if (arg == "--") && (!value.is_vec()) {
-                            value = OptValue::from(vec![]);
-                            Some(value)
-                        }
-                        else {
-                            Some(value)
-                        }
-                    );
+                    let ret = Ok(if value.is_vec() {
+                        value.as_vec_mut().unwrap().push(arg.clone());
+                        Some(value)
+                    } else if (arg == "--") && (!value.is_vec()) {
+                        value = OptValue::from(vec![]);
+                        Some(value)
+                    } else {
+                        Some(value)
+                    });
                     println!("----> {:?}", ret);
                     ret
                 },

@@ -17,74 +17,32 @@ use crate::uid::Uid;
 pub use forward::ForwardParser;
 pub use gen_style::GenStyle;
 
-#[async_trait::async_trait(?Send)]
 pub trait Parser<S>: Debug
 where
     S: Set,
     Self: Sized,
 {
-    #[cfg(not(feature = "async"))]
     fn parse(
         &mut self,
         set: S,
         iter: impl Iterator<Item = String>,
     ) -> Result<Option<ReturnValue<S>>>;
 
-    #[cfg(feature = "async")]
-    async fn parse(
-        &mut self,
-        set: S,
-        iter: impl Iterator<Item = String>,
-    ) -> Result<Option<ReturnValue<S>>>;
-
-    #[cfg(not(feature = "async"))]
     fn invoke_callback(&self, uid: Uid, set: &mut S, noa_index: usize) -> Result<Option<OptValue>>;
 
-    #[cfg(feature = "async")]
-    async fn invoke_callback(
-        &mut self,
-        uid: Uid,
-        set: &mut S,
-        noa_index: usize,
-    ) -> Result<Option<OptValue>>;
-
-    #[cfg(not(feature = "async"))]
     fn pre_check(&self, set: &S) -> Result<bool> {
         check::default_pre_check(set, self)
     }
 
-    #[cfg(not(feature = "async"))]
     fn check_opt(&self, set: &S) -> Result<bool> {
         check::default_opt_check(set, self)
     }
 
-    #[cfg(not(feature = "async"))]
     fn check_nonopt(&self, set: &S) -> Result<bool> {
         check::default_nonopt_check(set, self)
     }
 
-    #[cfg(not(feature = "async"))]
     fn post_check(&self, set: &S) -> Result<bool> {
-        check::default_post_check(set, self)
-    }
-
-    #[cfg(feature = "async")]
-    async fn pre_check(&self, set: &S) -> Result<bool> {
-        check::default_pre_check(set, self)
-    }
-
-    #[cfg(feature = "async")]
-    async fn check_opt(&self, set: &S) -> Result<bool> {
-        check::default_opt_check(set, self)
-    }
-
-    #[cfg(feature = "async")]
-    async fn check_nonopt(&self, set: &S) -> Result<bool> {
-        check::default_nonopt_check(set, self)
-    }
-
-    #[cfg(feature = "async")]
-    async fn post_check(&self, set: &S) -> Result<bool> {
         check::default_post_check(set, self)
     }
 
@@ -107,7 +65,6 @@ impl<S, T: Parser<S>> Publisher<Box<dyn Proc>, S> for T
 where
     S: Set + Default,
 {
-    #[cfg(not(feature = "async"))]
     fn publish(&mut self, msg: &mut Box<dyn Proc>, set: &mut S) -> Result<bool> {
         let proc = msg;
 
@@ -124,37 +81,6 @@ where
                     let opt = set.get_opt_mut(info.uid()).unwrap();
 
                     debug!("Get return value of option {:?} = {:?}", info.uid(), ret);
-                    // need try to borrow opt once more, cause the borrow check
-                    opt.set_callback_ret(ret)?;
-                }
-            }
-            if proc.is_matched() {
-                debug!("Proc<{}> matched", proc.msg_uid());
-                proc.reset();
-            }
-            if proc.quit() {
-                break;
-            }
-        }
-        Ok(proc.is_matched())
-    }
-
-    #[cfg(feature = "async")]
-    async fn publish(&mut self, msg: &mut P, set: &mut S) -> Result<bool> {
-        let proc = msg;
-
-        debug!("Got message<{}>: {:?}", &proc.msg_uid(), &proc);
-        for info in self.subscriber_iter() {
-            let opt = set.get_opt_mut(info.uid()).unwrap();
-            let res = proc.process(opt.as_mut()).await?;
-
-            if let Some(noa_index) = res {
-                let invoke_callback = opt.is_need_invoke();
-
-                if invoke_callback {
-                    let ret = self.invoke_callback(info.uid(), set, noa_index).await?;
-                    let opt = set.get_opt_mut(info.uid()).unwrap();
-
                     // need try to borrow opt once more, cause the borrow check
                     opt.set_callback_ret(ret)?;
                 }

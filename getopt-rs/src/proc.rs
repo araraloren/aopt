@@ -21,13 +21,8 @@ pub trait Info: Debug {
     fn uid(&self) -> Uid;
 }
 
-#[async_trait::async_trait(?Send)]
 pub trait Publisher<M: Message, S: Set> {
-    #[cfg(not(feature = "async"))]
     fn publish(&mut self, msg: &mut M, set: &mut S) -> Result<bool>;
-
-    #[cfg(feature = "async")]
-    async fn publish(&mut self, msg: &mut M, set: &mut S) -> Result<bool>;
 
     fn subscriber_iter(&self) -> Iter<'_, Box<dyn Info>>;
 
@@ -40,7 +35,6 @@ pub trait Subscriber<M: Message, S: Set> {
     fn subscribe_from(&self, publisher: &mut dyn Publisher<M, S>);
 }
 
-#[async_trait::async_trait(?Send)]
 pub trait Proc: Debug {
     fn uid(&self) -> Uid;
 
@@ -48,11 +42,7 @@ pub trait Proc: Debug {
 
     fn get_ctx(&self, index: usize) -> Option<&Box<dyn Context>>;
 
-    #[cfg(not(feature = "async"))]
     fn process(&mut self, opt: &mut dyn Opt) -> Result<Option<usize>>;
-
-    #[cfg(feature = "async")]
-    async fn process(&mut self, opt: &mut dyn Opt) -> Result<Option<usize>>;
 
     fn is_matched(&self) -> bool;
 

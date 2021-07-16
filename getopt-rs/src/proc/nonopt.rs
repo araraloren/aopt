@@ -23,7 +23,6 @@ impl From<Uid> for NonOptCtxProc {
     }
 }
 
-#[async_trait::async_trait(?Send)]
 impl Proc for NonOptCtxProc {
     fn uid(&self) -> Uid {
         self.uid
@@ -41,31 +40,7 @@ impl Proc for NonOptCtxProc {
         }
     }
 
-    #[cfg(not(feature = "async"))]
     fn process(&mut self, opt: &mut dyn Opt) -> Result<Option<usize>> {
-        if opt.match_style(Style::Cmd)
-            || opt.match_style(Style::Main)
-            || opt.match_style(Style::Pos)
-        {
-            if let Some(ctx) = self.context.as_mut() {
-                if !ctx.is_matched() {
-                    if ctx.match_opt(opt) {
-                        if ctx.process_opt(opt)? {
-                            self.consoume_argument =
-                                self.consoume_argument || ctx.is_comsume_argument();
-                            return Ok(ctx.get_matched_index());
-                        }
-                    }
-                } else {
-                    return Ok(ctx.get_matched_index());
-                }
-            }
-        }
-        Ok(None)
-    }
-
-    #[cfg(feature = "async")]
-    async fn process(&mut self, opt: &mut dyn Opt) -> Result<Option<usize>> {
         if opt.match_style(Style::Cmd)
             || opt.match_style(Style::Main)
             || opt.match_style(Style::Pos)

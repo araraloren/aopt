@@ -69,13 +69,11 @@ where
     }
 }
 
-#[async_trait::async_trait(?Send)]
 impl<S, G> Parser<S> for ForwardParser<S, G>
 where
     S: Set + Default,
     G: Generator + Debug + Default,
 {
-    #[cfg(not(feature = "async"))]
     fn parse(
         &mut self,
         set: S,
@@ -186,113 +184,6 @@ where
         }))
     }
 
-    #[cfg(feature = "async")]
-    async fn parse(
-        &mut self,
-        set: S,
-        iter: impl Iterator<Item = String>,
-    ) -> Result<Option<ReturnValue<S>>> {
-        use crate::proc::Publisher;
-
-        let mut argstream = ArgStream::from(iter);
-        let mut set = set;
-        let mut iter = argstream.iter_mut();
-
-        // copy the prefix, so we don't need borrow set
-        let prefix: Vec<String> = set.get_prefix().iter().map(|v| v.clone()).collect();
-
-        set.subscribe_from(self);
-        self.pre_check(&set)?;
-
-        // iterate the Arguments, generate option context
-        // send it to Publisher
-        debug!("Start process option ...");
-        while let Some(arg) = iter.next() {
-            let mut matched = false;
-
-            debug!("Get next Argument => {:?}", &arg);
-            if let Ok(ret) = arg.parse(&prefix) {
-                if ret {
-                    debug!(" ... parsed: {:?}", &arg);
-                    for gen_style in self.gen_style_order.clone() {
-                        if let Some(ret) = gen_style.gen_opt::<OptCtxProc>(arg) {
-                            let mut proc: Box<dyn Proc> = Box::new(ret);
-
-                            if let Ok(_) = self.publish(&mut proc, &mut set) {
-                                if proc.is_matched() && proc.is_comsume_argument() {
-                                    matched = true;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            if matched {
-                iter.next();
-            } else {
-                if let Some(noa) = &arg.current {
-                    self.noa.push(noa.clone());
-                }
-            }
-        }
-
-        self.check_opt(&set)?;
-
-        let noa_count = self.noa.len();
-
-        if noa_count > 0 {
-            let gen_style = GenStyle::GSNonCmd;
-
-            debug!("Start process {:?} ...", &gen_style);
-            if let Some(ret) =
-                gen_style.gen_nonopt::<NonOptCtxProc>(&self.noa[0], noa_count as u64, 1)
-            {
-                let mut proc: Box<dyn Proc> = Box::new(ret);
-
-                if let Ok(ret) = self.publish(&mut proc, &mut set) {
-                    debug!("ret = {:?}", ret);
-                }
-            }
-
-            let gen_style = GenStyle::GSNonPos;
-
-            debug!("Start process {:?} ...", &gen_style);
-            for index in 1..=noa_count {
-                if let Some(ret) = gen_style.gen_nonopt::<NonOptCtxProc>(
-                    &self.noa[index - 1],
-                    noa_count as u64,
-                    index as u64,
-                ) {
-                    let mut proc: Box<dyn Proc> = Box::new(ret);
-
-                    if let Ok(ret) = self.publish(&mut proc, &mut set) {
-                        debug!("ret = {:?}", ret);
-                    }
-                }
-            }
-        }
-
-        self.check_nonopt(&set)?;
-
-        let gen_style = GenStyle::GSNonMain;
-
-        debug!("Start process {:?} ...", &gen_style);
-        if let Some(ret) =
-            gen_style.gen_nonopt::<NonOptCtxProc>(&String::new(), noa_count as u64, 1)
-        {
-            let mut proc: Box<dyn Proc> = Box::new(ret);
-
-            if let Ok(ret) = self.publish(&mut proc, &mut set) {
-                debug!("ret = {:?}", ret);
-            }
-        }
-
-        self.post_check(&set)?;
-        todo!();
-        Ok(None)
-    }
-
-    #[cfg(not(feature = "async"))]
     fn invoke_callback(&self, uid: Uid, set: &mut S, noa_index: usize) -> Result<Option<OptValue>> {
         if let Some(callback) = self.callback.get(&uid) {
             debug!("calling callback of option<{}>", uid);
@@ -309,29 +200,6 @@ where
                 }
                 OptCallback::Main(cb) => cb.as_mut().call(uid, set, &self.noa),
                 OptCallback::MainMut(cb) => cb.as_mut().call(uid, set, &self.noa),
-                OptCallback::Null => Ok(None),
-            }
-        } else {
-            Ok(None)
-        }
-    }
-
-    #[cfg(feature = "async")]
-    async fn invoke_callback(
-        &self,
-        uid: Uid,
-        set: &mut S,
-        noa_index: usize,
-    ) -> Result<Option<OptValue>> {
-        if let Some(callback) = self.callback.get(&uid) {
-            debug!("calling callback of option<{}>", uid);
-            match callback.borrow_mut().deref_mut() {
-                OptCallback::Opt(cb) => cb.as_mut().call(uid, set).await,
-                OptCallback::OptMut(cb) => cb.as_mut().call(uid, set).await,
-                OptCallback::Pos(cb) => cb.as_mut().call(uid, set, &self.noa[noa_index]).await,
-                OptCallback::PosMut(cb) => cb.as_mut().call(uid, set, &self.noa[noa_index]).await,
-                OptCallback::Main(cb) => cb.as_mut().call(uid, set, &self.noa).await,
-                OptCallback::MainMut(cb) => cb.as_mut().call(uid, set, &self.noa).await,
                 OptCallback::Null => Ok(None),
             }
         } else {

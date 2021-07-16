@@ -184,7 +184,7 @@ impl Value for CmdOpt {
     fn get_value(&self) -> &OptValue {
         &self.value
     }
-    
+
     fn get_value_mut(&mut self) -> &mut OptValue {
         &mut self.value
     }

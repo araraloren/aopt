@@ -50,7 +50,7 @@ impl Context for NonOptContext {
         // try to set value here happy some check
         // in parser, we will set the value to return value of callback.
         // the non-opt can be reentered, so check if it has a value.
-        if ! opt.has_value() {
+        if !opt.has_value() {
             opt.set_value(opt.parse_value("")?);
             opt.set_invoke(true);
         }
