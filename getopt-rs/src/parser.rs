@@ -1,6 +1,5 @@
 pub mod check;
-pub mod forward;
-pub mod gen_style;
+pub mod simple;
 pub mod state;
 
 use std::cell::RefCell;
@@ -12,8 +11,8 @@ use crate::set::Set;
 use crate::uid::Uid;
 pub(crate) use std::collections::hash_map::Iter as HashMapIter;
 
-pub use forward::ForwardParser;
-pub use gen_style::GenStyle;
+pub use simple::SimpleParser;
+pub use state::ParserState;
 
 pub trait Parser<S>: Debug
 where

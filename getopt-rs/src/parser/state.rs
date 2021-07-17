@@ -3,16 +3,6 @@ use crate::ctx::{Context, NonOptContext, OptContext};
 use crate::opt::Style;
 use crate::proc::Matcher;
 
-pub trait StateGenerator {
-    fn get_next(
-        &self,
-        args_count: u64,
-        args_index: u64,
-        noa: &[String],
-        noa_index: u64,
-    ) -> ParserState;
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ParserState {
     PSEqualWithValue,

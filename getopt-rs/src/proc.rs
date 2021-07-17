@@ -2,7 +2,6 @@ pub mod nonopt;
 pub mod opt;
 
 use std::fmt::Debug;
-use std::slice::Iter;
 
 use crate::ctx::Context;
 use crate::err::Result;

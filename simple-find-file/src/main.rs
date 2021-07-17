@@ -2,13 +2,13 @@ use getopt_rs::err::report_an_error;
 use getopt_rs::opt::nonopt::*;
 use getopt_rs::opt::opt::*;
 use getopt_rs::opt::*;
-use getopt_rs::parser::{ForwardParser, Parser};
+use getopt_rs::parser::{Parser, SimpleParser};
 use getopt_rs::set::{SimpleSet, *};
 use getopt_rs::uid::UidGenerator;
 
 fn main() {
     let mut set = SimpleSet::default();
-    let mut parser = ForwardParser::<UidGenerator>::default();
+    let mut parser = SimpleParser::<SimpleSet, UidGenerator>::default();
 
     set.add_creator(Box::new(IntCreator::default()));
     set.add_creator(Box::new(BoolCreator::default()));
@@ -31,8 +31,8 @@ fn main() {
         parser.add_callback(
             id,
             OptCallback::Main(Box::new(callback::SimpleMainCallback::new(
-                |_id, set, _| {
-                    let mut ret = Ok(None);
+                |_id, set, _, value| {
+                    let mut ret = Ok(Some(value));
                     if let Some(std) = set.filter("std").unwrap().find() {
                         if let Some(std) = std.get_value().as_str() {
                             if !check_compiler_std(std, "cpp") {
@@ -54,7 +54,7 @@ fn main() {
         parser.add_callback(
             id,
             OptCallback::Main(Box::new(callback::SimpleMainCallback::new(
-                |_id, set, _| {
+                |_id, set, _, value| {
                     let std = set
                         .filter("std")
                         .unwrap()
@@ -67,7 +67,7 @@ fn main() {
                     if !check_compiler_std(std, "c") {
                         report_an_error(format!("Unsupport standard version for c++: {}", std))
                     } else {
-                        Ok(None)
+                        Ok(Some(value))
                     }
                 },
             ))),
@@ -86,18 +86,20 @@ fn main() {
         let id = commit.commit().unwrap();
         parser.add_callback(
             id,
-            OptCallback::Opt(Box::new(callback::SimpleOptCallback::new(|id, set| {
-                println!(
-                    "user want define a macro {:?}",
-                    set.get_opt(id)
-                        .unwrap()
-                        .get_value()
-                        .as_slice()
-                        .unwrap()
-                        .last()
-                );
-                Ok(None)
-            }))),
+            OptCallback::Opt(Box::new(callback::SimpleOptCallback::new(
+                |id, set, value| {
+                    println!(
+                        "user want define a macro {:?}",
+                        set.get_opt(id)
+                            .unwrap()
+                            .get_value()
+                            .as_slice()
+                            .unwrap()
+                            .last()
+                    );
+                    Ok(Some(value))
+                },
+            ))),
         );
     }
     if let Ok(mut commit) = set.add_opt("+l=a") {
@@ -105,18 +107,20 @@ fn main() {
         let id = commit.commit().unwrap();
         parser.add_callback(
             id,
-            OptCallback::Opt(Box::new(callback::SimpleOptCallback::new(|id, set| {
-                println!(
-                    "user want link the library {:?}",
-                    set.get_opt(id)
-                        .unwrap()
-                        .get_value()
-                        .as_slice()
-                        .unwrap()
-                        .last()
-                );
-                Ok(None)
-            }))),
+            OptCallback::Opt(Box::new(callback::SimpleOptCallback::new(
+                |id, set, value| {
+                    println!(
+                        "user want link the library {:?}",
+                        set.get_opt(id)
+                            .unwrap()
+                            .get_value()
+                            .as_slice()
+                            .unwrap()
+                            .last()
+                    );
+                    Ok(Some(value))
+                },
+            ))),
         );
     }
     if let Ok(mut commit) = set.add_opt("+i=a") {
@@ -124,18 +128,20 @@ fn main() {
         let id = commit.commit().unwrap();
         parser.add_callback(
             id,
-            OptCallback::Opt(Box::new(callback::SimpleOptCallback::new(|id, set| {
-                println!(
-                    "user want include header {:?}",
-                    set.get_opt(id)
-                        .unwrap()
-                        .get_value()
-                        .as_slice()
-                        .unwrap()
-                        .last()
-                );
-                Ok(None)
-            }))),
+            OptCallback::Opt(Box::new(callback::SimpleOptCallback::new(
+                |id, set, value| {
+                    println!(
+                        "user want include header {:?}",
+                        set.get_opt(id)
+                            .unwrap()
+                            .get_value()
+                            .as_slice()
+                            .unwrap()
+                            .last()
+                    );
+                    Ok(Some(value))
+                },
+            ))),
         );
     }
     if let Ok(mut commit) = set.add_opt("+L=a") {
@@ -143,18 +149,20 @@ fn main() {
         let id = commit.commit().unwrap();
         parser.add_callback(
             id,
-            OptCallback::Opt(Box::new(callback::SimpleOptCallback::new(|id, set| {
-                println!(
-                    "user want add search library search path {:?}",
-                    set.get_opt(id)
-                        .unwrap()
-                        .get_value()
-                        .as_slice()
-                        .unwrap()
-                        .last()
-                );
-                Ok(None)
-            }))),
+            OptCallback::Opt(Box::new(callback::SimpleOptCallback::new(
+                |id, set, value| {
+                    println!(
+                        "user want add search library search path {:?}",
+                        set.get_opt(id)
+                            .unwrap()
+                            .get_value()
+                            .as_slice()
+                            .unwrap()
+                            .last()
+                    );
+                    Ok(Some(value))
+                },
+            ))),
         );
     }
     if let Ok(mut commit) = set.add_opt("+I=a") {
@@ -162,18 +170,20 @@ fn main() {
         let id = commit.commit().unwrap();
         parser.add_callback(
             id,
-            OptCallback::Opt(Box::new(callback::SimpleOptCallback::new(|id, set| {
-                println!(
-                    "user want add search header search path {:?}",
-                    set.get_opt(id)
-                        .unwrap()
-                        .get_value()
-                        .as_slice()
-                        .unwrap()
-                        .last()
-                );
-                Ok(None)
-            }))),
+            OptCallback::Opt(Box::new(callback::SimpleOptCallback::new(
+                |id, set, value| {
+                    println!(
+                        "user want add search header search path {:?}",
+                        set.get_opt(id)
+                            .unwrap()
+                            .get_value()
+                            .as_slice()
+                            .unwrap()
+                            .last()
+                    );
+                    Ok(Some(value))
+                },
+            ))),
         );
     }
     if let Ok(mut commit) = set.add_opt("-w=b") {
@@ -191,7 +201,7 @@ fn main() {
         parser.add_callback(
             id,
             OptCallback::PosMut(Box::new(callback::SimplePosMutCallback::new(
-                |id, set, arg, _index| {
+                |id, set, arg, _index, value| {
                     // collect the arguments after --
                     let mut value = std::mem::take(set.get_opt_mut(id).unwrap().get_value_mut());
                     let ret = Ok(if value.is_vec() {

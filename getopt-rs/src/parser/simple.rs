@@ -4,18 +4,18 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::ops::DerefMut;
 
-use super::GenStyle;
 use super::HashMapIter;
+use super::ParserState;
 use super::{Parser, ReturnValue};
 use crate::arg::ArgStream;
 use crate::err::Result;
-use crate::opt::{OptCallback, OptValue};
+use crate::opt::{OptCallback, OptValue, Style};
 use crate::proc::{Info, Matcher, NonOptMatcher, OptMatcher, Proc};
 use crate::set::{OptionInfo, Set};
 use crate::uid::{Generator, Uid};
 
 #[derive(Debug)]
-pub struct ForwardParser<S, G>
+pub struct SimpleParser<S, G>
 where
     G: Generator + Debug + Default,
     S: Set + Default,
@@ -28,12 +28,10 @@ where
 
     noa: Vec<String>,
 
-    gen_style_order: Vec<GenStyle>,
-
     marker: PhantomData<S>,
 }
 
-impl<S, G> Default for ForwardParser<S, G>
+impl<S, G> Default for SimpleParser<S, G>
 where
     G: Generator + Debug + Default,
     S: Set + Default,
@@ -44,19 +42,12 @@ where
             subscriber_info: vec![],
             callback: HashMap::new(),
             noa: vec![],
-            gen_style_order: vec![
-                GenStyle::GSEqualWithValue,
-                GenStyle::GSArgument,
-                GenStyle::GSBoolean,
-                GenStyle::GSMultipleOption,
-                GenStyle::GSEmbeddedValue,
-            ],
             marker: PhantomData::default(),
         }
     }
 }
 
-impl<S, G> ForwardParser<S, G>
+impl<S, G> SimpleParser<S, G>
 where
     G: Generator + Debug + Default,
     S: Set + Default,
@@ -69,7 +60,7 @@ where
     }
 }
 
-impl<S, G> Parser<S> for ForwardParser<S, G>
+impl<S, G> Parser<S> for SimpleParser<S, G>
 where
     G: Generator + Debug + Default,
     S: Set + Default,
@@ -86,11 +77,22 @@ where
         // copy the prefix, so we don't need borrow set
         let prefix: Vec<String> = set.get_prefix().iter().map(|v| v.clone()).collect();
 
+        // add info to Proc
         for opt in set.iter() {
             self.subscriber_info
                 .push(Box::new(OptionInfo::from(opt.get_uid())));
         }
+
+        // do pre check
         self.pre_check(&set)?;
+
+        let parser_state = vec![
+            ParserState::PSEqualWithValue,
+            ParserState::PSArgument,
+            ParserState::PSBoolean,
+            ParserState::PSMultipleOption,
+            ParserState::PSEmbeddedValue,
+        ];
 
         // iterate the Arguments, generate option context
         // send it to Publisher
@@ -103,7 +105,7 @@ where
             if let Ok(ret) = arg.parse(&prefix) {
                 if ret {
                     debug!(" ... parsed: {:?}", &arg);
-                    for gen_style in self.gen_style_order.clone() {
+                    for gen_style in &parser_state {
                         if let Some(ret) = gen_style.gen_opt::<OptMatcher>(arg) {
                             let mut proc = ret;
 
@@ -125,19 +127,20 @@ where
             if matched && consume {
                 iter.next();
             } else if !matched {
-                debug!("!!! Not matching {:?}", &arg);
+                debug!("!!! Not matching {:?}, add it to noa", &arg);
                 if let Some(noa) = &arg.current {
                     self.noa.push(noa.clone());
                 }
             }
         }
 
+        // do option check
         self.check_opt(&set)?;
 
         let noa_count = self.noa.len();
 
         if noa_count > 0 {
-            let gen_style = GenStyle::GSNonCmd;
+            let gen_style = ParserState::PSNonCmd;
 
             debug!("Start process {:?} ...", &gen_style);
             if let Some(ret) =
@@ -148,7 +151,7 @@ where
                 self.process(&mut proc, &mut set)?;
             }
 
-            let gen_style = GenStyle::GSNonPos;
+            let gen_style = ParserState::PSNonPos;
 
             debug!("Start process {:?} ...", &gen_style);
             for index in 1..=noa_count {
@@ -164,9 +167,10 @@ where
             }
         }
 
+        // check pos and cmd
         self.check_nonopt(&set)?;
 
-        let gen_style = GenStyle::GSNonMain;
+        let gen_style = ParserState::PSNonMain;
 
         debug!("Start process {:?} ...", &gen_style);
         if let Some(ret) =
@@ -233,13 +237,14 @@ where
     }
 }
 
-impl<S, G> Proc<S, NonOptMatcher> for ForwardParser<S, G>
+impl<S, G> Proc<S, NonOptMatcher> for SimpleParser<S, G>
 where
     G: Generator + Debug + Default,
     S: Set + Default,
 {
     fn process(&mut self, msg: &mut NonOptMatcher, set: &mut S) -> Result<bool> {
         let matcher = msg;
+        let mut matched = false;
 
         debug!("Got message<{}>: {:?}", &matcher.uid(), &matcher);
         for info in self.subscriber_info.iter() {
@@ -251,30 +256,39 @@ where
 
                 if let Some(noa_index) = ctx.get_matched_index() {
                     let invoke_callback = opt.is_need_invoke();
-                    let value = ctx.take_value();
+                    let mut value = ctx.take_value();
 
                     assert_eq!(value.is_some(), true);
                     if invoke_callback {
-                        // invoke callback of current option/non-option
-                        let ret = self.invoke_callback(uid, set, noa_index, value.unwrap())?;
-                        let opt = set[uid].as_mut();
+                        let has_callback = self.get_callback(uid).is_some();
 
-                        debug!("Get return value of option<{}> = {:?}", uid, ret);
-                        if ret.is_some() {
-                            opt.set_callback_ret(ret)?;
+                        if has_callback {
+                            // invoke callback of current option/non-option
+                            value = self.invoke_callback(uid, set, noa_index, value.unwrap())?;
+                            if value.is_some() {
+                                // make matched true, if any of NonOpt callback return Some(*)
+                                matched = true;
+                            }
                         } else {
-                            // if we get none, for non-option, just try next option
-                            ctx.set_matched_index(None);
+                            // if a Cmd is matched, then the M matched
+                            if opt.match_style(Style::Cmd) {
+                                matched = true;
+                            }
                         }
+                        // reborrow the opt avoid the compiler error
+                        debug!("In Proc, get return value of option<{}> = {:?}", uid, value);
+                        set[uid].as_mut().set_callback_ret(value)?;
+                        // reset the matcher, we need match all the NonOpt
+                        matcher.reset();
                     }
                 }
             }
         }
-        Ok(matcher.is_matched())
+        Ok(matched)
     }
 }
 
-impl<S, G> Proc<S, OptMatcher> for ForwardParser<S, G>
+impl<S, G> Proc<S, OptMatcher> for SimpleParser<S, G>
 where
     G: Generator + Debug + Default,
     S: Set + Default,
@@ -304,7 +318,8 @@ where
                         if ret.is_some() {
                             opt.set_callback_ret(ret)?;
                         } else {
-                            // if we get none, for option, skip current matcher
+                            // if we get none, for option, skip current M
+                            // all the ctx in M must be matched
                             ctx.set_matched_index(None);
                             break;
                         }

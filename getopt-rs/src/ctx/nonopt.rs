@@ -47,6 +47,11 @@ impl Context for NonOptContext {
         if matched {
             self.matched_index = Some(self.current as usize);
             self.set_value(opt.parse_value(self.name.as_str())?);
+            debug!(
+                "Keep value of option<{}> ==> {:?}",
+                opt.get_uid(),
+                self.get_value()
+            );
             opt.set_invoke(true);
         }
         Ok(matched)

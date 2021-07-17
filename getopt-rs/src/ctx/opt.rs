@@ -63,7 +63,7 @@ impl Context for OptContext {
             self.matched_index = Some(0);
             self.set_value(opt.parse_value(self.argument.as_ref().unwrap().as_str())?);
             debug!(
-                "Get value of option<{}> ==> {:?}",
+                "Keep value of option<{}> ==> {:?}",
                 opt.get_uid(),
                 self.get_value()
             );
