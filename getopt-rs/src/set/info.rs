@@ -395,7 +395,7 @@ impl<'a> From<&'a dyn Opt> for OptionInfo {
 }
 
 impl Info for OptionInfo {
-    fn uid(&self) -> Uid {
+    fn info_uid(&self) -> Uid {
         self.uid
     }
 }

@@ -3,44 +3,61 @@ use crate::ctx::{Context, NonOptContext, OptContext};
 use crate::opt::Style;
 use crate::proc::Matcher;
 
-#[derive(Debug, Clone)]
-pub enum GenStyle {
-    GSEqualWithValue,
-
-    GSArgument,
-
-    GSEmbeddedValue,
-
-    GSMultipleOption,
-
-    GSBoolean,
-
-    GSDelayEqualWithValue,
-
-    GSDelayArgument,
-
-    GSDelayEmbeddedValue,
-
-    GSDelayMultipleOption,
-
-    GSDelayBoolean,
-
-    GSNonMain,
-
-    GSNonPos,
-
-    GSNonCmd,
+pub trait StateGenerator {
+    fn get_next(
+        &self,
+        args_count: u64,
+        args_index: u64,
+        noa: &[String],
+        noa_index: u64,
+    ) -> ParserState;
 }
 
-// todo !
-// remove type paramter P, make gen_* return Box<dyn Proc>
-// make a GS generate, generate GS
-impl<'pre> GenStyle {
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ParserState {
+    PSEqualWithValue,
+
+    PSArgument,
+
+    PSEmbeddedValue,
+
+    PSMultipleOption,
+
+    PSBoolean,
+
+    PSDelayEqualWithValue,
+
+    PSDelayArgument,
+
+    PSDelayEmbeddedValue,
+
+    PSDelayMultipleOption,
+
+    PSDelayBoolean,
+
+    PSNonMain,
+
+    PSNonPos,
+
+    PSNonCmd,
+
+    PSPreCheck,
+
+    PSPostCheck,
+
+    PSOptCheck,
+
+    PSNonOptCheck,
+
+    PSCustom(u64),
+}
+
+impl<'pre> ParserState {
     pub fn gen_opt<M: Matcher + Default>(&self, arg: &Argument<'pre>) -> Option<M> {
         let mut ret: Vec<Box<dyn Context>> = vec![];
 
         match self {
-            GenStyle::GSEqualWithValue => {
+            Self::PSEqualWithValue => {
                 if arg.get_value().is_some() {
                     ret.push(Box::new(OptContext::new(
                         arg.get_prefix().unwrap().clone(),
@@ -51,7 +68,7 @@ impl<'pre> GenStyle {
                     )));
                 }
             }
-            GenStyle::GSArgument => {
+            Self::PSArgument => {
                 if arg.get_value().is_none() {
                     ret.push(Box::new(OptContext::new(
                         arg.get_prefix().unwrap().clone(),
@@ -62,7 +79,7 @@ impl<'pre> GenStyle {
                     )));
                 }
             }
-            GenStyle::GSEmbeddedValue => {
+            Self::PSEmbeddedValue => {
                 if arg.get_value().is_none() {
                     if let Some(name) = arg.get_name() {
                         if name.len() >= 2 {
@@ -79,7 +96,7 @@ impl<'pre> GenStyle {
                     }
                 }
             }
-            GenStyle::GSMultipleOption => {
+            Self::PSMultipleOption => {
                 if arg.get_value().is_none() {
                     if let Some(name) = arg.get_name() {
                         if name.len() > 1 {
@@ -96,7 +113,7 @@ impl<'pre> GenStyle {
                     }
                 }
             }
-            GenStyle::GSBoolean => {
+            Self::PSBoolean => {
                 if arg.get_value().is_none() {
                     ret.push(Box::new(OptContext::new(
                         arg.get_prefix().unwrap().clone(),
@@ -107,7 +124,7 @@ impl<'pre> GenStyle {
                     )));
                 }
             }
-            GenStyle::GSDelayEqualWithValue => {
+            Self::PSDelayEqualWithValue => {
                 if arg.get_value().is_some() {
                     ret.push(Box::new(OptContext::new(
                         arg.get_prefix().unwrap().clone(),
@@ -118,7 +135,7 @@ impl<'pre> GenStyle {
                     )));
                 }
             }
-            GenStyle::GSDelayArgument => {
+            Self::PSDelayArgument => {
                 if arg.get_value().is_none() {
                     ret.push(Box::new(OptContext::new(
                         arg.get_prefix().unwrap().clone(),
@@ -129,7 +146,7 @@ impl<'pre> GenStyle {
                     )));
                 }
             }
-            GenStyle::GSDelayEmbeddedValue => {
+            Self::PSDelayEmbeddedValue => {
                 if arg.get_value().is_none() {
                     if let Some(name) = arg.get_name() {
                         if name.len() >= 2 {
@@ -146,7 +163,7 @@ impl<'pre> GenStyle {
                     }
                 }
             }
-            GenStyle::GSDelayMultipleOption => {
+            Self::PSDelayMultipleOption => {
                 if arg.get_value().is_none() {
                     if let Some(name) = arg.get_name() {
                         if name.len() > 1 {
@@ -163,7 +180,7 @@ impl<'pre> GenStyle {
                     }
                 }
             }
-            GenStyle::GSDelayBoolean => {
+            Self::PSDelayBoolean => {
                 if arg.get_value().is_none() {
                     ret.push(Box::new(OptContext::new(
                         arg.get_prefix().unwrap().clone(),
@@ -198,7 +215,7 @@ impl<'pre> GenStyle {
         let mut ret: Vec<Box<dyn Context>> = vec![];
 
         match self {
-            GenStyle::GSNonMain => {
+            Self::PSNonMain => {
                 ret.push(Box::new(NonOptContext::new(
                     noa.clone(),
                     Style::Main,
@@ -206,7 +223,7 @@ impl<'pre> GenStyle {
                     current,
                 )));
             }
-            GenStyle::GSNonPos => {
+            Self::PSNonPos => {
                 ret.push(Box::new(NonOptContext::new(
                     noa.clone(),
                     Style::Pos,
@@ -214,7 +231,7 @@ impl<'pre> GenStyle {
                     current,
                 )));
             }
-            GenStyle::GSNonCmd => {
+            Self::PSNonCmd => {
                 ret.push(Box::new(NonOptContext::new(
                     noa.clone(),
                     Style::Cmd,

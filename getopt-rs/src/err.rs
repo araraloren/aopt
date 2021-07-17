@@ -22,6 +22,9 @@ pub enum Error {
     #[error("not support option type name `{0}`")]
     InvalidOptionTypeName(String),
 
+    #[error("invalid value type for option `{0}`, found: {1}")]
+    InvalidOptionValueType(String, String),
+
     #[error("can not invoke with callback type `{0}`")]
     InvalidCallbackType(String),
 

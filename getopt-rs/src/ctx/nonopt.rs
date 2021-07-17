@@ -1,6 +1,6 @@
 use super::Context;
 use crate::err::Result;
-use crate::opt::{Opt, Style};
+use crate::opt::{Opt, OptValue, Style};
 
 #[derive(Debug)]
 pub struct NonOptContext {
@@ -12,6 +12,8 @@ pub struct NonOptContext {
 
     current: u64,
 
+    value: Option<OptValue>,
+
     matched_index: Option<usize>,
 }
 
@@ -22,13 +24,14 @@ impl NonOptContext {
             style,
             total,
             current,
+            value: None,
             matched_index: None,
         }
     }
 }
 
 impl Context for NonOptContext {
-    fn match_opt(&self, opt: &dyn Opt) -> bool {
+    fn process(&mut self, opt: &mut dyn Opt) -> Result<bool> {
         let mut matched = opt.match_style(self.style);
         debug!(
             "Matching option<{}> <-> nonopt context<{:?}>",
@@ -41,20 +44,24 @@ impl Context for NonOptContext {
                     && opt.match_index(self.total, self.current));
         }
         debug!(">>>> {}", if matched { "TRUE" } else { "FALSE" });
-        matched
-    }
-
-    fn process_opt(&mut self, opt: &mut dyn Opt) -> Result<bool> {
-        self.matched_index = Some(self.current as usize);
-        debug!("Set data of option<{}>", opt.get_uid());
-        // try to set value here happy some check
-        // in parser, we will set the value to return value of callback.
-        // the non-opt can be reentered, so check if it has a value.
-        if !opt.has_value() {
-            opt.set_value(opt.parse_value("")?);
+        if matched {
+            self.matched_index = Some(self.current as usize);
+            self.set_value(opt.parse_value(self.name.as_str())?);
             opt.set_invoke(true);
         }
-        Ok(true)
+        Ok(matched)
+    }
+
+    fn get_value(&self) -> Option<&OptValue> {
+        self.value.as_ref()
+    }
+
+    fn take_value(&mut self) -> Option<OptValue> {
+        self.value.take()
+    }
+
+    fn set_value(&mut self, value: OptValue) {
+        self.value = Some(value);
     }
 
     fn get_matched_index(&self) -> Option<usize> {

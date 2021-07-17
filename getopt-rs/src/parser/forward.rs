@@ -5,13 +5,13 @@ use std::marker::PhantomData;
 use std::ops::DerefMut;
 
 use super::GenStyle;
-use super::{HashMapIter, SliceIter};
+use super::HashMapIter;
 use super::{Parser, ReturnValue};
 use crate::arg::ArgStream;
 use crate::err::Result;
 use crate::opt::{OptCallback, OptValue};
-use crate::proc::{Info, NonOptCtxProc, OptCtxProc, Proc, Subscriber};
-use crate::set::Set;
+use crate::proc::{Info, Matcher, NonOptMatcher, OptMatcher, Proc};
+use crate::set::{OptionInfo, Set};
 use crate::uid::{Generator, Uid};
 
 #[derive(Debug)]
@@ -71,16 +71,14 @@ where
 
 impl<S, G> Parser<S> for ForwardParser<S, G>
 where
-    S: Set + Default,
     G: Generator + Debug + Default,
+    S: Set + Default,
 {
     fn parse(
         &mut self,
         set: S,
         iter: impl Iterator<Item = String>,
     ) -> Result<Option<ReturnValue<S>>> {
-        use crate::proc::Publisher;
-
         let mut argstream = ArgStream::from(iter);
         let mut set = set;
         let mut iter = argstream.iter_mut();
@@ -88,7 +86,10 @@ where
         // copy the prefix, so we don't need borrow set
         let prefix: Vec<String> = set.get_prefix().iter().map(|v| v.clone()).collect();
 
-        set.subscribe_from(self);
+        for opt in set.iter() {
+            self.subscriber_info
+                .push(Box::new(OptionInfo::from(opt.get_uid())));
+        }
         self.pre_check(&set)?;
 
         // iterate the Arguments, generate option context
@@ -103,10 +104,10 @@ where
                 if ret {
                     debug!(" ... parsed: {:?}", &arg);
                     for gen_style in self.gen_style_order.clone() {
-                        if let Some(ret) = gen_style.gen_opt::<OptCtxProc>(arg) {
-                            let mut proc: Box<dyn Proc> = Box::new(ret);
+                        if let Some(ret) = gen_style.gen_opt::<OptMatcher>(arg) {
+                            let mut proc = ret;
 
-                            if self.publish(&mut proc, &mut set)? {
+                            if self.process(&mut proc, &mut set)? {
                                 if proc.is_matched() {
                                     matched = true;
                                 }
@@ -140,25 +141,25 @@ where
 
             debug!("Start process {:?} ...", &gen_style);
             if let Some(ret) =
-                gen_style.gen_nonopt::<NonOptCtxProc>(&self.noa[0], noa_count as u64, 1)
+                gen_style.gen_nonopt::<NonOptMatcher>(&self.noa[0], noa_count as u64, 1)
             {
-                let mut proc: Box<dyn Proc> = Box::new(ret);
+                let mut proc = ret;
 
-                self.publish(&mut proc, &mut set)?;
+                self.process(&mut proc, &mut set)?;
             }
 
             let gen_style = GenStyle::GSNonPos;
 
             debug!("Start process {:?} ...", &gen_style);
             for index in 1..=noa_count {
-                if let Some(ret) = gen_style.gen_nonopt::<NonOptCtxProc>(
+                if let Some(ret) = gen_style.gen_nonopt::<NonOptMatcher>(
                     &self.noa[index - 1],
                     noa_count as u64,
                     index as u64,
                 ) {
-                    let mut proc: Box<dyn Proc> = Box::new(ret);
+                    let mut proc = ret;
 
-                    self.publish(&mut proc, &mut set)?;
+                    self.process(&mut proc, &mut set)?;
                 }
             }
         }
@@ -169,11 +170,11 @@ where
 
         debug!("Start process {:?} ...", &gen_style);
         if let Some(ret) =
-            gen_style.gen_nonopt::<NonOptCtxProc>(&String::new(), noa_count as u64, 1)
+            gen_style.gen_nonopt::<NonOptMatcher>(&String::new(), noa_count as u64, 1)
         {
-            let mut proc: Box<dyn Proc> = Box::new(ret);
+            let mut proc = ret;
 
-            self.publish(&mut proc, &mut set)?;
+            self.process(&mut proc, &mut set)?;
         }
 
         self.post_check(&set)?;
@@ -184,26 +185,32 @@ where
         }))
     }
 
-    fn invoke_callback(&self, uid: Uid, set: &mut S, noa_index: usize) -> Result<Option<OptValue>> {
+    fn invoke_callback(
+        &self,
+        uid: Uid,
+        set: &mut S,
+        noa_index: usize,
+        value: OptValue,
+    ) -> Result<Option<OptValue>> {
         if let Some(callback) = self.callback.get(&uid) {
             debug!("calling callback of option<{}>", uid);
             match callback.borrow_mut().deref_mut() {
-                OptCallback::Opt(cb) => cb.as_mut().call(uid, set),
-                OptCallback::OptMut(cb) => cb.as_mut().call(uid, set),
+                OptCallback::Opt(cb) => cb.as_mut().call(uid, set, value),
+                OptCallback::OptMut(cb) => cb.as_mut().call(uid, set, value),
                 OptCallback::Pos(cb) => {
                     cb.as_mut()
-                        .call(uid, set, &self.noa[noa_index - 1], noa_index as u64)
+                        .call(uid, set, &self.noa[noa_index - 1], noa_index as u64, value)
                 }
                 OptCallback::PosMut(cb) => {
                     cb.as_mut()
-                        .call(uid, set, &self.noa[noa_index - 1], noa_index as u64)
+                        .call(uid, set, &self.noa[noa_index - 1], noa_index as u64, value)
                 }
-                OptCallback::Main(cb) => cb.as_mut().call(uid, set, &self.noa),
-                OptCallback::MainMut(cb) => cb.as_mut().call(uid, set, &self.noa),
+                OptCallback::Main(cb) => cb.as_mut().call(uid, set, &self.noa, value),
+                OptCallback::MainMut(cb) => cb.as_mut().call(uid, set, &self.noa, value),
                 OptCallback::Null => Ok(None),
             }
         } else {
-            Ok(None)
+            Ok(Some(value))
         }
     }
 
@@ -219,23 +226,95 @@ where
         self.callback.iter()
     }
 
-    fn subscriber_iter(&self) -> SliceIter<'_, Box<dyn Info>> {
-        self.subscriber_info.iter()
-    }
-
-    fn reg_subscriber(&mut self, info: Box<dyn Info>) {
-        self.subscriber_info.push(info);
-    }
-
-    fn clr_subscriber(&mut self) {
-        self.subscriber_info.clear();
-    }
-
     fn reset(&mut self) {
         self.uid_gen.reset();
         self.noa.clear();
-        // don't know why this not working
-        // self.clr_subscriber();
         self.subscriber_info.clear();
     }
 }
+
+impl<S, G> Proc<S, NonOptMatcher> for ForwardParser<S, G>
+where
+    G: Generator + Debug + Default,
+    S: Set + Default,
+{
+    fn process(&mut self, msg: &mut NonOptMatcher, set: &mut S) -> Result<bool> {
+        let matcher = msg;
+
+        debug!("Got message<{}>: {:?}", &matcher.uid(), &matcher);
+        for info in self.subscriber_info.iter() {
+            let uid = info.info_uid();
+            let ctx = matcher.process(uid, set)?;
+
+            if let Some(ctx) = ctx {
+                let opt = set[uid].as_mut();
+
+                if let Some(noa_index) = ctx.get_matched_index() {
+                    let invoke_callback = opt.is_need_invoke();
+                    let value = ctx.take_value();
+
+                    assert_eq!(value.is_some(), true);
+                    if invoke_callback {
+                        // invoke callback of current option/non-option
+                        let ret = self.invoke_callback(uid, set, noa_index, value.unwrap())?;
+                        let opt = set[uid].as_mut();
+
+                        debug!("Get return value of option<{}> = {:?}", uid, ret);
+                        if ret.is_some() {
+                            opt.set_callback_ret(ret)?;
+                        } else {
+                            // if we get none, for non-option, just try next option
+                            ctx.set_matched_index(None);
+                        }
+                    }
+                }
+            }
+        }
+        Ok(matcher.is_matched())
+    }
+}
+
+impl<S, G> Proc<S, OptMatcher> for ForwardParser<S, G>
+where
+    G: Generator + Debug + Default,
+    S: Set + Default,
+{
+    fn process(&mut self, msg: &mut OptMatcher, set: &mut S) -> Result<bool> {
+        let matcher = msg;
+
+        debug!("Got message<{}>: {:?}", &matcher.uid(), &matcher);
+        for info in self.subscriber_info.iter() {
+            let uid = info.info_uid();
+            let ctx = matcher.process(uid, set)?;
+
+            if let Some(ctx) = ctx {
+                let opt = set[uid].as_mut();
+
+                if let Some(noa_index) = ctx.get_matched_index() {
+                    let invoke_callback = opt.is_need_invoke();
+                    let value = ctx.take_value();
+
+                    assert_eq!(value.is_some(), true);
+                    if invoke_callback {
+                        // invoke callback of current option/non-option
+                        let ret = self.invoke_callback(uid, set, noa_index, value.unwrap())?;
+                        let opt = set[uid].as_mut();
+
+                        debug!("Get return value of option<{}> = {:?}", uid, ret);
+                        if ret.is_some() {
+                            opt.set_callback_ret(ret)?;
+                        } else {
+                            // if we get none, for option, skip current matcher
+                            ctx.set_matched_index(None);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        Ok(matcher.is_matched())
+    }
+}
+
+#[cfg(test)]
+mod test {}

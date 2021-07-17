@@ -100,11 +100,11 @@ impl<'a> From<&'a Callback> for CallbackType {
 }
 
 pub trait OptCallback: Debug {
-    fn call(&mut self, uid: Uid, set: &dyn Set) -> Result<Option<OptValue>>;
+    fn call(&mut self, uid: Uid, set: &dyn Set, value: OptValue) -> Result<Option<OptValue>>;
 }
 
 pub trait OptMutCallback: Debug {
-    fn call(&mut self, uid: Uid, set: &mut dyn Set) -> Result<Option<OptValue>>;
+    fn call(&mut self, uid: Uid, set: &mut dyn Set, value: OptValue) -> Result<Option<OptValue>>;
 }
 
 pub trait PosCallback: Debug {
@@ -114,6 +114,7 @@ pub trait PosCallback: Debug {
         set: &dyn Set,
         arg: &String,
         noa_index: u64,
+        value: OptValue,
     ) -> Result<Option<OptValue>>;
 }
 
@@ -124,15 +125,28 @@ pub trait PosMutCallback: Debug {
         set: &mut dyn Set,
         arg: &String,
         noa_index: u64,
+        value: OptValue,
     ) -> Result<Option<OptValue>>;
 }
 
 pub trait MainCallback: Debug {
-    fn call(&mut self, uid: Uid, set: &dyn Set, args: &[String]) -> Result<Option<OptValue>>;
+    fn call(
+        &mut self,
+        uid: Uid,
+        set: &dyn Set,
+        args: &[String],
+        value: OptValue,
+    ) -> Result<Option<OptValue>>;
 }
 
 pub trait MainMutCallback: Debug {
-    fn call(&mut self, uid: Uid, set: &mut dyn Set, args: &[String]) -> Result<Option<OptValue>>;
+    fn call(
+        &mut self,
+        uid: Uid,
+        set: &mut dyn Set,
+        args: &[String],
+        value: OptValue,
+    ) -> Result<Option<OptValue>>;
 }
 
 #[derive(Debug)]
@@ -189,11 +203,12 @@ impl Callback {
         set: &dyn Set,
         args: &[String],
         noa_index: u64,
+        value: OptValue,
     ) -> Result<Option<OptValue>> {
         match self {
-            Callback::Opt(v) => v.as_mut().call(uid, set),
-            Callback::Pos(v) => v.as_mut().call(uid, set, &args[0], noa_index),
-            Callback::Main(v) => v.as_mut().call(uid, set, args),
+            Callback::Opt(v) => v.as_mut().call(uid, set, value),
+            Callback::Pos(v) => v.as_mut().call(uid, set, &args[0], noa_index, value),
+            Callback::Main(v) => v.as_mut().call(uid, set, args, value),
             other => Err(Error::InvalidCallbackType(format!("{:?}", other))),
         }
     }
@@ -204,11 +219,12 @@ impl Callback {
         set: &mut dyn Set,
         args: &[String],
         noa_index: u64,
+        value: OptValue,
     ) -> Result<Option<OptValue>> {
         match self {
-            Callback::OptMut(v) => v.as_mut().call(uid, set),
-            Callback::PosMut(v) => v.as_mut().call(uid, set, &args[0], noa_index),
-            Callback::MainMut(v) => v.as_mut().call(uid, set, args),
+            Callback::OptMut(v) => v.as_mut().call(uid, set, value),
+            Callback::PosMut(v) => v.as_mut().call(uid, set, &args[0], noa_index, value),
+            Callback::MainMut(v) => v.as_mut().call(uid, set, args, value),
             other => Err(Error::InvalidCallbackType(format!("{:?}", other))),
         }
     }
@@ -250,15 +266,19 @@ impl From<Box<dyn MainMutCallback>> for Callback {
     }
 }
 
-pub struct SimpleOptCallback<T: 'static + FnMut(Uid, &dyn Set) -> Result<Option<OptValue>>>(T);
+pub struct SimpleOptCallback<
+    T: 'static + FnMut(Uid, &dyn Set, OptValue) -> Result<Option<OptValue>>,
+>(T);
 
-impl<T: 'static + FnMut(Uid, &dyn Set) -> Result<Option<OptValue>>> SimpleOptCallback<T> {
+impl<T: 'static + FnMut(Uid, &dyn Set, OptValue) -> Result<Option<OptValue>>> SimpleOptCallback<T> {
     pub fn new(cb: T) -> Self {
         Self(cb)
     }
 }
 
-impl<T: 'static + FnMut(Uid, &dyn Set) -> Result<Option<OptValue>>> Debug for SimpleOptCallback<T> {
+impl<T: 'static + FnMut(Uid, &dyn Set, OptValue) -> Result<Option<OptValue>>> Debug
+    for SimpleOptCallback<T>
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SimpleOptCallback")
             .field("FnMut", &String::from("..."))
@@ -266,25 +286,27 @@ impl<T: 'static + FnMut(Uid, &dyn Set) -> Result<Option<OptValue>>> Debug for Si
     }
 }
 
-impl<T: 'static + FnMut(Uid, &dyn Set) -> Result<Option<OptValue>>> OptCallback
+impl<T: 'static + FnMut(Uid, &dyn Set, OptValue) -> Result<Option<OptValue>>> OptCallback
     for SimpleOptCallback<T>
 {
-    fn call(&mut self, uid: Uid, set: &dyn Set) -> Result<Option<OptValue>> {
-        self.0(uid, set)
+    fn call(&mut self, uid: Uid, set: &dyn Set, value: OptValue) -> Result<Option<OptValue>> {
+        self.0(uid, set, value)
     }
 }
 
-pub struct SimpleOptMutCallback<T: 'static + FnMut(Uid, &mut dyn Set) -> Result<Option<OptValue>>>(
-    T,
-);
+pub struct SimpleOptMutCallback<
+    T: 'static + FnMut(Uid, &mut dyn Set, OptValue) -> Result<Option<OptValue>>,
+>(T);
 
-impl<T: 'static + FnMut(Uid, &mut dyn Set) -> Result<Option<OptValue>>> SimpleOptMutCallback<T> {
+impl<T: 'static + FnMut(Uid, &mut dyn Set, OptValue) -> Result<Option<OptValue>>>
+    SimpleOptMutCallback<T>
+{
     pub fn new(cb: T) -> Self {
         Self(cb)
     }
 }
 
-impl<T: 'static + FnMut(Uid, &mut dyn Set) -> Result<Option<OptValue>>> Debug
+impl<T: 'static + FnMut(Uid, &mut dyn Set, OptValue) -> Result<Option<OptValue>>> Debug
     for SimpleOptMutCallback<T>
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -294,19 +316,19 @@ impl<T: 'static + FnMut(Uid, &mut dyn Set) -> Result<Option<OptValue>>> Debug
     }
 }
 
-impl<T: 'static + FnMut(Uid, &mut dyn Set) -> Result<Option<OptValue>>> OptMutCallback
+impl<T: 'static + FnMut(Uid, &mut dyn Set, OptValue) -> Result<Option<OptValue>>> OptMutCallback
     for SimpleOptMutCallback<T>
 {
-    fn call(&mut self, uid: Uid, set: &mut dyn Set) -> Result<Option<OptValue>> {
-        self.0(uid, set)
+    fn call(&mut self, uid: Uid, set: &mut dyn Set, value: OptValue) -> Result<Option<OptValue>> {
+        self.0(uid, set, value)
     }
 }
 
 pub struct SimplePosCallback<
-    T: 'static + FnMut(Uid, &dyn Set, &String, u64) -> Result<Option<OptValue>>,
+    T: 'static + FnMut(Uid, &dyn Set, &String, u64, OptValue) -> Result<Option<OptValue>>,
 >(T);
 
-impl<T: 'static + FnMut(Uid, &dyn Set, &String, u64) -> Result<Option<OptValue>>>
+impl<T: 'static + FnMut(Uid, &dyn Set, &String, u64, OptValue) -> Result<Option<OptValue>>>
     SimplePosCallback<T>
 {
     pub fn new(cb: T) -> Self {
@@ -314,7 +336,7 @@ impl<T: 'static + FnMut(Uid, &dyn Set, &String, u64) -> Result<Option<OptValue>>
     }
 }
 
-impl<T: 'static + FnMut(Uid, &dyn Set, &String, u64) -> Result<Option<OptValue>>> Debug
+impl<T: 'static + FnMut(Uid, &dyn Set, &String, u64, OptValue) -> Result<Option<OptValue>>> Debug
     for SimplePosCallback<T>
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -324,8 +346,8 @@ impl<T: 'static + FnMut(Uid, &dyn Set, &String, u64) -> Result<Option<OptValue>>
     }
 }
 
-impl<T: 'static + FnMut(Uid, &dyn Set, &String, u64) -> Result<Option<OptValue>>> PosCallback
-    for SimplePosCallback<T>
+impl<T: 'static + FnMut(Uid, &dyn Set, &String, u64, OptValue) -> Result<Option<OptValue>>>
+    PosCallback for SimplePosCallback<T>
 {
     fn call(
         &mut self,
@@ -333,16 +355,17 @@ impl<T: 'static + FnMut(Uid, &dyn Set, &String, u64) -> Result<Option<OptValue>>
         set: &dyn Set,
         arg: &String,
         noa_index: u64,
+        value: OptValue,
     ) -> Result<Option<OptValue>> {
-        self.0(uid, set, arg, noa_index)
+        self.0(uid, set, arg, noa_index, value)
     }
 }
 
 pub struct SimplePosMutCallback<
-    T: 'static + FnMut(Uid, &mut dyn Set, &String, u64) -> Result<Option<OptValue>>,
+    T: 'static + FnMut(Uid, &mut dyn Set, &String, u64, OptValue) -> Result<Option<OptValue>>,
 >(T);
 
-impl<T: 'static + FnMut(Uid, &mut dyn Set, &String, u64) -> Result<Option<OptValue>>>
+impl<T: 'static + FnMut(Uid, &mut dyn Set, &String, u64, OptValue) -> Result<Option<OptValue>>>
     SimplePosMutCallback<T>
 {
     pub fn new(cb: T) -> Self {
@@ -350,8 +373,8 @@ impl<T: 'static + FnMut(Uid, &mut dyn Set, &String, u64) -> Result<Option<OptVal
     }
 }
 
-impl<T: 'static + FnMut(Uid, &mut dyn Set, &String, u64) -> Result<Option<OptValue>>> Debug
-    for SimplePosMutCallback<T>
+impl<T: 'static + FnMut(Uid, &mut dyn Set, &String, u64, OptValue) -> Result<Option<OptValue>>>
+    Debug for SimplePosMutCallback<T>
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SimplePosMutCallback")
@@ -360,8 +383,8 @@ impl<T: 'static + FnMut(Uid, &mut dyn Set, &String, u64) -> Result<Option<OptVal
     }
 }
 
-impl<T: 'static + FnMut(Uid, &mut dyn Set, &String, u64) -> Result<Option<OptValue>>> PosMutCallback
-    for SimplePosMutCallback<T>
+impl<T: 'static + FnMut(Uid, &mut dyn Set, &String, u64, OptValue) -> Result<Option<OptValue>>>
+    PosMutCallback for SimplePosMutCallback<T>
 {
     fn call(
         &mut self,
@@ -369,16 +392,17 @@ impl<T: 'static + FnMut(Uid, &mut dyn Set, &String, u64) -> Result<Option<OptVal
         set: &mut dyn Set,
         arg: &String,
         noa_index: u64,
+        value: OptValue,
     ) -> Result<Option<OptValue>> {
-        self.0(uid, set, arg, noa_index)
+        self.0(uid, set, arg, noa_index, value)
     }
 }
 
 pub struct SimpleMainCallback<
-    T: 'static + FnMut(Uid, &dyn Set, &[String]) -> Result<Option<OptValue>>,
+    T: 'static + FnMut(Uid, &dyn Set, &[String], OptValue) -> Result<Option<OptValue>>,
 >(T);
 
-impl<T: 'static + FnMut(Uid, &dyn Set, &[String]) -> Result<Option<OptValue>>>
+impl<T: 'static + FnMut(Uid, &dyn Set, &[String], OptValue) -> Result<Option<OptValue>>>
     SimpleMainCallback<T>
 {
     pub fn new(cb: T) -> Self {
@@ -386,7 +410,7 @@ impl<T: 'static + FnMut(Uid, &dyn Set, &[String]) -> Result<Option<OptValue>>>
     }
 }
 
-impl<T: 'static + FnMut(Uid, &dyn Set, &[String]) -> Result<Option<OptValue>>> Debug
+impl<T: 'static + FnMut(Uid, &dyn Set, &[String], OptValue) -> Result<Option<OptValue>>> Debug
     for SimpleMainCallback<T>
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -396,19 +420,25 @@ impl<T: 'static + FnMut(Uid, &dyn Set, &[String]) -> Result<Option<OptValue>>> D
     }
 }
 
-impl<T: 'static + FnMut(Uid, &dyn Set, &[String]) -> Result<Option<OptValue>>> MainCallback
-    for SimpleMainCallback<T>
+impl<T: 'static + FnMut(Uid, &dyn Set, &[String], OptValue) -> Result<Option<OptValue>>>
+    MainCallback for SimpleMainCallback<T>
 {
-    fn call(&mut self, uid: Uid, set: &dyn Set, args: &[String]) -> Result<Option<OptValue>> {
-        self.0(uid, set, args)
+    fn call(
+        &mut self,
+        uid: Uid,
+        set: &dyn Set,
+        args: &[String],
+        value: OptValue,
+    ) -> Result<Option<OptValue>> {
+        self.0(uid, set, args, value)
     }
 }
 
 pub struct SimpleMainMutCallback<
-    T: 'static + FnMut(Uid, &mut dyn Set, &[String]) -> Result<Option<OptValue>>,
+    T: 'static + FnMut(Uid, &mut dyn Set, &[String], OptValue) -> Result<Option<OptValue>>,
 >(T);
 
-impl<T: 'static + FnMut(Uid, &mut dyn Set, &[String]) -> Result<Option<OptValue>>>
+impl<T: 'static + FnMut(Uid, &mut dyn Set, &[String], OptValue) -> Result<Option<OptValue>>>
     SimpleMainMutCallback<T>
 {
     pub fn new(cb: T) -> Self {
@@ -416,7 +446,7 @@ impl<T: 'static + FnMut(Uid, &mut dyn Set, &[String]) -> Result<Option<OptValue>
     }
 }
 
-impl<T: 'static + FnMut(Uid, &mut dyn Set, &[String]) -> Result<Option<OptValue>>> Debug
+impl<T: 'static + FnMut(Uid, &mut dyn Set, &[String], OptValue) -> Result<Option<OptValue>>> Debug
     for SimpleMainMutCallback<T>
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -426,10 +456,16 @@ impl<T: 'static + FnMut(Uid, &mut dyn Set, &[String]) -> Result<Option<OptValue>
     }
 }
 
-impl<T: 'static + FnMut(Uid, &mut dyn Set, &[String]) -> Result<Option<OptValue>>> MainMutCallback
-    for SimpleMainMutCallback<T>
+impl<T: 'static + FnMut(Uid, &mut dyn Set, &[String], OptValue) -> Result<Option<OptValue>>>
+    MainMutCallback for SimpleMainMutCallback<T>
 {
-    fn call(&mut self, uid: Uid, set: &mut dyn Set, args: &[String]) -> Result<Option<OptValue>> {
-        self.0(uid, set, args)
+    fn call(
+        &mut self,
+        uid: Uid,
+        set: &mut dyn Set,
+        args: &[String],
+        value: OptValue,
+    ) -> Result<Option<OptValue>> {
+        self.0(uid, set, args, value)
     }
 }

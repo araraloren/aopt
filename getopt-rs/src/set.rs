@@ -9,7 +9,6 @@ use std::slice::{Iter, IterMut};
 
 use crate::err::Result;
 use crate::opt::Opt;
-use crate::proc::{Proc, Subscriber};
 use crate::uid::Uid;
 
 pub use self::commit::Commit;
@@ -25,23 +24,19 @@ pub trait Creator: Debug {
     fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>>;
 }
 
-pub trait Set:
-    Debug
-    + Index<Uid, Output = Box<dyn Opt>>
-    + IndexMut<Uid>
-    + AsRef<[Box<dyn Opt>]>
-    + AsMut<[Box<dyn Opt>]>
+pub trait Set: Debug + PrefixSet + OptionSet + CreatorSet {}
+
+pub trait PrefixSet {
+    fn add_prefix(&mut self, prefix: String);
+
+    fn get_prefix(&self) -> &[String];
+
+    fn clr_prefix(&mut self);
+}
+
+pub trait OptionSet:
+    Index<Uid, Output = Box<dyn Opt>> + IndexMut<Uid> + AsRef<[Box<dyn Opt>]> + AsMut<[Box<dyn Opt>]>
 {
-    fn has_creator(&self, type_name: &str) -> bool;
-
-    fn add_creator(&mut self, creator: Box<dyn Creator>);
-
-    fn app_creator(&mut self, creator: Vec<Box<dyn Creator>>);
-
-    fn rem_creator(&mut self, opt_type: &str) -> bool;
-
-    fn get_creator(&self, opt_type: &str) -> Option<&Box<dyn Creator>>;
-
     fn add_opt(&mut self, opt_str: &str) -> Result<Commit>;
 
     fn add_opt_ci(&mut self, ci: CreateInfo) -> Result<Uid>;
@@ -61,18 +56,16 @@ pub trait Set:
     fn filter(&self, opt_str: &str) -> Result<Filter>;
 
     fn filter_mut(&mut self, opt_str: &str) -> Result<FilterMut>;
-
-    fn set_prefix(&mut self, prefix: Vec<String>);
-
-    fn add_prefix(&mut self, prefix: String);
-
-    fn get_prefix(&self) -> &[String];
 }
 
-impl<S: Set> Subscriber<Box<dyn Proc>, S> for S {
-    fn subscribe_from(&self, publisher: &mut dyn crate::proc::Publisher<Box<dyn Proc>, S>) {
-        for opt in self.iter() {
-            publisher.reg_subscriber(Box::new(OptionInfo::from(opt.get_uid())))
-        }
-    }
+pub trait CreatorSet {
+    fn has_creator(&self, type_name: &str) -> bool;
+
+    fn add_creator(&mut self, creator: Box<dyn Creator>);
+
+    fn app_creator(&mut self, creator: Vec<Box<dyn Creator>>);
+
+    fn rem_creator(&mut self, opt_type: &str) -> bool;
+
+    fn get_creator(&self, opt_type: &str) -> Option<&Box<dyn Creator>>;
 }

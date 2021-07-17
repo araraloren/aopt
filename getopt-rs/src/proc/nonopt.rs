@@ -1,12 +1,13 @@
+use super::Matcher;
+
 use crate::ctx::Context;
 use crate::err::Result;
-use crate::opt::Opt;
 use crate::opt::Style;
-use crate::proc::Proc;
+use crate::set::Set;
 use crate::uid::Uid;
 
 #[derive(Debug, Default)]
-pub struct NonOptCtxProc {
+pub struct NonOptMatcher {
     uid: Uid,
 
     context: Option<Box<dyn Context>>,
@@ -14,7 +15,7 @@ pub struct NonOptCtxProc {
     consoume_argument: bool,
 }
 
-impl From<Uid> for NonOptCtxProc {
+impl From<Uid> for NonOptMatcher {
     fn from(uid: Uid) -> Self {
         Self {
             uid,
@@ -23,7 +24,7 @@ impl From<Uid> for NonOptCtxProc {
     }
 }
 
-impl Proc for NonOptCtxProc {
+impl Matcher for NonOptMatcher {
     fn uid(&self) -> Uid {
         self.uid
     }
@@ -40,22 +41,30 @@ impl Proc for NonOptCtxProc {
         }
     }
 
-    fn process(&mut self, opt: &mut dyn Opt) -> Result<Option<usize>> {
+    fn get_ctx_mut(&mut self, index: usize) -> Option<&mut Box<dyn Context>> {
+        if index == 0 {
+            self.context.as_mut()
+        } else {
+            None
+        }
+    }
+
+    fn process<S: Set>(&mut self, uid: Uid, set: &mut S) -> Result<Option<&mut Box<dyn Context>>> {
+        let opt = set[uid].as_mut();
+
         if opt.match_style(Style::Cmd)
             || opt.match_style(Style::Main)
             || opt.match_style(Style::Pos)
         {
             if let Some(ctx) = self.context.as_mut() {
                 if !ctx.is_matched() {
-                    if ctx.match_opt(opt) {
-                        if ctx.process_opt(opt)? {
-                            self.consoume_argument =
-                                self.consoume_argument || ctx.is_comsume_argument();
-                            return Ok(ctx.get_matched_index());
-                        }
+                    if ctx.process(opt)? {
+                        self.consoume_argument =
+                            self.consoume_argument || ctx.is_comsume_argument();
+                        return Ok(Some(ctx));
                     }
                 } else {
-                    return Ok(ctx.get_matched_index());
+                    return Ok(Some(ctx));
                 }
             }
         }

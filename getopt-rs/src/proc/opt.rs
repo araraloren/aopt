@@ -1,11 +1,12 @@
+use super::Matcher;
+
 use crate::ctx::Context;
 use crate::err::Result;
-use crate::opt::Opt;
-use crate::proc::Proc;
+use crate::set::Set;
 use crate::uid::Uid;
 
 #[derive(Debug, Default)]
-pub struct OptCtxProc {
+pub struct OptMatcher {
     uid: Uid,
 
     context: Vec<Box<dyn Context>>,
@@ -13,7 +14,7 @@ pub struct OptCtxProc {
     consoume_argument: bool,
 }
 
-impl From<Uid> for OptCtxProc {
+impl From<Uid> for OptMatcher {
     fn from(uid: Uid) -> Self {
         Self {
             uid,
@@ -22,7 +23,7 @@ impl From<Uid> for OptCtxProc {
     }
 }
 
-impl Proc for OptCtxProc {
+impl Matcher for OptMatcher {
     fn uid(&self) -> Uid {
         self.uid
     }
@@ -35,15 +36,18 @@ impl Proc for OptCtxProc {
         self.context.get(index)
     }
 
-    fn process(&mut self, opt: &mut dyn Opt) -> Result<Option<usize>> {
+    fn get_ctx_mut(&mut self, index: usize) -> Option<&mut Box<dyn Context>> {
+        self.context.get_mut(index)
+    }
+
+    fn process<S: Set>(&mut self, uid: Uid, set: &mut S) -> Result<Option<&mut Box<dyn Context>>> {
+        let opt = set[uid].as_mut();
+
         for ctx in self.context.iter_mut() {
             if !ctx.is_matched() {
-                if ctx.match_opt(opt) {
-                    if ctx.process_opt(opt)? {
-                        self.consoume_argument =
-                            self.consoume_argument || ctx.is_comsume_argument();
-                        return Ok(ctx.get_matched_index());
-                    }
+                if ctx.process(opt)? {
+                    self.consoume_argument = self.consoume_argument || ctx.is_comsume_argument();
+                    return Ok(Some(ctx));
                 }
             }
         }

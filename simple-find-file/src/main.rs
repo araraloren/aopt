@@ -3,12 +3,12 @@ use getopt_rs::opt::nonopt::*;
 use getopt_rs::opt::opt::*;
 use getopt_rs::opt::*;
 use getopt_rs::parser::{ForwardParser, Parser};
-use getopt_rs::set::{Set, SimpleSet};
+use getopt_rs::set::{SimpleSet, *};
 use getopt_rs::uid::UidGenerator;
 
 fn main() {
     let mut set = SimpleSet::default();
-    let mut parser = ForwardParser::<SimpleSet, UidGenerator>::default();
+    let mut parser = ForwardParser::<UidGenerator>::default();
 
     set.add_creator(Box::new(IntCreator::default()));
     set.add_creator(Box::new(BoolCreator::default()));
@@ -185,7 +185,7 @@ fn main() {
         commit.commit().unwrap();
     }
     if let Ok(mut commit) = set.add_opt("temp=p@*") {
-        commit.set_help("pass all the arguments after'--' to compiler.".to_string());
+        commit.set_help("pass all the arguments after '--' to compiler.".to_string());
         commit.set_name("--".to_string());
         let id = commit.commit().unwrap();
         parser.add_callback(
@@ -203,7 +203,6 @@ fn main() {
                     } else {
                         Some(value)
                     });
-                    println!("----> {:?}", ret);
                     ret
                 },
             ))),

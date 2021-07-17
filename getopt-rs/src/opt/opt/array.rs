@@ -111,14 +111,23 @@ impl Callback for ArrayOpt {
     }
 
     fn set_callback_ret(&mut self, ret: Option<OptValue>) -> Result<()> {
-        if let Some(ret) = ret {
+        if let Some(mut ret) = ret {
             if !ret.is_vec() {
                 return Err(Error::InvalidReturnValueOfCallback(
                     "OptValue::Vec".to_owned(),
                     format!("{:?}", ret),
                 ));
             }
-            self.set_value(ret);
+            // merge the value of return and self
+            let mut value = take(&mut self.value);
+            if !value.is_vec() {
+                value = OptValue::from(vec![]);
+            }
+            value
+                .as_vec_mut()
+                .unwrap()
+                .append(ret.as_vec_mut().unwrap());
+            self.set_value(value);
         }
         Ok(())
     }
@@ -218,18 +227,7 @@ impl Value for ArrayOpt {
     }
 
     fn set_value(&mut self, value: OptValue) {
-        let mut value = value;
-
-        if value.is_vec() {
-            if self.value.is_vec() {
-                self.value
-                    .as_vec_mut()
-                    .unwrap()
-                    .append(value.as_vec_mut().unwrap())
-            } else {
-                self.value = value;
-            }
-        }
+        self.value = value;
     }
 
     fn set_default_value(&mut self, value: OptValue) {

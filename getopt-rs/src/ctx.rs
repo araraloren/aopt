@@ -1,20 +1,22 @@
 use std::fmt::Debug;
 
-pub mod delay;
 pub mod nonopt;
 pub mod opt;
 
 use crate::err::Result;
-use crate::opt::{Opt, Style};
+use crate::opt::{Opt, OptValue, Style};
 
-pub use self::delay::DelayContext;
 pub use self::nonopt::NonOptContext;
 pub use self::opt::OptContext;
 
 pub trait Context: Debug {
-    fn match_opt(&self, opt: &dyn Opt) -> bool;
+    fn process(&mut self, opt: &mut dyn Opt) -> Result<bool>;
 
-    fn process_opt(&mut self, opt: &mut dyn Opt) -> Result<bool>;
+    fn get_value(&self) -> Option<&OptValue>;
+
+    fn take_value(&mut self) -> Option<OptValue>;
+
+    fn set_value(&mut self, value: OptValue);
 
     fn get_matched_index(&self) -> Option<usize>;
 

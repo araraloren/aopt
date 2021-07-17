@@ -1,10 +1,12 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 use super::{Commit, Filter, FilterMut, Uid};
 use super::{CreateInfo, Creator, FilterInfo, Set};
+use super::{CreatorSet, OptionSet, PrefixSet};
 use super::{Index, IndexMut, Iter, IterMut};
 use crate::err::{Error, Result};
-use crate::opt::Opt;
+use crate::opt::{Opt, OptCallback};
 
 #[derive(Debug, Default)]
 pub struct SimpleSet {
@@ -13,32 +15,13 @@ pub struct SimpleSet {
     creator: HashMap<String, Box<dyn Creator>>,
 
     prefix: Vec<String>,
+
+    callback: HashMap<Uid, RefCell<OptCallback>>,
 }
 
-impl Set for SimpleSet {
-    fn has_creator(&self, opt_type: &str) -> bool {
-        self.creator.contains_key(opt_type)
-    }
+impl Set for SimpleSet {}
 
-    fn add_creator(&mut self, creator: Box<dyn Creator>) {
-        let opt_type = creator.get_type_name();
-        self.creator.insert(String::from(opt_type), creator);
-    }
-
-    fn app_creator(&mut self, creator: Vec<Box<dyn Creator>>) {
-        for creator in creator {
-            self.add_creator(creator);
-        }
-    }
-
-    fn rem_creator(&mut self, opt_type: &str) -> bool {
-        self.creator.remove(opt_type).is_some()
-    }
-
-    fn get_creator(&self, opt_type: &str) -> Option<&Box<dyn Creator>> {
-        self.creator.get(opt_type)
-    }
-
+impl OptionSet for SimpleSet {
     fn add_opt(&mut self, opt_str: &str) -> Result<Commit> {
         let info = CreateInfo::parse(opt_str, self.get_prefix())?;
         Ok(Commit::new(self, info))
@@ -104,12 +87,34 @@ impl Set for SimpleSet {
         let info = FilterInfo::parse(opt_str, self.get_prefix())?;
         Ok(FilterMut::new(self, info))
     }
+}
 
-    fn set_prefix(&mut self, prefix: Vec<String>) {
-        self.prefix = prefix;
-        self.prefix.sort_by(|a, b| b.len().cmp(&a.len()));
+impl CreatorSet for SimpleSet {
+    fn has_creator(&self, opt_type: &str) -> bool {
+        self.creator.contains_key(opt_type)
     }
 
+    fn add_creator(&mut self, creator: Box<dyn Creator>) {
+        let opt_type = creator.get_type_name();
+        self.creator.insert(String::from(opt_type), creator);
+    }
+
+    fn app_creator(&mut self, creator: Vec<Box<dyn Creator>>) {
+        for creator in creator {
+            self.add_creator(creator);
+        }
+    }
+
+    fn rem_creator(&mut self, opt_type: &str) -> bool {
+        self.creator.remove(opt_type).is_some()
+    }
+
+    fn get_creator(&self, opt_type: &str) -> Option<&Box<dyn Creator>> {
+        self.creator.get(opt_type)
+    }
+}
+
+impl PrefixSet for SimpleSet {
     fn add_prefix(&mut self, prefix: String) {
         self.prefix.push(prefix);
         self.prefix.sort_by(|a, b| b.len().cmp(&a.len()));
@@ -117,6 +122,10 @@ impl Set for SimpleSet {
 
     fn get_prefix(&self) -> &[String] {
         &self.prefix
+    }
+
+    fn clr_prefix(&mut self) {
+        self.prefix.clear();
     }
 }
 

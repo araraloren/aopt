@@ -57,6 +57,10 @@ impl<'pre> ArgStream<'pre> {
     fn map_one_item(item: Option<String>) -> Option<String> {
         item.map_or(None, |v| Some(String::from(v)))
     }
+
+    pub fn len(&self) -> usize {
+        self.args.len()
+    }
 }
 
 impl<'str, 'nv, 'pre, It: Iterator<Item = String>> From<It> for ArgStream<'pre> {

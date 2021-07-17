@@ -1,6 +1,6 @@
 use super::Context;
 use crate::err::{Error, Result};
-use crate::opt::{Opt, Style};
+use crate::opt::{Opt, OptValue, Style};
 
 #[derive(Debug)]
 pub struct OptContext {
@@ -13,6 +13,8 @@ pub struct OptContext {
     style: Style,
 
     consume_arg: bool,
+
+    value: Option<OptValue>,
 
     matched_index: Option<usize>,
 }
@@ -31,13 +33,14 @@ impl OptContext {
             argument,
             style,
             consume_arg,
+            value: None,
             matched_index: None,
         }
     }
 }
 
 impl Context for OptContext {
-    fn match_opt(&self, opt: &dyn Opt) -> bool {
+    fn process(&mut self, opt: &mut dyn Opt) -> Result<bool> {
         let mut matched = opt.match_style(self.style);
 
         debug!(
@@ -51,25 +54,34 @@ impl Context for OptContext {
                     || opt.match_alias(self.prefix.as_ref(), self.name.as_ref()));
         }
         debug!(">>>> {}", if matched { "TRUE" } else { "FALSE" });
-        matched
+        if matched {
+            if self.is_comsume_argument() && self.argument.is_none() {
+                return Err(Error::RequiredArgumentOfOption(String::from(
+                    opt.get_hint(),
+                )));
+            }
+            self.matched_index = Some(0);
+            self.set_value(opt.parse_value(self.argument.as_ref().unwrap().as_str())?);
+            debug!(
+                "Get value of option<{}> ==> {:?}",
+                opt.get_uid(),
+                self.get_value()
+            );
+            opt.set_invoke(true);
+        }
+        Ok(matched)
     }
 
-    fn process_opt(&mut self, opt: &mut dyn Opt) -> Result<bool> {
-        debug!("Set the data of option<{}>", opt.get_uid());
-        if self.is_comsume_argument() && self.argument.is_none() {
-            return Err(Error::RequiredArgumentOfOption(String::from(
-                opt.get_hint(),
-            )));
-        }
-        self.matched_index = Some(0);
-        let mut value = &String::default();
-        if let Some(v) = &self.argument {
-            value = v;
-        }
-        opt.set_value(opt.parse_value(value.as_str())?);
-        opt.set_invoke(true);
-        debug!("after setting ==> {:?}", opt);
-        Ok(true)
+    fn get_value(&self) -> Option<&OptValue> {
+        self.value.as_ref()
+    }
+
+    fn take_value(&mut self) -> Option<OptValue> {
+        self.value.take()
+    }
+
+    fn set_value(&mut self, value: OptValue) {
+        self.value = Some(value);
     }
 
     fn get_matched_index(&self) -> Option<usize> {

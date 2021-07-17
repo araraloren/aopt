@@ -6,43 +6,30 @@ use std::slice::Iter;
 
 use crate::ctx::Context;
 use crate::err::Result;
-use crate::opt::Opt;
 use crate::set::Set;
 use crate::uid::Uid;
 
-pub use nonopt::NonOptCtxProc;
-pub use opt::OptCtxProc;
-
-pub trait Message: Debug {
-    fn msg_uid(&self) -> Uid;
-}
+pub use nonopt::NonOptMatcher;
+pub use opt::OptMatcher;
 
 pub trait Info: Debug {
-    fn uid(&self) -> Uid;
+    fn info_uid(&self) -> Uid;
 }
 
-pub trait Publisher<M: Message, S: Set> {
-    fn publish(&mut self, msg: &mut M, set: &mut S) -> Result<bool>;
-
-    fn subscriber_iter(&self) -> Iter<'_, Box<dyn Info>>;
-
-    fn reg_subscriber(&mut self, info: Box<dyn Info>);
-
-    fn clr_subscriber(&mut self);
+pub trait Proc<S: Set, M: Matcher>: Debug {
+    fn process(&mut self, matcher: &mut M, set: &mut S) -> Result<bool>;
 }
 
-pub trait Subscriber<M: Message, S: Set> {
-    fn subscribe_from(&self, publisher: &mut dyn Publisher<M, S>);
-}
-
-pub trait Proc: Debug {
+pub trait Matcher: Debug {
     fn uid(&self) -> Uid;
 
     fn add_ctx(&mut self, ctx: Box<dyn Context>);
 
     fn get_ctx(&self, index: usize) -> Option<&Box<dyn Context>>;
 
-    fn process(&mut self, opt: &mut dyn Opt) -> Result<Option<usize>>;
+    fn get_ctx_mut(&mut self, index: usize) -> Option<&mut Box<dyn Context>>;
+
+    fn process<S: Set>(&mut self, uid: Uid, set: &mut S) -> Result<Option<&mut Box<dyn Context>>>;
 
     fn is_matched(&self) -> bool;
 
@@ -53,10 +40,4 @@ pub trait Proc: Debug {
     fn reset(&mut self);
 
     fn len(&self) -> usize;
-}
-
-impl Message for Box<dyn Proc> {
-    fn msg_uid(&self) -> Uid {
-        self.uid()
-    }
 }
