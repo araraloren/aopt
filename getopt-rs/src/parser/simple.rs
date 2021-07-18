@@ -14,7 +14,7 @@ use crate::proc::{Info, Matcher, NonOptMatcher, OptMatcher, Proc};
 use crate::set::{OptionInfo, Set};
 use crate::uid::{Generator, Uid};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct SimpleParser<S, G>
 where
     G: Generator + Debug + Default,
@@ -29,22 +29,6 @@ where
     noa: Vec<String>,
 
     marker: PhantomData<S>,
-}
-
-impl<S, G> Default for SimpleParser<S, G>
-where
-    G: Generator + Debug + Default,
-    S: Set + Default,
-{
-    fn default() -> Self {
-        Self {
-            uid_gen: G::default(),
-            subscriber_info: vec![],
-            callback: HashMap::new(),
-            noa: vec![],
-            marker: PhantomData::default(),
-        }
-    }
 }
 
 impl<S, G> SimpleParser<S, G>
@@ -181,6 +165,7 @@ where
             self.process(&mut proc, &mut set)?;
         }
 
+        // do post check
         self.post_check(&set)?;
 
         Ok(Some(ReturnValue {
@@ -278,6 +263,7 @@ where
                         // reborrow the opt avoid the compiler error
                         debug!("In Proc, get return value of option<{}> = {:?}", uid, value);
                         set[uid].as_mut().set_callback_ret(value)?;
+                        set[uid].as_mut().set_invoke(false);
                         // reset the matcher, we need match all the NonOpt
                         matcher.reset();
                     }
@@ -315,6 +301,7 @@ where
                         let opt = set[uid].as_mut();
 
                         debug!("Get return value of option<{}> = {:?}", uid, ret);
+                        opt.set_invoke(false);
                         if ret.is_some() {
                             opt.set_callback_ret(ret)?;
                         } else {
@@ -332,4 +319,123 @@ where
 }
 
 #[cfg(test)]
-mod test {}
+mod test {
+    use crate::{prelude::*, set::Commit};
+
+    struct ValueChecker {
+        type_name: &'static str,
+
+        deactivate_style: bool,
+
+        value: OptValue,
+
+        default_value: OptValue,
+
+        name: &'static str,
+
+        prefix: &'static str,
+
+        alias: Vec<(&'static str, &'static str)>,
+
+        optional: bool,
+
+        index: Option<OptIndex>,
+    }
+
+    #[test]
+    fn testing_simple_parser() {
+        let mut set = SimpleSet::new();
+        let mut parser = SimpleParser::<SimpleSet, UidGenerator>::default();
+
+        set.add_prefix(String::from("+"));
+
+        assert!(testing_add_opts(&mut set, &mut parser).is_ok());
+
+        let ret = parser.parse(set, &mut ["+intalias", "42"].iter().map(|v| v.to_string()));
+
+        assert!(ret.is_ok());
+        assert!(ret.unwrap().is_some());
+    }
+
+    fn testing_add_opts<S: Set, P: Parser<S>>(set: &mut S, parser: &mut P) -> Result<()> {
+        testing_add_opt(
+            set,
+            parser,
+            "-i=i",
+            None,
+            ValueChecker {
+                type_name: "i",
+                deactivate_style: false,
+                value: OptValue::from(42i64),
+                default_value: OptValue::Null,
+                name: "i",
+                prefix: "-",
+                alias: vec![("+", "intalias")],
+                optional: true,
+                index: None,
+            },
+        )?;
+        testing_add_opt(
+            set,
+            parser,
+            "--longint=i",
+            None,
+            ValueChecker {
+                type_name: "i",
+                deactivate_style: false,
+                value: OptValue::from(24i64),
+                default_value: OptValue::Null,
+                name: "longint",
+                prefix: "--",
+                alias: vec![],
+                optional: true,
+                index: None,
+            },
+        )?;
+        Ok(())
+    }
+
+    fn testing_add_opt<S: Set, P: Parser<S>>(
+        set: &mut S,
+        parser: &mut P,
+        opt: &str,
+        tweaker: Option<Box<dyn FnMut(&mut Commit)>>,
+        checker: ValueChecker,
+    ) -> Result<()> {
+        let mut commit = set.add_opt(opt)?;
+
+        if let Some(mut tweaker) = tweaker {
+            tweaker.as_mut()(&mut commit);
+        }
+
+        let id = commit.commit()?;
+
+        parser.add_callback(
+            id,
+            simple_opt_cb!(move |inner_id, set, value| {
+                assert_eq!(id, inner_id);
+                assert_eq!(value, checker.value);
+
+                let opt = set.get_opt(inner_id);
+
+                assert!(opt.is_some());
+
+                let opt = opt.unwrap();
+
+                assert_eq!(opt.get_name(), checker.name);
+                assert_eq!(opt.is_need_invoke(), true);
+                assert_eq!(opt.get_optional(), checker.optional);
+                assert_eq!(checker.default_value, *opt.get_default_value());
+                assert_eq!(opt.get_type_name(), checker.type_name);
+                assert_eq!(checker.deactivate_style, opt.is_deactivate_style());
+                assert_eq!(checker.prefix, opt.get_prefix());
+                assert_eq!(opt.get_index(), checker.index.as_ref());
+                for (prefix, name) in &checker.alias {
+                    assert!(opt.match_alias(prefix, name));
+                }
+                Ok(Some(value))
+            }),
+        );
+        Ok(())
+    }
+}

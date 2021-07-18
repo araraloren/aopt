@@ -184,7 +184,7 @@ impl State {
             }
         }
 
-        debug!("Transition from {:?} --to--> {:?}", self, next_state);
+        // debug!("Transition from {:?} --to--> {:?}", self, next_state);
 
         *self = next_state;
     }
@@ -196,10 +196,10 @@ impl State {
         data_keeper: &mut DataKeeper<'pre>,
     ) -> Result<bool> {
         if self != State::End {
-            debug!(
-                "Current state = {:?}, {:?}, parse pattern = {:?}",
-                self, index, pattern
-            );
+            // debug!(
+            //     "Current state = {:?}, {:?}, parse pattern = {:?}",
+            //     self, index, pattern
+            // );
 
             self.self_transition(index, pattern);
 

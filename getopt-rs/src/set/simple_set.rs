@@ -19,6 +19,15 @@ pub struct SimpleSet {
     callback: HashMap<Uid, RefCell<OptCallback>>,
 }
 
+impl SimpleSet {
+    pub fn new() -> Self {
+        let mut ret = Self::default();
+        crate::tools::initialize_creator(&mut ret);
+        crate::tools::initialize_prefix(&mut ret);
+        ret
+    }
+}
+
 impl Set for SimpleSet {}
 
 impl OptionSet for SimpleSet {

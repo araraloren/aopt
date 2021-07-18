@@ -300,3 +300,39 @@ impl Debug for CloneHelper {
             .finish()
     }
 }
+
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        match self {
+            Self::Null => match other {
+                Self::Null => true,
+                _ => false,
+            },
+            Value::Int(v) => match other {
+                Self::Int(ov) => *v == *ov,
+                _ => false,
+            },
+            Value::Uint(v) => match other {
+                Self::Uint(ov) => *v == *ov,
+                _ => false,
+            },
+            Value::Flt(v) => match other {
+                Self::Flt(ov) => *v == *ov,
+                _ => false,
+            },
+            Value::Str(v) => match other {
+                Self::Str(ov) => v == ov,
+                _ => false,
+            },
+            Value::Bool(v) => match other {
+                Self::Bool(ov) => *v == *ov,
+                _ => false,
+            },
+            Value::Array(v) => match other {
+                Self::Array(ov) => v == ov,
+                _ => false,
+            },
+            Value::Any(_) => false,
+        }
+    }
+}
