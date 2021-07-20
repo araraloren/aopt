@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+
 use std::collections::HashMap;
 
 use super::{Commit, Filter, FilterMut, Uid};
@@ -6,7 +6,7 @@ use super::{CreateInfo, Creator, FilterInfo, Set};
 use super::{CreatorSet, OptionSet, PrefixSet};
 use super::{Index, IndexMut, Iter, IterMut};
 use crate::err::{Error, Result};
-use crate::opt::{Opt, OptCallback};
+use crate::opt::Opt;
 
 #[derive(Debug, Default)]
 pub struct SimpleSet {
@@ -15,8 +15,6 @@ pub struct SimpleSet {
     creator: HashMap<String, Box<dyn Creator>>,
 
     prefix: Vec<String>,
-
-    callback: HashMap<Uid, RefCell<OptCallback>>,
 }
 
 impl SimpleSet {
@@ -95,6 +93,12 @@ impl OptionSet for SimpleSet {
     fn filter_mut(&mut self, opt_str: &str) -> Result<FilterMut> {
         let info = FilterInfo::parse(opt_str, self.get_prefix())?;
         Ok(FilterMut::new(self, info))
+    }
+
+    fn reset(&mut self) {
+        for opt in self.opt.iter_mut() {
+            opt.reset_value();
+        }
     }
 }
 

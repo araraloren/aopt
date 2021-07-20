@@ -56,6 +56,8 @@ pub trait OptionSet:
     fn filter(&self, opt_str: &str) -> Result<Filter>;
 
     fn filter_mut(&mut self, opt_str: &str) -> Result<FilterMut>;
+
+    fn reset(&mut self);
 }
 
 pub trait CreatorSet {

@@ -67,7 +67,8 @@ where
                 .push(Box::new(OptionInfo::from(opt.get_uid())));
         }
 
-        // do pre check
+        // reset set and do pre check
+        set.reset();
         self.pre_check(&set)?;
 
         let parser_state = vec![
