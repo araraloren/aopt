@@ -52,8 +52,8 @@ pub mod tools {
     #[macro_export]
     macro_rules! simple_main_cb {
         ($block:expr) => {
-            crate::opt::callback::Callback::Main(Box::new(
-                crate::opt::callback::SimpleMainCallback::new($block),
+            getopt_rs::opt::callback::Callback::Main(Box::new(
+                getopt_rs::opt::callback::SimpleMainCallback::new($block),
             ))
         };
     }
@@ -61,8 +61,8 @@ pub mod tools {
     #[macro_export]
     macro_rules! simple_main_mut_cb {
         ($block:expr) => {
-            crate::opt::callback::Callback::MainMut(Box::new(
-                crate::opt::callback::SimpleMainMutCallback::new($block),
+            getopt_rs::opt::callback::Callback::MainMut(Box::new(
+                getopt_rs::opt::callback::SimpleMainMutCallback::new($block),
             ))
         };
     }
@@ -70,8 +70,8 @@ pub mod tools {
     #[macro_export]
     macro_rules! simple_pos_cb {
         ($block:expr) => {
-            crate::opt::callback::Callback::Pos(Box::new(
-                crate::opt::callback::SimplePosCallback::new($block),
+            getopt_rs::opt::callback::Callback::Pos(Box::new(
+                getopt_rs::opt::callback::SimplePosCallback::new($block),
             ))
         };
     }
@@ -79,8 +79,8 @@ pub mod tools {
     #[macro_export]
     macro_rules! simple_pos_mut_cb {
         ($block:expr) => {
-            crate::opt::callback::Callback::PosMut(Box::new(
-                crate::opt::callback::SimplePosMutCallback::new($block),
+            getopt_rs::opt::callback::Callback::PosMut(Box::new(
+                getopt_rs::opt::callback::SimplePosMutCallback::new($block),
             ))
         };
     }
@@ -88,8 +88,8 @@ pub mod tools {
     #[macro_export]
     macro_rules! simple_opt_cb {
         ($block:expr) => {
-            crate::opt::callback::Callback::Opt(Box::new(
-                crate::opt::callback::SimpleOptCallback::new($block),
+            getopt_rs::opt::callback::Callback::Opt(Box::new(
+                getopt_rs::opt::callback::SimpleOptCallback::new($block),
             ))
         };
     }
@@ -97,8 +97,8 @@ pub mod tools {
     #[macro_export]
     macro_rules! simple_opt_mut_cb {
         ($block:expr) => {
-            crate::opt::callback::Callback::OptMut(Box::new(
-                crate::opt::callback::SimpleOptMutCallback::new($block),
+            getopt_rs::opt::callback::Callback::OptMut(Box::new(
+                getopt_rs::opt::callback::SimpleOptMutCallback::new($block),
             ))
         };
     }
