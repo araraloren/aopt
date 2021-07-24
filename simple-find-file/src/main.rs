@@ -245,7 +245,7 @@ fn main() -> Result<()> {
     }
 
     impl DataChecker {
-        pub fn check(&self, opt: &dyn Opt, cb_value: OptValue) {
+        pub fn check(&self, opt: &dyn Opt, cb_value: &OptValue) {
             assert_eq!(opt.get_name(), self.name);
             assert_eq!(opt.is_need_invoke(), true);
             assert_eq!(opt.get_optional(), self.optional);
@@ -257,7 +257,7 @@ fn main() -> Result<()> {
             for (prefix, name) in &self.alias {
                 assert!(opt.match_alias(prefix, name));
             }
-            assert!(self.cb_value.eq(&cb_value));
+            assert!(self.cb_value.eq(cb_value));
         }
     }
 
@@ -268,19 +268,84 @@ fn main() -> Result<()> {
 
         commit_tweak: Option<Box<dyn FnMut(&mut Commit)>>,
 
-        callback_tweak: Option<Box<dyn FnMut(&mut P, Uid)>>,
+        callback_tweak: Option<Box<dyn FnMut(&mut P, Uid, Option<DataChecker>)>>,
 
-        checker: DataChecker,
+        checker: Option<DataChecker>,
 
         marker: PhantomData<S>,
+    }
+
+    impl<S: Set, P: Parser<S>> TestingCase<S, P> {
+        pub fn do_test(&mut self, set: &mut S, parser: &mut P) -> Result<()> {
+            let mut commit = set.add_opt(self.opt_str)?;
+            
+            if let Some(tweak) = self.commit_tweak.as_mut() {
+                tweak.as_mut()(&mut commit);
+            }
+            let uid = commit.commit()?;
+
+            if let Some(tweak) = self.callback_tweak.as_mut() {
+                tweak.as_mut()(parser, uid, self.checker.take());
+            }
+            Ok(())
+        }
+
+        pub fn check_ret(&mut self, set: &mut S) -> Result<()> {
+            if let Some(opt) = set.filter(self.opt_str)?.find() {
+                assert!(self.ret_value.eq(opt.as_ref().get_value()));
+            }
+            Ok(())
+        }
     }
 
     let mut set = SimpleSet::new();
     let mut parser = SimpleParser::new(UidGenerator::default());
 
-    
+    let testing_cases = &mut [
+        TestingCase {
+            opt_str: "-i=i",
+            ret_value: OptValue::from(42i64),
+            commit_tweak: Some(Box::new(|commit: &mut Commit| {
+                commit.add_alias("--".to_owned(), "int".to_owned());
+            })),
+            callback_tweak: Some(Box::new(|parser: &mut SimpleParser<SimpleSet, UidGenerator>, uid, checker: Option<DataChecker>| {
+                let mut checker = checker;
 
-    parser.parse(set, &mut ["-a"].iter().map(|&v|String::from(v)))?;
+                parser.add_callback(uid, simple_opt_cb!( move |uid, set, value| {
+                    let opt = set[uid].as_ref();
+                    
+                    if let Some(checker) = checker.take() {
+                        checker.check(opt, &value);
+                    }
+                    Ok(Some(value))
+                }));
+            })),
+            checker: Some(DataChecker {
+                type_name: "i",
+                deactivate_style: false,
+                cb_value: OptValue::from(42i64),
+                default_value: OptValue::Null,
+                name: "i",
+                prefix: "-",
+                alias: vec![],
+                optional: true,
+                index: None,
+            }),
+            marker: PhantomData::default(),
+        }
+    ];
+
+    for testing_case in testing_cases.iter_mut() {
+        testing_case.do_test(&mut set, &mut parser)?;
+    }
+
+    let ret = parser.parse(set, &mut ["-i", "42"].iter().map(|&v|String::from(v)))?;
+
+    if let Some(mut ret) = ret {
+        for testing_case in testing_cases.iter_mut() {
+            testing_case.check_ret(&mut ret.set)?;
+        }
+    }
     Ok(())
 }
 
