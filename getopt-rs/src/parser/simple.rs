@@ -322,42 +322,7 @@ where
 #[cfg(test)]
 mod test {
     use crate::{prelude::*, set::Commit};
-    use std::marker::PhantomData;
-
-    #[derive(Debug)]
-    struct CheckingData {
-        type_name: &'static str,
-
-        deactivate_style: bool,
-
-        value: OptValue,
-
-        default_value: OptValue,
-
-        name: &'static str,
-
-        prefix: &'static str,
-
-        alias: Vec<(&'static str, &'static str)>,
-
-        optional: bool,
-
-        index: Option<OptIndex>,
-    }
-
-    struct TestingCase<S: Set, P: Parser<S>> {
-        opt_str: &'static str,
-
-        after_parse_value: OptValue,
-
-        commit_tweak: Option<Box<dyn FnMut(&mut Commit)>>,
-
-        callback_tweak: Option<Box<dyn FnMut(&mut P, Uid)>>,
-
-        checking: CheckingData,
-
-        marker: PhantomData<S>,
-    }
+    use crate::parser::testutil::*;
 
     #[test]
     fn testing_simple_parser() {
@@ -389,36 +354,5 @@ mod test {
             assert_eq!(*opt.as_ref().get_value(), value);
         }
         Ok(())
-    }
-
-    fn testing_add_opts<S: Set, P: Parser<S>>(
-        set: &mut S,
-        parser: &mut P,
-        ts: &mut TestingCase<S, P>,
-    ) -> Result<()> {
-        let mut commit = set.add_opt(ts.opt_str)?;
-        if let Some(tweak) = ts.commit_tweak.as_mut() {
-            tweak.as_mut()(&mut commit);
-        }
-        let id = commit.commit()?;
-        if let Some(tweak) = ts.callback_tweak.as_mut() {
-            tweak.as_mut()(parser, id);
-        }
-        Ok(())
-    }
-
-    fn checking_data(opt: &dyn Opt, checking_data: &CheckingData, value: &OptValue) {
-        assert_eq!(opt.get_name(), checking_data.name);
-        assert_eq!(opt.is_need_invoke(), true);
-        assert_eq!(opt.get_optional(), checking_data.optional);
-        assert!(checking_data.default_value.eq(opt.get_default_value()));
-        assert_eq!(opt.get_type_name(), checking_data.type_name);
-        assert_eq!(checking_data.deactivate_style, opt.is_deactivate_style());
-        assert_eq!(checking_data.prefix, opt.get_prefix());
-        assert_eq!(opt.get_index(), checking_data.index.as_ref());
-        for (prefix, name) in &checking_data.alias {
-            assert!(opt.match_alias(prefix, name));
-        }
-        assert!(checking_data.value.eq(value));
     }
 }

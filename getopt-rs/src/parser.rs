@@ -1,6 +1,7 @@
 pub mod check;
 pub mod simple;
 pub mod state;
+pub(crate) mod testutil;
 
 use std::cell::RefCell;
 use std::fmt::Debug;
