@@ -14,6 +14,7 @@ use crate::uid::Uid;
 pub(crate) use std::collections::hash_map::Iter as HashMapIter;
 
 pub use simple_parser::SimpleParser;
+pub use delay_parser::DelayParser;
 pub use state::ParserState;
 
 pub trait Parser<S>: Debug
