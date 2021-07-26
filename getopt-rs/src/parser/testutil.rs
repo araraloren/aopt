@@ -1,28 +1,27 @@
-
 use std::marker::PhantomData;
 
 use crate::prelude::*;
 use crate::set::Commit;
 
 #[derive(Debug)]
-struct DataChecker {
-    type_name: &'static str,
+pub struct DataChecker {
+    pub type_name: &'static str,
 
-    deactivate_style: bool,
+    pub deactivate_style: bool,
 
-    cb_value: OptValue,
+    pub cb_value: OptValue,
 
-    default_value: OptValue,
+    pub default_value: OptValue,
 
-    name: &'static str,
+    pub name: &'static str,
 
-    prefix: &'static str,
+    pub prefix: &'static str,
 
-    alias: Vec<(&'static str, &'static str)>,
+    pub alias: Vec<(&'static str, &'static str)>,
 
-    optional: bool,
+    pub optional: bool,
 
-    index: Option<OptIndex>,
+    pub index: Option<OptIndex>,
 }
 
 impl Default for DataChecker {
@@ -43,6 +42,7 @@ impl Default for DataChecker {
 
 impl DataChecker {
     pub fn check(&self, opt: &dyn Opt, cb_value: &OptValue) {
+        println!("checking {:?} and {:?} <-> {:?}", opt, cb_value, self);
         assert_eq!(opt.get_name(), self.name);
         assert_eq!(opt.is_need_invoke(), true);
         assert_eq!(opt.get_optional(), self.optional);
@@ -54,28 +54,38 @@ impl DataChecker {
         for (prefix, name) in &self.alias {
             assert!(opt.match_alias(prefix, name));
         }
-        assert!(self.cb_value.eq(cb_value));
+        if self.cb_value.is_vec() && cb_value.is_vec() {
+            if let Some(testing_values) = self.cb_value.as_vec() {
+                if let Some(values) = cb_value.as_vec() {
+                    for value in values {
+                        assert!(testing_values.contains(value));
+                    }
+                }
+            }
+        } else {
+            assert!(self.cb_value.eq(cb_value));
+        }
     }
 }
 
 pub struct TestingCase<S: Set, P: Parser<S>> {
-    opt_str: &'static str,
+    pub opt_str: &'static str,
 
-    ret_value: Option<OptValue>,
+    pub ret_value: Option<OptValue>,
 
-    commit_tweak: Option<Box<dyn FnMut(&mut Commit)>>,
+    pub commit_tweak: Option<Box<dyn FnMut(&mut Commit)>>,
 
-    callback_tweak: Option<Box<dyn FnMut(&mut P, Uid, Option<DataChecker>)>>,
+    pub callback_tweak: Option<Box<dyn FnMut(&mut P, Uid, Option<DataChecker>)>>,
 
-    checker: Option<DataChecker>,
+    pub checker: Option<DataChecker>,
 
-    marker: PhantomData<S>,
+    pub marker: PhantomData<S>,
 }
 
 impl<S: Set, P: Parser<S>> TestingCase<S, P> {
     pub fn do_test(&mut self, set: &mut S, parser: &mut P) -> Result<()> {
         let mut commit = set.add_opt(self.opt_str)?;
-        
+
         if let Some(tweak) = self.commit_tweak.as_mut() {
             tweak.as_mut()(&mut commit);
         }

@@ -263,11 +263,13 @@ where
                         }
                         // reborrow the opt avoid the compiler error
                         debug!("In Proc, get return value of option<{}> = {:?}", uid, value);
-                        set[uid].as_mut().set_callback_ret(value)?;
                         set[uid].as_mut().set_invoke(false);
                         // reset the matcher, we need match all the NonOpt
                         matcher.reset();
                     }
+
+                    // set the value after invoke
+                    set[uid].as_mut().set_callback_ret(value)?;
                 }
             }
         }
@@ -293,25 +295,19 @@ where
 
                 if let Some(noa_index) = ctx.get_matched_index() {
                     let invoke_callback = opt.is_need_invoke();
-                    let value = ctx.take_value();
+                    let mut value = ctx.take_value();
 
                     assert_eq!(value.is_some(), true);
+
                     if invoke_callback {
                         // invoke callback of current option/non-option
-                        let ret = self.invoke_callback(uid, set, noa_index, value.unwrap())?;
-                        let opt = set[uid].as_mut();
+                        value = self.invoke_callback(uid, set, noa_index, value.unwrap())?;
 
-                        debug!("Get return value of option<{}> = {:?}", uid, ret);
-                        opt.set_invoke(false);
-                        if ret.is_some() {
-                            opt.set_callback_ret(ret)?;
-                        } else {
-                            // if we get none, for option, skip current M
-                            // all the ctx in M must be matched
-                            ctx.set_matched_index(None);
-                            break;
-                        }
+                        debug!("Get return value of option<{}> = {:?}", uid, value);
+                        set[uid].as_mut().set_invoke(false);
                     }
+
+                    set[uid].as_mut().set_callback_ret(value)?;
                 }
             }
         }
@@ -321,37 +317,187 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{prelude::*, set::Commit};
     use crate::parser::testutil::*;
+    use crate::{prelude::*, set::Commit};
+    use std::marker::PhantomData;
+
+    macro_rules! simple_cb_tweak {
+        () => {
+            Some(Box::new(
+                |parser: &mut SimpleParser<SimpleSet, UidGenerator>,
+                 uid,
+                 checker: Option<DataChecker>| {
+                    let mut checker = checker;
+
+                    parser.add_callback(
+                        uid,
+                        simple_opt_cb!(move |uid, set, value| {
+                            let opt = set[uid].as_ref();
+
+                            if let Some(checker) = checker.take() {
+                                checker.check(opt, &value);
+                            }
+                            Ok(Some(value))
+                        }),
+                    );
+                },
+            ))
+        };
+    }
 
     #[test]
     fn testing_simple_parser() {
-        let mut set = SimpleSet::new();
-        let mut parser = SimpleParser::<SimpleSet, UidGenerator>::default();
+        let testing_cases = &mut [
+            TestingCase {
+                opt_str: "-a=i",
+                ret_value: Some(OptValue::from(42i64)),
+                commit_tweak: None,
+                callback_tweak: simple_cb_tweak!(),
+                checker: Some(DataChecker {
+                    type_name: "i",
+                    cb_value: OptValue::from(42i64),
+                    name: "a",
+                    prefix: "-",
+                    ..DataChecker::default()
+                }),
+                marker: PhantomData::default(),
+            },
+            TestingCase {
+                opt_str: "-b=u",
+                ret_value: Some(OptValue::from(42u64)),
+                commit_tweak: None,
+                callback_tweak: simple_cb_tweak!(),
+                checker: Some(DataChecker {
+                    type_name: "u",
+                    cb_value: OptValue::from(42u64),
+                    name: "b",
+                    prefix: "-",
+                    ..DataChecker::default()
+                }),
+                marker: PhantomData::default(),
+            },
+            TestingCase {
+                opt_str: "-c=s",
+                ret_value: Some(OptValue::from("string")),
+                commit_tweak: None,
+                callback_tweak: simple_cb_tweak!(),
+                checker: Some(DataChecker {
+                    type_name: "s",
+                    cb_value: OptValue::from("string"),
+                    name: "c",
+                    prefix: "-",
+                    ..DataChecker::default()
+                }),
+                marker: PhantomData::default(),
+            },
+            TestingCase {
+                opt_str: "-d=f",
+                ret_value: Some(OptValue::from(3.1415926f64)),
+                commit_tweak: None,
+                callback_tweak: simple_cb_tweak!(),
+                checker: Some(DataChecker {
+                    type_name: "f",
+                    cb_value: OptValue::from(3.1415926f64),
+                    name: "d",
+                    prefix: "-",
+                    ..DataChecker::default()
+                }),
+                marker: PhantomData::default(),
+            },
+            TestingCase {
+                opt_str: "-e=b",
+                ret_value: Some(OptValue::from(true)),
+                commit_tweak: None,
+                callback_tweak: simple_cb_tweak!(),
+                checker: Some(DataChecker {
+                    type_name: "b",
+                    cb_value: OptValue::from(true),
+                    name: "e",
+                    prefix: "-",
+                    ..DataChecker::default()
+                }),
+                marker: PhantomData::default(),
+            },
+            TestingCase {
+                opt_str: "-f=a",
+                ret_value: Some(OptValue::from(vec!["lucy".to_owned(), "lily".to_owned()])),
+                commit_tweak: None,
+                callback_tweak: simple_cb_tweak!(),
+                checker: Some(DataChecker {
+                    type_name: "a",
+                    cb_value: OptValue::from(vec!["lucy".to_owned(), "lily".to_owned()]),
+                    name: "f",
+                    prefix: "-",
+                    ..DataChecker::default()
+                }),
+                marker: PhantomData::default(),
+            },
+            TestingCase {
+                opt_str: "-g=i",
+                ret_value: Some(OptValue::from(42i64)),
+                commit_tweak: Some(Box::new(|commit: &mut Commit| {
+                    commit.add_alias("+".to_owned(), "g-i64".to_owned());
+                })),
+                callback_tweak: simple_cb_tweak!(),
+                checker: Some(DataChecker {
+                    type_name: "i",
+                    cb_value: OptValue::from(42i64),
+                    name: "g",
+                    prefix: "-",
+                    alias: vec![("+", "g-i64")],
+                    ..DataChecker::default()
+                }),
+                marker: PhantomData::default(),
+            },
+            TestingCase {
+                opt_str: "-h=i",
+                ret_value: None,
+                commit_tweak: None,
+                callback_tweak: simple_cb_tweak!(),
+                checker: None,
+                marker: PhantomData::default(),
+            },
+        ];
 
-        set.add_prefix(String::from("+"));
-
-        // assert!(testing_add_opts(&mut set, &mut parser).is_ok());
-
-        let ret = parser.parse(set, &mut ["+intalias", "42"].iter().map(|v| v.to_string()));
-
-        assert!(ret.is_ok());
-
-        let retvalue = ret.unwrap();
-
-        assert!(retvalue.is_some());
-
-        if let Some(mut retvalue) = retvalue {
-            assert!(checking_value(&mut retvalue.set, "i", OptValue::Int(42)).is_ok());
-        }
+        assert!(do_simple_test(testing_cases).is_ok());
     }
 
-    fn checking_value<S: Set>(set: &mut S, opt: &str, value: OptValue) -> Result<()> {
-        let filter = set.filter(opt)?;
-        let opt = filter.find();
+    fn do_simple_test(
+        testing_cases: &mut [TestingCase<SimpleSet, SimpleParser<SimpleSet, UidGenerator>>],
+    ) -> Result<()> {
+        let mut set = SimpleSet::new();
+        let mut parser = SimpleParser::new(UidGenerator::default());
 
-        if let Some(opt) = opt {
-            assert_eq!(*opt.as_ref().get_value(), value);
+        set.add_prefix("+".to_owned());
+
+        for testing_case in testing_cases.iter_mut() {
+            testing_case.do_test(&mut set, &mut parser)?;
+        }
+
+        let input = &mut [
+            "-a",
+            "42",
+            "-b=42",
+            "-cstring",
+            "-f",
+            "lucy",
+            "-d",
+            "3.1415926",
+            "-e",
+            "-f",
+            "lily",
+            "+g-i64",
+            "42",
+        ]
+        .iter()
+        .map(|&v| String::from(v));
+
+        let ret = parser.parse(set, input)?;
+
+        if let Some(mut ret) = ret {
+            for testing_case in testing_cases.iter_mut() {
+                testing_case.check_ret(&mut ret.set)?;
+            }
         }
         Ok(())
     }

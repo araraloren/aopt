@@ -1,5 +1,6 @@
 pub mod check;
-pub mod simple;
+pub mod delay_parser;
+pub mod simple_parser;
 pub mod state;
 pub(crate) mod testutil;
 
@@ -12,7 +13,7 @@ use crate::set::Set;
 use crate::uid::Uid;
 pub(crate) use std::collections::hash_map::Iter as HashMapIter;
 
-pub use simple::SimpleParser;
+pub use simple_parser::SimpleParser;
 pub use state::ParserState;
 
 pub trait Parser<S>: Debug

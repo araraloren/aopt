@@ -15,6 +15,11 @@ use crate::uid::Uid;
 pub use self::callback::{Callback as OptCallback, CallbackType};
 pub use self::help::HelpInfo;
 pub use self::index::Index as OptIndex;
+pub use self::nonopt::{cmd::CmdCreator, main::MainCreator, pos::PosCreator};
+pub use self::opt::{
+    array::ArrayCreator, bool::BoolCreator, flt::FltCreator, int::IntCreator, str::StrCreator,
+    uint::UintCreator,
+};
 pub use self::parser::{parse_option_str, DataKeeper};
 pub use self::style::Style;
 pub use self::value::Value as OptValue;

@@ -283,8 +283,7 @@ fn main() -> Result<()> {
                         }
                     }
                 }
-            }
-            else {
+            } else {
                 assert!(self.cb_value.eq(cb_value));
             }
         }
@@ -307,7 +306,7 @@ fn main() -> Result<()> {
     impl<S: Set, P: Parser<S>> TestingCase<S, P> {
         pub fn do_test(&mut self, set: &mut S, parser: &mut P) -> Result<()> {
             let mut commit = set.add_opt(self.opt_str)?;
-            
+
             if let Some(tweak) = self.commit_tweak.as_mut() {
                 tweak.as_mut()(&mut commit);
             }
@@ -331,23 +330,32 @@ fn main() -> Result<()> {
 
     macro_rules! simple_cb_tweak {
         () => {
-            Some(Box::new(|parser: &mut SimpleParser<SimpleSet, UidGenerator>, uid, checker: Option<DataChecker>| {
-                let mut checker = checker;
+            Some(Box::new(
+                |parser: &mut SimpleParser<SimpleSet, UidGenerator>,
+                 uid,
+                 checker: Option<DataChecker>| {
+                    let mut checker = checker;
 
-                parser.add_callback(uid, simple_opt_cb!( move |uid, set, value| {
-                    let opt = set[uid].as_ref();
-                    
-                    if let Some(checker) = checker.take() {
-                        checker.check(opt, &value);
-                    }
-                    Ok(Some(value))
-                }));
-            }))
-        }
+                    parser.add_callback(
+                        uid,
+                        simple_opt_cb!(move |uid, set, value| {
+                            let opt = set[uid].as_ref();
+
+                            if let Some(checker) = checker.take() {
+                                checker.check(opt, &value);
+                            }
+                            Ok(Some(value))
+                        }),
+                    );
+                },
+            ))
+        };
     }
 
     let mut set = SimpleSet::new();
     let mut parser = SimpleParser::new(UidGenerator::default());
+
+    set.add_prefix("+".to_owned());
 
     let testing_cases = &mut [
         TestingCase {
@@ -360,7 +368,7 @@ fn main() -> Result<()> {
                 cb_value: OptValue::from(42i64),
                 name: "a",
                 prefix: "-",
-                .. DataChecker::default()
+                ..DataChecker::default()
             }),
             marker: PhantomData::default(),
         },
@@ -374,7 +382,7 @@ fn main() -> Result<()> {
                 cb_value: OptValue::from(42u64),
                 name: "b",
                 prefix: "-",
-                .. DataChecker::default()
+                ..DataChecker::default()
             }),
             marker: PhantomData::default(),
         },
@@ -388,7 +396,7 @@ fn main() -> Result<()> {
                 cb_value: OptValue::from("string"),
                 name: "c",
                 prefix: "-",
-                .. DataChecker::default()
+                ..DataChecker::default()
             }),
             marker: PhantomData::default(),
         },
@@ -402,7 +410,7 @@ fn main() -> Result<()> {
                 cb_value: OptValue::from(3.1415926f64),
                 name: "d",
                 prefix: "-",
-                .. DataChecker::default()
+                ..DataChecker::default()
             }),
             marker: PhantomData::default(),
         },
@@ -416,7 +424,7 @@ fn main() -> Result<()> {
                 cb_value: OptValue::from(true),
                 name: "e",
                 prefix: "-",
-                .. DataChecker::default()
+                ..DataChecker::default()
             }),
             marker: PhantomData::default(),
         },
@@ -430,8 +438,33 @@ fn main() -> Result<()> {
                 cb_value: OptValue::from(vec!["lucy".to_owned(), "lily".to_owned()]),
                 name: "f",
                 prefix: "-",
-                .. DataChecker::default()
+                ..DataChecker::default()
             }),
+            marker: PhantomData::default(),
+        },
+        TestingCase {
+            opt_str: "-g=i",
+            ret_value: Some(OptValue::from(42i64)),
+            commit_tweak: Some(Box::new(|commit: &mut Commit| {
+                commit.add_alias("+".to_owned(), "g-i64".to_owned());
+            })),
+            callback_tweak: simple_cb_tweak!(),
+            checker: Some(DataChecker {
+                type_name: "i",
+                cb_value: OptValue::from(42i64),
+                name: "g",
+                prefix: "-",
+                alias: vec![("+", "g-i64")],
+                ..DataChecker::default()
+            }),
+            marker: PhantomData::default(),
+        },
+        TestingCase {
+            opt_str: "-h=i",
+            ret_value: None,
+            commit_tweak: None,
+            callback_tweak: simple_cb_tweak!(),
+            checker: None,
             marker: PhantomData::default(),
         },
     ];
@@ -441,14 +474,22 @@ fn main() -> Result<()> {
     }
 
     let input = &mut [
-        "-a", "42",
+        "-a",
+        "42",
         "-b=42",
         "-cstring",
-        "-f", "lucy",
-        "-d", "3.1415926",
+        "-f",
+        "lucy",
+        "-d",
+        "3.1415926",
         "-e",
-        "-f", "lily",
-    ].iter().map(|&v|String::from(v));
+        "-f",
+        "lily",
+        "+g-i64",
+        "42",
+    ]
+    .iter()
+    .map(|&v| String::from(v));
 
     let ret = parser.parse(set, input)?;
 

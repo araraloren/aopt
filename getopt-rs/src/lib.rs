@@ -13,11 +13,8 @@ pub(crate) mod pat;
 extern crate log;
 
 pub mod tools {
-    use crate::opt::{nonopt, opt};
-    pub use crate::opt::{
-        Alias, Callback, Help, HelpInfo, Identifier, Index, Name, Opt, OptCallback, OptIndex,
-        OptValue, Optional, Type, Value,
-    };
+    use crate::opt::{ArrayCreator, BoolCreator, FltCreator, IntCreator, StrCreator, UintCreator};
+    use crate::opt::{CmdCreator, MainCreator, PosCreator};
     use crate::set::Set;
     use log::LevelFilter;
     use simplelog::{CombinedLogger, Config, SimpleLogger};
@@ -33,15 +30,15 @@ pub mod tools {
     }
 
     pub fn initialize_creator<S: Set>(set: &mut S) {
-        set.add_creator(Box::new(opt::ArrayCreator::default()));
-        set.add_creator(Box::new(opt::BoolCreator::default()));
-        set.add_creator(Box::new(opt::FltCreator::default()));
-        set.add_creator(Box::new(opt::IntCreator::default()));
-        set.add_creator(Box::new(opt::StrCreator::default()));
-        set.add_creator(Box::new(opt::UintCreator::default()));
-        set.add_creator(Box::new(nonopt::CmdCreator::default()));
-        set.add_creator(Box::new(nonopt::MainCreator::default()));
-        set.add_creator(Box::new(nonopt::PosCreator::default()));
+        set.add_creator(Box::new(ArrayCreator::default()));
+        set.add_creator(Box::new(BoolCreator::default()));
+        set.add_creator(Box::new(FltCreator::default()));
+        set.add_creator(Box::new(IntCreator::default()));
+        set.add_creator(Box::new(StrCreator::default()));
+        set.add_creator(Box::new(UintCreator::default()));
+        set.add_creator(Box::new(CmdCreator::default()));
+        set.add_creator(Box::new(MainCreator::default()));
+        set.add_creator(Box::new(PosCreator::default()));
     }
 
     pub fn initialize_prefix<S: Set>(set: &mut S) {
@@ -52,54 +49,42 @@ pub mod tools {
     #[macro_export]
     macro_rules! simple_main_cb {
         ($block:expr) => {
-            getopt_rs::opt::callback::Callback::Main(Box::new(
-                getopt_rs::opt::callback::SimpleMainCallback::new($block),
-            ))
+            OptCallback::Main(Box::new(SimpleMainCallback::new($block)))
         };
     }
 
     #[macro_export]
     macro_rules! simple_main_mut_cb {
         ($block:expr) => {
-            getopt_rs::opt::callback::Callback::MainMut(Box::new(
-                getopt_rs::opt::callback::SimpleMainMutCallback::new($block),
-            ))
+            OptCallback::MainMut(Box::new(SimpleMainMutCallback::new($block)))
         };
     }
 
     #[macro_export]
     macro_rules! simple_pos_cb {
         ($block:expr) => {
-            getopt_rs::opt::callback::Callback::Pos(Box::new(
-                getopt_rs::opt::callback::SimplePosCallback::new($block),
-            ))
+            OptCallback::Pos(Box::new(SimplePosCallback::new($block)))
         };
     }
 
     #[macro_export]
     macro_rules! simple_pos_mut_cb {
         ($block:expr) => {
-            getopt_rs::opt::callback::Callback::PosMut(Box::new(
-                getopt_rs::opt::callback::SimplePosMutCallback::new($block),
-            ))
+            OptCallback::PosMut(Box::new(SimplePosMutCallback::new($block)))
         };
     }
 
     #[macro_export]
     macro_rules! simple_opt_cb {
         ($block:expr) => {
-            getopt_rs::opt::callback::Callback::Opt(Box::new(
-                getopt_rs::opt::callback::SimpleOptCallback::new($block),
-            ))
+            OptCallback::Opt(Box::new(SimpleOptCallback::new($block)))
         };
     }
 
     #[macro_export]
     macro_rules! simple_opt_mut_cb {
         ($block:expr) => {
-            getopt_rs::opt::callback::Callback::OptMut(Box::new(
-                getopt_rs::opt::callback::SimpleOptMutCallback::new($block),
-            ))
+            OptCallback::OptMut(Box::new(SimpleOptMutCallback::new($block)))
         };
     }
 }
@@ -110,7 +95,7 @@ pub mod prelude {
     pub use crate::opt::callback::{SimpleMainCallback, SimpleMainMutCallback};
     pub use crate::opt::callback::{SimpleOptCallback, SimpleOptMutCallback};
     pub use crate::opt::callback::{SimplePosCallback, SimplePosMutCallback};
-    pub use crate::opt::{nonopt, opt};
+    pub use crate::opt::{nonopt as nonopt_impl, opt as opt_impl};
     pub use crate::opt::{
         Alias, Callback, Help, HelpInfo, Identifier, Index, Name, Opt, OptCallback, OptIndex,
         OptValue, Optional, Type, Value,

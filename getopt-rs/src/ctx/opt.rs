@@ -61,7 +61,9 @@ impl Context for OptContext {
                 )));
             }
             self.matched_index = Some(0);
-            self.set_value(opt.parse_value(self.argument.as_ref().unwrap_or(&String::from("")).as_str())?);
+            self.set_value(
+                opt.parse_value(self.argument.as_ref().unwrap_or(&String::from("")).as_str())?,
+            );
             debug!(
                 "Keep value of option<{}> ==> {:?}",
                 opt.get_uid(),
