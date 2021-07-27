@@ -95,12 +95,13 @@ pub mod prelude {
     pub use crate::opt::callback::{SimpleMainCallback, SimpleMainMutCallback};
     pub use crate::opt::callback::{SimpleOptCallback, SimpleOptMutCallback};
     pub use crate::opt::callback::{SimplePosCallback, SimplePosMutCallback};
-    pub use crate::opt::{nonopt as nonopt_impl, opt as opt_impl};
     pub use crate::opt::{
         Alias, Callback, Help, HelpInfo, Identifier, Index, Name, Opt, OptCallback, OptIndex,
         OptValue, Optional, Type, Value,
     };
-    pub use crate::parser::{Parser, SimpleParser};
+    pub use crate::opt::{ArrayCreator, BoolCreator, FltCreator, IntCreator, StrCreator, UintCreator};
+    pub use crate::opt::{CmdCreator, MainCreator, PosCreator};
+    pub use crate::parser::{Parser, SimpleParser, DelayParser, PreParser};
     pub use crate::proc::{Info, Proc};
     pub use crate::proc::{Matcher, NonOptMatcher, OptMatcher};
     pub use crate::set::{CreatorSet, OptionSet, PrefixSet, Set, SimpleSet};
