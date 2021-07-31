@@ -33,7 +33,7 @@ pub trait Type {
 
     fn match_style(&self, style: style::Style) -> bool;
 
-    fn check(&self) -> Result<bool>;
+    fn check(&self) -> Result<()>;
 
     fn as_any(&self) -> &dyn std::any::Any;
 }

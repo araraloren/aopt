@@ -64,7 +64,7 @@ where
 }
 
 #[derive(Debug)]
-pub struct ReturnValue<'a, S: Set> {
-    pub noa: &'a Vec<String>,
+pub struct ReturnValue<S: Set> {
+    pub noa: Vec<String>,
     pub set: S,
 }

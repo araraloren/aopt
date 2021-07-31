@@ -171,7 +171,7 @@ where
 
         Ok(Some(ReturnValue {
             set: set,
-            noa: &self.noa,
+            noa: self.noa.clone(),
         }))
     }
 

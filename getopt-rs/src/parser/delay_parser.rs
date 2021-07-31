@@ -210,7 +210,7 @@ where
 
         Ok(Some(ReturnValue {
             set: set,
-            noa: &self.noa,
+            noa: self.noa.clone(),
         }))
     }
 
@@ -259,6 +259,7 @@ where
         self.uid_gen.reset();
         self.noa.clear();
         self.subscriber_info.clear();
+        self.value_keeper.clear();
     }
 }
 

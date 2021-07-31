@@ -55,10 +55,28 @@ pub enum Error {
     #[error("the option @{0} is force required: `{1}`")]
     ForceRequiredPostionOption(u64, String),
 
+    // Special type mark the parsing failed !
+    #[error("{0}")]
+    ReportMatchFailed(String),
+
     #[error("{0}")]
     ReportError(String),
 }
 
+impl Error {
+    pub fn is_special(&self) -> bool {
+        match self {
+            Self::ReportMatchFailed(_) => { true }
+            Self::ReportError(_) => { true }
+            _ => false,
+        }
+    }
+}
+
 pub fn report_an_error<T>(error_description: String) -> Result<T> {
-    Err(Error::ReportError(error_description))
+    Err(Error::ReportError(format!("report error: {}", error_description)))
+}
+
+pub fn report_match_failed<T>(error_description: String) -> Result<T> {
+    Err(Error::ReportMatchFailed(format!("match failed: {}", error_description)))
 }

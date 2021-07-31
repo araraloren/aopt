@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::Parser;
-use crate::err::{Error, Result};
+use crate::err::{Error, Result, report_match_failed};
 use crate::opt::Style;
 use crate::set::Set;
 use crate::uid::Uid;
@@ -80,14 +80,14 @@ pub fn default_nonopt_check<S: Set, P: Parser<S>>(set: &S, _parser: &P) -> Resul
                 if opt.match_style(Style::Cmd) {
                     cmd_count += 1;
                     // set the cmd will valid the check
-                    cmd_valid = cmd_valid || opt.check().unwrap_or(false);
+                    cmd_valid = cmd_valid || opt.check().is_ok();
                     // if any of cmd is valid, break out
                     if cmd_valid {
                         break;
                     }
                     names.push(opt.get_hint().to_owned());
                 } else if opt.match_style(Style::Pos) {
-                    let opt_valid = opt.check().unwrap_or(false);
+                    let opt_valid = opt.check().is_ok();
 
                     pos_valid = pos_valid && opt_valid;
                     if !opt_valid && !opt.get_optional() {
@@ -116,7 +116,7 @@ pub fn default_nonopt_check<S: Set, P: Parser<S>>(set: &S, _parser: &P) -> Resul
 
             for uid in uids {
                 let opt = set.get_opt(*uid).unwrap();
-                let opt_valid = opt.check().unwrap_or(false);
+                let opt_valid = opt.check().is_ok();
 
                 pos_valid = pos_valid && opt_valid;
                 if !opt_valid {
@@ -128,10 +128,7 @@ pub fn default_nonopt_check<S: Set, P: Parser<S>>(set: &S, _parser: &P) -> Resul
             valid = pos_valid;
         }
         if !valid {
-            return Err(Error::ForceRequiredPostionOption(
-                *index,
-                names.join(" or "),
-            ));
+            return report_match_failed(format!("option @{} is force required: {}", *index, names.join(" or ")));
         }
         names.clear();
     }

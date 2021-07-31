@@ -1,6 +1,7 @@
 use std::mem::take;
 
 use crate::opt::*;
+use crate::err::report_match_failed;
 use crate::set::CreateInfo;
 use crate::set::Creator;
 use crate::uid::Uid;
@@ -74,11 +75,11 @@ impl Type for BoolOpt {
         }
     }
 
-    fn check(&self) -> Result<bool> {
+    fn check(&self) -> Result<()> {
         if !(self.get_optional() || self.has_value()) {
-            Err(Error::ForceRequiredOption(self.get_hint().to_owned()))
+            report_match_failed(format!("option {} check failed!", self.get_hint()))
         } else {
-            Ok(true)
+            Ok(())
         }
     }
 
