@@ -1,6 +1,6 @@
 use super::parser::parse_argument;
 use super::parser::DataKeeper;
-use crate::err::{Error, Result};
+use crate::err::Result;
 
 #[derive(Debug, Clone, Default)]
 pub struct Argument<'pre> {
@@ -47,6 +47,6 @@ impl<'pre> Argument<'pre> {
                 }
             }
         }
-        Err(Error::NotOptionArgument)
+        Ok(false)
     }
 }

@@ -4,6 +4,9 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Error)]
 pub enum Error {
+    #[error("Got argument error: `{0}`")]
+    FromArgumentError(#[from] ArgumentError),
+
     #[error("failed parse option string `{0}`")]
     InvalidOptionCreateString(String),
 
@@ -79,4 +82,39 @@ pub fn report_an_error<T>(error_description: String) -> Result<T> {
 
 pub fn report_match_failed<T>(error_description: String) -> Result<T> {
     Err(Error::ReportMatchFailed(format!("match failed: {}", error_description)))
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ArgumentError {
+    #[error("Failed parsing '{0}' as an option string")]
+    ParsingFailed(String),
+
+    #[error("Can not get sub-pattern({1} .. {2}) of '{0}'")]
+    PatternAccessFailed(String, usize, usize),
+
+    #[error("The given option setting '{0}' need value after '='")]
+    ValueAccessFailed(String),
+}
+
+pub enum ParsingError {
+
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ConstructError {
+    #[error("Invalid option type '{0}'")]
+    InvalidOptionType(String),
+
+    #[error("Failed to parsing option string '{0}'")]
+    InvalidOptionString(String),
+
+    #[error("Option type '{0}' not support deactivate style")]
+    NotSupportDeactivateStyle(String),
+
+    #[error("Need valid prefix for option type '{0}'")]
+    RequiredValidPrefix(String),
+}
+
+pub enum SpecialError {
+
 }
