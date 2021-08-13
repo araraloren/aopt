@@ -1,4 +1,6 @@
-use crate::err::{Error, Result};
+#![feature(try_blocks)]
+
+use crate::err::{ArgumentError, Error, Result};
 use crate::pat::{ParseIndex, ParserPattern};
 
 pub fn parse_argument<'pre>(pattern: &str, prefix: &'pre [String]) -> Result<DataKeeper<'pre>> {
@@ -9,14 +11,13 @@ pub fn parse_argument<'pre>(pattern: &str, prefix: &'pre [String]) -> Result<Dat
     let res = State::default().parse(&mut index, &pattern, &mut data_keeper)?;
 
     if res {
-        debug!(
-            "With pattern: {:?}, parse result -> {:?}",
-            pattern.get_pattern(),
-            data_keeper
-        );
+        tracing::debug!(?pattern, %prefix, ?data_keeper, "parsing argument successed");
         return Ok(data_keeper);
     }
-    Err(Error::NotOptionArgument)
+    tracing::error!(?pattern, %prefix, ?index, "parsing argument failed");
+    Err(ArgumentError::ParsingFailed(
+        pattern.get_pattern().to_owned(),
+    ));
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -47,147 +48,147 @@ impl Default for State {
     }
 }
 
+const DEACTIVATE_STYLE_CHAR: char = '/';
+const VALUE_SPLIT_CHAR: char = '=';
+
 impl State {
+    #[tracing::instrument]
     pub fn self_transition<'pat, 'pre>(
         &mut self,
         index: &ParseIndex,
         pattern: &ParserPattern<'pat, 'pre>,
     ) {
-        let mut next_state = Self::End;
-
-        match self.clone() {
-            Self::PreCheck => {
-                next_state = Self::Prefix;
-            }
-            Self::Prefix => {
-                if let Some(ch) = pattern.left_chars(index.get()).nth(0) {
-                    // match the deactivate char
-                    next_state = if ch == '/' { Self::Disable } else { Self::Name };
+        let next_state = {
+            match self.clone() {
+                Self::PreCheck => Self::Prefix,
+                Self::Prefix => {
+                    if pattern.starts(DEACTIVATE_STYLE_CHAR, index.get()) {
+                        Self::Disable
+                    } else {
+                        Self::Name
+                    }
+                }
+                Self::Disable => Self::Name,
+                Self::Name => {
+                    if pattern.starts(VALUE_SPLIT_CHAR, index.get()) {
+                        Self::Equal
+                    } else {
+                        Self::End
+                    }
+                }
+                Self::Equal => Self::Value,
+                Self::Value => Self::End,
+                Self::End => {
+                    unreachable!("The end state can't going on!");
                 }
             }
-            Self::Disable => {
-                next_state = Self::Name;
-            }
-            Self::Name => {
-                if let Some(ch) = pattern.left_chars(index.get()).nth(0) {
-                    // match the equal char
-                    next_state = if ch == '=' { Self::Equal } else { Self::End }
-                }
-            }
-            Self::Equal => next_state = Self::Value,
-            Self::Value => next_state = Self::End,
-            Self::End => {
-                unreachable!("The end state can't going on!");
-            }
-        }
-
-        // debug!("Transition from {:?} --to--> {:?}", self, next_state);
-
-        *self = next_state
+        };
+        tracing::debug!("transition state from '{}' to '{}'", self, next_state);
+        *self = next_state;
     }
 
+    #[tracing::instrument]
     pub fn parse<'pat, 'pre>(
         mut self,
         index: &mut ParseIndex,
         pattern: &ParserPattern<'pat, 'pre>,
         data_keeper: &mut DataKeeper<'pre>,
     ) -> Result<bool> {
-        if self != Self::End {
-            // debug!(
-            //     "Current state = {:?}, {:?}, parse pattern = {:?}",
-            //     self, index, pattern
-            // );
+        let current_state = self.clone();
 
-            self.self_transition(index, pattern);
-
-            let next_state = self.clone();
-
-            match next_state {
-                Self::Prefix => {
-                    for prefix in pattern.get_prefixs() {
-                        if pattern.get_pattern().starts_with(prefix) {
-                            data_keeper.prefix = Some(&prefix);
-                            index.inc(prefix.len());
-                            break;
-                        }
-                    }
+        match current_state {
+            Self::PreCheck => {
+                if pattern.get_pattern().is_empty() {
+                    tracing::warn!("got an empty pattern");
+                    return Ok(false);
                 }
-                Self::Disable => {
-                    data_keeper.disable = true;
-                    index.inc(1);
-                }
-                Self::Name => {
-                    let mut temp_index = index.get();
-                    let start = temp_index;
-
-                    // get the chars until we meet '=' or reach the end
-                    for ch in pattern.left_chars(temp_index) {
-                        temp_index += 1;
-                        if ch == '=' {
-                            // the name not include '=', so > 1
-                            if temp_index - start > 1 {
-                                data_keeper.name = Some(
-                                    pattern
-                                        .get_pattern()
-                                        .get(start..temp_index - 1)
-                                        .ok_or(Error::InvalidStringRange {
-                                            beg: start,
-                                            end: temp_index - 1,
-                                        })?
-                                        .to_owned(),
-                                );
-                                index.set(temp_index - 1);
-                            }
-                            break;
-                        } else if temp_index == index.len() {
-                            // all the chars if name
-                            if temp_index - start >= 1 {
-                                data_keeper.name = Some(
-                                    pattern
-                                        .get_pattern()
-                                        .get(start..temp_index)
-                                        .ok_or(Error::InvalidStringRange {
-                                            beg: start,
-                                            end: temp_index,
-                                        })?
-                                        .to_owned(),
-                                );
-                                index.set(temp_index);
-                            }
-                            break;
-                        }
-                    }
-                }
-                Self::Equal => {
-                    index.inc(1);
-                }
-                Self::Value => {
-                    if !index.is_end() {
-                        // if we are here, the left chars is value
-                        data_keeper.value = Some(
-                            pattern
-                                .get_pattern()
-                                .get(index.get()..)
-                                .ok_or(Error::InvalidStringRange {
-                                    beg: index.get(),
-                                    end: index.len(),
-                                })?
-                                .to_owned(),
-                        );
-                        index.set(index.len());
-                    } else {
-                        return Err(Error::RequireValueForArgument(String::from(
-                            pattern.get_pattern(),
-                        )));
-                    }
-                }
-                _ => {}
             }
+            Self::Prefix => {
+                for prefix in pattern.get_prefixs() {
+                    if pattern.get_pattern().starts_with(prefix) {
+                        data_keeper.prefix = Some(&prefix);
+                        index.inc(prefix.len());
+                        break;
+                    }
+                }
+            }
+            Self::Disable => {
+                data_keeper.disable = true;
+                index.inc(1);
+            }
+            Self::Name => {
+                let start = index.get();
 
-            next_state.parse(index, pattern, data_keeper)
-        } else {
-            Ok(true)
+                // get the chars until we meet '=' or reach the end
+                for (cur, ch) in pattern.chars(end).enumerate() {
+                    let name_end = 0;
+                    // the name not include '=', so > 1
+                    if ch == VALUE_SPLIT_CHAR && cur > start {
+                        name_end = cur;
+                    } else if end == index.len() && cur >= start {
+                        name_end = cur + 1;
+                    }
+                    if name_end > 0 {
+                        let name = pattern.get_pattern().get(start..name_end);
+
+                        if name.is_none() {
+                            tracing::error!(
+                                ?pattern,
+                                "accessing string [{}, {}) failed",
+                                start,
+                                real_end
+                            );
+                            return Err(ArgumentError::PatternAccessFailed(
+                                pattern.get_pattern().to_owned(),
+                                start,
+                                name_end,
+                            ));
+                        }
+                        data_keeper.name = name.to_owned();
+                        index.set(name_end);
+                        break;
+                    }
+                }
+            }
+            Self::Equal => {
+                index.inc(1);
+            }
+            Self::Value => {
+                if !index.is_end() {
+                    // if we are here, the left chars is value
+                    let value = pattern.get_pattern().get(index.get()..);
+
+                    if value.is_none() {
+                        tracing::error!(
+                            ?pattern,
+                            "accessing string [{}, {}) failed",
+                            index.get(),
+                            index.len()
+                        );
+                        return Err(ArgumentError::PatternAccessFailed(
+                            pattern.get_pattern().to_owned(),
+                            index.get(),
+                            index.len(),
+                        ));
+                    }
+                    data_keeper.value = value.to_owned();
+                    index.set(index.len());
+                } else {
+                    tracing::error!(?pattern, "syntax error! require an value after '='.");
+                    return Err(ArgumentError::RequireValueForArgument(
+                        pattern.get_pattern().to_owned(),
+                    ));
+                }
+            }
+            Self::End => {
+                return Ok(true);
+            }
+            _ => {}
         }
+
+        self.self_transition(index, pattern);
+
+        self.parse(index, pattern, data_keeper)
     }
 }
 
