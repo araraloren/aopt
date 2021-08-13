@@ -8,8 +8,7 @@ edition = "2018"
 
 [dependencies]
 thiserror = "1.0"
-log = "0.4"
-simplelog = "0.10"
-supercow = "0.1"
+tracing = "0.1"
+tracing-subscriber = "0.2"
 
 [features]
