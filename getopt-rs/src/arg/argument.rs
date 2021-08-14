@@ -1,5 +1,6 @@
 use super::parser::parse_argument;
 use super::parser::DataKeeper;
+use crate::err::ArgumentError;
 use crate::err::Result;
 
 #[derive(Debug, Clone, Default)]
@@ -41,11 +42,13 @@ impl<'pre> Argument<'pre> {
             self.data_keeper = parse_argument(pattern.as_ref(), prefix)?;
 
             // must have prefix and name
-            if self.data_keeper.prefix.is_some() {
-                if self.data_keeper.name.is_some() {
-                    return Ok(true);
-                }
+            if self.data_keeper.prefix.is_none() {
+                return Err(ArgumentError::MissingPrefix(pattern.clone()).into());
             }
+            if self.data_keeper.name.is_none() {
+                return Err(ArgumentError::MissingName(pattern.clone()).into());
+            }
+            return Ok(true);
         }
         Ok(false)
     }

@@ -1,6 +1,4 @@
-#![feature(try_blocks)]
-
-use crate::err::{ArgumentError, Error, Result};
+use crate::err::{ArgumentError, Result};
 use crate::pat::{ParseIndex, ParserPattern};
 
 pub fn parse_argument<'pre>(pattern: &str, prefix: &'pre [String]) -> Result<DataKeeper<'pre>> {
@@ -11,13 +9,16 @@ pub fn parse_argument<'pre>(pattern: &str, prefix: &'pre [String]) -> Result<Dat
     let res = State::default().parse(&mut index, &pattern, &mut data_keeper)?;
 
     if res {
-        tracing::debug!(?pattern, %prefix, ?data_keeper, "parsing argument successed");
+        debug!(
+            ?pattern,
+            ?prefix,
+            ?data_keeper,
+            "parsing argument successed"
+        );
         return Ok(data_keeper);
     }
-    tracing::error!(?pattern, %prefix, ?index, "parsing argument failed");
-    Err(ArgumentError::ParsingFailed(
-        pattern.get_pattern().to_owned(),
-    ));
+    error!(?pattern, ?prefix, ?index, "parsing argument failed");
+    Err(ArgumentError::ParsingFailed(pattern.get_pattern().to_owned()).into())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -52,7 +53,7 @@ const DEACTIVATE_STYLE_CHAR: char = '/';
 const VALUE_SPLIT_CHAR: char = '=';
 
 impl State {
-    #[tracing::instrument]
+    #[instrument]
     pub fn self_transition<'pat, 'pre>(
         &mut self,
         index: &ParseIndex,
@@ -83,11 +84,11 @@ impl State {
                 }
             }
         };
-        tracing::debug!("transition state from '{}' to '{}'", self, next_state);
+        debug!("transition state from '{:?}' to '{:?}'", self, next_state);
         *self = next_state;
     }
 
-    #[tracing::instrument]
+    #[instrument]
     pub fn parse<'pat, 'pre>(
         mut self,
         index: &mut ParseIndex,
@@ -99,7 +100,7 @@ impl State {
         match current_state {
             Self::PreCheck => {
                 if pattern.get_pattern().is_empty() {
-                    tracing::warn!("got an empty pattern");
+                    warn!("got an empty pattern");
                     return Ok(false);
                 }
             }
@@ -120,31 +121,30 @@ impl State {
                 let start = index.get();
 
                 // get the chars until we meet '=' or reach the end
-                for (cur, ch) in pattern.chars(end).enumerate() {
+                for (cur, ch) in pattern.chars(index.get()).enumerate() {
                     let name_end = 0;
                     // the name not include '=', so > 1
                     if ch == VALUE_SPLIT_CHAR && cur > start {
                         name_end = cur;
-                    } else if end == index.len() && cur >= start {
+                    } else if cur + 1 == index.len() && cur >= start {
                         name_end = cur + 1;
                     }
                     if name_end > 0 {
                         let name = pattern.get_pattern().get(start..name_end);
 
                         if name.is_none() {
-                            tracing::error!(
+                            error!(
                                 ?pattern,
-                                "accessing string [{}, {}) failed",
-                                start,
-                                real_end
+                                "accessing string [{}, {}) failed", start, name_end
                             );
                             return Err(ArgumentError::PatternAccessFailed(
                                 pattern.get_pattern().to_owned(),
                                 start,
                                 name_end,
-                            ));
+                            )
+                            .into());
                         }
-                        data_keeper.name = name.to_owned();
+                        data_keeper.name = Some(name.unwrap().to_owned());
                         index.set(name_end);
                         break;
                     }
@@ -159,7 +159,7 @@ impl State {
                     let value = pattern.get_pattern().get(index.get()..);
 
                     if value.is_none() {
-                        tracing::error!(
+                        error!(
                             ?pattern,
                             "accessing string [{}, {}) failed",
                             index.get(),
@@ -169,15 +169,16 @@ impl State {
                             pattern.get_pattern().to_owned(),
                             index.get(),
                             index.len(),
-                        ));
+                        )
+                        .into());
                     }
-                    data_keeper.value = value.to_owned();
+                    data_keeper.value = Some(value.unwrap().to_owned());
                     index.set(index.len());
                 } else {
-                    tracing::error!(?pattern, "syntax error! require an value after '='.");
-                    return Err(ArgumentError::RequireValueForArgument(
-                        pattern.get_pattern().to_owned(),
-                    ));
+                    error!(?pattern, "syntax error! require an value after '='.");
+                    return Err(
+                        ArgumentError::MissingValue(pattern.get_pattern().to_owned()).into(),
+                    );
                 }
             }
             Self::End => {
