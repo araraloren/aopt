@@ -1,5 +1,5 @@
 use super::index::Index;
-use crate::err::Error;
+use crate::err::ConstructError;
 use crate::err::Result;
 use crate::pat::{ParseIndex, ParserPattern};
 
@@ -12,17 +12,21 @@ pub fn parse_option_str<'pre>(pattern: &str, prefix: &'pre [String]) -> Result<D
 
     if res {
         debug!(
-            "With pattern: {:?}, parse result -> {:?}",
-            pattern.get_pattern(),
-            data_keeper
+            ?pattern,
+            ?prefix,
+            ?data_keeper,
+            "parsing option string successed"
         );
         // don't check anything
         return Ok(data_keeper);
     }
-
-    Err(Error::InvalidOptionCreateString(String::from(
-        pattern.get_pattern(),
-    )))
+    error!(
+        ?pattern,
+        ?prefix,
+        ?data_keeper,
+        "parsing option string failed"
+    );
+    Err(ConstructError::ParsingFailed(pattern.get_pattern().to_owned()).into())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -110,316 +114,324 @@ impl Default for State {
     }
 }
 
+const NAME_VALUE_SPLIT: char = '=';
+
 impl State {
     pub fn anywhere_symbol() -> &'static str {
         "*"
     }
 
+    #[tracing::instrument]
     pub fn self_transition<'pat, 'vec, 'pre>(
         &mut self,
         index: &ParseIndex,
         pattern: &ParserPattern<'pat, 'pre>,
     ) {
-        let mut next_state = Self::End;
-
-        match self.clone() {
-            Self::PreCheck => {
-                next_state = Self::Prefix;
-            }
+        let is_end = pattern.len() == index.get();
+        let next_state = match self.clone() {
+            Self::PreCheck => Self::Prefix,
             Self::Prefix => {
-                if let Some(_) = pattern.left_chars(index.get()).nth(0) {
-                    next_state = Self::Name
+                if is_end {
+                    Self::Name
+                } else {
+                    Self::End
                 }
             }
             Self::Name => {
-                if let Some(ch) = pattern.left_chars(index.get()).nth(0) {
-                    next_state = match ch {
-                        // equal state will increment the index
-                        '=' => Self::Equal,
-                        _ => Self::Type,
-                    };
+                if is_end {
+                    if pattern.starts(NAME_VALUE_SPLIT, index.get()) {
+                        Self::Equal
+                    } else {
+                        Self::Type
+                    }
+                } else {
+                    Self::End
                 }
             }
-            Self::Equal => {
-                next_state = Self::Type;
-            }
-            State::Type | State::Deactivate | State::Optional => {
-                if let Some(ch) = pattern.left_chars(index.get()).nth(0) {
-                    next_state = match ch {
+            Self::Equal => Self::Type,
+            Self::Type | Self::Deactivate | Self::Optional => {
+                if let Some(ch) = pattern.chars(index.get()).nth(0) {
+                    match ch {
                         '!' => Self::Optional,
                         '/' => Self::Deactivate,
                         '@' => Self::Index,
                         _ => Self::End,
-                    };
+                    }
+                } else {
+                    Self::End
                 }
             }
-            State::Index => {
+            Self::Index => {
                 let (_, index_part) = pattern.get_pattern().split_at(index.get());
 
-                next_state = if index_part.starts_with("+[") || index_part.starts_with("[") {
-                    State::List
+                if index_part.starts_with("+[") || index_part.starts_with("[") {
+                    Self::List
                 } else if index_part.starts_with("-[") {
-                    State::Except
+                    Self::Except
                 } else if index_part.starts_with("-") {
-                    State::BackwardIndex
+                    Self::BackwardIndex
                 } else if index_part == Self::anywhere_symbol() {
-                    State::AnyWhere
+                    Self::AnyWhere
                 } else if index_part.starts_with(">") {
-                    State::Greater
+                    Self::Greater
                 } else if index_part.starts_with("<") {
-                    State::Less
+                    Self::Less
                 } else {
-                    State::FowradIndex
-                };
+                    Self::FowradIndex
+                }
             }
-            State::FowradIndex
-            | State::BackwardIndex
-            | State::List
-            | State::Except
-            | State::AnyWhere
-            | State::Greater
-            | State::Less => {}
-            State::End => {
+            Self::FowradIndex
+            | Self::BackwardIndex
+            | Self::List
+            | Self::Except
+            | Self::AnyWhere
+            | Self::Greater
+            | Self::Less => Self::End,
+            Self::End => {
                 unreachable!("The end state can't going on!");
             }
-        }
-
-        // debug!("Transition from {:?} --to--> {:?}", self, next_state);
-
+        };
+        debug!("transition state from '{:?}' to '{:?}'", self, next_state);
         *self = next_state;
     }
 
+    #[tracing::instrument]
     pub fn parse<'pat, 'pre>(
         mut self,
         index: &mut ParseIndex,
         pattern: &ParserPattern<'pat, 'pre>,
         data_keeper: &mut DataKeeper<'pre>,
     ) -> Result<bool> {
-        if self != State::End {
-            // debug!(
-            //     "Current state = {:?}, {:?}, parse pattern = {:?}",
-            //     self, index, pattern
-            // );
+        let current_state = self.clone();
 
-            self.self_transition(index, pattern);
+        match current_state {
+            Self::PreCheck => {
+                if pattern.get_pattern().is_empty() {
+                    warn!("got an empty pattern");
+                    return Ok(false);
+                }
+            }
+            Self::Prefix => {
+                for prefix in pattern.get_prefixs() {
+                    if pattern.get_pattern().starts_with(prefix) {
+                        data_keeper.prefix = Some(&prefix);
+                        index.inc(prefix.len());
+                        break;
+                    }
+                }
+            }
+            Self::Name => {
+                let start = index.get();
 
-            let next_state = self.clone();
+                for (cur, ch) in pattern.chars(start).enumerate() {
+                    let mut name_end = 0;
 
-            match next_state {
-                State::Prefix => {
-                    for prefix in pattern.get_prefixs() {
-                        if pattern.get_pattern().starts_with(prefix) {
-                            data_keeper.prefix = Some(&prefix);
-                            index.inc(prefix.len());
-                            break;
+                    if (ch == '=' || ch == '!' || ch == '/' || ch == '@') && cur > start {
+                        name_end = cur;
+                    } else if cur + 1 == index.len() && cur >= start {
+                        name_end = cur + 1;
+                    }
+                    if name_end > 0 {
+                        let name = pattern.get_pattern().get(start..name_end);
+
+                        if name.is_none() {
+                            error!(
+                                ?pattern,
+                                "accessing string [{}, {}) failed", start, name_end
+                            );
+                            return Err(ConstructError::PatternAccessFailed(
+                                pattern.get_pattern().to_owned(),
+                                start,
+                                name_end,
+                            )
+                            .into());
                         }
+                        data_keeper.name = Some(name.unwrap().to_owned());
+                        index.set(name_end);
+                        break;
                     }
                 }
-                State::Name => {
-                    let mut cur_index = index.get();
-                    let start = cur_index;
+            }
+            Self::Equal => {
+                index.inc(1);
+            }
+            Self::Type => {
+                let start = index.get();
 
-                    for ch in pattern.left_chars(cur_index) {
-                        cur_index += 1;
-                        if ch == '=' || ch == '!' || ch == '/' || ch == '@' {
-                            if cur_index - start > 1 {
-                                data_keeper.name = Some(
-                                    pattern
-                                        .get_pattern()
-                                        .get(start..cur_index - 1)
-                                        .ok_or(Error::InvalidStringRange {
-                                            beg: start,
-                                            end: cur_index - 1,
-                                        })?
-                                        .to_owned(),
-                                );
-                                index.set(cur_index - 1);
-                            }
-                            break;
-                        } else if cur_index == index.len() {
-                            if cur_index - start >= 1 {
-                                data_keeper.name = Some(
-                                    pattern
-                                        .get_pattern()
-                                        .get(start..cur_index)
-                                        .ok_or(Error::InvalidStringRange {
-                                            beg: start,
-                                            end: cur_index,
-                                        })?
-                                        .to_owned(),
-                                );
-                                index.set(cur_index);
-                            }
-                            break;
+                for (cur, ch) in pattern.chars(start).enumerate() {
+                    let mut type_end = 0;
+
+                    if (ch == '!' || ch == '/' || ch == '@') && cur > start {
+                        type_end = cur;
+                    } else if cur + 1 == index.len() && cur >= start {
+                        type_end = cur + 1;
+                    }
+                    if type_end > 0 {
+                        let type_ = pattern.get_pattern().get(start..type_end);
+
+                        if type_.is_none() {
+                            error!(
+                                ?pattern,
+                                "accessing string [{}, {}) failed", start, type_end
+                            );
+                            return Err(ConstructError::PatternAccessFailed(
+                                pattern.get_pattern().to_owned(),
+                                start,
+                                type_end,
+                            )
+                            .into());
                         }
+                        data_keeper.type_name = Some(type_.unwrap().to_owned());
+                        index.set(type_end);
+                        break;
                     }
                 }
-                State::Equal => {
-                    index.inc(1);
-                }
-                State::Type => {
-                    let mut cur_index = index.get();
-                    let start = cur_index;
+            }
+            Self::Deactivate => {
+                data_keeper.deactivate = Some(true);
+                index.inc(1);
+            }
+            Self::Optional => {
+                data_keeper.optional = Some(true);
+                index.inc(1);
+            }
+            Self::Index => {
+                index.inc(1);
+            }
+            Self::FowradIndex => {
+                let (_, index_part) = pattern.get_pattern().split_at(index.get());
 
-                    for ch in pattern.left_chars(cur_index) {
-                        cur_index += 1;
-                        if ch == '!' || ch == '/' || ch == '@' {
-                            if cur_index - start > 1 {
-                                data_keeper.type_name = Some(
-                                    pattern
-                                        .get_pattern()
-                                        .get(start..cur_index - 1)
-                                        .ok_or(Error::InvalidStringRange {
-                                            beg: start,
-                                            end: cur_index - 1,
-                                        })?
-                                        .to_owned(),
-                                );
-                                index.set(cur_index - 1);
-                            }
-                            break;
-                        } else if cur_index == index.len() {
-                            if cur_index - start >= 1 {
-                                data_keeper.type_name = Some(
-                                    pattern
-                                        .get_pattern()
-                                        .get(start..cur_index)
-                                        .ok_or(Error::InvalidStringRange {
-                                            beg: start,
-                                            end: cur_index,
-                                        })?
-                                        .to_owned(),
-                                );
-                                index.set(cur_index);
-                            }
-                            break;
-                        }
-                    }
+                let ret = index_part.parse::<u64>().map_err(|e| {
+                    ConstructError::IndexParsingFailed(
+                        pattern.get_pattern().to_owned(),
+                        format!("{:?}", e),
+                    )
+                })?;
+                if ret > 0 {
+                    data_keeper.forward_index = Some(ret);
+                } else {
+                    data_keeper.anywhere = Some(true);
                 }
-                State::Deactivate => {
-                    data_keeper.deactivate = Some(true);
-                    index.inc(1);
-                }
-                State::Optional => {
-                    data_keeper.optional = Some(true);
-                    index.inc(1);
-                }
-                State::Index => {
-                    index.inc(1);
-                }
-                State::FowradIndex => {
-                    let (_, index_part) = pattern.get_pattern().split_at(index.get());
+                index.set(index.len());
+            }
+            Self::BackwardIndex => {
+                let (_, index_part) = pattern.get_pattern().split_at(index.get() + 1);
 
-                    let ret = index_part
-                        .parse::<u64>()
-                        .map_err(|e| Error::InavlidOptionIndexValue(format!("{:?}", e)))?;
-                    if ret > 0 {
-                        data_keeper.forward_index = Some(ret);
-                    } else {
-                        data_keeper.anywhere = Some(true);
-                    }
-                    index.set(index.len());
+                let ret = index_part.parse::<u64>().map_err(|e| {
+                    ConstructError::IndexParsingFailed(
+                        pattern.get_pattern().to_owned(),
+                        format!("{:?}", e),
+                    )
+                })?;
+                if ret > 0 {
+                    data_keeper.backward_index = Some(ret);
+                } else {
+                    data_keeper.anywhere = Some(true);
                 }
-                State::BackwardIndex => {
-                    let (_, index_part) = pattern.get_pattern().split_at(index.get() + 1);
+                index.set(index.len());
+            }
+            Self::List => {
+                let (_, index_part) = pattern.get_pattern().split_at(index.get());
 
-                    let ret = index_part
-                        .parse::<u64>()
-                        .map_err(|e| Error::InavlidOptionIndexValue(format!("{:?}", e)))?;
-                    if ret > 0 {
-                        data_keeper.backward_index = Some(ret);
-                    } else {
-                        data_keeper.anywhere = Some(true);
-                    }
-                    index.set(index.len());
-                }
-                State::List => {
-                    let (_, index_part) = pattern.get_pattern().split_at(index.get());
-
-                    if index_part.starts_with("+[") {
-                        let index_part = pattern
-                            .get_pattern()
-                            .get(index.get() + 2..index.len() - 1)
-                            .unwrap();
-
-                        data_keeper.list = index_part
-                            .split(',')
-                            .map(|v| {
-                                v.trim()
-                                    .parse::<u64>()
-                                    .map_err(|e| Error::InavlidOptionIndexValue(format!("{:?}", e)))
-                            })
-                            .collect::<Result<Vec<u64>>>()?;
-                    } else {
-                        let index_part = pattern
-                            .get_pattern()
-                            .get(index.get() + 1..index.len() - 1)
-                            .unwrap();
-
-                        data_keeper.list = index_part
-                            .split(',')
-                            .map(|v| {
-                                v.trim()
-                                    .parse::<u64>()
-                                    .map_err(|e| Error::InavlidOptionIndexValue(format!("{:?}", e)))
-                            })
-                            .collect::<Result<Vec<u64>>>()?;
-                    }
-                    index.set(index.len());
-                }
-                State::Except => {
+                if index_part.starts_with("+[") {
                     let index_part = pattern
                         .get_pattern()
                         .get(index.get() + 2..index.len() - 1)
                         .unwrap();
 
-                    data_keeper.except = index_part
+                    data_keeper.list = index_part
                         .split(',')
                         .map(|v| {
-                            v.trim()
-                                .parse::<u64>()
-                                .map_err(|e| Error::InavlidOptionIndexValue(format!("{:?}", e)))
+                            v.trim().parse::<u64>().map_err(|e| {
+                                ConstructError::IndexParsingFailed(
+                                    pattern.get_pattern().to_owned(),
+                                    format!("{:?}", e),
+                                )
+                                .into()
+                            })
                         })
                         .collect::<Result<Vec<u64>>>()?;
-                    index.set(index.len());
-                }
-                State::AnyWhere => {
-                    data_keeper.anywhere = Some(true);
-                    index.set(index.len());
-                }
-                State::Greater => {
-                    let (_, index_part) = pattern.get_pattern().split_at(index.get());
+                } else {
+                    let index_part = pattern
+                        .get_pattern()
+                        .get(index.get() + 1..index.len() - 1)
+                        .unwrap();
 
-                    let ret = index_part
-                        .parse::<u64>()
-                        .map_err(|e| Error::InavlidOptionIndexValue(format!("{:?}", e)))?;
-                    data_keeper.greater = Some(ret);
-                    index.set(index.len());
+                    data_keeper.list = index_part
+                        .split(',')
+                        .map(|v| {
+                            v.trim().parse::<u64>().map_err(|e| {
+                                ConstructError::IndexParsingFailed(
+                                    pattern.get_pattern().to_owned(),
+                                    format!("{:?}", e),
+                                )
+                                .into()
+                            })
+                        })
+                        .collect::<Result<Vec<u64>>>()?;
                 }
-                State::Less => {
-                    let (_, index_part) = pattern.get_pattern().split_at(index.get());
-
-                    let ret = index_part
-                        .parse::<u64>()
-                        .map_err(|e| Error::InavlidOptionIndexValue(format!("{:?}", e)))?;
-                    data_keeper.less = Some(ret);
-                    index.set(index.len());
-                }
-                State::End => {
-                    if !index.is_end() {
-                        return Err(Error::InvalidOptionCreateString(format!(
-                            "{}",
-                            pattern.get_pattern()
-                        )));
-                    }
-                }
-                _ => {}
+                index.set(index.len());
             }
+            Self::Except => {
+                let index_part = pattern
+                    .get_pattern()
+                    .get(index.get() + 2..index.len() - 1)
+                    .unwrap();
 
-            next_state.parse(index, pattern, data_keeper)
-        } else {
-            Ok(true)
+                data_keeper.except = index_part
+                    .split(',')
+                    .map(|v| {
+                        v.trim().parse::<u64>().map_err(|e| {
+                            ConstructError::IndexParsingFailed(
+                                pattern.get_pattern().to_owned(),
+                                format!("{:?}", e),
+                            )
+                            .into()
+                        })
+                    })
+                    .collect::<Result<Vec<u64>>>()?;
+                index.set(index.len());
+            }
+            Self::AnyWhere => {
+                data_keeper.anywhere = Some(true);
+                index.set(index.len());
+            }
+            Self::Greater => {
+                let (_, index_part) = pattern.get_pattern().split_at(index.get());
+
+                let ret = index_part.parse::<u64>().map_err(|e| {
+                    ConstructError::IndexParsingFailed(
+                        pattern.get_pattern().to_owned(),
+                        format!("{:?}", e),
+                    )
+                })?;
+                data_keeper.greater = Some(ret);
+                index.set(index.len());
+            }
+            Self::Less => {
+                let (_, index_part) = pattern.get_pattern().split_at(index.get());
+
+                let ret = index_part.parse::<u64>().map_err(|e| {
+                    ConstructError::IndexParsingFailed(
+                        pattern.get_pattern().to_owned(),
+                        format!("{:?}", e),
+                    )
+                })?;
+                data_keeper.less = Some(ret);
+                index.set(index.len());
+            }
+            Self::End => {
+                if !index.is_end() {
+                    return Err(
+                        ConstructError::ParsingFailed(pattern.get_pattern().to_owned()).into(),
+                    );
+                }
+            }
         }
+
+        self.self_transition(index, pattern);
+
+        self.parse(index, pattern, data_keeper)
     }
 }
 

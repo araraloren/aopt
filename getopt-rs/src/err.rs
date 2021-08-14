@@ -4,23 +4,11 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("Got argument error: `{0}`")]
+    #[error("Argument error: '{0}'")]
     FromArgumentError(#[from] ArgumentError),
 
-    #[error("failed parse option string `{0}`")]
-    InvalidOptionCreateString(String),
-
-    #[error("argument looks like not a option setting")]
-    NotOptionArgument,
-
-    #[error("failed get string with range: {:?} .. {:?}", beg, end)]
-    InvalidStringRange { beg: usize, end: usize },
-
-    #[error("option string with '=' need an value after it: `{0}`")]
-    RequireValueForArgument(String),
-
-    #[error("invalid option index value: `{0}`")]
-    InavlidOptionIndexValue(String),
+    #[error("Construct error: '{0}'")]
+    FromConstrutError(#[from] ConstructError),
 
     #[error("not support option type name `{0}`")]
     InvalidOptionTypeName(String),
@@ -69,19 +57,25 @@ pub enum Error {
 impl Error {
     pub fn is_special(&self) -> bool {
         match self {
-            Self::ReportMatchFailed(_) => { true }
-            Self::ReportError(_) => { true }
+            Self::ReportMatchFailed(_) => true,
+            Self::ReportError(_) => true,
             _ => false,
         }
     }
 }
 
 pub fn report_an_error<T>(error_description: String) -> Result<T> {
-    Err(Error::ReportError(format!("report error: {}", error_description)))
+    Err(Error::ReportError(format!(
+        "report error: {}",
+        error_description
+    )))
 }
 
 pub fn report_match_failed<T>(error_description: String) -> Result<T> {
-    Err(Error::ReportMatchFailed(format!("match failed: {}", error_description)))
+    Err(Error::ReportMatchFailed(format!(
+        "match failed: {}",
+        error_description
+    )))
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -92,29 +86,40 @@ pub enum ArgumentError {
     #[error("Can not get sub-pattern({1} .. {2}) of '{0}'")]
     PatternAccessFailed(String, usize, usize),
 
-    #[error("The given option setting '{0}' need value after '='")]
-    ValueAccessFailed(String),
+    #[error("Syntax error! Missing an value after '=': '{0}'")]
+    MissingValue(String),
+
+    #[error("Syntax error! Missing option prefix: '{0}'")]
+    MissingPrefix(String),
+
+    #[error("Syntax error! Missing option name: '{0}'")]
+    MissingName(String),
 }
 
-pub enum ParsingError {
-
-}
+pub enum ParsingError {}
 
 #[derive(Debug, thiserror::Error)]
 pub enum ConstructError {
-    #[error("Invalid option type '{0}'")]
-    InvalidOptionType(String),
+    #[error("Syntax error! Missing option type: '{0}'")]
+    MissingOptionType(String),
 
-    #[error("Failed to parsing option string '{0}'")]
-    InvalidOptionString(String),
+    #[error("Syntax error! Missing option name: '{0}'")]
+    MissingOptionName(String),
+
+    #[error("Syntax error! Failed to parsing option string '{0}'")]
+    ParsingFailed(String),
+
+    #[error("Can not get sub-pattern({1} .. {2}) of '{0}'")]
+    PatternAccessFailed(String, usize, usize),
+
+    #[error("Syntax error! '{0}' parsing failed: {1}")]
+    IndexParsingFailed(String, String),
 
     #[error("Option type '{0}' not support deactivate style")]
     NotSupportDeactivateStyle(String),
 
-    #[error("Need valid prefix for option type '{0}'")]
-    RequiredValidPrefix(String),
+    #[error("Syntax error! Missing prefix for option type '{0}'")]
+    MissingOptionPrefix(String),
 }
 
-pub enum SpecialError {
-
-}
+pub enum SpecialError {}
