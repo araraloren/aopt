@@ -1,4 +1,4 @@
-use crate::err::{Error, Result};
+use crate::err::{ConstructError, Result};
 use crate::opt::parser::parse_option_str;
 use crate::opt::parser::DataKeeper;
 use crate::opt::{HelpInfo, Opt, OptIndex, OptValue};
@@ -185,12 +185,13 @@ impl CreateInfo {
     pub fn parse(pattern: &str, prefix: &[String]) -> Result<Self> {
         let data_keeper = parse_option_str(pattern, prefix)?;
 
-        if data_keeper.name.is_some() {
-            if data_keeper.type_name.is_some() {
-                return Ok(data_keeper.into());
-            }
+        if data_keeper.name.is_none() {
+            return Err(ConstructError::MissingOptionName(pattern.to_owned()).into());
         }
-        Err(Error::InvalidOptionCreateString(String::from(pattern)))
+        if data_keeper.type_name.is_none() {
+            return Err(ConstructError::MissingOptionType(pattern.to_owned()).into());
+        }
+        return Ok(data_keeper.into());
     }
 }
 
