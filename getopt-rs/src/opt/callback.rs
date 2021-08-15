@@ -196,38 +196,6 @@ impl Callback {
             Callback::Null => false,
         }
     }
-
-    pub fn call(
-        &mut self,
-        uid: Uid,
-        set: &dyn Set,
-        args: &[String],
-        noa_index: u64,
-        value: OptValue,
-    ) -> Result<Option<OptValue>> {
-        match self {
-            Callback::Opt(v) => v.as_mut().call(uid, set, value),
-            Callback::Pos(v) => v.as_mut().call(uid, set, &args[0], noa_index, value),
-            Callback::Main(v) => v.as_mut().call(uid, set, args, value),
-            other => Err(Error::InvalidCallbackType(format!("{:?}", other))),
-        }
-    }
-
-    pub fn call_mut(
-        &mut self,
-        uid: Uid,
-        set: &mut dyn Set,
-        args: &[String],
-        noa_index: u64,
-        value: OptValue,
-    ) -> Result<Option<OptValue>> {
-        match self {
-            Callback::OptMut(v) => v.as_mut().call(uid, set, value),
-            Callback::PosMut(v) => v.as_mut().call(uid, set, &args[0], noa_index, value),
-            Callback::MainMut(v) => v.as_mut().call(uid, set, args, value),
-            other => Err(Error::InvalidCallbackType(format!("{:?}", other))),
-        }
-    }
 }
 
 impl From<Box<dyn OptCallback>> for Callback {

@@ -1,7 +1,7 @@
 use std::mem::take;
 
 use super::NonOpt;
-use crate::err::report_match_failed;
+use crate::err::SpecialError;
 use crate::opt::*;
 use crate::set::CreateInfo;
 use crate::set::Creator;
@@ -74,7 +74,7 @@ impl Type for PosOpt {
 
     fn check(&self) -> Result<()> {
         if !(self.get_optional() || self.has_value()) {
-            report_match_failed(format!("option {} check failed!", self.get_hint()))
+            Err(SpecialError::OptionForceRequired(self.get_hint().to_owned()).into())
         } else {
             Ok(())
         }

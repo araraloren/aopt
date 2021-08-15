@@ -4,7 +4,7 @@ use super::{Commit, Filter, FilterMut, Uid};
 use super::{CreateInfo, Creator, FilterInfo, Set};
 use super::{CreatorSet, OptionSet, PrefixSet};
 use super::{Index, IndexMut, Iter, IterMut};
-use crate::err::{Error, Result};
+use crate::err::{Error, ParserError, Result};
 use crate::opt::Opt;
 
 #[derive(Debug, Default)]
@@ -46,10 +46,9 @@ impl OptionSet for SimpleSet {
                 self.opt.push(opt);
                 Ok(uid)
             }
-            None => Err(Error::InvalidOptionTypeName(format!(
-                "{}",
-                ci.get_type_name()
-            ))),
+            None => {
+                Err(ParserError::NotSupportOptionType(format!("{}", ci.get_type_name())).into())
+            }
         }
     }
 
