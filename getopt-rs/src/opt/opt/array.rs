@@ -1,5 +1,7 @@
 use std::mem::take;
 
+use crate::err::ConstructError;
+use crate::err::ParserError;
 use crate::err::SpecialError;
 use crate::opt::*;
 use crate::set::CreateInfo;
@@ -114,10 +116,11 @@ impl Callback for ArrayOpt {
     fn set_callback_ret(&mut self, ret: Option<OptValue>) -> Result<()> {
         if let Some(mut ret) = ret {
             if !ret.is_vec() {
-                return Err(Error::InvalidReturnValueOfCallback(
-                    "OptValue::Vec".to_owned(),
-                    format!("{:?}", ret),
-                ));
+                return Err(ParserError::InvalidReturnValueOfCallback(format!(
+                    "excepted OptValue::vec, found {:?}",
+                    ret
+                ))
+                .into());
             }
             // merge the value of return and self
             let mut value = take(&mut self.value);
@@ -279,13 +282,14 @@ impl Creator for ArrayCreator {
     fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>> {
         if create_info.get_support_deactivate_style() {
             if !self.is_support_deactivate_style() {
-                return Err(Error::NotSupportDeactivateStyle(
+                return Err(ConstructError::NotSupportDeactivateStyle(
                     create_info.get_name().to_owned(),
-                ));
+                )
+                .into());
             }
         }
         if create_info.get_prefix().is_none() {
-            return Err(Error::NeedValidPrefix(current_type()));
+            return Err(ConstructError::MissingOptionPrefix(current_type().to_owned()).into());
         }
 
         assert_eq!(create_info.get_type_name(), self.get_type_name());

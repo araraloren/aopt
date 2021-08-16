@@ -7,6 +7,8 @@ use crate::set::Creator;
 use crate::uid::Uid;
 
 pub mod path {
+    use crate::err::{ConstructError, ParserError};
+
     use super::*;
 
     pub fn current_type() -> &'static str {
@@ -121,10 +123,11 @@ pub mod path {
         fn set_callback_ret(&mut self, ret: Option<OptValue>) -> Result<()> {
             if let Some(ret) = ret {
                 if !ret.is_any() {
-                    return Err(Error::InvalidReturnValueOfCallback(
-                        "OptValue::Any".to_owned(),
-                        format!("{:?}", ret),
-                    ));
+                    return Err(ParserError::InvalidReturnValueOfCallback(format!(
+                        "excepted OptValue::vec, found {:?}",
+                        ret
+                    ))
+                    .into());
                 }
                 self.set_value(ret);
             }
@@ -277,13 +280,14 @@ pub mod path {
         fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>> {
             if create_info.get_support_deactivate_style() {
                 if !self.is_support_deactivate_style() {
-                    return Err(Error::NotSupportDeactivateStyle(
+                    return Err(ConstructError::NotSupportDeactivateStyle(
                         create_info.get_name().to_owned(),
-                    ));
+                    )
+                    .into());
                 }
             }
             if create_info.get_prefix().is_none() {
-                return Err(Error::NeedValidPrefix(current_type()));
+                return Err(ConstructError::MissingOptionPrefix(current_type().to_owned()).into());
             }
 
             assert_eq!(create_info.get_type_name(), self.get_type_name());

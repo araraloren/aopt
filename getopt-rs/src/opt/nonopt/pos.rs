@@ -1,6 +1,7 @@
 use std::mem::take;
 
 use super::NonOpt;
+use crate::err::ConstructError;
 use crate::err::SpecialError;
 use crate::opt::*;
 use crate::set::CreateInfo;
@@ -253,15 +254,16 @@ impl Creator for PosCreator {
     fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>> {
         if create_info.get_support_deactivate_style() {
             if !self.is_support_deactivate_style() {
-                return Err(Error::NotSupportDeactivateStyle(
+                return Err(ConstructError::NotSupportDeactivateStyle(
                     create_info.get_name().to_owned(),
-                ));
+                )
+                .into());
             }
         }
         if create_info.get_index().is_null() {
-            return Err(Error::ForceRequiredOptionIndex(
-                create_info.get_name().to_owned(),
-            ));
+            return Err(
+                ConstructError::MissingNonOptionIndex(create_info.get_name().to_owned()).into(),
+            );
         }
 
         assert_eq!(create_info.get_type_name(), self.get_type_name());

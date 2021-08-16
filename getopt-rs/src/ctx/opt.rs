@@ -1,5 +1,5 @@
 use super::Context;
-use crate::err::{Error, Result, report_match_failed};
+use crate::err::{report_match_failed, Error, Result, SpecialError};
 use crate::opt::{Opt, OptValue, Style};
 
 #[derive(Debug)]
@@ -56,16 +56,16 @@ impl Context for OptContext {
         debug!(">>>> {}", if matched { "TRUE" } else { "FALSE" });
         if matched {
             if self.is_comsume_argument() && self.argument.is_none() {
-                return Err(Error::RequiredArgumentOfOption(String::from(
-                    opt.get_hint(),
-                )));
+                return Err(
+                    SpecialError::MissingArgumentForOption(opt.get_hint().to_owned()).into(),
+                );
             }
             self.matched_index = Some(0);
-            match opt.parse_value(self.argument.as_ref().unwrap_or(&String::from("")).as_str()) {
-                Ok(value) => self.set_value(value),
-                Err(e) => {
-                    return report_match_failed(format!("{:?}", e))
-                }
+            if let Some(arg) = self.argument.as_ref() {
+                let value = opt.parse_value(arg.as_str()).map_err(|v| {
+                    SpecialError::InvalidArgumentForOption(opt.get_hint().to_owned())
+                })?;
+                self.set_value(value);
             }
             debug!(
                 "Keep value of option<{}> ==> {:?}",

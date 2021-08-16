@@ -1,5 +1,7 @@
 use std::mem::take;
 
+use crate::err::ConstructError;
+use crate::err::ParserError;
 use crate::err::SpecialError;
 use crate::opt::*;
 use crate::set::CreateInfo;
@@ -117,10 +119,11 @@ impl Callback for BoolOpt {
     fn set_callback_ret(&mut self, ret: Option<OptValue>) -> Result<()> {
         if let Some(ret) = ret {
             if !ret.is_bool() {
-                return Err(Error::InvalidReturnValueOfCallback(
-                    "OptValue::Bool".to_owned(),
-                    format!("{:?}", ret),
-                ));
+                return Err(ParserError::InvalidReturnValueOfCallback(format!(
+                    "excepted OptValue::Bool, found {:?}",
+                    ret
+                ))
+                .into());
             }
             self.set_value(ret);
         }
@@ -271,13 +274,14 @@ impl Creator for BoolCreator {
     fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>> {
         if create_info.get_support_deactivate_style() {
             if !self.is_support_deactivate_style() {
-                return Err(Error::NotSupportDeactivateStyle(
+                return Err(ConstructError::NotSupportDeactivateStyle(
                     create_info.get_name().to_owned(),
-                ));
+                )
+                .into());
             }
         }
         if create_info.get_prefix().is_none() {
-            return Err(Error::NeedValidPrefix(current_type()));
+            return Err(ConstructError::MissingOptionPrefix(current_type().to_owned()).into());
         }
 
         assert_eq!(create_info.get_type_name(), self.get_type_name());

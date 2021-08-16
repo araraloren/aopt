@@ -26,8 +26,12 @@ impl<'pat, 'pre> ParserPattern<'pat, 'pre> {
         self.pattern
     }
 
-    pub fn left_chars(&self, skip_len: usize) -> Skip<Chars> {
+    pub fn chars(&self, skip_len: usize) -> Skip<Chars> {
         self.pattern.chars().skip(skip_len)
+    }
+
+    pub fn starts(&self, ch: char, skip_len: usize) -> bool {
+        self.pattern.chars().skip(skip_len).nth(0) == Some(ch)
     }
 
     pub fn len(&self) -> usize {

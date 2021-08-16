@@ -121,8 +121,8 @@ impl State {
                 let start = index.get();
 
                 // get the chars until we meet '=' or reach the end
-                for (cur, ch) in pattern.chars(index.get()).enumerate() {
-                    let name_end = 0;
+                for (cur, ch) in pattern.chars(start).enumerate() {
+                    let mut name_end = 0;
                     // the name not include '=', so > 1
                     if ch == VALUE_SPLIT_CHAR && cur > start {
                         name_end = cur;

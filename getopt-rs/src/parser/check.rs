@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::Parser;
-use crate::err::{Error, Result, report_match_failed};
+use crate::err::{report_match_failed, ConstructError, Error, Result};
 use crate::opt::Style;
 use crate::set::Set;
 use crate::uid::Uid;
@@ -11,17 +11,14 @@ pub fn default_pre_check<S: Set, P: Parser<S>>(set: &S, parser: &P) -> Result<bo
     for (uid, callback) in parser.callback_iter() {
         if let Some(opt) = set.get_opt(*uid) {
             if !opt.is_accept_callback_type(callback.borrow().to_callback_type()) {
-                return Err(Error::InvalidOptionCallbackData(format!(
-                    "invalid callback type of option {}: {:?}",
-                    opt.get_hint(),
-                    callback.borrow().to_callback_type()
-                )));
+                return Err(ConstructError::NotSupportCallbackType(
+                    opt.get_hint().to_owned(),
+                    format!("{:?}", callback.borrow().to_callback_type()),
+                )
+                .into());
             }
         } else {
-            return Err(Error::InvalidOptionCallbackData(format!(
-                "invalid id {}",
-                uid
-            )));
+            warn!(%uid, "callback has unknow option uid");
         }
     }
     Ok(true)
@@ -128,7 +125,11 @@ pub fn default_nonopt_check<S: Set, P: Parser<S>>(set: &S, _parser: &P) -> Resul
             valid = pos_valid;
         }
         if !valid {
-            return report_match_failed(format!("option @{} is force required: {}", *index, names.join(" or ")));
+            return report_match_failed(format!(
+                "option @{} is force required: {}",
+                *index,
+                names.join(" or ")
+            ));
         }
         names.clear();
     }

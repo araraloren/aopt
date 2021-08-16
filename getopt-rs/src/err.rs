@@ -10,38 +10,11 @@ pub enum Error {
     #[error("Construct error: '{0}'")]
     FromConstrutError(#[from] ConstructError),
 
-    #[error("not support option type name `{0}`")]
-    InvalidOptionTypeName(String),
+    #[error("Parser error: '{0}'")]
+    FromParserError(#[from] ParserError),
 
-    #[error("invalid value type for option `{0}`, found: {1}")]
-    InvalidOptionValueType(String, String),
-
-    #[error("can not invoke with callback type `{0}`")]
-    InvalidCallbackType(String),
-
-    #[error("the option `{0}` is force required")]
-    ForceRequiredOption(String),
-
-    #[error("option type is not support deactivate style: `{0}`")]
-    NotSupportDeactivateStyle(String),
-
-    #[error("pos option `{0}` index can not be null")]
-    ForceRequiredOptionIndex(String),
-
-    #[error("parse option value `{0}` failed: `{1}`")]
-    ParseOptionValueFailed(String, String),
-
-    #[error("option type `{0}` need an valid prefix")]
-    NeedValidPrefix(&'static str),
-
-    #[error("option `{0}` need an argument")]
-    RequiredArgumentOfOption(String),
-
-    #[error("inavlid return value type, except `{0}` found `{1}`")]
-    InvalidReturnValueOfCallback(String, String),
-
-    #[error("invalid option callback data: `{0}`")]
-    InvalidOptionCallbackData(String),
+    #[error("Special error: '{0}'")]
+    FromSpecialError(#[from] SpecialError),
 
     #[error("the option @{0} is force required: `{1}`")]
     ForceRequiredPostionOption(u64, String),
@@ -96,7 +69,17 @@ pub enum ArgumentError {
     MissingName(String),
 }
 
-pub enum ParsingError {}
+#[derive(Debug, thiserror::Error)]
+pub enum ParserError {
+    #[error("Not support option type '{0}'")]
+    NotSupportOptionType(String),
+
+    #[error("Failed parsing '{0}': '{1}'")]
+    ParsingValueFailed(String, String),
+
+    #[error("Invalid callback return value type: '{0}'")]
+    InvalidReturnValueOfCallback(String),
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum ConstructError {
@@ -120,6 +103,29 @@ pub enum ConstructError {
 
     #[error("Syntax error! Missing prefix for option type '{0}'")]
     MissingOptionPrefix(String),
+
+    #[error("Syntax error! Missing Non-Option index: '{0}'")]
+    MissingNonOptionIndex(String),
+
+    #[error("Option '{0} not support callback type '{1}'")]
+    NotSupportCallbackType(String, String),
 }
 
-pub enum SpecialError {}
+#[derive(Debug, thiserror::Error)]
+pub enum SpecialError {
+    #[error("Option '{0}' is force required")]
+    OptionForceRequired(String),
+
+    #[error("Missing argument for option '{0}'")]
+    MissingArgumentForOption(String),
+
+    #[error("Invalid value for option '{0}'")]
+    InvalidArgumentForOption(String),
+
+    #[error("{0}")]
+    CommonError(String),
+}
+
+pub fn report_special_error(msg: String) -> SpecialError {
+    SpecialError::CommonError(msg)
+}

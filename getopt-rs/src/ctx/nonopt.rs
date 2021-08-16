@@ -1,5 +1,5 @@
 use super::Context;
-use crate::err::{Result, report_match_failed};
+use crate::err::{report_match_failed, Result};
 use crate::opt::{Opt, OptValue, Style};
 
 #[derive(Debug)]
@@ -48,9 +48,7 @@ impl Context for NonOptContext {
             self.matched_index = Some(self.current as usize);
             match opt.parse_value(self.name.as_str()) {
                 Ok(value) => self.set_value(value),
-                Err(e) => {
-                    return report_match_failed(format!("{:?}", e))
-                }
+                Err(e) => return report_match_failed(format!("{:?}", e)),
             }
             debug!(
                 "Keep value of option<{}> ==> {:?}",

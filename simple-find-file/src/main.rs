@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
+use getopt_rs::err::report_an_error;
 use getopt_rs::opt::value;
 use getopt_rs::prelude::*;
-use getopt_rs::err::report_an_error;
 
 fn main() -> Result<()> {
     let mut set = SimpleSet::default();
@@ -28,22 +28,20 @@ fn main() -> Result<()> {
         let id = commit.commit().unwrap();
         parser.add_callback(
             id,
-            OptCallback::Main(Box::new(SimpleMainCallback::new(
-                |_id, set, _, value| {
-                    let mut ret = Ok(Some(value));
-                    if let Some(std) = set.filter("std").unwrap().find() {
-                        if let Some(std) = std.get_value().as_str() {
-                            if !check_compiler_std(std, "cpp") {
-                                ret = report_an_error(format!(
-                                    "Unsupport standard version for c++: {}",
-                                    std
-                                ));
-                            }
+            OptCallback::Main(Box::new(SimpleMainCallback::new(|_id, set, _, value| {
+                let mut ret = Ok(Some(value));
+                if let Some(std) = set.filter("std").unwrap().find() {
+                    if let Some(std) = std.get_value().as_str() {
+                        if !check_compiler_std(std, "cpp") {
+                            ret = report_an_error(format!(
+                                "Unsupport standard version for c++: {}",
+                                std
+                            ));
                         }
                     }
-                    ret
-                },
-            ))),
+                }
+                ret
+            }))),
         );
     }
     if let Ok(mut commit) = set.add_opt("c=c") {
@@ -51,24 +49,22 @@ fn main() -> Result<()> {
         let id = commit.commit().unwrap();
         parser.add_callback(
             id,
-            OptCallback::Main(Box::new(SimpleMainCallback::new(
-                |_id, set, _, value| {
-                    let std = set
-                        .filter("std")
-                        .unwrap()
-                        .find()
-                        .unwrap()
-                        .get_value()
-                        .as_str()
-                        .unwrap();
+            OptCallback::Main(Box::new(SimpleMainCallback::new(|_id, set, _, value| {
+                let std = set
+                    .filter("std")
+                    .unwrap()
+                    .find()
+                    .unwrap()
+                    .get_value()
+                    .as_str()
+                    .unwrap();
 
-                    if !check_compiler_std(std, "c") {
-                        report_an_error(format!("Unsupport standard version for c++: {}", std))
-                    } else {
-                        Ok(Some(value))
-                    }
-                },
-            ))),
+                if !check_compiler_std(std, "c") {
+                    report_an_error(format!("Unsupport standard version for c++: {}", std))
+                } else {
+                    Ok(Some(value))
+                }
+            }))),
         );
     }
     if let Ok(mut commit) = set.add_opt("-S=b") {
@@ -84,20 +80,18 @@ fn main() -> Result<()> {
         let id = commit.commit().unwrap();
         parser.add_callback(
             id,
-            OptCallback::Opt(Box::new(SimpleOptCallback::new(
-                |id, set, value| {
-                    println!(
-                        "user want define a macro {:?}",
-                        set.get_opt(id)
-                            .unwrap()
-                            .get_value()
-                            .as_slice()
-                            .unwrap_or(&[])
-                            .last()
-                    );
-                    Ok(Some(value))
-                },
-            ))),
+            OptCallback::Opt(Box::new(SimpleOptCallback::new(|id, set, value| {
+                println!(
+                    "user want define a macro {:?}",
+                    set.get_opt(id)
+                        .unwrap()
+                        .get_value()
+                        .as_slice()
+                        .unwrap_or(&[])
+                        .last()
+                );
+                Ok(Some(value))
+            }))),
         );
     }
     if let Ok(mut commit) = set.add_opt("+l=a") {
@@ -105,20 +99,18 @@ fn main() -> Result<()> {
         let id = commit.commit().unwrap();
         parser.add_callback(
             id,
-            OptCallback::Opt(Box::new(SimpleOptCallback::new(
-                |id, set, value| {
-                    println!(
-                        "user want link the library {:?}",
-                        set.get_opt(id)
-                            .unwrap()
-                            .get_value()
-                            .as_slice()
-                            .unwrap()
-                            .last()
-                    );
-                    Ok(Some(value))
-                },
-            ))),
+            OptCallback::Opt(Box::new(SimpleOptCallback::new(|id, set, value| {
+                println!(
+                    "user want link the library {:?}",
+                    set.get_opt(id)
+                        .unwrap()
+                        .get_value()
+                        .as_slice()
+                        .unwrap()
+                        .last()
+                );
+                Ok(Some(value))
+            }))),
         );
     }
     if let Ok(mut commit) = set.add_opt("+i=a") {
@@ -126,20 +118,18 @@ fn main() -> Result<()> {
         let id = commit.commit().unwrap();
         parser.add_callback(
             id,
-            OptCallback::Opt(Box::new(SimpleOptCallback::new(
-                |id, set, value| {
-                    println!(
-                        "user want include header {:?}",
-                        set.get_opt(id)
-                            .unwrap()
-                            .get_value()
-                            .as_slice()
-                            .unwrap()
-                            .last()
-                    );
-                    Ok(Some(value))
-                },
-            ))),
+            OptCallback::Opt(Box::new(SimpleOptCallback::new(|id, set, value| {
+                println!(
+                    "user want include header {:?}",
+                    set.get_opt(id)
+                        .unwrap()
+                        .get_value()
+                        .as_slice()
+                        .unwrap()
+                        .last()
+                );
+                Ok(Some(value))
+            }))),
         );
     }
     if let Ok(mut commit) = set.add_opt("+L=a") {
@@ -147,20 +137,18 @@ fn main() -> Result<()> {
         let id = commit.commit().unwrap();
         parser.add_callback(
             id,
-            OptCallback::Opt(Box::new(SimpleOptCallback::new(
-                |id, set, value| {
-                    println!(
-                        "user want add search library search path {:?}",
-                        set.get_opt(id)
-                            .unwrap()
-                            .get_value()
-                            .as_slice()
-                            .unwrap()
-                            .last()
-                    );
-                    Ok(Some(value))
-                },
-            ))),
+            OptCallback::Opt(Box::new(SimpleOptCallback::new(|id, set, value| {
+                println!(
+                    "user want add search library search path {:?}",
+                    set.get_opt(id)
+                        .unwrap()
+                        .get_value()
+                        .as_slice()
+                        .unwrap()
+                        .last()
+                );
+                Ok(Some(value))
+            }))),
         );
     }
     if let Ok(mut commit) = set.add_opt("+I=a") {
@@ -168,20 +156,18 @@ fn main() -> Result<()> {
         let id = commit.commit().unwrap();
         parser.add_callback(
             id,
-            OptCallback::Opt(Box::new(SimpleOptCallback::new(
-                |id, set, value| {
-                    println!(
-                        "user want add search header search path {:?}",
-                        set.get_opt(id)
-                            .unwrap()
-                            .get_value()
-                            .as_slice()
-                            .unwrap()
-                            .last()
-                    );
-                    Ok(Some(value))
-                },
-            ))),
+            OptCallback::Opt(Box::new(SimpleOptCallback::new(|id, set, value| {
+                println!(
+                    "user want add search header search path {:?}",
+                    set.get_opt(id)
+                        .unwrap()
+                        .get_value()
+                        .as_slice()
+                        .unwrap()
+                        .last()
+                );
+                Ok(Some(value))
+            }))),
         );
     }
     if let Ok(mut commit) = set.add_opt("-w=b") {

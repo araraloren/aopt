@@ -1,5 +1,7 @@
 use std::mem::take;
 
+use crate::err::ConstructError;
+use crate::err::ParserError;
 use crate::err::SpecialError;
 use crate::opt::*;
 use crate::set::CreateInfo;
@@ -114,10 +116,11 @@ impl Callback for UintOpt {
     fn set_callback_ret(&mut self, ret: Option<OptValue>) -> Result<()> {
         if let Some(ret) = ret {
             if !ret.is_uint() {
-                return Err(Error::InvalidReturnValueOfCallback(
-                    "OptValue::Uint".to_owned(),
-                    format!("{:?}", ret),
-                ));
+                return Err(ParserError::InvalidReturnValueOfCallback(format!(
+                    "excepted OptValue::Uint, found {:?}",
+                    ret
+                ))
+                .into());
             }
             self.set_value(ret);
         }
@@ -228,7 +231,7 @@ impl Value for UintOpt {
 
     fn parse_value(&self, string: &str) -> Result<OptValue> {
         Ok(OptValue::from(string.parse::<u64>().map_err(|e| {
-            Error::ParseOptionValueFailed(String::from(string), format!("{:?}", e))
+            ParserError::ParsingValueFailed(String::from(string), format!("{:?}", e))
         })?))
     }
 
@@ -270,13 +273,14 @@ impl Creator for UintCreator {
     fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>> {
         if create_info.get_support_deactivate_style() {
             if !self.is_support_deactivate_style() {
-                return Err(Error::NotSupportDeactivateStyle(
+                return Err(ConstructError::NotSupportDeactivateStyle(
                     create_info.get_name().to_owned(),
-                ));
+                )
+                .into());
             }
         }
         if create_info.get_prefix().is_none() {
-            return Err(Error::NeedValidPrefix(current_type()));
+            return Err(ConstructError::MissingOptionPrefix(current_type().to_owned()).into());
         }
 
         assert_eq!(create_info.get_type_name(), self.get_type_name());

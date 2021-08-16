@@ -1,4 +1,3 @@
-
 pub mod arg;
 pub mod ctx;
 pub mod err;
@@ -11,30 +10,34 @@ pub mod uid;
 pub(crate) mod pat;
 
 #[macro_use]
-extern crate log;
+extern crate tracing;
 
-use prelude::Set;
 use prelude::Parser;
 use prelude::Result;
 use prelude::ReturnValue;
+use prelude::Set;
 
-pub fn getopt_impl<S: Set + Default, P: Parser<S>>(iter: impl Iterator<Item = String>, mut sets: Vec<S>, mut parsers: Vec<P>) -> Result<Option<ReturnValue<S>>> {
+pub fn getopt_impl<S: Set + Default, P: Parser<S>>(
+    iter: impl Iterator<Item = String>,
+    mut sets: Vec<S>,
+    mut parsers: Vec<P>,
+) -> Result<Option<ReturnValue<S>>> {
     assert_eq!(sets.len(), parsers.len());
 
     let args: Vec<String> = iter.collect();
 
-    for index in 0 .. parsers.len() {
+    for index in 0..parsers.len() {
         let parser = parsers.get_mut(index).unwrap();
 
-        match parser.parse(std::mem::take(&mut sets[index]), args.iter().map(|v|v.clone())) {
-            Ok(rv) => {
-                return Ok(rv)
-            }
+        match parser.parse(
+            std::mem::take(&mut sets[index]),
+            args.iter().map(|v| v.clone()),
+        ) {
+            Ok(rv) => return Ok(rv),
             Err(e) => {
                 if e.is_special() {
                     continue;
-                }
-                else {
+                } else {
                     return Err(e);
                 }
             }
@@ -47,18 +50,6 @@ pub mod tools {
     use crate::opt::{ArrayCreator, BoolCreator, FltCreator, IntCreator, StrCreator, UintCreator};
     use crate::opt::{CmdCreator, MainCreator, PosCreator};
     use crate::set::Set;
-    use log::LevelFilter;
-    use simplelog::{CombinedLogger, Config, SimpleLogger};
-
-    pub fn initialize_log() -> std::result::Result<(), log::SetLoggerError> {
-        CombinedLogger::init(vec![
-            SimpleLogger::new(LevelFilter::Warn, Config::default()),
-            SimpleLogger::new(LevelFilter::Error, Config::default()),
-            SimpleLogger::new(LevelFilter::Debug, Config::default()),
-            SimpleLogger::new(LevelFilter::Info, Config::default()),
-            //SimpleLogger::new(LevelFilter::Trace, Config::default()),
-        ])
-    }
 
     pub fn initialize_creator<S: Set>(set: &mut S) {
         set.add_creator(Box::new(ArrayCreator::default()));
@@ -130,9 +121,11 @@ pub mod prelude {
         Alias, Callback, Help, HelpInfo, Identifier, Index, Name, Opt, OptCallback, OptIndex,
         OptValue, Optional, Type, Value,
     };
-    pub use crate::opt::{ArrayCreator, BoolCreator, FltCreator, IntCreator, StrCreator, UintCreator};
+    pub use crate::opt::{
+        ArrayCreator, BoolCreator, FltCreator, IntCreator, StrCreator, UintCreator,
+    };
     pub use crate::opt::{CmdCreator, MainCreator, PosCreator};
-    pub use crate::parser::{Parser, SimpleParser, DelayParser, PreParser, ReturnValue};
+    pub use crate::parser::{DelayParser, Parser, PreParser, ReturnValue, SimpleParser};
     pub use crate::proc::{Info, Proc};
     pub use crate::proc::{Matcher, NonOptMatcher, OptMatcher};
     pub use crate::set::{CreatorSet, OptionSet, PrefixSet, Set, SimpleSet};
