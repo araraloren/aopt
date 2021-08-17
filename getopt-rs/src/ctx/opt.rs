@@ -40,20 +40,17 @@ impl OptContext {
 }
 
 impl Context for OptContext {
+    #[tracing::instrument]
     fn process(&mut self, opt: &mut dyn Opt) -> Result<bool> {
         let mut matched = opt.match_style(self.style);
 
-        debug!(
-            "Matching option<{}> <-> opt context<{:?}>",
-            opt.get_uid(),
-            self
-        );
         if matched {
             matched = matched
                 && ((opt.match_name(self.name.as_ref()) && opt.match_prefix(self.prefix.as_ref()))
                     || opt.match_alias(self.prefix.as_ref(), self.name.as_ref()));
         }
-        debug!(">>>> {}", if matched { "TRUE" } else { "FALSE" });
+        info!(%matched, "Matching context with opt<{}>", opt.get_uid());
+        trace!(?self, ?opt, "matching ...");
         if matched {
             if self.is_comsume_argument() && self.argument.is_none() {
                 return Err(
@@ -67,11 +64,7 @@ impl Context for OptContext {
                 })?;
                 self.set_value(value);
             }
-            debug!(
-                "Keep value of option<{}> ==> {:?}",
-                opt.get_uid(),
-                self.get_value()
-            );
+            debug!(" get return value {:?}!", self.get_value());
             opt.set_invoke(true);
         }
         Ok(matched)

@@ -11,7 +11,7 @@ pub fn parse_option_str<'pre>(pattern: &str, prefix: &'pre [String]) -> Result<D
     let res = State::default().parse(&mut index, &pattern, &mut data_keeper)?;
 
     if res {
-        debug!(
+        trace!(
             ?pattern,
             ?prefix,
             ?data_keeper,
@@ -20,7 +20,7 @@ pub fn parse_option_str<'pre>(pattern: &str, prefix: &'pre [String]) -> Result<D
         // don't check anything
         return Ok(data_keeper);
     }
-    error!(
+    trace!(
         ?pattern,
         ?prefix,
         ?data_keeper,
@@ -121,24 +121,23 @@ impl State {
         "*"
     }
 
-    #[tracing::instrument]
     pub fn self_transition<'pat, 'vec, 'pre>(
         &mut self,
         index: &ParseIndex,
         pattern: &ParserPattern<'pat, 'pre>,
     ) {
-        let is_end = pattern.len() == index.get();
+        let index_not_end = pattern.len() > index.get();
         let next_state = match self.clone() {
             Self::PreCheck => Self::Prefix,
             Self::Prefix => {
-                if is_end {
+                if index_not_end {
                     Self::Name
                 } else {
                     Self::End
                 }
             }
             Self::Name => {
-                if is_end {
+                if index_not_end {
                     if pattern.starts(NAME_VALUE_SPLIT, index.get()) {
                         Self::Equal
                     } else {
@@ -191,11 +190,10 @@ impl State {
                 unreachable!("The end state can't going on!");
             }
         };
-        debug!("transition state from '{:?}' to '{:?}'", self, next_state);
+        trace!("transition state from '{:?}' to '{:?}'", self, next_state);
         *self = next_state;
     }
 
-    #[tracing::instrument]
     pub fn parse<'pat, 'pre>(
         mut self,
         index: &mut ParseIndex,
@@ -226,10 +224,10 @@ impl State {
                 for (cur, ch) in pattern.chars(start).enumerate() {
                     let mut name_end = 0;
 
-                    if (ch == '=' || ch == '!' || ch == '/' || ch == '@') && cur > start {
-                        name_end = cur;
-                    } else if cur + 1 == index.len() && cur >= start {
-                        name_end = cur + 1;
+                    if (ch == '=' || ch == '!' || ch == '/' || ch == '@') && cur >= 1 {
+                        name_end = start + cur;
+                    } else if start + cur + 1 == index.len() {
+                        name_end = start + cur + 1;
                     }
                     if name_end > 0 {
                         let name = pattern.get_pattern().get(start..name_end);
@@ -261,10 +259,10 @@ impl State {
                 for (cur, ch) in pattern.chars(start).enumerate() {
                     let mut type_end = 0;
 
-                    if (ch == '!' || ch == '/' || ch == '@') && cur > start {
-                        type_end = cur;
-                    } else if cur + 1 == index.len() && cur >= start {
-                        type_end = cur + 1;
+                    if (ch == '!' || ch == '/' || ch == '@') && cur >= 1 {
+                        type_end = start + cur;
+                    } else if start + cur + 1 == index.len() {
+                        type_end = start + cur + 1;
                     }
                     if type_end > 0 {
                         let type_ = pattern.get_pattern().get(start..type_end);
@@ -421,10 +419,14 @@ impl State {
                 index.set(index.len());
             }
             Self::End => {
+                debug!(?index, "!!!!!!!!!!!!!!");
                 if !index.is_end() {
                     return Err(
                         ConstructError::ParsingFailed(pattern.get_pattern().to_owned()).into(),
                     );
+                }
+                else {
+                    return Ok(true);
                 }
             }
         }

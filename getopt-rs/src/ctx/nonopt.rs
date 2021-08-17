@@ -31,30 +31,24 @@ impl NonOptContext {
 }
 
 impl Context for NonOptContext {
+    #[tracing::instrument]
     fn process(&mut self, opt: &mut dyn Opt) -> Result<bool> {
         let mut matched = opt.match_style(self.style);
-        debug!(
-            "Matching option<{}> <-> nonopt context<{:?}>",
-            opt.get_uid(),
-            self
-        );
+
         if matched {
             matched = matched
                 && (opt.match_name(self.name.as_ref())
                     && opt.match_index(self.total, self.current));
         }
-        debug!(">>>> {}", if matched { "TRUE" } else { "FALSE" });
+        info!(%matched, "Matching context with non-opt<{}>", opt.get_uid());
+        trace!(?self, ?opt, "matching ...");
         if matched {
             self.matched_index = Some(self.current as usize);
             let value = opt
                 .parse_value(self.name.as_str())
                 .map_err(|_| SpecialError::InvalidArgumentForOption(opt.get_hint().to_owned()))?;
             self.set_value(value);
-            debug!(
-                "Keep value of option<{}> ==> {:?}",
-                opt.get_uid(),
-                self.get_value()
-            );
+            debug!("get return value {:?}!", self.get_value());
             opt.set_invoke(true);
         }
         Ok(matched)

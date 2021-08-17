@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 getopt-rs = { path = "../getopt-rs" }
+tracing-subscriber = "0.2"

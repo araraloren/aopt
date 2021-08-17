@@ -1,10 +1,14 @@
 use std::marker::PhantomData;
 
-use getopt_rs::err::report_custom_error;
+use getopt_rs::err::create_error;
 use getopt_rs::opt::value;
 use getopt_rs::prelude::*;
 
 fn main() -> Result<()> {
+    tracing_subscriber::fmt::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
+
     let mut set = SimpleSet::default();
     let mut parser = PreParser::<SimpleSet, UidGenerator>::default();
 
@@ -21,8 +25,6 @@ fn main() -> Result<()> {
     set.add_prefix(String::from("--"));
     set.add_prefix(String::from("+"));
 
-    getopt_rs::tools::initialize_log().unwrap();
-
     if let Ok(mut commit) = set.add_opt("cpp=c") {
         commit.set_help("run in cpp mode".to_string());
         let id = commit.commit().unwrap();
@@ -33,10 +35,11 @@ fn main() -> Result<()> {
                 if let Some(std) = set.filter("std").unwrap().find() {
                     if let Some(std) = std.get_value().as_str() {
                         if !check_compiler_std(std, "cpp") {
-                            ret = report_custom_error(format!(
+                            ret = Err(create_error(format!(
                                 "Unsupport standard version for c++: {}",
                                 std
-                            ));
+                            ))
+                            .into());
                         }
                     }
                 }
@@ -60,7 +63,7 @@ fn main() -> Result<()> {
                     .unwrap();
 
                 if !check_compiler_std(std, "c") {
-                    report_custom_error(format!("Unsupport standard version for c++: {}", std))
+                    Err(create_error(format!("Unsupport standard version for c++: {}", std)).into())
                 } else {
                     Ok(Some(value))
                 }
@@ -202,6 +205,9 @@ fn main() -> Result<()> {
             ))),
         );
     }
+
+    dbg!(&set);
+
     let mut args = &mut ["c", "a", "ops"].iter().map(|&v| String::from(v));
 
     let ret = parser.parse(set, &mut std::env::args().skip(1)).unwrap();

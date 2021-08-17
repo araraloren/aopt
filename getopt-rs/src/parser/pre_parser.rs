@@ -228,6 +228,7 @@ where
     G: Generator + Debug + Default,
     S: Set + Default,
 {
+    #[tracing::instrument]
     fn process(&mut self, msg: &mut NonOptMatcher, set: &mut S) -> Result<bool> {
         let matcher = msg;
         let mut matched = false;

@@ -9,7 +9,7 @@ pub fn parse_argument<'pre>(pattern: &str, prefix: &'pre [String]) -> Result<Dat
     let res = State::default().parse(&mut index, &pattern, &mut data_keeper)?;
 
     if res {
-        debug!(
+        trace!(
             ?pattern,
             ?prefix,
             ?data_keeper,
@@ -53,7 +53,6 @@ const DEACTIVATE_STYLE_CHAR: char = '/';
 const VALUE_SPLIT_CHAR: char = '=';
 
 impl State {
-    #[instrument]
     pub fn self_transition<'pat, 'pre>(
         &mut self,
         index: &ParseIndex,
@@ -84,11 +83,10 @@ impl State {
                 }
             }
         };
-        debug!("transition state from '{:?}' to '{:?}'", self, next_state);
+        trace!("transition state from '{:?}' to '{:?}'", self, next_state);
         *self = next_state;
     }
 
-    #[instrument]
     pub fn parse<'pat, 'pre>(
         mut self,
         index: &mut ParseIndex,
@@ -124,10 +122,10 @@ impl State {
                 for (cur, ch) in pattern.chars(start).enumerate() {
                     let mut name_end = 0;
                     // the name not include '=', so > 1
-                    if ch == VALUE_SPLIT_CHAR && cur > start {
-                        name_end = cur;
-                    } else if cur + 1 == index.len() && cur >= start {
-                        name_end = cur + 1;
+                    if ch == VALUE_SPLIT_CHAR && cur >= 1 {
+                        name_end = start + cur;
+                    } else if start + cur + 1 == index.len() {
+                        name_end = start + cur + 1;
                     }
                     if name_end > 0 {
                         let name = pattern.get_pattern().get(start..name_end);
@@ -184,7 +182,6 @@ impl State {
             Self::End => {
                 return Ok(true);
             }
-            _ => {}
         }
 
         self.self_transition(index, pattern);

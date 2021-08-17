@@ -250,11 +250,10 @@ impl Creator for CmdCreator {
                 .into());
             }
         }
-
         assert_eq!(create_info.get_type_name(), self.get_type_name());
-
         let opt: CmdOpt = create_info.into();
 
+        trace!(?opt, "create a CmdOpt");
         Ok(Box::new(opt))
     }
 }

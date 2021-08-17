@@ -95,6 +95,9 @@ pub enum ConstructError {
 
     #[error("Option '{0} not support callback type '{1}'")]
     NotSupportCallbackType(String, String),
+
+    #[error("Not support option type '{0}'")]
+    NotSupportOptionType(String),
 }
 
 #[derive(Debug, thiserror::Error)]

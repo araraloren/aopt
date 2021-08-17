@@ -4,7 +4,7 @@ use super::{Commit, Filter, FilterMut, Uid};
 use super::{CreateInfo, Creator, FilterInfo, Set};
 use super::{CreatorSet, OptionSet, PrefixSet};
 use super::{Index, IndexMut, Iter, IterMut};
-use crate::err::{Error, ParserError, Result};
+use crate::err::{ConstructError, Result};
 use crate::opt::Opt;
 
 #[derive(Debug, Default)]
@@ -30,6 +30,8 @@ impl Set for SimpleSet {}
 impl OptionSet for SimpleSet {
     fn add_opt(&mut self, opt_str: &str) -> Result<Commit> {
         let info = CreateInfo::parse(opt_str, self.get_prefix())?;
+
+        debug!(%opt_str, "create option");
         Ok(Commit::new(self, info))
     }
 
@@ -37,6 +39,7 @@ impl OptionSet for SimpleSet {
         let uid = self.opt.len() as Uid;
         let mut ci = ci;
 
+        trace!(?ci, "create option with ci");
         match self.get_creator(ci.get_type_name()) {
             Some(creator) => {
                 ci.set_uid(uid);
@@ -47,7 +50,7 @@ impl OptionSet for SimpleSet {
                 Ok(uid)
             }
             None => {
-                Err(ParserError::NotSupportOptionType(format!("{}", ci.get_type_name())).into())
+                Err(ConstructError::NotSupportOptionType(format!("{}", ci.get_type_name())).into())
             }
         }
     }
