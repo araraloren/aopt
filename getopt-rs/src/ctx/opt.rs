@@ -1,5 +1,5 @@
 use super::Context;
-use crate::err::{report_match_failed, Error, Result, SpecialError};
+use crate::err::{Result, SpecialError};
 use crate::opt::{Opt, OptValue, Style};
 
 #[derive(Debug)]

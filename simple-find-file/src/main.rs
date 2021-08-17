@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use getopt_rs::err::report_an_error;
+use getopt_rs::err::report_custom_error;
 use getopt_rs::opt::value;
 use getopt_rs::prelude::*;
 
@@ -33,7 +33,7 @@ fn main() -> Result<()> {
                 if let Some(std) = set.filter("std").unwrap().find() {
                     if let Some(std) = std.get_value().as_str() {
                         if !check_compiler_std(std, "cpp") {
-                            ret = report_an_error(format!(
+                            ret = report_custom_error(format!(
                                 "Unsupport standard version for c++: {}",
                                 std
                             ));
@@ -60,7 +60,7 @@ fn main() -> Result<()> {
                     .unwrap();
 
                 if !check_compiler_std(std, "c") {
-                    report_an_error(format!("Unsupport standard version for c++: {}", std))
+                    report_custom_error(format!("Unsupport standard version for c++: {}", std))
                 } else {
                     Ok(Some(value))
                 }

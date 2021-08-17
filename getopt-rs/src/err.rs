@@ -16,39 +16,25 @@ pub enum Error {
     #[error("Special error: '{0}'")]
     FromSpecialError(#[from] SpecialError),
 
-    #[error("the option @{0} is force required: `{1}`")]
-    ForceRequiredPostionOption(u64, String),
-
-    // Special type mark the parsing failed !
     #[error("{0}")]
-    ReportMatchFailed(String),
-
-    #[error("{0}")]
-    ReportError(String),
+    CustomError(String),
 }
 
 impl Error {
     pub fn is_special(&self) -> bool {
         match self {
-            Self::ReportMatchFailed(_) => true,
-            Self::ReportError(_) => true,
+            Self::FromSpecialError(_) => true,
             _ => false,
         }
     }
 }
 
-pub fn report_an_error<T>(error_description: String) -> Result<T> {
-    Err(Error::ReportError(format!(
-        "report error: {}",
-        error_description
-    )))
+pub fn create_error(error_description: String) -> Error {
+    Error::CustomError(error_description)
 }
 
-pub fn report_match_failed<T>(error_description: String) -> Result<T> {
-    Err(Error::ReportMatchFailed(format!(
-        "match failed: {}",
-        error_description
-    )))
+pub fn create_failure(msg: String) -> SpecialError {
+    SpecialError::CustomFailure(msg)
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -122,10 +108,9 @@ pub enum SpecialError {
     #[error("Invalid value for option '{0}'")]
     InvalidArgumentForOption(String),
 
-    #[error("{0}")]
-    CommonError(String),
-}
+    #[error("POS @{0} is force required: `{1}`")]
+    POSForceRequired(u64, String),
 
-pub fn report_special_error(msg: String) -> SpecialError {
-    SpecialError::CommonError(msg)
+    #[error("{0}")]
+    CustomFailure(String),
 }

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::Parser;
-use crate::err::{report_match_failed, ConstructError, Error, Result};
+use crate::err::{ConstructError, Result, SpecialError};
 use crate::opt::Style;
 use crate::set::Set;
 use crate::uid::Uid;
@@ -125,11 +125,7 @@ pub fn default_nonopt_check<S: Set, P: Parser<S>>(set: &S, _parser: &P) -> Resul
             valid = pos_valid;
         }
         if !valid {
-            return report_match_failed(format!(
-                "option @{} is force required: {}",
-                *index,
-                names.join(" or ")
-            ));
+            return Err(SpecialError::POSForceRequired(*index, names.join(" or ")).into());
         }
         names.clear();
     }

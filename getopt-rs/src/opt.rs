@@ -9,7 +9,7 @@ pub mod value;
 
 use std::fmt::Debug;
 
-use crate::err::{Error, Result};
+use crate::err::Result;
 use crate::uid::Uid;
 
 pub use self::callback::{Callback as OptCallback, CallbackType};
