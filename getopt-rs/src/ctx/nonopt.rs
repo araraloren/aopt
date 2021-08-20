@@ -31,7 +31,6 @@ impl NonOptContext {
 }
 
 impl Context for NonOptContext {
-    #[tracing::instrument]
     fn process(&mut self, opt: &mut dyn Opt) -> Result<bool> {
         let mut matched = opt.match_style(self.style);
 

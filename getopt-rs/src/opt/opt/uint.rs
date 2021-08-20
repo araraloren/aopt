@@ -287,6 +287,7 @@ impl Creator for UintCreator {
 
         let opt: UintOpt = create_info.into();
 
+        trace!(?opt, "create a Uint");
         Ok(Box::new(opt))
     }
 }

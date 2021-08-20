@@ -296,6 +296,7 @@ impl Creator for ArrayCreator {
 
         let opt: ArrayOpt = create_info.into();
 
+        trace!(?opt, "create a Array");
         Ok(Box::new(opt))
     }
 }

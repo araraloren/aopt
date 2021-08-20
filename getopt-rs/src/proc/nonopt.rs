@@ -52,6 +52,7 @@ impl Matcher for NonOptMatcher {
     fn process<S: Set>(&mut self, uid: Uid, set: &mut S) -> Result<Option<&mut Box<dyn Context>>> {
         let opt = set[uid].as_mut();
 
+        info!(?uid, "process nonopt");
         if opt.match_style(Style::Cmd)
             || opt.match_style(Style::Main)
             || opt.match_style(Style::Pos)

@@ -294,6 +294,7 @@ pub mod path {
 
             let opt: PathOpt = create_info.into();
 
+            trace!(?opt, "create a Path");
             Ok(Box::new(opt))
         }
     }

@@ -245,6 +245,7 @@ impl Creator for MainCreator {
 
         let opt: MainOpt = create_info.into();
 
+        trace!(?opt, "create a Main");
         Ok(Box::new(opt))
     }
 }

@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use super::OptValue;
-use crate::err::{Error, Result};
+use crate::err::Result;
 use crate::set::Set;
 use crate::uid::Uid;
 

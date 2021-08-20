@@ -40,7 +40,6 @@ impl OptContext {
 }
 
 impl Context for OptContext {
-    #[tracing::instrument]
     fn process(&mut self, opt: &mut dyn Opt) -> Result<bool> {
         let mut matched = opt.match_style(self.style);
 
@@ -59,12 +58,12 @@ impl Context for OptContext {
             }
             self.matched_index = Some(0);
             if let Some(arg) = self.argument.as_ref() {
-                let value = opt.parse_value(arg.as_str()).map_err(|v| {
+                let value = opt.parse_value(arg.as_str()).map_err(|_| {
                     SpecialError::InvalidArgumentForOption(opt.get_hint().to_owned())
                 })?;
                 self.set_value(value);
             }
-            debug!(" get return value {:?}!", self.get_value());
+            debug!("get return value {:?}!", self.get_value());
             opt.set_invoke(true);
         }
         Ok(matched)

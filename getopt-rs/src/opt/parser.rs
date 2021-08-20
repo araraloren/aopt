@@ -424,8 +424,7 @@ impl State {
                     return Err(
                         ConstructError::ParsingFailed(pattern.get_pattern().to_owned()).into(),
                     );
-                }
-                else {
+                } else {
                     return Ok(true);
                 }
             }

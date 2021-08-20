@@ -287,6 +287,7 @@ impl Creator for FltCreator {
 
         let opt: FltOpt = create_info.into();
 
+        trace!(?opt, "create a Flt");
         Ok(Box::new(opt))
     }
 }

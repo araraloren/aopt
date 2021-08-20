@@ -50,13 +50,15 @@ pub fn default_nonopt_check<S: Set, P: Parser<S>>(set: &S, _parser: &P) -> Resul
                 .as_ref()
                 .get_index()
                 .unwrap()
-                .calc_index(MAX_INDEX, 0)
+                .calc_index(MAX_INDEX, 1)
                 .unwrap_or(MAX_INDEX);
             let entry = index_map.entry(index).or_insert(vec![]);
 
             entry.push(opt.as_ref().get_uid());
         }
     }
+
+    trace!(?index_map, "non-opt check information");
 
     let mut names = vec![];
 
@@ -69,7 +71,7 @@ pub fn default_nonopt_check<S: Set, P: Parser<S>>(set: &S, _parser: &P) -> Resul
             let mut cmd_count = 0;
             let mut cmd_valid = false;
             let mut pos_valid = true;
-            let mut force_valid = true;
+            let mut force_valid = false;
 
             for uid in uids {
                 let opt = set.get_opt(*uid).unwrap();
@@ -77,8 +79,8 @@ pub fn default_nonopt_check<S: Set, P: Parser<S>>(set: &S, _parser: &P) -> Resul
                 if opt.match_style(Style::Cmd) {
                     cmd_count += 1;
                     // set the cmd will valid the check
-                    cmd_valid = cmd_valid || opt.check().is_ok();
                     // if any of cmd is valid, break out
+                    cmd_valid = cmd_valid || opt.check().is_ok();
                     if cmd_valid {
                         break;
                     }
@@ -87,23 +89,20 @@ pub fn default_nonopt_check<S: Set, P: Parser<S>>(set: &S, _parser: &P) -> Resul
                     let opt_valid = opt.check().is_ok();
 
                     pos_valid = pos_valid && opt_valid;
-                    if !opt_valid && !opt.get_optional() {
-                        force_valid = false;
+                    if opt_valid && !opt.get_optional() {
+                        force_valid = true;
                         names.push(opt.get_hint().to_owned());
                     }
                 }
             }
 
-            debug!(
-                "In default nonopt-check: cmd_valid={} pos_valid={} force_valid={}",
-                cmd_valid, pos_valid, force_valid
-            );
+            debug!(%cmd_valid, %pos_valid, %force_valid, "in default nonopt-check");
 
             // if we have CMD, then the CMD must be set or any POS is set
+            // if all nonopt @1 are POS, it's normally like @2..
             if cmd_count > 0 {
                 valid = cmd_valid || (pos_valid && force_valid);
             } else {
-                // if all nonopt @1 are POS, it's normally like @2..
                 valid = pos_valid;
             }
         } else {
@@ -120,8 +119,7 @@ pub fn default_nonopt_check<S: Set, P: Parser<S>>(set: &S, _parser: &P) -> Resul
                     names.push(opt.get_hint().to_owned());
                 }
             }
-            debug!("In default nonopt-check: pos_valid={}", pos_valid);
-            // the forced POS must be set
+            debug!(%pos_valid, "in default nonopt-check");
             valid = pos_valid;
         }
         if !valid {

@@ -206,14 +206,12 @@ fn main() -> Result<()> {
         );
     }
 
-    dbg!(&set);
-
     let mut args = &mut ["c", "a", "ops"].iter().map(|&v| String::from(v));
 
     let ret = parser.parse(set, &mut std::env::args().skip(1)).unwrap();
 
     if let Some(ret) = ret {
-        dbg!(ret);
+        // dbg!(ret);
     }
 
     Ok(())

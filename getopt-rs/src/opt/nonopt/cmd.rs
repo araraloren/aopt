@@ -171,12 +171,10 @@ impl Index for CmdOpt {
     fn set_index(&mut self, _index: OptIndex) {}
 
     fn match_index(&self, total: u64, current: u64) -> bool {
-        match self.get_index() {
-            Some(realindex) => match realindex.calc_index(total, current) {
-                Some(realindex) => return realindex == current,
-                None => {}
-            },
-            None => {}
+        if let Some(realindex) = self.get_index() {
+            if let Some(realindex) = realindex.calc_index(total, current) {
+                return realindex == current;
+            }
         }
         false
     }
@@ -253,7 +251,7 @@ impl Creator for CmdCreator {
         assert_eq!(create_info.get_type_name(), self.get_type_name());
         let opt: CmdOpt = create_info.into();
 
-        trace!(?opt, "create a CmdOpt");
+        trace!(?opt, "create a Cmd");
         Ok(Box::new(opt))
     }
 }

@@ -81,6 +81,7 @@ where
         }
 
         // reset set and do pre check
+        info!("reset and do pre check");
         set.reset();
         self.pre_check(&set)?;
 
@@ -94,15 +95,15 @@ where
 
         // iterate the Arguments, generate option context
         // send it to Publisher
-        debug!("Start process option ...");
+        info!("start process option ...");
         while let Some(arg) = iter.next() {
             let mut matched = false;
             let mut consume = false;
 
-            debug!("Get next Argument => {:?}", &arg);
+            debug!(?arg, "iterator Argument ...");
             if let Ok(ret) = arg.parse(&prefix) {
                 if ret {
-                    debug!(" ... parsed: {:?}", &arg);
+                    debug!(?arg, "after parsing ...");
                     for gen_style in &parser_state {
                         if let Some(ret) = gen_style.gen_opt::<OptMatcher>(arg) {
                             let mut proc = ret;
@@ -125,12 +126,14 @@ where
             if matched && consume {
                 iter.next();
             } else if !matched {
-                debug!("!!! Not matching {:?}, add it to noa", &arg);
+                debug!("!!! {:?} not matching, will add it to noa", &arg);
                 if let Some(noa) = &arg.current {
                     self.noa.push(noa.clone());
                 }
             }
         }
+
+        trace!(?self.noa, "current non-option argument");
 
         // do option check
         self.check_opt(&set)?;
@@ -140,7 +143,7 @@ where
         if noa_count > 0 {
             let gen_style = ParserState::PSNonCmd;
 
-            debug!("Start process {:?} ...", &gen_style);
+            info!("start process {:?} ...", &gen_style);
             if let Some(ret) =
                 gen_style.gen_nonopt::<NonOptMatcher>(&self.noa[0], noa_count as u64, 1)
             {
@@ -151,7 +154,7 @@ where
 
             let gen_style = ParserState::PSNonPos;
 
-            debug!("Start process {:?} ...", &gen_style);
+            info!("start process {:?} ...", &gen_style);
             for index in 1..=noa_count {
                 if let Some(ret) = gen_style.gen_nonopt::<NonOptMatcher>(
                     &self.noa[index - 1],
@@ -196,7 +199,7 @@ where
 
         let gen_style = ParserState::PSNonMain;
 
-        debug!("Start process {:?} ...", &gen_style);
+        info!("start process {:?} ...", &gen_style);
         if let Some(ret) =
             gen_style.gen_nonopt::<NonOptMatcher>(&String::new(), noa_count as u64, 1)
         {
@@ -272,7 +275,7 @@ where
         let matcher = msg;
         let mut matched = false;
 
-        debug!("Got message<{}>: {:?}", &matcher.uid(), &matcher);
+        debug!(?matcher, "NonOptMatcher got message");
         for info in self.subscriber_info.iter() {
             let uid = info.info_uid();
             let ctx = matcher.process(uid, set)?;
@@ -290,9 +293,9 @@ where
 
                         if has_callback {
                             // invoke callback of current option/non-option
+                            // make matched true, if any of NonOpt callback return Some(*)
                             value = self.invoke_callback(uid, set, noa_index, value.unwrap())?;
                             if value.is_some() {
-                                // make matched true, if any of NonOpt callback return Some(*)
                                 matched = true;
                             }
                         } else {
@@ -302,9 +305,9 @@ where
                             }
                         }
                         // reborrow the opt avoid the compiler error
-                        debug!("In Proc, get return value of option<{}> = {:?}", uid, value);
-                        set[uid].as_mut().set_invoke(false);
                         // reset the matcher, we need match all the NonOpt
+                        debug!(?value, "get callback return value");
+                        set[uid].as_mut().set_invoke(false);
                         matcher.reset();
                     }
 
@@ -326,7 +329,7 @@ where
         let matcher = msg;
         let mut value_keeper = HashMap::<Uid, Vec<OptValueKeeper>>::new();
 
-        debug!("Got message<{}>: {:?}", &matcher.uid(), &matcher);
+        debug!(?matcher, "OptMatcher got message");
         for info in self.subscriber_info.iter() {
             let uid = info.info_uid();
             let ctx = matcher.process(uid, set)?;
@@ -344,6 +347,7 @@ where
                     }
 
                     // add the value to value keeper, call the callback after cmd/pos processed
+                    info!("add {:?} to delay parser value keeper", &uid);
                     value_keeper
                         .entry(uid)
                         .or_insert(vec![])

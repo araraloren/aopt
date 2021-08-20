@@ -287,6 +287,7 @@ impl Creator for IntCreator {
 
         let opt: IntOpt = create_info.into();
 
+        trace!(?opt, "create a Int");
         Ok(Box::new(opt))
     }
 }

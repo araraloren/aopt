@@ -43,6 +43,7 @@ impl Matcher for OptMatcher {
     fn process<S: Set>(&mut self, uid: Uid, set: &mut S) -> Result<Option<&mut Box<dyn Context>>> {
         let opt = set[uid].as_mut();
 
+        info!(?uid, "process opt");
         for ctx in self.context.iter_mut() {
             if !ctx.is_matched() {
                 if ctx.process(opt)? {

@@ -270,6 +270,7 @@ impl Creator for PosCreator {
 
         let opt: PosOpt = create_info.into();
 
+        trace!(?opt, "create a Pos");
         Ok(Box::new(opt))
     }
 }

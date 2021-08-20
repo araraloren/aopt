@@ -285,6 +285,7 @@ impl Creator for StrCreator {
 
         let opt: StrOpt = create_info.into();
 
+        trace!(?opt, "create a Str");
         Ok(Box::new(opt))
     }
 }

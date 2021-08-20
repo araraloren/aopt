@@ -288,6 +288,7 @@ impl Creator for BoolCreator {
 
         let opt: BoolOpt = create_info.into();
 
+        trace!(?opt, "create a Bool");
         Ok(Box::new(opt))
     }
 }
