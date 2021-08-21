@@ -25,8 +25,9 @@ pub fn getopt_impl<S: Set + Default, P: Parser<S>>(
     assert_eq!(sets.len(), parsers.len());
 
     let args: Vec<String> = iter.collect();
+    let count = parsers.len();
 
-    for index in 0..parsers.len() {
+    for index in 0..count {
         let parser = parsers.get_mut(index).unwrap();
 
         match parser.parse(
@@ -35,7 +36,7 @@ pub fn getopt_impl<S: Set + Default, P: Parser<S>>(
         ) {
             Ok(rv) => return Ok(rv),
             Err(e) => {
-                if e.is_special() {
+                if e.is_special() && index + 1 != count {
                     continue;
                 } else {
                     return Err(e);
@@ -44,6 +45,17 @@ pub fn getopt_impl<S: Set + Default, P: Parser<S>>(
         }
     }
     Ok(None)
+}
+
+#[macro_export]
+macro_rules! getopt {
+    ($iter:expr, $($set:expr, $parser:expr),+ ) => {
+        getopt_rs::getopt_impl(
+            $iter,
+            vec![$($set, )+],
+            vec![$($parser, )+]
+        )
+    };
 }
 
 pub mod tools {

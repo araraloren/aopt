@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use getopt_rs::err::create_error;
 use getopt_rs::opt::value;
-use getopt_rs::prelude::*;
+use getopt_rs::{getopt, prelude::*};
 
 fn main() -> Result<()> {
     tracing_subscriber::fmt::fmt()
@@ -208,11 +208,7 @@ fn main() -> Result<()> {
 
     let mut args = &mut ["c", "a", "ops"].iter().map(|&v| String::from(v));
 
-    let ret = parser.parse(set, &mut std::env::args().skip(1)).unwrap();
-
-    if let Some(ret) = ret {
-        // dbg!(ret);
-    }
+    getopt!(&mut std::env::args().skip(1), set, parser)?;
 
     Ok(())
 }
