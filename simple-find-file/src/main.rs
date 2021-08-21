@@ -1,13 +1,11 @@
-use std::marker::PhantomData;
-
 use getopt_rs::err::create_error;
-use getopt_rs::opt::value;
 use getopt_rs::{getopt, prelude::*};
 
-fn main() -> Result<()> {
+fn main() -> color_eyre::Result<()> {
     tracing_subscriber::fmt::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
+    color_eyre::install()?;
 
     let mut set = SimpleSet::default();
     let mut parser = PreParser::<SimpleSet, UidGenerator>::default();
