@@ -7,7 +7,7 @@ use crate::set::Set;
 use crate::uid::Uid;
 
 /// Check the callback type in  parser .
-pub fn default_pre_check<S: Set, P: Parser<S>>(set: &S, parser: &P) -> Result<bool> {
+pub fn default_pre_check<P: Parser>(set: &dyn Set, parser: &P) -> Result<bool> {
     for (uid, callback) in parser.callback_iter() {
         if let Some(opt) = set.get_opt(*uid) {
             if !opt.is_accept_callback_type(callback.borrow().to_callback_type()) {
@@ -24,7 +24,7 @@ pub fn default_pre_check<S: Set, P: Parser<S>>(set: &S, parser: &P) -> Result<bo
     Ok(true)
 }
 
-pub fn default_opt_check<S: Set, P: Parser<S>>(set: &S, _parser: &P) -> Result<bool> {
+pub fn default_opt_check<P: Parser>(set: &dyn Set, _parser: &P) -> Result<bool> {
     for opt in set.iter() {
         if opt.as_ref().match_style(Style::Boolean)
             || opt.as_ref().match_style(Style::Argument)
@@ -36,7 +36,7 @@ pub fn default_opt_check<S: Set, P: Parser<S>>(set: &S, _parser: &P) -> Result<b
     Ok(true)
 }
 
-pub fn default_nonopt_check<S: Set, P: Parser<S>>(set: &S, _parser: &P) -> Result<bool> {
+pub fn default_nonopt_check<P: Parser>(set: &dyn Set, _parser: &P) -> Result<bool> {
     const MAX_INDEX: u64 = u64::MAX;
 
     let mut index_map: HashMap<u64, Vec<Uid>> = HashMap::new();
@@ -131,6 +131,6 @@ pub fn default_nonopt_check<S: Set, P: Parser<S>>(set: &S, _parser: &P) -> Resul
     Ok(true)
 }
 
-pub fn default_post_check<S: Set, P: Parser<S>>(_set: &S, _parser: &P) -> Result<bool> {
+pub fn default_post_check<P: Parser>(_set: &dyn Set, _parser: &P) -> Result<bool> {
     Ok(true)
 }

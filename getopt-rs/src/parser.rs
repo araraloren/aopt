@@ -19,38 +19,34 @@ pub use pre_parser::PreParser;
 pub use simple_parser::SimpleParser;
 pub use state::ParserState;
 
-pub trait Parser<S>: Debug
-where
-    Self: Sized,
-    S: Set,
-{
-    fn parse(
+pub trait Parser: Debug {
+    fn parse<'a>(
         &mut self,
-        set: S,
-        iter: impl Iterator<Item = String>,
-    ) -> Result<Option<ReturnValue<S>>>;
+        set: &'a mut dyn Set,
+        iter: &mut dyn Iterator<Item = String>,
+    ) -> Result<Option<ReturnValue<'a>>>;
 
     fn invoke_callback(
         &self,
         uid: Uid,
-        set: &mut S,
+        set: &mut dyn Set,
         noa_index: usize,
         value: OptValue,
     ) -> Result<Option<OptValue>>;
 
-    fn pre_check(&self, set: &S) -> Result<bool> {
+    fn pre_check(&self, set: &dyn Set) -> Result<bool> where Self: Sized {
         check::default_pre_check(set, self)
     }
 
-    fn check_opt(&self, set: &S) -> Result<bool> {
+    fn check_opt(&self, set: &dyn Set) -> Result<bool> where Self: Sized {
         check::default_opt_check(set, self)
     }
 
-    fn check_nonopt(&self, set: &S) -> Result<bool> {
+    fn check_nonopt(&self, set: &dyn Set) -> Result<bool> where Self: Sized {
         check::default_nonopt_check(set, self)
     }
 
-    fn post_check(&self, set: &S) -> Result<bool> {
+    fn post_check(&self, set: &dyn Set) -> Result<bool> where Self: Sized {
         check::default_post_check(set, self)
     }
 
@@ -64,7 +60,7 @@ where
 }
 
 #[derive(Debug)]
-pub struct ReturnValue<S: Set> {
+pub struct ReturnValue<'a> {
     pub noa: Vec<String>,
-    pub set: S,
+    pub set: &'a mut dyn Set,
 }

@@ -40,7 +40,7 @@ impl Matcher for OptMatcher {
         self.context.get_mut(index)
     }
 
-    fn process<S: Set>(&mut self, uid: Uid, set: &mut S) -> Result<Option<&mut Box<dyn Context>>> {
+    fn process(&mut self, uid: Uid, set: &mut dyn Set) -> Result<Option<&mut Box<dyn Context>>> {
         let opt = set[uid].as_mut();
 
         info!(?uid, "process opt");

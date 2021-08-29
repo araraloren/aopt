@@ -17,22 +17,22 @@ use prelude::Result;
 use prelude::ReturnValue;
 use prelude::Set;
 
-pub fn getopt_impl<S: Set + Default, P: Parser<S>>(
+pub fn getopt_impl<'a, P: Parser>(
     iter: impl Iterator<Item = String>,
-    mut sets: Vec<S>,
+    sets: Vec<&'a mut dyn Set>,
     mut parsers: Vec<P>,
-) -> Result<Option<ReturnValue<S>>> {
+) -> Result<Option<ReturnValue<'a>>> {
     assert_eq!(sets.len(), parsers.len());
 
     let args: Vec<String> = iter.collect();
     let count = parsers.len();
 
-    for index in 0..count {
+    for (index, set) in sets.into_iter().enumerate() {
         let parser = parsers.get_mut(index).unwrap();
 
         match parser.parse(
-            std::mem::take(&mut sets[index]),
-            args.iter().map(|v| v.clone()),
+            set,
+            &mut args.iter().map(|v| v.clone()),
         ) {
             Ok(rv) => return Ok(rv),
             Err(e) => {

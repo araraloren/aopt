@@ -57,16 +57,16 @@ where
     }
 }
 
-impl<S, G> Parser<S> for DelayParser<S, G>
+impl<S, G> Parser for DelayParser<S, G>
 where
     G: Generator + Debug + Default,
     S: Set + Default,
 {
-    fn parse(
+    fn parse<'a>(
         &mut self,
-        set: S,
-        iter: impl Iterator<Item = String>,
-    ) -> Result<Option<ReturnValue<S>>> {
+        set: &'a mut dyn Set,
+        iter: &mut dyn Iterator<Item = String>,
+    ) -> Result<Option<ReturnValue<'a>>> {
         let mut argstream = ArgStream::from(iter);
         let mut set = set;
         let mut iter = argstream.iter_mut();
@@ -83,7 +83,7 @@ where
         // reset set and do pre check
         info!("reset and do pre check");
         set.reset();
-        self.pre_check(&set)?;
+        self.pre_check(set)?;
 
         let parser_state = vec![
             ParserState::PSDelayEqualWithValue,
@@ -108,7 +108,7 @@ where
                         if let Some(ret) = gen_style.gen_opt::<OptMatcher>(arg) {
                             let mut proc = ret;
 
-                            if self.process(&mut proc, &mut set)? {
+                            if self.process(&mut proc, set)? {
                                 if proc.is_matched() {
                                     matched = true;
                                 }
@@ -136,7 +136,7 @@ where
         trace!(?self.noa, "current non-option argument");
 
         // do option check
-        self.check_opt(&set)?;
+        self.check_opt(set)?;
 
         let noa_count = self.noa.len();
 
@@ -149,7 +149,7 @@ where
             {
                 let mut proc = ret;
 
-                self.process(&mut proc, &mut set)?;
+                self.process(&mut proc, set)?;
             }
 
             let gen_style = ParserState::PSNonPos;
@@ -163,13 +163,13 @@ where
                 ) {
                     let mut proc = ret;
 
-                    self.process(&mut proc, &mut set)?;
+                    self.process(&mut proc, set)?;
                 }
             }
         }
 
         // check pos and cmd
-        self.check_nonopt(&set)?;
+        self.check_nonopt(set)?;
 
         {
             // do value set and invoke callback
@@ -185,7 +185,7 @@ where
                             // invoke callback of current option/non-option
                             parsed_value = self.invoke_callback(
                                 uid,
-                                &mut set,
+                                set,
                                 value.noa_index,
                                 parsed_value.unwrap(),
                             )?;
@@ -205,11 +205,11 @@ where
         {
             let mut proc = ret;
 
-            self.process(&mut proc, &mut set)?;
+            self.process(&mut proc, set)?;
         }
 
         // do post check
-        self.post_check(&set)?;
+        self.post_check(set)?;
 
         Ok(Some(ReturnValue {
             set: set,
@@ -220,7 +220,7 @@ where
     fn invoke_callback(
         &self,
         uid: Uid,
-        set: &mut S,
+        set: &mut dyn Set,
         noa_index: usize,
         value: OptValue,
     ) -> Result<Option<OptValue>> {
@@ -266,12 +266,12 @@ where
     }
 }
 
-impl<S, G> Proc<S, NonOptMatcher> for DelayParser<S, G>
+impl<S, G> Proc<NonOptMatcher> for DelayParser<S, G>
 where
     G: Generator + Debug + Default,
     S: Set + Default,
 {
-    fn process(&mut self, msg: &mut NonOptMatcher, set: &mut S) -> Result<bool> {
+    fn process(&mut self, msg: &mut NonOptMatcher, set: &mut dyn Set) -> Result<bool> {
         let matcher = msg;
         let mut matched = false;
 
@@ -320,12 +320,12 @@ where
     }
 }
 
-impl<S, G> Proc<S, OptMatcher> for DelayParser<S, G>
+impl<S, G> Proc<OptMatcher> for DelayParser<S, G>
 where
     G: Generator + Debug + Default,
     S: Set + Default,
 {
-    fn process(&mut self, msg: &mut OptMatcher, set: &mut S) -> Result<bool> {
+    fn process(&mut self, msg: &mut OptMatcher, set: &mut dyn Set) -> Result<bool> {
         let matcher = msg;
         let mut value_keeper = HashMap::<Uid, Vec<OptValueKeeper>>::new();
 

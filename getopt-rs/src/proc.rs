@@ -15,8 +15,8 @@ pub trait Info: Debug {
     fn info_uid(&self) -> Uid;
 }
 
-pub trait Proc<S: Set, M: Matcher>: Debug {
-    fn process(&mut self, matcher: &mut M, set: &mut S) -> Result<bool>;
+pub trait Proc<M: Matcher>: Debug {
+    fn process(&mut self, matcher: &mut M, set: &mut dyn Set) -> Result<bool>;
 }
 
 pub trait Matcher: Debug {
@@ -28,7 +28,7 @@ pub trait Matcher: Debug {
 
     fn get_ctx_mut(&mut self, index: usize) -> Option<&mut Box<dyn Context>>;
 
-    fn process<S: Set>(&mut self, uid: Uid, set: &mut S) -> Result<Option<&mut Box<dyn Context>>>;
+    fn process(&mut self, uid: Uid, set: &mut dyn Set) -> Result<Option<&mut Box<dyn Context>>>;
 
     fn is_matched(&self) -> bool;
 

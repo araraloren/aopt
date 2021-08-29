@@ -70,7 +70,7 @@ impl DataChecker {
     }
 }
 
-pub struct TestingCase<S: Set, P: Parser<S>> {
+pub struct TestingCase<P: Parser> {
     pub opt_str: &'static str,
 
     pub ret_value: Option<OptValue>,
@@ -80,12 +80,10 @@ pub struct TestingCase<S: Set, P: Parser<S>> {
     pub callback_tweak: Option<Box<dyn FnMut(&mut P, Uid, Option<DataChecker>)>>,
 
     pub checker: Option<DataChecker>,
-
-    pub marker: PhantomData<S>,
 }
 
-impl<S: Set, P: Parser<S>> TestingCase<S, P> {
-    pub fn do_test(&mut self, set: &mut S, parser: &mut P) -> Result<()> {
+impl<P: Parser> TestingCase<P> {
+    pub fn do_test(&mut self, set: &mut dyn Set, parser: &mut P) -> Result<()> {
         let mut commit = set.add_opt(self.opt_str)?;
 
         if let Some(tweak) = self.commit_tweak.as_mut() {
@@ -99,7 +97,7 @@ impl<S: Set, P: Parser<S>> TestingCase<S, P> {
         Ok(())
     }
 
-    pub fn check_ret(&mut self, set: &mut S) -> Result<()> {
+    pub fn check_ret(&mut self, set: &mut dyn Set) -> Result<()> {
         if let Some(ret_value) = self.ret_value.as_ref() {
             if let Some(opt) = set.filter(self.opt_str)?.find() {
                 assert!(ret_value.eq(opt.as_ref().get_value()));
