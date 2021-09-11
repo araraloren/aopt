@@ -1,7 +1,6 @@
-
+use crate::style::{Alignment, Style};
 use std::borrow::Cow;
 use textwrap::{core::display_width, wrap};
-use crate::style::{Style, Alignment};
 
 #[derive(Debug, Default)]
 pub struct Wrapped<'a> {
@@ -12,9 +11,7 @@ pub struct Wrapped<'a> {
 
 impl<'a> Wrapped<'a> {
     pub fn new(cows: Vec<Cow<'a, str>>, style: Style) -> Self {
-        Self {
-            cows, style,
-        }
+        Self { cows, style }
     }
 
     pub fn get_style(&self) -> &Style {
@@ -47,9 +44,12 @@ impl<'a> Wrapped<'a> {
                 }
             }
             ret
-        }
-        else {
-            format!("{}{}", " ".repeat(self.style.indent), padding_str.repeat(self.get_wrap_width()))
+        } else {
+            format!(
+                "{}{}",
+                " ".repeat(self.style.indent),
+                padding_str.repeat(self.get_wrap_width())
+            )
         }
     }
 
@@ -90,7 +90,7 @@ impl<'a, 'b> Wrapper<'a, 'b> {
             for (col, style) in line.iter().zip(default_style.iter()) {
                 wrapped.push(Wrapped::new(wrap(col, style.wrap_width), style.clone()));
             }
-            
+
             self.output.push(wrapped);
         }
     }
@@ -105,7 +105,7 @@ impl<'a, 'b> Wrapper<'a, 'b> {
             self.output.push(wrapped);
         }
     }
-    
+
     pub fn get_output(&self) -> &Vec<Vec<Wrapped<'b>>> {
         &self.output
     }

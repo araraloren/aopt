@@ -24,7 +24,7 @@ pub trait Parser: Debug {
         &mut self,
         set: &'a mut dyn Set,
         iter: &mut dyn Iterator<Item = String>,
-    ) -> Result<Option<ReturnValue<'a>>>;
+    ) -> Result<bool>;
 
     fn invoke_callback(
         &self,
@@ -34,19 +34,31 @@ pub trait Parser: Debug {
         value: OptValue,
     ) -> Result<Option<OptValue>>;
 
-    fn pre_check(&self, set: &dyn Set) -> Result<bool> where Self: Sized {
+    fn pre_check(&self, set: &dyn Set) -> Result<bool>
+    where
+        Self: Sized,
+    {
         check::default_pre_check(set, self)
     }
 
-    fn check_opt(&self, set: &dyn Set) -> Result<bool> where Self: Sized {
+    fn check_opt(&self, set: &dyn Set) -> Result<bool>
+    where
+        Self: Sized,
+    {
         check::default_opt_check(set, self)
     }
 
-    fn check_nonopt(&self, set: &dyn Set) -> Result<bool> where Self: Sized {
+    fn check_nonopt(&self, set: &dyn Set) -> Result<bool>
+    where
+        Self: Sized,
+    {
         check::default_nonopt_check(set, self)
     }
 
-    fn post_check(&self, set: &dyn Set) -> Result<bool> where Self: Sized {
+    fn post_check(&self, set: &dyn Set) -> Result<bool>
+    where
+        Self: Sized,
+    {
         check::default_post_check(set, self)
     }
 
@@ -57,10 +69,4 @@ pub trait Parser: Debug {
     fn callback_iter(&self) -> HashMapIter<'_, Uid, RefCell<OptCallback>>;
 
     fn reset(&mut self);
-}
-
-#[derive(Debug)]
-pub struct ReturnValue<'a> {
-    pub noa: Vec<String>,
-    pub set: &'a mut dyn Set,
 }

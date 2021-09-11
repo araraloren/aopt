@@ -1,12 +1,11 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::marker::PhantomData;
 use std::ops::DerefMut;
 
 use super::HashMapIter;
+use super::Parser;
 use super::ParserState;
-use super::{Parser, ReturnValue};
 use crate::arg::ArgStream;
 use crate::err::Result;
 use crate::opt::{OptCallback, OptValue, Style};
@@ -15,10 +14,9 @@ use crate::set::{OptionInfo, Set};
 use crate::uid::{Generator, Uid};
 
 #[derive(Debug, Default)]
-pub struct PreParser<S, G>
+pub struct PreParser<G>
 where
     G: Generator + Debug + Default,
-    S: Set + Default,
 {
     uid_gen: G,
 
@@ -27,14 +25,11 @@ where
     callback: HashMap<Uid, RefCell<OptCallback>>,
 
     noa: Vec<String>,
-
-    marker: PhantomData<S>,
 }
 
-impl<S, G> PreParser<S, G>
+impl<G> PreParser<G>
 where
     G: Generator + Debug + Default,
-    S: Set + Default,
 {
     pub fn new(uid_gen: G) -> Self {
         Self {
@@ -44,16 +39,15 @@ where
     }
 }
 
-impl<S, G> Parser for PreParser<S, G>
+impl<G> Parser for PreParser<G>
 where
     G: Generator + Debug + Default,
-    S: Set + Default,
 {
     fn parse<'a>(
         &mut self,
         set: &'a mut dyn Set,
         iter: &mut dyn Iterator<Item = String>,
-    ) -> Result<Option<ReturnValue<'a>>> {
+    ) -> Result<bool> {
         let mut argstream = ArgStream::from(iter);
         let mut set = set;
         let mut iter = argstream.iter_mut();
@@ -172,10 +166,7 @@ where
         // do post check
         self.post_check(set)?;
 
-        Ok(Some(ReturnValue {
-            set: set,
-            noa: self.noa.clone(),
-        }))
+        Ok(true)
     }
 
     fn invoke_callback(
@@ -226,10 +217,9 @@ where
     }
 }
 
-impl<S, G> Proc<NonOptMatcher> for PreParser<S, G>
+impl<G> Proc<NonOptMatcher> for PreParser<G>
 where
     G: Generator + Debug + Default,
-    S: Set + Default,
 {
     fn process(&mut self, msg: &mut NonOptMatcher, set: &mut dyn Set) -> Result<bool> {
         let matcher = msg;
@@ -280,10 +270,9 @@ where
     }
 }
 
-impl<S, G> Proc<OptMatcher> for PreParser<S, G>
+impl<G> Proc<OptMatcher> for PreParser<G>
 where
     G: Generator + Debug + Default,
-    S: Set + Default,
 {
     fn process(&mut self, msg: &mut OptMatcher, set: &mut dyn Set) -> Result<bool> {
         let matcher = msg;

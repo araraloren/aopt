@@ -1,12 +1,11 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::marker::PhantomData;
 use std::ops::DerefMut;
 
 use super::HashMapIter;
+use super::Parser;
 use super::ParserState;
-use super::{Parser, ReturnValue};
 use crate::arg::ArgStream;
 use crate::err::Result;
 use crate::opt::{OptCallback, OptValue, Style};
@@ -15,10 +14,9 @@ use crate::set::{OptionInfo, Set};
 use crate::uid::{Generator, Uid};
 
 #[derive(Debug, Default)]
-pub struct SimpleParser<S, G>
+pub struct SimpleParser<G>
 where
     G: Generator + Debug + Default,
-    S: Set + Default,
 {
     uid_gen: G,
 
@@ -27,14 +25,11 @@ where
     callback: HashMap<Uid, RefCell<OptCallback>>,
 
     noa: Vec<String>,
-
-    marker: PhantomData<S>,
 }
 
-impl<S, G> SimpleParser<S, G>
+impl<G> SimpleParser<G>
 where
     G: Generator + Debug + Default,
-    S: Set + Default,
 {
     pub fn new(uid_gen: G) -> Self {
         Self {
@@ -44,18 +39,17 @@ where
     }
 }
 
-impl<S, G> Parser for SimpleParser<S, G>
+impl<G> Parser for SimpleParser<G>
 where
     G: Generator + Debug + Default,
-    S: Set + Default,
 {
     fn parse<'a>(
         &mut self,
         set: &'a mut dyn Set,
         iter: &mut dyn Iterator<Item = String>,
-    ) -> Result<Option<ReturnValue<'a>>> {
+    ) -> Result<bool> {
         let mut argstream = ArgStream::from(iter);
-        let mut set = set;
+        let set = set;
         let mut iter = argstream.iter_mut();
 
         // copy the prefix, so we don't need borrow set
@@ -172,10 +166,7 @@ where
         // do post check
         self.post_check(set)?;
 
-        Ok(Some(ReturnValue {
-            set: set,
-            noa: self.noa.clone(),
-        }))
+        Ok(true)
     }
 
     fn invoke_callback(
@@ -226,10 +217,9 @@ where
     }
 }
 
-impl<S, G> Proc<NonOptMatcher> for SimpleParser<S, G>
+impl<G> Proc<NonOptMatcher> for SimpleParser<G>
 where
     G: Generator + Debug + Default,
-    S: Set + Default,
 {
     fn process(&mut self, msg: &mut NonOptMatcher, set: &mut dyn Set) -> Result<bool> {
         let matcher = msg;
@@ -280,10 +270,9 @@ where
     }
 }
 
-impl<S, G> Proc<OptMatcher> for SimpleParser<S, G>
+impl<G> Proc<OptMatcher> for SimpleParser<G>
 where
     G: Generator + Debug + Default,
-    S: Set + Default,
 {
     fn process(&mut self, msg: &mut OptMatcher, set: &mut dyn Set) -> Result<bool> {
         let matcher = msg;
@@ -320,15 +309,14 @@ where
 
 #[cfg(test)]
 mod test {
+    use crate::getopt;
     use crate::parser::testutil::*;
     use crate::{prelude::*, set::Commit};
 
     macro_rules! simple_cb_tweak {
         () => {
             Some(Box::new(
-                |parser: &mut SimpleParser<SimpleSet, UidGenerator>,
-                 uid,
-                 checker: Option<DataChecker>| {
+                |parser: &mut SimpleParser<UidGenerator>, uid, checker: Option<DataChecker>| {
                     let mut checker = checker;
 
                     parser.add_callback(
@@ -361,7 +349,7 @@ mod test {
                     name: "a",
                     prefix: "-",
                     ..DataChecker::default()
-                })
+                }),
             },
             TestingCase {
                 opt_str: "-b=u",
@@ -374,7 +362,7 @@ mod test {
                     name: "b",
                     prefix: "-",
                     ..DataChecker::default()
-                })
+                }),
             },
             TestingCase {
                 opt_str: "-c=s",
@@ -387,7 +375,7 @@ mod test {
                     name: "c",
                     prefix: "-",
                     ..DataChecker::default()
-                })
+                }),
             },
             TestingCase {
                 opt_str: "-d=f",
@@ -400,7 +388,7 @@ mod test {
                     name: "d",
                     prefix: "-",
                     ..DataChecker::default()
-                })
+                }),
             },
             TestingCase {
                 opt_str: "-e=b",
@@ -413,7 +401,7 @@ mod test {
                     name: "e",
                     prefix: "-",
                     ..DataChecker::default()
-                })
+                }),
             },
             TestingCase {
                 opt_str: "-f=a",
@@ -426,7 +414,7 @@ mod test {
                     name: "f",
                     prefix: "-",
                     ..DataChecker::default()
-                })
+                }),
             },
             TestingCase {
                 opt_str: "-g=i",
@@ -442,23 +430,21 @@ mod test {
                     prefix: "-",
                     alias: vec![("+", "g-i64")],
                     ..DataChecker::default()
-                })
+                }),
             },
             TestingCase {
                 opt_str: "-h=i",
                 ret_value: None,
                 commit_tweak: None,
                 callback_tweak: simple_cb_tweak!(),
-                checker: None
+                checker: None,
             },
         ];
 
         assert!(do_simple_test(testing_cases).is_ok());
     }
 
-    fn do_simple_test(
-        testing_cases: &mut [TestingCase<SimpleParser<SimpleSet, UidGenerator>>],
-    ) -> Result<()> {
+    fn do_simple_test(testing_cases: &mut [TestingCase<SimpleParser<UidGenerator>>]) -> Result<()> {
         let mut set = SimpleSet::new();
         let mut parser = SimpleParser::new(UidGenerator::default());
 
@@ -486,13 +472,12 @@ mod test {
         .iter()
         .map(|&v| String::from(v));
 
-        let ret = parser.parse(&mut set, input)?;
-
-        if let Some(mut ret) = ret {
+        if let Ok(Some(ret)) = getopt!(input, set, parser) {
             for testing_case in testing_cases.iter_mut() {
-                testing_case.check_ret(ret.set)?;
+                testing_case.check_ret(ret.1)?;
             }
         }
+
         Ok(())
     }
 }

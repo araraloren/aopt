@@ -14,14 +14,15 @@ extern crate tracing;
 
 use prelude::Parser;
 use prelude::Result;
-use prelude::ReturnValue;
 use prelude::Set;
 
-pub fn getopt_impl<'a, P: Parser>(
+pub struct ReturnValue<'a, P: Parser>(P, &'a mut dyn Set);
+
+pub fn getopt_impl<'a, P: Parser + Default>(
     iter: impl Iterator<Item = String>,
     sets: Vec<&'a mut dyn Set>,
     mut parsers: Vec<P>,
-) -> Result<Option<ReturnValue<'a>>> {
+) -> Result<Option<ReturnValue<'a, P>>> {
     assert_eq!(sets.len(), parsers.len());
 
     let args: Vec<String> = iter.collect();
@@ -30,11 +31,12 @@ pub fn getopt_impl<'a, P: Parser>(
     for (index, set) in sets.into_iter().enumerate() {
         let parser = parsers.get_mut(index).unwrap();
 
-        match parser.parse(
-            set,
-            &mut args.iter().map(|v| v.clone()),
-        ) {
-            Ok(rv) => return Ok(rv),
+        match parser.parse(set, &mut args.iter().map(|v| v.clone())) {
+            Ok(rv) => {
+                if rv {
+                    return Ok(Some(ReturnValue(std::mem::take(parser), set)));
+                }
+            }
             Err(e) => {
                 if e.is_special() && index + 1 != count {
                     continue;
@@ -47,12 +49,31 @@ pub fn getopt_impl<'a, P: Parser>(
     Ok(None)
 }
 
+pub fn getopt_impl_s<'a, P: Parser + Default>(
+    mut iter: impl Iterator<Item = String>,
+    set: &'a mut dyn Set,
+    mut parser: P,
+) -> Result<Option<ReturnValue<'a, P>>> {
+    if parser.parse(set, &mut iter)? {
+        return Ok(Some(ReturnValue(parser, set)));
+    } else {
+        Ok(None)
+    }
+}
+
 #[macro_export]
 macro_rules! getopt {
-    ($iter:expr, $($set:expr, $parser:expr),+ ) => {
-        getopt_rs::getopt_impl(
+    ($iter:expr, $set:expr, $parser:expr ) => {
+        getopt_impl_s(
             $iter,
-            vec![$($set, )+],
+            &mut $set,
+            $parser
+        )
+    };
+    ($iter:expr, $($set:expr, $parser:expr),+ ) => {
+        getopt_impl(
+            $iter,
+            vec![$(&mut $set, )+],
             vec![$($parser, )+]
         )
     };
@@ -137,12 +158,13 @@ pub mod prelude {
         ArrayCreator, BoolCreator, FltCreator, IntCreator, StrCreator, UintCreator,
     };
     pub use crate::opt::{CmdCreator, MainCreator, PosCreator};
-    pub use crate::parser::{DelayParser, Parser, PreParser, ReturnValue, SimpleParser};
+    pub use crate::parser::{DelayParser, Parser, PreParser, SimpleParser};
     pub use crate::proc::{Info, Proc};
     pub use crate::proc::{Matcher, NonOptMatcher, OptMatcher};
     pub use crate::set::{CreatorSet, OptionSet, PrefixSet, Set, SimpleSet};
     pub use crate::tools;
     pub use crate::uid::{Uid, UidGenerator};
+    pub use crate::{getopt, getopt_impl, getopt_impl_s, ReturnValue};
     pub use crate::{simple_main_cb, simple_main_mut_cb};
     pub use crate::{simple_opt_cb, simple_opt_mut_cb};
     pub use crate::{simple_pos_cb, simple_pos_mut_cb};

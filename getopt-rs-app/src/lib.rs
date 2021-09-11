@@ -1,4 +1,1 @@
-
-struct App {
-    
-}
+struct App {}

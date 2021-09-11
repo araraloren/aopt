@@ -8,7 +8,7 @@ fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     let mut set = SimpleSet::default();
-    let mut parser = PreParser::<SimpleSet, UidGenerator>::default();
+    let mut parser = PreParser::<UidGenerator>::default();
 
     set.add_creator(Box::new(IntCreator::default()));
     set.add_creator(Box::new(BoolCreator::default()));
