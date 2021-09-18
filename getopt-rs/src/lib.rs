@@ -1,3 +1,4 @@
+pub mod app;
 pub mod arg;
 pub mod ctx;
 pub mod err;

@@ -2,7 +2,6 @@
 
 members = [
     "getopt-rs",
-    "getopt-rs-app",
     "getopt-rs-help",
     "simple-find-file"
 ]
