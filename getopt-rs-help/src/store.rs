@@ -10,24 +10,24 @@ pub struct Store {
 }
 
 impl Store {
-    pub fn new_sec(&mut self, sec: &str) -> SectionMut {
+    pub fn new_sec(&mut self, sec: String) -> SectionMut {
         SectionMut::new(self, sec)
     }
 
-    pub fn new_cmd(&mut self, cmd: &str) -> CmdMut {
+    pub fn new_cmd(&mut self, cmd: String) -> CmdMut {
         CmdMut::new(self, cmd)
     }
 
-    pub fn new_pos(&mut self, cmd: &str, pos: &str) -> Option<CmdPosMut> {
+    pub fn new_pos(&mut self, cmd: &str, pos: String) -> Option<CmdPosMut> {
         self.get_cmd_mut(cmd).map(|v| CmdPosMut::new(v, pos))
     }
 
-    pub fn new_opt(&mut self, cmd: &str, opt: &str) -> Option<CmdOptMut> {
+    pub fn new_opt(&mut self, cmd: &str, opt: String) -> Option<CmdOptMut> {
         self.get_cmd_mut(cmd).map(|v| CmdOptMut::new(v, opt))
     }
 
-    pub fn attach_cmd(&mut self, sec: &str, cmd: &str) -> bool {
-        if let Some(_) = self.get_cmd(cmd) {
+    pub fn attach_cmd(&mut self, sec: &str, cmd: String) -> bool {
+        if let Some(_) = self.get_cmd(cmd.as_str()) {
             if let Some(sec_store) = self.get_sec_mut(sec) {
                 sec_store.attach_cmd(cmd);
                 return true;
@@ -112,28 +112,28 @@ pub struct SectionMut<'a> {
 }
 
 impl<'a> SectionMut<'a> {
-    pub fn new(g: &'a mut Store, s: &str) -> Self {
+    pub fn new(g: &'a mut Store, s: String) -> Self {
         let mut ss = SecStore::default();
         ss.set_name(s);
         Self { g, s: ss }
     }
 
-    pub fn set_name(&mut self, name: &str) -> &mut Self {
+    pub fn set_name(&mut self, name: String) -> &mut Self {
         self.s.set_name(name);
         self
     }
 
-    pub fn set_hint(&mut self, hint: &str) -> &mut Self {
+    pub fn set_hint(&mut self, hint: String) -> &mut Self {
         self.s.set_hint(hint);
         self
     }
 
-    pub fn set_help(&mut self, help: &str) -> &mut Self {
+    pub fn set_help(&mut self, help: String) -> &mut Self {
         self.s.set_help(help);
         self
     }
 
-    pub fn attach_cmd(&mut self, cmd: &str) -> &mut Self {
+    pub fn attach_cmd(&mut self, cmd: String) -> &mut Self {
         self.s.attach_cmd(cmd);
         self
     }
@@ -150,38 +150,38 @@ pub struct CmdMut<'a> {
 }
 
 impl<'a> CmdMut<'a> {
-    pub fn new(g: &'a mut Store, c: &str) -> Self {
+    pub fn new(g: &'a mut Store, c: String) -> Self {
         let mut cs = CmdStore::default();
         cs.set_name(c);
         Self { g, c: cs }
     }
 
-    pub fn set_name(&mut self, name: &str) -> &mut Self {
+    pub fn set_name(&mut self, name: String) -> &mut Self {
         self.c.set_name(name);
         self
     }
 
-    pub fn set_usage(&mut self, help: &str) -> &mut Self {
+    pub fn set_usage(&mut self, help: String) -> &mut Self {
         self.c.set_usage(help);
         self
     }
 
-    pub fn set_footer(&mut self, help: &str) -> &mut Self {
+    pub fn set_footer(&mut self, help: String) -> &mut Self {
         self.c.set_footer(help);
         self
     }
 
-    pub fn set_header(&mut self, help: &str) -> &mut Self {
+    pub fn set_header(&mut self, help: String) -> &mut Self {
         self.c.set_header(help);
         self
     }
 
-    pub fn set_hint(&mut self, hint: &str) -> &mut Self {
+    pub fn set_hint(&mut self, hint: String) -> &mut Self {
         self.c.set_hint(hint);
         self
     }
 
-    pub fn set_help(&mut self, help: &str) -> &mut Self {
+    pub fn set_help(&mut self, help: String) -> &mut Self {
         self.c.set_help(help);
         self
     }
@@ -196,11 +196,11 @@ impl<'a> CmdMut<'a> {
         self
     }
 
-    pub fn new_pos(&mut self, pos: &str) -> CmdPosMut {
+    pub fn new_pos(&mut self, pos: String) -> CmdPosMut {
         CmdPosMut::new(&mut self.c, pos)
     }
 
-    pub fn new_opt(&mut self, opt: &str) -> CmdOptMut {
+    pub fn new_opt(&mut self, opt: String) -> CmdOptMut {
         CmdOptMut::new(&mut self.c, opt)
     }
 
@@ -216,23 +216,23 @@ pub struct CmdPosMut<'a> {
 }
 
 impl<'a> CmdPosMut<'a> {
-    pub fn new(c: &'a mut CmdStore, p: &str) -> Self {
+    pub fn new(c: &'a mut CmdStore, p: String) -> Self {
         let mut ps = PosStore::default();
         ps.set_name(p);
         Self { c, p: ps }
     }
 
-    pub fn set_name(&mut self, name: &str) -> &mut Self {
+    pub fn set_name(&mut self, name: String) -> &mut Self {
         self.p.set_name(name);
         self
     }
 
-    pub fn set_hint(&mut self, hint: &str) -> &mut Self {
+    pub fn set_hint(&mut self, hint: String) -> &mut Self {
         self.p.set_hint(hint);
         self
     }
 
-    pub fn set_help(&mut self, help: &str) -> &mut Self {
+    pub fn set_help(&mut self, help: String) -> &mut Self {
         self.p.set_help(help);
         self
     }
@@ -259,23 +259,23 @@ pub struct CmdOptMut<'a> {
 }
 
 impl<'a> CmdOptMut<'a> {
-    pub fn new(c: &'a mut CmdStore, o: &str) -> Self {
+    pub fn new(c: &'a mut CmdStore, o: String) -> Self {
         let mut os = OptStore::default();
         os.set_name(o);
         Self { c, o: os }
     }
 
-    pub fn set_name(&mut self, name: &str) -> &mut Self {
+    pub fn set_name(&mut self, name: String) -> &mut Self {
         self.o.set_name(name);
         self
     }
 
-    pub fn set_hint(&mut self, hint: &str) -> &mut Self {
+    pub fn set_hint(&mut self, hint: String) -> &mut Self {
         self.o.set_hint(hint);
         self
     }
 
-    pub fn set_help(&mut self, help: &str) -> &mut Self {
+    pub fn set_help(&mut self, help: String) -> &mut Self {
         self.o.set_help(help);
         self
     }
@@ -302,18 +302,18 @@ pub struct OptStore {
 }
 
 impl OptStore {
-    pub fn set_name(&mut self, name: &str) -> &mut Self {
-        self.name = name.to_owned();
+    pub fn set_name(&mut self, name: String) -> &mut Self {
+        self.name = name;
         self
     }
 
-    pub fn set_hint(&mut self, hint: &str) -> &mut Self {
-        self.hint = hint.to_owned();
+    pub fn set_hint(&mut self, hint: String) -> &mut Self {
+        self.hint = hint;
         self
     }
 
-    pub fn set_help(&mut self, help: &str) -> &mut Self {
-        self.help = help.to_owned();
+    pub fn set_help(&mut self, help: String) -> &mut Self {
+        self.help = help;
         self
     }
 
@@ -353,18 +353,18 @@ pub struct PosStore {
 }
 
 impl PosStore {
-    pub fn set_name(&mut self, name: &str) -> &mut Self {
-        self.name = name.to_owned();
+    pub fn set_name(&mut self, name: String) -> &mut Self {
+        self.name = name;
         self
     }
 
-    pub fn set_hint(&mut self, hint: &str) -> &mut Self {
-        self.hint = hint.to_owned();
+    pub fn set_hint(&mut self, hint: String) -> &mut Self {
+        self.hint = hint;
         self
     }
 
-    pub fn set_help(&mut self, help: &str) -> &mut Self {
-        self.help = help.to_owned();
+    pub fn set_help(&mut self, help: String) -> &mut Self {
+        self.help = help;
         self
     }
 
@@ -419,33 +419,33 @@ pub struct CmdStore {
 }
 
 impl CmdStore {
-    pub fn set_name(&mut self, name: &str) -> &mut Self {
-        self.name = name.to_owned();
+    pub fn set_name(&mut self, name: String) -> &mut Self {
+        self.name = name;
         self
     }
 
-    pub fn set_usage(&mut self, help: &str) -> &mut Self {
-        self.usage = help.to_owned();
+    pub fn set_usage(&mut self, help: String) -> &mut Self {
+        self.usage = help;
         self
     }
 
-    pub fn set_footer(&mut self, help: &str) -> &mut Self {
-        self.footer = help.to_owned();
+    pub fn set_footer(&mut self, help: String) -> &mut Self {
+        self.footer = help;
         self
     }
 
-    pub fn set_header(&mut self, help: &str) -> &mut Self {
-        self.header = help.to_owned();
+    pub fn set_header(&mut self, help: String) -> &mut Self {
+        self.header = help;
         self
     }
 
-    pub fn set_hint(&mut self, hint: &str) -> &mut Self {
-        self.hint = hint.to_owned();
+    pub fn set_hint(&mut self, hint: String) -> &mut Self {
+        self.hint = hint;
         self
     }
 
-    pub fn set_help(&mut self, help: &str) -> &mut Self {
-        self.help = help.to_owned();
+    pub fn set_help(&mut self, help: String) -> &mut Self {
+        self.help = help;
         self
     }
 
@@ -500,23 +500,23 @@ pub struct SecStore {
 }
 
 impl SecStore {
-    pub fn set_name(&mut self, name: &str) -> &mut Self {
-        self.name = name.to_owned();
+    pub fn set_name(&mut self, name: String) -> &mut Self {
+        self.name = name;
         self
     }
 
-    pub fn set_hint(&mut self, hint: &str) -> &mut Self {
-        self.hint = hint.to_owned();
+    pub fn set_hint(&mut self, hint: String) -> &mut Self {
+        self.hint = hint;
         self
     }
 
-    pub fn set_help(&mut self, help: &str) -> &mut Self {
-        self.help = help.to_owned();
+    pub fn set_help(&mut self, help: String) -> &mut Self {
+        self.help = help;
         self
     }
 
-    pub fn attach_cmd(&mut self, cmd: &str) -> &mut Self {
-        self.cmd_attach.push(cmd.to_owned());
+    pub fn attach_cmd(&mut self, cmd: String) -> &mut Self {
+        self.cmd_attach.push(cmd);
         self
     }
 
