@@ -57,9 +57,9 @@ impl Context for OptContext {
                 );
             }
             self.matched_index = Some(0);
-            let value = opt.parse_value(self.argument.as_ref().unwrap_or(&String::from(""))).map_err(|_| {
-                SpecialError::InvalidArgumentForOption(opt.get_hint().to_owned())
-            })?;
+            let value = opt
+                .parse_value(self.argument.as_ref().unwrap_or(&String::from("")))
+                .map_err(|_| SpecialError::InvalidArgumentForOption(opt.get_hint().to_owned()))?;
             self.set_value(value);
             debug!("get return value {:?}!", self.get_value());
             opt.set_invoke(true);

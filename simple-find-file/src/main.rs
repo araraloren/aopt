@@ -42,31 +42,39 @@ fn main() -> color_eyre::Result<()> {
             }),
         );
     }
-    if let Ok(mut commit) = set.add_opt("--dir=b") {
-        commit.add_alias(String::from("-"), String::from("d"));
-        let id = commit.commit()?;
-        parser.add_callback(
-            id,
-            simple_opt_mut_cb!(|_, set, value| {
-                let ret = filte_file(set, "directory", |f| Path::new(f).is_dir())
-                            .iter()
-                            .map(|&v| String::from(v)).collect::<Vec<String>>();
-                if let Ok(mut filter) = set.filter_mut("directory") {
-                    if let Some(dir_opt) = filter.find() {
-                        dir_opt
-                            .set_value(OptValue::from(ret))
+    for (opt, alias_prefix, alias_name, file_type) in
+        [
+            ("--dir=b", String::from("-"), String::from("d"), "dir"),
+            ("--link=b", String::from("-"), String::from("l"), "link"),
+            ("--file=b", String::from("-"), String::from("f"), "file")
+        ]
+    {
+        if let Ok(mut commit) = set.add_opt(opt) {
+            commit.add_alias(alias_prefix, alias_name);
+            let id = commit.commit()?;
+            parser.add_callback(
+                id,
+                simple_opt_mut_cb!(move |_, set_cb, value| {
+                    let ret = filte_file(set_cb, "directory", file_type, Box::new(filter_type))
+                        .iter()
+                        .map(|&v| String::from(v))
+                        .collect::<Vec<String>>();
+                    if let Ok(mut filter) = set_cb.filter_mut("directory") {
+                        if let Some(dir_opt) = filter.find() {
+                            dir_opt.set_value(OptValue::from(ret))
+                        }
                     }
-                }
-                Ok(Some(value))
-            }),
-        )
+                    Ok(Some(value))
+                }),
+            )
+        }
     }
     if let Ok(mut commit) = set.add_opt("main=m") {
         let id = commit.commit()?;
         parser.add_callback(
             id,
             simple_main_cb!(|_, set, _, value| {
-                for file in filte_file(set, "directory", |_| true) {
+                for file in filte_file(set, "directory", "all", Box::new(filter_type)) {
                     println!("{}", file);
                 }
                 Ok(Some(value))
@@ -79,14 +87,19 @@ fn main() -> color_eyre::Result<()> {
     Ok(())
 }
 
-fn filte_file<'a, F: Fn(&str) -> bool>(set: &'a dyn Set, opt: &str, filte_op: F) -> Vec<&'a str> {
+fn filte_file<'a>(
+    set: &'a dyn Set,
+    opt: &str,
+    file_type: &str,
+    filte_op: Box<dyn Fn(&str, &str) -> bool>,
+) -> Vec<&'a str> {
     let mut ret = vec![];
     if let Ok(filter) = set.filter(opt) {
         if let Some(dir_opt) = filter.find() {
             let value = dir_opt.get_value();
             if let Some(files) = value.as_slice() {
                 for file in files {
-                    if filte_op(file) {
+                    if filte_op(file_type, file) {
                         ret.push(file.as_str());
                     }
                 }
@@ -95,6 +108,30 @@ fn filte_file<'a, F: Fn(&str) -> bool>(set: &'a dyn Set, opt: &str, filte_op: F)
     }
     ret
 }
+
+fn filter_type(file_type: &str, file: &str) -> bool {
+    match file_type {
+        "all" => true,
+        "dir" => {
+            Path::new(file).is_dir()
+        }
+        "link" => {
+            if let Ok(meta) = std::fs::symlink_metadata(file) {
+                meta.file_type().is_symlink()
+            }
+            else {
+                false
+            }
+        }
+        "file" => {
+            Path::new(file).is_file()
+        }
+        _ => {
+            false
+        }
+    }
+}
+
 
 fn find_file_in_directory(dir: &str) -> color_eyre::Result<Vec<String>> {
     let mut ret = vec![];
