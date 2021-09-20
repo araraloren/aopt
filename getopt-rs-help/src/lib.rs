@@ -1,11 +1,10 @@
-
+pub mod printer;
 pub mod store;
 pub mod style;
 pub mod wrapper;
-pub mod printer;
 
-use std::io::{Stdout, Write};
 use std::io::Result;
+use std::io::{Stdout, Write};
 
 use printer::Printer;
 use store::Store;
@@ -87,8 +86,7 @@ impl<W: Write> Printer<W> for AppHelp<W> {
         if let Some(cmd_store) = self.store.get_cmd(cmd) {
             self.writer
                 .write(format!("{}\n", cmd_store.get_header()).as_bytes())
-        }
-        else {
+        } else {
             Ok(0)
         }
     }
@@ -97,8 +95,7 @@ impl<W: Write> Printer<W> for AppHelp<W> {
         if let Some(cmd_store) = self.store.get_cmd(cmd) {
             self.writer
                 .write(format!("{}\n", cmd_store.get_footer()).as_bytes())
-        }
-        else {
+        } else {
             Ok(0)
         }
     }
@@ -110,6 +107,4 @@ impl<W: Write> Printer<W> for AppHelp<W> {
     fn print_cmd_opt(&mut self, cmd: &str) -> Result<usize> {
         todo!()
     }
-
-    
 }

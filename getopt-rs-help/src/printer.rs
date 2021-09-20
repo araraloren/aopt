@@ -1,4 +1,4 @@
-use crate::{style::Style};
+use crate::style::Style;
 
 use std::io::{Result, Write};
 

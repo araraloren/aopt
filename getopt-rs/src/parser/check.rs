@@ -46,15 +46,12 @@ pub fn default_nonopt_check<P: Parser>(set: &dyn Set, _parser: &P) -> Result<boo
             || opt.as_ref().match_style(Style::Cmd)
             || opt.as_ref().match_style(Style::Main)
         {
-            let index = opt
-                .as_ref()
-                .get_index()
-                .unwrap()
-                .calc_index(MAX_INDEX, 1)
-                .unwrap_or(MAX_INDEX);
-            let entry = index_map.entry(index).or_insert(vec![]);
+            if let Some(index) = opt.as_ref().get_index() {
+                let index = index.calc_index(MAX_INDEX, 1).unwrap_or(MAX_INDEX);
+                let entry = index_map.entry(index).or_insert(vec![]);
 
-            entry.push(opt.as_ref().get_uid());
+                entry.push(opt.as_ref().get_uid());
+            }
         }
     }
 
