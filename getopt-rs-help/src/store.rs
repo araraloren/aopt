@@ -2,11 +2,13 @@ use std::fmt::Debug;
 
 #[derive(Debug, Default)]
 pub struct Store {
-    global: CmdStore,
-
     sections: Vec<SecStore>,
 
     cmds: Vec<CmdStore>,
+
+    header: String,
+
+    footer: String,
 }
 
 impl Store {
@@ -60,10 +62,6 @@ impl Store {
         false
     }
 
-    pub fn set_global(&mut self, cmd: CmdStore) {
-        self.global = cmd;
-    }
-
     pub fn get_sec(&self, sec: &str) -> Option<&SecStore> {
         self.sections.iter().find(|&v| v.get_name() == sec)
     }
@@ -96,12 +94,22 @@ impl Store {
         self.get_cmd_mut(cmd).and_then(|v| v.get_opt_mut(opt))
     }
 
-    pub fn get_global(&self) -> &CmdStore {
-        &self.global
+    pub fn set_header(&mut self, header: String) -> &mut Self {
+        self.header = header;
+        self
     }
 
-    pub fn get_global_mut(&mut self) -> &mut CmdStore {
-        &mut self.global
+    pub fn set_footer(&mut self, footer: String) -> &mut Self {
+        self.footer = footer;
+        self
+    }
+
+    pub fn get_header(&self) -> &str {
+        &self.header
+    }
+
+    pub fn get_footer(&self) -> &str {
+        &self.footer
     }
 }
 
@@ -461,6 +469,14 @@ impl CmdStore {
 
     pub fn get_name(&self) -> &str {
         self.name.as_str()
+    }
+
+    pub fn get_header(&self) -> &str {
+        &self.header
+    }
+
+    pub fn get_footer(&self) -> &str {
+        &self.footer
     }
 
     pub fn get_hint(&self) -> &str {
