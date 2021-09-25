@@ -15,6 +15,10 @@ pub trait Printer<W: Write> {
 
     fn print_footer(&mut self) -> Result<usize>;
 
+    fn print_pos(&mut self) -> Result<usize>;
+
+    fn print_opt(&mut self) -> Result<usize>;
+
     fn print_section_all(&mut self) -> Result<usize>;
 
     fn print_section(&mut self, section: &str) -> Result<usize>;

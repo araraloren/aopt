@@ -12,7 +12,7 @@ use style::Style;
 
 #[derive(Debug)]
 pub struct AppHelp<W: Write> {
-    pub name: String,
+    name: String,
 
     pub store: Store,
 
@@ -29,6 +29,26 @@ impl<W: Write> AppHelp<W> {
             style,
             writer,
         }
+    }
+
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
+
+    pub fn get_style(&self) -> &Style {
+        &self.style
+    }
+
+    pub fn set_style(&mut self, style: Style) {
+        self.style = style;
+    }
+
+    pub fn set_writer(&mut self, writer: W) {
+        self.writer = writer;
     }
 }
 
@@ -57,17 +77,34 @@ impl<W: Write> Printer<W> for AppHelp<W> {
     }
 
     fn print_usage(&mut self) -> Result<usize> {
-        todo!()
+        let mut buffer = String::new();
+
+        buffer += &format!("usage: {} ", self.get_name());
+        for opt_store in self.store.get_global().opt_iter() {
+            buffer += &format!("{} ", opt_store.get_hint());
+        }
+        if self.store.cmd_len() > 0 {
+            buffer += &format!("<COMMAND> [args]\n");
+        }
+        self.writer.write(buffer.as_bytes())
     }
 
     fn print_header(&mut self) -> Result<usize> {
         self.writer
-            .write(format!("{}\n", self.store.get_header()).as_bytes())
+            .write(format!("{}\n", self.store.get_global().get_header()).as_bytes())
     }
 
     fn print_footer(&mut self) -> Result<usize> {
         self.writer
-            .write(format!("{}\n", self.store.get_footer()).as_bytes())
+            .write(format!("{}\n", self.store.get_global().get_footer()).as_bytes())
+    }
+
+    fn print_pos(&mut self) -> Result<usize> {
+        todo!()
+    }
+
+    fn print_opt(&mut self) -> Result<usize> {
+        todo!()
     }
 
     fn print_section_all(&mut self) -> Result<usize> {

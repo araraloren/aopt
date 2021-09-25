@@ -162,11 +162,11 @@ impl FilterType {
             FilterType::Size(size) => {
                 *size = *value.as_uint().unwrap_or(&u64::MAX);
             }
-            _ => { }
+            _ => {}
         }
         self
     }
-    
+
     pub fn filter(&self, path: &str) -> bool {
         if let Ok(meta) = std::fs::symlink_metadata(path) {
             match self {

@@ -6,9 +6,7 @@ pub struct Store {
 
     cmds: Vec<CmdStore>,
 
-    header: String,
-
-    footer: String,
+    global_cmd: CmdStore,
 }
 
 impl Store {
@@ -62,6 +60,22 @@ impl Store {
         false
     }
 
+    pub fn sec_len(&self) -> usize {
+        self.sections.len()
+    }
+
+    pub fn cmd_len(&self) -> usize {
+        self.cmds.len()
+    }
+
+    pub fn get_secs(&self) -> &[SecStore] {
+        &self.sections
+    }
+
+    pub fn get_cmds(&self) -> &[CmdStore] {
+        &self.cmds
+    }
+
     pub fn get_sec(&self, sec: &str) -> Option<&SecStore> {
         self.sections.iter().find(|&v| v.get_name() == sec)
     }
@@ -94,22 +108,28 @@ impl Store {
         self.get_cmd_mut(cmd).and_then(|v| v.get_opt_mut(opt))
     }
 
-    pub fn set_header(&mut self, header: String) -> &mut Self {
-        self.header = header;
-        self
+    pub fn sec_iter(&self) -> std::slice::Iter<'_, SecStore> {
+        self.sections.iter()
     }
 
-    pub fn set_footer(&mut self, footer: String) -> &mut Self {
-        self.footer = footer;
-        self
+    pub fn cmd_iter(&self) -> std::slice::Iter<'_, CmdStore> {
+        self.cmds.iter()
     }
 
-    pub fn get_header(&self) -> &str {
-        &self.header
+    pub fn sec_iter_mut(&mut self) -> std::slice::IterMut<'_, SecStore> {
+        self.sections.iter_mut()
     }
 
-    pub fn get_footer(&self) -> &str {
-        &self.footer
+    pub fn cmd_iter_mut(&mut self) -> std::slice::IterMut<'_, CmdStore> {
+        self.cmds.iter_mut()
+    }
+
+    pub fn get_global(&self) -> &CmdStore {
+        &self.global_cmd
+    }
+
+    pub fn get_global_mut(&mut self) -> &mut CmdStore {
+        &mut self.global_cmd
     }
 }
 
@@ -502,6 +522,30 @@ impl CmdStore {
     pub fn get_opt_mut(&mut self, opt: &str) -> Option<&mut OptStore> {
         self.opt_store.iter_mut().find(|v| v.name == opt)
     }
+
+    pub fn pos_len(&self) -> usize {
+        self.pos_store.len()
+    }
+
+    pub fn opt_len(&self) -> usize {
+        self.opt_store.len()
+    }
+
+    pub fn get_pos_store(&self) -> &[PosStore] {
+        &self.pos_store
+    }
+
+    pub fn get_opt_store(&self) -> &[OptStore] {
+        &self.opt_store
+    }
+
+    pub fn pos_iter(&self) -> std::slice::Iter<'_, PosStore> {
+        self.pos_store.iter()
+    }
+
+    pub fn opt_iter(&self) -> std::slice::Iter<'_, OptStore> {
+        self.opt_store.iter()
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -550,5 +594,17 @@ impl SecStore {
 
     pub fn get_help(&self) -> &str {
         self.help.as_str()
+    }
+
+    pub fn cmd_len(&self) -> usize {
+        self.cmd_attach.len()
+    }
+
+    pub fn get_cmd(&self) -> &[String] {
+        &self.cmd_attach
+    }
+
+    pub fn cmd_iter(&self) -> std::slice::Iter<'_, String> {
+        self.cmd_attach.iter()
     }
 }
