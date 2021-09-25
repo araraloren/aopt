@@ -37,7 +37,7 @@ fn main() -> color_eyre::Result<()> {
             }),
         );
     }
-    for (opt, alias_prefix, alias_name, filter_type) in [
+    for (opt, alias_prefix, alias_name, mut filter_type) in [
         (
             "--dir=b",
             String::from("-"),
@@ -56,6 +56,18 @@ fn main() -> color_eyre::Result<()> {
             String::from("f"),
             FilterType::File,
         ),
+        (
+            "--size=u",
+            String::from("-"),
+            String::from("s"),
+            FilterType::Size(0),
+        ),
+        (
+            "--regex=s",
+            String::from("-"),
+            String::from("r"),
+            FilterType::Regex(String::default()),
+        ),
     ] {
         if let Ok(mut commit) = set.add_opt(opt) {
             commit.add_alias(alias_prefix, alias_name);
@@ -63,6 +75,7 @@ fn main() -> color_eyre::Result<()> {
             parser.add_callback(
                 id,
                 simple_opt_mut_cb!(move |_, set_cb, value| {
+                    let filter_type = filter_type.copy_value_from(&value);
                     let ret = filte_file(set_cb, "directory", &filter_type)
                         .iter()
                         .map(|&v| String::from(v))
@@ -76,47 +89,6 @@ fn main() -> color_eyre::Result<()> {
                 }),
             )
         }
-    }
-    if let Ok(mut commit) = set.add_opt("--size=u") {
-        commit.add_alias(String::from("-"), String::from("s"));
-        let id = commit.commit()?;
-        parser.add_callback(
-            id,
-            simple_opt_mut_cb!(move |_, set_cb, value| {
-                let filter_type = FilterType::Size(*value.as_uint().unwrap_or(&u64::MAX));
-                let ret = filte_file(set_cb, "directory", &filter_type)
-                    .iter()
-                    .map(|&v| String::from(v))
-                    .collect::<Vec<String>>();
-                if let Ok(mut filter) = set_cb.filter_mut("directory") {
-                    if let Some(dir_opt) = filter.find() {
-                        dir_opt.set_value(OptValue::from(ret))
-                    }
-                }
-                Ok(Some(value))
-            }),
-        )
-    }
-    if let Ok(mut commit) = set.add_opt("--regex=s") {
-        commit.add_alias(String::from("-"), String::from("r"));
-        let id = commit.commit()?;
-        parser.add_callback(
-            id,
-            simple_opt_mut_cb!(move |_, set_cb, value| {
-                let filter_type =
-                    FilterType::Regex(value.as_str().unwrap_or(&format!(".")).clone());
-                let ret = filte_file(set_cb, "directory", &filter_type)
-                    .iter()
-                    .map(|&v| String::from(v))
-                    .collect::<Vec<String>>();
-                if let Ok(mut filter) = set_cb.filter_mut("directory") {
-                    if let Some(dir_opt) = filter.find() {
-                        dir_opt.set_value(OptValue::from(ret))
-                    }
-                }
-                Ok(Some(value))
-            }),
-        )
     }
     if let Ok(mut commit) = set.add_opt("main=m") {
         let id = commit.commit()?;
@@ -182,6 +154,19 @@ impl Default for FilterType {
 }
 
 impl FilterType {
+    pub fn copy_value_from(&mut self, value: &OptValue) -> &mut Self {
+        match self {
+            FilterType::Regex(regex_str) => {
+                *regex_str = value.as_str().unwrap_or(&String::from(".")).clone();
+            }
+            FilterType::Size(size) => {
+                *size = *value.as_uint().unwrap_or(&u64::MAX);
+            }
+            _ => { }
+        }
+        self
+    }
+    
     pub fn filter(&self, path: &str) -> bool {
         if let Ok(meta) = std::fs::symlink_metadata(path) {
             match self {
