@@ -10,3 +10,4 @@ edition = "2018"
 getopt-rs = { path = "../getopt-rs" }
 tracing-subscriber = "0.2"
 color-eyre = "0.5"
+regex = "1.5"
