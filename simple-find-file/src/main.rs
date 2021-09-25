@@ -76,7 +76,7 @@ fn main() -> color_eyre::Result<()> {
                 id,
                 simple_opt_mut_cb!(move |_, set_cb, value| {
                     let filter_type = filter_type.copy_value_from(&value);
-                    let ret = filte_file(set_cb, "directory", &filter_type)
+                    let ret = filter_file(set_cb, "directory", &filter_type)
                         .iter()
                         .map(|&v| String::from(v))
                         .collect::<Vec<String>>();
@@ -95,7 +95,7 @@ fn main() -> color_eyre::Result<()> {
         parser.add_callback(
             id,
             simple_main_cb!(|_, set, _, value| {
-                for file in filte_file(set, "directory", &FilterType::All) {
+                for file in filter_file(set, "directory", &FilterType::All) {
                     println!("{}", file);
                 }
                 Ok(Some(value))
@@ -108,7 +108,7 @@ fn main() -> color_eyre::Result<()> {
     Ok(())
 }
 
-fn filte_file<'a>(set: &'a dyn Set, opt: &str, filter_type: &FilterType) -> Vec<&'a str> {
+fn filter_file<'a>(set: &'a dyn Set, opt: &str, filter_type: &FilterType) -> Vec<&'a str> {
     let mut ret = vec![];
     if let Ok(filter) = set.filter(opt) {
         if let Some(dir_opt) = filter.find() {
