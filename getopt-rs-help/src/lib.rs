@@ -84,7 +84,17 @@ impl<W: Write> Printer<W> for AppHelp<W> {
             buffer += &format!("{} ", opt_store.get_hint());
         }
         if self.store.cmd_len() > 0 {
-            buffer += &format!("<COMMAND> [args]\n");
+            buffer += &format!("<COMMAND> ");
+        }
+        if self.store.get_global().pos_len() > 0 {
+            buffer += &format!("**ARGS**\n");
+        } else {
+            for cmd_store in self.store.cmd_iter() {
+                if cmd_store.pos_len() > 0 {
+                    buffer += &format!("**ARGS**\n");
+                    break;
+                }
+            }
         }
         self.writer.write(buffer.as_bytes())
     }

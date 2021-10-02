@@ -270,7 +270,7 @@ impl<'a> CmdPosMut<'a> {
         self
     }
 
-    pub fn set_index(&mut self, index: i64) -> &mut Self {
+    pub fn set_index(&mut self, index: String) -> &mut Self {
         self.p.set_index(index);
         self
     }
@@ -330,6 +330,15 @@ pub struct OptStore {
 }
 
 impl OptStore {
+    pub fn new(name: String, hint: String, help: String, optional: bool) -> Self {
+        Self {
+            name,
+            hint,
+            help,
+            optional,
+        }
+    }
+
     pub fn set_name(&mut self, name: String) -> &mut Self {
         self.name = name;
         self
@@ -375,12 +384,22 @@ pub struct PosStore {
 
     help: String,
 
-    index: i64,
+    index: String,
 
     optional: bool,
 }
 
 impl PosStore {
+    pub fn new(name: String, hint: String, help: String, index: String, optional: bool) -> Self {
+        Self {
+            name,
+            hint,
+            help,
+            index,
+            optional,
+        }
+    }
+
     pub fn set_name(&mut self, name: String) -> &mut Self {
         self.name = name;
         self
@@ -401,7 +420,7 @@ impl PosStore {
         self
     }
 
-    pub fn set_index(&mut self, index: i64) -> &mut Self {
+    pub fn set_index(&mut self, index: String) -> &mut Self {
         self.index = index;
         self
     }
@@ -422,8 +441,8 @@ impl PosStore {
         self.optional
     }
 
-    pub fn get_index(&self) -> i64 {
-        self.index
+    pub fn get_index(&self) -> &str {
+        self.index.as_str()
     }
 }
 
