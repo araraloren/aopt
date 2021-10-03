@@ -25,7 +25,7 @@ impl Default for Style {
     fn default() -> Self {
         Self {
             align: Alignment::default(),
-            indent: 0,
+            indent: 2,
             padding_char: ' ',
             wrap_width: 0,
         }

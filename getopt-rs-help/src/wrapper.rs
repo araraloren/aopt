@@ -58,6 +58,7 @@ impl<'a> Wrapped<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct Wrapper<'a, 'b> {
     data: &'a Vec<Vec<&'b str>>,
 
@@ -73,7 +74,8 @@ impl<'a, 'b> Wrapper<'a, 'b> {
     }
 
     pub fn wrap(&mut self) {
-        let mut default_style = vec![Style::default(); self.data.len()];
+        let data_len = self.data.iter().map(|v|v.len()).max().unwrap_or(0);
+        let mut default_style = vec![Style::default(); data_len];
 
         for line in self.data.iter() {
             for (style_mut, col) in default_style.iter_mut().zip(line.iter()) {
