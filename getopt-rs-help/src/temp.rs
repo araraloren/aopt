@@ -69,15 +69,210 @@ fn main() {
             "@0".to_owned(),
             false,
         ));
+        global.set_footer(String::from("Here is the footer of global help!"));
+        global.set_header(String::from("Here is the header of global help!"));
+    }
+
+    {
+        let mut store = app.store.new_cmd("c".to_owned());
+
+        store.set_hint("c".to_owned());
+        store.set_help("Compile and run c code".to_owned());
+        store.set_header(String::from("Here is cmd header for c"));
+        store.set_footer(String::from("Here is cmd footer for c"));
+
+        store.add_pos(PosStore::new(
+            "file".to_owned(),
+            "<file>".to_owned(),
+            "the c source file path".to_owned(),
+            "@0".to_owned(),
+            false,
+        ));
+        store.add_opt(OptStore::new(
+            "O".to_owned(),
+            "-O|--optimize=i".to_owned(),
+            "Set optimization level".to_owned(),
+            true,
+        ));
+        store.add_opt(OptStore::new(
+            "L".to_owned(),
+            "-L|--link=s".to_owned(),
+            "Add link library".to_owned(),
+            true,
+        ));
+        store.add_opt(OptStore::new(
+            "S".to_owned(),
+            "-S=b".to_owned(),
+            "Show assembly output".to_owned(),
+            true,
+        ));
+        store.commit();
+    }
+
+    {
+        let mut store = app.store.new_cmd("cpp".to_owned());
+
+        store.set_hint("cpp".to_owned());
+        store.set_help("Compile and run cpp code".to_owned());
+        store.set_header(String::from("Here is cmd header for cpp"));
+        store.set_footer(String::from("Here is cmd footer for cpp"));
+
+        store.add_pos(PosStore::new(
+            "file".to_owned(),
+            "<file>".to_owned(),
+            "the cpp source file path".to_owned(),
+            "@0".to_owned(),
+            false,
+        ));
+        store.add_opt(OptStore::new(
+            "O".to_owned(),
+            "-O|--optimize=i".to_owned(),
+            "Set optimization level".to_owned(),
+            true,
+        ));
+        store.add_opt(OptStore::new(
+            "L".to_owned(),
+            "-L|--link=s".to_owned(),
+            "Add link library".to_owned(),
+            true,
+        ));
+        store.add_opt(OptStore::new(
+            "S".to_owned(),
+            "-S=b".to_owned(),
+            "Show assembly output".to_owned(),
+            true,
+        ));
+        store.commit();
+    }
+
+    {
+        let mut store = app.store.new_cmd("java".to_owned());
+
+        store.set_hint("java".to_owned());
+        store.set_help("Compile and run java code".to_owned());
+        store.set_header(String::from("Here is cmd header for java"));
+        store.set_footer(String::from("Here is cmd footer for java"));
+
+        store.add_pos(PosStore::new(
+            "file".to_owned(),
+            "<file>".to_owned(),
+            "the java source file path".to_owned(),
+            "@0".to_owned(),
+            false,
+        ));
+        store.add_opt(OptStore::new(
+            "O".to_owned(),
+            "-O|--optimize=i".to_owned(),
+            "Set optimization level".to_owned(),
+            true,
+        ));
+        store.add_opt(OptStore::new(
+            "L".to_owned(),
+            "-L|--link=s".to_owned(),
+            "Add link library".to_owned(),
+            true,
+        ));
+        store.add_opt(OptStore::new(
+            "S".to_owned(),
+            "-S=b".to_owned(),
+            "Show assembly output".to_owned(),
+            true,
+        ));
+        store.commit();
+    }
+
+    {
+        let mut store = app.store.new_cmd("py".to_owned());
+
+        store.set_hint("py".to_owned());
+        store.set_help("Run python code".to_owned());
+        store.set_header(String::from("Here is cmd header for python"));
+        store.set_footer(String::from("Here is cmd footer for python"));
+
+        store.add_pos(PosStore::new(
+            "file".to_owned(),
+            "<file>".to_owned(),
+            "the python source file path".to_owned(),
+            "@0".to_owned(),
+            false,
+        ));
+        store.add_opt(OptStore::new(
+            "O".to_owned(),
+            "-O|--optimize=i".to_owned(),
+            "Set optimization level".to_owned(),
+            true,
+        ));
+        store.add_opt(OptStore::new(
+            "L".to_owned(),
+            "-L|--link=s".to_owned(),
+            "Add link library".to_owned(),
+            true,
+        ));
+        store.add_opt(OptStore::new(
+            "S".to_owned(),
+            "-S=b".to_owned(),
+            "Show assembly output".to_owned(),
+            true,
+        ));
+        store.commit();
+    }
+
+    {
+        let mut store = app.store.new_cmd("perl".to_owned());
+
+        store.set_hint("perl".to_owned());
+        store.set_help("Run perl code".to_owned());
+        store.set_header(String::from("Here is cmd header for perl"));
+        store.set_footer(String::from("Here is cmd footer for perl"));
+
+        store.add_pos(PosStore::new(
+            "file".to_owned(),
+            "<file>".to_owned(),
+            "the perl source file path".to_owned(),
+            "@0".to_owned(),
+            false,
+        ));
+        store.add_opt(OptStore::new(
+            "O".to_owned(),
+            "-O|--optimize=i".to_owned(),
+            "Set optimization level".to_owned(),
+            true,
+        ));
+        store.add_opt(OptStore::new(
+            "L".to_owned(),
+            "-L|--link=s".to_owned(),
+            "Add link library".to_owned(),
+            true,
+        ));
+        store.add_opt(OptStore::new(
+            "S".to_owned(),
+            "-S=b".to_owned(),
+            "Show assembly output".to_owned(),
+            true,
+        ));
+        store.commit();
+    }
+
+    {
+        let mut store = app.store.new_sec("compile".to_owned());
+
+        store.set_help(String::from("The language will compile and run:"));
+        store.attach_cmd("c".to_owned());
+        store.attach_cmd("cpp".to_owned());
+        store.attach_cmd("java".to_owned());
+        store.commit();
+    }
+
+    {
+        let mut store = app.store.new_sec("interpret".to_owned());
+
+        store.set_help(String::from("The language will run with interpreter:"));
+        store.attach_cmd("perl".to_owned());
+        store.attach_cmd("py".to_owned());
+        store.commit();
     }
 
     dbg!(&app);
 
-    app.print_usage();
-
-    app.print_header();
-
-    app.print_pos();
-
-    app.print_opt();
+    app.print_help().unwrap();
 }

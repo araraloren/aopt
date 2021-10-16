@@ -74,7 +74,7 @@ impl<'a, 'b> Wrapper<'a, 'b> {
     }
 
     pub fn wrap(&mut self) {
-        let data_len = self.data.iter().map(|v|v.len()).max().unwrap_or(0);
+        let data_len = self.data.iter().map(|v| v.len()).max().unwrap_or(0);
         let mut default_style = vec![Style::default(); data_len];
 
         for line in self.data.iter() {

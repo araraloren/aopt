@@ -1,10 +1,10 @@
+pub mod err;
 pub mod printer;
 pub mod store;
 pub mod style;
 pub mod wrapper;
 
-use std::borrow::Cow;
-use std::io::Result;
+use crate::err::{Error, Result};
 use std::io::{Stdout, Write};
 
 use printer::Printer;
@@ -76,25 +76,121 @@ impl<W: Write> Printer<W> for AppHelp<W> {
     }
 
     fn print_help(&mut self) -> Result<usize> {
-        todo!()
+        self.print_cmd_usage(None)?;
+        self.print_cmd_header(None)?;
+        self.print_section_all()?;
+        self.print_cmd_footer(None)
     }
 
-    fn print_usage(&mut self) -> Result<usize> {
+    fn print_cmd_help(&mut self, cmd: Option<&str>) -> Result<usize> {
+        self.print_cmd_usage(cmd)?;
+        self.print_cmd_header(cmd)?;
+        self.print_cmd_pos(cmd)?;
+        self.print_cmd_opt(cmd)?;
+        self.print_cmd_footer(cmd)
+    }
+
+    fn print_section_all(&mut self) -> Result<usize> {
+        let mut out: usize = 0;
+        for sec_store in self.store.sec_iter() {
+            let mut cmd_info = vec![];
+
+            for cmd_name in sec_store.cmd_iter() {
+                if let Some(cmd_store) = self.store.get_cmd(cmd_name) {
+                    cmd_info.push(vec![cmd_store.get_hint(), cmd_store.get_help()]);
+                }
+            }
+            let mut buffer = String::new();
+
+            buffer += &format!("\n{}\n", sec_store.get_help());
+            if !cmd_info.is_empty() {
+                let mut wrapper = Wrapper::new(&cmd_info);
+
+                wrapper.wrap();
+                let wrapped = wrapper.get_output();
+
+                for wrapped_line in wrapped {
+                    let max_len = wrapped_line.iter().map(|v| v.len()).max().unwrap_or(1);
+
+                    for i in 0..max_len {
+                        buffer += &wrapped_line
+                            .iter()
+                            .map(|v| v.get_line(i))
+                            .collect::<Vec<String>>()
+                            .join(&" ".repeat(self.style.row_spacing));
+                        buffer += &format!("\n{}", "\n".repeat(self.style.cmd_line_spacing));
+                    }
+                }
+                buffer.truncate(buffer.len() - 1);
+            }
+
+            out += self.writer.write(buffer.as_bytes())?;
+            out += self.writer.write(format!("\n").as_bytes())?;
+        }
+        Ok(out)
+    }
+
+    fn print_section(&mut self, section: &str) -> Result<usize> {
+        let mut cmd_info = vec![];
+        let sec_store = self
+            .store
+            .get_sec(section)
+            .ok_or(Error::InvalidSecName(String::from(section)))?;
+
+        for cmd_name in sec_store.cmd_iter() {
+            if let Some(cmd_store) = self.store.get_cmd(cmd_name) {
+                cmd_info.push(vec![cmd_store.get_hint(), cmd_store.get_help()]);
+            }
+        }
         let mut buffer = String::new();
 
+        buffer += &format!("\n{}\n", sec_store.get_help());
+        if !cmd_info.is_empty() {
+            let mut wrapper = Wrapper::new(&cmd_info);
+
+            wrapper.wrap();
+            let wrapped = wrapper.get_output();
+
+            for wrapped_line in wrapped {
+                let max_len = wrapped_line.iter().map(|v| v.len()).max().unwrap_or(1);
+
+                for i in 0..max_len {
+                    buffer += &wrapped_line
+                        .iter()
+                        .map(|v| v.get_line(i))
+                        .collect::<Vec<String>>()
+                        .join(&" ".repeat(self.style.row_spacing));
+                    buffer += &format!("\n{}", "\n".repeat(self.style.cmd_line_spacing));
+                }
+            }
+            buffer.truncate(buffer.len() - 1);
+        }
+
+        Ok(self.writer.write(buffer.as_bytes())?)
+    }
+
+    fn print_cmd_usage(&mut self, cmd: Option<&str>) -> Result<usize> {
+        let mut buffer = String::new();
+        let cmd_store = if let Some(cmd_name) = cmd {
+            self.store
+                .get_cmd(cmd_name)
+                .ok_or(Error::InvalidCmdName(String::from(cmd_name)))?
+        } else {
+            self.store.get_global()
+        };
+
         buffer += &format!("usage: {} ", self.get_name());
-        for opt_store in self.store.get_global().opt_iter() {
+        for opt_store in cmd_store.opt_iter() {
             if opt_store.get_optional() {
                 buffer += &format!("[{}] ", opt_store.get_hint());
-            }
-            else {
+            } else {
                 buffer += &format!("<{}> ", opt_store.get_hint());
             }
         }
         if self.store.cmd_len() > 0 {
             buffer += &format!("<COMMAND> ");
         }
-        if self.store.get_global().pos_len() > 0 {
+        if cmd_store.pos_len() > 0 {
             buffer += &format!("**ARGS**");
         } else {
             for cmd_store in self.store.cmd_iter() {
@@ -105,31 +201,52 @@ impl<W: Write> Printer<W> for AppHelp<W> {
             }
         }
         buffer += "\n";
-        self.writer.write(buffer.as_bytes())
+        Ok(self.writer.write(buffer.as_bytes())?)
     }
 
-    fn print_header(&mut self) -> Result<usize> {
-        let header = self.store.get_global().get_header();
+    fn print_cmd_header(&mut self, cmd: Option<&str>) -> Result<usize> {
+        let cmd_store = if let Some(cmd_name) = cmd {
+            self.store
+                .get_cmd(cmd_name)
+                .ok_or(Error::InvalidCmdName(String::from(cmd_name)))?
+        } else {
+            self.store.get_global()
+        };
+        let header = cmd_store.get_header();
         if header.is_empty() {
             Ok(0)
         } else {
-            self.writer.write(format!("\n{}\n", header).as_bytes())
+            Ok(self.writer.write(format!("\n{}\n", header).as_bytes())?)
         }
     }
 
-    fn print_footer(&mut self) -> Result<usize> {
-        let footer = self.store.get_global().get_footer();
+    fn print_cmd_footer(&mut self, cmd: Option<&str>) -> Result<usize> {
+        let cmd_store = if let Some(cmd_name) = cmd {
+            self.store
+                .get_cmd(cmd_name)
+                .ok_or(Error::InvalidCmdName(String::from(cmd_name)))?
+        } else {
+            self.store.get_global()
+        };
+        let footer = cmd_store.get_footer();
         if footer.is_empty() {
             Ok(0)
         } else {
-            self.writer.write(format!("\n{}\n", footer).as_bytes())
+            Ok(self.writer.write(format!("\n{}\n", footer).as_bytes())?)
         }
     }
 
-    fn print_pos(&mut self) -> Result<usize> {
+    fn print_cmd_pos(&mut self, cmd: Option<&str>) -> Result<usize> {
         let mut pos_info = vec![];
+        let cmd_store = if let Some(cmd_name) = cmd {
+            self.store
+                .get_cmd(cmd_name)
+                .ok_or(Error::InvalidCmdName(String::from(cmd_name)))?
+        } else {
+            self.store.get_global()
+        };
 
-        for pos_store in self.store.get_global().pos_iter() {
+        for pos_store in cmd_store.pos_iter() {
             pos_info.push(vec![pos_store.get_hint(), pos_store.get_help()]);
         }
         let mut buffer = String::new();
@@ -145,22 +262,31 @@ impl<W: Write> Printer<W> for AppHelp<W> {
                 let max_len = wrapped_line.iter().map(|v| v.len()).max().unwrap_or(1);
 
                 for i in 0..max_len {
-                    for line in wrapped_line {
-                        buffer += &line.get_line(i);
-                    }
-                    buffer += "\n\n";
+                    buffer += &wrapped_line
+                        .iter()
+                        .map(|v| v.get_line(i))
+                        .collect::<Vec<String>>()
+                        .join(&" ".repeat(self.style.row_spacing));
+                    buffer += &format!("\n{}", "\n".repeat(self.style.pos_line_spacing));
                 }
             }
             buffer.truncate(buffer.len() - 1);
         }
 
-        self.writer.write(buffer.as_bytes())
+        Ok(self.writer.write(buffer.as_bytes())?)
     }
 
-    fn print_opt(&mut self) -> Result<usize> {
+    fn print_cmd_opt(&mut self, cmd: Option<&str>) -> Result<usize> {
         let mut opt_info = vec![];
+        let cmd_store = if let Some(cmd_name) = cmd {
+            self.store
+                .get_cmd(cmd_name)
+                .ok_or(Error::InvalidCmdName(String::from(cmd_name)))?
+        } else {
+            self.store.get_global()
+        };
 
-        for opt_store in self.store.get_global().opt_iter() {
+        for opt_store in cmd_store.opt_iter() {
             opt_info.push(vec![opt_store.get_hint(), opt_store.get_help()]);
         }
         let mut buffer = String::new();
@@ -176,53 +302,17 @@ impl<W: Write> Printer<W> for AppHelp<W> {
                 let max_len = wrapped_line.iter().map(|v| v.len()).max().unwrap_or(1);
 
                 for i in 0..max_len {
-                    for line in wrapped_line {
-                        buffer += &line.get_line(i);
-                    }
-                    buffer += "\n\n";
+                    buffer += &wrapped_line
+                        .iter()
+                        .map(|v| v.get_line(i))
+                        .collect::<Vec<String>>()
+                        .join(&" ".repeat(self.style.row_spacing));
+                    buffer += &format!("\n{}", "\n".repeat(self.style.opt_line_spacing));
                 }
             }
             buffer.truncate(buffer.len() - 1);
         }
 
-        self.writer.write(buffer.as_bytes())
-    }
-
-    fn print_section_all(&mut self) -> Result<usize> {
-        todo!()
-    }
-
-    fn print_section(&mut self, section: &str) -> Result<usize> {
-        todo!()
-    }
-
-    fn print_cmd_usage(&mut self, cmd: &str) -> Result<usize> {
-        todo!()
-    }
-
-    fn print_cmd_header(&mut self, cmd: &str) -> Result<usize> {
-        if let Some(cmd_store) = self.store.get_cmd(cmd) {
-            self.writer
-                .write(format!("{}\n", cmd_store.get_header()).as_bytes())
-        } else {
-            Ok(0)
-        }
-    }
-
-    fn print_cmd_footer(&mut self, cmd: &str) -> Result<usize> {
-        if let Some(cmd_store) = self.store.get_cmd(cmd) {
-            self.writer
-                .write(format!("{}\n", cmd_store.get_footer()).as_bytes())
-        } else {
-            Ok(0)
-        }
-    }
-
-    fn print_cmd_pos(&mut self, cmd: &str) -> Result<usize> {
-        todo!()
-    }
-
-    fn print_cmd_opt(&mut self, cmd: &str) -> Result<usize> {
-        todo!()
+        Ok(self.writer.write(buffer.as_bytes())?)
     }
 }

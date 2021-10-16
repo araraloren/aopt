@@ -151,11 +151,6 @@ impl<'a> SectionMut<'a> {
         self
     }
 
-    pub fn set_hint(&mut self, hint: String) -> &mut Self {
-        self.s.set_hint(hint);
-        self
-    }
-
     pub fn set_help(&mut self, help: String) -> &mut Self {
         self.s.set_help(help);
         self
@@ -571,8 +566,6 @@ impl CmdStore {
 pub struct SecStore {
     name: String,
 
-    hint: String,
-
     help: String,
 
     cmd_attach: Vec<String>,
@@ -581,11 +574,6 @@ pub struct SecStore {
 impl SecStore {
     pub fn set_name(&mut self, name: String) -> &mut Self {
         self.name = name;
-        self
-    }
-
-    pub fn set_hint(&mut self, hint: String) -> &mut Self {
-        self.hint = hint;
         self
     }
 
@@ -605,10 +593,6 @@ impl SecStore {
 
     pub fn get_name(&self) -> &str {
         self.name.as_str()
-    }
-
-    pub fn get_hint(&self) -> &str {
-        self.hint.as_str()
     }
 
     pub fn get_help(&self) -> &str {

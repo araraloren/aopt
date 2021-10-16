@@ -13,3 +13,4 @@ path="src/temp.rs"
 
 [dependencies]
 textwrap = "0.14"
+thiserror = "1.0"
