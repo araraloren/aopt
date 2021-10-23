@@ -62,7 +62,7 @@ where
         iter: &mut dyn Iterator<Item = String>,
     ) -> Result<bool> {
         let mut argstream = ArgStream::from(iter);
-        let mut set = set;
+        let set = set;
         let mut iter = argstream.iter_mut();
 
         // copy the prefix, so we don't need borrow set

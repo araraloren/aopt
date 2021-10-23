@@ -59,17 +59,10 @@ impl HelpInfo {
 impl<'a> From<&'a mut CreateInfo> for HelpInfo {
     fn from(ci: &'a mut CreateInfo) -> Self {
         let mut help_info = take(ci.get_help_info_mut());
-        let default_string = String::default();
-
         Self {
             help: take(help_info.get_help_mut()),
             hint: if help_info.get_hint().is_empty() {
-                create_help_hint(
-                    ci.get_optional(),
-                    ci.get_prefix().as_ref().unwrap_or(&default_string).as_str(),
-                    ci.get_name(),
-                    ci.get_type_name(),
-                )
+                create_help_hint(&ci)
             } else {
                 take(help_info.get_hint_mut())
             },
@@ -77,13 +70,17 @@ impl<'a> From<&'a mut CreateInfo> for HelpInfo {
     }
 }
 
-pub fn create_help_hint(optional: bool, prefix: &str, name: &str, type_name: &str) -> String {
-    format!(
-        "{}{}{}={}{}",
-        if optional { "[" } else { "<" },
-        prefix,
-        name,
-        type_name,
-        if optional { "]" } else { ">" },
-    )
+/// Generate the help like `--Option | -O`
+pub fn create_help_hint(ci: &CreateInfo) -> String {
+    let mut ret = String::default();
+
+    if let Some(prefix) = ci.get_prefix() {
+        ret += prefix;
+    }
+    ret += ci.get_name();
+    for alias in ci.get_alias() {
+        ret += &format!(" | {}{}", alias.0, alias.1);
+    }
+
+    ret
 }
