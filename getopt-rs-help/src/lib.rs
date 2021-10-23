@@ -270,7 +270,6 @@ impl<W: Write> Printer<W> for AppHelp<W> {
                     buffer += &format!("\n{}", "\n".repeat(self.style.pos_line_spacing));
                 }
             }
-            buffer.truncate(buffer.len() - 1);
         }
 
         Ok(self.writer.write(buffer.as_bytes())?)
@@ -310,7 +309,6 @@ impl<W: Write> Printer<W> for AppHelp<W> {
                     buffer += &format!("\n{}", "\n".repeat(self.style.opt_line_spacing));
                 }
             }
-            buffer.truncate(buffer.len() - 1);
         }
 
         Ok(self.writer.write(buffer.as_bytes())?)

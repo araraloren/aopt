@@ -1,3 +1,4 @@
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Index {
     Forward(u64),
@@ -117,5 +118,35 @@ impl Index {
 impl Default for Index {
     fn default() -> Self {
         Self::Null
+    }
+}
+
+impl ToString for Index {
+    fn to_string(&self) -> String {
+        match self {
+            Index::Forward(v) | Index::Backward(v) => {
+                format!("{}", v)
+            }
+            Index::List(v) => {
+                let strs: Vec<String> = v.iter().map(|v| format!("{}", v)).collect();
+
+                format!("[{}]", strs.join(", "))
+            }
+            Index::Except(v) => {
+                let strs: Vec<String> = v.iter().map(|v| format!("{}", v)).collect();
+
+                format!("-[{}]", strs.join(", "))
+            }
+            Index::Greater(v) => {
+                format!(">{}", v)
+            }
+            Index::Less(v) => {
+                format!("<{}", v)
+            }
+            Index::AnyWhere => {
+                format!("*")
+            }
+            Index::Null => String::default(),
+        }
     }
 }

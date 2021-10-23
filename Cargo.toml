@@ -2,6 +2,7 @@
 
 members = [
     "getopt-rs",
+    "snowball-follow",
     "getopt-rs-help",
-    "simple-find-file"
+    "simple-find-file",
 ]

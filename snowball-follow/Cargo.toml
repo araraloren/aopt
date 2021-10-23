@@ -1,14 +1,11 @@
 [package]
-name = "simple-find-file"
-version = "0.2.0"
-authors = ["araraloren <blackcatoverwall@gmail.com>"]
+name = "snowball-follow"
+version = "0.1.0"
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 getopt-rs = { path = "../getopt-rs" }
-getopt-rs-help = { path = "../getopt-rs-help" }
 tracing-subscriber = "0.2"
 color-eyre = "0.5"
-regex = "1.5"
