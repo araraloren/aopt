@@ -17,25 +17,24 @@ use prelude::Parser;
 use prelude::Result;
 use prelude::Set;
 
-pub struct ReturnValue<'a, P: Parser>(P, &'a mut dyn Set);
+pub struct ReturnValue<'a, 'b>(&'b mut dyn Parser, &'a mut dyn Set);
 
-pub fn getopt_impl<'a, P: Parser + Default>(
+pub fn getopt_impl<'a, 'b>(
     iter: impl Iterator<Item = String>,
     sets: Vec<&'a mut dyn Set>,
-    mut parsers: Vec<P>,
-) -> Result<Option<ReturnValue<'a, P>>> {
+    parsers: Vec<&'b mut dyn Parser>,
+) -> Result<Option<ReturnValue<'a, 'b>>> {
     assert_eq!(sets.len(), parsers.len());
 
     let args: Vec<String> = iter.collect();
     let count = parsers.len();
+    let mut index = 0;
 
-    for (index, set) in sets.into_iter().enumerate() {
-        let parser = parsers.get_mut(index).unwrap();
-
+    for (parser, set) in parsers.into_iter().zip(sets.into_iter()) {
         match parser.parse(set, &mut args.iter().map(|v| v.clone())) {
             Ok(rv) => {
                 if rv {
-                    return Ok(Some(ReturnValue(std::mem::take(parser), set)));
+                    return Ok(Some(ReturnValue(parser, set)));
                 }
             }
             Err(e) => {
@@ -46,15 +45,16 @@ pub fn getopt_impl<'a, P: Parser + Default>(
                 }
             }
         }
+        index += 1;
     }
     Ok(None)
 }
 
-pub fn getopt_impl_s<'a, P: Parser + Default>(
+pub fn getopt_impl_s<'a, 'b>(
     mut iter: impl Iterator<Item = String>,
     set: &'a mut dyn Set,
-    mut parser: P,
-) -> Result<Option<ReturnValue<'a, P>>> {
+    parser: &'b mut dyn Parser,
+) -> Result<Option<ReturnValue<'a, 'b>>> {
     if parser.parse(set, &mut iter)? {
         return Ok(Some(ReturnValue(parser, set)));
     } else {
@@ -68,14 +68,14 @@ macro_rules! getopt {
         getopt_impl_s(
             $iter,
             &mut $set,
-            $parser
+            &mut $parser
         )
     };
     ($iter:expr, $($set:expr, $parser:expr),+ ) => {
         getopt_impl(
             $iter,
             vec![$(&mut $set, )+],
-            vec![$($parser, )+]
+            vec![$(&mut $parser, )+]
         )
     };
 }
