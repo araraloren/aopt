@@ -3,6 +3,7 @@ use super::{Result, Set, Uid};
 use crate::opt::help::HelpInfo;
 use crate::opt::index::Index;
 use crate::opt::value::Value;
+use crate::OptStr;
 
 #[derive(Debug)]
 pub struct Commit<'a> {
@@ -26,17 +27,17 @@ impl<'a> Commit<'a> {
         self
     }
 
-    pub fn set_type_name(&mut self, type_name: String) -> &mut Self {
+    pub fn set_type_name(&mut self, type_name: OptStr) -> &mut Self {
         self.info.set_type_name(type_name);
         self
     }
 
-    pub fn set_name(&mut self, name: String) -> &mut Self {
+    pub fn set_name(&mut self, name: OptStr) -> &mut Self {
         self.info.set_name(name);
         self
     }
 
-    pub fn set_prefix(&mut self, prefix: String) -> &mut Self {
+    pub fn set_prefix(&mut self, prefix: OptStr) -> &mut Self {
         self.info.set_prefix(prefix);
         self
     }
@@ -51,12 +52,12 @@ impl<'a> Commit<'a> {
         self
     }
 
-    pub fn set_hint(&mut self, hint: String) -> &mut Self {
+    pub fn set_hint(&mut self, hint: OptStr) -> &mut Self {
         self.info.set_hint(hint);
         self
     }
 
-    pub fn set_help(&mut self, help: String) -> &mut Self {
+    pub fn set_help(&mut self, help: OptStr) -> &mut Self {
         self.info.set_help(help);
         self
     }
@@ -66,7 +67,7 @@ impl<'a> Commit<'a> {
         self
     }
 
-    pub fn add_alias(&mut self, prefix: String, name: String) -> &mut Self {
+    pub fn add_alias(&mut self, prefix: OptStr, name: OptStr) -> &mut Self {
         self.info.add_alias(prefix, name);
         self
     }

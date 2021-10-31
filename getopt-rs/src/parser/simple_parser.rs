@@ -43,11 +43,7 @@ impl<G> Parser for SimpleParser<G>
 where
     G: Generator + Debug + Default,
 {
-    fn parse(
-        &mut self,
-        set: &mut dyn Set,
-        iter: &mut dyn Iterator<Item = String>,
-    ) -> Result<bool> {
+    fn parse(&mut self, set: &mut dyn Set, iter: &mut dyn Iterator<Item = String>) -> Result<bool> {
         let mut argstream = ArgStream::from(iter);
         let set = set;
         let mut iter = argstream.iter_mut();

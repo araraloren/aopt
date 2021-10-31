@@ -2,6 +2,7 @@ use super::info::FilterInfo;
 use super::Set;
 use crate::opt::index::Index;
 use crate::opt::Opt;
+use crate::OptStr;
 
 #[derive(Debug)]
 pub struct Filter<'a> {
@@ -25,17 +26,17 @@ impl<'a> Filter<'a> {
         self
     }
 
-    pub fn set_type_name(&mut self, type_name: String) -> &mut Self {
+    pub fn set_type_name(&mut self, type_name: OptStr) -> &mut Self {
         self.info.set_type_name(type_name);
         self
     }
 
-    pub fn set_name(&mut self, name: String) -> &mut Self {
+    pub fn set_name(&mut self, name: OptStr) -> &mut Self {
         self.info.set_name(name);
         self
     }
 
-    pub fn set_prefix(&mut self, prefix: String) -> &mut Self {
+    pub fn set_prefix(&mut self, prefix: OptStr) -> &mut Self {
         self.info.set_prefix(prefix);
         self
     }
@@ -88,17 +89,17 @@ impl<'a> FilterMut<'a> {
         self
     }
 
-    pub fn set_type_name(&mut self, type_name: String) -> &mut Self {
+    pub fn set_type_name(&mut self, type_name: OptStr) -> &mut Self {
         self.info.set_type_name(type_name);
         self
     }
 
-    pub fn set_name(&mut self, name: String) -> &mut Self {
+    pub fn set_name(&mut self, name: OptStr) -> &mut Self {
         self.info.set_name(name);
         self
     }
 
-    pub fn set_prefix(&mut self, prefix: String) -> &mut Self {
+    pub fn set_prefix(&mut self, prefix: OptStr) -> &mut Self {
         self.info.set_prefix(prefix);
         self
     }

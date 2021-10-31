@@ -20,11 +20,7 @@ pub use simple_parser::SimpleParser;
 pub use state::ParserState;
 
 pub trait Parser: Debug {
-    fn parse(
-        &mut self,
-        set: &mut dyn Set,
-        iter: &mut dyn Iterator<Item = String>,
-    ) -> Result<bool>;
+    fn parse(&mut self, set: &mut dyn Set, iter: &mut dyn Iterator<Item = String>) -> Result<bool>;
 
     fn invoke_callback(
         &self,

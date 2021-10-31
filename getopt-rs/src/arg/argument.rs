@@ -22,15 +22,15 @@ impl Argument {
         }
     }
 
-    pub fn get_prefix(&self) -> &Option<&'pre String> {
+    pub fn get_prefix(&self) -> &Option<OptStr> {
         &self.data_keeper.prefix
     }
 
-    pub fn get_name(&self) -> &Option<String> {
+    pub fn get_name(&self) -> &Option<OptStr> {
         &self.data_keeper.name
     }
 
-    pub fn get_value(&self) -> &Option<String> {
+    pub fn get_value(&self) -> &Option<OptStr> {
         &self.data_keeper.value
     }
 
@@ -38,16 +38,16 @@ impl Argument {
         self.data_keeper.disable
     }
 
-    pub fn parse(&mut self, prefix: &'pre [String]) -> Result<bool> {
+    pub fn parse(&mut self, prefix: &[OptStr]) -> Result<bool> {
         if let Some(pattern) = &self.current {
-            self.data_keeper = parse_argument(pattern.as_ref(), prefix)?;
+            self.data_keeper = parse_argument(pattern.clone(), prefix)?;
 
             // must have prefix and name
             if self.data_keeper.prefix.is_none() {
-                return Err(ArgumentError::MissingPrefix(pattern.clone()).into());
+                return Err(ArgumentError::MissingPrefix(pattern.to_string()).into());
             }
             if self.data_keeper.name.is_none() {
-                return Err(ArgumentError::MissingName(pattern.clone()).into());
+                return Err(ArgumentError::MissingName(pattern.to_string()).into());
             }
             return Ok(true);
         }

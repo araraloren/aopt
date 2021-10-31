@@ -42,8 +42,8 @@ pub enum ParserState {
     PSCustom(u64),
 }
 
-impl<'pre> ParserState {
-    pub fn gen_opt<M: Matcher + Default>(&self, arg: &Argument<'pre>) -> Option<M> {
+impl ParserState {
+    pub fn gen_opt<M: Matcher + Default>(&self, arg: &Argument) -> Option<M> {
         let mut ret: Vec<Box<dyn Context>> = vec![];
 
         match self {

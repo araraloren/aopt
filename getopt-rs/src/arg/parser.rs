@@ -54,11 +54,7 @@ const DEACTIVATE_STYLE_CHAR: char = '/';
 const VALUE_SPLIT_CHAR: char = '=';
 
 impl State {
-    pub fn self_transition<'pre>(
-        &mut self,
-        index: &ParseIndex,
-        pattern: &ParserPattern<'pre>,
-    ) {
+    pub fn self_transition<'pre>(&mut self, index: &ParseIndex, pattern: &ParserPattern<'pre>) {
         let next_state = {
             match self.clone() {
                 Self::PreCheck => Self::Prefix,
@@ -105,8 +101,8 @@ impl State {
             }
             Self::Prefix => {
                 for prefix in pattern.get_prefixs() {
-                    if pattern.get_pattern().starts_with(prefix) {
-                        data_keeper.prefix = Some(&prefix);
+                    if pattern.get_pattern().starts_with(prefix.as_ref()) {
+                        data_keeper.prefix = Some(prefix.clone());
                         index.inc(prefix.len());
                         break;
                     }
@@ -131,7 +127,10 @@ impl State {
                     if name_end > 0 {
                         let name = pattern.get_pattern().get(start..name_end);
 
-                        if name.is_none() {
+                        if let Some(name) = name {
+                            data_keeper.name = Some(name.into());
+                            index.set(name_end);
+                        } else {
                             error!(
                                 ?pattern,
                                 "accessing string [{}, {}) failed", start, name_end
@@ -143,8 +142,6 @@ impl State {
                             )
                             .into());
                         }
-                        data_keeper.name = Some(name.unwrap().to_owned());
-                        index.set(name_end);
                         break;
                     }
                 }
@@ -157,7 +154,10 @@ impl State {
                     // if we are here, the left chars is value
                     let value = pattern.get_pattern().get(index.get()..);
 
-                    if value.is_none() {
+                    if let Some(value) = value {
+                        data_keeper.value = Some(value.into());
+                        index.set(index.len());
+                    } else {
                         error!(
                             ?pattern,
                             "accessing string [{}, {}) failed",
@@ -171,8 +171,6 @@ impl State {
                         )
                         .into());
                     }
-                    data_keeper.value = Some(value.unwrap().to_owned());
-                    index.set(index.len());
                 } else {
                     error!(?pattern, "syntax error! require an value after '='.");
                     return Err(
@@ -194,6 +192,7 @@ impl State {
 #[cfg(test)]
 mod test {
     use crate::arg::parser::parse_argument;
+    use crate::OptStr;
 
     #[test]
     fn test_for_input_parser() {
@@ -220,10 +219,10 @@ mod test {
                 ("-foo=", None),
             ];
 
-            let prefixs = vec![String::from("--"), String::from("-"), String::from("")];
+            let prefixs = vec![OptStr::from("--"), OptStr::from("-"), OptStr::from("")];
 
             for case in test_cases.iter() {
-                try_to_verify_one_task(case.0, &prefixs, case.1);
+                try_to_verify_one_task(OptStr::from(case.0), &prefixs, case.1);
             }
         }
         {
@@ -249,17 +248,17 @@ mod test {
                 ("-foo=", None),
             ];
 
-            let prefixs = vec![String::from("--"), String::from("-")];
+            let prefixs = vec![OptStr::from("--"), OptStr::from("-")];
 
             for case in test_cases.iter() {
-                try_to_verify_one_task(case.0, &prefixs, case.1);
+                try_to_verify_one_task(OptStr::from(case.0), &prefixs, case.1);
             }
         }
     }
 
     fn try_to_verify_one_task(
-        pattern: &str,
-        prefix: &Vec<String>,
+        pattern: OptStr,
+        prefix: &Vec<OptStr>,
         except: Option<(Option<&str>, Option<&str>, Option<&str>, bool)>,
     ) {
         let ret = parse_argument(pattern, prefix);
@@ -271,12 +270,21 @@ mod test {
                 panic!("----> {:?}", except);
             }
 
-            let default = String::from("");
+            let default = OptStr::from("");
 
             if let Some(except) = except {
-                assert_eq!(except.0.unwrap_or(""), dk.prefix.unwrap_or(&default));
-                assert_eq!(except.1.unwrap_or(""), dk.name.unwrap_or(default.clone()));
-                assert_eq!(except.2.unwrap_or(""), dk.value.unwrap_or(default.clone()));
+                assert_eq!(
+                    except.0.unwrap_or(""),
+                    dk.prefix.unwrap_or(default).as_ref()
+                );
+                assert_eq!(
+                    except.1.unwrap_or(""),
+                    dk.name.unwrap_or(default.clone()).as_ref()
+                );
+                assert_eq!(
+                    except.2.unwrap_or(""),
+                    dk.value.unwrap_or(default.clone()).as_ref()
+                );
                 assert_eq!(except.3, dk.disable);
             }
         } else {
