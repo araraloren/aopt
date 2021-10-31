@@ -20,9 +20,9 @@ pub use simple_parser::SimpleParser;
 pub use state::ParserState;
 
 pub trait Parser: Debug {
-    fn parse<'a>(
+    fn parse(
         &mut self,
-        set: &'a mut dyn Set,
+        set: &mut dyn Set,
         iter: &mut dyn Iterator<Item = String>,
     ) -> Result<bool>;
 

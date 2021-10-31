@@ -1,7 +1,8 @@
 use crate::err::{ArgumentError, Result};
 use crate::pat::{ParseIndex, ParserPattern};
+use crate::OptStr;
 
-pub fn parse_argument<'pre>(pattern: &str, prefix: &'pre [String]) -> Result<DataKeeper<'pre>> {
+pub fn parse_argument(pattern: OptStr, prefix: &[OptStr]) -> Result<DataKeeper> {
     let pattern = ParserPattern::new(pattern, prefix);
     let mut index = ParseIndex::new(pattern.len());
     let mut data_keeper = DataKeeper::default();
@@ -33,12 +34,12 @@ enum State {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct DataKeeper<'pre> {
-    pub name: Option<String>,
+pub struct DataKeeper {
+    pub name: Option<OptStr>,
 
-    pub value: Option<String>,
+    pub value: Option<OptStr>,
 
-    pub prefix: Option<&'pre String>,
+    pub prefix: Option<OptStr>,
 
     pub disable: bool,
 }
@@ -53,10 +54,10 @@ const DEACTIVATE_STYLE_CHAR: char = '/';
 const VALUE_SPLIT_CHAR: char = '=';
 
 impl State {
-    pub fn self_transition<'pat, 'pre>(
+    pub fn self_transition<'pre>(
         &mut self,
         index: &ParseIndex,
-        pattern: &ParserPattern<'pat, 'pre>,
+        pattern: &ParserPattern<'pre>,
     ) {
         let next_state = {
             match self.clone() {
@@ -87,11 +88,11 @@ impl State {
         *self = next_state;
     }
 
-    pub fn parse<'pat, 'pre>(
+    pub fn parse<'pre>(
         mut self,
         index: &mut ParseIndex,
-        pattern: &ParserPattern<'pat, 'pre>,
-        data_keeper: &mut DataKeeper<'pre>,
+        pattern: &ParserPattern<'pre>,
+        data_keeper: &mut DataKeeper,
     ) -> Result<bool> {
         let current_state = self.clone();
 

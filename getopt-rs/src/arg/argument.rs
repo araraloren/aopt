@@ -2,18 +2,19 @@ use super::parser::parse_argument;
 use super::parser::DataKeeper;
 use crate::err::ArgumentError;
 use crate::err::Result;
+use crate::OptStr;
 
 #[derive(Debug, Clone, Default)]
-pub struct Argument<'pre> {
-    pub current: Option<String>,
+pub struct Argument {
+    pub current: Option<OptStr>,
 
-    pub next: Option<String>,
+    pub next: Option<OptStr>,
 
-    data_keeper: DataKeeper<'pre>,
+    data_keeper: DataKeeper,
 }
 
-impl<'pre> Argument<'pre> {
-    pub fn new(current: Option<String>, next: Option<String>) -> Self {
+impl Argument {
+    pub fn new(current: Option<OptStr>, next: Option<OptStr>) -> Self {
         Self {
             current,
             next,

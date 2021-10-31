@@ -6,15 +6,17 @@ use std::fmt::Debug;
 use std::iter::Iterator;
 use std::slice::{Iter, IterMut};
 
+use crate::OptStr;
+
 pub use argument::Argument;
 
 #[derive(Debug, Default)]
-pub struct ArgStream<'pre> {
-    args: Vec<Argument<'pre>>,
+pub struct ArgStream {
+    args: Vec<Argument>,
     index: usize,
 }
 
-impl<'pre> ArgStream<'pre> {
+impl ArgStream {
     pub fn new(args: impl Iterator<Item = String>) -> Self {
         Self {
             args: Self::iterator_to_args(args),
@@ -27,15 +29,15 @@ impl<'pre> ArgStream<'pre> {
         self
     }
 
-    pub fn iter(&self) -> Iter<'_, Argument<'pre>> {
+    pub fn iter(&self) -> Iter<'_, Argument> {
         self.args.iter()
     }
 
-    pub fn iter_mut(&mut self) -> IterMut<'_, Argument<'pre>> {
+    pub fn iter_mut(&mut self) -> IterMut<'_, Argument> {
         self.args.iter_mut()
     }
 
-    fn iterator_to_args<Iter>(mut iter: Iter) -> Vec<Argument<'pre>>
+    fn iterator_to_args<Iter>(mut iter: Iter) -> Vec<Argument>
     where
         Iter: Iterator<Item = String>,
     {
@@ -54,8 +56,8 @@ impl<'pre> ArgStream<'pre> {
         ret
     }
 
-    fn map_one_item(item: Option<String>) -> Option<String> {
-        item.map_or(None, |v| Some(String::from(v)))
+    fn map_one_item(item: Option<String>) -> Option<OptStr> {
+        item.map_or(None, |v| Some(OptStr::from(&v)))
     }
 
     pub fn len(&self) -> usize {
@@ -63,7 +65,7 @@ impl<'pre> ArgStream<'pre> {
     }
 }
 
-impl<'str, 'nv, 'pre, It: Iterator<Item = String>> From<It> for ArgStream<'pre> {
+impl<'str, 'nv, 'pre, It: Iterator<Item = String>> From<It> for ArgStream {
     fn from(iter: It) -> Self {
         Self {
             args: Self::iterator_to_args(iter),
@@ -158,7 +160,7 @@ mod test {
     }
 
     fn testing_one_iterator<'pre, 'vec: 'pre>(
-        mut argstream: ArgStream<'pre>,
+        mut argstream: ArgStream,
         prefixs: &'vec Vec<String>,
         data_check: &Vec<String>,
         check: &Vec<Vec<&str>>,

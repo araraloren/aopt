@@ -10,6 +10,11 @@ pub mod uid;
 
 pub(crate) mod pat;
 
+// declare a alias for string type
+pub use ustr::Ustr as OptStr;
+pub use ustr::UstrMap as OptStrMap;
+pub use ustr::UstrSet as OptStrSet;
+
 #[macro_use]
 extern crate tracing;
 
