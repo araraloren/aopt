@@ -78,6 +78,7 @@ impl<'str, 'nv, 'pre, It: Iterator<Item = String>> From<It> for ArgStream {
 mod test {
 
     use super::ArgStream;
+    use crate::OptStr;
 
     #[test]
     fn make_sure_arg_stream_work() {
@@ -113,7 +114,7 @@ mod test {
 
             testing_one_iterator(
                 ArgStream::new(data),
-                &vec![String::from("--"), String::from("-")],
+                &vec![OptStr::from("--"), OptStr::from("-")],
                 &data_check,
                 &check,
             );
@@ -152,7 +153,7 @@ mod test {
 
             testing_one_iterator(
                 ArgStream::new(data),
-                &vec![String::from("+"), String::from("")],
+                &vec![OptStr::from("+"), OptStr::from("")],
                 &data_check,
                 &check,
             );
@@ -161,11 +162,11 @@ mod test {
 
     fn testing_one_iterator<'pre, 'vec: 'pre>(
         mut argstream: ArgStream,
-        prefixs: &'vec Vec<String>,
+        prefixs: &'vec Vec<OptStr>,
         data_check: &Vec<String>,
         check: &Vec<Vec<&str>>,
     ) {
-        let default_str = String::from("");
+        let default_str = OptStr::from("");
         let default_data = String::from("");
         let default_item = "";
 
@@ -181,7 +182,7 @@ mod test {
             if let Ok(ret) = arg.parse(prefixs) {
                 if ret {
                     assert_eq!(
-                        arg.get_prefix().unwrap_or(&default_str),
+                        arg.get_prefix().as_ref().unwrap_or(&default_str),
                         check_item.get(0).unwrap_or(&default_item)
                     );
                     assert_eq!(

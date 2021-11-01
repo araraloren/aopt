@@ -10,6 +10,7 @@ use std::slice::{Iter, IterMut};
 use crate::err::Result;
 use crate::opt::Opt;
 use crate::uid::Uid;
+use crate::OptStr;
 
 pub use self::commit::Commit;
 pub use self::filter::{Filter, FilterMut};
@@ -27,9 +28,9 @@ pub trait Creator: Debug {
 pub trait Set: Debug + PrefixSet + OptionSet + CreatorSet {}
 
 pub trait PrefixSet {
-    fn add_prefix(&mut self, prefix: String);
+    fn add_prefix(&mut self, prefix: &str);
 
-    fn get_prefix(&self) -> &[String];
+    fn get_prefix(&self) -> &[OptStr];
 
     fn clr_prefix(&mut self);
 }

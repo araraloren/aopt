@@ -1,14 +1,15 @@
 use super::Context;
 use crate::err::{Result, SpecialError};
 use crate::opt::{Opt, OptValue, Style};
+use crate::OptStr;
 
 #[derive(Debug)]
 pub struct OptContext {
-    prefix: String,
+    prefix: OptStr,
 
-    name: String,
+    name: OptStr,
 
-    argument: Option<String>,
+    argument: Option<OptStr>,
 
     style: Style,
 
@@ -21,9 +22,9 @@ pub struct OptContext {
 
 impl OptContext {
     pub fn new(
-        prefix: String,
-        name: String,
-        argument: Option<String>,
+        prefix: OptStr,
+        name: OptStr,
+        argument: Option<OptStr>,
         style: Style,
         consume_arg: bool,
     ) -> Self {
@@ -58,7 +59,7 @@ impl Context for OptContext {
             }
             self.matched_index = Some(0);
             let value = opt
-                .parse_value(self.argument.as_ref().unwrap_or(&String::from("")))
+                .parse_value(self.argument.as_ref().unwrap_or(&OptStr::from("")))
                 .map_err(|_| SpecialError::InvalidArgumentForOption(opt.get_hint().to_owned()))?;
             self.set_value(value);
             debug!("get return value {:?}!", self.get_value());
@@ -91,7 +92,7 @@ impl Context for OptContext {
         self.style
     }
 
-    fn get_next_argument(&self) -> &Option<String> {
+    fn get_next_argument(&self) -> &Option<OptStr> {
         &self.argument
     }
 

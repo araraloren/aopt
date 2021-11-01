@@ -103,8 +103,8 @@ pub mod tools {
     }
 
     pub fn initialize_prefix<S: Set>(set: &mut S) {
-        set.add_prefix(String::from("--"));
-        set.add_prefix(String::from("-"));
+        set.add_prefix("--");
+        set.add_prefix("-");
     }
 
     #[macro_export]

@@ -12,6 +12,7 @@ use crate::opt::{OptCallback, OptValue, Style};
 use crate::proc::{Info, Matcher, NonOptMatcher, OptMatcher, Proc};
 use crate::set::{OptionInfo, Set};
 use crate::uid::{Generator, Uid};
+use crate::OptStr;
 
 #[derive(Debug, Default)]
 pub struct PreParser<G>
@@ -24,7 +25,7 @@ where
 
     callback: HashMap<Uid, RefCell<OptCallback>>,
 
-    noa: Vec<String>,
+    noa: Vec<OptStr>,
 }
 
 impl<G> PreParser<G>
@@ -53,7 +54,7 @@ where
         let mut iter = argstream.iter_mut();
 
         // copy the prefix, so we don't need borrow set
-        let prefix: Vec<String> = set.get_prefix().iter().map(|v| v.clone()).collect();
+        let prefix: Vec<OptStr> = set.get_prefix().iter().map(|v| v.clone()).collect();
 
         // add info to Proc
         for opt in set.iter() {
@@ -86,7 +87,7 @@ where
                 if ret {
                     debug!(?arg, "after parsing ...");
                     for gen_style in &parser_state {
-                        if let Some(ret) = gen_style.gen_opt::<OptMatcher>(arg) {
+                        if let Some(ret) = gen_style.gen_opt::<OptMatcher>(arg)? {
                             let mut proc = ret;
 
                             if self.process(&mut proc, set)? {
@@ -126,7 +127,7 @@ where
 
             info!("start process {:?} ...", &gen_style);
             if let Some(ret) =
-                gen_style.gen_nonopt::<NonOptMatcher>(&self.noa[0], noa_count as u64, 1)
+                gen_style.gen_nonopt::<NonOptMatcher>(&self.noa[0], noa_count as u64, 1)?
             {
                 let mut proc = ret;
 
@@ -141,7 +142,7 @@ where
                     &self.noa[index - 1],
                     noa_count as u64,
                     index as u64,
-                ) {
+                )? {
                     let mut proc = ret;
 
                     self.process(&mut proc, set)?;
@@ -156,7 +157,7 @@ where
 
         info!("start process {:?} ...", &gen_style);
         if let Some(ret) =
-            gen_style.gen_nonopt::<NonOptMatcher>(&String::new(), noa_count as u64, 1)
+            gen_style.gen_nonopt::<NonOptMatcher>(&OptStr::default(), noa_count as u64, 1)?
         {
             let mut proc = ret;
 

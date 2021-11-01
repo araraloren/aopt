@@ -53,6 +53,9 @@ pub enum ArgumentError {
 
     #[error("Syntax error! Missing option name: '{0}'")]
     MissingName(String),
+
+    #[error("Can not unwrap '{0}' from Argument")]
+    UnwrapError(String),
 }
 
 #[derive(Debug, thiserror::Error)]
