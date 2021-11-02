@@ -186,8 +186,14 @@ where
                     cb.as_mut()
                         .call(uid, set, &self.noa[noa_index - 1], noa_index as u64, value)
                 }
-                OptCallback::Main(cb) => cb.as_mut().call(uid, set, &self.noa, value),
-                OptCallback::MainMut(cb) => cb.as_mut().call(uid, set, &self.noa, value),
+                OptCallback::Main(cb) => {
+                    let noaref: Vec<&str> = self.noa.iter().map(|v| v.as_ref()).collect();
+                    cb.as_mut().call(uid, set, &noaref, value)
+                }
+                OptCallback::MainMut(cb) => {
+                    let noaref: Vec<&str> = self.noa.iter().map(|v| v.as_ref()).collect();
+                    cb.as_mut().call(uid, set, &noaref, value)
+                }
                 OptCallback::Null => Ok(None),
             }
         } else {
@@ -417,7 +423,7 @@ mod test {
                 opt_str: "-g=i",
                 ret_value: Some(OptValue::from(42i64)),
                 commit_tweak: Some(Box::new(|commit: &mut Commit| {
-                    commit.add_alias("+".to_owned(), "g-i64".to_owned());
+                    commit.add_alias("+".into(), "g-i64".into());
                 })),
                 callback_tweak: simple_cb_tweak!(),
                 checker: Some(DataChecker {
@@ -445,7 +451,7 @@ mod test {
         let mut set = SimpleSet::new();
         let mut parser = SimpleParser::new(UidGenerator::default());
 
-        set.add_prefix("+".to_owned());
+        set.add_prefix("+");
 
         for testing_case in testing_cases.iter_mut() {
             testing_case.do_test(&mut set, &mut parser)?;

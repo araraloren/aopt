@@ -7,6 +7,7 @@ use crate::opt::*;
 use crate::set::CreateInfo;
 use crate::set::Creator;
 use crate::uid::Uid;
+use crate::OptStr;
 
 pub fn current_type() -> &'static str {
     "c"
@@ -17,7 +18,7 @@ pub trait Cmd: NonOpt {}
 pub struct CmdOpt {
     uid: Uid,
 
-    name: String,
+    name: OptStr,
 
     value: OptValue,
 
@@ -122,11 +123,11 @@ impl Name for CmdOpt {
         ""
     }
 
-    fn set_name(&mut self, string: String) {
+    fn set_name(&mut self, string: OptStr) {
         self.name = string;
     }
 
-    fn set_prefix(&mut self, _string: String) {}
+    fn set_prefix(&mut self, _string: OptStr) {}
 
     fn match_name(&self, name: &str) -> bool {
         self.get_name() == name

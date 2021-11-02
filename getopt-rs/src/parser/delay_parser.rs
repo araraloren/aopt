@@ -229,8 +229,14 @@ where
                     cb.as_mut()
                         .call(uid, set, &self.noa[noa_index - 1], noa_index as u64, value)
                 }
-                OptCallback::Main(cb) => cb.as_mut().call(uid, set, &self.noa, value),
-                OptCallback::MainMut(cb) => cb.as_mut().call(uid, set, &self.noa, value),
+                OptCallback::Main(cb) => {
+                    let noaref: Vec<&str> = self.noa.iter().map(|v| v.as_ref()).collect();
+                    cb.as_mut().call(uid, set, &noaref, value)
+                }
+                OptCallback::MainMut(cb) => {
+                    let noaref: Vec<&str> = self.noa.iter().map(|v| v.as_ref()).collect();
+                    cb.as_mut().call(uid, set, &noaref, value)
+                }
                 OptCallback::Null => Ok(None),
             }
         } else {

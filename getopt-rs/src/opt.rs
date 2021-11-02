@@ -11,6 +11,7 @@ use std::fmt::Debug;
 
 use crate::err::Result;
 use crate::uid::Uid;
+use crate::OptStr;
 
 pub use self::callback::{Callback as OptCallback, CallbackType};
 pub use self::help::HelpInfo;
@@ -55,27 +56,27 @@ pub trait Callback {
 }
 
 pub trait Name {
-    fn get_name(&self) -> &str;
+    fn get_name(&self) -> OptStr;
 
-    fn get_prefix(&self) -> &str;
+    fn get_prefix(&self) -> OptStr;
 
-    fn set_name(&mut self, string: String);
+    fn set_name(&mut self, string: OptStr);
 
-    fn set_prefix(&mut self, string: String);
+    fn set_prefix(&mut self, string: OptStr);
 
-    fn match_name(&self, name: &str) -> bool;
+    fn match_name(&self, name: OptStr) -> bool;
 
-    fn match_prefix(&self, prefix: &str) -> bool;
+    fn match_prefix(&self, prefix: OptStr) -> bool;
 }
 
 pub trait Alias {
-    fn get_alias(&self) -> Option<&Vec<(String, String)>>;
+    fn get_alias(&self) -> Option<&Vec<(OptStr, OptStr)>>;
 
-    fn add_alias(&mut self, prefix: String, name: String);
+    fn add_alias(&mut self, prefix: OptStr, name: OptStr);
 
-    fn rem_alias(&mut self, prefix: &str, name: &str);
+    fn rem_alias(&mut self, prefix: OptStr, name: OptStr);
 
-    fn match_alias(&self, prefix: &str, name: &str) -> bool;
+    fn match_alias(&self, prefix: OptStr, name: OptStr) -> bool;
 }
 
 pub trait Optional {
