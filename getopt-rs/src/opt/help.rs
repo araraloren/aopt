@@ -2,40 +2,41 @@ use std::mem::take;
 
 use super::Opt;
 use crate::set::CreateInfo;
+use crate::OptStr;
 
 #[derive(Debug, Clone, Default)]
 pub struct HelpInfo {
-    hint: String,
-    help: String,
+    hint: OptStr,
+    help: OptStr,
 }
 
 impl HelpInfo {
-    pub fn new(hint: String, help: String) -> Self {
+    pub fn new(hint: OptStr, help: OptStr) -> Self {
         Self { hint, help }
     }
 
-    pub fn get_hint(&self) -> &String {
-        &self.hint
+    pub fn get_hint(&self) -> OptStr {
+        self.hint.clone()
     }
 
-    pub fn get_help(&self) -> &String {
-        &self.help
+    pub fn get_help(&self) -> OptStr {
+        self.help.clone()
     }
 
-    pub fn get_hint_mut(&mut self) -> &mut String {
+    pub fn get_hint_mut(&mut self) -> &mut OptStr {
         &mut self.hint
     }
 
-    pub fn get_help_mut(&mut self) -> &mut String {
+    pub fn get_help_mut(&mut self) -> &mut OptStr {
         &mut self.help
     }
 
-    pub fn set_hint<T: Into<String>>(&mut self, hint: T) -> &mut Self {
+    pub fn set_hint<T: Into<OptStr>>(&mut self, hint: T) -> &mut Self {
         self.hint = hint.into();
         self
     }
 
-    pub fn set_help<T: Into<String>>(&mut self, help: T) -> &mut Self {
+    pub fn set_help<T: Into<OptStr>>(&mut self, help: T) -> &mut Self {
         self.help = help.into();
         self
     }
@@ -50,7 +51,8 @@ impl HelpInfo {
                 opt.get_name(),
                 opt.get_type_name(),
                 if opt.get_optional() { "]" } else { ">" },
-            ),
+            )
+            .into(),
         }
     }
 }
@@ -71,7 +73,7 @@ impl<'a> From<&'a mut CreateInfo> for HelpInfo {
 }
 
 /// Generate the help like `--Option | -O`
-pub fn create_help_hint(ci: &CreateInfo) -> String {
+pub fn create_help_hint(ci: &CreateInfo) -> OptStr {
     let mut ret = String::default();
 
     if let Some(prefix) = ci.get_prefix() {
@@ -82,5 +84,5 @@ pub fn create_help_hint(ci: &CreateInfo) -> String {
         ret += &format!(" | {}{}", alias.0, alias.1);
     }
 
-    ret
+    ret.into()
 }

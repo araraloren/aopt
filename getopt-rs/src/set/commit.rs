@@ -72,7 +72,7 @@ impl<'a> Commit<'a> {
         self
     }
 
-    pub fn rem_alias(&mut self, prefix: &str, name: &str) -> &mut Self {
+    pub fn rem_alias(&mut self, prefix: &OptStr, name: &OptStr) -> &mut Self {
         self.info.rem_alias(prefix, name);
         self
     }

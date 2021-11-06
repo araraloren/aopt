@@ -92,9 +92,9 @@ impl CreateInfo {
         self
     }
 
-    pub fn rem_alias(&mut self, prefix: &str, name: &str) -> &mut Self {
+    pub fn rem_alias(&mut self, prefix: &OptStr, name: &OptStr) -> &mut Self {
         for (index, alias) in self.alias.iter().enumerate() {
-            if alias.0 == prefix && alias.1 == name {
+            if &alias.0 == prefix && &alias.1 == name {
                 self.alias.remove(index);
                 break;
             }
@@ -119,16 +119,16 @@ impl CreateInfo {
         self.optional
     }
 
-    pub fn get_type_name(&self) -> &OptStr {
-        &self.type_name
+    pub fn get_type_name(&self) -> OptStr {
+        self.type_name
     }
 
-    pub fn get_name(&self) -> &str {
-        &self.name
+    pub fn get_name(&self) -> OptStr {
+        self.name
     }
 
-    pub fn get_prefix(&self) -> &Option<OptStr> {
-        &self.prefix
+    pub fn get_prefix(&self) -> Option<OptStr> {
+        self.prefix
     }
 
     pub fn get_index(&self) -> &OptIndex {
@@ -267,16 +267,16 @@ impl FilterInfo {
         self.optional.unwrap()
     }
 
-    pub fn get_type_name(&self) -> &OptStr {
-        self.type_name.as_ref().unwrap()
+    pub fn get_type_name(&self) -> OptStr {
+        self.type_name.clone().unwrap()
     }
 
-    pub fn get_name(&self) -> &str {
-        self.name.as_ref().unwrap()
+    pub fn get_name(&self) -> OptStr {
+        self.name.clone().unwrap()
     }
 
-    pub fn get_prefix(&self) -> &str {
-        self.prefix.as_ref().unwrap()
+    pub fn get_prefix(&self) -> OptStr {
+        self.prefix.clone().unwrap()
     }
 
     pub fn get_index(&self) -> &OptIndex {
@@ -329,7 +329,7 @@ impl FilterInfo {
             if !matched {
                 if let Some(alias) = opt.get_alias().as_ref() {
                     for item in alias.iter() {
-                        if &item.0 == self.get_prefix() {
+                        if item.0 == self.get_prefix() {
                             matched = true;
                             break;
                         }
@@ -344,7 +344,7 @@ impl FilterInfo {
             if !matched {
                 if let Some(alias) = opt.get_alias().as_ref() {
                     for item in alias.iter() {
-                        if &item.1 == self.get_name() {
+                        if item.1 == self.get_name() {
                             matched = true;
                             break;
                         }

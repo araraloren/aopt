@@ -115,12 +115,12 @@ impl Callback for CmdOpt {
 }
 
 impl Name for CmdOpt {
-    fn get_name(&self) -> &str {
+    fn get_name(&self) -> &OptStr {
         &self.name
     }
 
-    fn get_prefix(&self) -> &str {
-        ""
+    fn get_prefix(&self) -> &OptStr {
+        &OptStr::from("")
     }
 
     fn set_name(&mut self, string: OptStr) {
@@ -129,11 +129,11 @@ impl Name for CmdOpt {
 
     fn set_prefix(&mut self, _string: OptStr) {}
 
-    fn match_name(&self, name: &str) -> bool {
+    fn match_name(&self, name: &OptStr) -> bool {
         self.get_name() == name
     }
 
-    fn match_prefix(&self, _prefix: &str) -> bool {
+    fn match_prefix(&self, _prefix: &OptStr) -> bool {
         false
     }
 }
@@ -151,15 +151,15 @@ impl Optional for CmdOpt {
 }
 
 impl Alias for CmdOpt {
-    fn get_alias(&self) -> Option<&Vec<(String, String)>> {
+    fn get_alias(&self) -> Option<&Vec<(OptStr, OptStr)>> {
         None
     }
 
-    fn add_alias(&mut self, _prefix: String, _name: String) {}
+    fn add_alias(&mut self, _prefix: OptStr, _name: OptStr) {}
 
-    fn rem_alias(&mut self, _prefix: &str, _name: &str) {}
+    fn rem_alias(&mut self, _prefix: &OptStr, _name: &OptStr) {}
 
-    fn match_alias(&self, _prefix: &str, _name: &str) -> bool {
+    fn match_alias(&self, _prefix: &OptStr, _name: &OptStr) -> bool {
         false
     }
 }
@@ -201,7 +201,7 @@ impl Value for CmdOpt {
     /// Can't change the default value of non-opt
     fn set_default_value(&mut self, _value: OptValue) {}
 
-    fn parse_value(&self, _string: &str) -> Result<OptValue> {
+    fn parse_value(&self, _string: &OptStr) -> Result<OptValue> {
         Ok(OptValue::from(true))
     }
 
@@ -215,11 +215,11 @@ impl Value for CmdOpt {
 }
 
 impl Help for CmdOpt {
-    fn set_hint(&mut self, hint: String) {
+    fn set_hint(&mut self, hint: OptStr) {
         self.help_info.set_hint(hint);
     }
 
-    fn set_help(&mut self, help: String) {
+    fn set_help(&mut self, help: OptStr) {
         self.help_info.set_help(help);
     }
 
@@ -249,7 +249,7 @@ impl Creator for CmdCreator {
                 .into());
             }
         }
-        assert_eq!(create_info.get_type_name(), self.get_type_name());
+        assert_eq!(create_info.get_type_name().as_ref(), self.get_type_name());
         let opt: CmdOpt = create_info.into();
 
         trace!(?opt, "create a Cmd");
@@ -261,6 +261,10 @@ impl Creator for CmdCreator {
 mod test {
     use super::*;
 
+    fn gen_optstr(str: &str) -> OptStr {
+        OptStr::from(str)
+    }
+
     #[test]
     fn make_type_cmd_work() {
         let creator = CmdCreator::default();
@@ -269,7 +273,7 @@ mod test {
         // cmd not support deactivate style
         assert_eq!(creator.is_support_deactivate_style(), false);
 
-        let mut ci = CreateInfo::parse("cmd=c", &[]).unwrap();
+        let mut ci = CreateInfo::parse(&gen_optstr("cmd=c"), &[]).unwrap();
 
         ci.set_uid(1);
 
@@ -291,10 +295,10 @@ mod test {
         assert_eq!(cmd.is_need_invoke(), true);
 
         // cmd not support alias
-        cmd.add_alias("-".to_owned(), "m".to_owned());
+        cmd.add_alias("-".into(), "m".into());
         assert_eq!(cmd.get_alias(), None);
-        assert_eq!(cmd.match_alias("-", "m"), false);
-        cmd.rem_alias("-", "m");
+        assert_eq!(cmd.match_alias(&"-".into(), &"m".into()), false);
+        cmd.rem_alias(&"-".into(), &"m".into());
         assert_eq!(cmd.get_alias(), None);
 
         assert_eq!(cmd.get_index(), Some(&OptIndex::forward(1)));
@@ -306,12 +310,12 @@ mod test {
         assert_eq!(cmd.get_index(), Some(&OptIndex::forward(1)));
         assert_eq!(cmd.match_index(6, 9), false);
 
-        assert_eq!(cmd.get_name(), "cmd");
-        assert_eq!(cmd.get_prefix(), "");
-        assert_eq!(cmd.match_name("www"), false);
-        assert_eq!(cmd.match_name("cmd"), true);
-        assert_eq!(cmd.match_prefix("--"), false);
-        assert_eq!(cmd.match_prefix(""), false);
+        assert_eq!(cmd.get_name(), "cmd".into());
+        assert_eq!(cmd.get_prefix(), "".into());
+        assert_eq!(cmd.match_name(&"www".into()), false);
+        assert_eq!(cmd.match_name(&"cmd".into()), true);
+        assert_eq!(cmd.match_prefix(&"--".into()), false);
+        assert_eq!(cmd.match_prefix(&"".into()), false);
         cmd.set_name(String::from("cmd1"));
         cmd.set_prefix(String::from("+"));
         assert_eq!(cmd.match_name("www"), false);

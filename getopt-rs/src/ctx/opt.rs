@@ -46,8 +46,8 @@ impl Context for OptContext {
 
         if matched {
             matched = matched
-                && ((opt.match_name(self.name.as_ref()) && opt.match_prefix(self.prefix.as_ref()))
-                    || opt.match_alias(self.prefix.as_ref(), self.name.as_ref()));
+                && ((opt.match_name(self.name) && opt.match_prefix(self.prefix))
+                    || opt.match_alias(self.prefix, self.name));
         }
         info!(%matched, "Matching context with opt<{}>", opt.get_uid());
         trace!(?self, ?opt, "matching ...");
@@ -59,7 +59,7 @@ impl Context for OptContext {
             }
             self.matched_index = Some(0);
             let value = opt
-                .parse_value(self.argument.as_ref().unwrap_or(&OptStr::from("")))
+                .parse_value(self.argument.unwrap_or(OptStr::from("")))
                 .map_err(|_| SpecialError::InvalidArgumentForOption(opt.get_hint().to_owned()))?;
             self.set_value(value);
             debug!("get return value {:?}!", self.get_value());
