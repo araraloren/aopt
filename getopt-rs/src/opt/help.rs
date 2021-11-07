@@ -87,7 +87,10 @@ pub fn create_help_hint(ci: &CreateInfo) -> Ustr {
     // adding name
     ret += ci.get_name().as_ref();
     // adding index
-    ret += &format!("@{}", ci.get_index().to_string());
+    let index_string = ci.get_index().to_string();
+    if ! index_string.is_empty() {
+        ret += &format!("@{}", index_string);
+    }
     // adding alias
     for alias in ci.get_alias() {
         ret += &format!(" | {}", alias);
