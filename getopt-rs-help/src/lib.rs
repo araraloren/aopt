@@ -98,7 +98,10 @@ impl<W: Write> Printer<W> for AppHelp<W> {
 
             for cmd_name in sec_store.cmd_iter() {
                 if let Some(cmd_store) = self.store.get_cmd(*cmd_name) {
-                    cmd_info.push(vec![cmd_store.get_hint().as_ref(), cmd_store.get_help().as_ref()]);
+                    cmd_info.push(vec![
+                        cmd_store.get_hint().as_ref(),
+                        cmd_store.get_help().as_ref(),
+                    ]);
                 }
             }
             let mut buffer = String::new();
@@ -140,7 +143,10 @@ impl<W: Write> Printer<W> for AppHelp<W> {
 
         for cmd_name in sec_store.cmd_iter() {
             if let Some(cmd_store) = self.store.get_cmd(*cmd_name) {
-                cmd_info.push(vec![cmd_store.get_hint().as_ref(), cmd_store.get_help().as_ref()]);
+                cmd_info.push(vec![
+                    cmd_store.get_hint().as_ref(),
+                    cmd_store.get_help().as_ref(),
+                ]);
             }
         }
         let mut buffer = String::new();
@@ -248,7 +254,10 @@ impl<W: Write> Printer<W> for AppHelp<W> {
         };
 
         for pos_store in cmd_store.pos_iter() {
-            pos_info.push(vec![pos_store.get_hint().as_ref(), pos_store.get_help().as_ref()]);
+            pos_info.push(vec![
+                pos_store.get_hint().as_ref(),
+                pos_store.get_help().as_ref(),
+            ]);
         }
         let mut buffer = String::new();
 
@@ -287,7 +296,10 @@ impl<W: Write> Printer<W> for AppHelp<W> {
         };
 
         for opt_store in cmd_store.opt_iter() {
-            opt_info.push(vec![opt_store.get_hint().as_ref(), opt_store.get_help().as_ref()]);
+            opt_info.push(vec![
+                opt_store.get_hint().as_ref(),
+                opt_store.get_help().as_ref(),
+            ]);
         }
         let mut buffer = String::new();
 

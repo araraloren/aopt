@@ -94,13 +94,15 @@ impl CreateInfo {
     }
 
     pub fn add_alias(&mut self, alias: Ustr) -> Result<&mut Self> {
-        let has_prefix = self.support_prefix.iter().any(|v|alias.starts_with(v.as_ref()) && alias.len() != v.len());
+        let has_prefix = self
+            .support_prefix
+            .iter()
+            .any(|v| alias.starts_with(v.as_ref()) && alias.len() != v.len());
 
         if has_prefix {
             self.alias.push(alias);
             Ok(self)
-        }
-        else {
+        } else {
             Err(ConstructError::InvalidOptionAlias(alias.to_string()).into())
         }
     }
@@ -126,7 +128,7 @@ impl CreateInfo {
         for alias in self.alias.iter() {
             for prefix in self.support_prefix.iter() {
                 if alias.starts_with(prefix.as_ref()) {
-                    if let Some(name) = alias.get(prefix.len() ..) {
+                    if let Some(name) = alias.get(prefix.len()..) {
                         ret.push((prefix.clone(), name.into()));
                     }
                 }
@@ -221,7 +223,7 @@ impl CreateInfo {
             return Err(ConstructError::MissingOptionType(pattern.to_owned()).into());
         }
         let mut ret: Self = data_keeper.into();
-        ret.set_support_prefix(prefix.iter().map(|v|v.clone()).collect::<Vec<Ustr>>());
+        ret.set_support_prefix(prefix.iter().map(|v| v.clone()).collect::<Vec<Ustr>>());
         return Ok(ret);
     }
 }

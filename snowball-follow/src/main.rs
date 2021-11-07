@@ -1,7 +1,11 @@
 use std::env::Args;
 
-use getopt_rs::{prelude::{Result, SimpleParser}, set::{OptionSet, SimpleSet}, tools::{initialize_creator, initialize_prefix}, uid::UidGenerator};
-
+use getopt_rs::{
+    prelude::{Result, SimpleParser},
+    set::{OptionSet, SimpleSet},
+    tools::{initialize_creator, initialize_prefix},
+    uid::UidGenerator,
+};
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
@@ -9,8 +13,6 @@ async fn main() -> color_eyre::Result<()> {
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
     color_eyre::install()?;
-
-
 
     Ok(())
 }
@@ -22,7 +24,12 @@ fn parser_command_line(args: Args) -> Result<SimpleSet> {
     initialize_creator(&mut set);
     initialize_prefix(&mut set);
 
-    // for [("-d=b", "--", "debug"), ("h=b", "--", "help"), "s=i", "--", ""]
+    for (optstr, alias) in [
+        ("-d=b", "--debug"),
+        ("h=b", "--help"),
+        ("s=i", "--start"),
+        ("c=i", "--count"),
+    ] {}
 
     Ok(set)
 }
