@@ -83,6 +83,26 @@ impl OptionSet for SimpleSet {
         self.opt.iter_mut()
     }
 
+    fn find(&self, opt_str: &str) -> Result<Option<&Box<dyn Opt>>> {
+        let fi = FilterInfo::parse(gstr(opt_str), self.get_prefix())?;
+        for opt in self.iter() {
+            if fi.match_opt(opt.as_ref()) {
+                return Ok(Some(opt));
+            }
+        }
+        Ok(None)
+    }
+
+    fn find_mut(&mut self, opt_str: &str) -> Result<Option<&mut Box<dyn Opt>>> {
+        let fi = FilterInfo::parse(gstr(opt_str), self.get_prefix())?;
+        for opt in self.iter_mut() {
+            if fi.match_opt(opt.as_ref()) {
+                return Ok(Some(opt));
+            }
+        }
+        Ok(None)
+    }
+
     fn filter(&self, opt_str: &str) -> Result<Filter> {
         Ok(Filter::new(
             self,
@@ -99,7 +119,7 @@ impl OptionSet for SimpleSet {
         for opt in self.opt.iter_mut() {
             opt.reset_value();
         }
-    }
+    } 
 }
 
 impl CreatorSet for SimpleSet {

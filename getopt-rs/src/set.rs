@@ -54,6 +54,10 @@ pub trait OptionSet:
 
     fn iter_mut(&mut self) -> IterMut<Box<dyn Opt>>;
 
+    fn find(&self, opt_str: &str) -> Result<Option<&Box<dyn Opt>>>;
+
+    fn find_mut(&mut self, opt_str: &str) -> Result<Option<&mut Box<dyn Opt>>>;
+
     fn filter(&self, opt_str: &str) -> Result<Filter>;
 
     fn filter_mut(&mut self, opt_str: &str) -> Result<FilterMut>;
