@@ -423,7 +423,7 @@ mod test {
                 opt_str: "-g=i",
                 ret_value: Some(OptValue::from(42i64)),
                 commit_tweak: Some(Box::new(|commit: &mut Commit| {
-                    commit.add_alias("+g-i64");
+                    commit.add_alias("+g-i64").unwrap();
                 })),
                 callback_tweak: simple_cb_tweak!(),
                 checker: Some(DataChecker {

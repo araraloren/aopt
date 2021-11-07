@@ -82,7 +82,7 @@ fn main() -> color_eyre::Result<()> {
     ] {
         if let Ok(mut commit) = set.add_opt(opt) {
             commit.set_help(help);
-            commit.add_alias(&format!("{}{}", alias_prefix, alias_name));
+            commit.add_alias(&format!("{}{}", alias_prefix, alias_name))?;
             let id = commit.commit()?;
             parser.add_callback(
                 id,
@@ -103,7 +103,7 @@ fn main() -> color_eyre::Result<()> {
         }
     }
     if let Ok(mut commit) = set.add_opt("--help=b") {
-        commit.add_alias("-h");
+        commit.add_alias("-h")?;
         commit.set_help("Show the help message");
         commit.commit()?;
     }

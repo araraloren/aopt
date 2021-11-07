@@ -67,9 +67,9 @@ impl<'a> Commit<'a> {
         self
     }
 
-    pub fn add_alias(&mut self, alias: &str) -> &mut Self {
-        self.info.add_alias(gstr(alias));
-        self
+    pub fn add_alias(&mut self, alias: &str) -> Result<&mut Self> {
+        self.info.add_alias(gstr(alias))?;
+        Ok(self)
     }
 
     pub fn rem_alias(&mut self, alias: Ustr) -> &mut Self {
