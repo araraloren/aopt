@@ -146,12 +146,12 @@ impl Name for ArrayOpt {
         self.prefix
     }
 
-    fn set_name(&mut self, Ustr: Ustr) {
-        self.name = Ustr;
+    fn set_name(&mut self, string: Ustr) {
+        self.name = string;
     }
 
-    fn set_prefix(&mut self, Ustr: Ustr) {
-        self.prefix = Ustr;
+    fn set_prefix(&mut self, string: Ustr) {
+        self.prefix = string;
     }
 
     fn match_name(&self, name: Ustr) -> bool {

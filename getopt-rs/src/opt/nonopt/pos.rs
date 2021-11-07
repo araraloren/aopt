@@ -126,8 +126,8 @@ impl Name for PosOpt {
         Ustr::from("")
     }
 
-    fn set_name(&mut self, Ustr: Ustr) {
-        self.name = Ustr;
+    fn set_name(&mut self, string: Ustr) {
+        self.name = string;
     }
 
     fn set_prefix(&mut self, _string: Ustr) {}
