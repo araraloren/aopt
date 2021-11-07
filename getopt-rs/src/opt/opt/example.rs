@@ -197,8 +197,7 @@ pub mod path {
         fn match_alias(&self, prefix: Ustr, name: Ustr) -> bool {
             self.alias
                 .iter()
-                .find(|&v| v.0 == prefix && v.1 == name)
-                .is_some()
+                .any(|&v| v.0 == prefix && v.1 == name)
         }
     }
 

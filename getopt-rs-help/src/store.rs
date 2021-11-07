@@ -588,7 +588,7 @@ impl SecStore {
     }
 
     pub fn has_cmd(&self, cmd: &str) -> bool {
-        self.cmd_attach.iter().find(|&v| v == cmd).is_some()
+        self.cmd_attach.iter().any(|v| v == cmd)
     }
 
     pub fn get_name(&self) -> &str {
