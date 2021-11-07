@@ -3,7 +3,7 @@ use super::{Result, Set, Uid};
 use crate::opt::help::HelpInfo;
 use crate::opt::index::Index;
 use crate::opt::value::Value;
-use crate::{Ustr, gstr};
+use crate::{gstr, Ustr};
 
 #[derive(Debug)]
 pub struct Commit<'a> {

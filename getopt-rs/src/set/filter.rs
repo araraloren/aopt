@@ -1,8 +1,8 @@
 use super::info::FilterInfo;
 use super::Set;
+use crate::gstr;
 use crate::opt::index::Index;
 use crate::opt::Opt;
-use crate::gstr;
 
 #[derive(Debug)]
 pub struct Filter<'a> {

@@ -55,7 +55,7 @@ impl Opt for PosOpt {}
 impl NonOpt for PosOpt {}
 
 impl Type for PosOpt {
-    fn get_type_name(&self) -> Ustr{
+    fn get_type_name(&self) -> Ustr {
         current_type()
     }
 

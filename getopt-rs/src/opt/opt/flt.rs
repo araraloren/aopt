@@ -187,9 +187,7 @@ impl Alias for FltOpt {
     }
 
     fn match_alias(&self, prefix: Ustr, name: Ustr) -> bool {
-        self.alias
-            .iter()
-            .any(|&v| v.0 == prefix && v.1 == name)
+        self.alias.iter().any(|&v| v.0 == prefix && v.1 == name)
     }
 }
 

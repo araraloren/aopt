@@ -4,11 +4,11 @@ use std::path::Path;
 
 use getopt_rs::err::create_error;
 use getopt_rs::tools::initialize_creator;
+use getopt_rs::Ustr;
 use getopt_rs::{getopt, prelude::*};
 use getopt_rs_help::printer::Printer;
 use getopt_rs_help::store::{OptStore, PosStore};
 use getopt_rs_help::AppHelp;
-use getopt_rs::Ustr;
 use regex::Regex;
 
 fn main() -> color_eyre::Result<()> {

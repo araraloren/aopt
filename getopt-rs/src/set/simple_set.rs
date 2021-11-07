@@ -4,7 +4,7 @@ use super::{CreatorSet, OptionSet, PrefixSet};
 use super::{Index, IndexMut, Iter, IterMut};
 use crate::err::{ConstructError, Result};
 use crate::opt::Opt;
-use crate::{Ustr, UstrMap, gstr};
+use crate::{gstr, Ustr, UstrMap};
 
 #[derive(Debug, Default)]
 pub struct SimpleSet {
@@ -119,7 +119,7 @@ impl OptionSet for SimpleSet {
         for opt in self.opt.iter_mut() {
             opt.reset_value();
         }
-    } 
+    }
 }
 
 impl CreatorSet for SimpleSet {

@@ -22,7 +22,9 @@ use prelude::Parser;
 use prelude::Result;
 use prelude::Set;
 
-pub fn gstr(s: &str) -> Ustr { Ustr::from(s) }
+pub fn gstr(s: &str) -> Ustr {
+    Ustr::from(s)
+}
 
 pub struct ReturnValue<'a, 'b>(&'b mut dyn Parser, &'a mut dyn Set);
 
@@ -155,6 +157,7 @@ pub mod tools {
 pub mod prelude {
     pub use crate::ctx::{Context, NonOptContext, OptContext};
     pub use crate::err::{Error, Result};
+    pub use crate::gstr;
     pub use crate::opt::callback::{SimpleMainCallback, SimpleMainMutCallback};
     pub use crate::opt::callback::{SimpleOptCallback, SimpleOptMutCallback};
     pub use crate::opt::callback::{SimplePosCallback, SimplePosMutCallback};
@@ -177,5 +180,4 @@ pub mod prelude {
     pub use crate::{simple_opt_cb, simple_opt_mut_cb};
     pub use crate::{simple_pos_cb, simple_pos_mut_cb};
     pub use crate::{Ustr, UstrMap};
-    pub use crate::gstr;
 }
