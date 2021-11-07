@@ -6,6 +6,7 @@ pub mod wrapper;
 
 use crate::err::{Error, Result};
 use std::io::{Stdout, Write};
+use ustr::Ustr;
 
 use printer::Printer;
 use store::Store;
@@ -15,7 +16,7 @@ use crate::wrapper::Wrapper;
 
 #[derive(Debug)]
 pub struct AppHelp<W: Write> {
-    name: String,
+    name: Ustr,
 
     pub store: Store,
 
@@ -25,7 +26,7 @@ pub struct AppHelp<W: Write> {
 }
 
 impl<W: Write> AppHelp<W> {
-    pub fn new(name: String, style: Style, writer: W) -> Self {
+    pub fn new(name: Ustr, style: Style, writer: W) -> Self {
         Self {
             name,
             store: Store::default(),
@@ -34,11 +35,11 @@ impl<W: Write> AppHelp<W> {
         }
     }
 
-    pub fn get_name(&self) -> &str {
-        &self.name
+    pub fn get_name(&self) -> Ustr {
+        self.name
     }
 
-    pub fn set_name(&mut self, name: String) {
+    pub fn set_name(&mut self, name: Ustr) {
         self.name = name;
     }
 
@@ -58,7 +59,7 @@ impl<W: Write> AppHelp<W> {
 impl Default for AppHelp<Stdout> {
     fn default() -> Self {
         Self {
-            name: String::default(),
+            name: Ustr::default(),
             store: Store::default(),
             style: Style::default(),
             writer: std::io::stdout(),
@@ -82,7 +83,7 @@ impl<W: Write> Printer<W> for AppHelp<W> {
         self.print_cmd_footer(None)
     }
 
-    fn print_cmd_help(&mut self, cmd: Option<&str>) -> Result<usize> {
+    fn print_cmd_help(&mut self, cmd: Option<Ustr>) -> Result<usize> {
         self.print_cmd_usage(cmd)?;
         self.print_cmd_header(cmd)?;
         self.print_cmd_pos(cmd)?;
@@ -96,8 +97,8 @@ impl<W: Write> Printer<W> for AppHelp<W> {
             let mut cmd_info = vec![];
 
             for cmd_name in sec_store.cmd_iter() {
-                if let Some(cmd_store) = self.store.get_cmd(cmd_name) {
-                    cmd_info.push(vec![cmd_store.get_hint(), cmd_store.get_help()]);
+                if let Some(cmd_store) = self.store.get_cmd(*cmd_name) {
+                    cmd_info.push(vec![cmd_store.get_hint().as_ref(), cmd_store.get_help().as_ref()]);
                 }
             }
             let mut buffer = String::new();
@@ -130,16 +131,16 @@ impl<W: Write> Printer<W> for AppHelp<W> {
         Ok(out)
     }
 
-    fn print_section(&mut self, section: &str) -> Result<usize> {
+    fn print_section(&mut self, section: Ustr) -> Result<usize> {
         let mut cmd_info = vec![];
         let sec_store = self
             .store
             .get_sec(section)
-            .ok_or(Error::InvalidSecName(String::from(section)))?;
+            .ok_or(Error::InvalidSecName(section.to_string()))?;
 
         for cmd_name in sec_store.cmd_iter() {
-            if let Some(cmd_store) = self.store.get_cmd(cmd_name) {
-                cmd_info.push(vec![cmd_store.get_hint(), cmd_store.get_help()]);
+            if let Some(cmd_store) = self.store.get_cmd(*cmd_name) {
+                cmd_info.push(vec![cmd_store.get_hint().as_ref(), cmd_store.get_help().as_ref()]);
             }
         }
         let mut buffer = String::new();
@@ -169,12 +170,12 @@ impl<W: Write> Printer<W> for AppHelp<W> {
         Ok(self.writer.write(buffer.as_bytes())?)
     }
 
-    fn print_cmd_usage(&mut self, cmd: Option<&str>) -> Result<usize> {
+    fn print_cmd_usage(&mut self, cmd: Option<Ustr>) -> Result<usize> {
         let mut buffer = String::new();
         let cmd_store = if let Some(cmd_name) = cmd {
             self.store
                 .get_cmd(cmd_name)
-                .ok_or(Error::InvalidCmdName(String::from(cmd_name)))?
+                .ok_or(Error::InvalidCmdName(cmd_name.to_string()))?
         } else {
             self.store.get_global()
         };
@@ -204,11 +205,11 @@ impl<W: Write> Printer<W> for AppHelp<W> {
         Ok(self.writer.write(buffer.as_bytes())?)
     }
 
-    fn print_cmd_header(&mut self, cmd: Option<&str>) -> Result<usize> {
+    fn print_cmd_header(&mut self, cmd: Option<Ustr>) -> Result<usize> {
         let cmd_store = if let Some(cmd_name) = cmd {
             self.store
                 .get_cmd(cmd_name)
-                .ok_or(Error::InvalidCmdName(String::from(cmd_name)))?
+                .ok_or(Error::InvalidCmdName(cmd_name.to_string()))?
         } else {
             self.store.get_global()
         };
@@ -220,11 +221,11 @@ impl<W: Write> Printer<W> for AppHelp<W> {
         }
     }
 
-    fn print_cmd_footer(&mut self, cmd: Option<&str>) -> Result<usize> {
+    fn print_cmd_footer(&mut self, cmd: Option<Ustr>) -> Result<usize> {
         let cmd_store = if let Some(cmd_name) = cmd {
             self.store
                 .get_cmd(cmd_name)
-                .ok_or(Error::InvalidCmdName(String::from(cmd_name)))?
+                .ok_or(Error::InvalidCmdName(cmd_name.to_string()))?
         } else {
             self.store.get_global()
         };
@@ -236,18 +237,18 @@ impl<W: Write> Printer<W> for AppHelp<W> {
         }
     }
 
-    fn print_cmd_pos(&mut self, cmd: Option<&str>) -> Result<usize> {
+    fn print_cmd_pos(&mut self, cmd: Option<Ustr>) -> Result<usize> {
         let mut pos_info = vec![];
         let cmd_store = if let Some(cmd_name) = cmd {
             self.store
                 .get_cmd(cmd_name)
-                .ok_or(Error::InvalidCmdName(String::from(cmd_name)))?
+                .ok_or(Error::InvalidCmdName(cmd_name.to_string()))?
         } else {
             self.store.get_global()
         };
 
         for pos_store in cmd_store.pos_iter() {
-            pos_info.push(vec![pos_store.get_hint(), pos_store.get_help()]);
+            pos_info.push(vec![pos_store.get_hint().as_ref(), pos_store.get_help().as_ref()]);
         }
         let mut buffer = String::new();
 
@@ -275,18 +276,18 @@ impl<W: Write> Printer<W> for AppHelp<W> {
         Ok(self.writer.write(buffer.as_bytes())?)
     }
 
-    fn print_cmd_opt(&mut self, cmd: Option<&str>) -> Result<usize> {
+    fn print_cmd_opt(&mut self, cmd: Option<Ustr>) -> Result<usize> {
         let mut opt_info = vec![];
         let cmd_store = if let Some(cmd_name) = cmd {
             self.store
                 .get_cmd(cmd_name)
-                .ok_or(Error::InvalidCmdName(String::from(cmd_name)))?
+                .ok_or(Error::InvalidCmdName(cmd_name.to_string()))?
         } else {
             self.store.get_global()
         };
 
         for opt_store in cmd_store.opt_iter() {
-            opt_info.push(vec![opt_store.get_hint(), opt_store.get_help()]);
+            opt_info.push(vec![opt_store.get_hint().as_ref(), opt_store.get_help().as_ref()]);
         }
         let mut buffer = String::new();
 

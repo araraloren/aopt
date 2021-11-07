@@ -227,33 +227,33 @@ impl FilterType {
 fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout> {
     let mut help = AppHelp::default();
 
-    help.set_name("simple-find-file".to_owned());
+    help.set_name("simple-find-file".into());
 
     let global = help.store.get_global_mut();
 
     for opt in set.iter() {
         if opt.match_style(getopt_rs::opt::Style::Pos) {
             global.add_pos(PosStore::new(
-                opt.get_name().to_owned(),
-                opt.get_hint().to_owned(),
-                opt.get_help().to_owned(),
-                opt.get_index().unwrap().to_string(),
+                opt.get_name(),
+                opt.get_hint(),
+                opt.get_help(),
+                opt.get_index().unwrap().to_string().into(),
                 opt.get_optional(),
             ));
         } else if !opt.match_style(getopt_rs::opt::Style::Main) {
             global.add_opt(OptStore::new(
-                opt.get_name().to_owned(),
-                opt.get_hint().to_owned(),
-                opt.get_help().to_owned(),
+                opt.get_name(),
+                opt.get_hint(),
+                opt.get_help(),
                 opt.get_optional(),
             ));
         }
     }
 
-    global.set_header(String::from(
+    global.set_header(Ustr::from(
         "Search the given directory, show the file match the filter conditions",
     ));
-    global.set_footer(String::from("Create by araraloren, V0.2.0"));
+    global.set_footer(Ustr::from("Create by araraloren, V0.2.0"));
 
     help
 }
