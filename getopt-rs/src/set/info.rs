@@ -346,8 +346,6 @@ impl FilterInfo {
     pub fn match_opt(&self, opt: &dyn Opt) -> bool {
         let mut ret = true;
 
-        dbg!(self);
-        dbg!(opt);
         if ret && self.has_deactivate_style() {
             ret = ret && (self.get_deactivate_style() == opt.is_deactivate_style());
         }
