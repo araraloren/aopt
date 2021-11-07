@@ -67,13 +67,13 @@ impl<'a> Commit<'a> {
         self
     }
 
-    pub fn add_alias(&mut self, prefix: &str, name: &str) -> &mut Self {
-        self.info.add_alias(gstr(prefix), gstr(name));
+    pub fn add_alias(&mut self, alias: &str) -> &mut Self {
+        self.info.add_alias(gstr(alias));
         self
     }
 
-    pub fn rem_alias(&mut self, prefix: Ustr, name: Ustr) -> &mut Self {
-        self.info.rem_alias(prefix, name);
+    pub fn rem_alias(&mut self, alias: Ustr) -> &mut Self {
+        self.info.rem_alias(alias);
         self
     }
 

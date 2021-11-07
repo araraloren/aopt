@@ -51,7 +51,7 @@ impl From<CreateInfo> for BoolOpt {
             value: OptValue::default(),
             default_value: take(ci.get_default_value_mut()),
             deactivate_style: ci.get_support_deactivate_style(),
-            alias: take(ci.get_alias_mut()),
+            alias: ci.gen_option_alias(),
             need_invoke: false,
             help_info,
         }

@@ -81,7 +81,7 @@ pub fn create_help_hint(ci: &CreateInfo) -> Ustr {
     }
     ret += ci.get_name().as_ref();
     for alias in ci.get_alias() {
-        ret += &format!(" | {}{}", alias.0, alias.1);
+        ret += &format!(" | {}", alias);
     }
 
     ret.into()

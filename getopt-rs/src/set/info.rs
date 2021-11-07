@@ -26,12 +26,18 @@ pub struct CreateInfo {
 
     has_value: bool,
 
-    alias: Vec<(Ustr, Ustr)>,
+    alias: Vec<Ustr>,
 
     help: HelpInfo,
+
+    support_prefix: Vec<Ustr>,
 }
 
 impl CreateInfo {
+    pub fn set_support_prefix(&mut self, prefix: Vec<Ustr>) {
+        self.support_prefix = prefix;
+    }
+
     pub fn set_uid(&mut self, uid: Uid) -> &mut Self {
         self.uid = uid;
         self
@@ -87,14 +93,21 @@ impl CreateInfo {
         self
     }
 
-    pub fn add_alias(&mut self, prefix: Ustr, name: Ustr) -> &mut Self {
-        self.alias.push((prefix, name));
-        self
+    pub fn add_alias(&mut self, alias: Ustr) -> Result<&mut Self> {
+        let has_prefix = self.support_prefix.iter().any(|v|alias.starts_with(v.as_ref()) && alias.len() != v.len());
+
+        if has_prefix {
+            self.alias.push(alias);
+            Ok(self)
+        }
+        else {
+            Err(ConstructError::InvalidOptionAlias(alias.to_string()).into())
+        }
     }
 
-    pub fn rem_alias(&mut self, prefix: Ustr, name: Ustr) -> &mut Self {
-        for (index, alias) in self.alias.iter().enumerate() {
-            if alias.0 == prefix && alias.1 == name {
+    pub fn rem_alias(&mut self, alias: Ustr) -> &mut Self {
+        for (index, value) in self.alias.iter().enumerate() {
+            if value == &alias {
                 self.alias.remove(index);
                 break;
             }
@@ -105,6 +118,21 @@ impl CreateInfo {
     pub fn clr_alias(&mut self) -> &mut Self {
         self.alias.clear();
         self
+    }
+
+    pub fn gen_option_alias(&self) -> Vec<(Ustr, Ustr)> {
+        let mut ret = vec![];
+
+        for alias in self.alias.iter() {
+            for prefix in self.support_prefix.iter() {
+                if alias.starts_with(prefix.as_ref()) {
+                    if let Some(name) = alias.get(prefix.len() ..) {
+                        ret.push((prefix.clone(), name.into()));
+                    }
+                }
+            }
+        }
+        ret
     }
 
     pub fn get_uid(&self) -> Uid {
@@ -135,7 +163,7 @@ impl CreateInfo {
         &self.index
     }
 
-    pub fn get_alias(&self) -> &Vec<(Ustr, Ustr)> {
+    pub fn get_alias(&self) -> &Vec<Ustr> {
         self.alias.as_ref()
     }
 
@@ -171,7 +199,7 @@ impl CreateInfo {
         &mut self.index
     }
 
-    pub fn get_alias_mut(&mut self) -> &mut Vec<(Ustr, Ustr)> {
+    pub fn get_alias_mut(&mut self) -> &mut Vec<Ustr> {
         self.alias.as_mut()
     }
 
@@ -192,7 +220,9 @@ impl CreateInfo {
         if data_keeper.type_name.is_none() {
             return Err(ConstructError::MissingOptionType(pattern.to_owned()).into());
         }
-        return Ok(data_keeper.into());
+        let mut ret: Self = data_keeper.into();
+        ret.set_support_prefix(prefix.iter().map(|v|v.clone()).collect::<Vec<Ustr>>());
+        return Ok(ret);
     }
 }
 

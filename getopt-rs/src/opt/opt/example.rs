@@ -51,7 +51,7 @@ pub mod path {
                 optional: ci.get_optional(),
                 value: OptValue::default(),
                 default_value: take(ci.get_default_value_mut()),
-                alias: take(ci.get_alias_mut()),
+                alias: ci.gen_option_alias(),
                 need_invoke: false,
                 help_info,
             }
