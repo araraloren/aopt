@@ -225,8 +225,14 @@ impl State {
                 for (cur, ch) in pattern.chars(start).enumerate() {
                     let mut name_end = 0;
 
-                    if (ch == '=' || ch == '!' || ch == '/' || ch == '@') && cur >= 1 {
-                        name_end = start + cur;
+                    if ch == '=' || ch == '!' || ch == '/' || ch == '@' {
+                        if cur >= 1 {
+                            name_end = start + cur;
+                        }
+                        else if cur == 0 {
+                            // current is '='
+                            break;
+                        }
                     } else if start + cur + 1 == index.len() {
                         name_end = start + cur + 1;
                     }
@@ -261,8 +267,14 @@ impl State {
                 for (cur, ch) in pattern.chars(start).enumerate() {
                     let mut type_end = 0;
 
-                    if (ch == '!' || ch == '/' || ch == '@') && cur >= 1 {
-                        type_end = start + cur;
+                    if ch == '!' || ch == '/' || ch == '@' {
+                        if cur >= 1 {
+                            type_end = start + cur;
+                        }
+                        else if cur == 0 {
+                            // current is '='
+                            break;
+                        }
                     } else if start + cur + 1 == index.len() {
                         type_end = start + cur + 1;
                     }
@@ -451,7 +463,7 @@ mod test {
         {
             // test 1
             let test_cases = vec![
-                ("", Some((None, None, None, Index::default(), false, true))),
+                ("", None),
                 (
                     "o=b",
                     Some((None, Some("o"), Some("b"), Index::default(), false, true)),
@@ -2675,7 +2687,7 @@ mod test {
             let test_cases = vec![
                 (
                     "",
-                    Some((Some(""), None, None, Index::default(), false, true)),
+                    None,
                 ),
                 (
                     "o=b",

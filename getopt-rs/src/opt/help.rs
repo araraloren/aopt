@@ -72,14 +72,23 @@ impl<'a> From<&'a mut CreateInfo> for HelpInfo {
     }
 }
 
-/// Generate the help like `--Option | -O`
+/// Generate the help like `--Option | -O` or `Pos` or `--/Option`
 pub fn create_help_hint(ci: &CreateInfo) -> Ustr {
     let mut ret = String::default();
 
+    // adding prefix
     if let Some(prefix) = ci.get_prefix() {
         ret += prefix.as_ref();
     }
+    // adding deactivate style
+    if ci.get_support_deactivate_style() {
+        ret += "/"; 
+    }
+    // adding name
     ret += ci.get_name().as_ref();
+    // adding index
+    ret += &format!("@{}", ci.get_index().to_string());
+    // adding alias
     for alias in ci.get_alias() {
         ret += &format!(" | {}", alias);
     }

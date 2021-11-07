@@ -119,8 +119,14 @@ impl State {
                 for (cur, ch) in pattern.chars(start).enumerate() {
                     let mut name_end = 0;
                     // the name not include '=', so > 1
-                    if ch == VALUE_SPLIT_CHAR && cur >= 1 {
-                        name_end = start + cur;
+                    if ch == VALUE_SPLIT_CHAR  {
+                        if cur >= 1 {
+                            name_end = start + cur;
+                        }
+                        else if cur == 0 {
+                            // current is '='
+                            break;
+                        }
                     } else if start + cur + 1 == index.len() {
                         name_end = start + cur + 1;
                     }
@@ -199,7 +205,7 @@ mod test {
         {
             // test 1
             let test_cases = vec![
-                ("", Some((Some(""), Some(""), None, false))),
+                ("", None),
                 ("-a", Some((Some("-"), Some("a"), None, false))),
                 ("-/a", Some((Some("-"), Some("a"), None, true))),
                 ("-a=b", Some((Some("-"), Some("a"), Some("b"), false))),
@@ -215,7 +221,7 @@ mod test {
                 ("foo", Some((Some(""), Some("foo"), None, false))),
                 ("/foo", Some((Some(""), Some("foo"), None, true))),
                 ("foo=bar", Some((Some(""), Some("foo"), Some("bar"), false))),
-                ("--=bar", Some((Some("--"), Some(""), Some("bar"), false))),
+                ("--=xar", Some((Some("--"), Some(""), Some("xar"), false))),
                 ("-foo=", None),
             ];
 
@@ -228,7 +234,7 @@ mod test {
         {
             // test 2
             let test_cases = vec![
-                ("", Some((Some(""), Some(""), None, false))),
+                ("", None),
                 ("-a", Some((Some("-"), Some("a"), None, false))),
                 ("-/a", Some((Some("-"), Some("a"), None, true))),
                 ("-a=b", Some((Some("-"), Some("a"), Some("b"), false))),
@@ -244,7 +250,7 @@ mod test {
                 ("foo", Some((Some(""), Some("foo"), None, false))),
                 ("/foo", Some((Some(""), Some("foo"), None, true))),
                 ("foo=bar", Some((Some(""), Some("foo"), Some("bar"), false))),
-                ("--=bar", Some((Some("--"), Some(""), Some("bar"), false))),
+                ("--=xar", Some((Some("--"), Some(""), Some("xar"), false))),
                 ("-foo=", None),
             ];
 
@@ -267,7 +273,7 @@ mod test {
             assert!(except.is_some());
 
             if except.is_none() {
-                panic!("----> {:?}", except);
+                panic!("----> {:?} {:?}", except, &dk);
             }
 
             let default = Ustr::from("");
@@ -288,6 +294,8 @@ mod test {
                 assert_eq!(except.3, dk.disable);
             }
         } else {
+            dbg!(&except);
+            dbg!(&ret);
             assert!(except.is_none());
         }
     }
