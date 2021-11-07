@@ -346,6 +346,8 @@ impl FilterInfo {
     pub fn match_opt(&self, opt: &dyn Opt) -> bool {
         let mut ret = true;
 
+        dbg!(self);
+        dbg!(opt);
         if ret && self.has_deactivate_style() {
             ret = ret && (self.get_deactivate_style() == opt.is_deactivate_style());
         }
@@ -356,7 +358,8 @@ impl FilterInfo {
             ret = ret && (self.get_type_name() == opt.get_type_name());
         }
         if ret && self.has_prefix() {
-            let mut matched = opt.match_prefix(self.get_prefix());
+            // don't call match prefix
+            let mut matched = opt.get_prefix() == self.get_prefix();
 
             if !matched {
                 if let Some(alias) = opt.get_alias().as_ref() {
@@ -371,7 +374,8 @@ impl FilterInfo {
             ret = ret && matched;
         }
         if ret && self.has_name() {
-            let mut matched = opt.match_name(self.get_name());
+            // don't call match name
+            let mut matched = opt.get_name() == self.get_name();
 
             if !matched {
                 if let Some(alias) = opt.get_alias().as_ref() {
