@@ -4,7 +4,7 @@ use crate::opt::parser::DataKeeper;
 use crate::opt::{HelpInfo, Opt, OptIndex, OptValue};
 use crate::proc::Info;
 use crate::uid::Uid;
-use crate::OptStr;
+use crate::Ustr;
 
 #[derive(Debug, Clone, Default)]
 pub struct CreateInfo {
@@ -14,11 +14,11 @@ pub struct CreateInfo {
 
     optional: bool,
 
-    type_name: OptStr,
+    type_name: Ustr,
 
-    name: OptStr,
+    name: Ustr,
 
-    prefix: Option<OptStr>,
+    prefix: Option<Ustr>,
 
     index: OptIndex,
 
@@ -26,7 +26,7 @@ pub struct CreateInfo {
 
     has_value: bool,
 
-    alias: Vec<(OptStr, OptStr)>,
+    alias: Vec<(Ustr, Ustr)>,
 
     help: HelpInfo,
 }
@@ -47,17 +47,17 @@ impl CreateInfo {
         self
     }
 
-    pub fn set_type_name(&mut self, type_name: OptStr) -> &mut Self {
+    pub fn set_type_name(&mut self, type_name: Ustr) -> &mut Self {
         self.type_name = type_name;
         self
     }
 
-    pub fn set_name(&mut self, name: OptStr) -> &mut Self {
+    pub fn set_name(&mut self, name: Ustr) -> &mut Self {
         self.name = name;
         self
     }
 
-    pub fn set_prefix(&mut self, prefix: OptStr) -> &mut Self {
+    pub fn set_prefix(&mut self, prefix: Ustr) -> &mut Self {
         self.prefix = Some(prefix);
         self
     }
@@ -72,12 +72,12 @@ impl CreateInfo {
         self
     }
 
-    pub fn set_hint(&mut self, hint: OptStr) -> &mut Self {
+    pub fn set_hint(&mut self, hint: Ustr) -> &mut Self {
         self.help.set_hint(hint);
         self
     }
 
-    pub fn set_help(&mut self, help: OptStr) -> &mut Self {
+    pub fn set_help(&mut self, help: Ustr) -> &mut Self {
         self.help.set_help(help);
         self
     }
@@ -87,14 +87,14 @@ impl CreateInfo {
         self
     }
 
-    pub fn add_alias(&mut self, prefix: OptStr, name: OptStr) -> &mut Self {
+    pub fn add_alias(&mut self, prefix: Ustr, name: Ustr) -> &mut Self {
         self.alias.push((prefix, name));
         self
     }
 
-    pub fn rem_alias(&mut self, prefix: &OptStr, name: &OptStr) -> &mut Self {
+    pub fn rem_alias(&mut self, prefix: Ustr, name: Ustr) -> &mut Self {
         for (index, alias) in self.alias.iter().enumerate() {
-            if &alias.0 == prefix && &alias.1 == name {
+            if alias.0 == prefix && alias.1 == name {
                 self.alias.remove(index);
                 break;
             }
@@ -119,15 +119,15 @@ impl CreateInfo {
         self.optional
     }
 
-    pub fn get_type_name(&self) -> OptStr {
+    pub fn get_type_name(&self) -> Ustr {
         self.type_name
     }
 
-    pub fn get_name(&self) -> OptStr {
+    pub fn get_name(&self) -> Ustr {
         self.name
     }
 
-    pub fn get_prefix(&self) -> Option<OptStr> {
+    pub fn get_prefix(&self) -> Option<Ustr> {
         self.prefix
     }
 
@@ -135,7 +135,7 @@ impl CreateInfo {
         &self.index
     }
 
-    pub fn get_alias(&self) -> &Vec<(OptStr, OptStr)> {
+    pub fn get_alias(&self) -> &Vec<(Ustr, Ustr)> {
         self.alias.as_ref()
     }
 
@@ -155,15 +155,15 @@ impl CreateInfo {
         &mut self.optional
     }
 
-    pub fn get_type_name_mut(&mut self) -> &mut OptStr {
+    pub fn get_type_name_mut(&mut self) -> &mut Ustr {
         &mut self.type_name
     }
 
-    pub fn get_name_mut(&mut self) -> &mut OptStr {
+    pub fn get_name_mut(&mut self) -> &mut Ustr {
         &mut self.name
     }
 
-    pub fn get_prefix_mut(&mut self) -> &mut Option<OptStr> {
+    pub fn get_prefix_mut(&mut self) -> &mut Option<Ustr> {
         &mut self.prefix
     }
 
@@ -171,7 +171,7 @@ impl CreateInfo {
         &mut self.index
     }
 
-    pub fn get_alias_mut(&mut self) -> &mut Vec<(OptStr, OptStr)> {
+    pub fn get_alias_mut(&mut self) -> &mut Vec<(Ustr, Ustr)> {
         self.alias.as_mut()
     }
 
@@ -183,7 +183,7 @@ impl CreateInfo {
         &mut self.help
     }
 
-    pub fn parse(pattern: OptStr, prefix: &[OptStr]) -> Result<Self> {
+    pub fn parse(pattern: Ustr, prefix: &[Ustr]) -> Result<Self> {
         let data_keeper = parse_option_str(pattern, prefix)?;
 
         if data_keeper.name.is_none() {
@@ -219,11 +219,11 @@ pub struct FilterInfo {
 
     optional: Option<bool>,
 
-    type_name: Option<OptStr>,
+    type_name: Option<Ustr>,
 
-    name: Option<OptStr>,
+    name: Option<Ustr>,
 
-    prefix: Option<OptStr>,
+    prefix: Option<Ustr>,
 
     index: Option<OptIndex>,
 }
@@ -239,17 +239,17 @@ impl FilterInfo {
         self
     }
 
-    pub fn set_type_name(&mut self, type_name: OptStr) -> &mut Self {
+    pub fn set_type_name(&mut self, type_name: Ustr) -> &mut Self {
         self.type_name = Some(type_name);
         self
     }
 
-    pub fn set_name(&mut self, name: OptStr) -> &mut Self {
+    pub fn set_name(&mut self, name: Ustr) -> &mut Self {
         self.name = Some(name);
         self
     }
 
-    pub fn set_prefix(&mut self, prefix: OptStr) -> &mut Self {
+    pub fn set_prefix(&mut self, prefix: Ustr) -> &mut Self {
         self.prefix = Some(prefix);
         self
     }
@@ -267,15 +267,15 @@ impl FilterInfo {
         self.optional.unwrap()
     }
 
-    pub fn get_type_name(&self) -> OptStr {
+    pub fn get_type_name(&self) -> Ustr {
         self.type_name.clone().unwrap()
     }
 
-    pub fn get_name(&self) -> OptStr {
+    pub fn get_name(&self) -> Ustr {
         self.name.clone().unwrap()
     }
 
-    pub fn get_prefix(&self) -> OptStr {
+    pub fn get_prefix(&self) -> Ustr {
         self.prefix.clone().unwrap()
     }
 
@@ -307,7 +307,7 @@ impl FilterInfo {
         self.index.is_some()
     }
 
-    pub fn parse(pattern: OptStr, prefix: &[OptStr]) -> Result<Self> {
+    pub fn parse(pattern: Ustr, prefix: &[Ustr]) -> Result<Self> {
         Ok(parse_option_str(pattern, prefix)?.into())
     }
 

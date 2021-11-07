@@ -2,19 +2,19 @@ use super::parser::parse_argument;
 use super::parser::DataKeeper;
 use crate::err::ArgumentError;
 use crate::err::Result;
-use crate::OptStr;
+use crate::Ustr;
 
 #[derive(Debug, Clone, Default)]
 pub struct Argument {
-    pub current: Option<OptStr>,
+    pub current: Option<Ustr>,
 
-    pub next: Option<OptStr>,
+    pub next: Option<Ustr>,
 
     data_keeper: DataKeeper,
 }
 
 impl Argument {
-    pub fn new(current: Option<OptStr>, next: Option<OptStr>) -> Self {
+    pub fn new(current: Option<Ustr>, next: Option<Ustr>) -> Self {
         Self {
             current,
             next,
@@ -22,15 +22,15 @@ impl Argument {
         }
     }
 
-    pub fn get_prefix(&self) -> &Option<OptStr> {
+    pub fn get_prefix(&self) -> &Option<Ustr> {
         &self.data_keeper.prefix
     }
 
-    pub fn get_name(&self) -> &Option<OptStr> {
+    pub fn get_name(&self) -> &Option<Ustr> {
         &self.data_keeper.name
     }
 
-    pub fn get_value(&self) -> &Option<OptStr> {
+    pub fn get_value(&self) -> &Option<Ustr> {
         &self.data_keeper.value
     }
 
@@ -38,7 +38,7 @@ impl Argument {
         self.data_keeper.disable
     }
 
-    pub fn parse(&mut self, prefix: &[OptStr]) -> Result<bool> {
+    pub fn parse(&mut self, prefix: &[Ustr]) -> Result<bool> {
         if let Some(pattern) = &self.current {
             self.data_keeper = parse_argument(pattern.clone(), prefix)?;
 

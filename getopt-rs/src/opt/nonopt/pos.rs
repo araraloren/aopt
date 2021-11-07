@@ -8,8 +8,8 @@ use crate::set::CreateInfo;
 use crate::set::Creator;
 use crate::uid::Uid;
 
-pub const fn current_type() -> OptStr {
-    OptStr::from("p")
+pub fn current_type() -> Ustr {
+    Ustr::from("p")
 }
 
 pub trait Pos: NonOpt {}
@@ -18,7 +18,7 @@ pub trait Pos: NonOpt {}
 pub struct PosOpt {
     uid: Uid,
 
-    name: OptStr,
+    name: Ustr,
 
     optional: bool,
 
@@ -55,7 +55,7 @@ impl Opt for PosOpt {}
 impl NonOpt for PosOpt {}
 
 impl Type for PosOpt {
-    fn get_type_name(&self) -> OptStr{
+    fn get_type_name(&self) -> Ustr{
         current_type()
     }
 
@@ -118,25 +118,25 @@ impl Callback for PosOpt {
 }
 
 impl Name for PosOpt {
-    fn get_name(&self) -> OptStr {
+    fn get_name(&self) -> Ustr {
         self.name
     }
 
-    fn get_prefix(&self) -> OptStr {
-        OptStr::from("")
+    fn get_prefix(&self) -> Ustr {
+        Ustr::from("")
     }
 
-    fn set_name(&mut self, OptStr: OptStr) {
-        self.name = OptStr;
+    fn set_name(&mut self, Ustr: Ustr) {
+        self.name = Ustr;
     }
 
-    fn set_prefix(&mut self, _string: OptStr) {}
+    fn set_prefix(&mut self, _string: Ustr) {}
 
-    fn match_name(&self, _name: OptStr) -> bool {
+    fn match_name(&self, _name: Ustr) -> bool {
         true
     }
 
-    fn match_prefix(&self, _prefix: OptStr) -> bool {
+    fn match_prefix(&self, _prefix: Ustr) -> bool {
         false
     }
 }
@@ -156,15 +156,15 @@ impl Optional for PosOpt {
 }
 
 impl Alias for PosOpt {
-    fn get_alias(&self) -> Option<&Vec<(OptStr, OptStr)>> {
+    fn get_alias(&self) -> Option<&Vec<(Ustr, Ustr)>> {
         None
     }
 
-    fn add_alias(&mut self, _prefix: OptStr, _name: OptStr) {}
+    fn add_alias(&mut self, _prefix: Ustr, _name: Ustr) {}
 
-    fn rem_alias(&mut self, _prefix: OptStr, _name: OptStr) {}
+    fn rem_alias(&mut self, _prefix: Ustr, _name: Ustr) {}
 
-    fn match_alias(&self, _prefix: OptStr, _name: OptStr) -> bool {
+    fn match_alias(&self, _prefix: Ustr, _name: Ustr) -> bool {
         false
     }
 }
@@ -209,7 +209,7 @@ impl Value for PosOpt {
 
     fn set_default_value(&mut self, _value: OptValue) {}
 
-    fn parse_value(&self, _string: OptStr) -> Result<OptValue> {
+    fn parse_value(&self, _string: Ustr) -> Result<OptValue> {
         Ok(OptValue::from(true))
     }
 
@@ -223,11 +223,11 @@ impl Value for PosOpt {
 }
 
 impl Help for PosOpt {
-    fn set_hint(&mut self, hint: OptStr) {
+    fn set_hint(&mut self, hint: Ustr) {
         self.help_info.set_hint(hint);
     }
 
-    fn set_help(&mut self, help: OptStr) {
+    fn set_help(&mut self, help: Ustr) {
         self.help_info.set_help(help);
     }
 
@@ -240,7 +240,7 @@ impl Help for PosOpt {
 pub struct PosCreator;
 
 impl Creator for PosCreator {
-    fn get_type_name(&self) -> OptStr {
+    fn get_type_name(&self) -> Ustr {
         current_type()
     }
 
@@ -284,7 +284,7 @@ mod test {
         // pos not support deactivate style
         assert_eq!(creator.is_support_deactivate_style(), false);
 
-        let mut ci = CreateInfo::parse(OptStr::from("pos=p@1"), &[]).unwrap();
+        let mut ci = CreateInfo::parse(Ustr::from("pos=p@1"), &[]).unwrap();
 
         ci.set_uid(1);
 
@@ -321,17 +321,17 @@ mod test {
         assert_eq!(pos.get_index(), Some(&OptIndex::forward(3)));
         assert_eq!(pos.match_index(6, 9), false);
 
-        assert_eq!(pos.get_name(), OptStr::from("pos"));
-        assert_eq!(pos.get_prefix(), OptStr::from(""));
+        assert_eq!(pos.get_name(), Ustr::from("pos"));
+        assert_eq!(pos.get_prefix(), Ustr::from(""));
         assert_eq!(pos.match_name("www".into()), true);
         assert_eq!(pos.match_name("pos".into()), true);
         assert_eq!(pos.match_prefix("--".into()), false);
         assert_eq!(pos.match_prefix("".into()), false);
-        pos.set_name(OptStr::from("pos1"));
-        pos.set_prefix(OptStr::from("+"));
+        pos.set_name(Ustr::from("pos1"));
+        pos.set_prefix(Ustr::from("+"));
         assert_eq!(pos.match_name("www".into()), true);
         assert_eq!(pos.match_name("pos1".into()), true);
-        assert_eq!(pos.get_name(), OptStr::from("pos1"));
+        assert_eq!(pos.get_name(), Ustr::from("pos1"));
         assert_eq!(pos.match_prefix("+".into()), false);
         assert_eq!(pos.match_prefix("".into()), false);
 

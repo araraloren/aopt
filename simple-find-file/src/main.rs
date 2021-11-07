@@ -8,6 +8,7 @@ use getopt_rs::{getopt, prelude::*};
 use getopt_rs_help::printer::Printer;
 use getopt_rs_help::store::{OptStore, PosStore};
 use getopt_rs_help::AppHelp;
+use getopt_rs::Ustr;
 use regex::Regex;
 
 fn main() -> color_eyre::Result<()> {
@@ -20,12 +21,12 @@ fn main() -> color_eyre::Result<()> {
     let mut parser = DelayParser::<UidGenerator>::default();
 
     initialize_creator(&mut set);
-    set.add_prefix(String::from("-"));
-    set.add_prefix(String::from("--"));
-    set.add_prefix(String::from("+"));
+    set.add_prefix(Ustr::from("-"));
+    set.add_prefix(Ustr::from("--"));
+    set.add_prefix(Ustr::from("+"));
 
     if let Ok(mut commit) = set.add_opt("directory=p@0") {
-        commit.set_help("Set the target directory".to_owned());
+        commit.set_help("Set the target directory");
         let id = commit.commit()?;
         parser.add_callback(
             id,
@@ -46,41 +47,41 @@ fn main() -> color_eyre::Result<()> {
         (
             "--dir=b",
             "Show the files type are directory",
-            String::from("-"),
-            String::from("d"),
+            "-",
+            "d",
             FilterType::Dir,
         ),
         (
             "--link=b",
             "Show the files type are symbol link",
-            String::from("-"),
-            String::from("l"),
+            "-",
+            "l",
             FilterType::Link,
         ),
         (
             "--file=b",
             "Show the files type are normal file",
-            String::from("-"),
-            String::from("f"),
+            "-",
+            "f",
             FilterType::File,
         ),
         (
             "--size=u",
             "Show the files size large than given size",
-            String::from("-"),
-            String::from("s"),
+            "-",
+            "s",
             FilterType::Size(0),
         ),
         (
             "--regex=s",
             "Show the files which name matched given regex",
-            String::from("-"),
-            String::from("r"),
+            "-",
+            "r",
             FilterType::Regex(String::default()),
         ),
     ] {
         if let Ok(mut commit) = set.add_opt(opt) {
-            commit.set_help(help.to_owned());
+            commit.set_help(help);
             commit.add_alias(alias_prefix, alias_name);
             let id = commit.commit()?;
             parser.add_callback(
@@ -102,12 +103,12 @@ fn main() -> color_eyre::Result<()> {
         }
     }
     if let Ok(mut commit) = set.add_opt("--help=b") {
-        commit.add_alias("-".to_owned(), "h".to_owned());
-        commit.set_help("Show the help message".to_owned());
+        commit.add_alias("-", "h");
+        commit.set_help("Show the help message");
         commit.commit()?;
     }
     if let Ok(mut commit) = set.add_opt("main=m") {
-        commit.set_help("Main function".to_owned());
+        commit.set_help("Main function");
         let id = commit.commit()?;
         parser.add_callback(
             id,

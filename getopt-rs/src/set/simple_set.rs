@@ -4,15 +4,15 @@ use super::{CreatorSet, OptionSet, PrefixSet};
 use super::{Index, IndexMut, Iter, IterMut};
 use crate::err::{ConstructError, Result};
 use crate::opt::Opt;
-use crate::{OptStr, OptStrMap};
+use crate::{Ustr, UstrMap, gstr};
 
 #[derive(Debug, Default)]
 pub struct SimpleSet {
     opt: Vec<Box<dyn Opt>>,
 
-    creator: OptStrMap<Box<dyn Creator>>,
+    creator: UstrMap<Box<dyn Creator>>,
 
-    prefix: Vec<OptStr>,
+    prefix: Vec<Ustr>,
 }
 
 impl SimpleSet {
@@ -27,8 +27,8 @@ impl SimpleSet {
 impl Set for SimpleSet {}
 
 impl OptionSet for SimpleSet {
-    fn add_opt(&mut self, opt_str: OptStr) -> Result<Commit> {
-        let info = CreateInfo::parse(opt_str, self.get_prefix())?;
+    fn add_opt(&mut self, opt_str: &str) -> Result<Commit> {
+        let info = CreateInfo::parse(Ustr::from(opt_str), self.get_prefix())?;
 
         debug!(%opt_str, "create option");
         Ok(Commit::new(self, info))
@@ -83,15 +83,15 @@ impl OptionSet for SimpleSet {
         self.opt.iter_mut()
     }
 
-    fn filter(&self, opt_str: OptStr) -> Result<Filter> {
+    fn filter(&self, opt_str: &str) -> Result<Filter> {
         Ok(Filter::new(
             self,
-            FilterInfo::parse(opt_str, self.get_prefix())?,
+            FilterInfo::parse(gstr(opt_str), self.get_prefix())?,
         ))
     }
 
-    fn filter_mut(&mut self, opt_str: OptStr) -> Result<FilterMut> {
-        let info = FilterInfo::parse(opt_str, self.get_prefix())?;
+    fn filter_mut(&mut self, opt_str: &str) -> Result<FilterMut> {
+        let info = FilterInfo::parse(gstr(opt_str), self.get_prefix())?;
         Ok(FilterMut::new(self, info))
     }
 
@@ -103,7 +103,7 @@ impl OptionSet for SimpleSet {
 }
 
 impl CreatorSet for SimpleSet {
-    fn has_creator(&self, opt_type: OptStr) -> bool {
+    fn has_creator(&self, opt_type: Ustr) -> bool {
         self.creator.contains_key(&opt_type)
     }
 
@@ -118,22 +118,22 @@ impl CreatorSet for SimpleSet {
         }
     }
 
-    fn rem_creator(&mut self, opt_type: OptStr) -> bool {
+    fn rem_creator(&mut self, opt_type: Ustr) -> bool {
         self.creator.remove(&opt_type.into()).is_some()
     }
 
-    fn get_creator(&self, opt_type: OptStr) -> Option<&Box<dyn Creator>> {
+    fn get_creator(&self, opt_type: Ustr) -> Option<&Box<dyn Creator>> {
         self.creator.get(&opt_type.into())
     }
 }
 
 impl PrefixSet for SimpleSet {
-    fn add_prefix(&mut self, prefix: OptStr) {
+    fn add_prefix(&mut self, prefix: Ustr) {
         self.prefix.push(prefix);
         self.prefix.sort_by(|a, b| b.len().cmp(&a.len()));
     }
 
-    fn get_prefix(&self) -> &[OptStr] {
+    fn get_prefix(&self) -> &[Ustr] {
         &self.prefix
     }
 

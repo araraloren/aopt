@@ -2,6 +2,7 @@
 
 use crate::prelude::*;
 use crate::set::Commit;
+use crate::Ustr;
 
 #[derive(Debug)]
 pub struct DataChecker {
@@ -49,10 +50,10 @@ impl DataChecker {
         assert!(self.default_value.eq(opt.get_default_value()));
         assert_eq!(opt.get_type_name(), self.type_name);
         assert_eq!(self.deactivate_style, opt.is_deactivate_style());
-        assert_eq!(self.prefix, opt.get_prefix());
+        assert_eq!(self.prefix, opt.get_prefix().as_ref());
         assert_eq!(opt.get_index(), self.index.as_ref());
         for (prefix, name) in &self.alias {
-            assert!(opt.match_alias(prefix, name));
+            assert!(opt.match_alias(Ustr::from(*prefix), Ustr::from(*name)));
         }
         if self.cb_value.is_vec() && cb_value.is_vec() {
             if let Some(testing_values) = self.cb_value.as_vec() {
@@ -82,7 +83,7 @@ pub struct TestingCase<P: Parser> {
 
 impl<P: Parser> TestingCase<P> {
     pub fn do_test(&mut self, set: &mut dyn Set, parser: &mut P) -> Result<()> {
-        let mut commit = set.add_opt(self.opt_str)?;
+        let mut commit = set.add_opt(self.opt_str.into())?;
 
         if let Some(tweak) = self.commit_tweak.as_mut() {
             tweak.as_mut()(&mut commit);
@@ -97,7 +98,7 @@ impl<P: Parser> TestingCase<P> {
 
     pub fn check_ret(&mut self, set: &mut dyn Set) -> Result<()> {
         if let Some(ret_value) = self.ret_value.as_ref() {
-            if let Some(opt) = set.filter(self.opt_str)?.find() {
+            if let Some(opt) = set.filter(self.opt_str.into())?.find() {
                 assert!(ret_value.eq(opt.as_ref().get_value()));
             }
         }

@@ -8,8 +8,8 @@ use crate::set::CreateInfo;
 use crate::set::Creator;
 use crate::uid::Uid;
 
-pub const fn current_type() -> OptStr {
-    OptStr::from("a")
+pub fn current_type() -> Ustr {
+    Ustr::from("a")
 }
 
 pub trait Array: Opt {}
@@ -18,9 +18,9 @@ pub trait Array: Opt {}
 pub struct ArrayOpt {
     uid: Uid,
 
-    name: OptStr,
+    name: Ustr,
 
-    prefix: OptStr,
+    prefix: Ustr,
 
     optional: bool,
 
@@ -28,7 +28,7 @@ pub struct ArrayOpt {
 
     default_value: OptValue,
 
-    alias: Vec<(OptStr, OptStr)>,
+    alias: Vec<(Ustr, Ustr)>,
 
     need_invoke: bool,
 
@@ -59,7 +59,7 @@ impl Array for ArrayOpt {}
 impl Opt for ArrayOpt {}
 
 impl Type for ArrayOpt {
-    fn get_type_name(&self) -> OptStr {
+    fn get_type_name(&self) -> Ustr {
         current_type()
     }
 
@@ -138,27 +138,27 @@ impl Callback for ArrayOpt {
 }
 
 impl Name for ArrayOpt {
-    fn get_name(&self) -> OptStr {
+    fn get_name(&self) -> Ustr {
         self.name
     }
 
-    fn get_prefix(&self) -> OptStr {
+    fn get_prefix(&self) -> Ustr {
         self.prefix
     }
 
-    fn set_name(&mut self, OptStr: OptStr) {
-        self.name = OptStr;
+    fn set_name(&mut self, Ustr: Ustr) {
+        self.name = Ustr;
     }
 
-    fn set_prefix(&mut self, OptStr: OptStr) {
-        self.prefix = OptStr;
+    fn set_prefix(&mut self, Ustr: Ustr) {
+        self.prefix = Ustr;
     }
 
-    fn match_name(&self, name: OptStr) -> bool {
+    fn match_name(&self, name: Ustr) -> bool {
         self.get_name() == name
     }
 
-    fn match_prefix(&self, prefix: OptStr) -> bool {
+    fn match_prefix(&self, prefix: Ustr) -> bool {
         self.get_prefix() == prefix
     }
 }
@@ -178,15 +178,15 @@ impl Optional for ArrayOpt {
 }
 
 impl Alias for ArrayOpt {
-    fn get_alias(&self) -> Option<&Vec<(OptStr, OptStr)>> {
+    fn get_alias(&self) -> Option<&Vec<(Ustr, Ustr)>> {
         Some(&self.alias)
     }
 
-    fn add_alias(&mut self, prefix: OptStr, name: OptStr) {
+    fn add_alias(&mut self, prefix: Ustr, name: Ustr) {
         self.alias.push((prefix, name));
     }
 
-    fn rem_alias(&mut self, prefix: OptStr, name: OptStr) {
+    fn rem_alias(&mut self, prefix: Ustr, name: Ustr) {
         for (index, value) in self.alias.iter().enumerate() {
             if value.0 == prefix && value.1 == name {
                 self.alias.remove(index);
@@ -195,7 +195,7 @@ impl Alias for ArrayOpt {
         }
     }
 
-    fn match_alias(&self, prefix: OptStr, name: OptStr) -> bool {
+    fn match_alias(&self, prefix: Ustr, name: Ustr) -> bool {
         self.alias
             .iter()
             .find(|&v| v.0 == prefix && v.1 == name)
@@ -238,7 +238,7 @@ impl Value for ArrayOpt {
         self.default_value = value;
     }
 
-    fn parse_value(&self, string: OptStr) -> Result<OptValue> {
+    fn parse_value(&self, string: Ustr) -> Result<OptValue> {
         let mut real_value = OptValue::from(vec![]);
         real_value.app_str(string.to_string());
         Ok(real_value)
@@ -254,11 +254,11 @@ impl Value for ArrayOpt {
 }
 
 impl Help for ArrayOpt {
-    fn set_hint(&mut self, hint: OptStr) {
+    fn set_hint(&mut self, hint: Ustr) {
         self.help_info.set_hint(hint);
     }
 
-    fn set_help(&mut self, help: OptStr) {
+    fn set_help(&mut self, help: Ustr) {
         self.help_info.set_help(help);
     }
 
@@ -271,7 +271,7 @@ impl Help for ArrayOpt {
 pub struct ArrayCreator;
 
 impl Creator for ArrayCreator {
-    fn get_type_name(&self) -> OptStr {
+    fn get_type_name(&self) -> Ustr {
         current_type()
     }
 

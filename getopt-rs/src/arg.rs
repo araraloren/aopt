@@ -6,7 +6,7 @@ use std::fmt::Debug;
 use std::iter::Iterator;
 use std::slice::{Iter, IterMut};
 
-use crate::OptStr;
+use crate::Ustr;
 
 pub use argument::Argument;
 
@@ -56,8 +56,8 @@ impl ArgStream {
         ret
     }
 
-    fn map_one_item(item: Option<String>) -> Option<OptStr> {
-        item.map_or(None, |v| Some(OptStr::from(&v)))
+    fn map_one_item(item: Option<String>) -> Option<Ustr> {
+        item.map_or(None, |v| Some(Ustr::from(&v)))
     }
 
     pub fn len(&self) -> usize {
@@ -78,7 +78,7 @@ impl<'str, 'nv, 'pre, It: Iterator<Item = String>> From<It> for ArgStream {
 mod test {
 
     use super::ArgStream;
-    use crate::OptStr;
+    use crate::Ustr;
 
     #[test]
     fn make_sure_arg_stream_work() {
@@ -114,7 +114,7 @@ mod test {
 
             testing_one_iterator(
                 ArgStream::new(data),
-                &vec![OptStr::from("--"), OptStr::from("-")],
+                &vec![Ustr::from("--"), Ustr::from("-")],
                 &data_check,
                 &check,
             );
@@ -153,7 +153,7 @@ mod test {
 
             testing_one_iterator(
                 ArgStream::new(data),
-                &vec![OptStr::from("+"), OptStr::from("")],
+                &vec![Ustr::from("+"), Ustr::from("")],
                 &data_check,
                 &check,
             );
@@ -162,11 +162,11 @@ mod test {
 
     fn testing_one_iterator<'pre, 'vec: 'pre>(
         mut argstream: ArgStream,
-        prefixs: &'vec Vec<OptStr>,
+        prefixs: &'vec Vec<Ustr>,
         data_check: &Vec<String>,
         check: &Vec<Vec<&str>>,
     ) {
-        let default_str = OptStr::from("");
+        let default_str = Ustr::from("");
         let default_data = String::from("");
         let default_item = "";
 

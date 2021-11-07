@@ -7,10 +7,10 @@ use crate::opt::*;
 use crate::set::CreateInfo;
 use crate::set::Creator;
 use crate::uid::Uid;
-use crate::OptStr;
+use crate::Ustr;
 
-pub const fn current_type() -> OptStr {
-    OptStr::from("m")
+pub fn current_type() -> Ustr {
+    Ustr::from("m")
 }
 
 pub trait Main: NonOpt {}
@@ -19,7 +19,7 @@ pub trait Main: NonOpt {}
 pub struct MainOpt {
     uid: Uid,
 
-    name: OptStr,
+    name: Ustr,
 
     value: OptValue,
 
@@ -50,7 +50,7 @@ impl Opt for MainOpt {}
 impl NonOpt for MainOpt {}
 
 impl Type for MainOpt {
-    fn get_type_name(&self) -> OptStr {
+    fn get_type_name(&self) -> Ustr {
         current_type()
     }
 
@@ -113,25 +113,25 @@ impl Callback for MainOpt {
 }
 
 impl Name for MainOpt {
-    fn get_name(&self) -> OptStr {
+    fn get_name(&self) -> Ustr {
         self.name
     }
 
-    fn get_prefix(&self) -> OptStr {
-        OptStr::from("")
+    fn get_prefix(&self) -> Ustr {
+        Ustr::from("")
     }
 
-    fn set_name(&mut self, string: OptStr) {
+    fn set_name(&mut self, string: Ustr) {
         self.name = string;
     }
 
-    fn set_prefix(&mut self, _string: OptStr) {}
+    fn set_prefix(&mut self, _string: Ustr) {}
 
-    fn match_name(&self, _name: OptStr) -> bool {
+    fn match_name(&self, _name: Ustr) -> bool {
         true
     }
 
-    fn match_prefix(&self, _prefix: OptStr) -> bool {
+    fn match_prefix(&self, _prefix: Ustr) -> bool {
         false
     }
 }
@@ -149,15 +149,15 @@ impl Optional for MainOpt {
 }
 
 impl Alias for MainOpt {
-    fn get_alias(&self) -> Option<&Vec<(OptStr, OptStr)>> {
+    fn get_alias(&self) -> Option<&Vec<(Ustr, Ustr)>> {
         None
     }
 
-    fn add_alias(&mut self, _prefix: OptStr, _name: OptStr) {}
+    fn add_alias(&mut self, _prefix: Ustr, _name: Ustr) {}
 
-    fn rem_alias(&mut self, _prefix: OptStr, _name: OptStr) {}
+    fn rem_alias(&mut self, _prefix: Ustr, _name: Ustr) {}
 
-    fn match_alias(&self, _prefix: OptStr, _name: OptStr) -> bool {
+    fn match_alias(&self, _prefix: Ustr, _name: Ustr) -> bool {
         false
     }
 }
@@ -193,7 +193,7 @@ impl Value for MainOpt {
 
     fn set_default_value(&mut self, _value: OptValue) {}
 
-    fn parse_value(&self, _string: OptStr) -> Result<OptValue> {
+    fn parse_value(&self, _string: Ustr) -> Result<OptValue> {
         Ok(OptValue::from(true))
     }
 
@@ -207,11 +207,11 @@ impl Value for MainOpt {
 }
 
 impl Help for MainOpt {
-    fn set_hint(&mut self, hint: OptStr) {
+    fn set_hint(&mut self, hint: Ustr) {
         self.help_info.set_hint(hint);
     }
 
-    fn set_help(&mut self, help: OptStr) {
+    fn set_help(&mut self, help: Ustr) {
         self.help_info.set_help(help);
     }
 
@@ -224,7 +224,7 @@ impl Help for MainOpt {
 pub struct MainCreator;
 
 impl Creator for MainCreator {
-    fn get_type_name(&self) -> OptStr {
+    fn get_type_name(&self) -> Ustr {
         current_type()
     }
 
@@ -263,7 +263,7 @@ mod test {
         // main not support deactivate style
         assert_eq!(creator.is_support_deactivate_style(), false);
 
-        let mut ci = CreateInfo::parse(OptStr::from("main=m"), &[]).unwrap();
+        let mut ci = CreateInfo::parse(Ustr::from("main=m"), &[]).unwrap();
 
         ci.set_uid(1);
 
@@ -298,14 +298,14 @@ mod test {
         assert_eq!(main.get_index(), None);
         assert_eq!(main.match_index(6, 9), true);
 
-        assert_eq!(main.get_name(), OptStr::from("main"));
-        assert_eq!(main.get_prefix(), OptStr::from(""));
+        assert_eq!(main.get_name(), Ustr::from("main"));
+        assert_eq!(main.get_prefix(), Ustr::from(""));
         assert_eq!(main.match_name("www".into()), true);
         assert_eq!(main.match_name("main".into()), true);
         assert_eq!(main.match_prefix("--".into()), false);
         assert_eq!(main.match_prefix("".into()), false);
-        main.set_name(OptStr::from("main1"));
-        main.set_prefix(OptStr::from("+"));
+        main.set_name(Ustr::from("main1"));
+        main.set_prefix(Ustr::from("+"));
         assert_eq!(main.match_name("www".into()), true);
         assert_eq!(main.match_name("main1".into()), true);
         assert_eq!(main.get_name(), "main1");

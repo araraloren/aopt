@@ -2,41 +2,41 @@ use std::mem::take;
 
 use super::Opt;
 use crate::set::CreateInfo;
-use crate::OptStr;
+use crate::Ustr;
 
 #[derive(Debug, Clone, Default)]
 pub struct HelpInfo {
-    hint: OptStr,
-    help: OptStr,
+    hint: Ustr,
+    help: Ustr,
 }
 
 impl HelpInfo {
-    pub fn new(hint: OptStr, help: OptStr) -> Self {
+    pub fn new(hint: Ustr, help: Ustr) -> Self {
         Self { hint, help }
     }
 
-    pub fn get_hint(&self) -> OptStr {
+    pub fn get_hint(&self) -> Ustr {
         self.hint.clone()
     }
 
-    pub fn get_help(&self) -> OptStr {
+    pub fn get_help(&self) -> Ustr {
         self.help.clone()
     }
 
-    pub fn get_hint_mut(&mut self) -> &mut OptStr {
+    pub fn get_hint_mut(&mut self) -> &mut Ustr {
         &mut self.hint
     }
 
-    pub fn get_help_mut(&mut self) -> &mut OptStr {
+    pub fn get_help_mut(&mut self) -> &mut Ustr {
         &mut self.help
     }
 
-    pub fn set_hint<T: Into<OptStr>>(&mut self, hint: T) -> &mut Self {
+    pub fn set_hint<T: Into<Ustr>>(&mut self, hint: T) -> &mut Self {
         self.hint = hint.into();
         self
     }
 
-    pub fn set_help<T: Into<OptStr>>(&mut self, help: T) -> &mut Self {
+    pub fn set_help<T: Into<Ustr>>(&mut self, help: T) -> &mut Self {
         self.help = help.into();
         self
     }
@@ -73,7 +73,7 @@ impl<'a> From<&'a mut CreateInfo> for HelpInfo {
 }
 
 /// Generate the help like `--Option | -O`
-pub fn create_help_hint(ci: &CreateInfo) -> OptStr {
+pub fn create_help_hint(ci: &CreateInfo) -> Ustr {
     let mut ret = String::default();
 
     if let Some(prefix) = ci.get_prefix() {

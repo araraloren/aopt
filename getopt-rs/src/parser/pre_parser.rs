@@ -12,7 +12,7 @@ use crate::opt::{OptCallback, OptValue, Style};
 use crate::proc::{Info, Matcher, NonOptMatcher, OptMatcher, Proc};
 use crate::set::{OptionInfo, Set};
 use crate::uid::{Generator, Uid};
-use crate::OptStr;
+use crate::Ustr;
 
 #[derive(Debug, Default)]
 pub struct PreParser<G>
@@ -25,7 +25,7 @@ where
 
     callback: HashMap<Uid, RefCell<OptCallback>>,
 
-    noa: Vec<OptStr>,
+    noa: Vec<Ustr>,
 }
 
 impl<G> PreParser<G>
@@ -54,7 +54,7 @@ where
         let mut iter = argstream.iter_mut();
 
         // copy the prefix, so we don't need borrow set
-        let prefix: Vec<OptStr> = set.get_prefix().iter().map(|v| v.clone()).collect();
+        let prefix: Vec<Ustr> = set.get_prefix().iter().map(|v| v.clone()).collect();
 
         // add info to Proc
         for opt in set.iter() {
@@ -157,7 +157,7 @@ where
 
         info!("start process {:?} ...", &gen_style);
         if let Some(ret) =
-            gen_style.gen_nonopt::<NonOptMatcher>(&OptStr::default(), noa_count as u64, 1)?
+            gen_style.gen_nonopt::<NonOptMatcher>(&Ustr::default(), noa_count as u64, 1)?
         {
             let mut proc = ret;
 

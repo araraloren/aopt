@@ -3,7 +3,7 @@ use crate::ctx::{Context, NonOptContext, OptContext};
 use crate::err::{ArgumentError, Error, Result};
 use crate::opt::Style;
 use crate::proc::Matcher;
-use crate::OptStr;
+use crate::Ustr;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ParserState {
@@ -49,7 +49,7 @@ impl ParserState {
         ArgumentError::UnwrapError(name.to_owned()).into()
     }
 
-    fn do_unwrap(name: &str, value: &Option<OptStr>) -> Result<OptStr> {
+    fn do_unwrap(name: &str, value: &Option<Ustr>) -> Result<Ustr> {
         let string = value.as_ref().ok_or(Self::gen_unwrap_error(name))?;
         Ok(string.clone())
     }
@@ -209,7 +209,7 @@ impl ParserState {
 
     pub fn gen_nonopt<M: Matcher + Default>(
         &self,
-        noa: &OptStr,
+        noa: &Ustr,
         total: u64,
         current: u64,
     ) -> Result<Option<M>> {

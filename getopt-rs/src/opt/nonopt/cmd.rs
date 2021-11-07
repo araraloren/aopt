@@ -7,10 +7,10 @@ use crate::opt::*;
 use crate::set::CreateInfo;
 use crate::set::Creator;
 use crate::uid::Uid;
-use crate::OptStr;
+use crate::Ustr;
 
-pub const fn current_type() -> OptStr {
-    OptStr::from("c")
+pub fn current_type() -> Ustr {
+    Ustr::from("c")
 }
 pub trait Cmd: NonOpt {}
 
@@ -18,7 +18,7 @@ pub trait Cmd: NonOpt {}
 pub struct CmdOpt {
     uid: Uid,
 
-    name: OptStr,
+    name: Ustr,
 
     value: OptValue,
 
@@ -52,7 +52,7 @@ impl Opt for CmdOpt {}
 impl NonOpt for CmdOpt {}
 
 impl Type for CmdOpt {
-    fn get_type_name(&self) -> OptStr {
+    fn get_type_name(&self) -> Ustr {
         current_type()
     }
 
@@ -115,25 +115,25 @@ impl Callback for CmdOpt {
 }
 
 impl Name for CmdOpt {
-    fn get_name(&self) -> OptStr {
+    fn get_name(&self) -> Ustr {
         self.name
     }
 
-    fn get_prefix(&self) -> OptStr {
-        OptStr::from("")
+    fn get_prefix(&self) -> Ustr {
+        Ustr::from("")
     }
 
-    fn set_name(&mut self, string: OptStr) {
+    fn set_name(&mut self, string: Ustr) {
         self.name = string;
     }
 
-    fn set_prefix(&mut self, _string: OptStr) {}
+    fn set_prefix(&mut self, _string: Ustr) {}
 
-    fn match_name(&self, name: OptStr) -> bool {
+    fn match_name(&self, name: Ustr) -> bool {
         self.get_name() == name
     }
 
-    fn match_prefix(&self, _prefix: OptStr) -> bool {
+    fn match_prefix(&self, _prefix: Ustr) -> bool {
         false
     }
 }
@@ -151,15 +151,15 @@ impl Optional for CmdOpt {
 }
 
 impl Alias for CmdOpt {
-    fn get_alias(&self) -> Option<&Vec<(OptStr, OptStr)>> {
+    fn get_alias(&self) -> Option<&Vec<(Ustr, Ustr)>> {
         None
     }
 
-    fn add_alias(&mut self, _prefix: OptStr, _name: OptStr) {}
+    fn add_alias(&mut self, _prefix: Ustr, _name: Ustr) {}
 
-    fn rem_alias(&mut self, _prefix: OptStr, _name: OptStr) {}
+    fn rem_alias(&mut self, _prefix: Ustr, _name: Ustr) {}
 
-    fn match_alias(&self, _prefix: OptStr, _name: OptStr) -> bool {
+    fn match_alias(&self, _prefix: Ustr, _name: Ustr) -> bool {
         false
     }
 }
@@ -201,7 +201,7 @@ impl Value for CmdOpt {
     /// Can't change the default value of non-opt
     fn set_default_value(&mut self, _value: OptValue) {}
 
-    fn parse_value(&self, _string: OptStr) -> Result<OptValue> {
+    fn parse_value(&self, _string: Ustr) -> Result<OptValue> {
         Ok(OptValue::from(true))
     }
 
@@ -215,11 +215,11 @@ impl Value for CmdOpt {
 }
 
 impl Help for CmdOpt {
-    fn set_hint(&mut self, hint: OptStr) {
+    fn set_hint(&mut self, hint: Ustr) {
         self.help_info.set_hint(hint);
     }
 
-    fn set_help(&mut self, help: OptStr) {
+    fn set_help(&mut self, help: Ustr) {
         self.help_info.set_help(help);
     }
 
@@ -232,7 +232,7 @@ impl Help for CmdOpt {
 pub struct CmdCreator;
 
 impl Creator for CmdCreator {
-    fn get_type_name(&self) -> OptStr {
+    fn get_type_name(&self) -> Ustr {
         current_type()
     }
 
@@ -269,7 +269,7 @@ mod test {
         // cmd not support deactivate style
         assert_eq!(creator.is_support_deactivate_style(), false);
 
-        let mut ci = CreateInfo::parse(OptStr::from("cmd=c"), &[]).unwrap();
+        let mut ci = CreateInfo::parse(Ustr::from("cmd=c"), &[]).unwrap();
 
         ci.set_uid(1);
 
@@ -306,17 +306,17 @@ mod test {
         assert_eq!(cmd.get_index(), Some(&OptIndex::forward(1)));
         assert_eq!(cmd.match_index(6, 9), false);
 
-        assert_eq!(cmd.get_name(), OptStr::from("cmd"));
-        assert_eq!(cmd.get_prefix(), OptStr::from(""));
+        assert_eq!(cmd.get_name(), Ustr::from("cmd"));
+        assert_eq!(cmd.get_prefix(), Ustr::from(""));
         assert_eq!(cmd.match_name("www".into()), false);
         assert_eq!(cmd.match_name("cmd".into()), true);
         assert_eq!(cmd.match_prefix("--".into()), false);
         assert_eq!(cmd.match_prefix("".into()), false);
-        cmd.set_name(OptStr::from("cmd1"));
-        cmd.set_prefix(OptStr::from("+"));
+        cmd.set_name(Ustr::from("cmd1"));
+        cmd.set_prefix(Ustr::from("+"));
         assert_eq!(cmd.match_name("www".into()), false);
         assert_eq!(cmd.match_name("cmd1".into()), true);
-        assert_eq!(cmd.get_name(), OptStr::from("cmd1"));
+        assert_eq!(cmd.get_name(), Ustr::from("cmd1"));
         assert_eq!(cmd.match_prefix("+".into()), false);
         assert_eq!(cmd.match_prefix("".into()), false);
 

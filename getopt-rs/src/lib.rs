@@ -11,9 +11,9 @@ pub mod uid;
 pub(crate) mod pat;
 
 // declare a alias for string type
-pub use ustr::Ustr as OptStr;
-pub use ustr::UstrMap as OptStrMap;
-pub use ustr::UstrSet as OptStrSet;
+pub use ustr::Ustr;
+pub use ustr::UstrMap;
+pub use ustr::UstrSet;
 
 #[macro_use]
 extern crate tracing;
@@ -21,6 +21,8 @@ extern crate tracing;
 use prelude::Parser;
 use prelude::Result;
 use prelude::Set;
+
+pub fn gstr(s: &str) -> Ustr { Ustr::from(s) }
 
 pub struct ReturnValue<'a, 'b>(&'b mut dyn Parser, &'a mut dyn Set);
 
@@ -103,8 +105,8 @@ pub mod tools {
     }
 
     pub fn initialize_prefix<S: Set>(set: &mut S) {
-        set.add_prefix("--");
-        set.add_prefix("-");
+        set.add_prefix("--".into());
+        set.add_prefix("-".into());
     }
 
     #[macro_export]
@@ -174,4 +176,6 @@ pub mod prelude {
     pub use crate::{simple_main_cb, simple_main_mut_cb};
     pub use crate::{simple_opt_cb, simple_opt_mut_cb};
     pub use crate::{simple_pos_cb, simple_pos_mut_cb};
+    pub use crate::{Ustr, UstrMap};
+    pub use crate::gstr;
 }

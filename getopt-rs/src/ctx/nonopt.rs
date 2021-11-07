@@ -1,11 +1,11 @@
 use super::Context;
 use crate::err::{Result, SpecialError};
 use crate::opt::{Opt, OptValue, Style};
-use crate::OptStr;
+use crate::Ustr;
 
 #[derive(Debug)]
 pub struct NonOptContext {
-    name: OptStr,
+    name: Ustr,
 
     style: Style,
 
@@ -19,7 +19,7 @@ pub struct NonOptContext {
 }
 
 impl NonOptContext {
-    pub fn new(name: OptStr, style: Style, total: u64, current: u64) -> Self {
+    pub fn new(name: Ustr, style: Style, total: u64, current: u64) -> Self {
         Self {
             name,
             style,
@@ -77,7 +77,7 @@ impl Context for NonOptContext {
         self.style
     }
 
-    fn get_next_argument(&self) -> &Option<OptStr> {
+    fn get_next_argument(&self) -> &Option<Ustr> {
         &None
     }
 

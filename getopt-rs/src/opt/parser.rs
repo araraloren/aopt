@@ -2,9 +2,9 @@ use super::index::Index;
 use crate::err::ConstructError;
 use crate::err::Result;
 use crate::pat::{ParseIndex, ParserPattern};
-use crate::OptStr;
+use crate::Ustr;
 
-pub fn parse_option_str(pattern: OptStr, prefix: &[OptStr]) -> Result<DataKeeper> {
+pub fn parse_option_str(pattern: Ustr, prefix: &[Ustr]) -> Result<DataKeeper> {
     let pattern = ParserPattern::new(pattern, prefix);
     let mut index = ParseIndex::new(pattern.len());
     let mut data_keeper = DataKeeper::default();
@@ -52,11 +52,11 @@ pub enum State {
 
 #[derive(Debug, Default)]
 pub struct DataKeeper {
-    pub prefix: Option<OptStr>,
+    pub prefix: Option<Ustr>,
 
-    pub name: Option<OptStr>,
+    pub name: Option<Ustr>,
 
-    pub type_name: Option<OptStr>,
+    pub type_name: Option<Ustr>,
 
     pub deactivate: Option<bool>,
 
@@ -444,7 +444,7 @@ impl State {
 mod test {
     use super::parse_option_str;
     use crate::opt::index::Index;
-    use crate::OptStr;
+    use crate::Ustr;
 
     #[test]
     fn test_option_str_parser() {
@@ -2664,10 +2664,10 @@ mod test {
                 ),
             ];
 
-            let prefixs = vec![OptStr::from("--"), OptStr::from("-")];
+            let prefixs = vec![Ustr::from("--"), Ustr::from("-")];
 
             for case in test_cases.iter() {
-                try_to_verify_one_task(OptStr::from(case.0), &prefixs, &case.1);
+                try_to_verify_one_task(Ustr::from(case.0), &prefixs, &case.1);
             }
         }
         {
@@ -5022,17 +5022,17 @@ mod test {
                 ),
             ];
 
-            let prefixs = vec![OptStr::from("--"), OptStr::from("-"), OptStr::from("")];
+            let prefixs = vec![Ustr::from("--"), Ustr::from("-"), Ustr::from("")];
 
             for case in test_cases.iter() {
-                try_to_verify_one_task(OptStr::from(case.0), &prefixs, &case.1);
+                try_to_verify_one_task(Ustr::from(case.0), &prefixs, &case.1);
             }
         }
     }
 
     fn try_to_verify_one_task(
-        pattern: OptStr,
-        prefix: &Vec<OptStr>,
+        pattern: Ustr,
+        prefix: &Vec<Ustr>,
         except: &Option<(Option<&str>, Option<&str>, Option<&str>, Index, bool, bool)>,
     ) {
         let ret = parse_option_str(pattern, prefix);
@@ -5040,7 +5040,7 @@ mod test {
         if let Ok(mut dk) = ret {
             assert!(except.is_some());
 
-            let default = OptStr::from("");
+            let default = Ustr::from("");
 
             if let Some(except) = except {
                 let index = dk.gen_index();
