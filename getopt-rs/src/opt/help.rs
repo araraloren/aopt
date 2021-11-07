@@ -77,9 +77,9 @@ pub fn create_help_hint(ci: &CreateInfo) -> OptStr {
     let mut ret = String::default();
 
     if let Some(prefix) = ci.get_prefix() {
-        ret += prefix;
+        ret += prefix.as_ref();
     }
-    ret += ci.get_name();
+    ret += ci.get_name().as_ref();
     for alias in ci.get_alias() {
         ret += &format!(" | {}{}", alias.0, alias.1);
     }

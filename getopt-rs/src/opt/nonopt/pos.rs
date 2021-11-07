@@ -8,8 +8,8 @@ use crate::set::CreateInfo;
 use crate::set::Creator;
 use crate::uid::Uid;
 
-pub fn current_type() -> &'static str {
-    "p"
+pub const fn current_type() -> OptStr {
+    OptStr::from("p")
 }
 
 pub trait Pos: NonOpt {}
@@ -18,9 +18,7 @@ pub trait Pos: NonOpt {}
 pub struct PosOpt {
     uid: Uid,
 
-    name: String,
-
-    prefix: String,
+    name: OptStr,
 
     optional: bool,
 
@@ -41,7 +39,6 @@ impl From<CreateInfo> for PosOpt {
         Self {
             uid: ci.get_uid(),
             name: take(ci.get_name_mut()),
-            prefix: String::from(""),
             optional: ci.get_optional(),
             value: OptValue::Null,
             index: take(ci.get_index_mut()),
@@ -58,7 +55,7 @@ impl Opt for PosOpt {}
 impl NonOpt for PosOpt {}
 
 impl Type for PosOpt {
-    fn get_type_name(&self) -> &'static str {
+    fn get_type_name(&self) -> OptStr{
         current_type()
     }
 
@@ -121,25 +118,25 @@ impl Callback for PosOpt {
 }
 
 impl Name for PosOpt {
-    fn get_name(&self) -> &str {
-        &self.name
+    fn get_name(&self) -> OptStr {
+        self.name
     }
 
-    fn get_prefix(&self) -> &str {
-        ""
+    fn get_prefix(&self) -> OptStr {
+        OptStr::from("")
     }
 
-    fn set_name(&mut self, string: String) {
-        self.name = string;
+    fn set_name(&mut self, OptStr: OptStr) {
+        self.name = OptStr;
     }
 
-    fn set_prefix(&mut self, _string: String) {}
+    fn set_prefix(&mut self, _string: OptStr) {}
 
-    fn match_name(&self, _name: &str) -> bool {
+    fn match_name(&self, _name: OptStr) -> bool {
         true
     }
 
-    fn match_prefix(&self, _prefix: &str) -> bool {
+    fn match_prefix(&self, _prefix: OptStr) -> bool {
         false
     }
 }
@@ -159,15 +156,15 @@ impl Optional for PosOpt {
 }
 
 impl Alias for PosOpt {
-    fn get_alias(&self) -> Option<&Vec<(String, String)>> {
+    fn get_alias(&self) -> Option<&Vec<(OptStr, OptStr)>> {
         None
     }
 
-    fn add_alias(&mut self, _prefix: String, _name: String) {}
+    fn add_alias(&mut self, _prefix: OptStr, _name: OptStr) {}
 
-    fn rem_alias(&mut self, _prefix: &str, _name: &str) {}
+    fn rem_alias(&mut self, _prefix: OptStr, _name: OptStr) {}
 
-    fn match_alias(&self, _prefix: &str, _name: &str) -> bool {
+    fn match_alias(&self, _prefix: OptStr, _name: OptStr) -> bool {
         false
     }
 }
@@ -212,7 +209,7 @@ impl Value for PosOpt {
 
     fn set_default_value(&mut self, _value: OptValue) {}
 
-    fn parse_value(&self, _string: &str) -> Result<OptValue> {
+    fn parse_value(&self, _string: OptStr) -> Result<OptValue> {
         Ok(OptValue::from(true))
     }
 
@@ -226,11 +223,11 @@ impl Value for PosOpt {
 }
 
 impl Help for PosOpt {
-    fn set_hint(&mut self, hint: String) {
+    fn set_hint(&mut self, hint: OptStr) {
         self.help_info.set_hint(hint);
     }
 
-    fn set_help(&mut self, help: String) {
+    fn set_help(&mut self, help: OptStr) {
         self.help_info.set_help(help);
     }
 
@@ -243,7 +240,7 @@ impl Help for PosOpt {
 pub struct PosCreator;
 
 impl Creator for PosCreator {
-    fn get_type_name(&self) -> &'static str {
+    fn get_type_name(&self) -> OptStr {
         current_type()
     }
 
@@ -287,7 +284,7 @@ mod test {
         // pos not support deactivate style
         assert_eq!(creator.is_support_deactivate_style(), false);
 
-        let mut ci = CreateInfo::parse("pos=p@1", &[]).unwrap();
+        let mut ci = CreateInfo::parse(OptStr::from("pos=p@1"), &[]).unwrap();
 
         ci.set_uid(1);
 
@@ -309,10 +306,10 @@ mod test {
         assert_eq!(pos.is_accept_callback_type(CallbackType::PosMut), true);
 
         // pos not support alias
-        pos.add_alias("-".to_owned(), "m".to_owned());
+        pos.add_alias("-".into(), "m".into());
         assert_eq!(pos.get_alias(), None);
-        assert_eq!(pos.match_alias("-", "m"), false);
-        pos.rem_alias("-", "m");
+        assert_eq!(pos.match_alias("-".into(), "m".into()), false);
+        pos.rem_alias("-".into(), "m".into());
         assert_eq!(pos.get_alias(), None);
 
         assert_eq!(pos.get_index(), Some(&OptIndex::forward(1)));
@@ -324,19 +321,19 @@ mod test {
         assert_eq!(pos.get_index(), Some(&OptIndex::forward(3)));
         assert_eq!(pos.match_index(6, 9), false);
 
-        assert_eq!(pos.get_name(), "pos");
-        assert_eq!(pos.get_prefix(), "");
-        assert_eq!(pos.match_name("www"), true);
-        assert_eq!(pos.match_name("pos"), true);
-        assert_eq!(pos.match_prefix("--"), false);
-        assert_eq!(pos.match_prefix(""), false);
-        pos.set_name(String::from("pos1"));
-        pos.set_prefix(String::from("+"));
-        assert_eq!(pos.match_name("www"), true);
-        assert_eq!(pos.match_name("pos1"), true);
-        assert_eq!(pos.get_name(), "pos1");
-        assert_eq!(pos.match_prefix("+"), false);
-        assert_eq!(pos.match_prefix(""), false);
+        assert_eq!(pos.get_name(), OptStr::from("pos"));
+        assert_eq!(pos.get_prefix(), OptStr::from(""));
+        assert_eq!(pos.match_name("www".into()), true);
+        assert_eq!(pos.match_name("pos".into()), true);
+        assert_eq!(pos.match_prefix("--".into()), false);
+        assert_eq!(pos.match_prefix("".into()), false);
+        pos.set_name(OptStr::from("pos1"));
+        pos.set_prefix(OptStr::from("+"));
+        assert_eq!(pos.match_name("www".into()), true);
+        assert_eq!(pos.match_name("pos1".into()), true);
+        assert_eq!(pos.get_name(), OptStr::from("pos1"));
+        assert_eq!(pos.match_prefix("+".into()), false);
+        assert_eq!(pos.match_prefix("".into()), false);
 
         assert_eq!(pos.get_optional(), true);
         assert_eq!(pos.match_optional(true), true);
@@ -348,7 +345,7 @@ mod test {
         assert_eq!(pos.get_value().is_null(), true);
         assert_eq!(pos.get_default_value().is_null(), true);
         assert_eq!(pos.has_value(), false);
-        let value = pos.parse_value("");
+        let value = pos.parse_value("".into());
         assert_eq!(value.is_ok(), true);
         let value = value.unwrap();
         assert_eq!(value.is_bool(), true);

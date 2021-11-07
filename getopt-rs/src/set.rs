@@ -18,7 +18,7 @@ pub use self::info::{CreateInfo, FilterInfo, OptionInfo};
 pub use self::simple_set::SimpleSet;
 
 pub trait Creator: Debug {
-    fn get_type_name(&self) -> &'static str;
+    fn get_type_name(&self) -> OptStr;
 
     fn is_support_deactivate_style(&self) -> bool;
 

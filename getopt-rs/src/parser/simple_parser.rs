@@ -451,7 +451,7 @@ mod test {
         let mut set = SimpleSet::new();
         let mut parser = SimpleParser::new(UidGenerator::default());
 
-        set.add_prefix("+");
+        set.add_prefix("+".into());
 
         for testing_case in testing_cases.iter_mut() {
             testing_case.do_test(&mut set, &mut parser)?;

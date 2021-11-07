@@ -7,9 +7,10 @@ use crate::opt::*;
 use crate::set::CreateInfo;
 use crate::set::Creator;
 use crate::uid::Uid;
+use crate::OptStr;
 
-pub fn current_type() -> &'static str {
-    "m"
+pub const fn current_type() -> OptStr {
+    OptStr::from("m")
 }
 
 pub trait Main: NonOpt {}
@@ -18,7 +19,7 @@ pub trait Main: NonOpt {}
 pub struct MainOpt {
     uid: Uid,
 
-    name: String,
+    name: OptStr,
 
     value: OptValue,
 
@@ -49,7 +50,7 @@ impl Opt for MainOpt {}
 impl NonOpt for MainOpt {}
 
 impl Type for MainOpt {
-    fn get_type_name(&self) -> &'static str {
+    fn get_type_name(&self) -> OptStr {
         current_type()
     }
 
@@ -112,25 +113,25 @@ impl Callback for MainOpt {
 }
 
 impl Name for MainOpt {
-    fn get_name(&self) -> &str {
-        &self.name
+    fn get_name(&self) -> OptStr {
+        self.name
     }
 
-    fn get_prefix(&self) -> &str {
-        ""
+    fn get_prefix(&self) -> OptStr {
+        OptStr::from("")
     }
 
-    fn set_name(&mut self, string: String) {
+    fn set_name(&mut self, string: OptStr) {
         self.name = string;
     }
 
-    fn set_prefix(&mut self, _string: String) {}
+    fn set_prefix(&mut self, _string: OptStr) {}
 
-    fn match_name(&self, _name: &str) -> bool {
+    fn match_name(&self, _name: OptStr) -> bool {
         true
     }
 
-    fn match_prefix(&self, _prefix: &str) -> bool {
+    fn match_prefix(&self, _prefix: OptStr) -> bool {
         false
     }
 }
@@ -148,15 +149,15 @@ impl Optional for MainOpt {
 }
 
 impl Alias for MainOpt {
-    fn get_alias(&self) -> Option<&Vec<(String, String)>> {
+    fn get_alias(&self) -> Option<&Vec<(OptStr, OptStr)>> {
         None
     }
 
-    fn add_alias(&mut self, _prefix: String, _name: String) {}
+    fn add_alias(&mut self, _prefix: OptStr, _name: OptStr) {}
 
-    fn rem_alias(&mut self, _prefix: &str, _name: &str) {}
+    fn rem_alias(&mut self, _prefix: OptStr, _name: OptStr) {}
 
-    fn match_alias(&self, _prefix: &str, _name: &str) -> bool {
+    fn match_alias(&self, _prefix: OptStr, _name: OptStr) -> bool {
         false
     }
 }
@@ -192,7 +193,7 @@ impl Value for MainOpt {
 
     fn set_default_value(&mut self, _value: OptValue) {}
 
-    fn parse_value(&self, _string: &str) -> Result<OptValue> {
+    fn parse_value(&self, _string: OptStr) -> Result<OptValue> {
         Ok(OptValue::from(true))
     }
 
@@ -206,11 +207,11 @@ impl Value for MainOpt {
 }
 
 impl Help for MainOpt {
-    fn set_hint(&mut self, hint: String) {
+    fn set_hint(&mut self, hint: OptStr) {
         self.help_info.set_hint(hint);
     }
 
-    fn set_help(&mut self, help: String) {
+    fn set_help(&mut self, help: OptStr) {
         self.help_info.set_help(help);
     }
 
@@ -223,7 +224,7 @@ impl Help for MainOpt {
 pub struct MainCreator;
 
 impl Creator for MainCreator {
-    fn get_type_name(&self) -> &'static str {
+    fn get_type_name(&self) -> OptStr {
         current_type()
     }
 
@@ -262,7 +263,7 @@ mod test {
         // main not support deactivate style
         assert_eq!(creator.is_support_deactivate_style(), false);
 
-        let mut ci = CreateInfo::parse("main=m", &[]).unwrap();
+        let mut ci = CreateInfo::parse(OptStr::from("main=m"), &[]).unwrap();
 
         ci.set_uid(1);
 
@@ -284,10 +285,10 @@ mod test {
         assert_eq!(main.is_accept_callback_type(CallbackType::MainMut), true);
 
         // main not support alias
-        main.add_alias("-".to_owned(), "m".to_owned());
+        main.add_alias("-".into(), "m".into());
         assert_eq!(main.get_alias(), None);
-        assert_eq!(main.match_alias("-", "m"), false);
-        main.rem_alias("-", "m");
+        assert_eq!(main.match_alias("-".into(), "m".into()), false);
+        main.rem_alias("-".into(), "m".into());
         assert_eq!(main.get_alias(), None);
 
         assert_eq!(main.get_index(), None);
@@ -297,19 +298,19 @@ mod test {
         assert_eq!(main.get_index(), None);
         assert_eq!(main.match_index(6, 9), true);
 
-        assert_eq!(main.get_name(), "main");
-        assert_eq!(main.get_prefix(), "");
-        assert_eq!(main.match_name("www"), true);
-        assert_eq!(main.match_name("main"), true);
-        assert_eq!(main.match_prefix("--"), false);
-        assert_eq!(main.match_prefix(""), false);
-        main.set_name(String::from("main1"));
-        main.set_prefix(String::from("+"));
-        assert_eq!(main.match_name("www"), true);
-        assert_eq!(main.match_name("main1"), true);
+        assert_eq!(main.get_name(), OptStr::from("main"));
+        assert_eq!(main.get_prefix(), OptStr::from(""));
+        assert_eq!(main.match_name("www".into()), true);
+        assert_eq!(main.match_name("main".into()), true);
+        assert_eq!(main.match_prefix("--".into()), false);
+        assert_eq!(main.match_prefix("".into()), false);
+        main.set_name(OptStr::from("main1"));
+        main.set_prefix(OptStr::from("+"));
+        assert_eq!(main.match_name("www".into()), true);
+        assert_eq!(main.match_name("main1".into()), true);
         assert_eq!(main.get_name(), "main1");
-        assert_eq!(main.match_prefix("+"), false);
-        assert_eq!(main.match_prefix(""), false);
+        assert_eq!(main.match_prefix("+".into()), false);
+        assert_eq!(main.match_prefix("".into()), false);
 
         assert_eq!(main.get_optional(), true);
         assert_eq!(main.match_optional(true), true);
@@ -321,7 +322,7 @@ mod test {
         assert_eq!(main.get_value().is_null(), true);
         assert_eq!(main.get_default_value().is_null(), true);
         assert_eq!(main.has_value(), false);
-        let value = main.parse_value("");
+        let value = main.parse_value("".into());
         assert_eq!(value.is_ok(), true);
         let value = value.unwrap();
         assert_eq!(value.is_bool(), true);

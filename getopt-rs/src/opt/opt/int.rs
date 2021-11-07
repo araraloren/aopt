@@ -7,9 +7,10 @@ use crate::opt::*;
 use crate::set::CreateInfo;
 use crate::set::Creator;
 use crate::uid::Uid;
+use crate::OptStr;
 
-pub fn current_type() -> &'static str {
-    "i"
+pub const fn current_type() -> OptStr {
+    OptStr::from("i")
 }
 
 pub trait Int: Opt {}
@@ -18,9 +19,9 @@ pub trait Int: Opt {}
 pub struct IntOpt {
     uid: Uid,
 
-    name: String,
+    name: OptStr,
 
-    prefix: String,
+    prefix: OptStr,
 
     optional: bool,
 
@@ -28,7 +29,7 @@ pub struct IntOpt {
 
     default_value: OptValue,
 
-    alias: Vec<(String, String)>,
+    alias: Vec<(OptStr, OptStr)>,
 
     need_invoke: bool,
 
@@ -59,7 +60,7 @@ impl Int for IntOpt {}
 impl Opt for IntOpt {}
 
 impl Type for IntOpt {
-    fn get_type_name(&self) -> &'static str {
+    fn get_type_name(&self) -> OptStr {
         current_type()
     }
 
@@ -129,27 +130,27 @@ impl Callback for IntOpt {
 }
 
 impl Name for IntOpt {
-    fn get_name(&self) -> &str {
-        &self.name
+    fn get_name(&self) -> OptStr {
+        self.name
     }
 
-    fn get_prefix(&self) -> &str {
-        &self.prefix
+    fn get_prefix(&self) -> OptStr {
+        self.prefix
     }
 
-    fn set_name(&mut self, string: String) {
+    fn set_name(&mut self, string: OptStr) {
         self.name = string;
     }
 
-    fn set_prefix(&mut self, string: String) {
+    fn set_prefix(&mut self, string: OptStr) {
         self.prefix = string;
     }
 
-    fn match_name(&self, name: &str) -> bool {
+    fn match_name(&self, name: OptStr) -> bool {
         self.get_name() == name
     }
 
-    fn match_prefix(&self, prefix: &str) -> bool {
+    fn match_prefix(&self, prefix: OptStr) -> bool {
         self.get_prefix() == prefix
     }
 }
@@ -169,15 +170,15 @@ impl Optional for IntOpt {
 }
 
 impl Alias for IntOpt {
-    fn get_alias(&self) -> Option<&Vec<(String, String)>> {
+    fn get_alias(&self) -> Option<&Vec<(OptStr, OptStr)>> {
         Some(&self.alias)
     }
 
-    fn add_alias(&mut self, prefix: String, name: String) {
+    fn add_alias(&mut self, prefix: OptStr, name: OptStr) {
         self.alias.push((prefix, name));
     }
 
-    fn rem_alias(&mut self, prefix: &str, name: &str) {
+    fn rem_alias(&mut self, prefix: OptStr, name: OptStr) {
         for (index, value) in self.alias.iter().enumerate() {
             if value.0 == prefix && value.1 == name {
                 self.alias.remove(index);
@@ -186,7 +187,7 @@ impl Alias for IntOpt {
         }
     }
 
-    fn match_alias(&self, prefix: &str, name: &str) -> bool {
+    fn match_alias(&self, prefix: OptStr, name: OptStr) -> bool {
         self.alias
             .iter()
             .find(|&v| v.0 == prefix && v.1 == name)
@@ -229,9 +230,9 @@ impl Value for IntOpt {
         self.default_value = value;
     }
 
-    fn parse_value(&self, string: &str) -> Result<OptValue> {
+    fn parse_value(&self, string: OptStr) -> Result<OptValue> {
         Ok(OptValue::from(string.parse::<i64>().map_err(|e| {
-            ParserError::ParsingValueFailed(String::from(string), format!("{:?}", e))
+            ParserError::ParsingValueFailed(String::from(string.as_ref()), format!("{:?}", e))
         })?))
     }
 
@@ -245,11 +246,11 @@ impl Value for IntOpt {
 }
 
 impl Help for IntOpt {
-    fn set_hint(&mut self, hint: String) {
+    fn set_hint(&mut self, hint: OptStr) {
         self.help_info.set_hint(hint);
     }
 
-    fn set_help(&mut self, help: String) {
+    fn set_help(&mut self, help: OptStr) {
         self.help_info.set_help(help);
     }
 
@@ -262,7 +263,7 @@ impl Help for IntOpt {
 pub struct IntCreator;
 
 impl Creator for IntCreator {
-    fn get_type_name(&self) -> &'static str {
+    fn get_type_name(&self) -> OptStr {
         current_type()
     }
 
