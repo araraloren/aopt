@@ -7,6 +7,7 @@ edition = "2018"
 
 [dependencies]
 getopt-rs = { path = "../getopt-rs" }
+getopt-rs-help = { path = "../getopt-rs-help" }
 tracing-subscriber = "0.2"
 color-eyre = "0.5"
 reqwest = { version = "0.11", features = ["json"] }
