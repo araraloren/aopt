@@ -1,29 +1,31 @@
 use std::iter::Skip;
 use std::str::Chars;
 
+use crate::Ustr;
+
 /// Pattern holder of the user input command line
 /// and create info string of option.
 #[derive(Debug)]
-pub struct ParserPattern<'pat, 'pre> {
-    pattern: &'pat str,
+pub struct ParserPattern<'pre> {
+    pattern: Ustr,
 
-    support_prefix: &'pre [String],
+    support_prefix: &'pre [Ustr],
 }
 
-impl<'pat, 'pre> ParserPattern<'pat, 'pre> {
-    pub fn new(pattern: &'pat str, prefix: &'pre [String]) -> Self {
+impl<'pre> ParserPattern<'pre> {
+    pub fn new(pattern: Ustr, prefix: &'pre [Ustr]) -> Self {
         Self {
             pattern,
             support_prefix: prefix,
         }
     }
 
-    pub fn get_prefixs(&self) -> &'pre [String] {
+    pub fn get_prefixs(&self) -> &'pre [Ustr] {
         self.support_prefix
     }
 
-    pub fn get_pattern(&self) -> &'pat str {
-        self.pattern
+    pub fn get_pattern(&self) -> &str {
+        self.pattern.as_ref()
     }
 
     pub fn chars(&self, skip_len: usize) -> Skip<Chars> {

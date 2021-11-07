@@ -6,15 +6,17 @@ use std::fmt::Debug;
 use std::iter::Iterator;
 use std::slice::{Iter, IterMut};
 
+use crate::Ustr;
+
 pub use argument::Argument;
 
 #[derive(Debug, Default)]
-pub struct ArgStream<'pre> {
-    args: Vec<Argument<'pre>>,
+pub struct ArgStream {
+    args: Vec<Argument>,
     index: usize,
 }
 
-impl<'pre> ArgStream<'pre> {
+impl ArgStream {
     pub fn new(args: impl Iterator<Item = String>) -> Self {
         Self {
             args: Self::iterator_to_args(args),
@@ -27,15 +29,15 @@ impl<'pre> ArgStream<'pre> {
         self
     }
 
-    pub fn iter(&self) -> Iter<'_, Argument<'pre>> {
+    pub fn iter(&self) -> Iter<'_, Argument> {
         self.args.iter()
     }
 
-    pub fn iter_mut(&mut self) -> IterMut<'_, Argument<'pre>> {
+    pub fn iter_mut(&mut self) -> IterMut<'_, Argument> {
         self.args.iter_mut()
     }
 
-    fn iterator_to_args<Iter>(mut iter: Iter) -> Vec<Argument<'pre>>
+    fn iterator_to_args<Iter>(mut iter: Iter) -> Vec<Argument>
     where
         Iter: Iterator<Item = String>,
     {
@@ -54,8 +56,8 @@ impl<'pre> ArgStream<'pre> {
         ret
     }
 
-    fn map_one_item(item: Option<String>) -> Option<String> {
-        item.map_or(None, |v| Some(String::from(v)))
+    fn map_one_item(item: Option<String>) -> Option<Ustr> {
+        item.map_or(None, |v| Some(Ustr::from(&v)))
     }
 
     pub fn len(&self) -> usize {
@@ -63,7 +65,7 @@ impl<'pre> ArgStream<'pre> {
     }
 }
 
-impl<'str, 'nv, 'pre, It: Iterator<Item = String>> From<It> for ArgStream<'pre> {
+impl<'str, 'nv, 'pre, It: Iterator<Item = String>> From<It> for ArgStream {
     fn from(iter: It) -> Self {
         Self {
             args: Self::iterator_to_args(iter),
@@ -76,6 +78,7 @@ impl<'str, 'nv, 'pre, It: Iterator<Item = String>> From<It> for ArgStream<'pre> 
 mod test {
 
     use super::ArgStream;
+    use crate::Ustr;
 
     #[test]
     fn make_sure_arg_stream_work() {
@@ -111,7 +114,7 @@ mod test {
 
             testing_one_iterator(
                 ArgStream::new(data),
-                &vec![String::from("--"), String::from("-")],
+                &vec![Ustr::from("--"), Ustr::from("-")],
                 &data_check,
                 &check,
             );
@@ -150,7 +153,7 @@ mod test {
 
             testing_one_iterator(
                 ArgStream::new(data),
-                &vec![String::from("+"), String::from("")],
+                &vec![Ustr::from("+"), Ustr::from("")],
                 &data_check,
                 &check,
             );
@@ -158,12 +161,12 @@ mod test {
     }
 
     fn testing_one_iterator<'pre, 'vec: 'pre>(
-        mut argstream: ArgStream<'pre>,
-        prefixs: &'vec Vec<String>,
+        mut argstream: ArgStream,
+        prefixs: &'vec Vec<Ustr>,
         data_check: &Vec<String>,
         check: &Vec<Vec<&str>>,
     ) {
-        let default_str = String::from("");
+        let default_str = Ustr::from("");
         let default_data = String::from("");
         let default_item = "";
 
@@ -179,7 +182,7 @@ mod test {
             if let Ok(ret) = arg.parse(prefixs) {
                 if ret {
                     assert_eq!(
-                        arg.get_prefix().unwrap_or(&default_str),
+                        arg.get_prefix().as_ref().unwrap_or(&default_str),
                         check_item.get(0).unwrap_or(&default_item)
                     );
                     assert_eq!(

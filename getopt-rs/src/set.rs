@@ -10,6 +10,7 @@ use std::slice::{Iter, IterMut};
 use crate::err::Result;
 use crate::opt::Opt;
 use crate::uid::Uid;
+use crate::Ustr;
 
 pub use self::commit::Commit;
 pub use self::filter::{Filter, FilterMut};
@@ -17,7 +18,7 @@ pub use self::info::{CreateInfo, FilterInfo, OptionInfo};
 pub use self::simple_set::SimpleSet;
 
 pub trait Creator: Debug {
-    fn get_type_name(&self) -> &'static str;
+    fn get_type_name(&self) -> Ustr;
 
     fn is_support_deactivate_style(&self) -> bool;
 
@@ -27,9 +28,9 @@ pub trait Creator: Debug {
 pub trait Set: Debug + PrefixSet + OptionSet + CreatorSet {}
 
 pub trait PrefixSet {
-    fn add_prefix(&mut self, prefix: String);
+    fn add_prefix(&mut self, prefix: Ustr);
 
-    fn get_prefix(&self) -> &[String];
+    fn get_prefix(&self) -> &[Ustr];
 
     fn clr_prefix(&mut self);
 }
@@ -53,6 +54,10 @@ pub trait OptionSet:
 
     fn iter_mut(&mut self) -> IterMut<Box<dyn Opt>>;
 
+    fn find(&self, opt_str: &str) -> Result<Option<&Box<dyn Opt>>>;
+
+    fn find_mut(&mut self, opt_str: &str) -> Result<Option<&mut Box<dyn Opt>>>;
+
     fn filter(&self, opt_str: &str) -> Result<Filter>;
 
     fn filter_mut(&mut self, opt_str: &str) -> Result<FilterMut>;
@@ -61,13 +66,13 @@ pub trait OptionSet:
 }
 
 pub trait CreatorSet {
-    fn has_creator(&self, type_name: &str) -> bool;
+    fn has_creator(&self, type_name: Ustr) -> bool;
 
     fn add_creator(&mut self, creator: Box<dyn Creator>);
 
     fn app_creator(&mut self, creator: Vec<Box<dyn Creator>>);
 
-    fn rem_creator(&mut self, opt_type: &str) -> bool;
+    fn rem_creator(&mut self, opt_type: Ustr) -> bool;
 
-    fn get_creator(&self, opt_type: &str) -> Option<&Box<dyn Creator>>;
+    fn get_creator(&self, opt_type: Ustr) -> Option<&Box<dyn Creator>>;
 }

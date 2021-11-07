@@ -1,6 +1,6 @@
 [package]
 name = "getopt-rs"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["araraloren <blackcatoverwall@gmail.com>"]
 edition = "2018"
 
@@ -10,5 +10,4 @@ edition = "2018"
 thiserror = "1.0"
 tracing = "0.1"
 tracing-subscriber = "0.2"
-
-[features]
+ustr = "0.8"

@@ -1,7 +1,8 @@
 use crate::err::{ArgumentError, Result};
 use crate::pat::{ParseIndex, ParserPattern};
+use crate::Ustr;
 
-pub fn parse_argument<'pre>(pattern: &str, prefix: &'pre [String]) -> Result<DataKeeper<'pre>> {
+pub fn parse_argument(pattern: Ustr, prefix: &[Ustr]) -> Result<DataKeeper> {
     let pattern = ParserPattern::new(pattern, prefix);
     let mut index = ParseIndex::new(pattern.len());
     let mut data_keeper = DataKeeper::default();
@@ -33,12 +34,12 @@ enum State {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct DataKeeper<'pre> {
-    pub name: Option<String>,
+pub struct DataKeeper {
+    pub name: Option<Ustr>,
 
-    pub value: Option<String>,
+    pub value: Option<Ustr>,
 
-    pub prefix: Option<&'pre String>,
+    pub prefix: Option<Ustr>,
 
     pub disable: bool,
 }
@@ -53,11 +54,7 @@ const DEACTIVATE_STYLE_CHAR: char = '/';
 const VALUE_SPLIT_CHAR: char = '=';
 
 impl State {
-    pub fn self_transition<'pat, 'pre>(
-        &mut self,
-        index: &ParseIndex,
-        pattern: &ParserPattern<'pat, 'pre>,
-    ) {
+    pub fn self_transition<'pre>(&mut self, index: &ParseIndex, pattern: &ParserPattern<'pre>) {
         let next_state = {
             match self.clone() {
                 Self::PreCheck => Self::Prefix,
@@ -87,11 +84,11 @@ impl State {
         *self = next_state;
     }
 
-    pub fn parse<'pat, 'pre>(
+    pub fn parse<'pre>(
         mut self,
         index: &mut ParseIndex,
-        pattern: &ParserPattern<'pat, 'pre>,
-        data_keeper: &mut DataKeeper<'pre>,
+        pattern: &ParserPattern<'pre>,
+        data_keeper: &mut DataKeeper,
     ) -> Result<bool> {
         let current_state = self.clone();
 
@@ -104,8 +101,8 @@ impl State {
             }
             Self::Prefix => {
                 for prefix in pattern.get_prefixs() {
-                    if pattern.get_pattern().starts_with(prefix) {
-                        data_keeper.prefix = Some(&prefix);
+                    if pattern.get_pattern().starts_with(prefix.as_ref()) {
+                        data_keeper.prefix = Some(prefix.clone());
                         index.inc(prefix.len());
                         break;
                     }
@@ -122,15 +119,24 @@ impl State {
                 for (cur, ch) in pattern.chars(start).enumerate() {
                     let mut name_end = 0;
                     // the name not include '=', so > 1
-                    if ch == VALUE_SPLIT_CHAR && cur >= 1 {
-                        name_end = start + cur;
+                    if ch == VALUE_SPLIT_CHAR  {
+                        if cur >= 1 {
+                            name_end = start + cur;
+                        }
+                        else if cur == 0 {
+                            // current is '='
+                            break;
+                        }
                     } else if start + cur + 1 == index.len() {
                         name_end = start + cur + 1;
                     }
                     if name_end > 0 {
                         let name = pattern.get_pattern().get(start..name_end);
 
-                        if name.is_none() {
+                        if let Some(name) = name {
+                            data_keeper.name = Some(name.into());
+                            index.set(name_end);
+                        } else {
                             error!(
                                 ?pattern,
                                 "accessing string [{}, {}) failed", start, name_end
@@ -142,8 +148,6 @@ impl State {
                             )
                             .into());
                         }
-                        data_keeper.name = Some(name.unwrap().to_owned());
-                        index.set(name_end);
                         break;
                     }
                 }
@@ -156,7 +160,10 @@ impl State {
                     // if we are here, the left chars is value
                     let value = pattern.get_pattern().get(index.get()..);
 
-                    if value.is_none() {
+                    if let Some(value) = value {
+                        data_keeper.value = Some(value.into());
+                        index.set(index.len());
+                    } else {
                         error!(
                             ?pattern,
                             "accessing string [{}, {}) failed",
@@ -170,8 +177,6 @@ impl State {
                         )
                         .into());
                     }
-                    data_keeper.value = Some(value.unwrap().to_owned());
-                    index.set(index.len());
                 } else {
                     error!(?pattern, "syntax error! require an value after '='.");
                     return Err(
@@ -193,13 +198,14 @@ impl State {
 #[cfg(test)]
 mod test {
     use crate::arg::parser::parse_argument;
+    use crate::Ustr;
 
     #[test]
     fn test_for_input_parser() {
         {
             // test 1
             let test_cases = vec![
-                ("", Some((Some(""), Some(""), None, false))),
+                ("", None),
                 ("-a", Some((Some("-"), Some("a"), None, false))),
                 ("-/a", Some((Some("-"), Some("a"), None, true))),
                 ("-a=b", Some((Some("-"), Some("a"), Some("b"), false))),
@@ -215,20 +221,20 @@ mod test {
                 ("foo", Some((Some(""), Some("foo"), None, false))),
                 ("/foo", Some((Some(""), Some("foo"), None, true))),
                 ("foo=bar", Some((Some(""), Some("foo"), Some("bar"), false))),
-                ("--=bar", Some((Some("--"), Some(""), Some("bar"), false))),
+                ("--=xar", Some((Some("--"), Some(""), Some("xar"), false))),
                 ("-foo=", None),
             ];
 
-            let prefixs = vec![String::from("--"), String::from("-"), String::from("")];
+            let prefixs = vec![Ustr::from("--"), Ustr::from("-"), Ustr::from("")];
 
             for case in test_cases.iter() {
-                try_to_verify_one_task(case.0, &prefixs, case.1);
+                try_to_verify_one_task(Ustr::from(case.0), &prefixs, case.1);
             }
         }
         {
             // test 2
             let test_cases = vec![
-                ("", Some((Some(""), Some(""), None, false))),
+                ("", None),
                 ("-a", Some((Some("-"), Some("a"), None, false))),
                 ("-/a", Some((Some("-"), Some("a"), None, true))),
                 ("-a=b", Some((Some("-"), Some("a"), Some("b"), false))),
@@ -244,21 +250,21 @@ mod test {
                 ("foo", Some((Some(""), Some("foo"), None, false))),
                 ("/foo", Some((Some(""), Some("foo"), None, true))),
                 ("foo=bar", Some((Some(""), Some("foo"), Some("bar"), false))),
-                ("--=bar", Some((Some("--"), Some(""), Some("bar"), false))),
+                ("--=xar", Some((Some("--"), Some(""), Some("xar"), false))),
                 ("-foo=", None),
             ];
 
-            let prefixs = vec![String::from("--"), String::from("-")];
+            let prefixs = vec![Ustr::from("--"), Ustr::from("-")];
 
             for case in test_cases.iter() {
-                try_to_verify_one_task(case.0, &prefixs, case.1);
+                try_to_verify_one_task(Ustr::from(case.0), &prefixs, case.1);
             }
         }
     }
 
     fn try_to_verify_one_task(
-        pattern: &str,
-        prefix: &Vec<String>,
+        pattern: Ustr,
+        prefix: &Vec<Ustr>,
         except: Option<(Option<&str>, Option<&str>, Option<&str>, bool)>,
     ) {
         let ret = parse_argument(pattern, prefix);
@@ -267,18 +273,29 @@ mod test {
             assert!(except.is_some());
 
             if except.is_none() {
-                panic!("----> {:?}", except);
+                panic!("----> {:?} {:?}", except, &dk);
             }
 
-            let default = String::from("");
+            let default = Ustr::from("");
 
             if let Some(except) = except {
-                assert_eq!(except.0.unwrap_or(""), dk.prefix.unwrap_or(&default));
-                assert_eq!(except.1.unwrap_or(""), dk.name.unwrap_or(default.clone()));
-                assert_eq!(except.2.unwrap_or(""), dk.value.unwrap_or(default.clone()));
+                assert_eq!(
+                    except.0.unwrap_or(""),
+                    dk.prefix.unwrap_or(default).as_ref()
+                );
+                assert_eq!(
+                    except.1.unwrap_or(""),
+                    dk.name.unwrap_or(default.clone()).as_ref()
+                );
+                assert_eq!(
+                    except.2.unwrap_or(""),
+                    dk.value.unwrap_or(default.clone()).as_ref()
+                );
                 assert_eq!(except.3, dk.disable);
             }
         } else {
+            dbg!(&except);
+            dbg!(&ret);
             assert!(except.is_none());
         }
     }

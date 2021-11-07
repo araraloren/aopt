@@ -7,9 +7,10 @@ use crate::opt::*;
 use crate::set::CreateInfo;
 use crate::set::Creator;
 use crate::uid::Uid;
+use crate::Ustr;
 
-pub fn current_type() -> &'static str {
-    "s"
+pub fn current_type() -> Ustr {
+    Ustr::from("s")
 }
 
 pub trait Str: Opt {}
@@ -18,9 +19,9 @@ pub trait Str: Opt {}
 pub struct StrOpt {
     uid: Uid,
 
-    name: String,
+    name: Ustr,
 
-    prefix: String,
+    prefix: Ustr,
 
     optional: bool,
 
@@ -28,7 +29,7 @@ pub struct StrOpt {
 
     default_value: OptValue,
 
-    alias: Vec<(String, String)>,
+    alias: Vec<(Ustr, Ustr)>,
 
     need_invoke: bool,
 
@@ -47,7 +48,7 @@ impl From<CreateInfo> for StrOpt {
             optional: ci.get_optional(),
             value: OptValue::default(),
             default_value: take(ci.get_default_value_mut()),
-            alias: take(ci.get_alias_mut()),
+            alias: ci.gen_option_alias(),
             need_invoke: false,
             help_info,
         }
@@ -59,7 +60,7 @@ impl Str for StrOpt {}
 impl Opt for StrOpt {}
 
 impl Type for StrOpt {
-    fn get_type_name(&self) -> &'static str {
+    fn get_type_name(&self) -> Ustr {
         current_type()
     }
 
@@ -129,27 +130,27 @@ impl Callback for StrOpt {
 }
 
 impl Name for StrOpt {
-    fn get_name(&self) -> &str {
-        &self.name
+    fn get_name(&self) -> Ustr {
+        self.name
     }
 
-    fn get_prefix(&self) -> &str {
-        &self.prefix
+    fn get_prefix(&self) -> Ustr {
+        self.prefix
     }
 
-    fn set_name(&mut self, string: String) {
+    fn set_name(&mut self, string: Ustr) {
         self.name = string;
     }
 
-    fn set_prefix(&mut self, string: String) {
+    fn set_prefix(&mut self, string: Ustr) {
         self.prefix = string;
     }
 
-    fn match_name(&self, name: &str) -> bool {
+    fn match_name(&self, name: Ustr) -> bool {
         self.get_name() == name
     }
 
-    fn match_prefix(&self, prefix: &str) -> bool {
+    fn match_prefix(&self, prefix: Ustr) -> bool {
         self.get_prefix() == prefix
     }
 }
@@ -169,15 +170,15 @@ impl Optional for StrOpt {
 }
 
 impl Alias for StrOpt {
-    fn get_alias(&self) -> Option<&Vec<(String, String)>> {
+    fn get_alias(&self) -> Option<&Vec<(Ustr, Ustr)>> {
         Some(&self.alias)
     }
 
-    fn add_alias(&mut self, prefix: String, name: String) {
+    fn add_alias(&mut self, prefix: Ustr, name: Ustr) {
         self.alias.push((prefix, name));
     }
 
-    fn rem_alias(&mut self, prefix: &str, name: &str) {
+    fn rem_alias(&mut self, prefix: Ustr, name: Ustr) {
         for (index, value) in self.alias.iter().enumerate() {
             if value.0 == prefix && value.1 == name {
                 self.alias.remove(index);
@@ -186,11 +187,8 @@ impl Alias for StrOpt {
         }
     }
 
-    fn match_alias(&self, prefix: &str, name: &str) -> bool {
-        self.alias
-            .iter()
-            .find(|&v| v.0 == prefix && v.1 == name)
-            .is_some()
+    fn match_alias(&self, prefix: Ustr, name: Ustr) -> bool {
+        self.alias.iter().any(|&v| v.0 == prefix && v.1 == name)
     }
 }
 
@@ -229,8 +227,8 @@ impl Value for StrOpt {
         self.default_value = value;
     }
 
-    fn parse_value(&self, string: &str) -> Result<OptValue> {
-        Ok(OptValue::from(string))
+    fn parse_value(&self, string: Ustr) -> Result<OptValue> {
+        Ok(OptValue::from(string.as_ref()))
     }
 
     fn has_value(&self) -> bool {
@@ -243,11 +241,11 @@ impl Value for StrOpt {
 }
 
 impl Help for StrOpt {
-    fn set_hint(&mut self, hint: String) {
+    fn set_hint(&mut self, hint: Ustr) {
         self.help_info.set_hint(hint);
     }
 
-    fn set_help(&mut self, help: String) {
+    fn set_help(&mut self, help: Ustr) {
         self.help_info.set_help(help);
     }
 
@@ -260,7 +258,7 @@ impl Help for StrOpt {
 pub struct StrCreator;
 
 impl Creator for StrCreator {
-    fn get_type_name(&self) -> &'static str {
+    fn get_type_name(&self) -> Ustr {
         current_type()
     }
 

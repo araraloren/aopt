@@ -1,5 +1,6 @@
 use super::info::FilterInfo;
 use super::Set;
+use crate::gstr;
 use crate::opt::index::Index;
 use crate::opt::Opt;
 
@@ -25,18 +26,18 @@ impl<'a> Filter<'a> {
         self
     }
 
-    pub fn set_type_name(&mut self, type_name: String) -> &mut Self {
-        self.info.set_type_name(type_name);
+    pub fn set_type_name(&mut self, type_name: &str) -> &mut Self {
+        self.info.set_type_name(gstr(type_name));
         self
     }
 
-    pub fn set_name(&mut self, name: String) -> &mut Self {
-        self.info.set_name(name);
+    pub fn set_name(&mut self, name: &str) -> &mut Self {
+        self.info.set_name(gstr(name));
         self
     }
 
-    pub fn set_prefix(&mut self, prefix: String) -> &mut Self {
-        self.info.set_prefix(prefix);
+    pub fn set_prefix(&mut self, prefix: &str) -> &mut Self {
+        self.info.set_prefix(gstr(prefix));
         self
     }
 
@@ -88,18 +89,18 @@ impl<'a> FilterMut<'a> {
         self
     }
 
-    pub fn set_type_name(&mut self, type_name: String) -> &mut Self {
-        self.info.set_type_name(type_name);
+    pub fn set_type_name(&mut self, type_name: &str) -> &mut Self {
+        self.info.set_type_name(gstr(type_name));
         self
     }
 
-    pub fn set_name(&mut self, name: String) -> &mut Self {
-        self.info.set_name(name);
+    pub fn set_name(&mut self, name: &str) -> &mut Self {
+        self.info.set_name(gstr(name));
         self
     }
 
-    pub fn set_prefix(&mut self, prefix: String) -> &mut Self {
-        self.info.set_prefix(prefix);
+    pub fn set_prefix(&mut self, prefix: &str) -> &mut Self {
+        self.info.set_prefix(gstr(prefix));
         self
     }
 

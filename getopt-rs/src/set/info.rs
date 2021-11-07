@@ -4,6 +4,7 @@ use crate::opt::parser::DataKeeper;
 use crate::opt::{HelpInfo, Opt, OptIndex, OptValue};
 use crate::proc::Info;
 use crate::uid::Uid;
+use crate::Ustr;
 
 #[derive(Debug, Clone, Default)]
 pub struct CreateInfo {
@@ -13,11 +14,11 @@ pub struct CreateInfo {
 
     optional: bool,
 
-    type_name: String,
+    type_name: Ustr,
 
-    name: String,
+    name: Ustr,
 
-    prefix: Option<String>,
+    prefix: Option<Ustr>,
 
     index: OptIndex,
 
@@ -25,12 +26,18 @@ pub struct CreateInfo {
 
     has_value: bool,
 
-    alias: Vec<(String, String)>,
+    alias: Vec<Ustr>,
 
     help: HelpInfo,
+
+    support_prefix: Vec<Ustr>,
 }
 
 impl CreateInfo {
+    pub fn set_support_prefix(&mut self, prefix: Vec<Ustr>) {
+        self.support_prefix = prefix;
+    }
+
     pub fn set_uid(&mut self, uid: Uid) -> &mut Self {
         self.uid = uid;
         self
@@ -46,17 +53,17 @@ impl CreateInfo {
         self
     }
 
-    pub fn set_type_name(&mut self, type_name: String) -> &mut Self {
+    pub fn set_type_name(&mut self, type_name: Ustr) -> &mut Self {
         self.type_name = type_name;
         self
     }
 
-    pub fn set_name(&mut self, name: String) -> &mut Self {
+    pub fn set_name(&mut self, name: Ustr) -> &mut Self {
         self.name = name;
         self
     }
 
-    pub fn set_prefix(&mut self, prefix: String) -> &mut Self {
+    pub fn set_prefix(&mut self, prefix: Ustr) -> &mut Self {
         self.prefix = Some(prefix);
         self
     }
@@ -71,12 +78,12 @@ impl CreateInfo {
         self
     }
 
-    pub fn set_hint(&mut self, hint: String) -> &mut Self {
+    pub fn set_hint(&mut self, hint: Ustr) -> &mut Self {
         self.help.set_hint(hint);
         self
     }
 
-    pub fn set_help(&mut self, help: String) -> &mut Self {
+    pub fn set_help(&mut self, help: Ustr) -> &mut Self {
         self.help.set_help(help);
         self
     }
@@ -86,14 +93,23 @@ impl CreateInfo {
         self
     }
 
-    pub fn add_alias(&mut self, prefix: String, name: String) -> &mut Self {
-        self.alias.push((prefix, name));
-        self
+    pub fn add_alias(&mut self, alias: Ustr) -> Result<&mut Self> {
+        let has_prefix = self
+            .support_prefix
+            .iter()
+            .any(|v| alias.starts_with(v.as_ref()) && alias.len() != v.len());
+
+        if has_prefix {
+            self.alias.push(alias);
+            Ok(self)
+        } else {
+            Err(ConstructError::InvalidOptionAlias(alias.to_string()).into())
+        }
     }
 
-    pub fn rem_alias(&mut self, prefix: &str, name: &str) -> &mut Self {
-        for (index, alias) in self.alias.iter().enumerate() {
-            if alias.0 == prefix && alias.1 == name {
+    pub fn rem_alias(&mut self, alias: Ustr) -> &mut Self {
+        for (index, value) in self.alias.iter().enumerate() {
+            if value == &alias {
                 self.alias.remove(index);
                 break;
             }
@@ -104,6 +120,21 @@ impl CreateInfo {
     pub fn clr_alias(&mut self) -> &mut Self {
         self.alias.clear();
         self
+    }
+
+    pub fn gen_option_alias(&self) -> Vec<(Ustr, Ustr)> {
+        let mut ret = vec![];
+
+        for alias in self.alias.iter() {
+            for prefix in self.support_prefix.iter() {
+                if alias.starts_with(prefix.as_ref()) {
+                    if let Some(name) = alias.get(prefix.len()..) {
+                        ret.push((prefix.clone(), name.into()));
+                    }
+                }
+            }
+        }
+        ret
     }
 
     pub fn get_uid(&self) -> Uid {
@@ -118,23 +149,23 @@ impl CreateInfo {
         self.optional
     }
 
-    pub fn get_type_name(&self) -> &String {
-        &self.type_name
+    pub fn get_type_name(&self) -> Ustr {
+        self.type_name
     }
 
-    pub fn get_name(&self) -> &str {
-        &self.name
+    pub fn get_name(&self) -> Ustr {
+        self.name
     }
 
-    pub fn get_prefix(&self) -> &Option<String> {
-        &self.prefix
+    pub fn get_prefix(&self) -> Option<Ustr> {
+        self.prefix
     }
 
     pub fn get_index(&self) -> &OptIndex {
         &self.index
     }
 
-    pub fn get_alias(&self) -> &Vec<(String, String)> {
+    pub fn get_alias(&self) -> &Vec<Ustr> {
         self.alias.as_ref()
     }
 
@@ -154,15 +185,15 @@ impl CreateInfo {
         &mut self.optional
     }
 
-    pub fn get_type_name_mut(&mut self) -> &mut String {
+    pub fn get_type_name_mut(&mut self) -> &mut Ustr {
         &mut self.type_name
     }
 
-    pub fn get_name_mut(&mut self) -> &mut String {
+    pub fn get_name_mut(&mut self) -> &mut Ustr {
         &mut self.name
     }
 
-    pub fn get_prefix_mut(&mut self) -> &mut Option<String> {
+    pub fn get_prefix_mut(&mut self) -> &mut Option<Ustr> {
         &mut self.prefix
     }
 
@@ -170,7 +201,7 @@ impl CreateInfo {
         &mut self.index
     }
 
-    pub fn get_alias_mut(&mut self) -> &mut Vec<(String, String)> {
+    pub fn get_alias_mut(&mut self) -> &mut Vec<Ustr> {
         self.alias.as_mut()
     }
 
@@ -182,7 +213,7 @@ impl CreateInfo {
         &mut self.help
     }
 
-    pub fn parse(pattern: &str, prefix: &[String]) -> Result<Self> {
+    pub fn parse(pattern: Ustr, prefix: &[Ustr]) -> Result<Self> {
         let data_keeper = parse_option_str(pattern, prefix)?;
 
         if data_keeper.name.is_none() {
@@ -191,12 +222,14 @@ impl CreateInfo {
         if data_keeper.type_name.is_none() {
             return Err(ConstructError::MissingOptionType(pattern.to_owned()).into());
         }
-        return Ok(data_keeper.into());
+        let mut ret: Self = data_keeper.into();
+        ret.set_support_prefix(prefix.iter().map(|v| v.clone()).collect::<Vec<Ustr>>());
+        return Ok(ret);
     }
 }
 
-impl<'pre> From<DataKeeper<'pre>> for CreateInfo {
-    fn from(data_keeper: DataKeeper<'pre>) -> Self {
+impl From<DataKeeper> for CreateInfo {
+    fn from(data_keeper: DataKeeper) -> Self {
         let mut data_keeper = data_keeper;
         let index = data_keeper.gen_index();
 
@@ -218,11 +251,11 @@ pub struct FilterInfo {
 
     optional: Option<bool>,
 
-    type_name: Option<String>,
+    type_name: Option<Ustr>,
 
-    name: Option<String>,
+    name: Option<Ustr>,
 
-    prefix: Option<String>,
+    prefix: Option<Ustr>,
 
     index: Option<OptIndex>,
 }
@@ -238,17 +271,17 @@ impl FilterInfo {
         self
     }
 
-    pub fn set_type_name(&mut self, type_name: String) -> &mut Self {
+    pub fn set_type_name(&mut self, type_name: Ustr) -> &mut Self {
         self.type_name = Some(type_name);
         self
     }
 
-    pub fn set_name(&mut self, name: String) -> &mut Self {
+    pub fn set_name(&mut self, name: Ustr) -> &mut Self {
         self.name = Some(name);
         self
     }
 
-    pub fn set_prefix(&mut self, prefix: String) -> &mut Self {
+    pub fn set_prefix(&mut self, prefix: Ustr) -> &mut Self {
         self.prefix = Some(prefix);
         self
     }
@@ -266,16 +299,16 @@ impl FilterInfo {
         self.optional.unwrap()
     }
 
-    pub fn get_type_name(&self) -> &String {
-        self.type_name.as_ref().unwrap()
+    pub fn get_type_name(&self) -> Ustr {
+        self.type_name.clone().unwrap()
     }
 
-    pub fn get_name(&self) -> &str {
-        self.name.as_ref().unwrap()
+    pub fn get_name(&self) -> Ustr {
+        self.name.clone().unwrap()
     }
 
-    pub fn get_prefix(&self) -> &str {
-        self.prefix.as_ref().unwrap()
+    pub fn get_prefix(&self) -> Ustr {
+        self.prefix.clone().unwrap()
     }
 
     pub fn get_index(&self) -> &OptIndex {
@@ -306,7 +339,7 @@ impl FilterInfo {
         self.index.is_some()
     }
 
-    pub fn parse(pattern: &str, prefix: &[String]) -> Result<Self> {
+    pub fn parse(pattern: Ustr, prefix: &[Ustr]) -> Result<Self> {
         Ok(parse_option_str(pattern, prefix)?.into())
     }
 
@@ -323,12 +356,13 @@ impl FilterInfo {
             ret = ret && (self.get_type_name() == opt.get_type_name());
         }
         if ret && self.has_prefix() {
-            let mut matched = opt.match_prefix(self.get_prefix());
+            // don't call match prefix
+            let mut matched = opt.get_prefix() == self.get_prefix();
 
             if !matched {
                 if let Some(alias) = opt.get_alias().as_ref() {
                     for item in alias.iter() {
-                        if &item.0 == self.get_prefix() {
+                        if item.0 == self.get_prefix() {
                             matched = true;
                             break;
                         }
@@ -338,12 +372,13 @@ impl FilterInfo {
             ret = ret && matched;
         }
         if ret && self.has_name() {
-            let mut matched = opt.match_name(self.get_name());
+            // don't call match name
+            let mut matched = opt.get_name() == self.get_name();
 
             if !matched {
                 if let Some(alias) = opt.get_alias().as_ref() {
                     for item in alias.iter() {
-                        if &item.1 == self.get_name() {
+                        if item.1 == self.get_name() {
                             matched = true;
                             break;
                         }
@@ -361,8 +396,8 @@ impl FilterInfo {
     }
 }
 
-impl<'pre> From<DataKeeper<'pre>> for FilterInfo {
-    fn from(data_keeper: DataKeeper<'pre>) -> Self {
+impl From<DataKeeper> for FilterInfo {
+    fn from(data_keeper: DataKeeper) -> Self {
         let mut data_keeper = data_keeper;
         let has_index = data_keeper.has_index();
         let index = data_keeper.gen_index();

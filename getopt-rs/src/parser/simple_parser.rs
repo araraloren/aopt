@@ -12,6 +12,7 @@ use crate::opt::{OptCallback, OptValue, Style};
 use crate::proc::{Info, Matcher, NonOptMatcher, OptMatcher, Proc};
 use crate::set::{OptionInfo, Set};
 use crate::uid::{Generator, Uid};
+use crate::Ustr;
 
 #[derive(Debug, Default)]
 pub struct SimpleParser<G>
@@ -24,7 +25,7 @@ where
 
     callback: HashMap<Uid, RefCell<OptCallback>>,
 
-    noa: Vec<String>,
+    noa: Vec<Ustr>,
 }
 
 impl<G> SimpleParser<G>
@@ -43,17 +44,13 @@ impl<G> Parser for SimpleParser<G>
 where
     G: Generator + Debug + Default,
 {
-    fn parse<'a>(
-        &mut self,
-        set: &'a mut dyn Set,
-        iter: &mut dyn Iterator<Item = String>,
-    ) -> Result<bool> {
+    fn parse(&mut self, set: &mut dyn Set, iter: &mut dyn Iterator<Item = String>) -> Result<bool> {
         let mut argstream = ArgStream::from(iter);
         let set = set;
         let mut iter = argstream.iter_mut();
 
         // copy the prefix, so we don't need borrow set
-        let prefix: Vec<String> = set.get_prefix().iter().map(|v| v.clone()).collect();
+        let prefix: Vec<Ustr> = set.get_prefix().iter().map(|v| v.clone()).collect();
 
         // add info to Proc
         for opt in set.iter() {
@@ -86,7 +83,7 @@ where
                 if ret {
                     debug!(?arg, "after parsing ...");
                     for gen_style in &parser_state {
-                        if let Some(ret) = gen_style.gen_opt::<OptMatcher>(arg) {
+                        if let Some(ret) = gen_style.gen_opt::<OptMatcher>(arg)? {
                             let mut proc = ret;
 
                             if self.process(&mut proc, set)? {
@@ -126,7 +123,7 @@ where
 
             info!("start process {:?} ...", &gen_style);
             if let Some(ret) =
-                gen_style.gen_nonopt::<NonOptMatcher>(&self.noa[0], noa_count as u64, 1)
+                gen_style.gen_nonopt::<NonOptMatcher>(&self.noa[0], noa_count as u64, 1)?
             {
                 let mut proc = ret;
 
@@ -141,7 +138,7 @@ where
                     &self.noa[index - 1],
                     noa_count as u64,
                     index as u64,
-                ) {
+                )? {
                     let mut proc = ret;
 
                     self.process(&mut proc, set)?;
@@ -156,7 +153,7 @@ where
 
         info!("start process {:?} ...", &gen_style);
         if let Some(ret) =
-            gen_style.gen_nonopt::<NonOptMatcher>(&String::new(), noa_count as u64, 1)
+            gen_style.gen_nonopt::<NonOptMatcher>(&Ustr::default(), noa_count as u64, 1)?
         {
             let mut proc = ret;
 
@@ -189,8 +186,14 @@ where
                     cb.as_mut()
                         .call(uid, set, &self.noa[noa_index - 1], noa_index as u64, value)
                 }
-                OptCallback::Main(cb) => cb.as_mut().call(uid, set, &self.noa, value),
-                OptCallback::MainMut(cb) => cb.as_mut().call(uid, set, &self.noa, value),
+                OptCallback::Main(cb) => {
+                    let noaref: Vec<&str> = self.noa.iter().map(|v| v.as_ref()).collect();
+                    cb.as_mut().call(uid, set, &noaref, value)
+                }
+                OptCallback::MainMut(cb) => {
+                    let noaref: Vec<&str> = self.noa.iter().map(|v| v.as_ref()).collect();
+                    cb.as_mut().call(uid, set, &noaref, value)
+                }
                 OptCallback::Null => Ok(None),
             }
         } else {
@@ -420,7 +423,7 @@ mod test {
                 opt_str: "-g=i",
                 ret_value: Some(OptValue::from(42i64)),
                 commit_tweak: Some(Box::new(|commit: &mut Commit| {
-                    commit.add_alias("+".to_owned(), "g-i64".to_owned());
+                    commit.add_alias("+g-i64").unwrap();
                 })),
                 callback_tweak: simple_cb_tweak!(),
                 checker: Some(DataChecker {
@@ -448,7 +451,7 @@ mod test {
         let mut set = SimpleSet::new();
         let mut parser = SimpleParser::new(UidGenerator::default());
 
-        set.add_prefix("+".to_owned());
+        set.add_prefix("+".into());
 
         for testing_case in testing_cases.iter_mut() {
             testing_case.do_test(&mut set, &mut parser)?;

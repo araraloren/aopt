@@ -2,18 +2,19 @@ use super::parser::parse_argument;
 use super::parser::DataKeeper;
 use crate::err::ArgumentError;
 use crate::err::Result;
+use crate::Ustr;
 
 #[derive(Debug, Clone, Default)]
-pub struct Argument<'pre> {
-    pub current: Option<String>,
+pub struct Argument {
+    pub current: Option<Ustr>,
 
-    pub next: Option<String>,
+    pub next: Option<Ustr>,
 
-    data_keeper: DataKeeper<'pre>,
+    data_keeper: DataKeeper,
 }
 
-impl<'pre> Argument<'pre> {
-    pub fn new(current: Option<String>, next: Option<String>) -> Self {
+impl Argument {
+    pub fn new(current: Option<Ustr>, next: Option<Ustr>) -> Self {
         Self {
             current,
             next,
@@ -21,15 +22,15 @@ impl<'pre> Argument<'pre> {
         }
     }
 
-    pub fn get_prefix(&self) -> &Option<&'pre String> {
+    pub fn get_prefix(&self) -> &Option<Ustr> {
         &self.data_keeper.prefix
     }
 
-    pub fn get_name(&self) -> &Option<String> {
+    pub fn get_name(&self) -> &Option<Ustr> {
         &self.data_keeper.name
     }
 
-    pub fn get_value(&self) -> &Option<String> {
+    pub fn get_value(&self) -> &Option<Ustr> {
         &self.data_keeper.value
     }
 
@@ -37,16 +38,16 @@ impl<'pre> Argument<'pre> {
         self.data_keeper.disable
     }
 
-    pub fn parse(&mut self, prefix: &'pre [String]) -> Result<bool> {
+    pub fn parse(&mut self, prefix: &[Ustr]) -> Result<bool> {
         if let Some(pattern) = &self.current {
-            self.data_keeper = parse_argument(pattern.as_ref(), prefix)?;
+            self.data_keeper = parse_argument(pattern.clone(), prefix)?;
 
             // must have prefix and name
             if self.data_keeper.prefix.is_none() {
-                return Err(ArgumentError::MissingPrefix(pattern.clone()).into());
+                return Err(ArgumentError::MissingPrefix(pattern.to_string()).into());
             }
             if self.data_keeper.name.is_none() {
-                return Err(ArgumentError::MissingName(pattern.clone()).into());
+                return Err(ArgumentError::MissingName(pattern.to_string()).into());
             }
             return Ok(true);
         }

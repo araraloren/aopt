@@ -3,6 +3,7 @@ use super::{Result, Set, Uid};
 use crate::opt::help::HelpInfo;
 use crate::opt::index::Index;
 use crate::opt::value::Value;
+use crate::{gstr, Ustr};
 
 #[derive(Debug)]
 pub struct Commit<'a> {
@@ -26,18 +27,18 @@ impl<'a> Commit<'a> {
         self
     }
 
-    pub fn set_type_name(&mut self, type_name: String) -> &mut Self {
-        self.info.set_type_name(type_name);
+    pub fn set_type_name(&mut self, type_name: &str) -> &mut Self {
+        self.info.set_type_name(gstr(type_name));
         self
     }
 
-    pub fn set_name(&mut self, name: String) -> &mut Self {
-        self.info.set_name(name);
+    pub fn set_name(&mut self, name: &str) -> &mut Self {
+        self.info.set_name(gstr(name));
         self
     }
 
-    pub fn set_prefix(&mut self, prefix: String) -> &mut Self {
-        self.info.set_prefix(prefix);
+    pub fn set_prefix(&mut self, prefix: &str) -> &mut Self {
+        self.info.set_prefix(gstr(prefix));
         self
     }
 
@@ -51,13 +52,13 @@ impl<'a> Commit<'a> {
         self
     }
 
-    pub fn set_hint(&mut self, hint: String) -> &mut Self {
-        self.info.set_hint(hint);
+    pub fn set_hint(&mut self, hint: &str) -> &mut Self {
+        self.info.set_hint(gstr(hint));
         self
     }
 
-    pub fn set_help(&mut self, help: String) -> &mut Self {
-        self.info.set_help(help);
+    pub fn set_help(&mut self, help: &str) -> &mut Self {
+        self.info.set_help(gstr(help));
         self
     }
 
@@ -66,13 +67,13 @@ impl<'a> Commit<'a> {
         self
     }
 
-    pub fn add_alias(&mut self, prefix: String, name: String) -> &mut Self {
-        self.info.add_alias(prefix, name);
-        self
+    pub fn add_alias(&mut self, alias: &str) -> Result<&mut Self> {
+        self.info.add_alias(gstr(alias))?;
+        Ok(self)
     }
 
-    pub fn rem_alias(&mut self, prefix: &str, name: &str) -> &mut Self {
-        self.info.rem_alias(prefix, name);
+    pub fn rem_alias(&mut self, alias: Ustr) -> &mut Self {
+        self.info.rem_alias(alias);
         self
     }
 

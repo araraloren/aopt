@@ -2,40 +2,41 @@ use std::mem::take;
 
 use super::Opt;
 use crate::set::CreateInfo;
+use crate::Ustr;
 
 #[derive(Debug, Clone, Default)]
 pub struct HelpInfo {
-    hint: String,
-    help: String,
+    hint: Ustr,
+    help: Ustr,
 }
 
 impl HelpInfo {
-    pub fn new(hint: String, help: String) -> Self {
+    pub fn new(hint: Ustr, help: Ustr) -> Self {
         Self { hint, help }
     }
 
-    pub fn get_hint(&self) -> &String {
-        &self.hint
+    pub fn get_hint(&self) -> Ustr {
+        self.hint.clone()
     }
 
-    pub fn get_help(&self) -> &String {
-        &self.help
+    pub fn get_help(&self) -> Ustr {
+        self.help.clone()
     }
 
-    pub fn get_hint_mut(&mut self) -> &mut String {
+    pub fn get_hint_mut(&mut self) -> &mut Ustr {
         &mut self.hint
     }
 
-    pub fn get_help_mut(&mut self) -> &mut String {
+    pub fn get_help_mut(&mut self) -> &mut Ustr {
         &mut self.help
     }
 
-    pub fn set_hint<T: Into<String>>(&mut self, hint: T) -> &mut Self {
+    pub fn set_hint<T: Into<Ustr>>(&mut self, hint: T) -> &mut Self {
         self.hint = hint.into();
         self
     }
 
-    pub fn set_help<T: Into<String>>(&mut self, help: T) -> &mut Self {
+    pub fn set_help<T: Into<Ustr>>(&mut self, help: T) -> &mut Self {
         self.help = help.into();
         self
     }
@@ -50,7 +51,8 @@ impl HelpInfo {
                 opt.get_name(),
                 opt.get_type_name(),
                 if opt.get_optional() { "]" } else { ">" },
-            ),
+            )
+            .into(),
         }
     }
 }
@@ -70,17 +72,29 @@ impl<'a> From<&'a mut CreateInfo> for HelpInfo {
     }
 }
 
-/// Generate the help like `--Option | -O`
-pub fn create_help_hint(ci: &CreateInfo) -> String {
+/// Generate the help like `--Option | -O` or `Pos` or `--/Option`
+pub fn create_help_hint(ci: &CreateInfo) -> Ustr {
     let mut ret = String::default();
 
+    // adding prefix
     if let Some(prefix) = ci.get_prefix() {
-        ret += prefix;
+        ret += prefix.as_ref();
     }
-    ret += ci.get_name();
+    // adding deactivate style
+    if ci.get_support_deactivate_style() {
+        ret += "/"; 
+    }
+    // adding name
+    ret += ci.get_name().as_ref();
+    // adding index
+    let index_string = ci.get_index().to_string();
+    if ! index_string.is_empty() {
+        ret += &format!("@{}", index_string);
+    }
+    // adding alias
     for alias in ci.get_alias() {
-        ret += &format!(" | {}{}", alias.0, alias.1);
+        ret += &format!(" | {}", alias);
     }
 
-    ret
+    ret.into()
 }

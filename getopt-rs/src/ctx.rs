@@ -5,6 +5,7 @@ pub mod opt;
 
 use crate::err::Result;
 use crate::opt::{Opt, OptValue, Style};
+use crate::Ustr;
 
 pub use self::nonopt::NonOptContext;
 pub use self::opt::OptContext;
@@ -24,7 +25,7 @@ pub trait Context: Debug {
 
     fn get_style(&self) -> Style;
 
-    fn get_next_argument(&self) -> &Option<String>;
+    fn get_next_argument(&self) -> &Option<Ustr>;
 
     fn is_comsume_argument(&self) -> bool;
 

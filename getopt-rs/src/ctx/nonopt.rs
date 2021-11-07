@@ -1,10 +1,11 @@
 use super::Context;
 use crate::err::{Result, SpecialError};
 use crate::opt::{Opt, OptValue, Style};
+use crate::Ustr;
 
 #[derive(Debug)]
 pub struct NonOptContext {
-    name: String,
+    name: Ustr,
 
     style: Style,
 
@@ -18,7 +19,7 @@ pub struct NonOptContext {
 }
 
 impl NonOptContext {
-    pub fn new(name: String, style: Style, total: u64, current: u64) -> Self {
+    pub fn new(name: Ustr, style: Style, total: u64, current: u64) -> Self {
         Self {
             name,
             style,
@@ -35,16 +36,15 @@ impl Context for NonOptContext {
         let mut matched = opt.match_style(self.style);
 
         if matched {
-            matched = matched
-                && (opt.match_name(self.name.as_ref())
-                    && opt.match_index(self.total, self.current));
+            matched =
+                matched && (opt.match_name(self.name) && opt.match_index(self.total, self.current));
         }
         info!(%matched, "Matching context with non-opt<{}>", opt.get_uid());
         trace!(?self, ?opt, "matching ...");
         if matched {
             self.matched_index = Some(self.current as usize);
             let value = opt
-                .parse_value(self.name.as_str())
+                .parse_value(self.name)
                 .map_err(|_| SpecialError::InvalidArgumentForOption(opt.get_hint().to_owned()))?;
             self.set_value(value);
             debug!("get return value {:?}!", self.get_value());
@@ -77,7 +77,7 @@ impl Context for NonOptContext {
         self.style
     }
 
-    fn get_next_argument(&self) -> &Option<String> {
+    fn get_next_argument(&self) -> &Option<Ustr> {
         &None
     }
 

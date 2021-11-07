@@ -4,6 +4,7 @@ use std::path::Path;
 
 use getopt_rs::err::create_error;
 use getopt_rs::tools::initialize_creator;
+use getopt_rs::Ustr;
 use getopt_rs::{getopt, prelude::*};
 use getopt_rs_help::printer::Printer;
 use getopt_rs_help::store::{OptStore, PosStore};
@@ -20,12 +21,12 @@ fn main() -> color_eyre::Result<()> {
     let mut parser = DelayParser::<UidGenerator>::default();
 
     initialize_creator(&mut set);
-    set.add_prefix(String::from("-"));
-    set.add_prefix(String::from("--"));
-    set.add_prefix(String::from("+"));
+    set.add_prefix(Ustr::from("-"));
+    set.add_prefix(Ustr::from("--"));
+    set.add_prefix(Ustr::from("+"));
 
     if let Ok(mut commit) = set.add_opt("directory=p@0") {
-        commit.set_help("Set the target directory".to_owned());
+        commit.set_help("Set the target directory");
         let id = commit.commit()?;
         parser.add_callback(
             id,
@@ -46,42 +47,42 @@ fn main() -> color_eyre::Result<()> {
         (
             "--dir=b",
             "Show the files type are directory",
-            String::from("-"),
-            String::from("d"),
+            "-",
+            "d",
             FilterType::Dir,
         ),
         (
             "--link=b",
             "Show the files type are symbol link",
-            String::from("-"),
-            String::from("l"),
+            "-",
+            "l",
             FilterType::Link,
         ),
         (
             "--file=b",
             "Show the files type are normal file",
-            String::from("-"),
-            String::from("f"),
+            "-",
+            "f",
             FilterType::File,
         ),
         (
             "--size=u",
             "Show the files size large than given size",
-            String::from("-"),
-            String::from("s"),
+            "-",
+            "s",
             FilterType::Size(0),
         ),
         (
             "--regex=s",
             "Show the files which name matched given regex",
-            String::from("-"),
-            String::from("r"),
+            "-",
+            "r",
             FilterType::Regex(String::default()),
         ),
     ] {
         if let Ok(mut commit) = set.add_opt(opt) {
-            commit.set_help(help.to_owned());
-            commit.add_alias(alias_prefix, alias_name);
+            commit.set_help(help);
+            commit.add_alias(&format!("{}{}", alias_prefix, alias_name))?;
             let id = commit.commit()?;
             parser.add_callback(
                 id,
@@ -102,12 +103,12 @@ fn main() -> color_eyre::Result<()> {
         }
     }
     if let Ok(mut commit) = set.add_opt("--help=b") {
-        commit.add_alias("-".to_owned(), "h".to_owned());
-        commit.set_help("Show the help message".to_owned());
+        commit.add_alias("-h")?;
+        commit.set_help("Show the help message");
         commit.commit()?;
     }
     if let Ok(mut commit) = set.add_opt("main=m") {
-        commit.set_help("Main function".to_owned());
+        commit.set_help("Main function");
         let id = commit.commit()?;
         parser.add_callback(
             id,
@@ -226,33 +227,33 @@ impl FilterType {
 fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout> {
     let mut help = AppHelp::default();
 
-    help.set_name("simple-find-file".to_owned());
+    help.set_name("simple-find-file".into());
 
     let global = help.store.get_global_mut();
 
     for opt in set.iter() {
         if opt.match_style(getopt_rs::opt::Style::Pos) {
             global.add_pos(PosStore::new(
-                opt.get_name().to_owned(),
-                opt.get_hint().to_owned(),
-                opt.get_help().to_owned(),
-                opt.get_index().unwrap().to_string(),
+                opt.get_name(),
+                opt.get_hint(),
+                opt.get_help(),
+                opt.get_index().unwrap().to_string().into(),
                 opt.get_optional(),
             ));
         } else if !opt.match_style(getopt_rs::opt::Style::Main) {
             global.add_opt(OptStore::new(
-                opt.get_name().to_owned(),
-                opt.get_hint().to_owned(),
-                opt.get_help().to_owned(),
+                opt.get_name(),
+                opt.get_hint(),
+                opt.get_help(),
                 opt.get_optional(),
             ));
         }
     }
 
-    global.set_header(String::from(
+    global.set_header(Ustr::from(
         "Search the given directory, show the file match the filter conditions",
     ));
-    global.set_footer(String::from("Create by araraloren, V0.2.0"));
+    global.set_footer(Ustr::from("Create by araraloren, V0.2.0"));
 
     help
 }

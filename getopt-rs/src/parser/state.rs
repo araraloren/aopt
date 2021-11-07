@@ -1,7 +1,9 @@
 use crate::arg::Argument;
 use crate::ctx::{Context, NonOptContext, OptContext};
+use crate::err::{ArgumentError, Error, Result};
 use crate::opt::Style;
 use crate::proc::Matcher;
+use crate::Ustr;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ParserState {
@@ -42,16 +44,25 @@ pub enum ParserState {
     PSCustom(u64),
 }
 
-impl<'pre> ParserState {
-    pub fn gen_opt<M: Matcher + Default>(&self, arg: &Argument<'pre>) -> Option<M> {
+impl ParserState {
+    fn gen_unwrap_error(name: &str) -> Error {
+        ArgumentError::UnwrapError(name.to_owned()).into()
+    }
+
+    fn do_unwrap(name: &str, value: &Option<Ustr>) -> Result<Ustr> {
+        let string = value.as_ref().ok_or(Self::gen_unwrap_error(name))?;
+        Ok(string.clone())
+    }
+
+    pub fn gen_opt<M: Matcher + Default>(&self, arg: &Argument) -> Result<Option<M>> {
         let mut ret: Vec<Box<dyn Context>> = vec![];
 
         match self {
             Self::PSEqualWithValue => {
                 if arg.get_value().is_some() {
                     ret.push(Box::new(OptContext::new(
-                        arg.get_prefix().unwrap().clone(),
-                        arg.get_name().as_ref().unwrap().clone(),
+                        Self::do_unwrap("prefix", arg.get_prefix())?,
+                        Self::do_unwrap("name", arg.get_name())?,
                         arg.get_value().clone(),
                         Style::Argument,
                         false,
@@ -61,8 +72,8 @@ impl<'pre> ParserState {
             Self::PSArgument => {
                 if arg.get_value().is_none() {
                     ret.push(Box::new(OptContext::new(
-                        arg.get_prefix().unwrap().clone(),
-                        arg.get_name().as_ref().unwrap().clone(),
+                        Self::do_unwrap("prefix", arg.get_prefix())?,
+                        Self::do_unwrap("name", arg.get_name())?,
                         arg.next.clone(),
                         Style::Argument,
                         true,
@@ -76,9 +87,9 @@ impl<'pre> ParserState {
                             let name_value = name.split_at(1);
 
                             ret.push(Box::new(OptContext::new(
-                                arg.get_prefix().unwrap().clone(),
-                                name_value.0.to_owned(),
-                                Some(name_value.1.to_owned()),
+                                Self::do_unwrap("prefix", arg.get_prefix())?,
+                                name_value.0.into(),
+                                Some(name_value.1.into()),
                                 Style::Argument,
                                 false,
                             )));
@@ -92,8 +103,8 @@ impl<'pre> ParserState {
                         if name.len() > 1 {
                             for char in name.chars() {
                                 ret.push(Box::new(OptContext::new(
-                                    arg.get_prefix().unwrap().clone(),
-                                    String::from(char),
+                                    Self::do_unwrap("prefix", arg.get_prefix())?,
+                                    format!("{}", char).into(),
                                     None,
                                     Style::Multiple,
                                     false,
@@ -106,8 +117,8 @@ impl<'pre> ParserState {
             Self::PSBoolean => {
                 if arg.get_value().is_none() {
                     ret.push(Box::new(OptContext::new(
-                        arg.get_prefix().unwrap().clone(),
-                        arg.get_name().as_ref().unwrap().clone(),
+                        Self::do_unwrap("prefix", arg.get_prefix())?,
+                        Self::do_unwrap("name", arg.get_name())?,
                         None,
                         Style::Boolean,
                         false,
@@ -117,8 +128,8 @@ impl<'pre> ParserState {
             Self::PSDelayEqualWithValue => {
                 if arg.get_value().is_some() {
                     ret.push(Box::new(OptContext::new(
-                        arg.get_prefix().unwrap().clone(),
-                        arg.get_name().as_ref().unwrap().clone(),
+                        Self::do_unwrap("prefix", arg.get_prefix())?,
+                        Self::do_unwrap("name", arg.get_name())?,
                         arg.get_value().clone(),
                         Style::Argument,
                         false,
@@ -128,8 +139,8 @@ impl<'pre> ParserState {
             Self::PSDelayArgument => {
                 if arg.get_value().is_none() {
                     ret.push(Box::new(OptContext::new(
-                        arg.get_prefix().unwrap().clone(),
-                        arg.get_name().as_ref().unwrap().clone(),
+                        Self::do_unwrap("prefix", arg.get_prefix())?,
+                        Self::do_unwrap("name", arg.get_name())?,
                         arg.next.clone(),
                         Style::Argument,
                         true,
@@ -143,9 +154,9 @@ impl<'pre> ParserState {
                             let name_value = name.split_at(1);
 
                             ret.push(Box::new(OptContext::new(
-                                arg.get_prefix().unwrap().clone(),
-                                name_value.0.to_owned(),
-                                Some(name_value.1.to_owned()),
+                                Self::do_unwrap("prefix", arg.get_prefix())?,
+                                name_value.0.into(),
+                                Some(name_value.1.into()),
                                 Style::Argument,
                                 false,
                             )));
@@ -159,8 +170,8 @@ impl<'pre> ParserState {
                         if name.len() > 1 {
                             for char in name.chars() {
                                 ret.push(Box::new(OptContext::new(
-                                    arg.get_prefix().unwrap().clone(),
-                                    String::from(char),
+                                    Self::do_unwrap("prefix", arg.get_prefix())?,
+                                    format!("{}", char).into(),
                                     None,
                                     Style::Multiple,
                                     false,
@@ -173,8 +184,8 @@ impl<'pre> ParserState {
             Self::PSDelayBoolean => {
                 if arg.get_value().is_none() {
                     ret.push(Box::new(OptContext::new(
-                        arg.get_prefix().unwrap().clone(),
-                        arg.get_name().as_ref().unwrap().clone(),
+                        Self::do_unwrap("prefix", arg.get_prefix())?,
+                        Self::do_unwrap("name", arg.get_name())?,
                         None,
                         Style::Boolean,
                         false,
@@ -183,7 +194,7 @@ impl<'pre> ParserState {
             }
             _ => {}
         }
-        if ret.len() == 0 {
+        Ok(if ret.len() == 0 {
             None
         } else {
             let mut proc = M::default();
@@ -193,15 +204,15 @@ impl<'pre> ParserState {
             }
 
             Some(proc)
-        }
+        })
     }
 
     pub fn gen_nonopt<M: Matcher + Default>(
         &self,
-        noa: &String,
+        noa: &Ustr,
         total: u64,
         current: u64,
-    ) -> Option<M> {
+    ) -> Result<Option<M>> {
         let mut ret: Vec<Box<dyn Context>> = vec![];
 
         match self {
@@ -231,7 +242,7 @@ impl<'pre> ParserState {
             }
             _ => {}
         }
-        if ret.len() == 0 {
+        Ok(if ret.len() == 0 {
             None
         } else {
             let mut proc = M::default();
@@ -241,6 +252,6 @@ impl<'pre> ParserState {
             }
 
             Some(proc)
-        }
+        })
     }
 }

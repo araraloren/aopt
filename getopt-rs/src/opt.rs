@@ -11,6 +11,7 @@ use std::fmt::Debug;
 
 use crate::err::Result;
 use crate::uid::Uid;
+use crate::Ustr;
 
 pub use self::callback::{Callback as OptCallback, CallbackType};
 pub use self::help::HelpInfo;
@@ -25,7 +26,7 @@ pub use self::style::Style;
 pub use self::value::Value as OptValue;
 
 pub trait Type {
-    fn get_type_name(&self) -> &'static str;
+    fn get_type_name(&self) -> Ustr;
 
     fn is_deactivate_style(&self) -> bool {
         false
@@ -55,27 +56,27 @@ pub trait Callback {
 }
 
 pub trait Name {
-    fn get_name(&self) -> &str;
+    fn get_name(&self) -> Ustr;
 
-    fn get_prefix(&self) -> &str;
+    fn get_prefix(&self) -> Ustr;
 
-    fn set_name(&mut self, string: String);
+    fn set_name(&mut self, string: Ustr);
 
-    fn set_prefix(&mut self, string: String);
+    fn set_prefix(&mut self, string: Ustr);
 
-    fn match_name(&self, name: &str) -> bool;
+    fn match_name(&self, name: Ustr) -> bool;
 
-    fn match_prefix(&self, prefix: &str) -> bool;
+    fn match_prefix(&self, prefix: Ustr) -> bool;
 }
 
 pub trait Alias {
-    fn get_alias(&self) -> Option<&Vec<(String, String)>>;
+    fn get_alias(&self) -> Option<&Vec<(Ustr, Ustr)>>;
 
-    fn add_alias(&mut self, prefix: String, name: String);
+    fn add_alias(&mut self, prefix: Ustr, name: Ustr);
 
-    fn rem_alias(&mut self, prefix: &str, name: &str);
+    fn rem_alias(&mut self, prefix: Ustr, name: Ustr);
 
-    fn match_alias(&self, prefix: &str, name: &str) -> bool;
+    fn match_alias(&self, prefix: Ustr, name: Ustr) -> bool;
 }
 
 pub trait Optional {
@@ -97,7 +98,7 @@ pub trait Value {
 
     fn set_default_value(&mut self, value: OptValue);
 
-    fn parse_value(&self, string: &str) -> Result<OptValue>;
+    fn parse_value(&self, string: Ustr) -> Result<OptValue>;
 
     fn has_value(&self) -> bool;
 
@@ -113,16 +114,16 @@ pub trait Index {
 }
 
 pub trait Help {
-    fn set_hint(&mut self, hint: String);
+    fn set_hint(&mut self, hint: Ustr);
 
-    fn set_help(&mut self, help: String);
+    fn set_help(&mut self, help: Ustr);
 
-    fn get_hint(&self) -> &str {
-        self.get_help_info().get_hint().as_str()
+    fn get_hint(&self) -> Ustr {
+        self.get_help_info().get_hint()
     }
 
-    fn get_help(&self) -> &str {
-        self.get_help_info().get_help().as_str()
+    fn get_help(&self) -> Ustr {
+        self.get_help_info().get_help()
     }
 
     fn get_help_info(&self) -> &HelpInfo;

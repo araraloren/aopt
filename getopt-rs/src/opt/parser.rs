@@ -2,8 +2,9 @@ use super::index::Index;
 use crate::err::ConstructError;
 use crate::err::Result;
 use crate::pat::{ParseIndex, ParserPattern};
+use crate::Ustr;
 
-pub fn parse_option_str<'pre>(pattern: &str, prefix: &'pre [String]) -> Result<DataKeeper<'pre>> {
+pub fn parse_option_str(pattern: Ustr, prefix: &[Ustr]) -> Result<DataKeeper> {
     let pattern = ParserPattern::new(pattern, prefix);
     let mut index = ParseIndex::new(pattern.len());
     let mut data_keeper = DataKeeper::default();
@@ -50,12 +51,12 @@ pub enum State {
 }
 
 #[derive(Debug, Default)]
-pub struct DataKeeper<'pre> {
-    pub prefix: Option<&'pre String>,
+pub struct DataKeeper {
+    pub prefix: Option<Ustr>,
 
-    pub name: Option<String>,
+    pub name: Option<Ustr>,
 
-    pub type_name: Option<String>,
+    pub type_name: Option<Ustr>,
 
     pub deactivate: Option<bool>,
 
@@ -76,7 +77,7 @@ pub struct DataKeeper<'pre> {
     pub less: Option<u64>,
 }
 
-impl<'pre> DataKeeper<'pre> {
+impl DataKeeper {
     pub fn gen_index(&mut self) -> Index {
         if self.forward_index.is_some() {
             Index::forward(self.forward_index.unwrap())
@@ -121,10 +122,10 @@ impl State {
         "*"
     }
 
-    pub fn self_transition<'pat, 'vec, 'pre>(
+    pub fn self_transition<'vec, 'pre>(
         &mut self,
         index: &ParseIndex,
-        pattern: &ParserPattern<'pat, 'pre>,
+        pattern: &ParserPattern<'pre>,
     ) {
         let index_not_end = pattern.len() > index.get();
         let next_state = match self.clone() {
@@ -194,11 +195,11 @@ impl State {
         *self = next_state;
     }
 
-    pub fn parse<'pat, 'pre>(
+    pub fn parse<'pre>(
         mut self,
         index: &mut ParseIndex,
-        pattern: &ParserPattern<'pat, 'pre>,
-        data_keeper: &mut DataKeeper<'pre>,
+        pattern: &ParserPattern<'pre>,
+        data_keeper: &mut DataKeeper,
     ) -> Result<bool> {
         let current_state = self.clone();
 
@@ -211,8 +212,8 @@ impl State {
             }
             Self::Prefix => {
                 for prefix in pattern.get_prefixs() {
-                    if pattern.get_pattern().starts_with(prefix) {
-                        data_keeper.prefix = Some(&prefix);
+                    if pattern.get_pattern().starts_with(prefix.as_ref()) {
+                        data_keeper.prefix = Some(prefix.clone());
                         index.inc(prefix.len());
                         break;
                     }
@@ -224,15 +225,24 @@ impl State {
                 for (cur, ch) in pattern.chars(start).enumerate() {
                     let mut name_end = 0;
 
-                    if (ch == '=' || ch == '!' || ch == '/' || ch == '@') && cur >= 1 {
-                        name_end = start + cur;
+                    if ch == '=' || ch == '!' || ch == '/' || ch == '@' {
+                        if cur >= 1 {
+                            name_end = start + cur;
+                        }
+                        else if cur == 0 {
+                            // current is '='
+                            break;
+                        }
                     } else if start + cur + 1 == index.len() {
                         name_end = start + cur + 1;
                     }
                     if name_end > 0 {
                         let name = pattern.get_pattern().get(start..name_end);
 
-                        if name.is_none() {
+                        if let Some(name) = name {
+                            data_keeper.name = Some(name.into());
+                            index.set(name_end);
+                        } else {
                             error!(
                                 ?pattern,
                                 "accessing string [{}, {}) failed", start, name_end
@@ -244,8 +254,6 @@ impl State {
                             )
                             .into());
                         }
-                        data_keeper.name = Some(name.unwrap().to_owned());
-                        index.set(name_end);
                         break;
                     }
                 }
@@ -259,15 +267,24 @@ impl State {
                 for (cur, ch) in pattern.chars(start).enumerate() {
                     let mut type_end = 0;
 
-                    if (ch == '!' || ch == '/' || ch == '@') && cur >= 1 {
-                        type_end = start + cur;
+                    if ch == '!' || ch == '/' || ch == '@' {
+                        if cur >= 1 {
+                            type_end = start + cur;
+                        }
+                        else if cur == 0 {
+                            // current is '='
+                            break;
+                        }
                     } else if start + cur + 1 == index.len() {
                         type_end = start + cur + 1;
                     }
                     if type_end > 0 {
                         let type_ = pattern.get_pattern().get(start..type_end);
 
-                        if type_.is_none() {
+                        if let Some(type_) = type_ {
+                            data_keeper.type_name = Some(type_.into());
+                            index.set(type_end);
+                        } else {
                             error!(
                                 ?pattern,
                                 "accessing string [{}, {}) failed", start, type_end
@@ -279,8 +296,7 @@ impl State {
                             )
                             .into());
                         }
-                        data_keeper.type_name = Some(type_.unwrap().to_owned());
-                        index.set(type_end);
+
                         break;
                     }
                 }
@@ -440,13 +456,14 @@ impl State {
 mod test {
     use super::parse_option_str;
     use crate::opt::index::Index;
+    use crate::Ustr;
 
     #[test]
     fn test_option_str_parser() {
         {
             // test 1
             let test_cases = vec![
-                ("", Some((None, None, None, Index::default(), false, true))),
+                ("", None),
                 (
                     "o=b",
                     Some((None, Some("o"), Some("b"), Index::default(), false, true)),
@@ -2659,10 +2676,10 @@ mod test {
                 ),
             ];
 
-            let prefixs = vec![String::from("--"), String::from("-")];
+            let prefixs = vec![Ustr::from("--"), Ustr::from("-")];
 
             for case in test_cases.iter() {
-                try_to_verify_one_task(case.0, &prefixs, &case.1);
+                try_to_verify_one_task(Ustr::from(case.0), &prefixs, &case.1);
             }
         }
         {
@@ -2670,7 +2687,7 @@ mod test {
             let test_cases = vec![
                 (
                     "",
-                    Some((Some(""), None, None, Index::default(), false, true)),
+                    None,
                 ),
                 (
                     "o=b",
@@ -5017,17 +5034,17 @@ mod test {
                 ),
             ];
 
-            let prefixs = vec![String::from("--"), String::from("-"), String::from("")];
+            let prefixs = vec![Ustr::from("--"), Ustr::from("-"), Ustr::from("")];
 
             for case in test_cases.iter() {
-                try_to_verify_one_task(case.0, &prefixs, &case.1);
+                try_to_verify_one_task(Ustr::from(case.0), &prefixs, &case.1);
             }
         }
     }
 
     fn try_to_verify_one_task(
-        pattern: &str,
-        prefix: &Vec<String>,
+        pattern: Ustr,
+        prefix: &Vec<Ustr>,
         except: &Option<(Option<&str>, Option<&str>, Option<&str>, Index, bool, bool)>,
     ) {
         let ret = parse_option_str(pattern, prefix);
@@ -5035,16 +5052,22 @@ mod test {
         if let Ok(mut dk) = ret {
             assert!(except.is_some());
 
-            let default = String::from("");
+            let default = Ustr::from("");
 
             if let Some(except) = except {
                 let index = dk.gen_index();
 
-                assert_eq!(except.0.unwrap_or(""), dk.prefix.unwrap_or(&default));
-                assert_eq!(except.1.unwrap_or(""), dk.name.unwrap_or(default.clone()));
+                assert_eq!(
+                    except.0.unwrap_or(""),
+                    dk.prefix.unwrap_or(default).as_ref()
+                );
+                assert_eq!(
+                    except.1.unwrap_or(""),
+                    dk.name.unwrap_or(default.clone()).as_ref()
+                );
                 assert_eq!(
                     except.2.unwrap_or(""),
-                    dk.type_name.unwrap_or(default.clone())
+                    dk.type_name.unwrap_or(default.clone()).as_ref()
                 );
                 assert_eq!(except.3, index);
                 assert_eq!(except.4, dk.deactivate.unwrap_or(false));

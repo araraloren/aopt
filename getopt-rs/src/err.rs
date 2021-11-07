@@ -53,6 +53,9 @@ pub enum ArgumentError {
 
     #[error("Syntax error! Missing option name: '{0}'")]
     MissingName(String),
+
+    #[error("Can not unwrap '{0}' from Argument")]
+    UnwrapError(String),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -98,6 +101,9 @@ pub enum ConstructError {
 
     #[error("Not support option type '{0}'")]
     NotSupportOptionType(String),
+
+    #[error("Invalid alias '{0}', check the option prefix or name")]
+    InvalidOptionAlias(String),
 }
 
 #[derive(Debug, thiserror::Error)]

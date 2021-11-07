@@ -5,14 +5,15 @@ use crate::opt::*;
 use crate::set::CreateInfo;
 use crate::set::Creator;
 use crate::uid::Uid;
+use crate::Ustr;
 
 pub mod path {
     use crate::err::{ConstructError, ParserError};
 
     use super::*;
 
-    pub fn current_type() -> &'static str {
-        "p"
+    pub fn current_type() -> Ustr {
+        Ustr::from("p")
     }
 
     pub trait Path: Opt {}
@@ -21,9 +22,9 @@ pub mod path {
     pub struct PathOpt {
         uid: Uid,
 
-        name: String,
+        name: Ustr,
 
-        prefix: String,
+        prefix: Ustr,
 
         optional: bool,
 
@@ -31,7 +32,7 @@ pub mod path {
 
         default_value: OptValue,
 
-        alias: Vec<(String, String)>,
+        alias: Vec<(Ustr, Ustr)>,
 
         need_invoke: bool,
 
@@ -50,7 +51,7 @@ pub mod path {
                 optional: ci.get_optional(),
                 value: OptValue::default(),
                 default_value: take(ci.get_default_value_mut()),
-                alias: take(ci.get_alias_mut()),
+                alias: ci.gen_option_alias(),
                 need_invoke: false,
                 help_info,
             }
@@ -62,7 +63,7 @@ pub mod path {
     impl Opt for PathOpt {}
 
     impl Type for PathOpt {
-        fn get_type_name(&self) -> &'static str {
+        fn get_type_name(&self) -> Ustr {
             current_type()
         }
 
@@ -136,27 +137,27 @@ pub mod path {
     }
 
     impl Name for PathOpt {
-        fn get_name(&self) -> &str {
-            &self.name
+        fn get_name(&self) -> Ustr {
+            self.name
         }
 
-        fn get_prefix(&self) -> &str {
-            &self.prefix
+        fn get_prefix(&self) -> Ustr {
+            self.prefix
         }
 
-        fn set_name(&mut self, string: String) {
+        fn set_name(&mut self, string: Ustr) {
             self.name = string;
         }
 
-        fn set_prefix(&mut self, string: String) {
+        fn set_prefix(&mut self, string: Ustr) {
             self.prefix = string;
         }
 
-        fn match_name(&self, name: &str) -> bool {
+        fn match_name(&self, name: Ustr) -> bool {
             self.get_name() == name
         }
 
-        fn match_prefix(&self, prefix: &str) -> bool {
+        fn match_prefix(&self, prefix: Ustr) -> bool {
             self.get_prefix() == prefix
         }
     }
@@ -176,15 +177,15 @@ pub mod path {
     }
 
     impl Alias for PathOpt {
-        fn get_alias(&self) -> Option<&Vec<(String, String)>> {
+        fn get_alias(&self) -> Option<&Vec<(Ustr, Ustr)>> {
             Some(&self.alias)
         }
 
-        fn add_alias(&mut self, prefix: String, name: String) {
+        fn add_alias(&mut self, prefix: Ustr, name: Ustr) {
             self.alias.push((prefix, name));
         }
 
-        fn rem_alias(&mut self, prefix: &str, name: &str) {
+        fn rem_alias(&mut self, prefix: Ustr, name: Ustr) {
             for (index, value) in self.alias.iter().enumerate() {
                 if value.0 == prefix && value.1 == name {
                     self.alias.remove(index);
@@ -193,11 +194,8 @@ pub mod path {
             }
         }
 
-        fn match_alias(&self, prefix: &str, name: &str) -> bool {
-            self.alias
-                .iter()
-                .find(|&v| v.0 == prefix && v.1 == name)
-                .is_some()
+        fn match_alias(&self, prefix: Ustr, name: Ustr) -> bool {
+            self.alias.iter().any(|&v| v.0 == prefix && v.1 == name)
         }
     }
 
@@ -236,9 +234,9 @@ pub mod path {
             self.default_value = value;
         }
 
-        fn parse_value(&self, string: &str) -> Result<OptValue> {
+        fn parse_value(&self, string: Ustr) -> Result<OptValue> {
             use std::path::PathBuf;
-            Ok(OptValue::from_any(Box::new(PathBuf::from(string))))
+            Ok(OptValue::from_any(Box::new(PathBuf::from(string.as_ref()))))
         }
 
         fn has_value(&self) -> bool {
@@ -252,11 +250,11 @@ pub mod path {
     }
 
     impl Help for PathOpt {
-        fn set_hint(&mut self, hint: String) {
+        fn set_hint(&mut self, hint: Ustr) {
             self.help_info.set_hint(hint);
         }
 
-        fn set_help(&mut self, help: String) {
+        fn set_help(&mut self, help: Ustr) {
             self.help_info.set_help(help);
         }
 
@@ -269,7 +267,7 @@ pub mod path {
     pub struct PathCreator;
 
     impl Creator for PathCreator {
-        fn get_type_name(&self) -> &'static str {
+        fn get_type_name(&self) -> Ustr {
             current_type()
         }
 
