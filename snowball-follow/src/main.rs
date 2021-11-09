@@ -1,3 +1,7 @@
+use std::fmt::format;
+use std::fs::File;
+use std::io::BufRead;
+use std::io::BufReader;
 use std::path::Path;
 use std::{env::Args, io::Stdout};
 
@@ -17,6 +21,10 @@ use getopt_rs_help::{
     AppHelp,
 };
 
+const STOCK_NUMBER_LEN: usize = 6;
+const STOCK_SHANGHAI: &'static str = "SH";
+const STOCK_SHENZHEN: &'static str = "SZ";
+
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
     tracing_subscriber::fmt::fmt()
@@ -25,7 +33,7 @@ async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
     let set = parser_command_line(std::env::args())?;
 
-    if ! print_help(&set)? {
+    if !print_help(&set)? {
         if let Ok(Some(id)) = set.find("stock_id") {
             if id.has_value() {
                 dbg!(id);
@@ -60,17 +68,29 @@ fn parser_command_line(args: Args) -> Result<SimpleSet> {
         }
     }
     // process single stock id
-    if let Ok(mut commit) = set.add_opt("stock_id=p@1") {
+    if let Ok(mut commit) = set.add_opt("stock_id=p@0") {
         commit.set_help("Get follow from single stock id");
         let id = commit.commit()?;
         parser.add_callback(
             id,
-            simple_pos_cb!(|_, _, id, _, value| {
-                let mut ret = Ok(Some(value));
+            simple_pos_mut_cb!(|_, set, id, _, value| {
+                let mut ret = Ok(None);
 
-                for char in id.chars() {
-                    if !char.is_ascii_digit() {
-                        ret = Ok(None);
+                if check_stock_number(id) {
+                    if let Ok(Some(opt)) = set.find_mut("stock_id") {
+                        let value_mut = opt.get_value_mut();
+
+                        if value_mut.is_null() {
+                            *value_mut = OptValue::from(vec![normalize_stock_number(id.as_ref())]);
+                        } else {
+                            if let Some(vec_mut) = value_mut.as_vec_mut() {
+                                vec_mut.push(normalize_stock_number(id.as_ref()));
+                            } else {
+                                ret = Err(create_error(format!(
+                                    "can not get vec mut ref from value"
+                                )));
+                            }
+                        }
                     }
                 }
                 ret
@@ -83,11 +103,43 @@ fn parser_command_line(args: Args) -> Result<SimpleSet> {
         let id = commit.commit()?;
         parser.add_callback(
             id,
-            simple_pos_cb!(|_, _, file, _, value| {
-                let mut ret = Ok(Some(value));
+            simple_pos_mut_cb!(|_, set, file, _, value| {
+                let mut ret = Ok(None);
+                let fh = Path::new(file);
+                if fh.is_file() {
+                    if let Ok(Some(opt)) = set.find_mut("stock_id") {
+                        let value_mut = opt.get_value_mut();
 
-                if !Path::new(file).is_file() {
-                    ret = Ok(None);
+                        if value_mut.is_null() {
+                            *value_mut = OptValue::from(vec![]);
+                        }
+                        if let Some(vec_mut) = value_mut.as_vec_mut() {
+                            let fh = File::open(fh).map_err(|e| {
+                                create_error(format!("can not read file {}: {:?}", file, e))
+                            })?;
+                            let mut reader = BufReader::new(fh);
+                            let mut line = String::default();
+
+                            loop {
+                                if let Ok(count) = reader.read_line(&mut line) {
+                                    if count > 0 {
+                                        if check_stock_number(line.as_ref()) {
+                                            vec_mut.push(normalize_stock_number(line.as_ref()));
+                                        } else {
+                                            eprintln!("`{}` is not a valid stock number", line);
+                                        }
+                                    } else {
+                                        break;
+                                    }
+                                } else {
+                                    ret = Err(create_error(format!(
+                                        "can not read line from file {}",
+                                        file
+                                    )));
+                                }
+                            }
+                        }
+                    }
                 }
                 ret
             }),
@@ -96,6 +148,38 @@ fn parser_command_line(args: Args) -> Result<SimpleSet> {
     getopt!(&mut args.skip(1), set, parser)?;
 
     Ok(set)
+}
+
+fn check_stock_number(number: &str) -> bool {
+    if number.len() > 0 && number.len() <= 6 {
+        for char in number.chars() {
+            if !char.is_ascii_digit() {
+                return false;
+            }
+        }
+        true
+    } else {
+        false
+    }
+}
+
+fn normalize_stock_number(number: &str) -> String {
+    let mut ret = format!("{}{}", "0".repeat(STOCK_NUMBER_LEN - number.len()), number);
+
+    if let Some(header) = ret.get(0..2) {
+        match header {
+            "68" | "60" => {
+                ret = format!("{}{}", STOCK_SHANGHAI, ret);
+            }
+            "00" | "30" => {
+                ret = format!("{}{}", STOCK_SHENZHEN, ret);
+            }
+            _ => {
+                panic!("{} is not a valid stock number", number);
+            }
+        }
+    }
+    ret
 }
 
 fn print_help(set: &dyn Set) -> Result<bool> {

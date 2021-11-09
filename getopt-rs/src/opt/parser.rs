@@ -228,8 +228,7 @@ impl State {
                     if ch == '=' || ch == '!' || ch == '/' || ch == '@' {
                         if cur >= 1 {
                             name_end = start + cur;
-                        }
-                        else if cur == 0 {
+                        } else if cur == 0 {
                             // current is '='
                             break;
                         }
@@ -270,8 +269,7 @@ impl State {
                     if ch == '!' || ch == '/' || ch == '@' {
                         if cur >= 1 {
                             type_end = start + cur;
-                        }
-                        else if cur == 0 {
+                        } else if cur == 0 {
                             // current is '='
                             break;
                         }
@@ -2685,10 +2683,7 @@ mod test {
         {
             // test 2
             let test_cases = vec![
-                (
-                    "",
-                    None,
-                ),
+                ("", None),
                 (
                     "o=b",
                     Some((
