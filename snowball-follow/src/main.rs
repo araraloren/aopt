@@ -1,4 +1,3 @@
-use std::fmt::format;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
@@ -20,6 +19,8 @@ use getopt_rs_help::{
     store::{OptStore, PosStore},
     AppHelp,
 };
+use reqwest::header;
+use reqwest::Client;
 
 const STOCK_NUMBER_LEN: usize = 6;
 const STOCK_SHANGHAI: &'static str = "SH";
@@ -31,20 +32,93 @@ async fn main() -> color_eyre::Result<()> {
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
     color_eyre::install()?;
-    let set = parser_command_line(std::env::args())?;
+    let mut set = parser_command_line(std::env::args())?;
+    let mut ids = vec![];
 
     if !print_help(&set)? {
-        if let Ok(Some(id)) = set.find("stock_id") {
+        if let Ok(Some(id)) = set.find_mut("stock_id") {
             if id.has_value() {
-                dbg!(id);
+                if let Some(id_vec) = id.get_value_mut().as_vec_mut().take() {
+                    ids.append(id_vec);
+                }
             }
         }
-        if let Ok(Some(file)) = set.find("stock_file_list") {
+        if let Ok(Some(file)) = set.find_mut("stock_file_list") {
             if file.has_value() {
-                dbg!(file);
+                if let Some(file_vec) = file.get_value_mut().as_vec_mut().take() {
+                    ids.append(file_vec);
+                }
             }
         }
     }
+    dbg!(&set);
+    let start = set
+        .find("start")?
+        .ok_or(create_error(format!("can not get start option")))?
+        .get_value()
+        .as_int()
+        .unwrap();
+    let count = set
+        .find("count")?
+        .ok_or(create_error(format!("can not get count option")))?
+        .get_value()
+        .as_int()
+        .unwrap();
+    let mut headers = header::HeaderMap::new();
+
+    headers.insert(
+        "Accept-Encoding",
+        header::HeaderValue::from_static("gzip, deflate, br"),
+    );
+    headers.insert(
+        "Accept-Language",
+        header::HeaderValue::from_static("zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6"),
+    );
+    headers.insert("Connection", header::HeaderValue::from_static("keep-alive"));
+    headers.insert("Sec-Fetch-Mode", header::HeaderValue::from_static("cors"));
+    headers.insert("Accept", header::HeaderValue::from_static("text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"));
+    headers.insert(
+        "Sec-Fetch-Dest",
+        header::HeaderValue::from_static("documents"),
+    );
+    headers.insert("Sec-Fetch-Site", header::HeaderValue::from_static("none"));
+    headers.insert("Cookie", header::HeaderValue::from_static("device_id=f080e827903c5ed9488187bc177acf74; xq_a_token=bbbce7f3f0e179adfe66962174d84eb7adafeeda; xqat=bbbce7f3f0e179adfe66962174d84eb7adafeeda; xq_r_token=91e53c5c325265960f1e0b108aaf481b810f2ebe; xq_id_token=eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJ1aWQiOi0xLCJpc3MiOiJ1YyIsImV4cCI6MTYzODQ2ODQxMSwiY3RtIjoxNjM2MDMzMzIyMjM1LCJjaWQiOiJkOWQwbjRBWnVwIn0.BbBR-jRnmrXDjhuV7iJjfzgwvAvzAw9mTs6Mj4FFt2MLyA_C7-IVsDpWPvbBQleLelsRwEuyktRckbsZfsYBEmcceEeuDFMbWIApAc9nU1Fya_EwBi_Nr1iGGV08_9poYiKh7aSSRAN7tcXj5_WhhOXKUht9-QlVvXSPUgur16kNkidjrAOrdjKbs4yUE6ghHZpy--UPiohjzygBopvrVqTEVmBu8E1CiKKmKSZ1nApcI7tw8Aj9hNlsBUwd4gj--ovXOZB8v6IRmX5AYvGlIg1t1JUM2RNBMex7sx2-4clJ6FARzgGPdbzF6GQlR3VXfEk2-FMBSnseuif1KBy_Pw; u=531636033333936; s=ct11vwujkw; Hm_lpvt_1db88642e346389874251b5a1eded6e3=1636165583; Hm_lvt_1db88642e346389874251b5a1eded6e3=1636163416,1636163871,1636165568,1636165583; acw_tc=2760828f16365544116183474eede90b6e81eda8def0cb2767fc4d85745b55"));
+
+    let mut client = Client::builder()
+        .user_agent(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36 Edg/95.0.1020.44",
+        )
+        .default_headers(headers)
+        .build()?;
+
+    for id in ids {
+        display_snowball_follow(&mut client, &id, start, count).await?;
+    }
+
+    Ok(())
+}
+
+async fn display_snowball_follow(
+    client: &mut Client,
+    code: &String,
+    start: &i64,
+    count: &i64,
+) -> reqwest::Result<()> {
+    let home = format!("https://www.xueqiu.com/S/{}", code);
+
+    let _res = client.get(&home).send().await?;
+
+    // println!("access {:?} ==> {:?}", home, res.text().await?);
+
+    let url = format!(
+        "https://www.xueqiu.com/recommend/pofriends.json?type=1&code={}&start={}&count={}",
+        code, start, count
+    );
+
+    let res = client.get(&url).send().await?;
+
+    println!("access {:?} ==> {:?}", url, res.text().await?);
+
     Ok(())
 }
 
@@ -55,13 +129,26 @@ fn parser_command_line(args: Args) -> Result<SimpleSet> {
     initialize_creator(&mut set);
     initialize_prefix(&mut set);
 
-    for (optstr, alias, help) in [
-        ("-d=b", "--debug", "Print debug message"),
-        ("-h=b", "--help", "Print help message"),
-        ("-s=i", "--start", "Set start parameter of request"),
-        ("-c=i", "--count", "Set count parameter of request"),
+    for (optstr, alias, help, value) in [
+        ("-d=b", "--debug", "Print debug message", None),
+        ("-h=b", "--help", "Print help message", None),
+        (
+            "-s=i",
+            "--start",
+            "Set start parameter of request",
+            Some(OptValue::from(0i64)),
+        ),
+        (
+            "-c=i",
+            "--count",
+            "Set count parameter of request",
+            Some(OptValue::from(14i64)),
+        ),
     ] {
         if let Ok(mut commit) = set.add_opt(optstr) {
+            if let Some(value) = value {
+                commit.set_default_value(value);
+            }
             commit.add_alias(alias)?;
             commit.set_help(help);
             commit.commit()?;
@@ -73,7 +160,7 @@ fn parser_command_line(args: Args) -> Result<SimpleSet> {
         let id = commit.commit()?;
         parser.add_callback(
             id,
-            simple_pos_mut_cb!(|_, set, id, _, value| {
+            simple_pos_mut_cb!(|_, set, id, _, _| {
                 let mut ret = Ok(None);
 
                 if check_stock_number(id) {
@@ -103,7 +190,7 @@ fn parser_command_line(args: Args) -> Result<SimpleSet> {
         let id = commit.commit()?;
         parser.add_callback(
             id,
-            simple_pos_mut_cb!(|_, set, file, _, value| {
+            simple_pos_mut_cb!(|_, set, file, _, _| {
                 let mut ret = Ok(None);
                 let fh = Path::new(file);
                 if fh.is_file() {
