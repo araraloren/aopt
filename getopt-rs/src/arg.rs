@@ -13,14 +13,12 @@ pub use argument::Argument;
 #[derive(Debug, Default)]
 pub struct ArgStream {
     args: Vec<Argument>,
-    index: usize,
 }
 
 impl ArgStream {
     pub fn new(args: impl Iterator<Item = String>) -> Self {
         Self {
             args: Self::iterator_to_args(args),
-            index: 0,
         }
     }
 
@@ -69,7 +67,6 @@ impl<'str, 'nv, 'pre, It: Iterator<Item = String>> From<It> for ArgStream {
     fn from(iter: It) -> Self {
         Self {
             args: Self::iterator_to_args(iter),
-            index: 0,
         }
     }
 }

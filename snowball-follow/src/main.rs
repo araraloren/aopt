@@ -25,7 +25,7 @@ async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
     let set = parser_command_line(std::env::args())?;
 
-    if ! print_help(&set)? {
+    if !print_help(&set)? {
         if let Ok(Some(id)) = set.find("stock_id") {
             if id.has_value() {
                 dbg!(id);

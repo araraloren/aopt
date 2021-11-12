@@ -82,13 +82,13 @@ pub fn create_help_hint(ci: &CreateInfo) -> Ustr {
     }
     // adding deactivate style
     if ci.get_support_deactivate_style() {
-        ret += "/"; 
+        ret += "/";
     }
     // adding name
     ret += ci.get_name().as_ref();
     // adding index
     let index_string = ci.get_index().to_string();
-    if ! index_string.is_empty() {
+    if !index_string.is_empty() {
         ret += &format!("@{}", index_string);
     }
     // adding alias

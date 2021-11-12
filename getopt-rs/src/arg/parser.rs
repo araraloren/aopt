@@ -119,11 +119,10 @@ impl State {
                 for (cur, ch) in pattern.chars(start).enumerate() {
                     let mut name_end = 0;
                     // the name not include '=', so > 1
-                    if ch == VALUE_SPLIT_CHAR  {
+                    if ch == VALUE_SPLIT_CHAR {
                         if cur >= 1 {
                             name_end = start + cur;
-                        }
-                        else if cur == 0 {
+                        } else if cur == 0 {
                             // current is '='
                             break;
                         }
