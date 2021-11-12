@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::path::Path;
+use std::time::Duration;
 use std::{env::Args, io::Stdout};
 
 use getopt_rs::err::create_error;
@@ -51,75 +52,124 @@ async fn main() -> color_eyre::Result<()> {
             }
         }
     }
-    dbg!(&set);
-    let start = set
-        .find("start")?
-        .ok_or(create_error(format!("can not get start option")))?
-        .get_value()
-        .as_int()
-        .unwrap();
-    let count = set
-        .find("count")?
-        .ok_or(create_error(format!("can not get count option")))?
-        .get_value()
-        .as_int()
-        .unwrap();
-    let mut headers = header::HeaderMap::new();
+    let start = get_value_from_set(&set, "start")?.as_int().unwrap_or(&0);
+    let count = get_value_from_set(&set, "count")?.as_int().unwrap_or(&14);
+    let interval = get_value_from_set(&set, "interval")?
+        .as_uint()
+        .unwrap_or(&1000);
+    let debug = get_value_from_set(&set, "debug")?
+        .as_bool()
+        .unwrap_or(&false);
+    let snowball = SnowBall::new(*debug)?;
 
-    headers.insert(
-        "Accept-Encoding",
-        header::HeaderValue::from_static("gzip, deflate, br"),
-    );
-    headers.insert(
-        "Accept-Language",
-        header::HeaderValue::from_static("zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6"),
-    );
-    headers.insert("Connection", header::HeaderValue::from_static("keep-alive"));
-    headers.insert("Sec-Fetch-Mode", header::HeaderValue::from_static("cors"));
-    headers.insert("Accept", header::HeaderValue::from_static("text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"));
-    headers.insert(
-        "Sec-Fetch-Dest",
-        header::HeaderValue::from_static("documents"),
-    );
-    headers.insert("Sec-Fetch-Site", header::HeaderValue::from_static("none"));
-    headers.insert("Cookie", header::HeaderValue::from_static("device_id=f080e827903c5ed9488187bc177acf74; xq_a_token=bbbce7f3f0e179adfe66962174d84eb7adafeeda; xqat=bbbce7f3f0e179adfe66962174d84eb7adafeeda; xq_r_token=91e53c5c325265960f1e0b108aaf481b810f2ebe; xq_id_token=eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJ1aWQiOi0xLCJpc3MiOiJ1YyIsImV4cCI6MTYzODQ2ODQxMSwiY3RtIjoxNjM2MDMzMzIyMjM1LCJjaWQiOiJkOWQwbjRBWnVwIn0.BbBR-jRnmrXDjhuV7iJjfzgwvAvzAw9mTs6Mj4FFt2MLyA_C7-IVsDpWPvbBQleLelsRwEuyktRckbsZfsYBEmcceEeuDFMbWIApAc9nU1Fya_EwBi_Nr1iGGV08_9poYiKh7aSSRAN7tcXj5_WhhOXKUht9-QlVvXSPUgur16kNkidjrAOrdjKbs4yUE6ghHZpy--UPiohjzygBopvrVqTEVmBu8E1CiKKmKSZ1nApcI7tw8Aj9hNlsBUwd4gj--ovXOZB8v6IRmX5AYvGlIg1t1JUM2RNBMex7sx2-4clJ6FARzgGPdbzF6GQlR3VXfEk2-FMBSnseuif1KBy_Pw; u=531636033333936; s=ct11vwujkw; Hm_lpvt_1db88642e346389874251b5a1eded6e3=1636165583; Hm_lvt_1db88642e346389874251b5a1eded6e3=1636163416,1636163871,1636165568,1636165583; acw_tc=2760828f16365544116183474eede90b6e81eda8def0cb2767fc4d85745b55"));
-
-    let mut client = Client::builder()
-        .user_agent(
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36 Edg/95.0.1020.44",
-        )
-        .default_headers(headers)
-        .build()?;
-
-    for id in ids {
-        display_snowball_follow(&mut client, &id, start, count).await?;
+    if snowball
+        .init(&format!("{}{}", STOCK_SHANGHAI, "000002"))
+        .await?
+    {
+        for id in ids {
+            if let Ok(count) = snowball.get_snowball_follow(&id, *start, *count).await {
+                println!("{}: {}", id, count);
+            } else {
+                println!("{}: None", id);
+            }
+            tokio::time::sleep(Duration::from_millis(*interval)).await;
+        }
     }
 
     Ok(())
 }
 
-async fn display_snowball_follow(
-    client: &mut Client,
-    code: &String,
-    start: &i64,
-    count: &i64,
-) -> reqwest::Result<()> {
-    let home = format!("https://www.xueqiu.com/S/{}", code);
+fn get_value_from_set<'a>(set: &'a dyn Set, opt: &str) -> Result<&'a OptValue> {
+    Ok(set
+        .find(opt)?
+        .ok_or(create_error(format!("can not get option value")))?
+        .get_value())
+}
 
-    let _res = client.get(&home).send().await?;
+#[derive(Debug, Clone)]
+pub struct SnowBall {
+    client: Client,
+    debug: bool,
+}
 
-    // println!("access {:?} ==> {:?}", home, res.text().await?);
+impl SnowBall {
+    pub fn new(debug: bool) -> reqwest::Result<Self> {
+        let mut headers = header::HeaderMap::new();
 
-    let url = format!(
-        "https://www.xueqiu.com/recommend/pofriends.json?type=1&code={}&start={}&count={}",
-        code, start, count
-    );
+        headers.insert(
+            "Accept-Encoding",
+            header::HeaderValue::from_static("gzip, deflate, br"),
+        );
+        headers.insert(
+            "Accept-Language",
+            header::HeaderValue::from_static("zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6"),
+        );
+        headers.insert("Accept", header::HeaderValue::from_static("text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"));
 
-    let res = client.get(&url).send().await?;
+        let client = Client::builder()
+        .user_agent(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36 Edg/95.0.1020.44",
+        )
+        .default_headers(headers)
+        .gzip(true)
+        .cookie_store(true)
+        .build()?;
 
-    println!("access {:?} ==> {:?}", url, res.text().await?);
+        Ok(Self { client, debug })
+    }
 
-    Ok(())
+    fn snowball_follow_uri(code: &str, start: i64, count: i64) -> String {
+        format!(
+            "https://www.xueqiu.com/recommend/pofriends.json?type=1&code={}&start={}&count={}",
+            code, start, count
+        )
+    }
+
+    fn snowball_home(code: &str) -> String {
+        format!("https://www.xueqiu.com/S/{}", code)
+    }
+
+    pub async fn init(&self, code: &str) -> reqwest::Result<bool> {
+        let home = Self::snowball_home(code);
+        let res = self.client.get(&home).send().await?;
+
+        if self.debug {
+            eprintln!("ACCESS `{}` , status = {:?}", &home, res.status());
+        }
+
+        Ok(res.status().is_success())
+    }
+
+    pub async fn get_snowball_follow(
+        &self,
+        code: &str,
+        start: i64,
+        count: i64,
+    ) -> reqwest::Result<i64> {
+        let stock_follow_uri = Self::snowball_follow_uri(code, start, count);
+        let res = self.client.get(&stock_follow_uri).send().await?;
+        let mut ret = 0;
+
+        if self.debug {
+            eprintln!("ACCESS `{}` , status = {:?}", &stock_follow_uri, res.status());
+        }
+
+        if res.status().is_success() {
+            let text = res.text().await?;
+
+            if let Ok(json) = json::parse(&text) {
+                match json {
+                    json::JsonValue::Object(v) => {
+                        if let Some(count) = v.get("totalcount") {
+                            ret = count.as_i64().unwrap_or(0);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        Ok(ret)
+    }
 }
 
 fn parser_command_line(args: Args) -> Result<SimpleSet> {
@@ -132,6 +182,12 @@ fn parser_command_line(args: Args) -> Result<SimpleSet> {
     for (optstr, alias, help, value) in [
         ("-d=b", "--debug", "Print debug message", None),
         ("-h=b", "--help", "Print help message", None),
+        (
+            "-i=u",
+            "--interval",
+            "Set access interval",
+            Some(OptValue::from(1000u64)),
+        ),
         (
             "-s=i",
             "--start",
