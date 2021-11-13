@@ -161,7 +161,7 @@ impl SnowBall {
                 match json {
                     json::JsonValue::Object(v) => {
                         if let Some(count) = v.get("totalcount") {
-                            ret = count.as_i64().unwrap_or(0);
+                            ret = count.as_i64().unwrap_or(0 );
                         }
                     }
                     _ => {}
