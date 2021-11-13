@@ -18,9 +18,9 @@ pub use ustr::UstrSet;
 #[macro_use]
 extern crate tracing;
 
-use prelude::Parser;
-use prelude::Result;
-use prelude::Set;
+use crate::err::Result;
+use crate::parser::Parser;
+use crate::set::Set;
 
 pub fn gstr(s: &str) -> Ustr {
     Ustr::from(s)
@@ -156,7 +156,6 @@ pub mod tools {
 
 pub mod prelude {
     pub use crate::ctx::{Context, NonOptContext, OptContext};
-    pub use crate::err::{Error, Result};
     pub use crate::gstr;
     pub use crate::opt::callback::{SimpleMainCallback, SimpleMainMutCallback};
     pub use crate::opt::callback::{SimpleOptCallback, SimpleOptMutCallback};

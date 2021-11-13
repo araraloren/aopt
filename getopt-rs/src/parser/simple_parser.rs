@@ -312,6 +312,7 @@ where
 
 #[cfg(test)]
 mod test {
+    use crate::err::Result;
     use crate::getopt;
     use crate::parser::testutil::*;
     use crate::{prelude::*, set::Commit};

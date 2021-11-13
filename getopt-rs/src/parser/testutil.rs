@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use crate::err::Result;
 use crate::prelude::*;
 use crate::set::Commit;
 use crate::Ustr;

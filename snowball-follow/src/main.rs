@@ -5,8 +5,9 @@ use getopt_rs::err::create_error;
 use getopt_rs::prelude::*;
 use getopt_rs::Ustr;
 use getopt_rs::{
+    err::Result,
     getopt,
-    prelude::{Result, SimpleParser},
+    parser::SimpleParser,
     set::{OptionSet, Set, SimpleSet},
     tools::{initialize_creator, initialize_prefix},
     uid::UidGenerator,
