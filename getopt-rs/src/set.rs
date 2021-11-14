@@ -75,6 +75,13 @@ pub trait OptionSet:
             .find_mut(opt_str)?
             .and_then(|v| Some(v.get_value_mut())))
     }
+
+    fn set_value(&mut self, opt_str: &str, value: OptValue) -> Result<Option<&mut Box<dyn Opt>>> {
+        Ok(self.find_mut(opt_str)?.and_then(|v| {
+            v.set_value(value);
+            Some(v)
+        }))
+    }
 }
 
 pub trait CreatorSet {
