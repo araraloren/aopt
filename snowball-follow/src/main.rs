@@ -6,16 +6,10 @@ use std::time::Duration;
 use std::{env::Args, io::Stdout};
 
 use getopt_rs::err::create_error;
+use getopt_rs::err::Result;
 use getopt_rs::prelude::*;
-use getopt_rs::Ustr;
-use getopt_rs::{
-    err::Result,
-    getopt,
-    parser::SimpleParser,
-    set::{OptionSet, Set, SimpleSet},
-    tools::{initialize_creator, initialize_prefix},
-    uid::UidGenerator,
-};
+use getopt_rs::tools::initialize_creator;
+use getopt_rs::tools::initialize_prefix;
 use getopt_rs_help::printer::Printer;
 use getopt_rs_help::{
     store::{OptStore, PosStore},

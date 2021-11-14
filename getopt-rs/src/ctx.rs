@@ -1,7 +1,7 @@
-use std::fmt::Debug;
-
 pub mod nonopt;
 pub mod opt;
+
+use std::fmt::Debug;
 
 use crate::err::Result;
 use crate::opt::{Opt, OptValue, Style};

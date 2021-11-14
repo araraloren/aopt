@@ -4,15 +4,14 @@ pub mod store;
 pub mod style;
 pub mod wrapper;
 
-use crate::err::{Error, Result};
 use std::io::{Stdout, Write};
 use ustr::Ustr;
 
+use crate::err::{Error, Result};
+use crate::wrapper::Wrapper;
 use printer::Printer;
 use store::Store;
 use style::Style;
-
-use crate::wrapper::Wrapper;
 
 #[derive(Debug)]
 pub struct AppHelp<W: Write> {

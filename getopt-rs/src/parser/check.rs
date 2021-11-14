@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use super::Parser;
+
 use crate::err::{ConstructError, Result, SpecialError};
 use crate::opt::Style;
 use crate::set::Set;

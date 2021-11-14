@@ -1,6 +1,5 @@
 use crate::err::{ConstructError, Result};
-use crate::opt::parser::parse_option_str;
-use crate::opt::parser::DataKeeper;
+use crate::opt::parser::{parse_option_str, DataKeeper};
 use crate::opt::{HelpInfo, Opt, OptIndex, OptValue};
 use crate::proc::Info;
 use crate::uid::Uid;

@@ -1,7 +1,5 @@
-use super::parser::parse_argument;
-use super::parser::DataKeeper;
-use crate::err::ArgumentError;
-use crate::err::Result;
+use super::parser::{parse_argument, DataKeeper};
+use crate::err::{ArgumentError, Result};
 use crate::Ustr;
 
 #[derive(Debug, Clone, Default)]

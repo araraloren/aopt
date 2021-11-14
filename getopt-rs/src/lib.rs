@@ -10,17 +10,17 @@ pub mod uid;
 
 pub(crate) mod pat;
 
-// declare a alias for string type
-pub use ustr::Ustr;
-pub use ustr::UstrMap;
-pub use ustr::UstrSet;
-
 #[macro_use]
 extern crate tracing;
 
 use crate::err::Result;
 use crate::parser::Parser;
 use crate::set::Set;
+
+// declare a alias for string type
+pub use ustr::Ustr;
+pub use ustr::UstrMap;
+pub use ustr::UstrSet;
 
 pub fn gstr(s: &str) -> Ustr {
     Ustr::from(s)

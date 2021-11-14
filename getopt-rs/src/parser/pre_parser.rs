@@ -6,6 +6,7 @@ use std::ops::DerefMut;
 use super::HashMapIter;
 use super::Parser;
 use super::ParserState;
+
 use crate::arg::ArgStream;
 use crate::err::Result;
 use crate::opt::{OptCallback, OptValue, Style};

@@ -1,6 +1,6 @@
 use super::index::Index;
-use crate::err::ConstructError;
-use crate::err::Result;
+
+use crate::err::{ConstructError, Result};
 use crate::pat::{ParseIndex, ParserPattern};
 use crate::Ustr;
 

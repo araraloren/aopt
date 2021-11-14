@@ -1,11 +1,8 @@
 use std::mem::take;
 
-use crate::err::ConstructError;
-use crate::err::ParserError;
-use crate::err::SpecialError;
+use crate::err::{ConstructError, ParserError, SpecialError};
 use crate::opt::*;
-use crate::set::CreateInfo;
-use crate::set::Creator;
+use crate::set::{CreateInfo, Creator};
 use crate::uid::Uid;
 use crate::Ustr;
 

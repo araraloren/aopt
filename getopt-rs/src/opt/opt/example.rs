@@ -2,8 +2,7 @@ use std::mem::take;
 
 use crate::err::SpecialError;
 use crate::opt::*;
-use crate::set::CreateInfo;
-use crate::set::Creator;
+use crate::set::{CreateInfo, Creator};
 use crate::uid::Uid;
 use crate::Ustr;
 
