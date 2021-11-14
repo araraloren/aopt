@@ -25,7 +25,7 @@ pub fn default_pre_check<P: Parser>(set: &dyn Set, parser: &P) -> Result<bool> {
 }
 
 pub fn default_opt_check<P: Parser>(set: &dyn Set, _parser: &P) -> Result<bool> {
-    for opt in set.iter() {
+    for opt in set.opt_iter() {
         if opt.as_ref().match_style(Style::Boolean)
             || opt.as_ref().match_style(Style::Argument)
             || opt.as_ref().match_style(Style::Multiple)
@@ -41,7 +41,7 @@ pub fn default_nonopt_check<P: Parser>(set: &dyn Set, _parser: &P) -> Result<boo
 
     let mut index_map: HashMap<u64, Vec<Uid>> = HashMap::new();
 
-    for opt in set.iter() {
+    for opt in set.opt_iter() {
         if opt.as_ref().match_style(Style::Pos)
             || opt.as_ref().match_style(Style::Cmd)
             || opt.as_ref().match_style(Style::Main)

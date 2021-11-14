@@ -35,7 +35,7 @@ impl OptionSet for SimpleSet {
     }
 
     fn add_opt_ci(&mut self, ci: CreateInfo) -> Result<Uid> {
-        let uid = self.opt.len() as Uid;
+        let uid = self.len() as Uid;
         let mut ci = ci;
 
         trace!(?ci, "create option with ci");
@@ -54,9 +54,8 @@ impl OptionSet for SimpleSet {
         }
     }
 
-    fn add_opt_raw(&mut self, opt: Box<dyn Opt>) -> Result<Uid> {
-        let mut opt = opt;
-        let uid = self.opt.len() as Uid;
+    fn add_opt_raw(&mut self, mut opt: Box<dyn Opt>) -> Result<Uid> {
+        let uid = self.len() as Uid;
 
         opt.set_uid(uid);
         self.opt.push(opt);
@@ -75,17 +74,17 @@ impl OptionSet for SimpleSet {
         self.opt.len()
     }
 
-    fn iter(&self) -> Iter<Box<dyn Opt>> {
+    fn opt_iter(&self) -> Iter<Box<dyn Opt>> {
         self.opt.iter()
     }
 
-    fn iter_mut(&mut self) -> IterMut<Box<dyn Opt>> {
+    fn opt_iter_mut(&mut self) -> IterMut<Box<dyn Opt>> {
         self.opt.iter_mut()
     }
 
     fn find(&self, opt_str: &str) -> Result<Option<&Box<dyn Opt>>> {
         let fi = FilterInfo::parse(gstr(opt_str), self.get_prefix())?;
-        for opt in self.iter() {
+        for opt in self.opt_iter() {
             if fi.match_opt(opt.as_ref()) {
                 return Ok(Some(opt));
             }
@@ -95,7 +94,7 @@ impl OptionSet for SimpleSet {
 
     fn find_mut(&mut self, opt_str: &str) -> Result<Option<&mut Box<dyn Opt>>> {
         let fi = FilterInfo::parse(gstr(opt_str), self.get_prefix())?;
-        for opt in self.iter_mut() {
+        for opt in self.opt_iter_mut() {
             if fi.match_opt(opt.as_ref()) {
                 return Ok(Some(opt));
             }

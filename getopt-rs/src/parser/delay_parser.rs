@@ -70,7 +70,7 @@ where
         let prefix: Vec<Ustr> = set.get_prefix().iter().map(|v| v.clone()).collect();
 
         // add info to Proc
-        for opt in set.iter() {
+        for opt in set.opt_iter() {
             self.subscriber_info
                 .push(Box::new(OptionInfo::from(opt.get_uid())));
         }

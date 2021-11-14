@@ -231,7 +231,7 @@ fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout> {
 
     let global = help.store.get_global_mut();
 
-    for opt in set.iter() {
+    for opt in set.opt_iter() {
         if opt.match_style(getopt_rs::opt::Style::Pos) {
             global.add_pos(PosStore::new(
                 opt.get_name(),

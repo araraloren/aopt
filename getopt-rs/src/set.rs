@@ -8,7 +8,7 @@ use std::ops::{Index, IndexMut};
 use std::slice::{Iter, IterMut};
 
 use crate::err::Result;
-use crate::opt::Opt;
+use crate::opt::{Opt, OptValue};
 use crate::uid::Uid;
 use crate::Ustr;
 
@@ -50,9 +50,9 @@ pub trait OptionSet:
 
     fn len(&self) -> usize;
 
-    fn iter(&self) -> Iter<Box<dyn Opt>>;
+    fn opt_iter(&self) -> Iter<Box<dyn Opt>>;
 
-    fn iter_mut(&mut self) -> IterMut<Box<dyn Opt>>;
+    fn opt_iter_mut(&mut self) -> IterMut<Box<dyn Opt>>;
 
     fn find(&self, opt_str: &str) -> Result<Option<&Box<dyn Opt>>>;
 
@@ -63,6 +63,18 @@ pub trait OptionSet:
     fn filter_mut(&mut self, opt_str: &str) -> Result<FilterMut>;
 
     fn reset(&mut self);
+
+    // some help functions access option data
+
+    fn get_value(&self, opt_str: &str) -> Result<Option<&OptValue>> {
+        Ok(self.find(opt_str)?.and_then(|v| Some(v.get_value())))
+    }
+
+    fn get_value_mut(&mut self, opt_str: &str) -> Result<Option<&mut OptValue>> {
+        Ok(self
+            .find_mut(opt_str)?
+            .and_then(|v| Some(v.get_value_mut())))
+    }
 }
 
 pub trait CreatorSet {

@@ -152,7 +152,11 @@ impl SnowBall {
         let mut ret = 0;
 
         if self.debug {
-            eprintln!("ACCESS `{}` , status = {:?}", &stock_follow_uri, res.status());
+            eprintln!(
+                "ACCESS `{}` , status = {:?}",
+                &stock_follow_uri,
+                res.status()
+            );
         }
 
         if res.status().is_success() {
@@ -162,7 +166,7 @@ impl SnowBall {
                 match json {
                     json::JsonValue::Object(v) => {
                         if let Some(count) = v.get("totalcount") {
-                            ret = count.as_i64().unwrap_or(0 );
+                            ret = count.as_i64().unwrap_or(0);
                         }
                     }
                     _ => {}
@@ -351,7 +355,7 @@ fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout> {
 
     let global = help.store.get_global_mut();
 
-    for opt in set.iter() {
+    for opt in set.opt_iter() {
         if opt.match_style(getopt_rs::opt::Style::Pos) {
             global.add_pos(PosStore::new(
                 opt.get_name(),

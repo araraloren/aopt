@@ -47,7 +47,7 @@ impl<'a> Filter<'a> {
     }
 
     pub fn find(&self) -> Option<&'a Box<dyn Opt>> {
-        for opt in self.set.iter() {
+        for opt in self.set.opt_iter() {
             if self.info.match_opt(opt.as_ref()) {
                 return Some(opt);
             }
@@ -58,7 +58,7 @@ impl<'a> Filter<'a> {
     pub fn find_all(&self) -> Vec<&'a Box<dyn Opt>> {
         let mut ret = vec![];
 
-        for opt in self.set.iter() {
+        for opt in self.set.opt_iter() {
             if self.info.match_opt(opt.as_ref()) {
                 ret.push(opt);
             }
@@ -110,7 +110,7 @@ impl<'a> FilterMut<'a> {
     }
 
     pub fn find(&mut self) -> Option<&mut Box<dyn Opt>> {
-        for opt in self.set.iter_mut() {
+        for opt in self.set.opt_iter_mut() {
             if self.info.match_opt(opt.as_ref()) {
                 return Some(opt);
             }
@@ -121,7 +121,7 @@ impl<'a> FilterMut<'a> {
     pub fn find_all(&mut self) -> Vec<&mut Box<dyn Opt>> {
         let mut ret = vec![];
 
-        for opt in self.set.iter_mut() {
+        for opt in self.set.opt_iter_mut() {
             if self.info.match_opt(opt.as_ref()) {
                 ret.push(opt);
             }
