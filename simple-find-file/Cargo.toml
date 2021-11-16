@@ -1,5 +1,5 @@
 [package]
-name = "simple-find-file"
+name = "ff"
 version = "0.2.0"
 authors = ["araraloren <blackcatoverwall@gmail.com>"]
 edition = "2018"
