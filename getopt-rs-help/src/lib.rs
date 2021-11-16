@@ -1,10 +1,12 @@
 pub mod err;
+pub mod format;
 pub mod printer;
 pub mod store;
 pub mod style;
 pub mod wrapper;
 
 use std::io::{Stdout, Write};
+use format::Format;
 use ustr::Ustr;
 
 use crate::err::{Error, Result};
@@ -14,7 +16,7 @@ use store::Store;
 use style::Style;
 
 #[derive(Debug)]
-pub struct AppHelp<W: Write> {
+pub struct AppHelp<W: Write, F: Format> {
     name: Ustr,
 
     pub store: Store,
@@ -22,15 +24,18 @@ pub struct AppHelp<W: Write> {
     style: Style,
 
     writer: W,
+
+    format: F,
 }
 
-impl<W: Write> AppHelp<W> {
+impl<W: Write, F: Format> AppHelp<W, F> {
     pub fn new(name: Ustr, style: Style, writer: W) -> Self {
         Self {
             name,
             store: Store::default(),
-            style,
+            style: style.clone(),
             writer,
+            format: F::from(style),
         }
     }
 
@@ -47,7 +52,8 @@ impl<W: Write> AppHelp<W> {
     }
 
     pub fn set_style(&mut self, style: Style) {
-        self.style = style;
+        self.style = style.clone();
+        self.format.set_style(style);
     }
 
     pub fn set_writer(&mut self, writer: W) {
@@ -55,18 +61,19 @@ impl<W: Write> AppHelp<W> {
     }
 }
 
-impl Default for AppHelp<Stdout> {
+impl<F: Format> Default for AppHelp<Stdout, F> {
     fn default() -> Self {
         Self {
             name: Ustr::default(),
             store: Store::default(),
             style: Style::default(),
             writer: std::io::stdout(),
+            format: F::from(Style::default()),
         }
     }
 }
 
-impl<W: Write> Printer<W> for AppHelp<W> {
+impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
     fn set_style(&mut self, style: Style) {
         self.style = style;
     }
@@ -105,7 +112,7 @@ impl<W: Write> Printer<W> for AppHelp<W> {
             }
             let mut buffer = String::new();
 
-            buffer += &format!("\n{}\n", sec_store.get_help());
+            buffer += self.format.format_sec_title(sec_store.get_help().as_ref()).as_ref();
             if !cmd_info.is_empty() {
                 let mut wrapper = Wrapper::new(&cmd_info);
 
@@ -150,7 +157,7 @@ impl<W: Write> Printer<W> for AppHelp<W> {
         }
         let mut buffer = String::new();
 
-        buffer += &format!("\n{}\n", sec_store.get_help());
+        buffer += self.format.format_sec_title(sec_store.get_help().as_ref()).as_ref();
         if !cmd_info.is_empty() {
             let mut wrapper = Wrapper::new(&cmd_info);
 
@@ -193,12 +200,12 @@ impl<W: Write> Printer<W> for AppHelp<W> {
                 buffer += &format!("<{}> ", opt_store.get_hint());
             }
         }
-        if self.store.cmd_len() > 0 {
+        if cmd.is_none() && self.store.cmd_len() > 0 {
             buffer += &format!("<COMMAND> ");
         }
         if cmd_store.pos_len() > 0 {
             buffer += &format!("**ARGS**");
-        } else {
+        } else if cmd.is_none() {
             for cmd_store in self.store.cmd_iter() {
                 if cmd_store.pos_len() > 0 {
                     buffer += &format!("**ARGS**");
@@ -260,8 +267,9 @@ impl<W: Write> Printer<W> for AppHelp<W> {
         }
         let mut buffer = String::new();
 
-        buffer += "\nPOS:\n";
         if !pos_info.is_empty() {
+            buffer += "\nPOS:\n";
+
             let mut wrapper = Wrapper::new(&pos_info);
 
             wrapper.wrap();
@@ -302,8 +310,9 @@ impl<W: Write> Printer<W> for AppHelp<W> {
         }
         let mut buffer = String::new();
 
-        buffer += "\nOPT:\n";
         if !opt_info.is_empty() {
+            buffer += "\nOPT:\n";
+
             let mut wrapper = Wrapper::new(&opt_info);
 
             wrapper.wrap();
@@ -324,5 +333,24 @@ impl<W: Write> Printer<W> for AppHelp<W> {
         }
 
         Ok(self.writer.write(buffer.as_bytes())?)
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct DefaultFormat(Style);
+
+impl Format for DefaultFormat {
+    fn current_style(&self) -> &Style {
+        &self.0
+    }
+
+    fn set_style(&mut self, style: Style) {
+        self.0 = style;
+    }
+}
+
+impl From<Style> for DefaultFormat {
+    fn from(s: Style) -> Self {
+        Self(s)
     }
 }

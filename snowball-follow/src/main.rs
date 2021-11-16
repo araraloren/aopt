@@ -10,6 +10,7 @@ use getopt_rs::err::Result;
 use getopt_rs::prelude::*;
 use getopt_rs::tools::initialize_creator;
 use getopt_rs::tools::initialize_prefix;
+use getopt_rs_help::DefaultFormat;
 use getopt_rs_help::printer::Printer;
 use getopt_rs_help::{
     store::{OptStore, PosStore},
@@ -342,7 +343,7 @@ fn print_help(set: &dyn Set) -> Result<bool> {
     Ok(is_need_help)
 }
 
-fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout> {
+fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout, DefaultFormat> {
     let mut help = AppHelp::default();
 
     help.set_name("snowball".into());

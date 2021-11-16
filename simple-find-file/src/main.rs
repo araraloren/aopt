@@ -8,7 +8,7 @@ use getopt_rs::Ustr;
 use getopt_rs::{getopt, prelude::*};
 use getopt_rs_help::printer::Printer;
 use getopt_rs_help::store::{OptStore, PosStore};
-use getopt_rs_help::AppHelp;
+use getopt_rs_help::{AppHelp, DefaultFormat};
 use regex::Regex;
 
 fn main() -> color_eyre::Result<()> {
@@ -224,7 +224,7 @@ impl FilterType {
     }
 }
 
-fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout> {
+fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout, DefaultFormat> {
     let mut help = AppHelp::default();
 
     help.set_name("simple-find-file".into());

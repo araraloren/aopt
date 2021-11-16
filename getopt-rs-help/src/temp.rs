@@ -1,12 +1,8 @@
-use getopt_rs_help::{
-    printer::Printer,
-    store::{OptStore, PosStore},
-    AppHelp,
-};
+use getopt_rs_help::{AppHelp, DefaultFormat, printer::Printer, store::{OptStore, PosStore}};
 use ustr::Ustr;
 
 fn main() {
-    let mut app = AppHelp::default();
+    let mut app = AppHelp::<std::io::Stdout, DefaultFormat>::default();
 
     app.set_name("snippet".into());
 
