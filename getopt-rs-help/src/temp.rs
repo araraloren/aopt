@@ -1,4 +1,8 @@
-use getopt_rs_help::{AppHelp, DefaultFormat, printer::Printer, store::{OptStore, PosStore}};
+use getopt_rs_help::{
+    printer::Printer,
+    store::{OptStore, PosStore},
+    AppHelp, DefaultFormat,
+};
 use ustr::Ustr;
 
 fn main() {

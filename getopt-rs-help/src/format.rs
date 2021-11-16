@@ -12,8 +12,7 @@ pub trait Format: From<Style> {
     fn format_usage_opt(&self, hint: &str, optional: bool) -> String {
         if optional {
             format!("[{}]", hint)
-        }
-        else {
+        } else {
             format!("<{}>", hint)
         }
     }

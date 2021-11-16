@@ -5,8 +5,8 @@ pub mod store;
 pub mod style;
 pub mod wrapper;
 
-use std::io::{Stdout, Write};
 use format::Format;
+use std::io::{Stdout, Write};
 use ustr::Ustr;
 
 use crate::err::{Error, Result};
@@ -112,7 +112,10 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
             }
             let mut buffer = String::new();
 
-            buffer += self.format.format_sec_title(sec_store.get_help().as_ref()).as_ref();
+            buffer += self
+                .format
+                .format_sec_title(sec_store.get_help().as_ref())
+                .as_ref();
             if !cmd_info.is_empty() {
                 let mut wrapper = Wrapper::new(&cmd_info);
 
@@ -157,7 +160,10 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
         }
         let mut buffer = String::new();
 
-        buffer += self.format.format_sec_title(sec_store.get_help().as_ref()).as_ref();
+        buffer += self
+            .format
+            .format_sec_title(sec_store.get_help().as_ref())
+            .as_ref();
         if !cmd_info.is_empty() {
             let mut wrapper = Wrapper::new(&cmd_info);
 

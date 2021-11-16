@@ -10,8 +10,8 @@ use getopt_rs::err::Result;
 use getopt_rs::prelude::*;
 use getopt_rs::tools::initialize_creator;
 use getopt_rs::tools::initialize_prefix;
-use getopt_rs_help::DefaultFormat;
 use getopt_rs_help::printer::Printer;
+use getopt_rs_help::DefaultFormat;
 use getopt_rs_help::{
     store::{OptStore, PosStore},
     AppHelp,
