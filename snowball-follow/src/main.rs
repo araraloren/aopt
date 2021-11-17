@@ -48,30 +48,31 @@ async fn main() -> color_eyre::Result<()> {
             }
         }
     }
-    let start = get_value_from_set(&set, "start")?.as_int().unwrap_or(&0);
-    let count = get_value_from_set(&set, "count")?.as_int().unwrap_or(&14);
-    let interval = get_value_from_set(&set, "interval")?
-        .as_uint()
-        .unwrap_or(&1000);
-    let debug = get_value_from_set(&set, "debug")?
-        .as_bool()
-        .unwrap_or(&false);
-    let snowball = SnowBall::new(*debug)?;
+    if ids.len() > 0 {
+        let start = get_value_from_set(&set, "start")?.as_int().unwrap_or(&0);
+        let count = get_value_from_set(&set, "count")?.as_int().unwrap_or(&14);
+        let interval = get_value_from_set(&set, "interval")?
+            .as_uint()
+            .unwrap_or(&1000);
+        let debug = get_value_from_set(&set, "debug")?
+            .as_bool()
+            .unwrap_or(&false);
+        let snowball = SnowBall::new(*debug)?;
 
-    if snowball
-        .init(&format!("{}{}", STOCK_SHANGHAI, "000002"))
-        .await?
-    {
-        for id in ids {
-            if let Ok(count) = snowball.get_snowball_follow(&id, *start, *count).await {
-                println!("{}: {}", id, count);
-            } else {
-                println!("{}: None", id);
+        if snowball
+            .init(&format!("{}{}", STOCK_SHANGHAI, "000002"))
+            .await?
+        {
+            for id in ids {
+                if let Ok(count) = snowball.get_snowball_follow(&id, *start, *count).await {
+                    println!("{}: {}", id, count);
+                } else {
+                    println!("{}: None", id);
+                }
+                tokio::time::sleep(Duration::from_millis(*interval)).await;
             }
-            tokio::time::sleep(Duration::from_millis(*interval)).await;
         }
     }
-
     Ok(())
 }
 
