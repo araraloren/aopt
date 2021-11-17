@@ -6,28 +6,31 @@ pub trait Format: From<Style> {
     fn current_style(&self) -> &Style;
 
     fn format_usage_name(&self, name: &str) -> String {
-        format!("usage: {}", name)
+        format!("usage: {} ", name)
     }
 
     fn format_usage_opt(&self, hint: &str, optional: bool) -> String {
         if optional {
-            format!("[{}]", hint)
+            format!("[{}] ", hint)
         } else {
-            format!("<{}>", hint)
+            format!("<{}> ", hint)
         }
     }
 
-    fn format_usage_cmd(&self, cmd_count: usize, pos_count: usize) -> String {
-        let mut ret = String::default();
+    fn format_usage_cmd(&self, cmd: Option<&str>) -> String {
+        if let Some(cmd_name) = cmd {
+            format!("{} ", cmd_name)
+        } else {
+            String::from("<COMMAND> ")
+        }
+    }
 
-        if cmd_count > 0 {
-            ret += "<COMMAND> ";
-        }
+    fn format_usage_pos(&self, pos_count: usize) -> String {
         if pos_count > 0 {
-            ret += "**ARGS**";
+            String::from("**ARGS**")
+        } else {
+            String::default()
         }
-        ret += "\n";
-        ret
     }
 
     fn get_opt_title(&self) -> String {

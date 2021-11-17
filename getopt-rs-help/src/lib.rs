@@ -126,12 +126,16 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
                     let max_len = wrapped_line.iter().map(|v| v.len()).max().unwrap_or(1);
 
                     for i in 0..max_len {
-                        buffer += &wrapped_line
-                            .iter()
-                            .map(|v| v.get_line(i))
-                            .collect::<Vec<String>>()
-                            .join(&" ".repeat(self.style.row_spacing));
-                        buffer += &format!("\n{}", "\n".repeat(self.style.cmd_line_spacing));
+                        buffer += self
+                            .format
+                            .format_sec_line(
+                                &wrapped_line
+                                    .iter()
+                                    .map(|v| v.get_line(i))
+                                    .collect::<Vec<String>>(),
+                            )
+                            .as_ref();
+                        buffer += self.format.format_sec_new_line().as_ref();
                     }
                 }
                 buffer.truncate(buffer.len() - 1);
@@ -174,12 +178,16 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
                 let max_len = wrapped_line.iter().map(|v| v.len()).max().unwrap_or(1);
 
                 for i in 0..max_len {
-                    buffer += &wrapped_line
-                        .iter()
-                        .map(|v| v.get_line(i))
-                        .collect::<Vec<String>>()
-                        .join(&" ".repeat(self.style.row_spacing));
-                    buffer += &format!("\n{}", "\n".repeat(self.style.cmd_line_spacing));
+                    buffer += self
+                        .format
+                        .format_sec_line(
+                            &wrapped_line
+                                .iter()
+                                .map(|v| v.get_line(i))
+                                .collect::<Vec<String>>(),
+                        )
+                        .as_ref();
+                    buffer += self.format.format_sec_new_line().as_ref();
                 }
             }
             buffer.truncate(buffer.len() - 1);
@@ -198,26 +206,38 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
             self.store.get_global()
         };
 
-        buffer += &format!("usage: {} ", self.get_name());
-        for opt_store in cmd_store.opt_iter() {
-            if opt_store.get_optional() {
-                buffer += &format!("[{}] ", opt_store.get_hint());
-            } else {
-                buffer += &format!("<{}> ", opt_store.get_hint());
+        buffer += self
+            .format
+            .format_usage_name(self.get_name().as_ref())
+            .as_ref();
+        // for global cmd, print global option before <COMMAND>
+        if cmd.is_none() {
+            for opt_store in cmd_store.opt_iter() {
+                buffer += self
+                    .format
+                    .format_usage_opt(opt_store.get_hint().as_ref(), opt_store.get_optional())
+                    .as_ref();
             }
-        }
-        if cmd.is_none() && self.store.cmd_len() > 0 {
-            buffer += &format!("<COMMAND> ");
-        }
-        if cmd_store.pos_len() > 0 {
-            buffer += &format!("**ARGS**");
-        } else if cmd.is_none() {
-            for cmd_store in self.store.cmd_iter() {
-                if cmd_store.pos_len() > 0 {
-                    buffer += &format!("**ARGS**");
-                    break;
-                }
+            buffer += self.format.format_usage_cmd(None).as_ref();
+            buffer += self
+                .format
+                .format_usage_pos(
+                    cmd_store.pos_len() + self.store.cmd_iter().fold(0, |acc, x| acc + x.pos_len()),
+                )
+                .as_ref();
+        } else {
+            // for any CMD, print option after it
+            buffer += self
+                .format
+                .format_usage_cmd(Some(cmd_store.get_name().as_ref()))
+                .as_ref();
+            for opt_store in cmd_store.opt_iter() {
+                buffer += self
+                    .format
+                    .format_usage_opt(opt_store.get_hint().as_ref(), opt_store.get_optional())
+                    .as_ref();
             }
+            buffer += self.format.format_usage_pos(cmd_store.pos_len()).as_ref();
         }
         buffer += "\n";
         Ok(self.writer.write(buffer.as_bytes())?)
@@ -235,7 +255,9 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
         if header.is_empty() {
             Ok(0)
         } else {
-            Ok(self.writer.write(format!("\n{}\n", header).as_bytes())?)
+            Ok(self
+                .writer
+                .write(self.format.format_header(header).as_bytes())?)
         }
     }
 
@@ -251,7 +273,9 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
         if footer.is_empty() {
             Ok(0)
         } else {
-            Ok(self.writer.write(format!("\n{}\n", footer).as_bytes())?)
+            Ok(self
+                .writer
+                .write(self.format.format_footer(footer).as_bytes())?)
         }
     }
 
@@ -274,7 +298,7 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
         let mut buffer = String::new();
 
         if !pos_info.is_empty() {
-            buffer += "\nPOS:\n";
+            buffer += self.format.get_pos_title().as_ref();
 
             let mut wrapper = Wrapper::new(&pos_info);
 
@@ -285,12 +309,16 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
                 let max_len = wrapped_line.iter().map(|v| v.len()).max().unwrap_or(1);
 
                 for i in 0..max_len {
-                    buffer += &wrapped_line
-                        .iter()
-                        .map(|v| v.get_line(i))
-                        .collect::<Vec<String>>()
-                        .join(&" ".repeat(self.style.row_spacing));
-                    buffer += &format!("\n{}", "\n".repeat(self.style.pos_line_spacing));
+                    buffer += self
+                        .format
+                        .format_pos_line(
+                            &wrapped_line
+                                .iter()
+                                .map(|v| v.get_line(i))
+                                .collect::<Vec<String>>(),
+                        )
+                        .as_ref();
+                    buffer += self.format.format_pos_new_line().as_ref();
                 }
             }
         }
@@ -317,7 +345,7 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
         let mut buffer = String::new();
 
         if !opt_info.is_empty() {
-            buffer += "\nOPT:\n";
+            buffer += self.format.get_opt_title().as_ref();
 
             let mut wrapper = Wrapper::new(&opt_info);
 
@@ -328,12 +356,16 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
                 let max_len = wrapped_line.iter().map(|v| v.len()).max().unwrap_or(1);
 
                 for i in 0..max_len {
-                    buffer += &wrapped_line
-                        .iter()
-                        .map(|v| v.get_line(i))
-                        .collect::<Vec<String>>()
-                        .join(&" ".repeat(self.style.row_spacing));
-                    buffer += &format!("\n{}", "\n".repeat(self.style.opt_line_spacing));
+                    buffer += self
+                        .format
+                        .format_opt_line(
+                            &wrapped_line
+                                .iter()
+                                .map(|v| v.get_line(i))
+                                .collect::<Vec<String>>(),
+                        )
+                        .as_ref();
+                    buffer += self.format.format_opt_new_line().as_ref();
                 }
             }
         }
