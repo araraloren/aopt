@@ -3,12 +3,16 @@ name = "ff"
 version = "0.2.0"
 authors = ["araraloren <blackcatoverwall@gmail.com>"]
 edition = "2018"
+license = "Mozilla Public License 2.0"
+description = "Example - simple file search tools"
+repository = "https://github.com/araraloren/getopt-rs/"
+categories = ["command-line-interface"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 getopt-rs = { path = "../getopt-rs" }
 getopt-rs-help = { path = "../getopt-rs-help" }
-tracing-subscriber = "0.2"
-color-eyre = "0.5"
-regex = "1.5"
+tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }
+color-eyre = "0.5.11"
+regex = "1.5.4"
