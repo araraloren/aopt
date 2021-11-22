@@ -2,13 +2,13 @@ use std::io::Stdout;
 use std::os::windows::prelude::MetadataExt;
 use std::path::Path;
 
-use getopt_rs::err::create_error;
-use getopt_rs::tools::initialize_creator;
-use getopt_rs::Ustr;
-use getopt_rs::{getopt, prelude::*};
-use getopt_rs_help::printer::Printer;
-use getopt_rs_help::store::{OptStore, PosStore};
-use getopt_rs_help::{AppHelp, DefaultFormat};
+use aopt::err::create_error;
+use aopt::tools::initialize_creator;
+use aopt::Ustr;
+use aopt::{getopt, prelude::*};
+use aopt_help::printer::Printer;
+use aopt_help::store::{OptStore, PosStore};
+use aopt_help::{AppHelp, DefaultFormat};
 use regex::Regex;
 
 fn main() -> color_eyre::Result<()> {
@@ -232,7 +232,7 @@ fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout, DefaultFormat> {
     let global = help.store.get_global_mut();
 
     for opt in set.opt_iter() {
-        if opt.match_style(getopt_rs::opt::Style::Pos) {
+        if opt.match_style(aopt::opt::Style::Pos) {
             global.add_pos(PosStore::new(
                 opt.get_name(),
                 opt.get_hint(),
@@ -240,7 +240,7 @@ fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout, DefaultFormat> {
                 opt.get_index().unwrap().to_string().into(),
                 opt.get_optional(),
             ));
-        } else if !opt.match_style(getopt_rs::opt::Style::Main) {
+        } else if !opt.match_style(aopt::opt::Style::Main) {
             global.add_opt(OptStore::new(
                 opt.get_name(),
                 opt.get_hint(),

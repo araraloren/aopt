@@ -1,8 +1,8 @@
 [workspace]
 
 members = [
-    "getopt-rs",
+    "aopt",
     "snowball-follow",
-    "getopt-rs-help",
+    "aopt-help",
     "simple-find-file",
 ]

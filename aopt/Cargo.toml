@@ -1,11 +1,11 @@
 [package]
-name = "getopt-rs"
+name = "aopt"
 version = "0.3.1"
 authors = ["araraloren <blackcatoverwall@gmail.com>"]
 edition = "2018"
 license = "Mozilla Public License 2.0"
 description = "A flexible and typed getopt tools"
-repository = "https://github.com/araraloren/getopt-rs/"
+repository = "https://github.com/araraloren/aopt/"
 keywords = ["getopt", "cli"]
 categories = ["command-line-interface"]
 

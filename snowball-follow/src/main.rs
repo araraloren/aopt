@@ -5,14 +5,14 @@ use std::path::Path;
 use std::time::Duration;
 use std::{env::Args, io::Stdout};
 
-use getopt_rs::err::create_error;
-use getopt_rs::err::Result;
-use getopt_rs::prelude::*;
-use getopt_rs::tools::initialize_creator;
-use getopt_rs::tools::initialize_prefix;
-use getopt_rs_help::printer::Printer;
-use getopt_rs_help::DefaultFormat;
-use getopt_rs_help::{
+use aopt::err::create_error;
+use aopt::err::Result;
+use aopt::prelude::*;
+use aopt::tools::initialize_creator;
+use aopt::tools::initialize_prefix;
+use aopt_help::printer::Printer;
+use aopt_help::DefaultFormat;
+use aopt_help::{
     store::{OptStore, PosStore},
     AppHelp,
 };
@@ -352,7 +352,7 @@ fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout, DefaultFormat> {
     let global = help.store.get_global_mut();
 
     for opt in set.opt_iter() {
-        if opt.match_style(getopt_rs::opt::Style::Pos) {
+        if opt.match_style(aopt::opt::Style::Pos) {
             global.add_pos(PosStore::new(
                 opt.get_name(),
                 opt.get_hint(),
@@ -360,7 +360,7 @@ fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout, DefaultFormat> {
                 opt.get_index().unwrap().to_string().into(),
                 opt.get_optional(),
             ));
-        } else if !opt.match_style(getopt_rs::opt::Style::Main) {
+        } else if !opt.match_style(aopt::opt::Style::Main) {
             global.add_opt(OptStore::new(
                 opt.get_name(),
                 opt.get_hint(),

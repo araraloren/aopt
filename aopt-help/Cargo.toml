@@ -1,11 +1,11 @@
 [package]
-name = "getopt-rs-help"
+name = "aopt-help"
 version = "0.2.0"
 authors = ["araraloren <araraloren@gmail.com>"]
 edition = "2018"
 license = "Mozilla Public License 2.0"
-description = "Generate help message for getopt-rs"
-repository = "https://github.com/araraloren/getopt-rs/"
+description = "Generate help message for aopt"
+repository = "https://github.com/araraloren/aopt/"
 keywords = ["getopt", "cli", "help", "usage"]
 categories = ["command-line-interface"]
 

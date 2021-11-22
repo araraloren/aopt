@@ -1,4 +1,4 @@
-# getopt_rs
+# aopt
 
 A getopt like command line tools for rust.
 
