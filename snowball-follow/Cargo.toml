@@ -1,6 +1,6 @@
 [package]
 name = "snow"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2018"
 license = "Mozilla Public License 2.0"
 description = "Example - simple spyder get follow people count on xueqiu.com"

@@ -3,6 +3,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::set::Set;
 use crate::uid::Uid;
+use crate::err::Result;
 use crate::parser::Parser;
 use crate::opt::OptCallback;
 use crate::parser::HashMapIter;
@@ -59,10 +60,13 @@ impl<S: Set + Default, P: Parser + Default> SingleApp<S, P> {
         self.parser.callback_iter()
     }
 
-    pub fn run<RET, F: FnMut(SingleApp<S, P>) -> RET>(&mut self, mut r: F) -> RET {
+    pub fn run<RET, F: FnMut(bool, SingleApp<S, P>) -> Result<RET>>(&mut self, mut iter: impl Iterator<Item = String>, mut r: F) -> Result<RET> {
+        let set = &mut self.set;
+        let parser = &mut self.parser;
+        let ret = parser.parse(set, &mut iter)?;
         let _self = std::mem::take(self);
-        // TODO add getopt!
-        r(_self)
+        
+        r(ret, _self)
     }
 }
 
