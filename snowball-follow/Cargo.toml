@@ -2,7 +2,7 @@
 name = "snow"
 version = "0.2.0"
 edition = "2018"
-license = "Mozilla Public License 2.0"
+license = "MPL-2.0"
 description = "Example - simple spyder get follow people count on xueqiu.com"
 repository = "https://github.com/araraloren/aopt/"
 categories = ["command-line-interface"]
