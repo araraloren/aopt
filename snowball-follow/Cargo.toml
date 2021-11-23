@@ -11,7 +11,7 @@ categories = ["command-line-interface"]
 
 [dependencies]
 aopt = { path = "../aopt", version = "0.3.1" }
-aopt-help = { path = "../aopt-help", version = "0.2.0" }
+aopt-help = { path = "../aopt-help", version = "0.2.1" }
 tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }
 color-eyre = "0.5.11"
 reqwest = { version = "0.11.6", features = ["json", "gzip", "cookies"] }
