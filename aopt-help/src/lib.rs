@@ -218,7 +218,9 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
                     .format_usage_opt(opt_store.get_hint().as_ref(), opt_store.get_optional())
                     .as_ref();
             }
-            buffer += self.format.format_usage_cmd(None).as_ref();
+            if self.store.cmd_iter().len() > 0 {
+                buffer += self.format.format_usage_cmd(None).as_ref();
+            }
             buffer += self
                 .format
                 .format_usage_pos(

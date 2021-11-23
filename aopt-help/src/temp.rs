@@ -275,8 +275,12 @@ fn main() {
 
     dbg!(&app);
 
-    println!("help of golbal ---------------> ");
+    println!("help ---------------> ");
     app.print_help().unwrap();
+    println!("help ---------------> ");
+
+    println!("help of golbal ---------------> ");
+    app.print_cmd_help(None).unwrap();
     println!("help of golbal ---------------> ");
 
     println!("help of cmd perl ---------------> ");
