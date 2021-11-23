@@ -177,6 +177,8 @@ fn parser_command_line(args: Args) -> Result<SimpleSet> {
     let mut set = SimpleSet::default();
     let mut parser = SimpleParser::<UidGenerator>::default();
 
+    parser.set_strict(true);
+
     initialize_creator(&mut set);
     initialize_prefix(&mut set);
 
@@ -201,6 +203,12 @@ fn parser_command_line(args: Args) -> Result<SimpleSet> {
             "Set count parameter of request",
             Some(OptValue::from(14i64)),
         ),
+        (
+            "-j=b/",
+            "--/10jqka",
+            "Parse the file using 10jqka format",
+            None,
+        ),
     ] {
         if let Ok(mut commit) = set.add_opt(optstr) {
             if let Some(value) = value {
@@ -220,7 +228,7 @@ fn parser_command_line(args: Args) -> Result<SimpleSet> {
             simple_pos_mut_cb!(|_, set, id, _, _| {
                 let mut ret = Ok(None);
 
-                if check_stock_number(id) {
+                if check_stock_number(id, false) {
                     if let Ok(Some(opt)) = set.find_mut("stock_id") {
                         let value_mut = opt.get_value_mut();
 
@@ -250,6 +258,10 @@ fn parser_command_line(args: Args) -> Result<SimpleSet> {
             simple_pos_mut_cb!(|_, set, file, _, _| {
                 let mut ret = Ok(None);
                 let fh = Path::new(file);
+                let is_10jqka = *set
+                    .get_value("j")?
+                    .map(|v| v.as_bool().unwrap_or(&false))
+                    .unwrap_or(&false);
                 if fh.is_file() {
                     if let Ok(Some(opt)) = set.find_mut("stock_id") {
                         let value_mut = opt.get_value_mut();
@@ -265,21 +277,28 @@ fn parser_command_line(args: Args) -> Result<SimpleSet> {
                             let mut line = String::default();
 
                             loop {
-                                if let Ok(count) = reader.read_line(&mut line) {
-                                    if count > 0 {
-                                        if check_stock_number(line.as_ref()) {
-                                            vec_mut.push(normalize_stock_number(line.as_ref()));
+                                match reader.read_line(&mut line) {
+                                    Ok(count) => {
+                                        if count > 0 {
+                                            if check_stock_number(line.as_ref(), is_10jqka) {
+                                                if is_10jqka {
+                                                    vec_mut.push(line.trim().to_owned());
+                                                } else {
+                                                    vec_mut.push(normalize_stock_number(
+                                                        line.as_ref(),
+                                                    ));
+                                                }
+                                            }
                                         } else {
-                                            eprintln!("`{}` is not a valid stock number", line);
+                                            break;
                                         }
-                                    } else {
-                                        break;
                                     }
-                                } else {
-                                    ret = Err(create_error(format!(
-                                        "can not read line from file {}",
-                                        file
-                                    )));
+                                    Err(e) => {
+                                        ret = Err(create_error(format!(
+                                            "can not read line from file {}: {:?}",
+                                            file, e
+                                        )));
+                                    }
                                 }
                             }
                         }
@@ -294,16 +313,30 @@ fn parser_command_line(args: Args) -> Result<SimpleSet> {
     Ok(set)
 }
 
-fn check_stock_number(number: &str) -> bool {
-    if number.len() > 0 && number.len() <= 6 {
-        for char in number.chars() {
-            if !char.is_ascii_digit() {
-                return false;
+fn check_stock_number(number: &str, is_10jqka: bool) -> bool {
+    if is_10jqka {
+        let trimed = number.trim();
+
+        if !trimed.is_empty() {
+            for char in trimed.chars() {
+                if !char.is_ascii_digit() || char == 'S' || char == 'Z' || char == 'H' {
+                    return false;
+                }
             }
         }
         true
     } else {
-        false
+        if number.len() > 0 && number.len() <= 6 {
+            for char in number.chars() {
+                if !char.is_ascii_digit() {
+                    return false;
+                }
+            }
+            true
+        } else {
+            eprintln!("`{}` is not a valid stock number", number);
+            false
+        }
     }
 }
 
