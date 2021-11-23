@@ -69,6 +69,11 @@ impl Context for OptContext {
         Ok(matched)
     }
 
+    fn undo(&mut self, opt: &mut dyn Opt) {
+        self.value = None;
+        self.matched_index = None;
+    }
+
     fn get_value(&self) -> Option<&OptValue> {
         self.value.as_ref()
     }

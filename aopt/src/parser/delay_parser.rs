@@ -354,6 +354,10 @@ where
                         });
                 }
             }
+            else {
+                value_keeper.clear();
+                break;
+            }
         }
 
         for (uid, values) in value_keeper {

@@ -50,6 +50,10 @@ impl Matcher for OptMatcher {
                     self.consoume_argument = self.consoume_argument || ctx.is_comsume_argument();
                     return Ok(Some(ctx));
                 }
+                else {
+                    ctx.undo(opt);
+                    break;
+                }
             }
         }
         Ok(None)
