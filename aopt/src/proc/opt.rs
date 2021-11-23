@@ -49,13 +49,14 @@ impl Matcher for OptMatcher {
                 if ctx.process(opt)? {
                     self.consoume_argument = self.consoume_argument || ctx.is_comsume_argument();
                     return Ok(Some(ctx));
-                } else {
-                    ctx.undo(opt);
-                    break;
                 }
             }
         }
         Ok(None)
+    }
+
+    fn undo(&mut self) {
+        self.context.iter_mut().for_each(|v| v.undo());
     }
 
     fn is_matched(&self) -> bool {

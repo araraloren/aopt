@@ -20,6 +20,13 @@ pub use pre_parser::PreParser;
 pub use simple_parser::SimpleParser;
 pub use state::ParserState;
 
+#[derive(Debug)]
+pub struct OptValueKeeper {
+    noa_index: usize,
+
+    value: OptValue,
+}
+
 pub trait Parser: Debug {
     fn parse(&mut self, set: &mut dyn Set, iter: &mut dyn Iterator<Item = String>) -> Result<bool>;
 

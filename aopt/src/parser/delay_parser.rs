@@ -4,6 +4,7 @@ use std::fmt::Debug;
 use std::ops::DerefMut;
 
 use super::HashMapIter;
+use super::OptValueKeeper;
 use super::Parser;
 use super::ParserState;
 
@@ -14,13 +15,6 @@ use crate::proc::{Info, Matcher, NonOptMatcher, OptMatcher, Proc};
 use crate::set::{OptionInfo, Set};
 use crate::uid::{Generator, Uid};
 use crate::Ustr;
-
-#[derive(Debug)]
-pub struct OptValueKeeper {
-    noa_index: usize,
-
-    value: OptValue,
-}
 
 #[derive(Debug, Default)]
 pub struct DelayParser<G>
@@ -314,6 +308,9 @@ where
                 }
             }
         }
+        if !matched {
+            matcher.undo();
+        }
         Ok(matched)
     }
 }
@@ -355,7 +352,10 @@ where
                 }
             }
         }
-
+        if !matcher.is_matched() {
+            matcher.undo();
+            value_keeper.clear();
+        }
         for (uid, values) in value_keeper {
             for value in values {
                 self.add_delay_value(uid, value);

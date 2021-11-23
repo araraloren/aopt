@@ -1,6 +1,6 @@
 [package]
 name = "aopt"
-version = "0.3.4"
+version = "0.3.5"
 authors = ["araraloren <blackcatoverwall@gmail.com>"]
 edition = "2018"
 license = "MPL-2.0"

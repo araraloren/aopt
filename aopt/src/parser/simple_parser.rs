@@ -4,6 +4,7 @@ use std::fmt::Debug;
 use std::ops::DerefMut;
 
 use super::HashMapIter;
+use super::OptValueKeeper;
 use super::Parser;
 use super::ParserState;
 
@@ -287,6 +288,9 @@ where
                 }
             }
         }
+        if !matched {
+            matcher.undo();
+        }
         Ok(matched)
     }
 }
@@ -297,6 +301,7 @@ where
 {
     fn process(&mut self, msg: &mut OptMatcher, set: &mut dyn Set) -> Result<bool> {
         let matcher = msg;
+        let mut value_keeper = HashMap::<Uid, Vec<OptValueKeeper>>::new();
 
         debug!(?matcher, "OptMatcher got message");
         for info in self.subscriber_info.iter() {
@@ -308,21 +313,52 @@ where
 
                 if let Some(noa_index) = ctx.get_matched_index() {
                     let invoke_callback = opt.is_need_invoke();
-                    let mut value = ctx.take_value();
+                    let value = ctx.take_value();
 
                     assert_eq!(value.is_some(), true);
-
                     if invoke_callback {
-                        // invoke callback of current option/non-option
-                        value = self.invoke_callback(uid, set, noa_index, value.unwrap())?;
-
-                        debug!(?value, "get callback return value");
-                        set[uid].as_mut().set_invoke(false);
+                        opt.set_invoke(false);
                     }
 
-                    set[uid].as_mut().set_callback_ret(value)?;
+                    // add the value to value keeper, call the callback after cmd/pos processed
+                    info!("add {:?} to delay parser value keeper", &uid);
+                    value_keeper
+                        .entry(uid)
+                        .or_insert(vec![])
+                        .push(OptValueKeeper {
+                            noa_index,
+                            value: value.unwrap(),
+                        });
                 }
             }
+        }
+
+        if matcher.is_matched() {
+            // do value set and invoke callback
+            let uids: Vec<_> = value_keeper.keys().map(|v| v.clone()).collect();
+
+            for uid in uids {
+                if let Some((_, values)) = value_keeper.remove_entry(&uid) {
+                    for value in values {
+                        let mut parsed_value = Some(value.value);
+                        let has_callback = self.get_callback(uid).is_some();
+
+                        if has_callback {
+                            // invoke callback of current option
+                            parsed_value = self.invoke_callback(
+                                uid,
+                                set,
+                                value.noa_index,
+                                parsed_value.unwrap(),
+                            )?;
+                        }
+
+                        set[uid].as_mut().set_callback_ret(parsed_value)?;
+                    }
+                }
+            }
+        } else {
+            matcher.undo();
         }
         Ok(matcher.is_matched())
     }

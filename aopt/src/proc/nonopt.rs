@@ -72,6 +72,12 @@ impl Matcher for NonOptMatcher {
         Ok(None)
     }
 
+    fn undo(&mut self) {
+        if let Some(ctx) = self.context.as_mut() {
+            ctx.undo();
+        }
+    }
+
     fn is_matched(&self) -> bool {
         self.context
             .as_ref()

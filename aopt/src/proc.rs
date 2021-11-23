@@ -30,6 +30,8 @@ pub trait Matcher: Debug {
 
     fn process(&mut self, uid: Uid, set: &mut dyn Set) -> Result<Option<&mut Box<dyn Context>>>;
 
+    fn undo(&mut self);
+
     fn is_matched(&self) -> bool;
 
     fn is_comsume_argument(&self) -> bool;

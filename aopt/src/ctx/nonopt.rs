@@ -54,7 +54,7 @@ impl Context for NonOptContext {
         Ok(matched)
     }
 
-    fn undo(&mut self, _opt: &mut dyn Opt) {
+    fn undo(&mut self) {
         self.value = None;
         self.matched_index = None;
     }

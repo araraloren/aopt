@@ -13,7 +13,7 @@ pub use self::opt::OptContext;
 pub trait Context: Debug {
     fn process(&mut self, opt: &mut dyn Opt) -> Result<bool>;
 
-    fn undo(&mut self, opt: &mut dyn Opt);
+    fn undo(&mut self);
 
     fn get_value(&self) -> Option<&OptValue>;
 
