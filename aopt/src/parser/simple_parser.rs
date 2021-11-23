@@ -8,6 +8,7 @@ use super::Parser;
 use super::ParserState;
 
 use crate::arg::ArgStream;
+use crate::err;
 use crate::err::Result;
 use crate::opt::{OptCallback, OptValue, Style};
 use crate::proc::{Info, Matcher, NonOptMatcher, OptMatcher, Proc};
@@ -27,6 +28,8 @@ where
     callback: HashMap<Uid, RefCell<OptCallback>>,
 
     noa: Vec<Ustr>,
+
+    strict: bool,
 }
 
 impl<G> SimpleParser<G>
@@ -38,6 +41,10 @@ where
             uid_gen,
             ..Self::default()
         }
+    }
+
+    pub fn set_strict(&mut self, strict: bool) {
+        self.strict = strict;
     }
 }
 
@@ -98,6 +105,16 @@ where
                                     break;
                                 }
                             }
+                        }
+                    }
+                    if !matched {
+                        // if current ARG is like an option, but it not matched
+                        if self.strict {
+                            return Err(err::SpecialError::InvalidOptionName(format!(
+                                "{}",
+                                arg.current.unwrap_or_default().as_str()
+                            ))
+                            .into());
                         }
                     }
                 }
@@ -305,8 +322,7 @@ where
 
                     set[uid].as_mut().set_callback_ret(value)?;
                 }
-            } 
-            else {
+            } else {
                 break;
             }
         }

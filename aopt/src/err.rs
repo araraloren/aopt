@@ -4,16 +4,16 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("Argument error: '{0}'")]
+    #[error("Argument error: `{0}`")]
     FromArgumentError(#[from] ArgumentError),
 
-    #[error("Construct error: '{0}'")]
+    #[error("Construct error: `{0}`")]
     FromConstrutError(#[from] ConstructError),
 
-    #[error("Parser error: '{0}'")]
+    #[error("Parser error: `{0}`")]
     FromParserError(#[from] ParserError),
 
-    #[error("Special error: '{0}'")]
+    #[error("Special error: `{0}`")]
     FromSpecialError(#[from] SpecialError),
 
     #[error("{0}")]
@@ -39,86 +39,89 @@ pub fn create_failure(msg: String) -> SpecialError {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ArgumentError {
-    #[error("Failed parsing '{0}' as an option string")]
+    #[error("Failed parsing `{0}` as an option string")]
     ParsingFailed(String),
 
-    #[error("Can not get sub-pattern({1} .. {2}) of '{0}'")]
+    #[error("Can not get sub-pattern({1} .. {2}) of `{0}`")]
     PatternAccessFailed(String, usize, usize),
 
-    #[error("Syntax error! Missing an value after '=': '{0}'")]
+    #[error("Syntax error! Missing an value after '=': `{0}`")]
     MissingValue(String),
 
-    #[error("Syntax error! Missing option prefix: '{0}'")]
+    #[error("Syntax error! Missing option prefix: `{0}`")]
     MissingPrefix(String),
 
-    #[error("Syntax error! Missing option name: '{0}'")]
+    #[error("Syntax error! Missing option name: `{0}`")]
     MissingName(String),
 
-    #[error("Can not unwrap '{0}' from Argument")]
+    #[error("Can not unwrap `{0}` from Argument")]
     UnwrapError(String),
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum ParserError {
-    #[error("Not support option type '{0}'")]
+    #[error("Not support option type `{0}`")]
     NotSupportOptionType(String),
 
-    #[error("Failed parsing '{0}': '{1}'")]
+    #[error("Failed parsing `{0}`: `{1}`")]
     ParsingValueFailed(String, String),
 
-    #[error("Invalid callback return value type: '{0}'")]
+    #[error("Invalid callback return value type: `{0}`")]
     InvalidReturnValueOfCallback(String),
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum ConstructError {
-    #[error("Syntax error! Missing option type: '{0}'")]
+    #[error("Syntax error! Missing option type: `{0}`")]
     MissingOptionType(String),
 
-    #[error("Syntax error! Missing option name: '{0}'")]
+    #[error("Syntax error! Missing option name: `{0}`")]
     MissingOptionName(String),
 
-    #[error("Syntax error! Failed to parsing option string '{0}'")]
+    #[error("Syntax error! Failed to parsing option string `{0}`")]
     ParsingFailed(String),
 
-    #[error("Can not get sub-pattern({1} .. {2}) of '{0}'")]
+    #[error("Can not get sub-pattern({1} .. {2}) of `{0}`")]
     PatternAccessFailed(String, usize, usize),
 
-    #[error("Syntax error! '{0}' parsing failed: {1}")]
+    #[error("Syntax error! `{0}` parsing failed: `{1}`")]
     IndexParsingFailed(String, String),
 
-    #[error("Option type '{0}' not support deactivate style")]
+    #[error("Option type `{0}` not support deactivate style")]
     NotSupportDeactivateStyle(String),
 
-    #[error("Syntax error! Missing prefix for option type '{0}'")]
+    #[error("Syntax error! Missing prefix for option type `{0}`")]
     MissingOptionPrefix(String),
 
-    #[error("Syntax error! Missing Non-Option index: '{0}'")]
+    #[error("Syntax error! Missing Non-Option index: `{0}`")]
     MissingNonOptionIndex(String),
 
-    #[error("Option '{0} not support callback type '{1}'")]
+    #[error("Option `{0}` not support callback type `{1}`")]
     NotSupportCallbackType(String, String),
 
-    #[error("Not support option type '{0}'")]
+    #[error("Not support option type `{0}`")]
     NotSupportOptionType(String),
 
-    #[error("Invalid alias '{0}', check the option prefix or name")]
+    #[error("Invalid alias `{0}`, check the option prefix or name")]
     InvalidOptionAlias(String),
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum SpecialError {
-    #[error("Option '{0}' is force required")]
+    #[error("Option `{0}` is force required")]
     OptionForceRequired(String),
 
-    #[error("Missing argument for option '{0}'")]
+    #[error("Missing argument for option `{0}`")]
     MissingArgumentForOption(String),
 
-    #[error("Invalid value for option '{0}'")]
+    #[error("Invalid value for option `{0}`")]
     InvalidArgumentForOption(String),
 
     #[error("POS @{0} is force required: `{1}`")]
     POSForceRequired(u64, String),
+
+    #[error("Invalid option name: `{0}`")]
+    InvalidOptionName(String),
 
     #[error("{0}")]
     CustomFailure(String),

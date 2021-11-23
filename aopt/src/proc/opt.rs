@@ -49,8 +49,7 @@ impl Matcher for OptMatcher {
                 if ctx.process(opt)? {
                     self.consoume_argument = self.consoume_argument || ctx.is_comsume_argument();
                     return Ok(Some(ctx));
-                }
-                else {
+                } else {
                     ctx.undo(opt);
                     break;
                 }

@@ -353,8 +353,7 @@ where
                             value: value.unwrap(),
                         });
                 }
-            }
-            else {
+            } else {
                 value_keeper.clear();
                 break;
             }

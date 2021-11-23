@@ -1,12 +1,12 @@
 use std::cell::RefCell;
 use std::ops::{Deref, DerefMut};
 
-use crate::set::Set;
-use crate::uid::Uid;
 use crate::err::Result;
-use crate::parser::Parser;
 use crate::opt::OptCallback;
 use crate::parser::HashMapIter;
+use crate::parser::Parser;
+use crate::set::Set;
+use crate::uid::Uid;
 
 #[derive(Debug, Default)]
 pub struct SingleApp<S: Set + Default, P: Parser + Default> {
@@ -17,11 +17,7 @@ pub struct SingleApp<S: Set + Default, P: Parser + Default> {
 
 impl<S: Set + Default, P: Parser + Default> SingleApp<S, P> {
     pub fn new(name: String, set: S, parser: P) -> Self {
-        Self {
-            name,
-            set,
-            parser,
-        }
+        Self { name, set, parser }
     }
 
     pub fn get_name(&self) -> &str {
@@ -60,12 +56,16 @@ impl<S: Set + Default, P: Parser + Default> SingleApp<S, P> {
         self.parser.callback_iter()
     }
 
-    pub fn run<RET, F: FnMut(bool, SingleApp<S, P>) -> Result<RET>>(&mut self, mut iter: impl Iterator<Item = String>, mut r: F) -> Result<RET> {
+    pub fn run<RET, F: FnMut(bool, SingleApp<S, P>) -> Result<RET>>(
+        &mut self,
+        mut iter: impl Iterator<Item = String>,
+        mut r: F,
+    ) -> Result<RET> {
         let set = &mut self.set;
         let parser = &mut self.parser;
         let ret = parser.parse(set, &mut iter)?;
         let _self = std::mem::take(self);
-        
+
         r(ret, _self)
     }
 }
