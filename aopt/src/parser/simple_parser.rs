@@ -322,8 +322,6 @@ where
 
                     set[uid].as_mut().set_callback_ret(value)?;
                 }
-            } else {
-                break;
             }
         }
         Ok(matcher.is_matched())

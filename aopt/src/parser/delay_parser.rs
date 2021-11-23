@@ -353,9 +353,6 @@ where
                             value: value.unwrap(),
                         });
                 }
-            } else {
-                value_keeper.clear();
-                break;
             }
         }
 
