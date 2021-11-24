@@ -202,7 +202,7 @@ fn parser_command_line(args: Args) -> Result<SimpleSet> {
             "--count",
             "Set count parameter of request",
             Some(OptValue::from(14i64)),
-        )
+        ),
     ] {
         if let Ok(mut commit) = set.add_opt(optstr) {
             if let Some(value) = value {
@@ -330,9 +330,10 @@ fn convert_line_to_stock_number(line: &str) -> Option<String> {
         } else {
             return Some(normalize_stock_number(line));
         }
-    }
-    else if line.len() == 9 {
-        if line.ends_with(&format!(".{}", STOCK_SHANGHAI)) || line.ends_with(&format!(".{}", STOCK_SHENZHEN)) {
+    } else if line.len() == 9 {
+        if line.ends_with(&format!(".{}", STOCK_SHANGHAI))
+            || line.ends_with(&format!(".{}", STOCK_SHENZHEN))
+        {
             for char in line.chars().rev().skip(3) {
                 if !char.is_ascii_digit() {
                     return None;
