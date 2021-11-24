@@ -2,6 +2,38 @@ use crate::err::{ArgumentError, Result};
 use crate::pat::{ParseIndex, ParserPattern};
 use crate::Ustr;
 
+/// Parse the input command line argument with given prefixs, return an [`DataKeeper`].
+///
+/// The struct of the input option string are:
+///
+/// ```
+/// [--][/][option][=][value]
+///   |  |     |    |    |
+///   |  |     |    |    |
+///   |  |     |    |    The value part, it is optional.
+///   |  |     |    |
+///   |  |     |    The delimiter of option name and value.
+///   |  |     |    
+///   |  |     The option name part, it must be provide by user.
+///   |  |
+///   |  The disable symbol, generally it is using for boolean option.
+///   |  
+///   The prefix of option.
+/// ```
+///
+/// # Example
+///
+/// ```rust
+/// use atop::arg;
+/// use ustr::Ustr;
+///
+/// let prefix = &[Ustr::from("--"), Ustr::from("-")];
+///
+/// let dk = parser::parse_argument(Ustr::from("--opt=32"), prefix);
+///
+/// dbg!(dk);
+///
+/// ```
 pub fn parse_argument(pattern: Ustr, prefix: &[Ustr]) -> Result<DataKeeper> {
     let pattern = ParserPattern::new(pattern, prefix);
     let mut index = ParseIndex::new(pattern.len());
