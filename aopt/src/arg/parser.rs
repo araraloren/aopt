@@ -2,11 +2,11 @@ use crate::err::{ArgumentError, Result};
 use crate::pat::{ParseIndex, ParserPattern};
 use crate::Ustr;
 
-/// Parse the input command line argument with given prefixs, return an [`DataKeeper`].
+/// Parse the input command line item with given prefixs, return an [`DataKeeper`].
 ///
 /// The struct of the input option string are:
 ///
-/// ```
+/// ```!
 /// [--][/][option][=][value]
 ///   |  |     |    |    |
 ///   |  |     |    |    |
@@ -24,15 +24,39 @@ use crate::Ustr;
 /// # Example
 ///
 /// ```rust
-/// use atop::arg;
+/// use aopt::arg::parser;
 /// use ustr::Ustr;
+/// use aopt::err::Result;
 ///
-/// let prefix = &[Ustr::from("--"), Ustr::from("-")];
+/// fn main() -> Result<()> {
+///     let prefix = &[Ustr::from("--"), Ustr::from("-")];
 ///
-/// let dk = parser::parse_argument(Ustr::from("--opt=32"), prefix);
+///     {// parse option with value
+///         let dk = parser::parse_argument(Ustr::from("--foo=32"), prefix)?;
 ///
-/// dbg!(dk);
+///         assert_eq!(dk.prefix, Some(Ustr::from("--")));
+///         assert_eq!(dk.name, Some(Ustr::from("foo")));
+///         assert_eq!(dk.value, Some(Ustr::from("32")));
+///         assert_eq!(dk.disable, false);
+///     }
+///     {// parse boolean option
+///         let dk = parser::parse_argument(Ustr::from("--/bar"), prefix)?;
 ///
+///         assert_eq!(dk.prefix, Some(Ustr::from("--")));
+///         assert_eq!(dk.name, Some(Ustr::from("bar")));
+///         assert_eq!(dk.value, None);
+///         assert_eq!(dk.disable, true);
+///     }
+///     {// parse other string
+///         let dk = parser::parse_argument(Ustr::from("-=bar"), prefix)?;
+///
+///         assert_eq!(dk.prefix, Some(Ustr::from("-")));
+///         assert_eq!(dk.name, None);
+///         assert_eq!(dk.value, Some(Ustr::from("bar")));
+///         assert_eq!(dk.disable, false);
+///     }
+///     Ok(())
+/// }
 /// ```
 pub fn parse_argument(pattern: Ustr, prefix: &[Ustr]) -> Result<DataKeeper> {
     let pattern = ParserPattern::new(pattern, prefix);
