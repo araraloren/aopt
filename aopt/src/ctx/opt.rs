@@ -19,6 +19,8 @@ pub struct OptContext {
     value: Option<OptValue>,
 
     matched_index: Option<usize>,
+
+    disable: bool,
 }
 
 impl OptContext {
@@ -28,6 +30,7 @@ impl OptContext {
         argument: Option<Ustr>,
         style: Style,
         consume_arg: bool,
+        disable: bool,
     ) -> Self {
         Self {
             prefix,
@@ -37,6 +40,7 @@ impl OptContext {
             consume_arg,
             value: None,
             matched_index: None,
+            disable,
         }
     }
 }
@@ -59,11 +63,26 @@ impl Context for OptContext {
                 );
             }
             self.matched_index = Some(0);
-            let value = opt
-                .parse_value(self.argument.unwrap_or(Ustr::from("")))
-                .map_err(|_| SpecialError::InvalidArgumentForOption(opt.get_hint().to_owned()))?;
-            self.set_value(value);
-            debug!("get return value {:?}!", self.get_value());
+            if opt.is_deactivate_style() == self.disable {
+                let value = opt
+                    .parse_value(self.argument.unwrap_or(Ustr::from("")))
+                    .map_err(|_| {
+                        SpecialError::InvalidArgumentForOption(opt.get_hint().to_owned())
+                    })?;
+                self.set_value(value);
+                debug!("get return and will set value {:?}!", self.get_value());
+            } else if !opt.is_deactivate_style() {
+                return Err(SpecialError::CanNotDisableOption(format!(
+                    "{}",
+                    opt.get_name().as_ref()
+                ))
+                .into());
+            }
+            // don't throw error when set deactivate style option
+            else {
+                warn!("get return and but not set value {:?}!", self.get_value());
+            }
+
             opt.set_invoke(true);
         }
         Ok(matched)

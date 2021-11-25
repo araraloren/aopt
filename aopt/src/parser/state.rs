@@ -66,6 +66,7 @@ impl ParserState {
                         arg.get_value().clone(),
                         Style::Argument,
                         false,
+                        arg.is_disabled(),
                     )));
                 }
             }
@@ -77,6 +78,7 @@ impl ParserState {
                         arg.next.clone(),
                         Style::Argument,
                         true,
+                        arg.is_disabled(),
                     )));
                 }
             }
@@ -92,6 +94,7 @@ impl ParserState {
                                 Some(name_value.1.into()),
                                 Style::Argument,
                                 false,
+                                arg.is_disabled(),
                             )));
                         }
                     }
@@ -108,6 +111,7 @@ impl ParserState {
                                     None,
                                     Style::Multiple,
                                     false,
+                                    arg.is_disabled(),
                                 )));
                             }
                         }
@@ -122,6 +126,7 @@ impl ParserState {
                         None,
                         Style::Boolean,
                         false,
+                        arg.is_disabled(),
                     )));
                 }
             }
@@ -133,6 +138,7 @@ impl ParserState {
                         arg.get_value().clone(),
                         Style::Argument,
                         false,
+                        arg.is_disabled(),
                     )));
                 }
             }
@@ -144,6 +150,7 @@ impl ParserState {
                         arg.next.clone(),
                         Style::Argument,
                         true,
+                        arg.is_disabled(),
                     )));
                 }
             }
@@ -159,6 +166,7 @@ impl ParserState {
                                 Some(name_value.1.into()),
                                 Style::Argument,
                                 false,
+                                arg.is_disabled(),
                             )));
                         }
                     }
@@ -175,6 +183,7 @@ impl ParserState {
                                     None,
                                     Style::Multiple,
                                     false,
+                                    arg.is_disabled(),
                                 )));
                             }
                         }
@@ -189,6 +198,7 @@ impl ParserState {
                         None,
                         Style::Boolean,
                         false,
+                        arg.is_disabled(),
                     )));
                 }
             }

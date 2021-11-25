@@ -123,6 +123,9 @@ pub enum SpecialError {
     #[error("Invalid option name: `{0}`")]
     InvalidOptionName(String),
 
+    #[error("Can not disable option which not support deactivate style: `{0}`")]
+    CanNotDisableOption(String),
+
     #[error("{0}")]
     CustomFailure(String),
 }
