@@ -44,6 +44,11 @@ where
         }
     }
 
+    pub fn with_strict(mut self, strict: bool) -> Self {
+        self.strict = strict;
+        self
+    }
+
     pub fn set_strict(&mut self, strict: bool) {
         self.strict = strict;
     }

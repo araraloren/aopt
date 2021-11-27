@@ -3,7 +3,6 @@ use std::os::windows::prelude::MetadataExt;
 use std::path::Path;
 
 use aopt::err::create_error;
-use aopt::tools::initialize_creator;
 use aopt::Ustr;
 use aopt::{getopt, prelude::*};
 use aopt_help::printer::Printer;
@@ -17,10 +16,9 @@ fn main() -> color_eyre::Result<()> {
         .init();
     color_eyre::install()?;
 
-    let mut set = SimpleSet::default();
+    let mut set = SimpleSet::default().with_default_creator();
     let mut parser = DelayParser::<UidGenerator>::default();
 
-    initialize_creator(&mut set);
     set.add_prefix(Ustr::from("-"));
     set.add_prefix(Ustr::from("--"));
     set.add_prefix(Ustr::from("+"));

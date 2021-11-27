@@ -5,6 +5,8 @@ use super::{Index, IndexMut, Iter, IterMut};
 
 use crate::err::{ConstructError, Result};
 use crate::opt::Opt;
+use crate::opt::{ArrayCreator, BoolCreator, FltCreator, IntCreator, StrCreator, UintCreator};
+use crate::opt::{CmdCreator, MainCreator, PosCreator};
 use crate::{gstr, Ustr, UstrMap};
 
 #[derive(Debug, Default)]
@@ -18,10 +20,33 @@ pub struct SimpleSet {
 
 impl SimpleSet {
     pub fn new() -> Self {
-        let mut ret = Self::default();
-        crate::tools::initialize_creator(&mut ret);
-        crate::tools::initialize_prefix(&mut ret);
-        ret
+        Self::default()
+    }
+
+    pub fn with_prefix(mut self, prefix: Ustr) -> Self {
+        self.add_prefix(prefix);
+        self
+    }
+
+    pub fn with_creator(mut self, creator: Box<dyn Creator>) -> Self {
+        self.add_creator(creator);
+        self
+    }
+
+    pub fn with_default_prefix(self) -> Self {
+        self.with_prefix("--".into()).with_prefix("-".into())
+    }
+
+    pub fn with_default_creator(self) -> Self {
+        self.with_creator(Box::new(ArrayCreator::default()))
+            .with_creator(Box::new(BoolCreator::default()))
+            .with_creator(Box::new(FltCreator::default()))
+            .with_creator(Box::new(IntCreator::default()))
+            .with_creator(Box::new(StrCreator::default()))
+            .with_creator(Box::new(UintCreator::default()))
+            .with_creator(Box::new(CmdCreator::default()))
+            .with_creator(Box::new(MainCreator::default()))
+            .with_creator(Box::new(PosCreator::default()))
     }
 }
 

@@ -20,6 +20,21 @@ impl<S: Set + Default, P: Parser + Default> SingleApp<S, P> {
         Self { name, set, parser }
     }
 
+    pub fn with_name(mut self, name: String) -> Self {
+        self.name = name;
+        self
+    }
+
+    pub fn with_optset(mut self, set: S) -> Self {
+        self.set = set;
+        self
+    }
+
+    pub fn with_parser(mut self, parser: P) -> Self {
+        self.parser = parser;
+        self
+    }
+
     pub fn get_name(&self) -> &str {
         self.name.as_str()
     }

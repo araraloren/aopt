@@ -90,27 +90,6 @@ macro_rules! getopt {
 }
 
 pub mod tools {
-    use crate::opt::{ArrayCreator, BoolCreator, FltCreator, IntCreator, StrCreator, UintCreator};
-    use crate::opt::{CmdCreator, MainCreator, PosCreator};
-    use crate::set::Set;
-
-    pub fn initialize_creator<S: Set>(set: &mut S) {
-        set.add_creator(Box::new(ArrayCreator::default()));
-        set.add_creator(Box::new(BoolCreator::default()));
-        set.add_creator(Box::new(FltCreator::default()));
-        set.add_creator(Box::new(IntCreator::default()));
-        set.add_creator(Box::new(StrCreator::default()));
-        set.add_creator(Box::new(UintCreator::default()));
-        set.add_creator(Box::new(CmdCreator::default()));
-        set.add_creator(Box::new(MainCreator::default()));
-        set.add_creator(Box::new(PosCreator::default()));
-    }
-
-    pub fn initialize_prefix<S: Set>(set: &mut S) {
-        set.add_prefix("--".into());
-        set.add_prefix("-".into());
-    }
-
     #[macro_export]
     macro_rules! simple_main_cb {
         ($block:expr) => {

@@ -8,8 +8,6 @@ use std::{env::Args, io::Stdout};
 use aopt::err::create_error;
 use aopt::err::Result;
 use aopt::prelude::*;
-use aopt::tools::initialize_creator;
-use aopt::tools::initialize_prefix;
 use aopt_help::printer::Printer;
 use aopt_help::DefaultFormat;
 use aopt_help::{
@@ -174,13 +172,12 @@ impl SnowBall {
 }
 
 fn parser_command_line(args: Args) -> Result<SimpleSet> {
-    let mut set = SimpleSet::default();
+    let mut set = SimpleSet::default()
+        .with_default_prefix()
+        .with_default_creator();
     let mut parser = SimpleParser::<UidGenerator>::default();
 
     parser.set_strict(true);
-
-    initialize_creator(&mut set);
-    initialize_prefix(&mut set);
 
     for (optstr, alias, help, value) in [
         ("-d=b", "--debug", "Print debug message", None),

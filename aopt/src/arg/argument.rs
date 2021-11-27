@@ -3,8 +3,8 @@ use crate::err::{ArgumentError, Result};
 use crate::Ustr;
 
 /// Argument hold current and next item of command line arguments.
-/// 
-/// When parsing the command line option need an argument. 
+///
+/// When parsing the command line option need an argument.
 /// The argument of option may embedded in itself.
 /// Or we need consume next item as argument of the option.
 #[derive(Debug, Clone, Default)]
@@ -42,14 +42,14 @@ impl Argument {
     }
 
     /// Call [`parse_argument`] parse the command line item with given prefix.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// Will save the [`DataKeeper`] to self and return `Ok(true)` when successed.
     /// Return `Ok(false)` when current item is [`None`].
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Will return [`ArgumentError::MissingPrefix`] when the result not have a valid prefix.
     /// Or return [`ArgumentError::MissingName`] when the result not have a valid name.
     pub fn parse(&mut self, prefix: &[Ustr]) -> Result<bool> {

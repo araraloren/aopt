@@ -31,6 +31,61 @@ pub struct CreateInfo {
 }
 
 impl CreateInfo {
+    pub fn with_uid(mut self, uid: Uid) -> Self {
+        self.uid = uid;
+        self
+    }
+
+    pub fn with_deactivate_style(mut self, support_deactivate_style: bool) -> Self {
+        self.support_deactivate_style = support_deactivate_style;
+        self
+    }
+
+    pub fn with_optional(mut self, optional: bool) -> Self {
+        self.optional = optional;
+        self
+    }
+
+    pub fn with_type_name(mut self, type_name: Ustr) -> Self {
+        self.type_name = type_name;
+        self
+    }
+
+    pub fn with_name(mut self, name: Ustr) -> Self {
+        self.name = name;
+        self
+    }
+
+    pub fn with_prefix(mut self, prefix: Ustr) -> Self {
+        self.prefix = Some(prefix);
+        self
+    }
+
+    pub fn with_index(mut self, index: OptIndex) -> Self {
+        self.index = index;
+        self
+    }
+
+    pub fn with_value(mut self, value: OptValue) -> Self {
+        self.value = value;
+        self
+    }
+
+    pub fn with_alias(mut self, alias: Vec<Ustr>) -> Self {
+        self.alias = alias;
+        self
+    }
+
+    pub fn with_help(mut self, help: HelpInfo) -> Self {
+        self.help = help;
+        self
+    }
+
+    pub fn with_support_prefix(mut self, support_prefix: Vec<Ustr>) -> Self {
+        self.support_prefix = support_prefix;
+        self
+    }
+
     pub fn set_support_prefix(&mut self, prefix: Vec<Ustr>) {
         self.support_prefix = prefix;
     }
@@ -258,6 +313,31 @@ pub struct FilterInfo {
 }
 
 impl FilterInfo {
+    pub fn with_optional(mut self, optional: bool) -> Self {
+        self.optional = Some(optional);
+        self
+    }
+
+    pub fn with_type_name(mut self, type_name: Ustr) -> Self {
+        self.type_name = Some(type_name);
+        self
+    }
+
+    pub fn with_name(mut self, name: Ustr) -> Self {
+        self.name = Some(name);
+        self
+    }
+
+    pub fn with_prefix(mut self, prefix: Ustr) -> Self {
+        self.prefix = Some(prefix);
+        self
+    }
+
+    pub fn with_index(mut self, index: OptIndex) -> Self {
+        self.index = Some(index);
+        self
+    }
+
     pub fn set_deactivate_style(&mut self, deactivate_style: bool) -> &mut Self {
         self.deactivate_style = Some(deactivate_style);
         self
