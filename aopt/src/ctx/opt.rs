@@ -63,7 +63,14 @@ impl Context for OptContext {
                 );
             }
             self.matched_index = Some(0);
-            if opt.is_deactivate_style() == self.disable {
+            if !opt.is_deactivate_style() && self.disable {
+                return Err(SpecialError::CanNotDisableOption(format!(
+                    "{}",
+                    opt.get_name().as_ref()
+                ))
+                .into());
+            }
+            else {
                 let value = opt
                     .parse_value(self.argument.unwrap_or(Ustr::from("")))
                     .map_err(|_| {
@@ -71,18 +78,7 @@ impl Context for OptContext {
                     })?;
                 self.set_value(value);
                 debug!("get return and will set value {:?}!", self.get_value());
-            } else if !opt.is_deactivate_style() {
-                return Err(SpecialError::CanNotDisableOption(format!(
-                    "{}",
-                    opt.get_name().as_ref()
-                ))
-                .into());
             }
-            // don't throw error when set deactivate style option
-            else {
-                warn!("get return and but not set value {:?}!", self.get_value());
-            }
-
             opt.set_invoke(true);
         }
         Ok(matched)

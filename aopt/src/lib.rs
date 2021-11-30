@@ -26,7 +26,7 @@ pub fn gstr(s: &str) -> Ustr {
     Ustr::from(s)
 }
 
-pub struct ReturnValue<'a, 'b>(&'b mut dyn Parser, &'a mut dyn Set);
+pub struct ReturnValue<'a, 'b>(pub &'b mut dyn Parser, pub &'a mut dyn Set);
 
 pub fn getopt_impl<'a, 'b>(
     iter: impl Iterator<Item = String>,
