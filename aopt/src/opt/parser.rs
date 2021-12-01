@@ -409,7 +409,7 @@ impl State {
                 index.set(index.len());
             }
             Self::Greater => {
-                let (_, index_part) = pattern.get_pattern().split_at(index.get());
+                let (_, index_part) = pattern.get_pattern().split_at(index.get() + 1);
 
                 let ret = index_part.parse::<u64>().map_err(|e| {
                     ConstructError::IndexParsingFailed(
@@ -421,7 +421,7 @@ impl State {
                 index.set(index.len());
             }
             Self::Less => {
-                let (_, index_part) = pattern.get_pattern().split_at(index.get());
+                let (_, index_part) = pattern.get_pattern().split_at(index.get() + 1);
 
                 let ret = index_part.parse::<u64>().map_err(|e| {
                     ConstructError::IndexParsingFailed(
