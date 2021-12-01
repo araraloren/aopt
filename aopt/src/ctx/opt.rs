@@ -69,8 +69,7 @@ impl Context for OptContext {
                     opt.get_name().as_ref()
                 ))
                 .into());
-            }
-            else {
+            } else {
                 let value = opt
                     .parse_value(self.argument.unwrap_or(Ustr::from("")))
                     .map_err(|_| {

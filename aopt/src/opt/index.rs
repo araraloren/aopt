@@ -83,12 +83,8 @@ impl Index {
                 }
             }
             Self::Except(list) => {
-                for offset in list {
-                    let offset = *offset;
-
-                    if offset <= total && offset != current {
-                        return Some(current);
-                    }
+                if current <= total && !list.contains(&current) {
+                    return Some(current);
                 }
             }
             Self::Greater(offset) => {
