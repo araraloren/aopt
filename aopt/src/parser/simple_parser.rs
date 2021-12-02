@@ -17,7 +17,7 @@ use crate::set::{OptionInfo, Set};
 use crate::uid::{Generator, Uid};
 use crate::Ustr;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct SimpleParser<G>
 where
     G: Generator + Debug + Default,
@@ -31,6 +31,21 @@ where
     noa: Vec<Ustr>,
 
     strict: bool,
+}
+
+impl<G> Default for SimpleParser<G>
+where
+    G: Generator + Debug + Default,
+{
+    fn default() -> Self {
+        Self {
+            uid_gen: G::default(),
+            subscriber_info: vec![],
+            callback: HashMap::default(),
+            noa: vec![],
+            strict: true,
+        }
+    }
 }
 
 impl<G> SimpleParser<G>
@@ -374,168 +389,209 @@ mod test {
     use crate::err::Result;
     use crate::getopt;
     use crate::parser::testutil::*;
-    use crate::{prelude::*, set::Commit};
-
-    macro_rules! simple_cb_tweak {
-        () => {
-            Some(Box::new(
-                |parser: &mut SimpleParser<UidGenerator>, uid, checker: Option<DataChecker>| {
-                    let mut checker = checker;
-
-                    parser.add_callback(
-                        uid,
-                        simple_opt_cb!(move |uid, set, value| {
-                            let opt = set[uid].as_ref();
-
-                            if let Some(checker) = checker.take() {
-                                checker.check(opt, &value);
-                            }
-                            Ok(Some(value))
-                        }),
-                    );
-                },
-            ))
-        };
-    }
+    use crate::prelude::*;
 
     #[test]
     fn testing_simple_parser() {
-        let testing_cases = &mut [
-            TestingCase {
-                opt_str: "-a=i",
-                ret_value: Some(OptValue::from(42i64)),
-                commit_tweak: None,
-                callback_tweak: simple_cb_tweak!(),
-                checker: Some(DataChecker {
-                    type_name: "i",
-                    cb_value: OptValue::from(42i64),
-                    name: "a",
-                    prefix: "-",
-                    ..DataChecker::default()
-                }),
-            },
-            TestingCase {
-                opt_str: "-b=u",
-                ret_value: Some(OptValue::from(42u64)),
-                commit_tweak: None,
-                callback_tweak: simple_cb_tweak!(),
-                checker: Some(DataChecker {
-                    type_name: "u",
-                    cb_value: OptValue::from(42u64),
-                    name: "b",
-                    prefix: "-",
-                    ..DataChecker::default()
-                }),
-            },
-            TestingCase {
-                opt_str: "-c=s",
-                ret_value: Some(OptValue::from("string")),
-                commit_tweak: None,
-                callback_tweak: simple_cb_tweak!(),
-                checker: Some(DataChecker {
-                    type_name: "s",
-                    cb_value: OptValue::from("string"),
-                    name: "c",
-                    prefix: "-",
-                    ..DataChecker::default()
-                }),
-            },
-            TestingCase {
-                opt_str: "-d=f",
-                ret_value: Some(OptValue::from(3.1415926f64)),
-                commit_tweak: None,
-                callback_tweak: simple_cb_tweak!(),
-                checker: Some(DataChecker {
-                    type_name: "f",
-                    cb_value: OptValue::from(3.1415926f64),
-                    name: "d",
-                    prefix: "-",
-                    ..DataChecker::default()
-                }),
-            },
-            TestingCase {
-                opt_str: "-e=b",
-                ret_value: Some(OptValue::from(true)),
-                commit_tweak: None,
-                callback_tweak: simple_cb_tweak!(),
-                checker: Some(DataChecker {
-                    type_name: "b",
-                    cb_value: OptValue::from(true),
-                    name: "e",
-                    prefix: "-",
-                    ..DataChecker::default()
-                }),
-            },
-            TestingCase {
-                opt_str: "-f=a",
-                ret_value: Some(OptValue::from(vec!["lucy".to_owned(), "lily".to_owned()])),
-                commit_tweak: None,
-                callback_tweak: simple_cb_tweak!(),
-                checker: Some(DataChecker {
-                    type_name: "a",
-                    cb_value: OptValue::from(vec!["lucy".to_owned(), "lily".to_owned()]),
-                    name: "f",
-                    prefix: "-",
-                    ..DataChecker::default()
-                }),
-            },
-            TestingCase {
-                opt_str: "-g=i",
-                ret_value: Some(OptValue::from(42i64)),
-                commit_tweak: Some(Box::new(|commit: &mut Commit| {
-                    commit.add_alias("+g-i64").unwrap();
-                })),
-                callback_tweak: simple_cb_tweak!(),
-                checker: Some(DataChecker {
-                    type_name: "i",
-                    cb_value: OptValue::from(42i64),
-                    name: "g",
-                    prefix: "-",
-                    alias: vec![("+", "g-i64")],
-                    ..DataChecker::default()
-                }),
-            },
-            TestingCase {
-                opt_str: "-h=i",
-                ret_value: None,
-                commit_tweak: None,
-                callback_tweak: simple_cb_tweak!(),
-                checker: None,
-            },
-        ];
-
-        assert!(do_simple_test(testing_cases).is_ok());
+        assert!(do_simple_test().is_ok());
+        assert!(do_simple_test_failed().is_err());
+        assert!(do_simple_test_failed_non_strict().is_ok());
     }
 
-    fn do_simple_test(testing_cases: &mut [TestingCase<SimpleParser<UidGenerator>>]) -> Result<()> {
-        let mut set = SimpleSet::new();
-        let mut parser = SimpleParser::new(UidGenerator::default());
+    fn do_simple_test_failed_non_strict() -> Result<()> {
+        let mut testing_cases = vec![];
 
-        set.add_prefix("+".into());
+        testing_cases.append(&mut nonopt_testcases());
+        testing_cases.append(&mut long_prefix_opt_testcases());
+        testing_cases.append(&mut shorting_prefix_opt_testcases());
+
+        let mut set = SimpleSet::default()
+            .with_default_prefix()
+            .with_default_creator();
+        let mut parser = SimpleParser::<UidGenerator>::default().with_strict(false);
 
         for testing_case in testing_cases.iter_mut() {
-            testing_case.do_test(&mut set, &mut parser)?;
+            if testing_case.value == Some(OptValue::from("pos6")) {
+                testing_case.set_value(OptValue::from("--unknow-opt"));
+            }
+            testing_case.add_test(&mut set, &mut parser)?;
         }
 
-        let input = &mut [
+        let mut args = [
+            "p",
+            "-a=value1",
             "-a",
-            "42",
-            "-b=42",
-            "-cstring",
-            "-f",
-            "lucy",
+            "value2",
+            "-bvalue3",
+            "-b",
+            "value4",
+            "-c",
             "-d",
-            "3.1415926",
-            "-e",
-            "-f",
-            "lily",
-            "+g-i64",
+            "-/e",
+            "-f3.1415926",
+            "-g=2.718281",
+            "-h",
             "42",
+            "-i-100000",
+            "-j",
+            "foo",
+            "-k=bar",
+            "-l1988",
+            "-m=2202",
+            "-/z12",
+            "-456",
+            "-?",
+            "pos2",
+            "pos3",
+            "pos4",
+            "pos5",
+            "--yopt-int=42",
+            "--aopt",
+            "value5",
+            "--aopt=value6",
+            "--copt=42",
+            "--eopt",
+            "value7",
+            "--fopt=988",
+            "--unknow-opt",
         ]
         .iter()
         .map(|&v| String::from(v));
 
-        if let Ok(Some(ret)) = getopt!(input, set, parser) {
+        if let Some(ret) = getopt!(&mut args, set, parser)? {
+            for testing_case in testing_cases.iter_mut() {
+                testing_case.check_ret(ret.1)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn do_simple_test_failed() -> Result<()> {
+        let mut testing_cases = vec![];
+
+        testing_cases.append(&mut nonopt_testcases());
+        testing_cases.append(&mut long_prefix_opt_testcases());
+        testing_cases.append(&mut shorting_prefix_opt_testcases());
+
+        let mut set = SimpleSet::default()
+            .with_default_prefix()
+            .with_default_creator();
+        let mut parser = SimpleParser::<UidGenerator>::default();
+
+        for testing_case in testing_cases.iter_mut() {
+            testing_case.add_test(&mut set, &mut parser)?;
+        }
+
+        let mut args = [
+            "p",
+            "-a=value1",
+            "-a",
+            "value2",
+            "-bvalue3",
+            "-b",
+            "value4",
+            "-c",
+            "-d",
+            "-/e",
+            "-f3.1415926",
+            "-g=2.718281",
+            "-h",
+            "42",
+            "-i-100000",
+            "-j",
+            "foo",
+            "-k=bar",
+            "-l1988",
+            "-m=2202",
+            "-/z12",
+            "-456",
+            "-?",
+            "pos2",
+            "pos3",
+            "pos4",
+            "pos5",
+            "pos6",
+            "--yopt-int=42",
+            "--aopt",
+            "value5",
+            "--aopt=value6",
+            "--copt=42",
+            "--eopt",
+            "value7",
+            "--fopt=988",
+            "--unknow-opt",
+        ]
+        .iter()
+        .map(|&v| String::from(v));
+
+        if let Some(ret) = getopt!(&mut args, set, parser)? {
+            for testing_case in testing_cases.iter_mut() {
+                testing_case.check_ret(ret.1)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn do_simple_test() -> Result<()> {
+        let mut testing_cases = vec![];
+
+        testing_cases.append(&mut nonopt_testcases());
+        testing_cases.append(&mut long_prefix_opt_testcases());
+        testing_cases.append(&mut shorting_prefix_opt_testcases());
+
+        let mut set = SimpleSet::default()
+            .with_default_prefix()
+            .with_default_creator();
+        let mut parser = SimpleParser::<UidGenerator>::default();
+
+        for testing_case in testing_cases.iter_mut() {
+            testing_case.add_test(&mut set, &mut parser)?;
+        }
+
+        let mut args = [
+            "p",
+            "-a=value1",
+            "-a",
+            "value2",
+            "-bvalue3",
+            "-b",
+            "value4",
+            "-c",
+            "-d",
+            "-/e",
+            "-f3.1415926",
+            "-g=2.718281",
+            "-h",
+            "42",
+            "-i-100000",
+            "-j",
+            "foo",
+            "-k=bar",
+            "-l1988",
+            "-m=2202",
+            "-/z12",
+            "-456",
+            "-?",
+            "pos2",
+            "pos3",
+            "pos4",
+            "pos5",
+            "pos6",
+            "--yopt-int=42",
+            "--aopt",
+            "value5",
+            "--aopt=value6",
+            "--copt=42",
+            "--eopt",
+            "value7",
+            "--fopt=988",
+        ]
+        .iter()
+        .map(|&v| String::from(v));
+
+        if let Some(ret) = getopt!(&mut args, set, parser)? {
             for testing_case in testing_cases.iter_mut() {
                 testing_case.check_ret(ret.1)?;
             }
