@@ -9,6 +9,7 @@ use super::Parser;
 use super::ParserState;
 
 use crate::arg::ArgStream;
+use crate::err;
 use crate::err::Result;
 use crate::opt::{OptCallback, OptValue, Style};
 use crate::proc::{Info, Matcher, NonOptMatcher, OptMatcher, Proc};
@@ -16,7 +17,7 @@ use crate::set::{OptionInfo, Set};
 use crate::uid::{Generator, Uid};
 use crate::Ustr;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct DelayParser<G>
 where
     G: Generator + Debug + Default,
@@ -30,6 +31,24 @@ where
     noa: Vec<Ustr>,
 
     value_keeper: HashMap<Uid, Vec<OptValueKeeper>>,
+
+    strict: bool,
+}
+
+impl<G> Default for DelayParser<G>
+where
+    G: Generator + Debug + Default,
+{
+    fn default() -> Self {
+        Self {
+            uid_gen: G::default(),
+            subscriber_info: vec![],
+            callback: HashMap::default(),
+            noa: vec![],
+            value_keeper: HashMap::default(),
+            strict: true,
+        }
+    }
 }
 
 impl<G> DelayParser<G>
@@ -45,6 +64,15 @@ where
 
     pub fn add_delay_value(&mut self, uid: Uid, value: OptValueKeeper) {
         self.value_keeper.entry(uid).or_insert(vec![]).push(value);
+    }
+
+    pub fn with_strict(mut self, strict: bool) -> Self {
+        self.strict = strict;
+        self
+    }
+
+    pub fn set_strict(&mut self, strict: bool) {
+        self.strict = strict;
     }
 }
 
@@ -109,6 +137,16 @@ where
                                     break;
                                 }
                             }
+                        }
+                    }
+                    if !matched {
+                        // if current ARG is like an option, but it not matched
+                        if self.strict {
+                            return Err(err::SpecialError::InvalidOptionName(format!(
+                                "{}",
+                                arg.current.unwrap_or_default().as_str()
+                            ))
+                            .into());
                         }
                     }
                 }
