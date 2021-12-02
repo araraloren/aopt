@@ -37,6 +37,7 @@ impl Argument {
         &self.data_keeper.value
     }
 
+    /// Return true if the option contain deactivate style symbol '/'
     pub fn is_disabled(&self) -> bool {
         self.data_keeper.disable
     }

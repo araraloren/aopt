@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::ops::{Deref, DerefMut};
 
+use crate::arg::ArgStream;
 use crate::err::Result;
 use crate::opt::OptCallback;
 use crate::parser::HashMapIter;
@@ -73,12 +74,12 @@ impl<S: Set + Default, P: Parser + Default> SingleApp<S, P> {
 
     pub fn run<RET, F: FnMut(bool, SingleApp<S, P>) -> Result<RET>>(
         &mut self,
-        mut iter: impl Iterator<Item = String>,
+        iter: impl Iterator<Item = String>,
         mut r: F,
     ) -> Result<RET> {
         let set = &mut self.set;
         let parser = &mut self.parser;
-        let ret = parser.parse(set, &mut iter)?;
+        let ret = parser.parse(set, &mut ArgStream::from(iter))?;
         let _self = std::mem::take(self);
 
         r(ret, _self)

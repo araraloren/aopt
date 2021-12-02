@@ -4,75 +4,106 @@ pub mod parser;
 use std::convert::From;
 use std::fmt::Debug;
 use std::iter::Iterator;
-use std::slice::{Iter, IterMut};
 
 use crate::Ustr;
 
 pub use argument::Argument;
 
-#[derive(Debug, Default)]
-pub struct ArgStream {
-    args: Vec<Argument>,
+/// The wrapper of command line items, it will output [`Argument`].
+///
+/// # Example
+/// ```rust
+/// use aopt::arg::ArgStream;
+/// use ustr::Ustr;
+/// use aopt::err::Result;
+///
+/// fn main() -> Result<()> {
+///     let args = ["-a", "v1", "--aopt", "p1", "p2", "--bopt", "v2"]
+///         .iter()
+///         .map(|&v| String::from(v));
+///     let mut stream = ArgStream::from(args);
+///     let next = stream.next().unwrap();
+///
+///     assert_eq!(next.current, Some(Ustr::from("-a")));
+///     assert_eq!(next.next, Some(Ustr::from("v1")));
+///     stream.next();
+///     let next = stream.next().unwrap();
+///
+///     assert_eq!(next.current, Some(Ustr::from("--aopt")));
+///     assert_eq!(next.next, Some(Ustr::from("p1")));
+///     let next = stream.next().unwrap();
+///
+///     assert_eq!(next.current, Some(Ustr::from("p1")));
+///     assert_eq!(next.next, Some(Ustr::from("p2")));
+///     stream.next();
+///     let next = stream.next().unwrap();
+///
+///     assert_eq!(next.current, Some(Ustr::from("--bopt")));
+///     assert_eq!(next.next, Some(Ustr::from("v2")));
+///     let next = stream.next().unwrap();
+///
+///     assert_eq!(next.current, Some(Ustr::from("v2")));
+///     assert_eq!(next.next, None);  
+///
+///     Ok(())
+/// }
+/// ```
+pub struct ArgStream<T: Iterator<Item = String>> {
+    iter: T,
+    first: Option<String>,
 }
 
-impl ArgStream {
-    pub fn new(args: impl Iterator<Item = String>) -> Self {
-        Self {
-            args: Self::iterator_to_args(args),
-        }
+impl<T: Iterator<Item = String>> Debug for ArgStream<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ArgStream")
+            .field("iter", &"{...}")
+            .field("first", &self.first)
+            .finish()
     }
+}
 
-    pub fn set_args(&mut self, args: impl Iterator<Item = String>) -> &mut Self {
-        self.args = Self::iterator_to_args(args);
-        self
+impl<T: Iterator<Item = String>> ArgStream<T> {
+    pub fn new(t: T) -> Self {
+        Self::from(t)
     }
-
-    pub fn iter(&self) -> Iter<'_, Argument> {
-        self.args.iter()
-    }
-
-    pub fn iter_mut(&mut self) -> IterMut<'_, Argument> {
-        self.args.iter_mut()
-    }
-
-    fn iterator_to_args<Iter>(mut iter: Iter) -> Vec<Argument>
-    where
-        Iter: Iterator<Item = String>,
-    {
-        let mut ret = vec![];
-        let mut current = iter.next();
-
-        while current.is_some() {
-            let next = iter.next();
-
-            ret.push(Argument::new(
-                Self::map_one_item(current),
-                Self::map_one_item(next.clone()),
-            ));
-            current = next;
-        }
-        ret
-    }
-
-    fn map_one_item(item: Option<String>) -> Option<Ustr> {
+    fn map_item(item: Option<String>) -> Option<Ustr> {
         item.map_or(None, |v| Some(Ustr::from(&v)))
     }
+}
 
-    pub fn len(&self) -> usize {
-        self.args.len()
+impl<T: Iterator<Item = String>> From<T> for ArgStream<T> {
+    fn from(mut v: T) -> Self {
+        let first = v.next();
+        Self {
+            iter: v,
+            first: first,
+        }
     }
 }
 
-impl<'str, 'nv, 'pre, It: Iterator<Item = String>> From<It> for ArgStream {
-    fn from(iter: It) -> Self {
-        Self {
-            args: Self::iterator_to_args(iter),
+impl<T: Iterator<Item = String>> Iterator for ArgStream<T> {
+    type Item = Argument;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.first.is_some() {
+            let next = self.iter.next();
+            let arg = Argument::new(
+                Self::map_item(self.first.take()),
+                Self::map_item(next.clone()),
+            );
+
+            self.first = next;
+            Some(arg)
+        } else {
+            None
         }
     }
 }
 
 #[cfg(test)]
 mod test {
+
+    use std::fmt::Debug;
 
     use super::ArgStream;
     use crate::Ustr;
@@ -157,8 +188,8 @@ mod test {
         }
     }
 
-    fn testing_one_iterator<'pre, 'vec: 'pre>(
-        mut argstream: ArgStream,
+    fn testing_one_iterator<'pre, 'vec: 'pre, T: Iterator<Item = String> + Debug>(
+        argstream: ArgStream<T>,
         prefixs: &'vec Vec<Ustr>,
         data_check: &Vec<String>,
         check: &Vec<Vec<&str>>,
@@ -167,7 +198,7 @@ mod test {
         let default_data = String::from("");
         let default_item = "";
 
-        for ((index, arg), check_item) in argstream.iter_mut().enumerate().zip(check.iter()) {
+        for ((index, mut arg), check_item) in argstream.enumerate().zip(check.iter()) {
             assert_eq!(
                 arg.current.as_ref().unwrap_or(&default_str),
                 data_check.get(index).unwrap_or(&default_data)

@@ -8,7 +8,7 @@ use super::OptValueKeeper;
 use super::Parser;
 use super::ParserState;
 
-use crate::arg::ArgStream;
+use crate::arg::Argument;
 use crate::err;
 use crate::err::Result;
 use crate::opt::{OptCallback, OptValue, Style};
@@ -73,10 +73,12 @@ impl<G> Parser for SimpleParser<G>
 where
     G: Generator + Debug + Default,
 {
-    fn parse(&mut self, set: &mut dyn Set, iter: &mut dyn Iterator<Item = String>) -> Result<bool> {
-        let mut argstream = ArgStream::from(iter);
+    fn parse(
+        &mut self,
+        set: &mut dyn Set,
+        iter: &mut dyn Iterator<Item = Argument>,
+    ) -> Result<bool> {
         let set = set;
-        let mut iter = argstream.iter_mut();
 
         // copy the prefix, so we don't need borrow set
         let prefix: Vec<Ustr> = set.get_prefix().iter().map(|v| v.clone()).collect();
@@ -103,7 +105,7 @@ where
         // iterate the Arguments, generate option context
         // send it to Publisher
         info!("start process option ...");
-        while let Some(arg) = iter.next() {
+        while let Some(mut arg) = iter.next() {
             let mut matched = false;
             let mut consume = false;
 
@@ -112,7 +114,7 @@ where
                 if ret {
                     debug!(?arg, "after parsing ...");
                     for gen_style in &parser_state {
-                        if let Some(ret) = gen_style.gen_opt::<OptMatcher>(arg)? {
+                        if let Some(ret) = gen_style.gen_opt::<OptMatcher>(&arg)? {
                             let mut proc = ret;
 
                             if self.process(&mut proc, set)? {

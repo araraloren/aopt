@@ -8,6 +8,7 @@ pub(crate) mod testutil;
 use std::cell::RefCell;
 use std::fmt::Debug;
 
+use crate::arg::Argument;
 use crate::err::Result;
 use crate::opt::{OptCallback, OptValue};
 use crate::set::Set;
@@ -28,7 +29,11 @@ pub struct OptValueKeeper {
 }
 
 pub trait Parser: Debug {
-    fn parse(&mut self, set: &mut dyn Set, iter: &mut dyn Iterator<Item = String>) -> Result<bool>;
+    fn parse(
+        &mut self,
+        set: &mut dyn Set,
+        iter: &mut dyn Iterator<Item = Argument>,
+    ) -> Result<bool>;
 
     fn invoke_callback(
         &self,

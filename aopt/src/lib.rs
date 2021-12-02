@@ -13,6 +13,7 @@ pub(crate) mod pat;
 #[macro_use]
 extern crate tracing;
 
+use crate::arg::ArgStream;
 use crate::err::Result;
 use crate::parser::Parser;
 use crate::set::Set;
@@ -40,7 +41,9 @@ pub fn getopt_impl<'a, 'b>(
     let mut index = 0;
 
     for (parser, set) in parsers.into_iter().zip(sets.into_iter()) {
-        match parser.parse(set, &mut args.iter().map(|v| v.clone())) {
+        let mut stream = ArgStream::from(args.clone().into_iter());
+
+        match parser.parse(set, &mut stream) {
             Ok(rv) => {
                 if rv {
                     return Ok(Some(ReturnValue(parser, set)));
@@ -60,11 +63,13 @@ pub fn getopt_impl<'a, 'b>(
 }
 
 pub fn getopt_impl_s<'a, 'b>(
-    mut iter: impl Iterator<Item = String>,
+    iter: impl Iterator<Item = String>,
     set: &'a mut dyn Set,
     parser: &'b mut dyn Parser,
 ) -> Result<Option<ReturnValue<'a, 'b>>> {
-    if parser.parse(set, &mut iter)? {
+    let mut stream = ArgStream::from(iter);
+
+    if parser.parse(set, &mut stream)? {
         return Ok(Some(ReturnValue(parser, set)));
     } else {
         Ok(None)
