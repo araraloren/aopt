@@ -5,4 +5,5 @@ members = [
     "snowball-follow",
     "aopt-help",
     "simple-find-file",
+    "index-constituent"
 ]

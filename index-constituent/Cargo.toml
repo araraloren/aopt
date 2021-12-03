@@ -1,0 +1,20 @@
+[package]
+name = "index"
+version = "0.1.0"
+edition = "2018"
+license = "MPL-2.0"
+description = "Example - simple spyder get index constituents"
+repository = "https://github.com/araraloren/aopt/"
+categories = ["command-line-interface", "spyder"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+aopt = { path = "../aopt", version = "0.4.1" }
+aopt-help = { path = "../aopt-help", version = "0.2.3" }
+tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }
+color-eyre = "0.5.11"
+reqwest = { version = "0.11.6", features = ["json", "gzip", "cookies"] }
+tokio = { version = "1.14.0", features = ["full"] }
+json = "0.12.4"
+async-trait = "0.1.51"
