@@ -1,7 +1,6 @@
 pub mod cnindex;
 pub mod csindex;
 
-use json::JsonValue;
 use std::ops::{Deref, DerefMut};
 
 #[async_trait::async_trait]
