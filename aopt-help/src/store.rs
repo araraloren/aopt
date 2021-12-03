@@ -185,11 +185,6 @@ impl<'a> CmdMut<'a> {
         self
     }
 
-    pub fn set_usage(&mut self, help: Ustr) -> &mut Self {
-        self.c.set_usage(help);
-        self
-    }
-
     pub fn set_footer(&mut self, help: Ustr) -> &mut Self {
         self.c.set_footer(help);
         self
@@ -446,8 +441,6 @@ impl PosStore {
 pub struct CmdStore {
     name: Ustr,
 
-    usage: Ustr,
-
     footer: Ustr,
 
     header: Ustr,
@@ -462,10 +455,9 @@ pub struct CmdStore {
 }
 
 impl CmdStore {
-    pub fn new(name: Ustr, usage: Ustr, footer: Ustr, header: Ustr, hint: Ustr, help: Ustr) -> Self {
+    pub fn new(name: Ustr, footer: Ustr, header: Ustr, hint: Ustr, help: Ustr) -> Self {
         Self {
             name,
-            usage,
             footer,
             header,
             hint,
@@ -477,11 +469,6 @@ impl CmdStore {
 
     pub fn set_name(&mut self, name: Ustr) -> &mut Self {
         self.name = name;
-        self
-    }
-
-    pub fn set_usage(&mut self, help: Ustr) -> &mut Self {
-        self.usage = help;
         self
     }
 
