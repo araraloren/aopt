@@ -20,6 +20,7 @@ pub use delay_parser::DelayParser;
 pub use pre_parser::PreParser;
 pub use simple_parser::SimpleParser;
 pub use state::ParserState;
+use ustr::Ustr;
 
 #[derive(Debug)]
 pub struct OptValueKeeper {
@@ -76,6 +77,8 @@ pub trait Parser: Debug {
     fn get_callback(&self, uid: Uid) -> Option<&RefCell<OptCallback>>;
 
     fn callback_iter(&self) -> HashMapIter<'_, Uid, RefCell<OptCallback>>;
+
+    fn get_noa(&self) -> &[Ustr];
 
     fn reset(&mut self);
 }

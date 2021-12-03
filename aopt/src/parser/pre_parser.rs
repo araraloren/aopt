@@ -217,6 +217,10 @@ where
         self.callback.iter()
     }
 
+    fn get_noa(&self) -> &[Ustr] {
+        &self.noa
+    }
+
     fn reset(&mut self) {
         self.uid_gen.reset();
         self.noa.clear();

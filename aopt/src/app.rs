@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::future::Future;
 use std::ops::{Deref, DerefMut};
 
 use crate::arg::ArgStream;
@@ -44,7 +45,7 @@ impl<S: Set + Default, P: Parser + Default> SingleApp<S, P> {
         &self.set
     }
 
-    pub fn get_parser(&mut self) -> &P {
+    pub fn get_parser(&self) -> &P {
         &self.parser
     }
 
@@ -83,6 +84,33 @@ impl<S: Set + Default, P: Parser + Default> SingleApp<S, P> {
         let _self = std::mem::take(self);
 
         r(ret, _self)
+    }
+
+    pub async fn run_async<
+        RET,
+        FUT: Future<Output = Result<RET>>,
+        F: FnMut(bool, SingleApp<S, P>) -> FUT,
+    >(
+        &mut self,
+        iter: impl Iterator<Item = String>,
+        mut r: F,
+    ) -> Result<RET> {
+        let set = &mut self.set;
+        let parser = &mut self.parser;
+        let async_ret;
+
+        match parser.parse(set, &mut ArgStream::from(iter)) {
+            Ok(ret) => {
+                let _self = std::mem::take(self);
+                let ret = r(ret, _self).await;
+
+                async_ret = ret;
+            }
+            Err(e) => {
+                async_ret = Err(e);
+            }
+        }
+        async_ret
     }
 }
 
