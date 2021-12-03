@@ -462,6 +462,19 @@ pub struct CmdStore {
 }
 
 impl CmdStore {
+    pub fn new(name: Ustr, usage: Ustr, footer: Ustr, header: Ustr, hint: Ustr, help: Ustr) -> Self {
+        Self {
+            name,
+            usage,
+            footer,
+            header,
+            hint,
+            help,
+            pos_store: vec![],
+            opt_store: vec![],
+        }
+    }
+
     pub fn set_name(&mut self, name: Ustr) -> &mut Self {
         self.name = name;
         self
