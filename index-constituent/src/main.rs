@@ -45,6 +45,7 @@ async fn main() -> color_eyre::Result<()> {
         ),
         ("-a=b", "--all", "Get all the result", None),
         ("-i=b", "--id-only", "Display only id column", None),
+        ("-r=b/", "--reverse", "Reverse the order of result", Some(OptValue::from(true))),
     ] {
         let mut commit = app.add_opt(opt)?;
 
@@ -148,7 +149,9 @@ async fn main() -> color_eyre::Result<()> {
                         let ret = run_command(&ctx).await?;
 
                         if ret.is_empty() || !ctx.get_all() {
-                            data.push(ret);
+                            for item in ret.iter() {
+                                data.push(item.clone());
+                            }
                             break;
                         }
                         if ctx.get_all() {
@@ -157,27 +160,29 @@ async fn main() -> color_eyre::Result<()> {
                     }
 
                     let id_only = *value_of(set, "--id-only")?.as_bool().unwrap_or(&false);
+                    let reverse = *value_of(set, "--reverse")?.as_bool().unwrap_or(&false);
 
-                    for req_ret in data {
-                        if id_only {
-                            for data in req_ret.iter() {
-                                println!("{}", data.code);
-                            }
-                        } else {
-                            for data in req_ret.iter() {
-                                if ctx.is_search()? {
-                                    println!(
-                                        "{}\t\t{}\t\t{:02}",
-                                        data.code, data.name, data.number
-                                    );
-                                } else if ctx.is_cons()? {
-                                    println!(
-                                        "{}\t\t{}\t\t{}",
-                                        data.code,
-                                        data.name,
-                                        data.number as f64 / 100.0
-                                    );
-                                }
+                    if reverse {
+                        data.reverse();
+                    }
+                    if id_only {
+                        for data in data.iter() {
+                            println!("{}", data.code);
+                        }
+                    } else {
+                        for data in data.iter() {
+                            if ctx.is_search()? {
+                                println!(
+                                    "{}\t\t{}\t\t{:02}",
+                                    data.code, data.name, data.number
+                                );
+                            } else if ctx.is_cons()? {
+                                println!(
+                                    "{}\t\t{}\t\t{}",
+                                    data.code,
+                                    data.name,
+                                    data.number as f64 / 100.0
+                                );
                             }
                         }
                     }
