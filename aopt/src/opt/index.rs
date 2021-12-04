@@ -119,8 +119,11 @@ impl Default for Index {
 impl ToString for Index {
     fn to_string(&self) -> String {
         match self {
-            Index::Forward(v) | Index::Backward(v) => {
+            Index::Forward(v) => {
                 format!("{}", v)
+            }
+            Index::Backward(v) => {
+                format!("-{}", v)
             }
             Index::List(v) => {
                 let strs: Vec<String> = v.iter().map(|v| format!("{}", v)).collect();
