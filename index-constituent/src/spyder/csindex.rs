@@ -1,5 +1,6 @@
+use super::json_to_number;
 use super::Item;
-use super::{SpyderConsData, SpyderIndexData};
+use super::SpyderIndexData;
 use reqwest::header;
 use reqwest::Client;
 
@@ -100,33 +101,38 @@ impl super::Spyder for CSIndex {
                     let mut ret = SpyderIndexData::default();
 
                     for (name, value) in json.entries() {
-                        if name == "data" {
-                            for member in value.members() {
-                                let mut item = Item::default();
+                        match name {
+                            "data" => {
+                                for member in value.members() {
+                                    let mut item = Item::default();
 
-                                for (name, inner_value) in member.entries() {
-                                    match name {
-                                        "indexCode" => {
-                                            item.code =
-                                                String::from(inner_value.as_str().unwrap_or(""));
-                                        }
-                                        "indexName" => {
-                                            item.name =
-                                                String::from(inner_value.as_str().unwrap_or(""));
-                                        }
-                                        "consNumber" => {
-                                            if let Some(v) = inner_value.as_str() {
-                                                if let Ok(num) = v.parse::<u64>() {
-                                                    item.number = num;
-                                                }
+                                    for (name, inner_value) in member.entries() {
+                                        match name {
+                                            "indexCode" => {
+                                                item.code = String::from(
+                                                    inner_value.as_str().unwrap_or(""),
+                                                );
                                             }
+                                            "indexName" => {
+                                                item.name = String::from(
+                                                    inner_value.as_str().unwrap_or(""),
+                                                );
+                                            }
+                                            "consNumber" => {
+                                                item.number =
+                                                    json_to_number(&inner_value).unwrap_or(0);
+                                            }
+                                            _ => {}
                                         }
-                                        _ => {}
                                     }
+                                    ret.push(item);
                                 }
-                                ret.push(item);
+                                return Ok(ret);
                             }
-                            return Ok(ret);
+                            "total" => {
+                                ret.set_total(value.as_i64().unwrap_or(0) as usize);
+                            }
+                            _ => {}
                         }
                     }
                 }
@@ -135,7 +141,11 @@ impl super::Spyder for CSIndex {
         Ok(SpyderIndexData::default())
     }
 
-    async fn fetch_cons(&self, code: &str, _page_number: usize) -> reqwest::Result<SpyderConsData> {
+    async fn fetch_cons(
+        &self,
+        code: &str,
+        _page_number: usize,
+    ) -> reqwest::Result<SpyderIndexData> {
         let index_uri = self.get_index_uri(code);
         let res = self.client.get(index_uri).send().await?;
 
@@ -154,49 +164,54 @@ impl super::Spyder for CSIndex {
             if res.status().is_success() {
                 let text = res.text().await?;
 
+                if self.debug {
+                    dbg!(&text);
+                }
+
                 if let Ok(json) = json::parse(&text) {
-                    let mut ret = SpyderConsData::default();
+                    let mut ret = SpyderIndexData::default();
 
+                    ret.set_total(10);
                     for (name, value) in json.entries() {
-                        if name == "data" {
-                            for (name, value) in value.entries() {
-                                if name == "weightList" {
-                                    for member in value.members() {
-                                        let mut item = Item::default();
+                        match name {
+                            "data" => {
+                                for (name, value) in value.entries() {
+                                    if name == "weightList" {
+                                        for member in value.members() {
+                                            let mut item = Item::default();
 
-                                        for (name, inner_value) in member.entries() {
-                                            match name {
-                                                "securityCode" => {
-                                                    item.code = String::from(
-                                                        inner_value.as_str().unwrap_or(""),
-                                                    );
-                                                }
-                                                "securityName" => {
-                                                    item.name = String::from(
-                                                        inner_value.as_str().unwrap_or(""),
-                                                    );
-                                                }
-                                                "weight" => {
-                                                    if let Some(v) = inner_value.as_str() {
-                                                        if let Ok(num) = v.parse::<f64>() {
-                                                            item.number = (num * 100.0) as u64;
-                                                        }
+                                            for (name, inner_value) in member.entries() {
+                                                match name {
+                                                    "securityCode" => {
+                                                        item.code = String::from(
+                                                            inner_value.as_str().unwrap_or(""),
+                                                        );
                                                     }
+                                                    "securityName" => {
+                                                        item.name = String::from(
+                                                            inner_value.as_str().unwrap_or(""),
+                                                        );
+                                                    }
+                                                    "weight" => {
+                                                        item.number = json_to_number(&inner_value)
+                                                            .unwrap_or(0);
+                                                    }
+                                                    _ => {}
                                                 }
-                                                _ => {}
                                             }
+                                            ret.push(item);
                                         }
-                                        ret.push(item);
+                                        return Ok(ret);
                                     }
-                                    return Ok(ret);
                                 }
                             }
+                            _ => {}
                         }
                     }
                 }
             }
         }
 
-        Ok(SpyderConsData::default())
+        Ok(SpyderIndexData::default())
     }
 }

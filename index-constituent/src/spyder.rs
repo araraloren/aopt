@@ -3,13 +3,15 @@ pub mod csindex;
 
 use std::ops::{Deref, DerefMut};
 
+use json::JsonValue;
+
 #[async_trait::async_trait]
 pub trait Spyder {
     async fn list(&self, page_number: usize) -> reqwest::Result<SpyderIndexData>;
 
     async fn search(&self, keyword: &str, page_number: usize) -> reqwest::Result<SpyderIndexData>;
 
-    async fn fetch_cons(&self, code: &str, page_number: usize) -> reqwest::Result<SpyderConsData>;
+    async fn fetch_cons(&self, code: &str, page_number: usize) -> reqwest::Result<SpyderIndexData>;
 }
 
 #[derive(Debug, Clone, Default)]
@@ -20,35 +22,40 @@ pub struct Item {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct SpyderIndexData(Vec<Item>);
+pub struct SpyderIndexData {
+    total: usize,
+    data: Vec<Item>,
+}
+
+impl SpyderIndexData {
+    pub fn set_total(&mut self, total: usize) {
+        self.total = total;
+    }
+}
 
 impl Deref for SpyderIndexData {
     type Target = Vec<Item>;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.data
     }
 }
 
 impl DerefMut for SpyderIndexData {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        &mut self.data
     }
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct SpyderConsData(Vec<Item>);
-
-impl Deref for SpyderConsData {
-    type Target = Vec<Item>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+pub fn json_to_number(json: &JsonValue) -> Option<u64> {
+    if json.is_number() {
+        return Some(json.as_fixed_point_u64(2).unwrap_or(0));
+    } else if json.is_string() {
+        if let Some(json) = json.as_str() {
+            if let Ok(v) = json.parse::<u64>() {
+                return Some(v);
+            }
+        }
     }
-}
-
-impl DerefMut for SpyderConsData {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
+    None
 }

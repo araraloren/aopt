@@ -1,8 +1,11 @@
+use std::collections::HashMap;
+
 use reqwest::header;
 use reqwest::Client;
 
+use super::json_to_number;
 use super::Item;
-use super::{SpyderConsData, SpyderIndexData};
+use super::SpyderIndexData;
 use chrono::{Datelike, Utc};
 
 #[derive(Debug, Clone)]
@@ -18,13 +21,18 @@ impl CNIndex {
 
         headers.insert(
             "Accept-Encoding",
-            header::HeaderValue::from_static("gzip, deflate, br"),
+            header::HeaderValue::from_static("gzip, deflate"),
         );
         headers.insert(
             "Accept-Language",
-            header::HeaderValue::from_static("zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6"),
+            header::HeaderValue::from_static(
+                "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2",
+            ),
         );
-        headers.insert("Accept", header::HeaderValue::from_static("text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"));
+        headers.insert(
+            "Accept",
+            header::HeaderValue::from_static("application/json, text/javascript, */*; q=0.01"),
+        );
 
         let client = Client::builder()
         .user_agent(
@@ -91,25 +99,24 @@ impl super::Spyder for CNIndex {
 
     async fn search(&self, keyword: &str, page_number: usize) -> reqwest::Result<SpyderIndexData> {
         let search_page_uri = self.get_search_page_uri(keyword);
-        let res = self.client.get(search_page_uri).send().await?;
+        let res = self.client.get(search_page_uri).header("Accept", " text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8").send().await?;
 
         if res.status().is_success() {
             let search_uri = self.get_search_content_uri();
-            let res = self
-                .client
-                .post(&search_uri)
-                .body(format!(
-                    "content={}&rows={}&pageNum={}",
-                    keyword, self.page_size, page_number
-                ))
-                .send()
-                .await?;
+            let mut hash_map = HashMap::new();
+
+            hash_map.insert("content", keyword.to_owned());
+            hash_map.insert("rows", format!("{}", self.page_size));
+            hash_map.insert("pageNum", format!("{}", page_number));
+
+            let res = self.client.post(&search_uri).form(&hash_map).send().await?;
 
             if self.debug {
                 eprintln!(
-                    "In search, url = `{}`, status: {:?}",
+                    "In search, url = `{}`, status: {:?}， res: {:?}",
                     search_uri,
-                    res.status()
+                    res.status(),
+                    res,
                 );
             }
 
@@ -122,28 +129,25 @@ impl super::Spyder for CNIndex {
                     for (name, value) in json.entries() {
                         if name == "data" {
                             for (name, value) in value.entries() {
-                                if name == "weightList" {
+                                if name == "rows" {
                                     for member in value.members() {
                                         let mut item = Item::default();
 
                                         for (name, inner_value) in member.entries() {
                                             match name {
-                                                "securityCode" => {
+                                                "indexcode" => {
                                                     item.code = String::from(
                                                         inner_value.as_str().unwrap_or(""),
                                                     );
                                                 }
-                                                "securityName" => {
+                                                "indexname" => {
                                                     item.name = String::from(
                                                         inner_value.as_str().unwrap_or(""),
                                                     );
                                                 }
-                                                "weight" => {
-                                                    if let Some(v) = inner_value.as_str() {
-                                                        if let Ok(num) = v.parse::<f64>() {
-                                                            item.number = (num * 100.0) as u64;
-                                                        }
-                                                    }
+                                                "samplesize" => {
+                                                    item.number =
+                                                        json_to_number(&inner_value).unwrap_or(0);
                                                 }
                                                 _ => {}
                                             }
@@ -151,6 +155,8 @@ impl super::Spyder for CNIndex {
                                         ret.push(item);
                                     }
                                     return Ok(ret);
+                                } else if name == "total" {
+                                    ret.set_total(value.as_i64().unwrap_or(0) as usize);
                                 }
                             }
                         }
@@ -162,11 +168,11 @@ impl super::Spyder for CNIndex {
         Ok(SpyderIndexData::default())
     }
 
-    async fn fetch_cons(&self, code: &str, page_number: usize) -> reqwest::Result<SpyderConsData> {
+    async fn fetch_cons(&self, code: &str, page_number: usize) -> reqwest::Result<SpyderIndexData> {
         let index_uri = self.get_index_uri(code);
         let res = self.client.get(index_uri).send().await?;
         let now = Utc::now();
-        let date = format!("{}-{:02}-{:02}", now.year_ce().1, now.month(), now.day());
+        let date = format!("{}-{:02}", now.year_ce().1, now.month() - 1);
 
         if res.status().is_success() {
             let cons_content_uri =
@@ -185,33 +191,30 @@ impl super::Spyder for CNIndex {
                 let text = res.text().await?;
 
                 if let Ok(json) = json::parse(&text) {
-                    let mut ret = SpyderConsData::default();
+                    let mut ret = SpyderIndexData::default();
 
                     for (name, value) in json.entries() {
                         if name == "data" {
                             for (name, value) in value.entries() {
-                                if name == "weightList" {
+                                if name == "rows" {
                                     for member in value.members() {
                                         let mut item = Item::default();
 
                                         for (name, inner_value) in member.entries() {
                                             match name {
-                                                "securityCode" => {
+                                                "seccode" => {
                                                     item.code = String::from(
                                                         inner_value.as_str().unwrap_or(""),
                                                     );
                                                 }
-                                                "securityName" => {
+                                                "secname" => {
                                                     item.name = String::from(
                                                         inner_value.as_str().unwrap_or(""),
                                                     );
                                                 }
                                                 "weight" => {
-                                                    if let Some(v) = inner_value.as_str() {
-                                                        if let Ok(num) = v.parse::<f64>() {
-                                                            item.number = (num * 100.0) as u64;
-                                                        }
-                                                    }
+                                                    item.number =
+                                                        json_to_number(&inner_value).unwrap_or(0);
                                                 }
                                                 _ => {}
                                             }
@@ -221,12 +224,14 @@ impl super::Spyder for CNIndex {
                                     return Ok(ret);
                                 }
                             }
+                        } else if name == "total" {
+                            ret.set_total(value.as_i64().unwrap_or(0) as usize);
                         }
                     }
                 }
             }
         }
 
-        Ok(SpyderConsData::default())
+        Ok(SpyderIndexData::default())
     }
 }
