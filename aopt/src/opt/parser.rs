@@ -4,6 +4,36 @@ use crate::err::{ConstructError, Result};
 use crate::pat::{ParseIndex, ParserPattern};
 use crate::Ustr;
 
+/// Parse the option string with given prefixs, return an [`DataKeeper`].
+///
+/// The struct of the option string are:
+///
+/// ```!
+/// [--][option][=][type][/][!][@index]
+///  |     |     |    |   |  |   |
+///  |     |     |    |   |  |   | 
+///  |     |     |    |   |  |   |
+///  |     |     |    |   |  |   The index part of option. Here are all the possible string:
+///  |     |     |    |   |  |   `@1` means first position
+///  |     |     |    |   |  |   `@-1` means last position
+///  |     |     |    |   |  |   `@[1, 2, 3]` means the position 1, 2 and 3
+///  |     |     |    |   |  |   `@-[1, 2]` means except the position 1, 2
+///  |     |     |    |   |  |   `@>2` means position that bigger than 2
+///  |     |     |    |   |  |   `@<3` means position less than 3
+///  |     |     |    |   |  |   `@*` means all the position
+///  |     |     |    |   |  |
+///  |     |     |    |   |  Indicate the option must be is force required.
+///  |     |     |    |   |
+///  |     |     |    |   The disable symbol, generally it is using for boolean option.
+///  |     |     |    |
+///  |     |     |    The type name of option.
+///  |     |     |    
+///  |     |     The delimiter of option name and type.
+///  |     |
+///  |     The option name part, it must be provide by user. 
+///  |  
+///  The prefix of option.
+/// ```
 pub fn parse_option_str(pattern: Ustr, prefix: &[Ustr]) -> Result<DataKeeper> {
     let pattern = ParserPattern::new(pattern, prefix);
     let mut index = ParseIndex::new(pattern.len());

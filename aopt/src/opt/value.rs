@@ -27,15 +27,57 @@ impl From<i64> for Value {
     }
 }
 
+impl From<i32> for Value {
+    fn from(v: i32) -> Self {
+        Self::Int(v as i64)
+    }
+}
+
+impl From<i16> for Value {
+    fn from(v: i16) -> Self {
+        Self::Int(v as i64)
+    }
+}
+
+impl From<i8> for Value {
+    fn from(v: i8) -> Self {
+        Self::Int(v as i64)
+    }
+}
+
 impl From<u64> for Value {
     fn from(v: u64) -> Self {
         Self::Uint(v)
     }
 }
 
+impl From<u32> for Value {
+    fn from(v: u32) -> Self {
+        Self::Uint(v as u64)
+    }
+}
+
+impl From<u16> for Value {
+    fn from(v: u16) -> Self {
+        Self::Uint(v as u64)
+    }
+}
+
+impl From<u8> for Value {
+    fn from(v: u8) -> Self {
+        Self::Uint(v as u64)
+    }
+}
+
 impl From<f64> for Value {
     fn from(v: f64) -> Self {
         Self::Flt(v)
+    }
+}
+
+impl From<f32> for Value {
+    fn from(v: f32) -> Self {
+        Self::Flt(v as f64)
     }
 }
 
