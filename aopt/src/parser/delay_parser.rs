@@ -161,9 +161,6 @@ where
 
         trace!(?self.noa, "current non-option argument");
 
-        // do option check
-        self.check_opt(set)?;
-
         let noa_count = self.noa.len();
 
         if noa_count > 0 {
@@ -194,9 +191,6 @@ where
             }
         }
 
-        // check pos and cmd
-        self.check_nonopt(set)?;
-
         {
             // do value set and invoke callback
             let uids: Vec<_> = self.value_keeper.keys().map(|v| v.clone()).collect();
@@ -222,6 +216,12 @@ where
                 }
             }
         }
+
+        // do option check
+        self.check_opt(set)?;
+
+        // check pos and cmd
+        self.check_nonopt(set)?;
 
         let gen_style = ParserState::PSNonMain;
 
