@@ -11,18 +11,18 @@ use crate::Ustr;
 /// ```!
 /// [--][option][=][type][/][!][@index]
 ///  |     |     |    |   |  |   |
-///  |     |     |    |   |  |   | 
+///  |     |     |    |   |  |   |
 ///  |     |     |    |   |  |   |
 ///  |     |     |    |   |  |   The index part of option. Here are all the possible string:
-///  |     |     |    |   |  |   `@1` means first position
-///  |     |     |    |   |  |   `@-1` means last position
-///  |     |     |    |   |  |   `@[1, 2, 3]` means the position 1, 2 and 3
-///  |     |     |    |   |  |   `@-[1, 2]` means except the position 1, 2
-///  |     |     |    |   |  |   `@>2` means position that bigger than 2
-///  |     |     |    |   |  |   `@<3` means position less than 3
-///  |     |     |    |   |  |   `@*` means all the position
+///  |     |     |    |   |  |   @1 means first position
+///  |     |     |    |   |  |   @-1 means last position
+///  |     |     |    |   |  |   @[1, 2, 3] means the position 1, 2 and 3
+///  |     |     |    |   |  |   @-[1, 2] means except the position 1, 2
+///  |     |     |    |   |  |   @>2 means position that bigger than 2
+///  |     |     |    |   |  |   @<3 means position less than 3
+///  |     |     |    |   |  |   @* means all the position
 ///  |     |     |    |   |  |
-///  |     |     |    |   |  Indicate the option must be is force required.
+///  |     |     |    |   |  Indicate the option is force required.
 ///  |     |     |    |   |
 ///  |     |     |    |   The disable symbol, generally it is using for boolean option.
 ///  |     |     |    |
@@ -30,7 +30,7 @@ use crate::Ustr;
 ///  |     |     |    
 ///  |     |     The delimiter of option name and type.
 ///  |     |
-///  |     The option name part, it must be provide by user. 
+///  |     The option name part, it must be provide by user.
 ///  |  
 ///  The prefix of option.
 /// ```

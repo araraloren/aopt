@@ -45,7 +45,12 @@ async fn main() -> color_eyre::Result<()> {
         ),
         ("-a=b", "--all", "Get all the result", None),
         ("-i=b", "--id-only", "Display only id column", None),
-        ("-r=b/", "--reverse", "Reverse the order of result", Some(OptValue::from(true))),
+        (
+            "-r=b/",
+            "--reverse",
+            "Reverse the order of result",
+            Some(OptValue::from(true)),
+        ),
     ] {
         let mut commit = app.add_opt(opt)?;
 
@@ -172,10 +177,7 @@ async fn main() -> color_eyre::Result<()> {
                     } else {
                         for data in data.iter() {
                             if ctx.is_search()? {
-                                println!(
-                                    "{}\t\t{}\t\t{:02}",
-                                    data.code, data.name, data.number
-                                );
+                                println!("{}\t\t{}\t\t{:02}", data.code, data.name, data.number);
                             } else if ctx.is_cons()? {
                                 println!(
                                     "{}\t\t{}\t\t{}",

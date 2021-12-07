@@ -4,7 +4,6 @@ use std::fmt::Debug;
 
 use crate::{err::Result, prelude::*, set::Commit};
 
-#[macro_export]
 macro_rules! simple_opt_tweak {
     () => {
         Box::new(|parser, uid, checker| {
@@ -12,8 +11,8 @@ macro_rules! simple_opt_tweak {
 
             parser.add_callback(
                 uid,
-                simple_opt_cb!(move |uid, set, value| {
-                    let opt = set[uid].as_ref();
+                simple_opt_mut_cb!(move |uid, set, value| {
+                    let opt = set[uid].as_mut();
 
                     if let Some(checker) = checker.take() {
                         checker.checking(opt, &value);
@@ -27,7 +26,6 @@ macro_rules! simple_opt_tweak {
     };
 }
 
-#[macro_export]
 macro_rules! simple_main_tweak {
     () => {
         Box::new(|parser, uid, checker| {
@@ -35,8 +33,8 @@ macro_rules! simple_main_tweak {
 
             parser.add_callback(
                 uid,
-                simple_main_cb!(move |uid, set, _, value| {
-                    let opt = set[uid].as_ref();
+                simple_main_mut_cb!(move |uid, set, _, value| {
+                    let opt = set[uid].as_mut();
 
                     if let Some(checker) = checker.take() {
                         checker.checking(opt, &value);
@@ -50,7 +48,6 @@ macro_rules! simple_main_tweak {
     };
 }
 
-#[macro_export]
 macro_rules! simple_pos_tweak {
     () => {
         Box::new(|parser, uid, checker| {
@@ -58,8 +55,8 @@ macro_rules! simple_pos_tweak {
 
             parser.add_callback(
                 uid,
-                simple_pos_cb!(move |uid, set, arg, _, value| {
-                    let opt = set[uid].as_ref();
+                simple_pos_mut_cb!(move |uid, set, arg, _, value| {
+                    let opt = set[uid].as_mut();
 
                     if let Some(checker) = checker.take() {
                         checker.checking(opt, &value);
@@ -219,7 +216,7 @@ impl<P: Parser> TestingCase<P> {
     }
 }
 
-pub struct Checker(Option<Box<dyn Fn(&OptChecker)>>);
+pub struct Checker(Box<dyn Fn(&OptChecker, &mut dyn Opt)>);
 
 impl Debug for Checker {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -228,14 +225,12 @@ impl Debug for Checker {
 }
 
 impl Checker {
-    pub fn new(func: Option<Box<dyn Fn(&OptChecker)>>) -> Self {
+    pub fn new(func: Box<dyn Fn(&OptChecker, &mut dyn Opt)>) -> Self {
         Self(func)
     }
 
-    pub fn call(&self, opt_checker: &OptChecker) {
-        if let Some(func) = &self.0 {
-            func(opt_checker);
-        }
+    pub fn call(&self, opt_checker: &OptChecker, opt: &mut dyn Opt) {
+        self.0(opt_checker, opt);
     }
 }
 
@@ -259,7 +254,7 @@ pub struct OptChecker {
 
     pub alias: Option<Vec<(&'static str, &'static str)>>,
 
-    pub checker: Checker,
+    pub checker: Option<Checker>,
 }
 
 impl Default for OptChecker {
@@ -274,7 +269,7 @@ impl Default for OptChecker {
             callback_value: None,
             default_value: None,
             alias: None,
-            checker: Checker(None),
+            checker: None,
         }
     }
 }
@@ -335,7 +330,7 @@ impl OptChecker {
     }
 
     pub fn with_checker(mut self, checker: Checker) -> Self {
-        self.checker = checker;
+        self.checker = Some(checker);
         self
     }
 
@@ -375,8 +370,8 @@ impl OptChecker {
         self.alias.as_ref()
     }
 
-    pub fn get_checker(&self) -> &Checker {
-        &self.checker
+    pub fn get_checker(&self) -> Option<&Checker> {
+        self.checker.as_ref()
     }
 
     pub fn set_type_name(&mut self, type_name: &'static str) {
@@ -416,10 +411,10 @@ impl OptChecker {
     }
 
     pub fn set_checker(&mut self, checker: Checker) {
-        self.checker = checker;
+        self.checker = Some(checker);
     }
 
-    pub fn checking(&self, opt: &dyn Opt, cb_value: &OptValue) {
+    pub fn checking(&self, opt: &mut dyn Opt, cb_value: &OptValue) {
         assert_eq!(opt.get_name().as_str(), self.name);
         assert_eq!(opt.get_type_name().as_str(), self.type_name);
         assert_eq!(opt.get_prefix().as_str(), self.prefix);
@@ -458,7 +453,9 @@ impl OptChecker {
                 assert!(opt.match_alias(Ustr::from(prefix), Ustr::from(name)));
             }
         }
-        self.checker.call(&self);
+        if let Some(checker) = self.checker.as_ref() {
+            checker.call(&self, opt);
+        }
     }
 }
 
