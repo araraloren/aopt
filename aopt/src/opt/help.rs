@@ -93,7 +93,14 @@ pub fn create_help_hint(ci: &CreateInfo) -> Ustr {
     }
     // adding alias
     for alias in ci.get_alias() {
-        ret += &format!(" | {}", alias);
+        for prefix in ci.get_support_prefix() {
+            if alias.starts_with(prefix.as_str()) {
+                if let Some(name) = alias.get(prefix.len()..alias.len()) {
+                    ret += &format!("|{}/{}", prefix, name);
+                    break;
+                }
+            }
+        }
     }
 
     ret.into()

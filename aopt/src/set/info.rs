@@ -190,6 +190,10 @@ impl CreateInfo {
         ret
     }
 
+    pub fn get_support_prefix(&self) -> &[Ustr] {
+        &self.support_prefix
+    }
+
     pub fn get_uid(&self) -> Uid {
         self.uid
     }
