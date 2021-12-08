@@ -1,6 +1,18 @@
 
 # Relase note
 
+## 0.4.1
+
+- add example index constituent spyder
+
+- fix the option index backward hint
+
+- move delay parser option check after the value set
+
+- fix duplicate alias name
+
+- some documents update
+
 ## 0.4.0
 
 - add with_* api for struct need build
