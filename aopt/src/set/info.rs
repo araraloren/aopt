@@ -182,6 +182,7 @@ impl CreateInfo {
                 if alias.starts_with(prefix.as_ref()) {
                     if let Some(name) = alias.get(prefix.len()..) {
                         ret.push((prefix.clone(), name.into()));
+                        break;
                     }
                 }
             }
