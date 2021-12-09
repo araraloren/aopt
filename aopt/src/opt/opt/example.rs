@@ -7,7 +7,9 @@ use crate::uid::Uid;
 use crate::Ustr;
 
 pub mod path {
-    use crate::err::{ConstructError, ParserError};
+    use std::convert::{TryFrom, TryInto};
+
+    use crate::err::{ConstructError, Error, ParserError};
 
     use super::*;
 
@@ -38,22 +40,28 @@ pub mod path {
         help_info: HelpInfo,
     }
 
-    impl From<CreateInfo> for PathOpt {
-        fn from(ci: CreateInfo) -> Self {
-            let mut ci = ci;
-            let help_info = HelpInfo::from(&mut ci);
+    impl TryFrom<CreateInfo> for PathOpt {
+        type Error = Error;
 
-            Self {
+        fn try_from(value: CreateInfo) -> Result<Self> {
+            let mut ci = value;
+            let help_info = HelpInfo::from(&mut ci);
+            let prefix = ci.get_prefix().ok_or(ConstructError::MissingOptionPrefix(
+                format!("{}", ci.get_name()),
+                format!("{}", ci.get_type_name()),
+            ))?;
+
+            Ok(Self {
                 uid: ci.get_uid(),
-                name: take(ci.get_name_mut()),
-                prefix: take(ci.get_prefix_mut()).unwrap(),
+                name: ci.get_name().clone(),
+                prefix,
                 optional: ci.get_optional(),
                 value: OptValue::default(),
                 default_value: take(ci.get_default_value_mut()),
                 alias: ci.gen_option_alias(),
                 need_invoke: false,
                 help_info,
-            }
+            })
         }
     }
 
@@ -283,13 +291,10 @@ pub mod path {
                     .into());
                 }
             }
-            if create_info.get_prefix().is_none() {
-                return Err(ConstructError::MissingOptionPrefix(current_type().to_owned()).into());
-            }
 
             assert_eq!(create_info.get_type_name(), self.get_type_name());
 
-            let opt: PathOpt = create_info.into();
+            let opt: PathOpt = create_info.try_into()?;
 
             trace!(?opt, "create a Path");
             Ok(Box::new(opt))

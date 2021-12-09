@@ -1,4 +1,6 @@
-use crate::err::{ConstructError, Result};
+use std::convert::{TryFrom, TryInto};
+
+use crate::err::{ConstructError, Result, Error};
 use crate::opt::parser::{parse_option_str, DataKeeper};
 use crate::opt::{HelpInfo, Opt, OptIndex, OptValue};
 use crate::proc::Info;
@@ -272,33 +274,32 @@ impl CreateInfo {
 
     pub fn parse(pattern: Ustr, prefix: &[Ustr]) -> Result<Self> {
         let data_keeper = parse_option_str(pattern, prefix)?;
+        let mut ret: Self = data_keeper.try_into()?;
 
-        if data_keeper.name.is_none() {
-            return Err(ConstructError::MissingOptionName(pattern.to_owned()).into());
-        }
-        if data_keeper.type_name.is_none() {
-            return Err(ConstructError::MissingOptionType(pattern.to_owned()).into());
-        }
-        let mut ret: Self = data_keeper.into();
         ret.set_support_prefix(prefix.iter().map(|v| v.clone()).collect::<Vec<Ustr>>());
+        
         return Ok(ret);
     }
 }
 
-impl From<DataKeeper> for CreateInfo {
-    fn from(data_keeper: DataKeeper) -> Self {
-        let mut data_keeper = data_keeper;
-        let index = data_keeper.gen_index();
+impl TryFrom<DataKeeper> for CreateInfo {
+    type Error = Error;
 
-        Self {
-            prefix: data_keeper.prefix.map(|v| v.clone()),
-            name: data_keeper.name.take().unwrap(),
-            type_name: data_keeper.type_name.take().unwrap(),
+    fn try_from(value: DataKeeper) -> Result<Self> {
+        let mut data_keeper = value;
+        let index = data_keeper.gen_index();
+        let name = data_keeper.name.ok_or(ConstructError::MissingOptionName(data_keeper.pattern.to_owned()))?;
+        let type_ = data_keeper.type_name.ok_or(ConstructError::MissingOptionType(data_keeper.pattern.to_owned()))?;
+        
+        Ok(Self {
+            name,
             index,
+            type_name: type_,
+            prefix: data_keeper.prefix.map(|v| v.clone()),
             support_deactivate_style: data_keeper.deactivate.unwrap_or(false),
-            optional: !data_keeper.optional.unwrap_or(false),
+            optional: ! data_keeper.optional.unwrap_or(false),
             ..Self::default()
-        }
+        })
     }
 }
 

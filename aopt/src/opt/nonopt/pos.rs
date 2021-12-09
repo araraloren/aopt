@@ -1,7 +1,7 @@
-use std::mem::take;
+use std::convert::{TryFrom, TryInto};
 
 use super::NonOpt;
-use crate::err::{ConstructError, SpecialError};
+use crate::err::{ConstructError, Error, SpecialError};
 use crate::opt::*;
 use crate::set::{CreateInfo, Creator};
 use crate::uid::Uid;
@@ -30,20 +30,22 @@ pub struct PosOpt {
     help_info: HelpInfo,
 }
 
-impl From<CreateInfo> for PosOpt {
-    fn from(ci: CreateInfo) -> Self {
-        let mut ci = ci;
+impl TryFrom<CreateInfo> for PosOpt {
+    type Error = Error;
+
+    fn try_from(value: CreateInfo) -> Result<Self> {
+        let mut ci = value;
         let help_info = HelpInfo::from(&mut ci);
 
-        Self {
+        Ok(Self {
             uid: ci.get_uid(),
-            name: take(ci.get_name_mut()),
+            name: ci.get_name().clone(),
             optional: ci.get_optional(),
             value: OptValue::Null,
-            index: take(ci.get_index_mut()),
+            index: std::mem::take(ci.get_index_mut()),
             need_invoke: false,
             help_info,
-        }
+        })
     }
 }
 
@@ -264,7 +266,7 @@ impl Creator for PosCreator {
 
         assert_eq!(create_info.get_type_name(), self.get_type_name());
 
-        let opt: PosOpt = create_info.into();
+        let opt: PosOpt = create_info.try_into()?;
 
         trace!(?opt, "create a Pos");
         Ok(Box::new(opt))

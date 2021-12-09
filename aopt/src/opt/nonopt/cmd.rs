@@ -1,8 +1,8 @@
-use std::mem::take;
+use std::convert::{TryFrom, TryInto};
 
 use super::NonOpt;
 
-use crate::err::{ConstructError, SpecialError};
+use crate::err::{ConstructError, Error, SpecialError};
 use crate::opt::*;
 use crate::set::{CreateInfo, Creator};
 use crate::uid::Uid;
@@ -28,19 +28,21 @@ pub struct CmdOpt {
     help_info: HelpInfo,
 }
 
-impl From<CreateInfo> for CmdOpt {
-    fn from(ci: CreateInfo) -> Self {
-        let mut ci = ci;
+impl TryFrom<CreateInfo> for CmdOpt {
+    type Error = Error;
+
+    fn try_from(value: CreateInfo) -> Result<Self> {
+        let mut ci = value;
         let help_info = HelpInfo::from(&mut ci);
 
-        Self {
+        Ok(Self {
             uid: ci.get_uid(),
-            name: take(ci.get_name_mut()),
+            name: ci.get_name().clone(),
             value: OptValue::Null,
-            index: OptIndex::Forward(1),
+            index: OptIndex::forward(1),
             need_invoke: false,
             help_info,
-        }
+        })
     }
 }
 
@@ -249,7 +251,7 @@ impl Creator for CmdCreator {
             }
         }
         assert_eq!(create_info.get_type_name(), self.get_type_name());
-        let opt: CmdOpt = create_info.into();
+        let opt: CmdOpt = create_info.try_into()?;
 
         trace!(?opt, "create a Cmd");
         Ok(Box::new(opt))

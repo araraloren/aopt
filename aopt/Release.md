@@ -1,6 +1,12 @@
 
 # Relase note
 
+## 0.4.2
+
+- fix the display of alias hint
+
+- using TryFrom instead of From when convert CreateInfo to *Opt
+
 ## 0.4.1
 
 - add example index constituent spyder

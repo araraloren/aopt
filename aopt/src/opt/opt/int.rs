@@ -1,6 +1,7 @@
+use std::convert::{TryFrom, TryInto};
 use std::mem::take;
 
-use crate::err::{ConstructError, ParserError, SpecialError};
+use crate::err::{ConstructError, Error, ParserError, SpecialError};
 use crate::opt::*;
 use crate::set::{CreateInfo, Creator};
 use crate::uid::Uid;
@@ -33,22 +34,28 @@ pub struct IntOpt {
     help_info: HelpInfo,
 }
 
-impl From<CreateInfo> for IntOpt {
-    fn from(ci: CreateInfo) -> Self {
-        let mut ci = ci;
-        let help_info = HelpInfo::from(&mut ci);
+impl TryFrom<CreateInfo> for IntOpt {
+    type Error = Error;
 
-        Self {
+    fn try_from(value: CreateInfo) -> Result<Self> {
+        let mut ci = value;
+        let help_info = HelpInfo::from(&mut ci);
+        let prefix = ci.get_prefix().ok_or(ConstructError::MissingOptionPrefix(
+            format!("{}", ci.get_name()),
+            format!("{}", ci.get_type_name()),
+        ))?;
+
+        Ok(Self {
             uid: ci.get_uid(),
-            name: take(ci.get_name_mut()),
-            prefix: take(ci.get_prefix_mut()).unwrap(),
+            name: ci.get_name().clone(),
+            prefix,
             optional: ci.get_optional(),
             value: OptValue::default(),
             default_value: take(ci.get_default_value_mut()),
             alias: ci.gen_option_alias(),
             need_invoke: false,
             help_info,
-        }
+        })
     }
 }
 
@@ -274,13 +281,10 @@ impl Creator for IntCreator {
                 .into());
             }
         }
-        if create_info.get_prefix().is_none() {
-            return Err(ConstructError::MissingOptionPrefix(current_type().to_owned()).into());
-        }
 
         assert_eq!(create_info.get_type_name(), self.get_type_name());
 
-        let opt: IntOpt = create_info.into();
+        let opt: IntOpt = create_info.try_into()?;
 
         trace!(?opt, "create a Int");
         Ok(Box::new(opt))

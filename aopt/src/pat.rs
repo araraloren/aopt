@@ -39,6 +39,10 @@ impl<'pre> ParserPattern<'pre> {
     pub fn len(&self) -> usize {
         self.pattern.len()
     }
+
+    pub fn clone_pattern(&self) -> Ustr {
+        self.pattern.clone()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

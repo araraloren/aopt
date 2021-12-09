@@ -82,6 +82,8 @@ pub enum State {
 
 #[derive(Debug, Default)]
 pub struct DataKeeper {
+    pub pattern: Ustr,
+
     pub prefix: Option<Ustr>,
 
     pub name: Option<Ustr>,
@@ -239,6 +241,7 @@ impl State {
                     warn!("got an empty pattern");
                     return Ok(false);
                 }
+                data_keeper.pattern = pattern.clone_pattern();
             }
             Self::Prefix => {
                 for prefix in pattern.get_prefixs() {

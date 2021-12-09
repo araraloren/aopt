@@ -90,8 +90,8 @@ pub enum ConstructError {
     #[error("Option type `{0}` not support deactivate style")]
     NotSupportDeactivateStyle(String),
 
-    #[error("Syntax error! Missing prefix for option type `{0}`")]
-    MissingOptionPrefix(String),
+    #[error("Syntax error! Missing prefix for option `{0}` with type `{1}`")]
+    MissingOptionPrefix(String, String),
 
     #[error("Syntax error! Missing Non-Option index: `{0}`")]
     MissingNonOptionIndex(String),

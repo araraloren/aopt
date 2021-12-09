@@ -5,4 +5,4 @@
 
 ## find source
 
-## add a api to set initialize the prefix and creator
+## add a convenient construct of all error
