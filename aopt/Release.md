@@ -1,6 +1,14 @@
 
 # Relase note
 
+## 0.4.3
+
+- update rust version to 2021
+
+- improve the export of structs
+
+- some documents update 
+
 ## 0.4.2
 
 - fix the display of alias hint

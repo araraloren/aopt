@@ -2,7 +2,7 @@
 name = "aopt-help"
 version = "0.2.3"
 authors = ["araraloren <araraloren@gmail.com>"]
-edition = "2018"
+edition = "2021"
 license = "MPL-2.0"
 description = "Generate help message for aopt"
 repository = "https://github.com/araraloren/aopt/"
