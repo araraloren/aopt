@@ -11,10 +11,18 @@ use super::ParserState;
 use crate::arg::Argument;
 use crate::err;
 use crate::err::Result;
-use crate::opt::{OptCallback, OptValue, Style};
-use crate::proc::{Info, Matcher, NonOptMatcher, OptMatcher, Proc};
-use crate::set::{OptionInfo, Set};
-use crate::uid::{Generator, Uid};
+use crate::opt::OptCallback;
+use crate::opt::OptValue;
+use crate::opt::Style;
+use crate::proc::Info;
+use crate::proc::Matcher;
+use crate::proc::NonOptMatcher;
+use crate::proc::OptMatcher;
+use crate::proc::Proc;
+use crate::set::OptionInfo;
+use crate::set::Set;
+use crate::uid::Generator;
+use crate::uid::Uid;
 use crate::Ustr;
 
 #[derive(Debug)]

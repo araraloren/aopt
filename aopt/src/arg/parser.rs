@@ -24,7 +24,7 @@ use crate::Ustr;
 /// # Example
 ///
 /// ```rust
-/// use aopt::arg::parser;
+/// use aopt::arg::parse_argument;
 /// use ustr::Ustr;
 /// use aopt::err::Result;
 ///
@@ -32,7 +32,7 @@ use crate::Ustr;
 ///     let prefix = &[Ustr::from("--"), Ustr::from("-")];
 ///
 ///     {// parse option with value
-///         let dk = parser::parse_argument(Ustr::from("--foo=32"), prefix)?;
+///         let dk = parse_argument(Ustr::from("--foo=32"), prefix)?;
 ///
 ///         assert_eq!(dk.prefix, Some(Ustr::from("--")));
 ///         assert_eq!(dk.name, Some(Ustr::from("foo")));
@@ -40,7 +40,7 @@ use crate::Ustr;
 ///         assert_eq!(dk.disable, false);
 ///     }
 ///     {// parse boolean option
-///         let dk = parser::parse_argument(Ustr::from("--/bar"), prefix)?;
+///         let dk = parse_argument(Ustr::from("--/bar"), prefix)?;
 ///
 ///         assert_eq!(dk.prefix, Some(Ustr::from("--")));
 ///         assert_eq!(dk.name, Some(Ustr::from("bar")));
@@ -48,7 +48,7 @@ use crate::Ustr;
 ///         assert_eq!(dk.disable, true);
 ///     }
 ///     {// parse other string
-///         let dk = parser::parse_argument(Ustr::from("-=bar"), prefix)?;
+///         let dk = parse_argument(Ustr::from("-=bar"), prefix)?;
 ///
 ///         assert_eq!(dk.prefix, Some(Ustr::from("-")));
 ///         assert_eq!(dk.name, None);

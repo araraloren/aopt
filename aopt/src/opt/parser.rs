@@ -40,10 +40,10 @@ use crate::Ustr;
 /// ```rust
 /// use aopt::Ustr;
 /// use aopt::err::Result;
-/// use aopt::opt::parser;
+/// use aopt::opt::parse_option_str;
 ///
 /// fn main() -> Result<()> {
-///     let ret = aopt::opt::parser::parse_option_str("--aopt=t!/".into(), &[Ustr::from("--")])?;
+///     let ret = parse_option_str("--aopt=t!/".into(), &[Ustr::from("--")])?;
 ///
 ///     assert_eq!(ret.prefix, Some(Ustr::from("--")));
 ///     assert_eq!(ret.name , Some(Ustr::from("aopt")));
@@ -58,7 +58,7 @@ use crate::Ustr;
 ///     assert_eq!(ret.greater, None);
 ///     assert_eq!(ret.less, None);
 ///
-///     let ret = aopt::opt::parser::parse_option_str("bopt=t@[1,2,3]".into(), &[Ustr::from("--")])?;
+///     let ret = parse_option_str("bopt=t@[1,2,3]".into(), &[Ustr::from("--")])?;
 ///
 ///     assert_eq!(ret.prefix, None);
 ///     assert_eq!(ret.name , Some(Ustr::from("bopt")));

@@ -1,7 +1,10 @@
 use super::Context;
 
-use crate::err::{Result, SpecialError};
-use crate::opt::{Opt, OptValue, Style};
+use crate::err::Result;
+use crate::err::SpecialError;
+use crate::opt::Opt;
+use crate::opt::OptValue;
+use crate::opt::Style;
 use crate::Ustr;
 
 #[derive(Debug)]

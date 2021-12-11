@@ -1,13 +1,33 @@
-use super::{Commit, Filter, FilterMut, Uid};
-use super::{CreateInfo, Creator, FilterInfo, Set};
-use super::{CreatorSet, OptionSet, PrefixSet};
-use super::{Index, IndexMut, Iter, IterMut};
-
-use crate::err::{ConstructError, Result};
+use super::Commit;
+use super::CreateInfo;
+use super::Creator;
+use super::CreatorSet;
+use super::Filter;
+use super::FilterInfo;
+use super::FilterMut;
+use super::Index;
+use super::IndexMut;
+use super::Iter;
+use super::IterMut;
+use super::OptionSet;
+use super::PrefixSet;
+use super::Set;
+use super::Uid;
+use crate::err::ConstructError;
+use crate::err::Result;
+use crate::gstr;
+use crate::opt::ArrayCreator;
+use crate::opt::BoolCreator;
+use crate::opt::CmdCreator;
+use crate::opt::FltCreator;
+use crate::opt::IntCreator;
+use crate::opt::MainCreator;
 use crate::opt::Opt;
-use crate::opt::{ArrayCreator, BoolCreator, FltCreator, IntCreator, StrCreator, UintCreator};
-use crate::opt::{CmdCreator, MainCreator, PosCreator};
-use crate::{gstr, Ustr, UstrMap};
+use crate::opt::PosCreator;
+use crate::opt::StrCreator;
+use crate::opt::UintCreator;
+use crate::Ustr;
+use crate::UstrMap;
 
 #[derive(Debug, Default)]
 pub struct SimpleSet {

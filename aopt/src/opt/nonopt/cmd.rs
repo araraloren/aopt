@@ -2,9 +2,12 @@ use std::convert::{TryFrom, TryInto};
 
 use super::NonOpt;
 
-use crate::err::{ConstructError, Error, SpecialError};
+use crate::err::ConstructError;
+use crate::err::Error;
+use crate::err::SpecialError;
 use crate::opt::*;
-use crate::set::{CreateInfo, Creator};
+use crate::set::CreateInfo;
+use crate::set::Creator;
 use crate::uid::Uid;
 use crate::Ustr;
 

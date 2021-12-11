@@ -1,5 +1,5 @@
-pub mod argument;
-pub mod parser;
+mod argument;
+mod parser;
 
 use std::convert::From;
 use std::fmt::Debug;
@@ -8,6 +8,8 @@ use std::iter::Iterator;
 use crate::Ustr;
 
 pub use argument::Argument;
+pub use parser::parse_argument;
+pub use parser::DataKeeper;
 
 /// The wrapper of command line items, it will output [`Argument`].
 ///

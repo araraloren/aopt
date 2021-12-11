@@ -1,6 +1,10 @@
 use crate::arg::Argument;
-use crate::ctx::{Context, NonOptContext, OptContext};
-use crate::err::{ArgumentError, Error, Result};
+use crate::ctx::Context;
+use crate::ctx::NonOptContext;
+use crate::ctx::OptContext;
+use crate::err::ArgumentError;
+use crate::err::Error;
+use crate::err::Result;
 use crate::opt::Style;
 use crate::proc::Matcher;
 use crate::Ustr;

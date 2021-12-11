@@ -1,20 +1,24 @@
-pub mod commit;
-pub mod filter;
-pub mod info;
-pub mod simple_set;
+mod commit;
+mod filter;
+mod info;
+mod simple_set;
 
 use std::fmt::Debug;
 use std::ops::{Index, IndexMut};
 use std::slice::{Iter, IterMut};
 
 use crate::err::Result;
-use crate::opt::{Opt, OptValue};
+use crate::opt::Opt;
+use crate::opt::OptValue;
 use crate::uid::Uid;
 use crate::Ustr;
 
 pub use self::commit::Commit;
-pub use self::filter::{Filter, FilterMut};
-pub use self::info::{CreateInfo, FilterInfo, OptionInfo};
+pub use self::filter::Filter;
+pub use self::filter::FilterMut;
+pub use self::info::CreateInfo;
+pub use self::info::FilterInfo;
+pub use self::info::OptionInfo;
 pub use self::simple_set::SimpleSet;
 
 pub trait Creator: Debug {

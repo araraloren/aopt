@@ -1,7 +1,7 @@
 use std::convert::{TryFrom, TryInto};
 
 use crate::err::{ConstructError, Error, Result};
-use crate::opt::parser::{parse_option_str, DataKeeper};
+use crate::opt::{parse_option_str, DataKeeper};
 use crate::opt::{HelpInfo, Opt, OptIndex, OptValue};
 use crate::proc::Info;
 use crate::uid::Uid;

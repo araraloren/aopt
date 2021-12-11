@@ -1,9 +1,9 @@
 use super::info::CreateInfo;
 use super::{Result, Set, Uid};
 
-use crate::opt::help::HelpInfo;
-use crate::opt::index::Index;
-use crate::opt::value::Value;
+use crate::opt::HelpInfo;
+use crate::opt::OptIndex;
+use crate::opt::OptValue;
 use crate::{gstr, Ustr};
 
 #[derive(Debug)]
@@ -43,12 +43,12 @@ impl<'a> Commit<'a> {
         self
     }
 
-    pub fn set_index(&mut self, index: Index) -> &mut Self {
+    pub fn set_index(&mut self, index: OptIndex) -> &mut Self {
         self.info.set_index(index);
         self
     }
 
-    pub fn set_default_value(&mut self, value: Value) -> &mut Self {
+    pub fn set_default_value(&mut self, value: OptValue) -> &mut Self {
         self.info.set_default_value(value);
         self
     }

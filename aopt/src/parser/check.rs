@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use super::Parser;
 
-use crate::err::{ConstructError, Result, SpecialError};
+use crate::err::ConstructError;
+use crate::err::Result;
+use crate::err::SpecialError;
 use crate::opt::Style;
 use crate::set::Set;
 use crate::uid::Uid;

@@ -1,5 +1,5 @@
-pub mod nonopt;
-pub mod opt;
+mod nonopt;
+mod opt;
 
 use std::fmt::Debug;
 

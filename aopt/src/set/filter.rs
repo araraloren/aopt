@@ -1,7 +1,7 @@
 use super::info::FilterInfo;
 use super::Set;
 use crate::gstr;
-use crate::opt::{index::Index, Opt};
+use crate::opt::{Opt, OptIndex};
 
 #[derive(Debug)]
 pub struct Filter<'a> {
@@ -40,7 +40,7 @@ impl<'a> Filter<'a> {
         self
     }
 
-    pub fn set_index(&mut self, index: Index) -> &mut Self {
+    pub fn set_index(&mut self, index: OptIndex) -> &mut Self {
         self.info.set_index(index);
         self
     }
@@ -103,7 +103,7 @@ impl<'a> FilterMut<'a> {
         self
     }
 
-    pub fn set_index(&mut self, index: Index) -> &mut Self {
+    pub fn set_index(&mut self, index: OptIndex) -> &mut Self {
         self.info.set_index(index);
         self
     }

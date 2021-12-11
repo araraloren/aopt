@@ -1,11 +1,12 @@
-pub mod callback;
-pub mod help;
-pub mod index;
+mod callback;
+mod help;
+mod index;
+mod parser;
+mod style;
+mod value;
+
 pub mod nonopt;
 pub mod opt;
-pub mod parser;
-pub mod style;
-pub mod value;
 
 use std::fmt::Debug;
 
@@ -13,13 +14,36 @@ use crate::err::Result;
 use crate::uid::Uid;
 use crate::Ustr;
 
-pub use self::callback::{Callback as OptCallback, CallbackType};
+pub use self::callback::Callback as OptCallback;
+pub use self::callback::CallbackType;
+pub use self::callback::MainCallback as MainFn;
+pub use self::callback::MainMutCallback as MainFnMut;
+pub use self::callback::OptCallback as OptFn;
+pub use self::callback::OptMutCallback as OptFnMut;
+pub use self::callback::PosCallback as PosFn;
+pub use self::callback::PosMutCallback as PosFnMut;
+pub use self::callback::SimpleMainCallback;
+pub use self::callback::SimpleMainMutCallback;
+pub use self::callback::SimpleOptCallback;
+pub use self::callback::SimpleOptMutCallback;
+pub use self::callback::SimplePosCallback;
+pub use self::callback::SimplePosMutCallback;
+pub use self::help::create_help_hint;
 pub use self::help::HelpInfo;
 pub use self::index::Index as OptIndex;
-pub use self::nonopt::{CmdCreator, MainCreator, PosCreator};
-pub use self::opt::{ArrayCreator, BoolCreator, FltCreator, IntCreator, StrCreator, UintCreator};
-pub use self::parser::{parse_option_str, DataKeeper};
+pub use self::nonopt::CmdCreator;
+pub use self::nonopt::MainCreator;
+pub use self::nonopt::PosCreator;
+pub use self::opt::ArrayCreator;
+pub use self::opt::BoolCreator;
+pub use self::opt::FltCreator;
+pub use self::opt::IntCreator;
+pub use self::opt::StrCreator;
+pub use self::opt::UintCreator;
+pub use self::parser::parse_option_str;
+pub use self::parser::DataKeeper;
 pub use self::style::Style;
+pub use self::value::CloneHelper;
 pub use self::value::Value as OptValue;
 
 pub trait Type {

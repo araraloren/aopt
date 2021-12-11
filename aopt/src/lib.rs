@@ -27,6 +27,7 @@ pub fn gstr(s: &str) -> Ustr {
     Ustr::from(s)
 }
 
+#[derive(Debug)]
 pub struct ReturnValue<'a, 'b>(pub &'b mut dyn Parser, pub &'a mut dyn Set);
 
 pub fn getopt_impl<'a, 'b>(
@@ -95,27 +96,64 @@ macro_rules! getopt {
 }
 
 pub mod prelude {
-    pub use crate::ctx::{Context, NonOptContext, OptContext};
+    pub use crate::ctx::Context;
+    pub use crate::ctx::NonOptContext;
+    pub use crate::ctx::OptContext;
+    pub use crate::getopt;
+    pub use crate::getopt_impl;
+    pub use crate::getopt_impl_s;
     pub use crate::gstr;
-    pub use crate::opt::callback::{SimpleMainCallback, SimpleMainMutCallback};
-    pub use crate::opt::callback::{SimpleOptCallback, SimpleOptMutCallback};
-    pub use crate::opt::callback::{SimplePosCallback, SimplePosMutCallback};
-    pub use crate::opt::{
-        Alias, Callback, Help, HelpInfo, Identifier, Index, Name, Opt, OptCallback, OptIndex,
-        OptValue, Optional, Type, Value,
-    };
-    pub use crate::opt::{
-        ArrayCreator, BoolCreator, FltCreator, IntCreator, StrCreator, UintCreator,
-    };
-    pub use crate::opt::{CmdCreator, MainCreator, PosCreator};
-    pub use crate::parser::{DelayParser, Parser, PreParser, SimpleParser};
-    pub use crate::proc::{Info, Proc};
-    pub use crate::proc::{Matcher, NonOptMatcher, OptMatcher};
-    pub use crate::set::{CreatorSet, OptionSet, PrefixSet, Set, SimpleSet};
+    pub use crate::opt::Alias;
+    pub use crate::opt::ArrayCreator;
+    pub use crate::opt::BoolCreator;
+    pub use crate::opt::Callback;
+    pub use crate::opt::CmdCreator;
+    pub use crate::opt::FltCreator;
+    pub use crate::opt::Help;
+    pub use crate::opt::HelpInfo;
+    pub use crate::opt::Identifier;
+    pub use crate::opt::Index;
+    pub use crate::opt::IntCreator;
+    pub use crate::opt::MainCreator;
+    pub use crate::opt::Name;
+    pub use crate::opt::Opt;
+    pub use crate::opt::OptCallback;
+    pub use crate::opt::OptIndex;
+    pub use crate::opt::OptValue;
+    pub use crate::opt::Optional;
+    pub use crate::opt::PosCreator;
+    pub use crate::opt::SimpleMainCallback;
+    pub use crate::opt::SimpleMainMutCallback;
+    pub use crate::opt::SimpleOptCallback;
+    pub use crate::opt::SimpleOptMutCallback;
+    pub use crate::opt::SimplePosCallback;
+    pub use crate::opt::SimplePosMutCallback;
+    pub use crate::opt::StrCreator;
+    pub use crate::opt::Type;
+    pub use crate::opt::UintCreator;
+    pub use crate::opt::Value;
+    pub use crate::parser::DelayParser;
+    pub use crate::parser::Parser;
+    pub use crate::parser::PreParser;
+    pub use crate::parser::SimpleParser;
+    pub use crate::proc::Info;
+    pub use crate::proc::Matcher;
+    pub use crate::proc::NonOptMatcher;
+    pub use crate::proc::OptMatcher;
+    pub use crate::proc::Proc;
+    pub use crate::set::CreatorSet;
+    pub use crate::set::OptionSet;
+    pub use crate::set::PrefixSet;
+    pub use crate::set::Set;
+    pub use crate::set::SimpleSet;
+    pub use crate::simple_main_cb;
+    pub use crate::simple_main_mut_cb;
+    pub use crate::simple_opt_cb;
+    pub use crate::simple_opt_mut_cb;
+    pub use crate::simple_pos_cb;
+    pub use crate::simple_pos_mut_cb;
     pub use crate::uid::{Uid, UidGenerator};
-    pub use crate::{getopt, getopt_impl, getopt_impl_s, ReturnValue};
-    pub use crate::{simple_main_cb, simple_main_mut_cb};
-    pub use crate::{simple_opt_cb, simple_opt_mut_cb};
-    pub use crate::{simple_pos_cb, simple_pos_mut_cb};
-    pub use crate::{Ustr, UstrMap};
+    pub use crate::ReturnValue;
+    pub use crate::Ustr;
+    pub use crate::UstrMap;
 }
