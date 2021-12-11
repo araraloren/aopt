@@ -13,10 +13,6 @@ pub mod path {
 
     use super::*;
 
-    pub fn current_type() -> Ustr {
-        Ustr::from("p")
-    }
-
     pub trait Path: Opt {}
 
     #[derive(Debug)]
@@ -71,7 +67,7 @@ pub mod path {
 
     impl Type for PathOpt {
         fn get_type_name(&self) -> Ustr {
-            current_type()
+            PathCreator::type_name()
         }
 
         fn is_deactivate_style(&self) -> bool {
@@ -273,9 +269,15 @@ pub mod path {
     #[derive(Debug, Default, Clone)]
     pub struct PathCreator;
 
+    impl PathCreator {
+        pub fn type_name() -> Ustr {
+            Ustr::from("p")
+        }
+    }
+
     impl Creator for PathCreator {
         fn get_type_name(&self) -> Ustr {
-            current_type()
+            PathCreator::type_name()
         }
 
         fn is_support_deactivate_style(&self) -> bool {

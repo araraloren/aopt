@@ -7,10 +7,6 @@ use crate::set::{CreateInfo, Creator};
 use crate::uid::Uid;
 use crate::Ustr;
 
-pub fn current_type() -> Ustr {
-    Ustr::from("m")
-}
-
 pub trait Main: NonOpt {}
 
 #[derive(Debug)]
@@ -51,7 +47,7 @@ impl NonOpt for MainOpt {}
 
 impl Type for MainOpt {
     fn get_type_name(&self) -> Ustr {
-        current_type()
+        MainCreator::type_name()
     }
 
     fn is_deactivate_style(&self) -> bool {
@@ -223,9 +219,15 @@ impl Help for MainOpt {
 #[derive(Debug, Default, Clone)]
 pub struct MainCreator;
 
+impl MainCreator {
+    pub fn type_name() -> Ustr {
+        Ustr::from("m")
+    }
+}
+
 impl Creator for MainCreator {
     fn get_type_name(&self) -> Ustr {
-        current_type()
+        MainCreator::type_name()
     }
 
     fn is_support_deactivate_style(&self) -> bool {
@@ -259,7 +261,7 @@ mod test {
     fn make_type_main_work() {
         let creator = MainCreator::default();
 
-        assert_eq!(creator.get_type_name(), current_type());
+        assert_eq!(creator.get_type_name(), MainCreator::type_name());
         // main not support deactivate style
         assert_eq!(creator.is_support_deactivate_style(), false);
 
@@ -269,7 +271,7 @@ mod test {
 
         let mut main = creator.create_with(ci).unwrap();
 
-        assert_eq!(main.get_type_name(), current_type());
+        assert_eq!(main.get_type_name(), MainCreator::type_name());
         assert_eq!(main.is_deactivate_style(), false);
         assert_eq!(main.match_style(Style::Main), true);
         assert_eq!(main.check().is_err(), false);

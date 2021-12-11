@@ -7,10 +7,6 @@ use crate::set::{CreateInfo, Creator};
 use crate::uid::Uid;
 use crate::Ustr;
 
-pub fn current_type() -> Ustr {
-    Ustr::from("b")
-}
-
 pub trait Bool: Opt {}
 
 #[derive(Debug)]
@@ -68,7 +64,7 @@ impl Opt for BoolOpt {}
 
 impl Type for BoolOpt {
     fn get_type_name(&self) -> Ustr {
-        current_type()
+        BoolCreator::type_name()
     }
 
     fn is_deactivate_style(&self) -> bool {
@@ -264,9 +260,15 @@ impl Help for BoolOpt {
 #[derive(Debug, Default, Clone)]
 pub struct BoolCreator;
 
+impl BoolCreator {
+    pub fn type_name() -> Ustr {
+        Ustr::from("b")
+    }
+}
+
 impl Creator for BoolCreator {
     fn get_type_name(&self) -> Ustr {
-        current_type()
+        BoolCreator::type_name()
     }
 
     fn is_support_deactivate_style(&self) -> bool {

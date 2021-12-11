@@ -7,10 +7,6 @@ use crate::set::{CreateInfo, Creator};
 use crate::uid::Uid;
 use crate::Ustr;
 
-pub fn current_type() -> Ustr {
-    Ustr::from("p")
-}
-
 pub trait Pos: NonOpt {}
 
 #[derive(Debug)]
@@ -57,7 +53,7 @@ impl NonOpt for PosOpt {}
 
 impl Type for PosOpt {
     fn get_type_name(&self) -> Ustr {
-        current_type()
+        PosCreator::type_name()
     }
 
     fn is_deactivate_style(&self) -> bool {
@@ -240,9 +236,15 @@ impl Help for PosOpt {
 #[derive(Debug, Default, Clone)]
 pub struct PosCreator;
 
+impl PosCreator {
+    pub fn type_name() -> Ustr {
+        Ustr::from("p")
+    }
+}
+
 impl Creator for PosCreator {
     fn get_type_name(&self) -> Ustr {
-        current_type()
+        PosCreator::type_name()
     }
 
     fn is_support_deactivate_style(&self) -> bool {
@@ -281,7 +283,7 @@ mod test {
     fn make_type_pos_work() {
         let creator = PosCreator::default();
 
-        assert_eq!(creator.get_type_name(), current_type());
+        assert_eq!(creator.get_type_name(), PosCreator::type_name());
         // pos not support deactivate style
         assert_eq!(creator.is_support_deactivate_style(), false);
 
@@ -291,7 +293,7 @@ mod test {
 
         let mut pos = creator.create_with(ci).unwrap();
 
-        assert_eq!(pos.get_type_name(), current_type());
+        assert_eq!(pos.get_type_name(), PosCreator::type_name());
         assert_eq!(pos.is_deactivate_style(), false);
         assert_eq!(pos.match_style(Style::Pos), true);
         assert_eq!(pos.check().is_err(), false);

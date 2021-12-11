@@ -7,10 +7,6 @@ use crate::set::{CreateInfo, Creator};
 use crate::uid::Uid;
 use crate::Ustr;
 
-pub fn current_type() -> Ustr {
-    Ustr::from("a")
-}
-
 pub trait Array: Opt {}
 
 #[derive(Debug)]
@@ -65,7 +61,7 @@ impl Opt for ArrayOpt {}
 
 impl Type for ArrayOpt {
     fn get_type_name(&self) -> Ustr {
-        current_type()
+        ArrayCreator::type_name()
     }
 
     fn is_deactivate_style(&self) -> bool {
@@ -272,9 +268,15 @@ impl Help for ArrayOpt {
 #[derive(Debug, Default, Clone)]
 pub struct ArrayCreator;
 
+impl ArrayCreator {
+    pub fn type_name() -> Ustr {
+        Ustr::from("a")
+    }
+}
+
 impl Creator for ArrayCreator {
     fn get_type_name(&self) -> Ustr {
-        current_type()
+        ArrayCreator::type_name()
     }
 
     fn is_support_deactivate_style(&self) -> bool {

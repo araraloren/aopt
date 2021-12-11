@@ -7,10 +7,6 @@ use crate::set::{CreateInfo, Creator};
 use crate::uid::Uid;
 use crate::Ustr;
 
-pub fn current_type() -> Ustr {
-    Ustr::from("u")
-}
-
 pub trait Uint: Opt {}
 
 #[derive(Debug)]
@@ -65,7 +61,7 @@ impl Opt for UintOpt {}
 
 impl Type for UintOpt {
     fn get_type_name(&self) -> Ustr {
-        current_type()
+        UintCreator::type_name()
     }
 
     fn is_deactivate_style(&self) -> bool {
@@ -263,9 +259,15 @@ impl Help for UintOpt {
 #[derive(Debug, Default, Clone)]
 pub struct UintCreator;
 
+impl UintCreator {
+    pub fn type_name() -> Ustr {
+        Ustr::from("u")
+    }
+}
+
 impl Creator for UintCreator {
     fn get_type_name(&self) -> Ustr {
-        current_type()
+        UintCreator::type_name()
     }
 
     fn is_support_deactivate_style(&self) -> bool {

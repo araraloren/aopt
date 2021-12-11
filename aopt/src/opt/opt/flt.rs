@@ -7,10 +7,6 @@ use crate::set::{CreateInfo, Creator};
 use crate::uid::Uid;
 use crate::Ustr;
 
-pub fn current_type() -> Ustr {
-    Ustr::from("f")
-}
-
 pub trait Flt: Opt {}
 
 #[derive(Debug)]
@@ -65,7 +61,7 @@ impl Opt for FltOpt {}
 
 impl Type for FltOpt {
     fn get_type_name(&self) -> Ustr {
-        current_type()
+        FltCreator::type_name()
     }
 
     fn is_deactivate_style(&self) -> bool {
@@ -263,9 +259,15 @@ impl Help for FltOpt {
 #[derive(Debug, Default, Clone)]
 pub struct FltCreator;
 
+impl FltCreator {
+    pub fn type_name() -> Ustr {
+        Ustr::from("f")
+    }
+}
+
 impl Creator for FltCreator {
     fn get_type_name(&self) -> Ustr {
-        current_type()
+        FltCreator::type_name()
     }
 
     fn is_support_deactivate_style(&self) -> bool {

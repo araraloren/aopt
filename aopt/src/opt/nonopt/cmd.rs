@@ -8,9 +8,6 @@ use crate::set::{CreateInfo, Creator};
 use crate::uid::Uid;
 use crate::Ustr;
 
-pub fn current_type() -> Ustr {
-    Ustr::from("c")
-}
 pub trait Cmd: NonOpt {}
 
 #[derive(Debug)]
@@ -54,7 +51,7 @@ impl NonOpt for CmdOpt {}
 
 impl Type for CmdOpt {
     fn get_type_name(&self) -> Ustr {
-        current_type()
+        CmdCreator::type_name()
     }
 
     fn is_deactivate_style(&self) -> bool {
@@ -232,9 +229,15 @@ impl Help for CmdOpt {
 #[derive(Debug, Default, Clone)]
 pub struct CmdCreator;
 
+impl CmdCreator {
+    pub fn type_name() -> Ustr {
+        Ustr::from("c")
+    }
+}
+
 impl Creator for CmdCreator {
     fn get_type_name(&self) -> Ustr {
-        current_type()
+        Self::type_name()
     }
 
     fn is_support_deactivate_style(&self) -> bool {
@@ -266,7 +269,7 @@ mod test {
     fn make_type_cmd_work() {
         let creator = CmdCreator::default();
 
-        assert_eq!(creator.get_type_name(), current_type());
+        assert_eq!(creator.get_type_name(), CmdCreator::type_name());
         // cmd not support deactivate style
         assert_eq!(creator.is_support_deactivate_style(), false);
 
@@ -276,7 +279,7 @@ mod test {
 
         let mut cmd = creator.create_with(ci).unwrap();
 
-        assert_eq!(cmd.get_type_name(), current_type());
+        assert_eq!(cmd.get_type_name(), CmdCreator::type_name());
         assert_eq!(cmd.is_deactivate_style(), false);
         assert_eq!(cmd.match_style(Style::Cmd), true);
         assert_eq!(cmd.check().is_err(), true);

@@ -7,10 +7,6 @@ use crate::set::{CreateInfo, Creator};
 use crate::uid::Uid;
 use crate::Ustr;
 
-pub fn current_type() -> Ustr {
-    Ustr::from("i")
-}
-
 pub trait Int: Opt {}
 
 #[derive(Debug)]
@@ -65,7 +61,7 @@ impl Opt for IntOpt {}
 
 impl Type for IntOpt {
     fn get_type_name(&self) -> Ustr {
-        current_type()
+        IntCreator::type_name()
     }
 
     fn is_deactivate_style(&self) -> bool {
@@ -263,9 +259,15 @@ impl Help for IntOpt {
 #[derive(Debug, Default, Clone)]
 pub struct IntCreator;
 
+impl IntCreator {
+    pub fn type_name() -> Ustr {
+        Ustr::from("i")
+    }
+}
+
 impl Creator for IntCreator {
     fn get_type_name(&self) -> Ustr {
-        current_type()
+        IntCreator::type_name()
     }
 
     fn is_support_deactivate_style(&self) -> bool {
