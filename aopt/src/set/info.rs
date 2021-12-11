@@ -1,6 +1,6 @@
 use std::convert::{TryFrom, TryInto};
 
-use crate::err::{ConstructError, Result, Error};
+use crate::err::{ConstructError, Error, Result};
 use crate::opt::parser::{parse_option_str, DataKeeper};
 use crate::opt::{HelpInfo, Opt, OptIndex, OptValue};
 use crate::proc::Info;
@@ -277,7 +277,7 @@ impl CreateInfo {
         let mut ret: Self = data_keeper.try_into()?;
 
         ret.set_support_prefix(prefix.iter().map(|v| v.clone()).collect::<Vec<Ustr>>());
-        
+
         return Ok(ret);
     }
 }
@@ -288,16 +288,22 @@ impl TryFrom<DataKeeper> for CreateInfo {
     fn try_from(value: DataKeeper) -> Result<Self> {
         let mut data_keeper = value;
         let index = data_keeper.gen_index();
-        let name = data_keeper.name.ok_or(ConstructError::MissingOptionName(data_keeper.pattern.to_owned()))?;
-        let type_ = data_keeper.type_name.ok_or(ConstructError::MissingOptionType(data_keeper.pattern.to_owned()))?;
-        
+        let name = data_keeper.name.ok_or(ConstructError::MissingOptionName(
+            data_keeper.pattern.to_owned(),
+        ))?;
+        let type_ = data_keeper
+            .type_name
+            .ok_or(ConstructError::MissingOptionType(
+                data_keeper.pattern.to_owned(),
+            ))?;
+
         Ok(Self {
             name,
             index,
             type_name: type_,
             prefix: data_keeper.prefix.map(|v| v.clone()),
             support_deactivate_style: data_keeper.deactivate.unwrap_or(false),
-            optional: ! data_keeper.optional.unwrap_or(false),
+            optional: !data_keeper.optional.unwrap_or(false),
             ..Self::default()
         })
     }

@@ -34,6 +34,51 @@ use crate::Ustr;
 ///  |  
 ///  The prefix of option.
 /// ```
+///
+/// # Example
+///
+/// ```rust
+/// use aopt::Ustr;
+/// use aopt::err::Result;
+/// use aopt::opt::parser;
+///
+/// fn main() -> Result<()> {
+///     let ret = aopt::opt::parser::parse_option_str("--aopt=t!/".into(), &[Ustr::from("--")])?;
+///
+///     assert_eq!(ret.prefix, Some(Ustr::from("--")));
+///     assert_eq!(ret.name , Some(Ustr::from("aopt")));
+///     assert_eq!(ret.type_name, Some(Ustr::from("t")));
+///     assert_eq!(ret.deactivate, Some(true));
+///     assert_eq!(ret.optional, Some(true));
+///     assert_eq!(ret.forward_index, None);
+///     assert_eq!(ret.backward_index, None);
+///     assert_eq!(ret.anywhere, None);
+///     assert_eq!(ret.list, []);
+///     assert_eq!(ret.except, []);
+///     assert_eq!(ret.greater, None);
+///     assert_eq!(ret.less, None);
+///
+///     let ret = aopt::opt::parser::parse_option_str("bopt=t@[1,2,3]".into(), &[Ustr::from("--")])?;
+///
+///     assert_eq!(ret.prefix, None);
+///     assert_eq!(ret.name , Some(Ustr::from("bopt")));
+///     assert_eq!(ret.type_name, Some(Ustr::from("t")));
+///     assert_eq!(ret.deactivate, None);
+///     assert_eq!(ret.optional, None);
+///     assert_eq!(ret.forward_index, None);
+///     assert_eq!(ret.backward_index, None);
+///     assert_eq!(ret.anywhere, None);
+///     assert_eq!(ret.list, [1, 2, 3]);
+///     assert_eq!(ret.except, []);
+///     assert_eq!(ret.greater, None);
+///     assert_eq!(ret.less, None);
+///
+///     Ok(())
+/// }
+/// ```
+///
+/// For more examples, please reference test case [`test_option_str_parser`](../../../src/aopt/opt/parser.rs.html#538).
+///
 pub fn parse_option_str(pattern: Ustr, prefix: &[Ustr]) -> Result<DataKeeper> {
     let pattern = ParserPattern::new(pattern, prefix);
     let mut index = ParseIndex::new(pattern.len());
