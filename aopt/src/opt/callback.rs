@@ -437,3 +437,45 @@ impl<T: 'static + FnMut(Uid, &mut dyn Set, &[&str], OptValue) -> Result<Option<O
         self.0(uid, set, args, value)
     }
 }
+
+#[macro_export]
+macro_rules! simple_main_cb {
+    ($block:expr) => {
+        OptCallback::Main(Box::new(SimpleMainCallback::new($block)))
+    };
+}
+
+#[macro_export]
+macro_rules! simple_main_mut_cb {
+    ($block:expr) => {
+        OptCallback::MainMut(Box::new(SimpleMainMutCallback::new($block)))
+    };
+}
+
+#[macro_export]
+macro_rules! simple_pos_cb {
+    ($block:expr) => {
+        OptCallback::Pos(Box::new(SimplePosCallback::new($block)))
+    };
+}
+
+#[macro_export]
+macro_rules! simple_pos_mut_cb {
+    ($block:expr) => {
+        OptCallback::PosMut(Box::new(SimplePosMutCallback::new($block)))
+    };
+}
+
+#[macro_export]
+macro_rules! simple_opt_cb {
+    ($block:expr) => {
+        OptCallback::Opt(Box::new(SimpleOptCallback::new($block)))
+    };
+}
+
+#[macro_export]
+macro_rules! simple_opt_mut_cb {
+    ($block:expr) => {
+        OptCallback::OptMut(Box::new(SimpleOptMutCallback::new($block)))
+    };
+}

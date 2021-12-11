@@ -94,50 +94,6 @@ macro_rules! getopt {
     };
 }
 
-pub mod tools {
-    #[macro_export]
-    macro_rules! simple_main_cb {
-        ($block:expr) => {
-            OptCallback::Main(Box::new(SimpleMainCallback::new($block)))
-        };
-    }
-
-    #[macro_export]
-    macro_rules! simple_main_mut_cb {
-        ($block:expr) => {
-            OptCallback::MainMut(Box::new(SimpleMainMutCallback::new($block)))
-        };
-    }
-
-    #[macro_export]
-    macro_rules! simple_pos_cb {
-        ($block:expr) => {
-            OptCallback::Pos(Box::new(SimplePosCallback::new($block)))
-        };
-    }
-
-    #[macro_export]
-    macro_rules! simple_pos_mut_cb {
-        ($block:expr) => {
-            OptCallback::PosMut(Box::new(SimplePosMutCallback::new($block)))
-        };
-    }
-
-    #[macro_export]
-    macro_rules! simple_opt_cb {
-        ($block:expr) => {
-            OptCallback::Opt(Box::new(SimpleOptCallback::new($block)))
-        };
-    }
-
-    #[macro_export]
-    macro_rules! simple_opt_mut_cb {
-        ($block:expr) => {
-            OptCallback::OptMut(Box::new(SimpleOptMutCallback::new($block)))
-        };
-    }
-}
-
 pub mod prelude {
     pub use crate::ctx::{Context, NonOptContext, OptContext};
     pub use crate::gstr;
@@ -156,7 +112,6 @@ pub mod prelude {
     pub use crate::proc::{Info, Proc};
     pub use crate::proc::{Matcher, NonOptMatcher, OptMatcher};
     pub use crate::set::{CreatorSet, OptionSet, PrefixSet, Set, SimpleSet};
-    pub use crate::tools;
     pub use crate::uid::{Uid, UidGenerator};
     pub use crate::{getopt, getopt_impl, getopt_impl_s, ReturnValue};
     pub use crate::{simple_main_cb, simple_main_mut_cb};
