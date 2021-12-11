@@ -70,6 +70,33 @@ macro_rules! simple_pos_tweak {
     };
 }
 
+macro_rules! simple_delay_pos_tweak {
+    () => {
+        Box::new(|parser, uid, checker| {
+            let mut checker = checker;
+
+            parser.add_callback(
+                uid,
+                simple_pos_mut_cb!(move |uid, set, arg, _, value| {
+                    let opt = set[uid].as_mut();
+
+                    if let Some(checker) = checker.take() {
+                        checker.checking(opt, &value);
+                    }
+                    for opt_name in arg.chars() {
+                        if let Some(modify_opt) = set.find_mut(&format!("{}", opt_name))? {
+                            modify_opt.set_callback_ret(Some(OptValue::from(true)))?;
+                        }
+                    }
+
+                    Ok(Some(OptValue::from(arg)))
+                }),
+            );
+            Ok(())
+        })
+    };
+}
+
 pub struct TestingCase<P: Parser> {
     pub opt: &'static str,
 
@@ -142,6 +169,11 @@ impl<P: Parser> TestingCase<P> {
 
     pub fn with_default_pos_tweak(mut self) -> Self {
         self.callback = Some(simple_pos_tweak!());
+        self
+    }
+
+    pub fn with_default_delay_pos_tweak(mut self) -> Self {
+        self.callback = Some(simple_delay_pos_tweak!());
         self
     }
 

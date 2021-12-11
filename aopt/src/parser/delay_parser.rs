@@ -405,3 +405,111 @@ where
         Ok(matcher.is_matched())
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::err::Result;
+    use crate::getopt;
+    use crate::parser::testutil::*;
+    use crate::prelude::*;
+
+    #[test]
+    fn testing_simple_parser() {
+        assert!(do_simple_test().is_ok());
+    }
+
+    fn do_simple_test() -> Result<()> {
+        let mut testing_cases = vec![];
+
+        testing_cases.append(&mut nonopt_testcases());
+        testing_cases.append(&mut long_prefix_opt_testcases());
+        testing_cases.append(&mut shorting_prefix_opt_testcases());
+        testing_cases.push(
+            TestingCase {
+                opt: "autoset=p@-1",
+                checker: Some(
+                    OptChecker::default()
+                        .with_optional(true)
+                        .with_type_name("p")
+                        .with_name("autoset")
+                        .with_deactivate_style(false)
+                        .with_callback_value(OptValue::from(true))
+                        .with_index(OptIndex::backward(1)),
+                ),
+                ..TestingCase::default()
+            }
+            .with_default_delay_pos_tweak(),
+        );
+
+        let mut set = SimpleSet::default()
+            .with_default_prefix()
+            .with_default_creator();
+        let mut parser = DelayParser::<UidGenerator>::default();
+
+        for testing_case in testing_cases.iter_mut() {
+            testing_case.add_test(&mut set, &mut parser)?;
+        }
+
+        let mut args = [
+            "p",
+            "-a=value1",
+            "-a",
+            "value2",
+            "-bvalue3",
+            "-b",
+            "value4",
+            "-/e",
+            "-f3.1415926",
+            "-g=2.718281",
+            "-h",
+            "42",
+            "-i-100000",
+            "-j",
+            "foo",
+            "-k=bar",
+            "-l1988",
+            "-m=2202",
+            "-/z12",
+            "-456",
+            "-?",
+            "pos2",
+            "pos3",
+            "pos4",
+            "pos5",
+            "--yopt-int=42",
+            "--aopt",
+            "value5",
+            "--aopt=value6",
+            "--copt=42",
+            "--eopt",
+            "value7",
+            "--fopt=988",
+            "cd",
+        ]
+        .iter()
+        .map(|&v| String::from(v));
+
+        if let Some(ret) = getopt!(&mut args, set, parser)? {
+            for testing_case in testing_cases.iter_mut() {
+                if testing_case.value == Some(OptValue::from("pos6")) {
+                    testing_case.set_value(OptValue::from("cd"));
+                }
+                testing_case.check_ret(ret.1)?;
+            }
+        }
+
+        assert_eq!(
+            parser.get_noa(),
+            &[
+                Ustr::from("p"),
+                Ustr::from("pos2"),
+                Ustr::from("pos3"),
+                Ustr::from("pos4"),
+                Ustr::from("pos5"),
+                Ustr::from("cd"),
+            ]
+        );
+
+        Ok(())
+    }
+}
