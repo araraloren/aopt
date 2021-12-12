@@ -29,6 +29,7 @@ use crate::pat::ParserPattern;
 /// ```rust
 /// use aopt::arg::parse_argument;
 /// use ustr::Ustr;
+/// use aopt::gstr;
 /// use aopt::err::Result;
 ///
 /// fn main() -> Result<()> {

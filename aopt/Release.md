@@ -3,6 +3,10 @@
 
 ## 0.4.3
 
+- clean Ustr::from
+
+- clean the module import
+
 - update rust version to 2021
 
 - improve the export of structs

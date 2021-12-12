@@ -19,6 +19,7 @@ pub use parser::DataKeeper;
 /// ```rust
 /// use aopt::arg::ArgStream;
 /// use ustr::Ustr;
+/// use aopt::gstr;
 /// use aopt::err::Result;
 ///
 /// fn main() -> Result<()> {

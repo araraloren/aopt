@@ -41,7 +41,7 @@ use crate::pat::ParserPattern;
 /// # Example
 ///
 /// ```rust
-/// use aopt::Ustr;
+/// use aopt::gstr;
 /// use aopt::err::Result;
 /// use aopt::opt::parse_option_str;
 ///
