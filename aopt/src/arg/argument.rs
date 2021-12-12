@@ -54,8 +54,13 @@ impl Argument {
     ///
     /// # Errors
     ///
-    /// Will return [`ArgumentError::MissingPrefix`] when the result not have a valid prefix.
-    /// Or return [`ArgumentError::MissingName`] when the result not have a valid name.
+    /// - [`ArgumentError::MissingPrefix`]
+    ///
+    /// When the result not have a valid prefix.
+    ///
+    /// - [`ArgumentError::MissingName`]
+    ///
+    /// When the result not have a valid name.
     pub fn parse(&mut self, prefix: &[Ustr]) -> Result<bool> {
         if let Some(pattern) = &self.current {
             self.data_keeper = parse_argument(pattern.clone(), prefix)?;
