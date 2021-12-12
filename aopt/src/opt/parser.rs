@@ -80,7 +80,7 @@ use crate::pat::ParserPattern;
 /// }
 /// ```
 ///
-/// For more examples, please reference test case [`test_option_str_parser`](../../../src/aopt/opt/parser.rs.html#538).
+/// For more examples, please reference test case [`test_option_str_parser`](../../src/aopt/opt/parser.rs.html#542).
 ///
 pub fn parse_option_str(pattern: Ustr, prefix: &[Ustr]) -> Result<DataKeeper> {
     let pattern = ParserPattern::new(pattern, prefix);
