@@ -5,7 +5,9 @@ use std::convert::From;
 use std::fmt::Debug;
 use std::iter::Iterator;
 
-use crate::Ustr;
+use ustr::Ustr;
+
+use crate::gstr;
 
 pub use argument::Argument;
 pub use parser::parse_argument;
@@ -26,25 +28,25 @@ pub use parser::DataKeeper;
 ///     let mut stream = ArgStream::from(args);
 ///     let next = stream.next().unwrap();
 ///
-///     assert_eq!(next.current, Some(Ustr::from("-a")));
-///     assert_eq!(next.next, Some(Ustr::from("v1")));
+///     assert_eq!(next.current, Some(gstr("-a")));
+///     assert_eq!(next.next, Some(gstr("v1")));
 ///     stream.next();
 ///     let next = stream.next().unwrap();
 ///
-///     assert_eq!(next.current, Some(Ustr::from("--aopt")));
-///     assert_eq!(next.next, Some(Ustr::from("p1")));
+///     assert_eq!(next.current, Some(gstr("--aopt")));
+///     assert_eq!(next.next, Some(gstr("p1")));
 ///     let next = stream.next().unwrap();
 ///
-///     assert_eq!(next.current, Some(Ustr::from("p1")));
-///     assert_eq!(next.next, Some(Ustr::from("p2")));
+///     assert_eq!(next.current, Some(gstr("p1")));
+///     assert_eq!(next.next, Some(gstr("p2")));
 ///     stream.next();
 ///     let next = stream.next().unwrap();
 ///
-///     assert_eq!(next.current, Some(Ustr::from("--bopt")));
-///     assert_eq!(next.next, Some(Ustr::from("v2")));
+///     assert_eq!(next.current, Some(gstr("--bopt")));
+///     assert_eq!(next.next, Some(gstr("v2")));
 ///     let next = stream.next().unwrap();
 ///
-///     assert_eq!(next.current, Some(Ustr::from("v2")));
+///     assert_eq!(next.current, Some(gstr("v2")));
 ///     assert_eq!(next.next, None);  
 ///
 ///     Ok(())
@@ -69,7 +71,7 @@ impl<T: Iterator<Item = String>> ArgStream<T> {
         Self::from(t)
     }
     fn map_item(item: Option<String>) -> Option<Ustr> {
-        item.map_or(None, |v| Some(Ustr::from(&v)))
+        item.map_or(None, |v| Some(gstr(&v)))
     }
 }
 
@@ -108,7 +110,8 @@ mod test {
     use std::fmt::Debug;
 
     use super::ArgStream;
-    use crate::Ustr;
+    use crate::gstr;
+    use ustr::Ustr;
 
     #[test]
     fn make_sure_arg_stream_work() {
@@ -144,7 +147,7 @@ mod test {
 
             testing_one_iterator(
                 ArgStream::new(data),
-                &vec![Ustr::from("--"), Ustr::from("-")],
+                &vec![gstr("--"), gstr("-")],
                 &data_check,
                 &check,
             );
@@ -183,7 +186,7 @@ mod test {
 
             testing_one_iterator(
                 ArgStream::new(data),
-                &vec![Ustr::from("+"), Ustr::from("")],
+                &vec![gstr("+"), gstr("")],
                 &data_check,
                 &check,
             );
@@ -196,7 +199,7 @@ mod test {
         data_check: &Vec<String>,
         check: &Vec<Vec<&str>>,
     ) {
-        let default_str = Ustr::from("");
+        let default_str = gstr("");
         let default_data = String::from("");
         let default_item = "";
 

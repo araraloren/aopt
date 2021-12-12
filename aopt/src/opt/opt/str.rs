@@ -1,15 +1,16 @@
 use std::convert::{TryFrom, TryInto};
 use std::mem::take;
+use ustr::Ustr;
 
 use crate::err::ConstructError;
 use crate::err::Error;
 use crate::err::ParserError;
 use crate::err::SpecialError;
+use crate::gstr;
 use crate::opt::*;
 use crate::set::CreateInfo;
 use crate::set::Creator;
 use crate::uid::Uid;
-use crate::Ustr;
 
 pub trait Str: Opt {}
 
@@ -263,7 +264,7 @@ pub struct StrCreator;
 
 impl StrCreator {
     pub fn type_name() -> Ustr {
-        Ustr::from("s")
+        gstr("s")
     }
 }
 

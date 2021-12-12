@@ -1,11 +1,11 @@
 use std::mem::take;
+use ustr::Ustr;
 
 use crate::err::SpecialError;
 use crate::opt::*;
 use crate::set::CreateInfo;
 use crate::set::Creator;
 use crate::uid::Uid;
-use crate::Ustr;
 
 pub mod path {
     use std::convert::{TryFrom, TryInto};
@@ -13,6 +13,7 @@ pub mod path {
     use crate::err::{ConstructError, Error, ParserError};
 
     use super::*;
+    use crate::gstr;
 
     pub trait Path: Opt {}
 
@@ -272,7 +273,7 @@ pub mod path {
 
     impl PathCreator {
         pub fn type_name() -> Ustr {
-            Ustr::from("p")
+            gstr("p")
         }
     }
 

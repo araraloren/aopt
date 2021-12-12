@@ -22,7 +22,7 @@ use crate::set::OptionInfo;
 use crate::set::Set;
 use crate::uid::Generator;
 use crate::uid::Uid;
-use crate::Ustr;
+use ustr::Ustr;
 
 #[derive(Debug, Default)]
 pub struct PreParser<G>
@@ -441,12 +441,12 @@ mod test {
         assert_eq!(
             parser.get_noa(),
             &[
-                Ustr::from("p"),
-                Ustr::from("pos2"),
-                Ustr::from("pos3"),
-                Ustr::from("pos4"),
-                Ustr::from("pos5"),
-                Ustr::from("--unknow-opt")
+                gstr("p"),
+                gstr("pos2"),
+                gstr("pos3"),
+                gstr("pos4"),
+                gstr("pos5"),
+                gstr("--unknow-opt")
             ]
         );
         Ok(())

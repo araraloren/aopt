@@ -1,11 +1,13 @@
+use ustr::Ustr;
+
 use super::Context;
 
 use crate::err::Result;
 use crate::err::SpecialError;
+use crate::gstr;
 use crate::opt::Opt;
 use crate::opt::OptValue;
 use crate::opt::Style;
-use crate::Ustr;
 
 #[derive(Debug)]
 pub struct OptContext {
@@ -74,7 +76,7 @@ impl Context for OptContext {
                 .into());
             } else {
                 let value = opt
-                    .parse_value(self.argument.unwrap_or(Ustr::from("")))
+                    .parse_value(self.argument.unwrap_or(gstr("")))
                     .map_err(|_| {
                         SpecialError::InvalidArgumentForOption(opt.get_hint().to_owned())
                     })?;

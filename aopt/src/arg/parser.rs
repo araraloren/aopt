@@ -1,6 +1,9 @@
-use crate::err::{ArgumentError, Result};
-use crate::pat::{ParseIndex, ParserPattern};
-use crate::Ustr;
+use ustr::Ustr;
+
+use crate::err::ArgumentError;
+use crate::err::Result;
+use crate::pat::ParseIndex;
+use crate::pat::ParserPattern;
 
 /// Parse the input command line item with given prefixs, return an [`DataKeeper`].
 ///
@@ -29,30 +32,30 @@ use crate::Ustr;
 /// use aopt::err::Result;
 ///
 /// fn main() -> Result<()> {
-///     let prefix = &[Ustr::from("--"), Ustr::from("-")];
+///     let prefix = &[gstr("--"), gstr("-")];
 ///
 ///     {// parse option with value
-///         let dk = parse_argument(Ustr::from("--foo=32"), prefix)?;
+///         let dk = parse_argument(gstr("--foo=32"), prefix)?;
 ///
-///         assert_eq!(dk.prefix, Some(Ustr::from("--")));
-///         assert_eq!(dk.name, Some(Ustr::from("foo")));
-///         assert_eq!(dk.value, Some(Ustr::from("32")));
+///         assert_eq!(dk.prefix, Some(gstr("--")));
+///         assert_eq!(dk.name, Some(gstr("foo")));
+///         assert_eq!(dk.value, Some(gstr("32")));
 ///         assert_eq!(dk.disable, false);
 ///     }
 ///     {// parse boolean option
-///         let dk = parse_argument(Ustr::from("--/bar"), prefix)?;
+///         let dk = parse_argument(gstr("--/bar"), prefix)?;
 ///
-///         assert_eq!(dk.prefix, Some(Ustr::from("--")));
-///         assert_eq!(dk.name, Some(Ustr::from("bar")));
+///         assert_eq!(dk.prefix, Some(gstr("--")));
+///         assert_eq!(dk.name, Some(gstr("bar")));
 ///         assert_eq!(dk.value, None);
 ///         assert_eq!(dk.disable, true);
 ///     }
 ///     {// parse other string
-///         let dk = parse_argument(Ustr::from("-=bar"), prefix)?;
+///         let dk = parse_argument(gstr("-=bar"), prefix)?;
 ///
-///         assert_eq!(dk.prefix, Some(Ustr::from("-")));
+///         assert_eq!(dk.prefix, Some(gstr("-")));
 ///         assert_eq!(dk.name, None);
-///         assert_eq!(dk.value, Some(Ustr::from("bar")));
+///         assert_eq!(dk.value, Some(gstr("bar")));
 ///         assert_eq!(dk.disable, false);
 ///     }
 ///     Ok(())
@@ -252,8 +255,10 @@ impl State {
 
 #[cfg(test)]
 mod test {
+    use ustr::Ustr;
+
     use crate::arg::parser::parse_argument;
-    use crate::Ustr;
+    use crate::gstr;
 
     #[test]
     fn test_for_input_parser() {
@@ -280,10 +285,10 @@ mod test {
                 ("-foo=", None),
             ];
 
-            let prefixs = vec![Ustr::from("--"), Ustr::from("-"), Ustr::from("")];
+            let prefixs = vec![gstr("--"), gstr("-"), gstr("")];
 
             for case in test_cases.iter() {
-                try_to_verify_one_task(Ustr::from(case.0), &prefixs, case.1);
+                try_to_verify_one_task(gstr(case.0), &prefixs, case.1);
             }
         }
         {
@@ -309,10 +314,10 @@ mod test {
                 ("-foo=", None),
             ];
 
-            let prefixs = vec![Ustr::from("--"), Ustr::from("-")];
+            let prefixs = vec![gstr("--"), gstr("-")];
 
             for case in test_cases.iter() {
-                try_to_verify_one_task(Ustr::from(case.0), &prefixs, case.1);
+                try_to_verify_one_task(gstr(case.0), &prefixs, case.1);
             }
         }
     }
@@ -331,7 +336,7 @@ mod test {
                 panic!("----> {:?} {:?}", except, &dk);
             }
 
-            let default = Ustr::from("");
+            let default = gstr("");
 
             if let Some(except) = except {
                 assert_eq!(

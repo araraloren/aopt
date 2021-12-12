@@ -2,7 +2,7 @@ use std::mem::take;
 
 use super::Opt;
 use crate::set::CreateInfo;
-use crate::Ustr;
+use ustr::Ustr;
 
 #[derive(Debug, Clone, Default)]
 pub struct HelpInfo {

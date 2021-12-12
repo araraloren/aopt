@@ -9,10 +9,10 @@ pub mod nonopt;
 pub mod opt;
 
 use std::fmt::Debug;
+use ustr::Ustr;
 
 use crate::err::Result;
 use crate::uid::Uid;
-use crate::Ustr;
 
 pub use self::callback::Callback as OptCallback;
 pub use self::callback::CallbackType;

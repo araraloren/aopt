@@ -1,6 +1,9 @@
-use super::parser::{parse_argument, DataKeeper};
-use crate::err::{ArgumentError, Result};
-use crate::Ustr;
+use ustr::Ustr;
+
+use super::parser::parse_argument;
+use super::parser::DataKeeper;
+use crate::err::ArgumentError;
+use crate::err::Result;
 
 /// Argument hold current and next item of command line arguments.
 ///

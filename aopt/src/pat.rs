@@ -1,7 +1,7 @@
 use std::iter::Skip;
 use std::str::Chars;
 
-use crate::Ustr;
+use ustr::Ustr;
 
 /// Pattern holder of the user input command line
 /// and create info string of option.

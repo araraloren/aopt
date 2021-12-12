@@ -6,12 +6,12 @@ mod simple_set;
 use std::fmt::Debug;
 use std::ops::{Index, IndexMut};
 use std::slice::{Iter, IterMut};
+use ustr::Ustr;
 
 use crate::err::Result;
 use crate::opt::Opt;
 use crate::opt::OptValue;
 use crate::uid::Uid;
-use crate::Ustr;
 
 pub use self::commit::Commit;
 pub use self::filter::Filter;

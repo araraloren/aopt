@@ -482,7 +482,7 @@ impl OptChecker {
         }
         if let Some(value) = &self.alias {
             for (prefix, name) in value {
-                assert!(opt.match_alias(Ustr::from(prefix), Ustr::from(name)));
+                assert!(opt.match_alias(gstr(prefix), gstr(name)));
             }
         }
         if let Some(checker) = self.checker.as_ref() {

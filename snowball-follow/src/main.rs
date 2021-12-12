@@ -407,10 +407,8 @@ fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout, DefaultFormat> {
         }
     }
 
-    global.set_header(Ustr::from(
-        "Get the follow people number in https://xueqiu.com/",
-    ));
-    global.set_footer(Ustr::from("Create by araraloren, V0.1.0"));
+    global.set_header(gstr("Get the follow people number in https://xueqiu.com/"));
+    global.set_footer(gstr("Create by araraloren, V0.1.0"));
 
     help
 }

@@ -1,11 +1,13 @@
-pub mod nonopt;
-pub mod opt;
+mod nonopt;
+mod opt;
 
 use std::fmt::Debug;
+use ustr::Ustr;
 
 use crate::err::Result;
-use crate::opt::{Opt, OptValue, Style};
-use crate::Ustr;
+use crate::opt::Opt;
+use crate::opt::OptValue;
+use crate::opt::Style;
 
 pub use self::nonopt::NonOptContext;
 pub use self::opt::OptContext;

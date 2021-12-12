@@ -5,7 +5,7 @@ use crate::opt::{parse_option_str, DataKeeper};
 use crate::opt::{HelpInfo, Opt, OptIndex, OptValue};
 use crate::proc::Info;
 use crate::uid::Uid;
-use crate::Ustr;
+use ustr::Ustr;
 
 #[derive(Debug, Clone, Default)]
 pub struct CreateInfo {

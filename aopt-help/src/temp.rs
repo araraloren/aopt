@@ -70,8 +70,8 @@ fn main() {
             "@0".into(),
             false,
         ));
-        global.set_footer(Ustr::from("Here is the footer of global help!"));
-        global.set_header(Ustr::from("Here is the header of global help!"));
+        global.set_footer(gstr("Here is the footer of global help!"));
+        global.set_header(gstr("Here is the header of global help!"));
     }
 
     {
@@ -79,8 +79,8 @@ fn main() {
 
         store.set_hint("c".into());
         store.set_help("Compile and run c code".into());
-        store.set_header(Ustr::from("Here is cmd header for c"));
-        store.set_footer(Ustr::from("Here is cmd footer for c"));
+        store.set_header(gstr("Here is cmd header for c"));
+        store.set_footer(gstr("Here is cmd footer for c"));
 
         store.add_pos(PosStore::new(
             "file".into(),
@@ -115,8 +115,8 @@ fn main() {
 
         store.set_hint("cpp".into());
         store.set_help("Compile and run cpp code".into());
-        store.set_header(Ustr::from("Here is cmd header for cpp"));
-        store.set_footer(Ustr::from("Here is cmd footer for cpp"));
+        store.set_header(gstr("Here is cmd header for cpp"));
+        store.set_footer(gstr("Here is cmd footer for cpp"));
 
         store.add_pos(PosStore::new(
             "file".into(),
@@ -151,8 +151,8 @@ fn main() {
 
         store.set_hint("java".into());
         store.set_help("Compile and run java code".into());
-        store.set_header(Ustr::from("Here is cmd header for java"));
-        store.set_footer(Ustr::from("Here is cmd footer for java"));
+        store.set_header(gstr("Here is cmd header for java"));
+        store.set_footer(gstr("Here is cmd footer for java"));
 
         store.add_pos(PosStore::new(
             "file".into(),
@@ -187,8 +187,8 @@ fn main() {
 
         store.set_hint("py".into());
         store.set_help("Run python code".into());
-        store.set_header(Ustr::from("Here is cmd header for python"));
-        store.set_footer(Ustr::from("Here is cmd footer for python"));
+        store.set_header(gstr("Here is cmd header for python"));
+        store.set_footer(gstr("Here is cmd footer for python"));
 
         store.add_pos(PosStore::new(
             "file".into(),
@@ -223,8 +223,8 @@ fn main() {
 
         store.set_hint("perl".into());
         store.set_help("Run perl code".into());
-        store.set_header(Ustr::from("Here is cmd header for perl"));
-        store.set_footer(Ustr::from("Here is cmd footer for perl"));
+        store.set_header(gstr("Here is cmd header for perl"));
+        store.set_footer(gstr("Here is cmd footer for perl"));
 
         store.add_pos(PosStore::new(
             "file".into(),
@@ -257,7 +257,7 @@ fn main() {
     {
         let mut store = app.store.new_sec("compile".into());
 
-        store.set_help(Ustr::from("The language will compile and run:"));
+        store.set_help(gstr("The language will compile and run:"));
         store.attach_cmd("c".into());
         store.attach_cmd("cpp".into());
         store.attach_cmd("java".into());
@@ -267,7 +267,7 @@ fn main() {
     {
         let mut store = app.store.new_sec("interpret".into());
 
-        store.set_help(Ustr::from("The language will run with interpreter:"));
+        store.set_help(gstr("The language will run with interpreter:"));
         store.attach_cmd("perl".into());
         store.attach_cmd("py".into());
         store.commit();
@@ -294,4 +294,8 @@ fn main() {
     println!("help of cmd java ---------------> ");
     app.print_cmd_help(Some("java".into())).unwrap();
     println!("help of cmd java ---------------> ");
+}
+
+fn gstr(str_: &str) -> Ustr {
+    Ustr::from(str_)
 }

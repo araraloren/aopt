@@ -1,14 +1,15 @@
 use std::convert::{TryFrom, TryInto};
+use ustr::Ustr;
 
 use super::NonOpt;
 use crate::err::ConstructError;
 use crate::err::Error;
 use crate::err::SpecialError;
+use crate::gstr;
 use crate::opt::*;
 use crate::set::CreateInfo;
 use crate::set::Creator;
 use crate::uid::Uid;
-use crate::Ustr;
 
 pub trait Main: NonOpt {}
 
@@ -117,7 +118,7 @@ impl Name for MainOpt {
     }
 
     fn get_prefix(&self) -> Ustr {
-        Ustr::from("")
+        gstr("")
     }
 
     fn set_name(&mut self, string: Ustr) {
@@ -224,7 +225,7 @@ pub struct MainCreator;
 
 impl MainCreator {
     pub fn type_name() -> Ustr {
-        Ustr::from("m")
+        gstr("m")
     }
 }
 
@@ -268,7 +269,7 @@ mod test {
         // main not support deactivate style
         assert_eq!(creator.is_support_deactivate_style(), false);
 
-        let mut ci = CreateInfo::parse(Ustr::from("main=m"), &[]).unwrap();
+        let mut ci = CreateInfo::parse(gstr("main=m"), &[]).unwrap();
 
         ci.set_uid(1);
 
@@ -303,14 +304,14 @@ mod test {
         assert_eq!(main.get_index(), None);
         assert_eq!(main.match_index(6, 9), true);
 
-        assert_eq!(main.get_name(), Ustr::from("main"));
-        assert_eq!(main.get_prefix(), Ustr::from(""));
+        assert_eq!(main.get_name(), gstr("main"));
+        assert_eq!(main.get_prefix(), gstr(""));
         assert_eq!(main.match_name("www".into()), true);
         assert_eq!(main.match_name("main".into()), true);
         assert_eq!(main.match_prefix("--".into()), false);
         assert_eq!(main.match_prefix("".into()), false);
-        main.set_name(Ustr::from("main1"));
-        main.set_prefix(Ustr::from("+"));
+        main.set_name(gstr("main1"));
+        main.set_prefix(gstr("+"));
         assert_eq!(main.match_name("www".into()), true);
         assert_eq!(main.match_name("main1".into()), true);
         assert_eq!(main.get_name(), "main1");

@@ -18,13 +18,8 @@ use crate::err::Result;
 use crate::parser::Parser;
 use crate::set::Set;
 
-// declare a alias for string type
-pub use ustr::Ustr;
-pub use ustr::UstrMap;
-pub use ustr::UstrSet;
-
-pub fn gstr(s: &str) -> Ustr {
-    Ustr::from(s)
+pub fn gstr(s: &str) -> ustr::Ustr {
+    ustr::Ustr::from(s)
 }
 
 #[derive(Debug)]
@@ -154,6 +149,6 @@ pub mod prelude {
     pub use crate::simple_pos_mut_cb;
     pub use crate::uid::{Uid, UidGenerator};
     pub use crate::ReturnValue;
-    pub use crate::Ustr;
-    pub use crate::UstrMap;
+    pub use ustr::Ustr;
+    pub use ustr::UstrMap;
 }

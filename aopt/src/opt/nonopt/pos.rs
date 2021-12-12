@@ -1,14 +1,15 @@
 use std::convert::{TryFrom, TryInto};
+use ustr::Ustr;
 
 use super::NonOpt;
 use crate::err::ConstructError;
 use crate::err::Error;
 use crate::err::SpecialError;
+use crate::gstr;
 use crate::opt::*;
 use crate::set::CreateInfo;
 use crate::set::Creator;
 use crate::uid::Uid;
-use crate::Ustr;
 
 pub trait Pos: NonOpt {}
 
@@ -123,7 +124,7 @@ impl Name for PosOpt {
     }
 
     fn get_prefix(&self) -> Ustr {
-        Ustr::from("")
+        gstr("")
     }
 
     fn set_name(&mut self, string: Ustr) {
@@ -241,7 +242,7 @@ pub struct PosCreator;
 
 impl PosCreator {
     pub fn type_name() -> Ustr {
-        Ustr::from("p")
+        gstr("p")
     }
 }
 
@@ -290,7 +291,7 @@ mod test {
         // pos not support deactivate style
         assert_eq!(creator.is_support_deactivate_style(), false);
 
-        let mut ci = CreateInfo::parse(Ustr::from("pos=p@1"), &[]).unwrap();
+        let mut ci = CreateInfo::parse(gstr("pos=p@1"), &[]).unwrap();
 
         ci.set_uid(1);
 
@@ -327,17 +328,17 @@ mod test {
         assert_eq!(pos.get_index(), Some(&OptIndex::forward(3)));
         assert_eq!(pos.match_index(6, 9), false);
 
-        assert_eq!(pos.get_name(), Ustr::from("pos"));
-        assert_eq!(pos.get_prefix(), Ustr::from(""));
+        assert_eq!(pos.get_name(), gstr("pos"));
+        assert_eq!(pos.get_prefix(), gstr(""));
         assert_eq!(pos.match_name("www".into()), true);
         assert_eq!(pos.match_name("pos".into()), true);
         assert_eq!(pos.match_prefix("--".into()), false);
         assert_eq!(pos.match_prefix("".into()), false);
-        pos.set_name(Ustr::from("pos1"));
-        pos.set_prefix(Ustr::from("+"));
+        pos.set_name(gstr("pos1"));
+        pos.set_prefix(gstr("+"));
         assert_eq!(pos.match_name("www".into()), true);
         assert_eq!(pos.match_name("pos1".into()), true);
-        assert_eq!(pos.get_name(), Ustr::from("pos1"));
+        assert_eq!(pos.get_name(), gstr("pos1"));
         assert_eq!(pos.match_prefix("+".into()), false);
         assert_eq!(pos.match_prefix("".into()), false);
 

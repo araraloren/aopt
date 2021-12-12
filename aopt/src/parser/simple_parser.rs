@@ -23,7 +23,7 @@ use crate::set::OptionInfo;
 use crate::set::Set;
 use crate::uid::Generator;
 use crate::uid::Uid;
-use crate::Ustr;
+use ustr::Ustr;
 
 #[derive(Debug)]
 pub struct SimpleParser<G>

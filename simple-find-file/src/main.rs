@@ -3,7 +3,6 @@ use std::os::windows::prelude::MetadataExt;
 use std::path::Path;
 
 use aopt::err::create_error;
-use aopt::Ustr;
 use aopt::{getopt, prelude::*};
 use aopt_help::printer::Printer;
 use aopt_help::store::{OptStore, PosStore};
@@ -19,9 +18,9 @@ fn main() -> color_eyre::Result<()> {
     let mut set = SimpleSet::default().with_default_creator();
     let mut parser = DelayParser::<UidGenerator>::default();
 
-    set.add_prefix(Ustr::from("-"));
-    set.add_prefix(Ustr::from("--"));
-    set.add_prefix(Ustr::from("+"));
+    set.add_prefix(gstr("-"));
+    set.add_prefix(gstr("--"));
+    set.add_prefix(gstr("+"));
 
     if let Ok(mut commit) = set.add_opt("directory=p@0") {
         commit.set_help("Set the target directory");
@@ -248,10 +247,10 @@ fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout, DefaultFormat> {
         }
     }
 
-    global.set_header(Ustr::from(
+    global.set_header(gstr(
         "Search the given directory, show the file match the filter conditions",
     ));
-    global.set_footer(Ustr::from("Create by araraloren, V0.2.0"));
+    global.set_footer(gstr("Create by araraloren, V0.2.0"));
 
     help
 }

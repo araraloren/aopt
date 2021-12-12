@@ -425,10 +425,10 @@ fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout, DefaultFormat> {
 
     help.set_name("index".into());
 
-    let version = Ustr::from("Create by araraloren, V0.1.0");
+    let version = gstr("Create by araraloren, V0.1.0");
     let global = help.store.get_global_mut();
 
-    global.set_header(Ustr::from("Search and list index constituents"));
+    global.set_header(gstr("Search and list index constituents"));
     global.set_footer(version.clone());
 
     for cmd_name in [SEARCH_CMD, CONS_CMD] {

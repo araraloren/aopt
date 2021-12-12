@@ -1,10 +1,11 @@
 use super::info::CreateInfo;
 use super::{Result, Set, Uid};
 
+use crate::gstr;
 use crate::opt::HelpInfo;
 use crate::opt::OptIndex;
 use crate::opt::OptValue;
-use crate::{gstr, Ustr};
+use ustr::Ustr;
 
 #[derive(Debug)]
 pub struct Commit<'a> {

@@ -1,15 +1,16 @@
 use std::convert::{TryFrom, TryInto};
+use ustr::Ustr;
 
 use super::NonOpt;
 
 use crate::err::ConstructError;
 use crate::err::Error;
 use crate::err::SpecialError;
+use crate::gstr;
 use crate::opt::*;
 use crate::set::CreateInfo;
 use crate::set::Creator;
 use crate::uid::Uid;
-use crate::Ustr;
 
 pub trait Cmd: NonOpt {}
 
@@ -121,7 +122,7 @@ impl Name for CmdOpt {
     }
 
     fn get_prefix(&self) -> Ustr {
-        Ustr::from("")
+        gstr("")
     }
 
     fn set_name(&mut self, string: Ustr) {
@@ -234,7 +235,7 @@ pub struct CmdCreator;
 
 impl CmdCreator {
     pub fn type_name() -> Ustr {
-        Ustr::from("c")
+        gstr("c")
     }
 }
 
@@ -276,7 +277,7 @@ mod test {
         // cmd not support deactivate style
         assert_eq!(creator.is_support_deactivate_style(), false);
 
-        let mut ci = CreateInfo::parse(Ustr::from("cmd=c"), &[]).unwrap();
+        let mut ci = CreateInfo::parse(gstr("cmd=c"), &[]).unwrap();
 
         ci.set_uid(1);
 
@@ -313,17 +314,17 @@ mod test {
         assert_eq!(cmd.get_index(), Some(&OptIndex::forward(1)));
         assert_eq!(cmd.match_index(6, 9), false);
 
-        assert_eq!(cmd.get_name(), Ustr::from("cmd"));
-        assert_eq!(cmd.get_prefix(), Ustr::from(""));
+        assert_eq!(cmd.get_name(), gstr("cmd"));
+        assert_eq!(cmd.get_prefix(), gstr(""));
         assert_eq!(cmd.match_name("www".into()), false);
         assert_eq!(cmd.match_name("cmd".into()), true);
         assert_eq!(cmd.match_prefix("--".into()), false);
         assert_eq!(cmd.match_prefix("".into()), false);
-        cmd.set_name(Ustr::from("cmd1"));
-        cmd.set_prefix(Ustr::from("+"));
+        cmd.set_name(gstr("cmd1"));
+        cmd.set_prefix(gstr("+"));
         assert_eq!(cmd.match_name("www".into()), false);
         assert_eq!(cmd.match_name("cmd1".into()), true);
-        assert_eq!(cmd.get_name(), Ustr::from("cmd1"));
+        assert_eq!(cmd.get_name(), gstr("cmd1"));
         assert_eq!(cmd.match_prefix("+".into()), false);
         assert_eq!(cmd.match_prefix("".into()), false);
 

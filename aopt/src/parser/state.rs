@@ -7,7 +7,7 @@ use crate::err::Error;
 use crate::err::Result;
 use crate::opt::Style;
 use crate::proc::Matcher;
-use crate::Ustr;
+use ustr::Ustr;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ParserState {

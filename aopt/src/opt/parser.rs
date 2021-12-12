@@ -1,8 +1,11 @@
+use ustr::Ustr;
+
 use super::index::Index;
 
-use crate::err::{ConstructError, Result};
-use crate::pat::{ParseIndex, ParserPattern};
-use crate::Ustr;
+use crate::err::ConstructError;
+use crate::err::Result;
+use crate::pat::ParseIndex;
+use crate::pat::ParserPattern;
 
 /// Parse the option string with given prefixs, return an [`DataKeeper`].
 ///
@@ -43,11 +46,11 @@ use crate::Ustr;
 /// use aopt::opt::parse_option_str;
 ///
 /// fn main() -> Result<()> {
-///     let ret = parse_option_str("--aopt=t!/".into(), &[Ustr::from("--")])?;
+///     let ret = parse_option_str("--aopt=t!/".into(), &[gstr("--")])?;
 ///
-///     assert_eq!(ret.prefix, Some(Ustr::from("--")));
-///     assert_eq!(ret.name , Some(Ustr::from("aopt")));
-///     assert_eq!(ret.type_name, Some(Ustr::from("t")));
+///     assert_eq!(ret.prefix, Some(gstr("--")));
+///     assert_eq!(ret.name , Some(gstr("aopt")));
+///     assert_eq!(ret.type_name, Some(gstr("t")));
 ///     assert_eq!(ret.deactivate, Some(true));
 ///     assert_eq!(ret.optional, Some(true));
 ///     assert_eq!(ret.forward_index, None);
@@ -58,11 +61,11 @@ use crate::Ustr;
 ///     assert_eq!(ret.greater, None);
 ///     assert_eq!(ret.less, None);
 ///
-///     let ret = parse_option_str("bopt=t@[1,2,3]".into(), &[Ustr::from("--")])?;
+///     let ret = parse_option_str("bopt=t@[1,2,3]".into(), &[gstr("--")])?;
 ///
 ///     assert_eq!(ret.prefix, None);
-///     assert_eq!(ret.name , Some(Ustr::from("bopt")));
-///     assert_eq!(ret.type_name, Some(Ustr::from("t")));
+///     assert_eq!(ret.name , Some(gstr("bopt")));
+///     assert_eq!(ret.type_name, Some(gstr("t")));
 ///     assert_eq!(ret.deactivate, None);
 ///     assert_eq!(ret.optional, None);
 ///     assert_eq!(ret.forward_index, None);
@@ -531,8 +534,9 @@ impl State {
 #[cfg(test)]
 mod test {
     use super::parse_option_str;
+    use crate::gstr;
     use crate::opt::index::Index;
-    use crate::Ustr;
+    use ustr::Ustr;
 
     #[test]
     fn test_option_str_parser() {
@@ -2752,10 +2756,10 @@ mod test {
                 ),
             ];
 
-            let prefixs = vec![Ustr::from("--"), Ustr::from("-")];
+            let prefixs = vec![gstr("--"), gstr("-")];
 
             for case in test_cases.iter() {
-                try_to_verify_one_task(Ustr::from(case.0), &prefixs, &case.1);
+                try_to_verify_one_task(gstr(case.0), &prefixs, &case.1);
             }
         }
         {
@@ -5107,10 +5111,10 @@ mod test {
                 ),
             ];
 
-            let prefixs = vec![Ustr::from("--"), Ustr::from("-"), Ustr::from("")];
+            let prefixs = vec![gstr("--"), gstr("-"), gstr("")];
 
             for case in test_cases.iter() {
-                try_to_verify_one_task(Ustr::from(case.0), &prefixs, &case.1);
+                try_to_verify_one_task(gstr(case.0), &prefixs, &case.1);
             }
         }
     }
@@ -5125,7 +5129,7 @@ mod test {
         if let Ok(mut dk) = ret {
             assert!(except.is_some());
 
-            let default = Ustr::from("");
+            let default = gstr("");
 
             if let Some(except) = except {
                 let index = dk.gen_index();

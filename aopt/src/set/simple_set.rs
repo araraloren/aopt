@@ -26,8 +26,8 @@ use crate::opt::Opt;
 use crate::opt::PosCreator;
 use crate::opt::StrCreator;
 use crate::opt::UintCreator;
-use crate::Ustr;
-use crate::UstrMap;
+use ustr::Ustr;
+use ustr::UstrMap;
 
 #[derive(Debug, Default)]
 pub struct SimpleSet {
@@ -74,7 +74,7 @@ impl Set for SimpleSet {}
 
 impl OptionSet for SimpleSet {
     fn add_opt(&mut self, opt_str: &str) -> Result<Commit> {
-        let info = CreateInfo::parse(Ustr::from(opt_str), self.get_prefix())?;
+        let info = CreateInfo::parse(gstr(opt_str), self.get_prefix())?;
 
         debug!(%opt_str, "create option");
         Ok(Commit::new(self, info))

@@ -1,3 +1,5 @@
+use ustr::Ustr;
+
 use super::Context;
 
 use crate::err::Result;
@@ -5,7 +7,6 @@ use crate::err::SpecialError;
 use crate::opt::Opt;
 use crate::opt::OptValue;
 use crate::opt::Style;
-use crate::Ustr;
 
 #[derive(Debug)]
 pub struct NonOptContext {
