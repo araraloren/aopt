@@ -13,7 +13,7 @@ use super::OptionSet;
 use super::PrefixSet;
 use super::Set;
 use super::Uid;
-use crate::err::ConstructError;
+use crate::err::Error;
 use crate::err::Result;
 use crate::gstr;
 use crate::opt::ArrayCreator;
@@ -94,9 +94,7 @@ impl OptionSet for SimpleSet {
                 self.opt.push(opt);
                 Ok(uid)
             }
-            None => {
-                Err(ConstructError::NotSupportOptionType(format!("{}", ci.get_type_name())).into())
-            }
+            None => Err(Error::opt_unsupport_option_type(ci.get_type_name())),
         }
     }
 

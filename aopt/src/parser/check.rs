@@ -2,9 +2,8 @@ use std::collections::HashMap;
 
 use super::Parser;
 
-use crate::err::ConstructError;
+use crate::err::Error;
 use crate::err::Result;
-use crate::err::SpecialError;
 use crate::opt::Style;
 use crate::set::Set;
 use crate::uid::Uid;
@@ -14,11 +13,10 @@ pub fn default_pre_check<P: Parser>(set: &dyn Set, parser: &P) -> Result<bool> {
     for (uid, callback) in parser.callback_iter() {
         if let Some(opt) = set.get_opt(*uid) {
             if !opt.is_accept_callback_type(callback.borrow().to_callback_type()) {
-                return Err(ConstructError::NotSupportCallbackType(
-                    opt.get_hint().to_owned(),
-                    format!("{:?}", callback.borrow().to_callback_type()),
-                )
-                .into());
+                return Err(Error::opt_unsupport_callback_type(
+                    opt.get_hint().as_ref(),
+                    &format!("{:?}", callback.borrow().to_callback_type()),
+                ));
             }
         } else {
             warn!(%uid, "callback has unknow option uid");
@@ -123,7 +121,7 @@ pub fn default_nonopt_check<P: Parser>(set: &dyn Set, _parser: &P) -> Result<boo
             valid = pos_valid;
         }
         if !valid {
-            return Err(SpecialError::POSForceRequired(*index, names.join(" or ")).into());
+            return Err(Error::sp_pos_force_require(*index, names.join(" | ")));
         }
         names.clear();
     }

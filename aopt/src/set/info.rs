@@ -1,11 +1,16 @@
 use std::convert::{TryFrom, TryInto};
+use ustr::Ustr;
 
-use crate::err::{ConstructError, Error, Result};
-use crate::opt::{parse_option_str, DataKeeper};
-use crate::opt::{HelpInfo, Opt, OptIndex, OptValue};
+use crate::err::Error;
+use crate::err::Result;
+use crate::opt::parse_option_str;
+use crate::opt::DataKeeper;
+use crate::opt::HelpInfo;
+use crate::opt::Opt;
+use crate::opt::OptIndex;
+use crate::opt::OptValue;
 use crate::proc::Info;
 use crate::uid::Uid;
-use ustr::Ustr;
 
 #[derive(Debug, Clone, Default)]
 pub struct CreateInfo {
@@ -157,7 +162,7 @@ impl CreateInfo {
             self.alias.push(alias);
             Ok(self)
         } else {
-            Err(ConstructError::InvalidOptionAlias(alias.to_string()).into())
+            Err(Error::opt_invalid_alias(alias))
         }
     }
 
@@ -288,14 +293,12 @@ impl TryFrom<DataKeeper> for CreateInfo {
     fn try_from(value: DataKeeper) -> Result<Self> {
         let mut data_keeper = value;
         let index = data_keeper.gen_index();
-        let name = data_keeper.name.ok_or(ConstructError::MissingOptionName(
-            data_keeper.pattern.to_owned(),
-        ))?;
+        let name = data_keeper
+            .name
+            .ok_or(Error::opt_missing_name(data_keeper.pattern))?;
         let type_ = data_keeper
             .type_name
-            .ok_or(ConstructError::MissingOptionType(
-                data_keeper.pattern.to_owned(),
-            ))?;
+            .ok_or(Error::opt_missing_type(data_keeper.pattern))?;
 
         Ok(Self {
             name,

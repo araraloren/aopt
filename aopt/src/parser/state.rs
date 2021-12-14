@@ -2,7 +2,6 @@ use crate::arg::Argument;
 use crate::ctx::Context;
 use crate::ctx::NonOptContext;
 use crate::ctx::OptContext;
-use crate::err::ArgumentError;
 use crate::err::Error;
 use crate::err::Result;
 use crate::opt::Style;
@@ -50,7 +49,7 @@ pub enum ParserState {
 
 impl ParserState {
     fn gen_unwrap_error(name: &str) -> Error {
-        ArgumentError::UnwrapError(name.to_owned()).into()
+        Error::arg_unwrap_value_failed(name)
     }
 
     fn do_unwrap(name: &str, value: &Option<Ustr>) -> Result<Ustr> {

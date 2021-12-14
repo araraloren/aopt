@@ -2,9 +2,7 @@ use std::convert::{TryFrom, TryInto};
 use ustr::Ustr;
 
 use super::NonOpt;
-use crate::err::ConstructError;
 use crate::err::Error;
-use crate::err::SpecialError;
 use crate::gstr;
 use crate::opt::*;
 use crate::set::CreateInfo;
@@ -67,7 +65,7 @@ impl Type for MainOpt {
 
     fn check(&self) -> Result<()> {
         if !(self.get_optional() || self.has_value()) {
-            Err(SpecialError::OptionForceRequired(self.get_hint().to_owned()).into())
+            Err(Error::sp_option_force_require(self.get_hint()))
         } else {
             Ok(())
         }
@@ -241,10 +239,9 @@ impl Creator for MainCreator {
     fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>> {
         if create_info.get_support_deactivate_style() {
             if !self.is_support_deactivate_style() {
-                return Err(ConstructError::NotSupportDeactivateStyle(
-                    create_info.get_name().to_owned(),
-                )
-                .into());
+                return Err(Error::opt_unsupport_deactivate_style(
+                    create_info.get_name(),
+                ));
             }
         }
 

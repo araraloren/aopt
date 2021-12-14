@@ -2,7 +2,7 @@ use ustr::Ustr;
 
 use super::index::Index;
 
-use crate::err::ConstructError;
+use crate::err::Error;
 use crate::err::Result;
 use crate::pat::ParseIndex;
 use crate::pat::ParserPattern;
@@ -105,7 +105,7 @@ pub fn parse_option_str(pattern: Ustr, prefix: &[Ustr]) -> Result<DataKeeper> {
         ?data_keeper,
         "parsing option string failed"
     );
-    Err(ConstructError::ParsingFailed(pattern.get_pattern().to_owned()).into())
+    Err(Error::opt_parsing_constructor_failed(pattern.get_pattern()))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -327,12 +327,11 @@ impl State {
                                 ?pattern,
                                 "accessing string [{}, {}) failed", start, name_end
                             );
-                            return Err(ConstructError::PatternAccessFailed(
-                                pattern.get_pattern().to_owned(),
+                            return Err(Error::opt_pattern_out_of_range(
+                                pattern.get_pattern(),
                                 start,
                                 name_end,
-                            )
-                            .into());
+                            ));
                         }
                         break;
                     }
@@ -368,12 +367,11 @@ impl State {
                                 ?pattern,
                                 "accessing string [{}, {}) failed", start, type_end
                             );
-                            return Err(ConstructError::PatternAccessFailed(
-                                pattern.get_pattern().to_owned(),
+                            return Err(Error::opt_pattern_out_of_range(
+                                pattern.get_pattern(),
                                 start,
                                 type_end,
-                            )
-                            .into());
+                            ));
                         }
 
                         break;
@@ -395,10 +393,7 @@ impl State {
                 let (_, index_part) = pattern.get_pattern().split_at(index.get());
 
                 let ret = index_part.parse::<u64>().map_err(|e| {
-                    ConstructError::IndexParsingFailed(
-                        pattern.get_pattern().to_owned(),
-                        format!("{:?}", e),
-                    )
+                    Error::opt_parsing_index_failed(pattern.get_pattern(), &format!("{:?}", e))
                 })?;
                 if ret > 0 {
                     data_keeper.forward_index = Some(ret);
@@ -411,10 +406,7 @@ impl State {
                 let (_, index_part) = pattern.get_pattern().split_at(index.get() + 1);
 
                 let ret = index_part.parse::<u64>().map_err(|e| {
-                    ConstructError::IndexParsingFailed(
-                        pattern.get_pattern().to_owned(),
-                        format!("{:?}", e),
-                    )
+                    Error::opt_parsing_index_failed(pattern.get_pattern(), &format!("{:?}", e))
                 })?;
                 if ret > 0 {
                     data_keeper.backward_index = Some(ret);
@@ -436,11 +428,10 @@ impl State {
                         .split(',')
                         .map(|v| {
                             v.trim().parse::<u64>().map_err(|e| {
-                                ConstructError::IndexParsingFailed(
-                                    pattern.get_pattern().to_owned(),
-                                    format!("{:?}", e),
+                                Error::opt_parsing_index_failed(
+                                    pattern.get_pattern(),
+                                    &format!("{:?}", e),
                                 )
-                                .into()
                             })
                         })
                         .collect::<Result<Vec<u64>>>()?;
@@ -454,11 +445,10 @@ impl State {
                         .split(',')
                         .map(|v| {
                             v.trim().parse::<u64>().map_err(|e| {
-                                ConstructError::IndexParsingFailed(
-                                    pattern.get_pattern().to_owned(),
-                                    format!("{:?}", e),
+                                Error::opt_parsing_index_failed(
+                                    pattern.get_pattern(),
+                                    &format!("{:?}", e),
                                 )
-                                .into()
                             })
                         })
                         .collect::<Result<Vec<u64>>>()?;
@@ -475,11 +465,10 @@ impl State {
                     .split(',')
                     .map(|v| {
                         v.trim().parse::<u64>().map_err(|e| {
-                            ConstructError::IndexParsingFailed(
-                                pattern.get_pattern().to_owned(),
-                                format!("{:?}", e),
+                            Error::opt_parsing_index_failed(
+                                pattern.get_pattern(),
+                                &format!("{:?}", e),
                             )
-                            .into()
                         })
                     })
                     .collect::<Result<Vec<u64>>>()?;
@@ -493,10 +482,7 @@ impl State {
                 let (_, index_part) = pattern.get_pattern().split_at(index.get() + 1);
 
                 let ret = index_part.parse::<u64>().map_err(|e| {
-                    ConstructError::IndexParsingFailed(
-                        pattern.get_pattern().to_owned(),
-                        format!("{:?}", e),
-                    )
+                    Error::opt_parsing_index_failed(pattern.get_pattern(), &format!("{:?}", e))
                 })?;
                 data_keeper.greater = Some(ret);
                 index.set(index.len());
@@ -505,10 +491,7 @@ impl State {
                 let (_, index_part) = pattern.get_pattern().split_at(index.get() + 1);
 
                 let ret = index_part.parse::<u64>().map_err(|e| {
-                    ConstructError::IndexParsingFailed(
-                        pattern.get_pattern().to_owned(),
-                        format!("{:?}", e),
-                    )
+                    Error::opt_parsing_index_failed(pattern.get_pattern(), &format!("{:?}", e))
                 })?;
                 data_keeper.less = Some(ret);
                 index.set(index.len());
@@ -516,9 +499,7 @@ impl State {
             Self::End => {
                 debug!(?index, "!!!!!!!!!!!!!!");
                 if !index.is_end() {
-                    return Err(
-                        ConstructError::ParsingFailed(pattern.get_pattern().to_owned()).into(),
-                    );
+                    return Err(Error::opt_parsing_constructor_failed(pattern.get_pattern()));
                 } else {
                     return Ok(true);
                 }

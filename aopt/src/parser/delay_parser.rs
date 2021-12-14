@@ -9,7 +9,7 @@ use super::Parser;
 use super::ParserState;
 
 use crate::arg::Argument;
-use crate::err;
+use crate::err::Error;
 use crate::err::Result;
 use crate::opt::OptCallback;
 use crate::opt::OptValue;
@@ -148,11 +148,9 @@ where
                     if !matched {
                         // if current ARG is like an option, but it not matched
                         if self.strict {
-                            return Err(err::SpecialError::InvalidOptionName(format!(
-                                "{}",
-                                arg.current.unwrap_or_default().as_str()
-                            ))
-                            .into());
+                            return Err(Error::sp_invalid_option_name(
+                                arg.current.unwrap_or_default().as_ref(),
+                            ));
                         }
                     }
                 }

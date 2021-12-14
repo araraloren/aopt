@@ -1,6 +1,6 @@
 use ustr::Ustr;
 
-use crate::err::ArgumentError;
+use crate::err::Error;
 use crate::err::Result;
 use crate::pat::ParseIndex;
 use crate::pat::ParserPattern;
@@ -79,7 +79,7 @@ pub fn parse_argument(pattern: Ustr, prefix: &[Ustr]) -> Result<DataKeeper> {
         return Ok(data_keeper);
     }
     error!(?pattern, ?prefix, ?index, "parsing argument failed");
-    Err(ArgumentError::ParsingFailed(pattern.get_pattern().to_owned()).into())
+    Err(Error::arg_parsing_failed(pattern.get_pattern()))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -200,12 +200,11 @@ impl State {
                                 ?pattern,
                                 "accessing string [{}, {}) failed", start, name_end
                             );
-                            return Err(ArgumentError::PatternAccessFailed(
-                                pattern.get_pattern().to_owned(),
+                            return Err(Error::arg_pattern_out_of_range(
+                                pattern.get_pattern(),
                                 start,
                                 name_end,
-                            )
-                            .into());
+                            ));
                         }
                         break;
                     }
@@ -229,18 +228,15 @@ impl State {
                             index.get(),
                             index.len()
                         );
-                        return Err(ArgumentError::PatternAccessFailed(
-                            pattern.get_pattern().to_owned(),
+                        return Err(Error::arg_pattern_out_of_range(
+                            pattern.get_pattern(),
                             index.get(),
                             index.len(),
-                        )
-                        .into());
+                        ));
                     }
                 } else {
                     error!(?pattern, "syntax error! require an value after '='.");
-                    return Err(
-                        ArgumentError::MissingValue(pattern.get_pattern().to_owned()).into(),
-                    );
+                    return Err(Error::arg_missing_value(pattern.get_pattern()));
                 }
             }
             Self::End => {

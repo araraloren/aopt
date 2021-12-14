@@ -2,8 +2,8 @@ use ustr::Ustr;
 
 use super::Context;
 
+use crate::err::Error;
 use crate::err::Result;
-use crate::err::SpecialError;
 use crate::gstr;
 use crate::opt::Opt;
 use crate::opt::OptValue;
@@ -63,23 +63,15 @@ impl Context for OptContext {
         trace!(?self, ?opt, "matching ...");
         if matched {
             if self.is_comsume_argument() && self.argument.is_none() {
-                return Err(
-                    SpecialError::MissingArgumentForOption(opt.get_hint().to_owned()).into(),
-                );
+                return Err(Error::sp_missing_argument(opt.get_hint()));
             }
             self.matched_index = Some(0);
             if !opt.is_deactivate_style() && self.disable {
-                return Err(SpecialError::CanNotDisableOption(format!(
-                    "{}",
-                    opt.get_name().as_ref()
-                ))
-                .into());
+                return Err(Error::sp_unsupport_deactivate_style(opt.get_hint()));
             } else {
                 let value = opt
                     .parse_value(self.argument.unwrap_or(gstr("")))
-                    .map_err(|_| {
-                        SpecialError::InvalidArgumentForOption(opt.get_hint().to_owned())
-                    })?;
+                    .map_err(|_| Error::sp_invalid_argument(opt.get_hint()))?;
                 self.set_value(value);
                 debug!("get return and will set value {:?}!", self.get_value());
             }

@@ -2,10 +2,7 @@ use std::convert::{TryFrom, TryInto};
 use std::mem::take;
 use ustr::Ustr;
 
-use crate::err::ConstructError;
 use crate::err::Error;
-use crate::err::ParserError;
-use crate::err::SpecialError;
 use crate::gstr;
 use crate::opt::*;
 use crate::set::CreateInfo;
@@ -43,10 +40,9 @@ impl TryFrom<CreateInfo> for BoolOpt {
     fn try_from(value: CreateInfo) -> Result<Self> {
         let mut ci = value;
         let help_info = HelpInfo::from(&mut ci);
-        let prefix = ci.get_prefix().ok_or(ConstructError::MissingOptionPrefix(
-            format!("{}", ci.get_name()),
-            format!("{}", ci.get_type_name()),
-        ))?;
+        let prefix = ci
+            .get_prefix()
+            .ok_or(Error::opt_missing_prefix(ci.get_name(), ci.get_type_name()))?;
 
         Ok(Self {
             uid: ci.get_uid(),
@@ -85,7 +81,7 @@ impl Type for BoolOpt {
 
     fn check(&self) -> Result<()> {
         if !(self.get_optional() || self.has_value()) {
-            Err(SpecialError::OptionForceRequired(self.get_hint().to_owned()).into())
+            Err(Error::sp_option_force_require(self.get_hint()))
         } else {
             Ok(())
         }
@@ -125,11 +121,10 @@ impl Callback for BoolOpt {
     fn set_callback_ret(&mut self, ret: Option<OptValue>) -> Result<()> {
         if let Some(ret) = ret {
             if !ret.is_bool() {
-                return Err(ParserError::InvalidReturnValueOfCallback(format!(
+                return Err(Error::opt_invalid_ret_value(format!(
                     "excepted OptValue::Bool, found {:?}",
                     ret
-                ))
-                .into());
+                )));
             }
             self.set_value(ret);
         }
@@ -283,10 +278,9 @@ impl Creator for BoolCreator {
     fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>> {
         if create_info.get_support_deactivate_style() {
             if !self.is_support_deactivate_style() {
-                return Err(ConstructError::NotSupportDeactivateStyle(
-                    create_info.get_name().to_owned(),
-                )
-                .into());
+                return Err(Error::opt_unsupport_deactivate_style(
+                    create_info.get_name(),
+                ));
             }
         }
 

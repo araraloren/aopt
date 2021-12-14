@@ -2,7 +2,7 @@ use ustr::Ustr;
 
 use super::parser::parse_argument;
 use super::parser::DataKeeper;
-use crate::err::ArgumentError;
+use crate::err::Error;
 use crate::err::Result;
 
 /// Argument hold current and next item of command line arguments.
@@ -67,10 +67,10 @@ impl Argument {
 
             // must have prefix and name
             if self.data_keeper.prefix.is_none() {
-                return Err(ArgumentError::MissingPrefix(pattern.to_string()).into());
+                return Err(Error::arg_missing_prefix(pattern));
             }
             if self.data_keeper.name.is_none() {
-                return Err(ArgumentError::MissingName(pattern.to_string()).into());
+                return Err(Error::arg_missing_name(pattern));
             }
             return Ok(true);
         }

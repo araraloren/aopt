@@ -2,8 +2,8 @@ use ustr::Ustr;
 
 use super::Context;
 
+use crate::err::Error;
 use crate::err::Result;
-use crate::err::SpecialError;
 use crate::opt::Opt;
 use crate::opt::OptValue;
 use crate::opt::Style;
@@ -50,7 +50,7 @@ impl Context for NonOptContext {
             self.matched_index = Some(self.current as usize);
             let value = opt
                 .parse_value(self.name)
-                .map_err(|_| SpecialError::InvalidArgumentForOption(opt.get_hint().to_owned()))?;
+                .map_err(|_| Error::sp_invalid_argument(opt.get_hint()))?;
             self.set_value(value);
             debug!("get return value {:?}!", self.get_value());
             opt.set_invoke(true);
