@@ -1,6 +1,6 @@
 [package]
 name = "aopt"
-version = "0.4.3"
+version = "0.4.4"
 authors = ["araraloren <blackcatoverwall@gmail.com>"]
 edition = "2021"
 license = "MPL-2.0"
@@ -8,6 +8,7 @@ description = "A flexible and typed getopt tools"
 repository = "https://github.com/araraloren/aopt/"
 keywords = ["getopt", "cli"]
 categories = ["command-line-interface"]
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
