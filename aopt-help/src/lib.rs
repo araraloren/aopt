@@ -1,19 +1,55 @@
-pub mod err;
-pub mod format;
-pub mod printer;
-pub mod store;
-pub mod style;
-pub mod wrapper;
+mod err;
+mod format;
+mod printer;
+mod store;
+mod style;
+mod wrapper;
 
-use format::Format;
 use std::io::{Stdout, Write};
 use ustr::Ustr;
 
-use crate::err::{Error, Result};
-use crate::wrapper::Wrapper;
-use printer::Printer;
-use store::Store;
-use style::Style;
+pub use crate::err::Error;
+pub use crate::err::Result;
+pub use crate::format::Format;
+pub use crate::printer::Printer;
+pub use crate::store::CmdMut;
+pub use crate::store::CmdOptMut;
+pub use crate::store::CmdPosMut;
+pub use crate::store::CmdStore;
+pub use crate::store::OptStore;
+pub use crate::store::PosStore;
+pub use crate::store::SecStore;
+pub use crate::store::SectionMut;
+pub use crate::store::Store;
+pub use crate::style::Alignment;
+pub use crate::style::Style;
+pub use crate::wrapper::Wrapped;
+pub use crate::wrapper::Wrapper;
+
+pub mod prelude {
+    pub use crate::err::Error;
+    pub use crate::err::Result;
+    pub use crate::format::Format;
+    pub use crate::printer::Printer;
+    pub use crate::store::CmdMut;
+    pub use crate::store::CmdOptMut;
+    pub use crate::store::CmdPosMut;
+    pub use crate::store::CmdStore;
+    pub use crate::store::OptStore;
+    pub use crate::store::PosStore;
+    pub use crate::store::SecStore;
+    pub use crate::store::SectionMut;
+    pub use crate::store::Store;
+    pub use crate::style::Alignment;
+    pub use crate::style::Style;
+    pub use crate::wrapper::Wrapped;
+    pub use crate::wrapper::Wrapper;
+    pub use crate::AppHelp;
+    pub use crate::DefaultFormat;
+    pub use std::io::Stdout;
+    pub use std::io::Write;
+    pub use ustr::Ustr;
+}
 
 #[derive(Debug)]
 pub struct AppHelp<W: Write, F: Format> {

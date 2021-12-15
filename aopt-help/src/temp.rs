@@ -1,8 +1,4 @@
-use aopt_help::{
-    printer::Printer,
-    store::{OptStore, PosStore},
-    AppHelp, DefaultFormat,
-};
+use aopt_help::{AppHelp, DefaultFormat, OptStore, PosStore, Printer};
 use ustr::Ustr;
 
 fn main() {
