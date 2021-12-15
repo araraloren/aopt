@@ -4,9 +4,7 @@ use std::path::Path;
 
 use aopt::err::create_error;
 use aopt::{getopt, prelude::*};
-use aopt_help::printer::Printer;
-use aopt_help::store::{OptStore, PosStore};
-use aopt_help::{AppHelp, DefaultFormat};
+use aopt_help::prelude::*;
 use regex::Regex;
 
 fn main() -> color_eyre::Result<()> {

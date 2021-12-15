@@ -54,11 +54,11 @@ impl Argument {
     ///
     /// # Errors
     ///
-    /// - [`ArgumentError::MissingPrefix`]
+    /// - [`ArgumentError::MissingPrefix`](crate::err::ArgumentError::MissingPrefix)
     ///
     /// When the result not have a valid prefix.
     ///
-    /// - [`ArgumentError::MissingName`]
+    /// - [`ArgumentError::MissingName`](crate::err::ArgumentError::MissingName)
     ///
     /// When the result not have a valid name.
     pub fn parse(&mut self, prefix: &[Ustr]) -> Result<bool> {

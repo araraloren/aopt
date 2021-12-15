@@ -8,12 +8,7 @@ use std::{env::Args, io::Stdout};
 use aopt::err::create_error;
 use aopt::err::Result;
 use aopt::prelude::*;
-use aopt_help::printer::Printer;
-use aopt_help::DefaultFormat;
-use aopt_help::{
-    store::{OptStore, PosStore},
-    AppHelp,
-};
+use aopt_help::prelude::*;
 use reqwest::header;
 use reqwest::Client;
 
