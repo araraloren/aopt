@@ -14,9 +14,11 @@ pub(crate) mod pat;
 extern crate tracing;
 
 use crate::arg::ArgStream;
-use crate::err::Result;
 use crate::parser::Parser;
 use crate::set::Set;
+
+pub use crate::err::Error;
+pub use crate::err::Result;
 
 /// Create a [`Ustr`](ustr::Ustr) from `&str`.
 pub fn gstr(s: &str) -> ustr::Ustr {
