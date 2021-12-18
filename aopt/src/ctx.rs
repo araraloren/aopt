@@ -32,32 +32,44 @@ pub trait Context: Debug {
     /// If any error rasied when process the option.
     fn process(&mut self, opt: &mut dyn Opt) -> Result<bool>;
 
+    /// Undo the matching operate.
     fn undo(&mut self, opt: &mut dyn Opt);
 
+    /// Get the matching result value.
     fn get_value(&self) -> Option<&OptValue>;
 
+    /// Take the ownership of result value.
     fn take_value(&mut self) -> Option<OptValue>;
 
+    /// Set the matching result value.
     fn set_value(&mut self, value: OptValue);
 
+    /// Get the matching uid.
     fn get_matched_uid(&self) -> Option<Uid> {
         None
     }
 
+    /// Set the matching uid.
     fn set_matched_uid(&mut self, _uid: Option<Uid>) {}
 
+    /// Get the matching non-option index.
     fn get_matched_index(&self) -> Option<usize> {
         None
     }
 
+    /// Set the matching non-option index.
     fn set_matched_index(&mut self, _index: Option<usize>) {}
 
+    /// Get current context support style.
     fn get_style(&self) -> Style;
 
-    fn get_next_argument(&self) -> &Option<Ustr>;
+    /// Get the argument of current context.
+    fn get_argument(&self) -> &Option<Ustr>;
 
+    /// Indicate if the context need consume command line item that treat as argument.
     fn is_comsume_argument(&self) -> bool;
 
+    /// If the context matched any option.
     fn is_matched(&self) -> bool {
         self.get_matched_uid().is_some()
     }

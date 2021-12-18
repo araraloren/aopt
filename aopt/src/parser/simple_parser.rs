@@ -295,7 +295,7 @@ where
 
                         if has_callback {
                             // invoke callback of current option/non-option
-                            // make matched true, if any of NonOpt callback return Some(*)
+                            // make matched true, if any of non-option callback return Some(*)
                             value = self.invoke_callback(
                                 uid,
                                 set,
@@ -303,12 +303,12 @@ where
                                 value.unwrap(),
                             )?;
                             if value.is_none() {
-                                // Ok(None) treat as user said current NonOpt not matched
+                                // Ok(None) treat as user said current non-option not matched
                                 matched = false;
                             }
                         }
                         // reborrow the opt avoid the compiler error
-                        // reset the matcher, we need match all the NonOpt
+                        // reset the matcher, we need match all the non-option
                         debug!(?value, "get callback return value");
                         set[uid].as_mut().set_invoke(false);
                         matcher.reset();

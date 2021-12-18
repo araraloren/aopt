@@ -102,7 +102,7 @@ impl Context for NonOptContext {
         self.style
     }
 
-    fn get_next_argument(&self) -> &Option<Ustr> {
+    fn get_argument(&self) -> &Option<Ustr> {
         &None
     }
 

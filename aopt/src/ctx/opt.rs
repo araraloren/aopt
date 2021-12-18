@@ -111,7 +111,7 @@ impl Context for OptContext {
         self.style
     }
 
-    fn get_next_argument(&self) -> &Option<Ustr> {
+    fn get_argument(&self) -> &Option<Ustr> {
         &self.argument
     }
 
