@@ -7,6 +7,7 @@ use crate::err::Result;
 use crate::opt::Opt;
 use crate::opt::OptValue;
 use crate::opt::Style;
+use crate::uid::Uid;
 
 #[derive(Debug)]
 pub struct NonOptContext {
@@ -21,6 +22,8 @@ pub struct NonOptContext {
     value: Option<OptValue>,
 
     matched_index: Option<usize>,
+
+    matched_uid: Option<Uid>,
 }
 
 impl NonOptContext {
@@ -32,6 +35,7 @@ impl NonOptContext {
             current,
             value: None,
             matched_index: None,
+            matched_uid: None,
         }
     }
 }
@@ -47,20 +51,23 @@ impl Context for NonOptContext {
         info!(%matched, "Matching context with non-opt<{}>", opt.get_uid());
         trace!(?self, ?opt, "matching ...");
         if matched {
-            self.matched_index = Some(self.current as usize);
             let value = opt
                 .parse_value(self.name)
                 .map_err(|_| Error::sp_invalid_argument(opt.get_hint()))?;
             self.set_value(value);
             debug!("get return value {:?}!", self.get_value());
             opt.set_invoke(true);
+            self.matched_uid = Some(opt.get_uid());
+            self.matched_index = Some(self.current as usize);
         }
         Ok(matched)
     }
 
-    fn undo(&mut self) {
+    fn undo(&mut self, opt: &mut dyn Opt) {
         self.value = None;
         self.matched_index = None;
+        self.matched_uid = None;
+        opt.set_invoke(false);
     }
 
     fn get_value(&self) -> Option<&OptValue> {
@@ -73,6 +80,14 @@ impl Context for NonOptContext {
 
     fn set_value(&mut self, value: OptValue) {
         self.value = Some(value);
+    }
+
+    fn get_matched_uid(&self) -> Option<Uid> {
+        self.matched_uid
+    }
+
+    fn set_matched_uid(&mut self, uid: Option<Uid>) {
+        self.matched_uid = uid;
     }
 
     fn get_matched_index(&self) -> Option<usize> {
@@ -93,5 +108,9 @@ impl Context for NonOptContext {
 
     fn is_comsume_argument(&self) -> bool {
         false
+    }
+
+    fn is_matched(&self) -> bool {
+        self.matched_uid.is_some() && self.matched_index.is_some()
     }
 }

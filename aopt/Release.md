@@ -1,6 +1,10 @@
 
 # Relase note
 
+## 0.5.0
+
+- improve the api of Context
+
 ## 0.4.3
 
 - clean the error

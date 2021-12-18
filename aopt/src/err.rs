@@ -4,6 +4,7 @@ use ustr::Ustr;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// Error string of [`Error`](crate::err::Error) type.
 #[derive(Debug, Clone, Default)]
 pub struct ErrorStr(String);
 
@@ -222,6 +223,7 @@ pub fn create_failure(msg: String) -> SpecialError {
     SpecialError::CustomFailure(msg.into())
 }
 
+/// Errors of parsing command line item.
 #[derive(Debug, thiserror::Error)]
 pub enum ArgumentError {
     #[error("Failed parsing `{0}` as an option string")]
@@ -243,6 +245,7 @@ pub enum ArgumentError {
     UnwrapValueFailed(ErrorStr),
 }
 
+/// Errors of option construct and parsing.
 #[derive(Debug, thiserror::Error)]
 pub enum ConstructError {
     #[error("Syntax error! Missing option type: {0}")]
@@ -285,6 +288,10 @@ pub enum ConstructError {
     InvalidRetValueOfCallback(ErrorStr),
 }
 
+/// Special error using for parser.
+///
+/// When using [`getopt!`](crate::getopt!) for multiple [`Parser`](crate::parser::Parser),
+/// current error will not treat as error until last Parser.
 #[derive(Debug, thiserror::Error)]
 pub enum SpecialError {
     #[error("Option `{0}` is force required")]

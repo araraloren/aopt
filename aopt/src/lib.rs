@@ -26,24 +26,26 @@ pub fn gstr(s: &str) -> ustr::Ustr {
 }
 
 /// The return value of [`getopt!`].
-///
-/// The first member is [`Parser`], second member is [`Set`].
 #[derive(Debug)]
 pub struct ReturnValue<'a, 'b>(pub &'b mut dyn Parser, pub &'a mut dyn Set);
 
 impl<'a, 'b> ReturnValue<'a, 'b> {
+    /// Get the parser of return value.
     pub fn parser(&self) -> &dyn Parser {
         self.0
     }
 
+    /// Get the set of return value.
     pub fn set(&self) -> &dyn Set {
         self.1
     }
 
+    /// Get the parser mutable reference of return value.
     pub fn parser_mut(&mut self) -> &mut dyn Parser {
         self.0
     }
 
+    /// Get the set mutable reference of return value.
     pub fn set_mut(&mut self) -> &mut dyn Set {
         self.1
     }

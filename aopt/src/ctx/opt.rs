@@ -8,6 +8,7 @@ use crate::gstr;
 use crate::opt::Opt;
 use crate::opt::OptValue;
 use crate::opt::Style;
+use crate::uid::Uid;
 
 #[derive(Debug)]
 pub struct OptContext {
@@ -23,7 +24,7 @@ pub struct OptContext {
 
     value: Option<OptValue>,
 
-    matched_index: Option<usize>,
+    matched_uid: Option<Uid>,
 
     disable: bool,
 }
@@ -44,7 +45,7 @@ impl OptContext {
             style,
             consume_arg,
             value: None,
-            matched_index: None,
+            matched_uid: None,
             disable,
         }
     }
@@ -65,7 +66,6 @@ impl Context for OptContext {
             if self.is_comsume_argument() && self.argument.is_none() {
                 return Err(Error::sp_missing_argument(opt.get_hint()));
             }
-            self.matched_index = Some(0);
             if !opt.is_deactivate_style() && self.disable {
                 return Err(Error::sp_unsupport_deactivate_style(opt.get_hint()));
             } else {
@@ -76,13 +76,15 @@ impl Context for OptContext {
                 debug!("get return and will set value {:?}!", self.get_value());
             }
             opt.set_invoke(true);
+            self.matched_uid = Some(opt.get_uid());
         }
         Ok(matched)
     }
 
-    fn undo(&mut self) {
+    fn undo(&mut self, opt: &mut dyn Opt) {
         self.value = None;
-        self.matched_index = None;
+        self.matched_uid = None;
+        opt.set_invoke(false);
     }
 
     fn get_value(&self) -> Option<&OptValue> {
@@ -97,12 +99,12 @@ impl Context for OptContext {
         self.value = Some(value);
     }
 
-    fn get_matched_index(&self) -> Option<usize> {
-        self.matched_index
+    fn get_matched_uid(&self) -> Option<Uid> {
+        self.matched_uid
     }
 
-    fn set_matched_index(&mut self, index: Option<usize>) {
-        self.matched_index = index;
+    fn set_matched_uid(&mut self, uid: Option<Uid>) {
+        self.matched_uid = uid;
     }
 
     fn get_style(&self) -> Style {

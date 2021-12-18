@@ -55,8 +55,12 @@ impl Matcher for OptMatcher {
         Ok(None)
     }
 
-    fn undo(&mut self) {
-        self.context.iter_mut().for_each(|v| v.undo());
+    fn undo(&mut self, set: &mut dyn Set) {
+        self.context.iter_mut().for_each(|v| {
+            if let Some(uid) = v.get_matched_uid() {
+                v.undo(set[uid].as_mut())
+            }
+        });
     }
 
     fn is_matched(&self) -> bool {

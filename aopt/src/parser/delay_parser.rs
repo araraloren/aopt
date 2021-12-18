@@ -13,7 +13,6 @@ use crate::err::Error;
 use crate::err::Result;
 use crate::opt::OptCallback;
 use crate::opt::OptValue;
-use crate::opt::Style;
 use crate::proc::Info;
 use crate::proc::Matcher;
 use crate::proc::NonOptMatcher;
@@ -311,7 +310,7 @@ where
 {
     fn process(&mut self, msg: &mut NonOptMatcher, set: &mut dyn Set) -> Result<bool> {
         let matcher = msg;
-        let mut matched = false;
+        let mut matched = true;
 
         debug!(?matcher, "NonOptMatcher got message");
         for info in self.subscriber_info.iter() {
@@ -319,9 +318,8 @@ where
             let ctx = matcher.process(uid, set)?;
 
             if let Some(ctx) = ctx {
-                let opt = set[uid].as_mut();
-
-                if let Some(noa_index) = ctx.get_matched_index() {
+                if ctx.is_matched() {
+                    let opt = set[uid].as_mut();
                     let invoke_callback = opt.is_need_invoke();
                     let mut value = ctx.take_value();
 
@@ -332,13 +330,14 @@ where
                         if has_callback {
                             // invoke callback of current option/non-option
                             // make matched true, if any of NonOpt callback return Some(*)
-                            value = self.invoke_callback(uid, set, noa_index, value.unwrap())?;
-                            if value.is_some() {
-                                matched = true;
-                            }
-                        } else {
-                            // if a Cmd is matched, then the M matched
-                            if opt.match_style(Style::Cmd) {
+                            value = self.invoke_callback(
+                                uid,
+                                set,
+                                ctx.get_matched_index().unwrap_or_default(),
+                                value.unwrap(),
+                            )?;
+                            if value.is_none() {
+                                // Ok(None) treat as user said current NonOpt not matched
                                 matched = true;
                             }
                         }
@@ -355,7 +354,7 @@ where
             }
         }
         if !matched {
-            matcher.undo();
+            matcher.undo(set);
         }
         Ok(matched)
     }
@@ -375,9 +374,8 @@ where
             let ctx = matcher.process(uid, set)?;
 
             if let Some(ctx) = ctx {
-                let opt = set[uid].as_mut();
-
-                if let Some(noa_index) = ctx.get_matched_index() {
+                if ctx.is_matched() {
+                    let opt = set[uid].as_mut();
                     let invoke_callback = opt.is_need_invoke();
                     let value = ctx.take_value();
 
@@ -392,14 +390,14 @@ where
                         .entry(uid)
                         .or_insert(vec![])
                         .push(OptValueKeeper {
-                            noa_index,
+                            noa_index: ctx.get_matched_index().unwrap_or_default(),
                             value: value.unwrap(),
                         });
                 }
             }
         }
         if !matcher.is_matched() {
-            matcher.undo();
+            matcher.undo(set);
             value_keeper.clear();
         }
         for (uid, values) in value_keeper {

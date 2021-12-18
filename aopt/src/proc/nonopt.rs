@@ -72,9 +72,11 @@ impl Matcher for NonOptMatcher {
         Ok(None)
     }
 
-    fn undo(&mut self) {
+    fn undo(&mut self, set: &mut dyn Set) {
         if let Some(ctx) = self.context.as_mut() {
-            ctx.undo();
+            if let Some(uid) = ctx.get_matched_uid() {
+                ctx.undo(set[uid].as_mut());
+            }
         }
     }
 
