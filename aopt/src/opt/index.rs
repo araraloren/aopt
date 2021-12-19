@@ -4,7 +4,7 @@
 ///
 /// # Example
 ///
-/// ```
+/// ```txt
 /// foo.exe -a=value -b value pos1 --aopt=42 pos2 --bopt value pos3
 ///             |     |   |    |      |       |      |     |     |
 ///             |     |   |    |      |       |      |     |     NOA @3 or @-1
@@ -20,87 +20,87 @@
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Index {
     /// The forward index of NOA.
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// For `["--aopt", "--bopt=42", "pos1", "--copt", "pos2", "--dopt", "value", "pos3"]`:
-    /// 
+    ///
     /// `@1` will matching `"pos1"`.
-    /// 
+    ///
     /// `@2` will matching `"pos2"`.
-    /// 
+    ///
     /// `@3` will matching `"pos3"`.
     Forward(u64),
 
     /// The backward index of NOA.
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// For `["--aopt", "--bopt=42", "pos1", "--copt", "pos2", "--dopt", "value", "pos3"]`:
-    /// 
+    ///
     /// `@-1` will matching `"pos3"`.
-    /// 
+    ///
     /// `@-2` will matching `"pos2"`.
-    /// 
+    ///
     /// `@-3` will matching `"pos1"`.
     Backward(u64),
 
     /// The include list of forward index of NOA.
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// For `["--aopt", "--bopt=42", "pos1", "--copt", "pos2", "--dopt", "value", "pos3"]`:
-    /// 
+    ///
     /// `@[1,3]` will matching `"pos1"` or `"pos3"`.
-    /// 
+    ///
     /// `@[1,2]` will matching `"pos1"` or `"pos2"`.
-    /// 
+    ///
     /// `@[1,2,3]` will matching `"pos1"`, `"pos2"` or `"pos3"`.
     List(Vec<u64>),
 
     /// The exclude list of forward index of NOA.
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// For `["--aopt", "--bopt=42", "pos1", "--copt", "pos2", "--dopt", "value", "pos3"]`:
-    /// 
+    ///
     /// `@-[1,3]` will matching `"pos2"`.
-    /// 
+    ///
     /// `@-[3]` will matching `"pos1"` or `"pos2"`.
-    /// 
+    ///
     /// `@-[2]` will matching `"pos1"` or `"pos3"`.
     Except(Vec<u64>),
 
     /// The NOA which index bigger than given position.
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// For `["--aopt", "--bopt=42", "pos1", "--copt", "pos2", "--dopt", "value", "pos3"]`:
-    /// 
+    ///
     /// `@>0` will matching `"pos1"`, `"pos2"` or `"pos3"`.
-    /// 
+    ///
     /// `@>2` will matching `"pos3"`.
-    /// 
+    ///
     /// `@>1` will matching `"pos2"` or `"pos3"`.
     Greater(u64),
 
     /// The NOA which index little than given position.
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// For `["--aopt", "--bopt=42", "pos1", "--copt", "pos2", "--dopt", "value", "pos3"]`:
-    /// 
+    ///
     /// `@<4` will matching `"pos1"`, `"pos2"` or `"pos3"`.
-    /// 
+    ///
     /// `@<2` will matching `"pos1"`.
     Less(u64),
 
     /// The anywhere position of NOA.
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// For `["--aopt", "--bopt=42", "pos1", "--copt", "pos2", "--dopt", "value", "pos3"]`:
-    /// 
+    ///
     /// `@*` or `@0` will matching `"pos1"`, `"pos2"` or `"pos3"`.
     AnyWhere,
 

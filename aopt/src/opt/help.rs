@@ -1,9 +1,26 @@
 use std::mem::take;
+use ustr::Ustr;
 
 use super::Opt;
 use crate::set::CreateInfo;
-use ustr::Ustr;
 
+/// The help information of option.
+///
+/// The `hint` is suggestion of the option. In generally, it will
+/// using in `usage` and `option list`.
+///
+/// The `help` is description of the option. In generally, it will
+/// using in `option list`.
+///
+/// Such as we have a option hint `--link|-l` with help
+/// `Set the link path`:
+/// ```txt
+/// usage: executable [--link|-l] **ARGS**
+///
+/// OPT:
+/// --link|-l   Set the link path
+/// ```
+///
 #[derive(Debug, Clone, Default)]
 pub struct HelpInfo {
     hint: Ustr,
@@ -57,7 +74,9 @@ impl HelpInfo {
     }
 }
 
-/// Generate the help info if it not exist in [`CreateInfo`].
+/// Convert the [`CreateInfo`] into [`HelpInfo`].
+///
+/// It will generate the help info if it not exist in [`CreateInfo`].
 impl<'a> From<&'a mut CreateInfo> for HelpInfo {
     fn from(ci: &'a mut CreateInfo) -> Self {
         let mut help_info = take(ci.get_help_info_mut());
@@ -72,7 +91,7 @@ impl<'a> From<&'a mut CreateInfo> for HelpInfo {
     }
 }
 
-/// Generate the help like `--Option | -O` or `Pos` or `--/Option`
+/// The help function using for generate help hint of option.
 pub fn create_help_hint(ci: &CreateInfo) -> Ustr {
     let mut ret = String::default();
 
