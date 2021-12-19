@@ -5,6 +5,8 @@
 
 - fix the callback immutable type paramaters
 
+- fix the callback lifetime parameter
+
 ## 0.5.0
 
 - improve the api of Context
