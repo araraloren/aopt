@@ -234,27 +234,27 @@ impl From<Box<dyn MainMutCallback>> for Callback {
     }
 }
 
-pub struct SimpleOptCallback<
-    T: 'static + FnMut(Uid, &dyn Set, OptValue) -> Result<Option<OptValue>>,
->(T);
+pub struct SimpleOptCallback<T: 'static + Fn(Uid, &dyn Set, OptValue) -> Result<Option<OptValue>>>(
+    T,
+);
 
-impl<T: 'static + FnMut(Uid, &dyn Set, OptValue) -> Result<Option<OptValue>>> SimpleOptCallback<T> {
+impl<T: 'static + Fn(Uid, &dyn Set, OptValue) -> Result<Option<OptValue>>> SimpleOptCallback<T> {
     pub fn new(cb: T) -> Self {
         Self(cb)
     }
 }
 
-impl<T: 'static + FnMut(Uid, &dyn Set, OptValue) -> Result<Option<OptValue>>> Debug
+impl<T: 'static + Fn(Uid, &dyn Set, OptValue) -> Result<Option<OptValue>>> Debug
     for SimpleOptCallback<T>
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SimpleOptCallback")
-            .field("FnMut", &String::from("..."))
+            .field("Fn", &String::from("..."))
             .finish()
     }
 }
 
-impl<T: 'static + FnMut(Uid, &dyn Set, OptValue) -> Result<Option<OptValue>>> OptCallback
+impl<T: 'static + Fn(Uid, &dyn Set, OptValue) -> Result<Option<OptValue>>> OptCallback
     for SimpleOptCallback<T>
 {
     fn call(&mut self, uid: Uid, set: &dyn Set, value: OptValue) -> Result<Option<OptValue>> {
@@ -293,10 +293,10 @@ impl<T: 'static + FnMut(Uid, &mut dyn Set, OptValue) -> Result<Option<OptValue>>
 }
 
 pub struct SimplePosCallback<
-    T: 'static + FnMut(Uid, &dyn Set, &str, u64, OptValue) -> Result<Option<OptValue>>,
+    T: 'static + Fn(Uid, &dyn Set, &str, u64, OptValue) -> Result<Option<OptValue>>,
 >(T);
 
-impl<T: 'static + FnMut(Uid, &dyn Set, &str, u64, OptValue) -> Result<Option<OptValue>>>
+impl<T: 'static + Fn(Uid, &dyn Set, &str, u64, OptValue) -> Result<Option<OptValue>>>
     SimplePosCallback<T>
 {
     pub fn new(cb: T) -> Self {
@@ -304,17 +304,17 @@ impl<T: 'static + FnMut(Uid, &dyn Set, &str, u64, OptValue) -> Result<Option<Opt
     }
 }
 
-impl<T: 'static + FnMut(Uid, &dyn Set, &str, u64, OptValue) -> Result<Option<OptValue>>> Debug
+impl<T: 'static + Fn(Uid, &dyn Set, &str, u64, OptValue) -> Result<Option<OptValue>>> Debug
     for SimplePosCallback<T>
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SimplePosCallback")
-            .field("FnMut", &String::from("..."))
+            .field("Fn", &String::from("..."))
             .finish()
     }
 }
 
-impl<T: 'static + FnMut(Uid, &dyn Set, &str, u64, OptValue) -> Result<Option<OptValue>>> PosCallback
+impl<T: 'static + Fn(Uid, &dyn Set, &str, u64, OptValue) -> Result<Option<OptValue>>> PosCallback
     for SimplePosCallback<T>
 {
     fn call(
@@ -367,10 +367,10 @@ impl<T: 'static + FnMut(Uid, &mut dyn Set, &str, u64, OptValue) -> Result<Option
 }
 
 pub struct SimpleMainCallback<
-    T: 'static + FnMut(Uid, &dyn Set, &[&str], OptValue) -> Result<Option<OptValue>>,
+    T: 'static + Fn(Uid, &dyn Set, &[&str], OptValue) -> Result<Option<OptValue>>,
 >(T);
 
-impl<T: 'static + FnMut(Uid, &dyn Set, &[&str], OptValue) -> Result<Option<OptValue>>>
+impl<T: 'static + Fn(Uid, &dyn Set, &[&str], OptValue) -> Result<Option<OptValue>>>
     SimpleMainCallback<T>
 {
     pub fn new(cb: T) -> Self {
@@ -378,17 +378,17 @@ impl<T: 'static + FnMut(Uid, &dyn Set, &[&str], OptValue) -> Result<Option<OptVa
     }
 }
 
-impl<T: 'static + FnMut(Uid, &dyn Set, &[&str], OptValue) -> Result<Option<OptValue>>> Debug
+impl<T: 'static + Fn(Uid, &dyn Set, &[&str], OptValue) -> Result<Option<OptValue>>> Debug
     for SimpleMainCallback<T>
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SimpleMainCallback")
-            .field("FnMut", &String::from("..."))
+            .field("Fn", &String::from("..."))
             .finish()
     }
 }
 
-impl<T: 'static + FnMut(Uid, &dyn Set, &[&str], OptValue) -> Result<Option<OptValue>>> MainCallback
+impl<T: 'static + Fn(Uid, &dyn Set, &[&str], OptValue) -> Result<Option<OptValue>>> MainCallback
     for SimpleMainCallback<T>
 {
     fn call(
