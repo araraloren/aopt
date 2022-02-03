@@ -5,6 +5,7 @@ use std::fmt::Debug;
 
 use crate::ctx::Context;
 use crate::err::Result;
+use crate::opt::Style;
 use crate::parser::ValueKeeper;
 use crate::set::Set;
 use crate::uid::Uid;
@@ -16,15 +17,8 @@ pub trait Info: Debug {
     fn info_uid(&self) -> Uid;
 }
 
-pub trait Matching<M: Matcher>: Debug {
-    fn matching_opt<S: Set>(
-        &mut self,
-        matcher: &mut M,
-        set: &mut S,
-        invoke: bool,
-    ) -> Result<Vec<ValueKeeper>>;
-
-    fn matching_nonopt<S: Set>(
+pub trait Proc<M: Matcher>: Debug {
+    fn process<S: Set>(
         &mut self,
         matcher: &mut M,
         set: &mut S,
@@ -40,6 +34,8 @@ pub trait Matcher: Debug + Default {
     fn get_ctx(&self, index: usize) -> Option<&Box<dyn Context>>;
 
     fn get_ctx_mut(&mut self, index: usize) -> Option<&mut Box<dyn Context>>;
+
+    fn get_style(&self) -> Style;
 
     fn process(&mut self, uid: Uid, set: &mut dyn Set) -> Result<Option<&mut Box<dyn Context>>>;
 

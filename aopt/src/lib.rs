@@ -244,9 +244,9 @@ pub mod prelude {
     // pub use crate::parser::SimpleParser;
     pub use crate::proc::Info;
     pub use crate::proc::Matcher;
-    pub use crate::proc::Matching;
     pub use crate::proc::NonOptMatcher;
     pub use crate::proc::OptMatcher;
+    pub use crate::proc::Proc;
     pub use crate::set::CreatorSet;
     pub use crate::set::OptionSet;
     pub use crate::set::PrefixSet;

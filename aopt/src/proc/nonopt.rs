@@ -49,6 +49,10 @@ impl Matcher for NonOptMatcher {
         }
     }
 
+    fn get_style(&self) -> Style {
+        self.context.as_ref().map_or(Style::Null, |v| v.get_style())
+    }
+
     fn process(&mut self, uid: Uid, set: &mut dyn Set) -> Result<Option<&mut Box<dyn Context>>> {
         let opt = set[uid].as_mut();
 

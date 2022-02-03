@@ -10,7 +10,7 @@ use crate::opt::OptValue;
 use crate::opt::Style;
 use crate::proc::Info;
 use crate::proc::Matcher;
-use crate::proc::Matching;
+use crate::proc::Proc;
 use crate::set::Set;
 use crate::uid::Uid;
 use crate::Error;
@@ -34,6 +34,114 @@ impl DefaultService {
     pub fn register<I: 'static + Info>(&mut self, info: I) -> &mut Self {
         self.subscriber_info.push(Box::new(info));
         self
+    }
+
+    pub fn matching_nonopt<M: Matcher, S: Set>(
+        &mut self,
+        matcher: &mut M,
+        set: &mut S,
+        _invoke: bool,
+    ) -> Result<Vec<ValueKeeper>> {
+        let mut matched = true;
+
+        debug!(?matcher, "process matcher in nonopt way: ");
+        for info in self.subscriber_info.iter() {
+            let uid = info.info_uid();
+            let ctx = matcher.process(uid, set).unwrap_or(None);
+
+            if let Some(ctx) = ctx {
+                if ctx.is_matched() {
+                    let opt = set[uid].as_mut();
+                    let invoke_callback = opt.is_need_invoke();
+                    let mut value = ctx.take_value();
+
+                    assert_eq!(value.is_some(), true);
+                    if invoke_callback {
+                        let has_callback = self.get_callback().contains_key(&uid);
+
+                        if has_callback {
+                            // invoke callback of current option/non-option
+                            // make matched true, if any of non-option callback return Some(*)
+                            value = self.invoke(
+                                uid,
+                                set,
+                                ctx.get_matched_index().unwrap_or_default(),
+                                value.unwrap(),
+                            )?;
+                            if value.is_none() {
+                                // Ok(None) treat as user said current non-option not matched
+                                matched = true;
+                            }
+                        }
+                        // reborrow the opt avoid the compiler error
+                        // reset the matcher, we need match all the non-option
+                        debug!(?value, "get callback return value");
+                        set[uid].as_mut().set_invoke(false);
+                        matcher.reset();
+                    }
+
+                    // set the value after invoke
+                    set[uid].as_mut().set_callback_ret(value)?;
+                }
+            }
+        }
+        if !matched {
+            matcher.undo(set);
+        }
+        Ok(vec![])
+    }
+
+    pub fn matching_opt<M: Matcher, S: Set>(
+        &mut self,
+        msg: &mut M,
+        set: &mut S,
+        invoke: bool,
+    ) -> Result<Vec<ValueKeeper>> {
+        let matcher = msg;
+        let mut value_keeper: Vec<ValueKeeper> = vec![];
+
+        debug!(?matcher, "process matcher in opt way: ");
+        for info in self.subscriber_info.iter() {
+            let uid = info.info_uid();
+            let ctx = matcher.process(uid, set).unwrap_or(None);
+
+            if let Some(ctx) = ctx {
+                if ctx.is_matched() {
+                    let opt = set[uid].as_mut();
+                    let invoke_callback = opt.is_need_invoke();
+                    let value = ctx.take_value();
+
+                    assert_eq!(value.is_some(), true);
+                    if invoke_callback {
+                        opt.set_invoke(false);
+                    }
+
+                    // add the value to value keeper, call the callback after cmd/pos processed
+                    info!("add {:?} to delay parser value keeper", &uid);
+                    value_keeper.push(ValueKeeper {
+                        id: uid,
+                        index: ctx.get_matched_index().unwrap_or_default(),
+                        value: value.unwrap(),
+                    });
+                }
+            }
+        }
+        if matcher.is_matched() && invoke {
+            // do value set and invoke callback
+            for ValueKeeper { id, index, value } in value_keeper {
+                let ret_value = if self.get_callback().contains_key(&id) {
+                    self.invoke(id, set, index, value)?
+                } else {
+                    Some(value)
+                };
+                set[id].as_mut().set_callback_ret(ret_value)?;
+            }
+            return Ok(vec![]);
+        }
+        if !matcher.is_matched() {
+            matcher.undo(set);
+        }
+        Ok(value_keeper)
     }
 }
 
@@ -62,7 +170,7 @@ impl Service for DefaultService {
         set: &mut S,
         invoke: bool,
     ) -> Result<Vec<ValueKeeper>> {
-        Ok(self.matching_opt(matcher, set, invoke)?)
+        Ok(self.process(matcher, set, invoke)?)
     }
 
     fn process_nonopt<M: Matcher, S: Set>(
@@ -264,112 +372,19 @@ impl Service for DefaultService {
     }
 }
 
-impl<M: Matcher> Matching<M> for DefaultService {
-    fn matching_nonopt<S: Set>(
-        &mut self,
-        matcher: &mut M,
-        set: &mut S,
-        _invoke: bool,
-    ) -> Result<Vec<ValueKeeper>> {
-        let mut matched = true;
-
-        debug!(?matcher, "process matcher in nonopt way: ");
-        for info in self.subscriber_info.iter() {
-            let uid = info.info_uid();
-            let ctx = matcher.process(uid, set).unwrap_or(None);
-
-            if let Some(ctx) = ctx {
-                if ctx.is_matched() {
-                    let opt = set[uid].as_mut();
-                    let invoke_callback = opt.is_need_invoke();
-                    let mut value = ctx.take_value();
-
-                    assert_eq!(value.is_some(), true);
-                    if invoke_callback {
-                        let has_callback = self.get_callback().contains_key(&uid);
-
-                        if has_callback {
-                            // invoke callback of current option/non-option
-                            // make matched true, if any of non-option callback return Some(*)
-                            value = self.invoke(
-                                uid,
-                                set,
-                                ctx.get_matched_index().unwrap_or_default(),
-                                value.unwrap(),
-                            )?;
-                            if value.is_none() {
-                                // Ok(None) treat as user said current non-option not matched
-                                matched = true;
-                            }
-                        }
-                        // reborrow the opt avoid the compiler error
-                        // reset the matcher, we need match all the non-option
-                        debug!(?value, "get callback return value");
-                        set[uid].as_mut().set_invoke(false);
-                        matcher.reset();
-                    }
-
-                    // set the value after invoke
-                    set[uid].as_mut().set_callback_ret(value)?;
-                }
-            }
-        }
-        if !matched {
-            matcher.undo(set);
-        }
-        Ok(vec![])
-    }
-
-    fn matching_opt<S: Set>(
+impl<M: Matcher> Proc<M> for DefaultService {
+    fn process<S: Set>(
         &mut self,
         msg: &mut M,
         set: &mut S,
         invoke: bool,
     ) -> Result<Vec<ValueKeeper>> {
-        let matcher = msg;
-        let mut value_keeper: Vec<ValueKeeper> = vec![];
-
-        debug!(?matcher, "process matcher in opt way: ");
-        for info in self.subscriber_info.iter() {
-            let uid = info.info_uid();
-            let ctx = matcher.process(uid, set).unwrap_or(None);
-
-            if let Some(ctx) = ctx {
-                if ctx.is_matched() {
-                    let opt = set[uid].as_mut();
-                    let invoke_callback = opt.is_need_invoke();
-                    let value = ctx.take_value();
-
-                    assert_eq!(value.is_some(), true);
-                    if invoke_callback {
-                        opt.set_invoke(false);
-                    }
-
-                    // add the value to value keeper, call the callback after cmd/pos processed
-                    info!("add {:?} to delay parser value keeper", &uid);
-                    value_keeper.push(ValueKeeper {
-                        id: uid,
-                        index: ctx.get_matched_index().unwrap_or_default(),
-                        value: value.unwrap(),
-                    });
-                }
+        match msg.get_style() {
+            Style::Boolean | Style::Argument | Style::Multiple => {
+                self.matching_opt(msg, set, invoke)
             }
+            Style::Pos | Style::Cmd | Style::Main => self.matching_nonopt(msg, set, invoke),
+            Style::Other | Style::Null => Ok(vec![]),
         }
-        if matcher.is_matched() && invoke {
-            // do value set and invoke callback
-            for ValueKeeper { id, index, value } in value_keeper {
-                let ret_value = if self.get_callback().contains_key(&id) {
-                    self.invoke(id, set, index, value)?
-                } else {
-                    Some(value)
-                };
-                set[id].as_mut().set_callback_ret(ret_value)?;
-            }
-            return Ok(vec![]);
-        }
-        if !matcher.is_matched() {
-            matcher.undo(set);
-        }
-        Ok(value_keeper)
     }
 }
