@@ -1,88 +1,113 @@
-mod check;
-mod delay_parser;
-mod pre_parser;
-mod simple_parser;
+mod delay_policy;
+mod forward_policy;
+mod pre_policy;
+mod service;
 mod state;
-pub(crate) mod testutil;
+// pub(crate) mod testutil;
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt::Debug;
+use std::marker::PhantomData;
 use ustr::Ustr;
 
 use crate::arg::Argument;
 use crate::err::Result;
 use crate::opt::{OptCallback, OptValue};
+use crate::proc::{Info, Matcher};
 use crate::set::Set;
 use crate::uid::Uid;
 
-pub(crate) use std::collections::hash_map::Iter as HashMapIter;
-
-pub use check::default_nonopt_check;
-pub use check::default_opt_check;
-pub use check::default_post_check;
-pub use check::default_pre_check;
-pub use delay_parser::DelayParser;
-pub use pre_parser::PreParser;
-pub use simple_parser::SimpleParser;
+pub use delay_policy::DelayPolicy;
+pub use forward_policy::ForwardPolicy;
+pub use pre_policy::PrePolicy;
+pub use service::DefaultService;
 pub use state::ParserState;
 
-#[derive(Debug)]
-pub struct OptValueKeeper {
-    noa_index: usize,
-
-    value: OptValue,
+#[derive(Debug, Clone)]
+pub struct ValueKeeper {
+    pub id: Uid,
+    pub index: usize,
+    pub value: OptValue,
 }
 
-pub trait Parser: Debug {
+pub trait Policy<S: Set, SS: Service> {
     fn parse(
         &mut self,
-        set: &mut dyn Set,
+        set: &mut S,
+        service: &mut SS,
         iter: &mut dyn Iterator<Item = Argument>,
     ) -> Result<bool>;
+}
 
-    fn invoke_callback(
+pub trait Service {
+    fn gen_opt<M: Matcher>(&self, arg: &Argument, style: &ParserState) -> Result<Option<M>>;
+
+    fn gen_nonopt<M: Matcher>(
+        &self,
+        noa: &Ustr,
+        total: usize,
+        current: usize,
+        style: &ParserState,
+    ) -> Result<Option<M>>;
+
+    fn process_opt<M: Matcher, S: Set>(
+        &mut self,
+        matcher: &mut M,
+        set: &mut S,
+        invoke: bool,
+    ) -> Result<Vec<ValueKeeper>>;
+
+    fn process_nonopt<M: Matcher, S: Set>(
+        &mut self,
+        matcher: &mut M,
+        set: &mut S,
+        invoke: bool,
+    ) -> Result<Vec<ValueKeeper>>;
+
+    fn pre_check<S: Set>(&self, set: &S) -> Result<bool>;
+
+    fn opt_check<S: Set>(&self, set: &S) -> Result<bool>;
+
+    fn nonopt_check<S: Set>(&self, set: &S) -> Result<bool>;
+
+    fn post_check<S: Set>(&self, set: &S) -> Result<bool>;
+
+    fn invoke<S: Set>(
         &self,
         uid: Uid,
-        set: &mut dyn Set,
-        noa_index: usize,
-        value: OptValue,
+        set: &mut S,
+        noa_idx: usize,
+        optvalue: OptValue,
     ) -> Result<Option<OptValue>>;
 
-    fn pre_check(&self, set: &dyn Set) -> Result<bool>
-    where
-        Self: Sized,
-    {
-        check::default_pre_check(set, self)
-    }
+    fn get_callback(&self) -> &HashMap<Uid, RefCell<OptCallback>>;
 
-    fn check_opt(&self, set: &dyn Set) -> Result<bool>
-    where
-        Self: Sized,
-    {
-        check::default_opt_check(set, self)
-    }
+    fn get_subscriber_info<I: 'static + Info>(&self) -> &Vec<Box<dyn Info>>;
 
-    fn check_nonopt(&self, set: &dyn Set) -> Result<bool>
-    where
-        Self: Sized,
-    {
-        check::default_nonopt_check(set, self)
-    }
+    fn get_noa(&self) -> &Vec<Ustr>;
 
-    fn post_check(&self, set: &dyn Set) -> Result<bool>
-    where
-        Self: Sized,
-    {
-        check::default_post_check(set, self)
-    }
+    fn get_callback_mut(&mut self) -> &mut HashMap<Uid, RefCell<OptCallback>>;
 
-    fn add_callback(&mut self, uid: Uid, callback: OptCallback);
+    fn get_subscriber_info_mut(&mut self) -> &mut Vec<Box<dyn Info>>;
 
-    fn get_callback(&self, uid: Uid) -> Option<&RefCell<OptCallback>>;
-
-    fn callback_iter(&self) -> HashMapIter<'_, Uid, RefCell<OptCallback>>;
-
-    fn get_noa(&self) -> &[Ustr];
+    fn get_noa_mut(&mut self) -> &mut Vec<Ustr>;
 
     fn reset(&mut self);
+}
+
+#[derive(Debug)]
+pub struct Parser<S: Set, SS: Service, P: Policy<S, SS>> {
+    policy: P,
+    service: SS,
+    __marker_s: PhantomData<S>,
+}
+
+impl<S: Set, SS: Service, P: Policy<S, SS>> Parser<S, SS, P> {
+    pub fn parse(&mut self, set: &mut S, iter: &mut dyn Iterator<Item = Argument>) -> Result<bool> {
+        let service = &mut self.service;
+        let policy = &mut self.policy;
+
+        policy.parse(set, service, iter)
+    }
 }

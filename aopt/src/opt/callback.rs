@@ -7,7 +7,7 @@ use crate::set::Set;
 use crate::uid::Uid;
 
 /// The callback type of option.
-/// 
+///
 /// Since rust has a lot of restrict on reference.
 /// So we can't store block code into option itself of [`Set`](crate::set::Set).
 /// Instead we put the callback code into [`Parser`](crate::parser::Parser).

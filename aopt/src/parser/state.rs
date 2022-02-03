@@ -57,7 +57,7 @@ impl ParserState {
         Ok(string.clone())
     }
 
-    pub fn gen_opt<M: Matcher + Default>(&self, arg: &Argument) -> Result<Option<M>> {
+    pub fn gen_opt<M: Matcher>(&self, arg: &Argument) -> Result<Option<M>> {
         let mut ret: Vec<Box<dyn Context>> = vec![];
 
         match self {
@@ -220,7 +220,7 @@ impl ParserState {
         })
     }
 
-    pub fn gen_nonopt<M: Matcher + Default>(
+    pub fn gen_nonopt<M: Matcher>(
         &self,
         noa: &Ustr,
         total: u64,
