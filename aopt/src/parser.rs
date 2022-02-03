@@ -8,7 +8,6 @@ mod state;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::marker::PhantomData;
 use ustr::Ustr;
 
 use crate::arg::Argument;
@@ -100,13 +99,14 @@ pub trait Service {
 pub struct Parser<S: Set, SS: Service, P: Policy<S, SS>> {
     policy: P,
     service: SS,
-    __marker_s: PhantomData<S>,
+    set: S,
 }
 
 impl<S: Set, SS: Service, P: Policy<S, SS>> Parser<S, SS, P> {
-    pub fn parse(&mut self, set: &mut S, iter: &mut dyn Iterator<Item = Argument>) -> Result<bool> {
+    pub fn parse(&mut self, iter: &mut dyn Iterator<Item = Argument>) -> Result<bool> {
         let service = &mut self.service;
         let policy = &mut self.policy;
+        let set = &mut self.set;
 
         policy.parse(set, service, iter)
     }
