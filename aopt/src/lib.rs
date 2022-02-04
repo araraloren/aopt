@@ -14,7 +14,7 @@ pub(crate) mod pat;
 extern crate tracing;
 
 use crate::arg::ArgStream;
-use crate::parser::MuParser;
+use crate::parser::DynParser;
 use crate::parser::Service;
 use crate::set::Set;
 
@@ -28,8 +28,8 @@ pub fn gstr(s: &str) -> ustr::Ustr {
 
 pub fn try_getopt<'a, T, S, SS>(
     iter: T,
-    parsers: Vec<&'a mut MuParser<S, SS>>,
-) -> Result<Option<&'a mut MuParser<S, SS>>>
+    parsers: Vec<&'a mut DynParser<S, SS>>,
+) -> Result<Option<&'a mut DynParser<S, SS>>>
 where
     T: Iterator<Item = String>,
     S: Set + Default,
@@ -190,7 +190,7 @@ pub mod prelude {
     pub use crate::opt::Value;
     pub use crate::parser::DelayPolicy;
     pub use crate::parser::ForwardPolicy;
-    pub use crate::parser::MuParser;
+    pub use crate::parser::DynParser;
     pub use crate::parser::Parser;
     pub use crate::parser::PrePolicy;
     pub use crate::proc::Info;

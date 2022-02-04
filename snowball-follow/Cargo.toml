@@ -10,7 +10,7 @@ categories = ["command-line-interface"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aopt = "0.4.3"
+aopt = "0.5.2"
 aopt-help = "0.2.5"
 tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }
 color-eyre = "0.5.11"

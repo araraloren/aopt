@@ -1,6 +1,10 @@
 
 # Relase note
 
+## 0.5.2
+
+- refeactor the parser
+
 ## 0.5.1
 
 - fix the callback immutable type paramaters

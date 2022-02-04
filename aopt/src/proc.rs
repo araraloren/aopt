@@ -27,7 +27,7 @@ pub trait Proc<M: Matcher>: Debug {
 }
 
 pub trait Matcher: Debug + Default {
-    fn uid(&self) -> Uid;
+    fn get_uid(&self) -> Uid;
 
     fn add_ctx(&mut self, ctx: Box<dyn Context>);
 

@@ -189,7 +189,7 @@ where
     }
 }
 
-pub struct MuParser<S, SS>
+pub struct DynParser<S, SS>
 where
     S: Set + Default,
     SS: Service + Default,
@@ -199,7 +199,7 @@ where
     set: S,
 }
 
-impl<S, SS> Deref for MuParser<S, SS>
+impl<S, SS> Deref for DynParser<S, SS>
 where
     S: Set + Default,
     SS: Service + Default,
@@ -211,7 +211,7 @@ where
     }
 }
 
-impl<S, SS> DerefMut for MuParser<S, SS>
+impl<S, SS> DerefMut for DynParser<S, SS>
 where
     S: Set + Default,
     SS: Service + Default,
@@ -221,7 +221,7 @@ where
     }
 }
 
-impl<S, SS> MuParser<S, SS>
+impl<S, SS> DynParser<S, SS>
 where
     S: Set + Default,
     SS: Service + Default,
@@ -281,7 +281,7 @@ where
     }
 }
 
-impl<S, SS, P> From<Parser<S, SS, P>> for MuParser<S, SS>
+impl<S, SS, P> From<Parser<S, SS, P>> for DynParser<S, SS>
 where
     S: Set + Default,
     SS: Service + Default,
@@ -294,11 +294,11 @@ where
         let service = take(parser.get_service_mut());
         let policy = take(parser.get_policy_mut());
 
-        MuParser::new(set, service, Box::new(policy))
+        DynParser::new(set, service, Box::new(policy))
     }
 }
 
-impl<'a, S, SS, P> From<&'a mut Parser<S, SS, P>> for MuParser<S, SS>
+impl<'a, S, SS, P> From<&'a mut Parser<S, SS, P>> for DynParser<S, SS>
 where
     S: Set + Default,
     SS: Service + Default,
@@ -311,6 +311,6 @@ where
         let service = take(parser.get_service_mut());
         let policy = take(parser.get_policy_mut());
 
-        MuParser::new(set, service, Box::new(policy))
+        DynParser::new(set, service, Box::new(policy))
     }
 }

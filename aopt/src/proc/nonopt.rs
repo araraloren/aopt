@@ -25,7 +25,7 @@ impl From<Uid> for NonOptMatcher {
 }
 
 impl Matcher for NonOptMatcher {
-    fn uid(&self) -> Uid {
+    fn get_uid(&self) -> Uid {
         self.uid
     }
 

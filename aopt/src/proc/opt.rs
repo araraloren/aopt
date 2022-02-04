@@ -25,7 +25,7 @@ impl From<Uid> for OptMatcher {
 }
 
 impl Matcher for OptMatcher {
-    fn uid(&self) -> Uid {
+    fn get_uid(&self) -> Uid {
         self.uid
     }
 
