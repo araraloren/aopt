@@ -29,7 +29,7 @@ use crate::opt::UintCreator;
 use ustr::Ustr;
 use ustr::UstrMap;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct SimpleSet {
     opt: Vec<Box<dyn Opt>>,
 
@@ -38,9 +38,19 @@ pub struct SimpleSet {
     prefix: Vec<Ustr>,
 }
 
+impl Default for SimpleSet {
+    fn default() -> Self {
+        Self::new().with_default_creator().with_default_prefix()
+    }
+}
+
 impl SimpleSet {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            opt: vec![],
+            creator: UstrMap::default(),
+            prefix: vec![],
+        }
     }
 
     pub fn with_prefix(mut self, prefix: Ustr) -> Self {
