@@ -14,7 +14,8 @@ pub(crate) mod pat;
 extern crate tracing;
 
 use crate::arg::ArgStream;
-use crate::parser::Parser;
+use crate::parser::MuParser;
+use crate::parser::Service;
 use crate::set::Set;
 
 pub use crate::err::Error;
@@ -25,78 +26,40 @@ pub fn gstr(s: &str) -> ustr::Ustr {
     ustr::Ustr::from(s)
 }
 
-// /// The return value of [`getopt!`].
-// #[derive(Debug)]
-// pub struct ReturnValue<'a, 'b>(pub &'b mut dyn Parser, pub &'a mut dyn Set);
+pub fn try_getopt<'a, T, S, SS>(
+    iter: T,
+    parsers: Vec<&'a mut MuParser<S, SS>>,
+) -> Result<Option<&'a mut MuParser<S, SS>>>
+where
+    T: Iterator<Item = String>,
+    S: Set + Default,
+    SS: Service + Default,
+{
+    let args: Vec<String> = iter.collect();
+    let count = parsers.len();
+    let mut index = 0;
 
-// impl<'a, 'b> ReturnValue<'a, 'b> {
-//     /// Get the parser of return value.
-//     pub fn parser(&self) -> &dyn Parser {
-//         self.0
-//     }
+    for parser in parsers {
+        let mut stream = ArgStream::from(args.clone().into_iter());
 
-//     /// Get the set of return value.
-//     pub fn set(&self) -> &dyn Set {
-//         self.1
-//     }
-
-//     /// Get the parser mutable reference of return value.
-//     pub fn parser_mut(&mut self) -> &mut dyn Parser {
-//         self.0
-//     }
-
-//     /// Get the set mutable reference of return value.
-//     pub fn set_mut(&mut self) -> &mut dyn Set {
-//         self.1
-//     }
-// }
-
-// pub fn getopt_impl<'a, 'b>(
-//     iter: impl Iterator<Item = String>,
-//     sets: Vec<&'a mut dyn Set>,
-//     parsers: Vec<&'b mut dyn Parser>,
-// ) -> Result<Option<ReturnValue<'a, 'b>>> {
-//     assert_eq!(sets.len(), parsers.len());
-
-//     let args: Vec<String> = iter.collect();
-//     let count = parsers.len();
-//     let mut index = 0;
-
-//     for (parser, set) in parsers.into_iter().zip(sets.into_iter()) {
-//         let mut stream = ArgStream::from(args.clone().into_iter());
-
-//         match parser.parse(set, &mut stream) {
-//             Ok(rv) => {
-//                 if rv {
-//                     return Ok(Some(ReturnValue(parser, set)));
-//                 }
-//             }
-//             Err(e) => {
-//                 if e.is_special() && index + 1 != count {
-//                     continue;
-//                 } else {
-//                     return Err(e);
-//                 }
-//             }
-//         }
-//         index += 1;
-//     }
-//     Ok(None)
-// }
-
-// pub fn getopt_impl_s<'a, 'b>(
-//     iter: impl Iterator<Item = String>,
-//     set: &'a mut dyn Set,
-//     parser: &'b mut dyn Parser,
-// ) -> Result<Option<ReturnValue<'a, 'b>>> {
-//     let mut stream = ArgStream::from(iter);
-
-//     if parser.parse(set, &mut stream)? {
-//         return Ok(Some(ReturnValue(parser, set)));
-//     } else {
-//         Ok(None)
-//     }
-// }
+        match parser.parse(&mut stream) {
+            Ok(rv) => {
+                if rv {
+                    return Ok(Some(parser));
+                }
+            }
+            Err(e) => {
+                if e.is_special() && index + 1 != count {
+                    continue;
+                } else {
+                    return Err(e);
+                }
+            }
+        }
+        index += 1;
+    }
+    Ok(None)
+}
 
 /// Parse the given string sequence, return the first matched [`Parser`] and [`Set`].
 ///
@@ -185,19 +148,8 @@ pub fn gstr(s: &str) -> ustr::Ustr {
 /// ```
 #[macro_export]
 macro_rules! getopt {
-    ($iter:expr, $set:expr, $parser:expr ) => {
-        getopt_impl_s(
-            $iter,
-            &mut $set,
-            &mut $parser
-        )
-    };
-    ($iter:expr, $($set:expr, $parser:expr),+ ) => {
-        getopt_impl(
-            $iter,
-            vec![$(&mut $set, )+],
-            vec![$(&mut $parser, )+]
-        )
+    ($iter:expr, $($parser:expr,)+ ) => {
+        try_getopt($iter, vec![$($parser,)+])
     };
 }
 
@@ -206,8 +158,6 @@ pub mod prelude {
     pub use crate::ctx::NonOptContext;
     pub use crate::ctx::OptContext;
     pub use crate::getopt;
-    // pub use crate::getopt_impl;
-    // pub use crate::getopt_impl_s;
     pub use crate::gstr;
     pub use crate::opt::Alias;
     pub use crate::opt::ArrayCreator;
@@ -238,10 +188,11 @@ pub mod prelude {
     pub use crate::opt::Type;
     pub use crate::opt::UintCreator;
     pub use crate::opt::Value;
-    // pub use crate::parser::DelayParser;
+    pub use crate::parser::DelayPolicy;
+    pub use crate::parser::ForwardPolicy;
+    pub use crate::parser::MuParser;
     pub use crate::parser::Parser;
-    // pub use crate::parser::PreParser;
-    // pub use crate::parser::SimpleParser;
+    pub use crate::parser::PrePolicy;
     pub use crate::proc::Info;
     pub use crate::proc::Matcher;
     pub use crate::proc::NonOptMatcher;
@@ -258,8 +209,8 @@ pub mod prelude {
     pub use crate::simple_opt_mut_cb;
     pub use crate::simple_pos_cb;
     pub use crate::simple_pos_mut_cb;
+    pub use crate::try_getopt;
     pub use crate::uid::{Uid, UidGenerator};
-    // pub use crate::ReturnValue;
     pub use ustr::Ustr;
     pub use ustr::UstrMap;
 }

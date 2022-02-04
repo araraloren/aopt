@@ -34,7 +34,7 @@ pub struct ValueKeeper {
     pub value: OptValue,
 }
 
-pub trait Policy<S: Set, SS: Service> {
+pub trait Policy<S: Set, SS: Service>: Debug {
     fn parse(
         &mut self,
         set: &mut S,
@@ -134,6 +134,14 @@ where
     SS: Service + Default,
     P: Policy<S, SS> + Default,
 {
+    pub fn new(set: S, service: SS, policy: P) -> Self {
+        Self {
+            set,
+            service,
+            policy,
+        }
+    }
+
     pub fn get_policy(&self) -> &P {
         &self.policy
     }
@@ -178,5 +186,131 @@ where
         let set = &mut self.set;
 
         policy.parse(set, service, iter)
+    }
+}
+
+pub struct MuParser<S, SS>
+where
+    S: Set + Default,
+    SS: Service + Default,
+{
+    policy: Box<dyn Policy<S, SS>>,
+    service: SS,
+    set: S,
+}
+
+impl<S, SS> Deref for MuParser<S, SS>
+where
+    S: Set + Default,
+    SS: Service + Default,
+{
+    type Target = S;
+
+    fn deref(&self) -> &Self::Target {
+        &self.set
+    }
+}
+
+impl<S, SS> DerefMut for MuParser<S, SS>
+where
+    S: Set + Default,
+    SS: Service + Default,
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.set
+    }
+}
+
+impl<S, SS> MuParser<S, SS>
+where
+    S: Set + Default,
+    SS: Service + Default,
+{
+    pub fn new(set: S, service: SS, policy: Box<dyn Policy<S, SS>>) -> Self {
+        Self {
+            set,
+            service,
+            policy,
+        }
+    }
+
+    pub fn get_policy(&self) -> &dyn Policy<S, SS> {
+        self.policy.as_ref()
+    }
+
+    pub fn get_policy_mut(&mut self) -> &mut dyn Policy<S, SS> {
+        self.policy.as_mut()
+    }
+
+    pub fn get_service(&self) -> &SS {
+        &self.service
+    }
+
+    pub fn get_service_mut(&mut self) -> &mut SS {
+        &mut self.service
+    }
+
+    pub fn get_set(&self) -> &S {
+        &self.set
+    }
+
+    pub fn get_set_mut(&mut self) -> &mut S {
+        &mut self.set
+    }
+
+    // extern the add_opt function, attach callback to option
+    pub fn add_opt_cb(&mut self, opt_str: &str) -> Result<CallbackCommit<'_, '_, S, SS>> {
+        let info = CreateInfo::parse(gstr(opt_str), self.get_prefix())?;
+
+        debug!(%opt_str, "create option has callback");
+        Ok(CallbackCommit::new(&mut self.set, &mut self.service, info))
+    }
+
+    pub fn set_callback(&mut self, uid: Uid, callback: OptCallback) {
+        self.get_service_mut()
+            .get_callback_mut()
+            .insert(uid, RefCell::new(callback));
+    }
+
+    pub fn parse(&mut self, iter: &mut dyn Iterator<Item = Argument>) -> Result<bool> {
+        let service = &mut self.service;
+        let policy = &mut self.policy;
+        let set = &mut self.set;
+
+        policy.parse(set, service, iter)
+    }
+}
+
+impl<S, SS, P> From<Parser<S, SS, P>> for MuParser<S, SS>
+where
+    S: Set + Default,
+    SS: Service + Default,
+    P: Policy<S, SS> + Default + 'static,
+{
+    fn from(mut parser: Parser<S, SS, P>) -> Self {
+        use std::mem::take;
+
+        let set = take(parser.get_set_mut());
+        let service = take(parser.get_service_mut());
+        let policy = take(parser.get_policy_mut());
+
+        MuParser::new(set, service, Box::new(policy))
+    }
+}
+
+impl<'a, S, SS, P> From<&'a mut Parser<S, SS, P>> for MuParser<S, SS>
+where
+    S: Set + Default,
+    SS: Service + Default,
+    P: Policy<S, SS> + Default + 'static,
+{
+    fn from(parser: &'a mut Parser<S, SS, P>) -> Self {
+        use std::mem::take;
+
+        let set = take(parser.get_set_mut());
+        let service = take(parser.get_service_mut());
+        let policy = take(parser.get_policy_mut());
+
+        MuParser::new(set, service, Box::new(policy))
     }
 }
