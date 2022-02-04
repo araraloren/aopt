@@ -83,7 +83,7 @@ impl SimpleSet {
 impl Set for SimpleSet {}
 
 impl OptionSet for SimpleSet {
-    fn add_opt(&mut self, opt_str: &str) -> Result<Commit> {
+    fn add_opt(&mut self, opt_str: &str) -> Result<Commit<Self>> {
         let info = CreateInfo::parse(gstr(opt_str), self.get_prefix())?;
 
         debug!(%opt_str, "create option");

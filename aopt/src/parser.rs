@@ -1,3 +1,4 @@
+mod commit;
 mod delay_policy;
 mod forward_policy;
 mod pre_policy;
@@ -8,15 +9,18 @@ mod state;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::ops::{Deref, DerefMut};
 use ustr::Ustr;
 
 use crate::arg::Argument;
 use crate::err::Result;
+use crate::gstr;
 use crate::opt::{OptCallback, OptValue};
 use crate::proc::{Info, Matcher};
-use crate::set::Set;
+use crate::set::{CreateInfo, Set};
 use crate::uid::Uid;
 
+pub use commit::CallbackCommit;
 pub use delay_policy::DelayPolicy;
 pub use forward_policy::ForwardPolicy;
 pub use pre_policy::PrePolicy;
@@ -88,14 +92,86 @@ pub trait Service {
     fn reset(&mut self);
 }
 
-#[derive(Debug)]
-pub struct Parser<S: Set, SS: Service, P: Policy<S, SS>> {
+#[derive(Debug, Default)]
+pub struct Parser<S, SS, P>
+where
+    S: Set + Default,
+    SS: Service + Default,
+    P: Policy<S, SS> + Default,
+{
     policy: P,
     service: SS,
     set: S,
 }
 
-impl<S: Set, SS: Service, P: Policy<S, SS>> Parser<S, SS, P> {
+impl<S, SS, P> Deref for Parser<S, SS, P>
+where
+    S: Set + Default,
+    SS: Service + Default,
+    P: Policy<S, SS> + Default,
+{
+    type Target = S;
+
+    fn deref(&self) -> &Self::Target {
+        &self.set
+    }
+}
+
+impl<S, SS, P> DerefMut for Parser<S, SS, P>
+where
+    S: Set + Default,
+    SS: Service + Default,
+    P: Policy<S, SS> + Default,
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.set
+    }
+}
+
+impl<S, SS, P> Parser<S, SS, P>
+where
+    S: Set + Default,
+    SS: Service + Default,
+    P: Policy<S, SS> + Default,
+{
+    pub fn get_policy(&self) -> &P {
+        &self.policy
+    }
+
+    pub fn get_policy_mut(&mut self) -> &mut P {
+        &mut self.policy
+    }
+
+    pub fn get_service(&self) -> &SS {
+        &self.service
+    }
+
+    pub fn get_service_mut(&mut self) -> &mut SS {
+        &mut self.service
+    }
+
+    pub fn get_set(&self) -> &S {
+        &self.set
+    }
+
+    pub fn get_set_mut(&mut self) -> &mut S {
+        &mut self.set
+    }
+
+    // extern the add_opt function, attach callback to option
+    pub fn add_opt_cb(&mut self, opt_str: &str) -> Result<CallbackCommit<'_, '_, S, SS>> {
+        let info = CreateInfo::parse(gstr(opt_str), self.get_prefix())?;
+
+        debug!(%opt_str, "create option has callback");
+        Ok(CallbackCommit::new(&mut self.set, &mut self.service, info))
+    }
+
+    pub fn set_callback(&mut self, uid: Uid, callback: OptCallback) {
+        self.get_service_mut()
+            .get_callback_mut()
+            .insert(uid, RefCell::new(callback));
+    }
+
     pub fn parse(&mut self, iter: &mut dyn Iterator<Item = Argument>) -> Result<bool> {
         let service = &mut self.service;
         let policy = &mut self.policy;
