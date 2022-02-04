@@ -164,22 +164,13 @@ impl Service for DefaultService {
         Ok(style.gen_nonopt(noa, total as u64, current as u64)?)
     }
 
-    fn process_opt<M: Matcher, S: Set>(
+    fn matching<M: Matcher, S: Set>(
         &mut self,
         matcher: &mut M,
         set: &mut S,
         invoke: bool,
     ) -> Result<Vec<ValueKeeper>> {
         Ok(self.process(matcher, set, invoke)?)
-    }
-
-    fn process_nonopt<M: Matcher, S: Set>(
-        &mut self,
-        matcher: &mut M,
-        set: &mut S,
-        invoke: bool,
-    ) -> Result<Vec<ValueKeeper>> {
-        Ok(self.matching_nonopt(matcher, set, invoke)?)
     }
 
     fn pre_check<S: Set>(&self, set: &S) -> Result<bool> {

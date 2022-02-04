@@ -82,7 +82,7 @@ impl<S: Set, SS: Service> Policy<S, SS> for DelayPolicy {
                     debug!(?arg, "after parsing ...");
                     for gen_style in &parser_state {
                         if let Some(mut proc) = service.gen_opt::<OptMatcher>(&arg, &gen_style)? {
-                            let value_keeper = service.process_opt(&mut proc, set, false)?;
+                            let value_keeper = service.matching(&mut proc, set, false)?;
 
                             if proc.is_matched() {
                                 for value in value_keeper {
@@ -130,7 +130,7 @@ impl<S: Set, SS: Service> Policy<S, SS> for DelayPolicy {
             if let Some(mut proc) =
                 service.gen_nonopt::<NonOptMatcher>(&noa[0], noa_count, 1, &gen_style)?
             {
-                service.process_nonopt(&mut proc, set, true)?;
+                service.matching(&mut proc, set, true)?;
             }
 
             let gen_style = ParserState::PSNonPos;
@@ -143,7 +143,7 @@ impl<S: Set, SS: Service> Policy<S, SS> for DelayPolicy {
                     index,
                     &gen_style,
                 )? {
-                    service.process_nonopt(&mut proc, set, true)?;
+                    service.matching(&mut proc, set, true)?;
                 }
             }
         }
@@ -170,7 +170,7 @@ impl<S: Set, SS: Service> Policy<S, SS> for DelayPolicy {
         if let Some(mut proc) =
             service.gen_nonopt::<NonOptMatcher>(&Ustr::default(), noa_count, 1, &gen_style)?
         {
-            service.process_nonopt(&mut proc, set, true)?;
+            service.matching(&mut proc, set, true)?;
         }
 
         // do post check

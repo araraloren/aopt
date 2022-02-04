@@ -64,7 +64,7 @@ impl<S: Set, SS: Service> Policy<S, SS> for PrePolicy {
                     debug!(?arg, "after parsing ...");
                     for gen_style in &parser_state {
                         if let Some(mut proc) = service.gen_opt::<OptMatcher>(&arg, &gen_style)? {
-                            service.process_opt(&mut proc, set, true)?;
+                            service.matching(&mut proc, set, true)?;
 
                             if proc.is_matched() {
                                 matched = true;
@@ -104,7 +104,7 @@ impl<S: Set, SS: Service> Policy<S, SS> for PrePolicy {
             if let Some(mut proc) =
                 service.gen_nonopt::<NonOptMatcher>(&noa[0], noa_count, 1, &gen_style)?
             {
-                service.process_nonopt(&mut proc, set, true)?;
+                service.matching(&mut proc, set, true)?;
             }
 
             let gen_style = ParserState::PSNonPos;
@@ -117,7 +117,7 @@ impl<S: Set, SS: Service> Policy<S, SS> for PrePolicy {
                     index,
                     &gen_style,
                 )? {
-                    service.process_nonopt(&mut proc, set, true)?;
+                    service.matching(&mut proc, set, true)?;
                 }
             }
         }
@@ -132,7 +132,7 @@ impl<S: Set, SS: Service> Policy<S, SS> for PrePolicy {
         if let Some(mut proc) =
             service.gen_nonopt::<NonOptMatcher>(&Ustr::default(), noa_count, 1, &gen_style)?
         {
-            service.process_nonopt(&mut proc, set, true)?;
+            service.matching(&mut proc, set, true)?;
         }
 
         // do post check

@@ -50,14 +50,7 @@ pub trait Service {
         style: &ParserState,
     ) -> Result<Option<M>>;
 
-    fn process_opt<M: Matcher, S: Set>(
-        &mut self,
-        matcher: &mut M,
-        set: &mut S,
-        invoke: bool,
-    ) -> Result<Vec<ValueKeeper>>;
-
-    fn process_nonopt<M: Matcher, S: Set>(
+    fn matching<M: Matcher, S: Set>(
         &mut self,
         matcher: &mut M,
         set: &mut S,
