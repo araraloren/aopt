@@ -13,9 +13,9 @@ categories = ["command-line-interface"]
 
 
 [dependencies]
-syn = { version = "1.0", features = [ "extra-traits", "full" ] }
-proc-macro2 = "1.0"
-quote = "1.0"
+syn = { version = "1.0.86", features = [ "extra-traits", "full" ] }
+proc-macro2 = "1.0.36"
+quote = "1.0.15"
 
 [lib]
 proc-macro = true
