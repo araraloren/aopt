@@ -1,6 +1,14 @@
 
 # Relase note
 
+## 0.5.2
+
+- add macro getopt/getoptd
+
+- refactor the parser
+
+- refactor test case
+
 ## 0.5.1
 
 - fix the callback immutable type paramaters

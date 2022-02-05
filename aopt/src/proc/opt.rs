@@ -2,6 +2,7 @@ use super::Matcher;
 
 use crate::ctx::Context;
 use crate::err::Result;
+use crate::opt::Style;
 use crate::set::Set;
 use crate::uid::Uid;
 
@@ -24,11 +25,15 @@ impl From<Uid> for OptMatcher {
 }
 
 impl Matcher for OptMatcher {
-    fn uid(&self) -> Uid {
+    fn get_uid(&self) -> Uid {
         self.uid
     }
 
     fn add_ctx(&mut self, ctx: Box<dyn Context>) {
+        if let Some(last) = self.context.last() {
+            // make sure the style are the same
+            assert_eq!(last.get_style(), ctx.get_style());
+        }
         self.context.push(ctx);
     }
 
@@ -38,6 +43,10 @@ impl Matcher for OptMatcher {
 
     fn get_ctx_mut(&mut self, index: usize) -> Option<&mut Box<dyn Context>> {
         self.context.get_mut(index)
+    }
+
+    fn get_style(&self) -> Style {
+        self.context.last().map_or(Style::Null, |v| v.get_style())
     }
 
     fn process(&mut self, uid: Uid, set: &mut dyn Set) -> Result<Option<&mut Box<dyn Context>>> {

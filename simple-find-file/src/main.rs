@@ -13,14 +13,11 @@ fn main() -> color_eyre::Result<()> {
         .init();
     color_eyre::install()?;
 
-    let mut set = SimpleSet::default().with_default_creator();
-    let mut parser = DelayParser::<UidGenerator>::default();
+    let mut parser = Parser::<SimpleSet, DefaultService, ForwardPolicy>::default();
 
-    set.add_prefix(gstr("-"));
-    set.add_prefix(gstr("--"));
-    set.add_prefix(gstr("+"));
+    parser.get_set_mut().add_prefix(gstr("+"));
 
-    if let Ok(mut commit) = set.add_opt("directory=p@0") {
+    if let Ok(mut commit) = parser.add_opt("directory=p@0") {
         commit.set_help("Set the target directory");
         let id = commit.commit()?;
         parser.add_callback(
@@ -75,7 +72,7 @@ fn main() -> color_eyre::Result<()> {
             FilterType::Regex(String::default()),
         ),
     ] {
-        if let Ok(mut commit) = set.add_opt(opt) {
+        if let Ok(mut commit) = parser.add_opt(opt) {
             commit.set_help(help);
             commit.add_alias(&format!("{}{}", alias_prefix, alias_name))?;
             let id = commit.commit()?;
@@ -97,12 +94,12 @@ fn main() -> color_eyre::Result<()> {
             )
         }
     }
-    if let Ok(mut commit) = set.add_opt("--help=b") {
+    if let Ok(mut commit) = parser.add_opt("--help=b") {
         commit.add_alias("-h")?;
         commit.set_help("Show the help message");
         commit.commit()?;
     }
-    if let Ok(mut commit) = set.add_opt("main=m") {
+    if let Ok(mut commit) = parser.add_opt("main=m") {
         commit.set_help("Main function");
         let id = commit.commit()?;
         parser.add_callback(
@@ -131,7 +128,7 @@ fn main() -> color_eyre::Result<()> {
         );
     }
 
-    getopt!(&mut std::env::args().skip(1), set, parser)?;
+    getopt!(&mut std::env::args().skip(1), parser)?;
 
     Ok(())
 }

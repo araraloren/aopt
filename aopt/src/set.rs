@@ -42,7 +42,9 @@ pub trait PrefixSet {
 pub trait OptionSet:
     Index<Uid, Output = Box<dyn Opt>> + IndexMut<Uid> + AsRef<[Box<dyn Opt>]> + AsMut<[Box<dyn Opt>]>
 {
-    fn add_opt(&mut self, opt_str: &str) -> Result<Commit>;
+    fn add_opt(&mut self, opt_str: &str) -> Result<Commit<'_, Self>>
+    where
+        Self: Sized;
 
     fn add_opt_ci(&mut self, ci: CreateInfo) -> Result<Uid>;
 

@@ -522,6 +522,12 @@ impl<'a> From<&'a dyn Opt> for OptionInfo {
     }
 }
 
+impl<'a> From<&'a Box<dyn Opt>> for OptionInfo {
+    fn from(opt: &'a Box<dyn Opt>) -> Self {
+        Self { uid: opt.get_uid() }
+    }
+}
+
 impl Info for OptionInfo {
     fn info_uid(&self) -> Uid {
         self.uid

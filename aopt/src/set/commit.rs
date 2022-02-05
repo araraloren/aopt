@@ -1,5 +1,5 @@
 use super::info::CreateInfo;
-use super::{Result, Set, Uid};
+use super::{OptionSet, Result, Set, Uid};
 
 use crate::gstr;
 use crate::opt::HelpInfo;
@@ -8,14 +8,14 @@ use crate::opt::OptValue;
 use ustr::Ustr;
 
 #[derive(Debug)]
-pub struct Commit<'a> {
-    set: &'a mut dyn Set,
+pub struct Commit<'a, S: OptionSet> {
+    set: &'a mut S,
 
     info: CreateInfo,
 }
 
-impl<'a> Commit<'a> {
-    pub fn new(set: &'a mut dyn Set, info: CreateInfo) -> Self {
+impl<'a, S: Set> Commit<'a, S> {
+    pub fn new(set: &'a mut S, info: CreateInfo) -> Self {
         Self { set, info }
     }
 

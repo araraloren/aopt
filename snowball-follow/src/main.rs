@@ -5,8 +5,10 @@ use std::path::Path;
 use std::time::Duration;
 use std::{env::Args, io::Stdout};
 
+use aopt::arg::ArgStream;
 use aopt::err::create_error;
 use aopt::err::Result;
+use aopt::parser::DefaultService;
 use aopt::prelude::*;
 use aopt_help::prelude::*;
 use reqwest::header;
@@ -22,10 +24,11 @@ async fn main() -> color_eyre::Result<()> {
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
     color_eyre::install()?;
-    let mut set = parser_command_line(std::env::args())?;
+    let mut parser = parser_command_line(std::env::args())?;
     let mut ids = vec![];
+    let set = parser.get_set_mut();
 
-    if !print_help(&set)? {
+    if !print_help(set)? {
         if let Ok(Some(id)) = set.find_mut("stock_id") {
             if id.has_value() {
                 if let Some(id_vec) = id.get_value_mut().as_vec_mut().take() {
@@ -42,12 +45,12 @@ async fn main() -> color_eyre::Result<()> {
         }
     }
     if ids.len() > 0 {
-        let start = get_value_from_set(&set, "start")?.as_int().unwrap_or(&0);
-        let count = get_value_from_set(&set, "count")?.as_int().unwrap_or(&14);
-        let interval = get_value_from_set(&set, "interval")?
+        let start = get_value_from_set(set, "start")?.as_int().unwrap_or(&0);
+        let count = get_value_from_set(set, "count")?.as_int().unwrap_or(&14);
+        let interval = get_value_from_set(set, "interval")?
             .as_uint()
             .unwrap_or(&1000);
-        let debug = get_value_from_set(&set, "debug")?
+        let debug = get_value_from_set(set, "debug")?
             .as_bool()
             .unwrap_or(&false);
         let snowball = SnowBall::new(*debug)?;
@@ -166,13 +169,10 @@ impl SnowBall {
     }
 }
 
-fn parser_command_line(args: Args) -> Result<SimpleSet> {
-    let mut set = SimpleSet::default()
-        .with_default_prefix()
-        .with_default_creator();
-    let mut parser = SimpleParser::<UidGenerator>::default();
+fn parser_command_line(args: Args) -> Result<Parser<SimpleSet, DefaultService, ForwardPolicy>> {
+    let mut parser = Parser::<SimpleSet, DefaultService, ForwardPolicy>::default();
 
-    parser.set_strict(true);
+    parser.get_policy_mut().set_strict(true);
 
     for (optstr, alias, help, value) in [
         ("-d=b", "--debug", "Print debug message", None),
@@ -196,7 +196,7 @@ fn parser_command_line(args: Args) -> Result<SimpleSet> {
             Some(OptValue::from(14i64)),
         ),
     ] {
-        if let Ok(mut commit) = set.add_opt(optstr) {
+        if let Ok(mut commit) = parser.add_opt(optstr) {
             if let Some(value) = value {
                 commit.set_default_value(value);
             }
@@ -206,7 +206,7 @@ fn parser_command_line(args: Args) -> Result<SimpleSet> {
         }
     }
     // process single stock id
-    if let Ok(mut commit) = set.add_opt("stock_id=p@0") {
+    if let Ok(mut commit) = parser.add_opt("stock_id=p@0") {
         commit.set_help("Get follow from single stock id");
         let id = commit.commit()?;
         parser.add_callback(
@@ -236,7 +236,7 @@ fn parser_command_line(args: Args) -> Result<SimpleSet> {
         );
     }
     // process single stock id
-    if let Ok(mut commit) = set.add_opt("stock_file_list=p@1") {
+    if let Ok(mut commit) = parser.add_opt("stock_file_list=p@1") {
         commit.set_help("Get follow from stock list in file");
         let id = commit.commit()?;
         parser.add_callback(
@@ -296,9 +296,14 @@ fn parser_command_line(args: Args) -> Result<SimpleSet> {
             }),
         );
     }
-    getopt!(&mut args.skip(1), set, parser)?;
 
-    Ok(set)
+    let mut stream = ArgStream::new(args.skip(1));
+
+    if !parser.parse(&mut stream)? {
+        panic!("command line parse failed!");
+    }
+
+    Ok(parser)
 }
 
 fn convert_line_to_stock_number(line: &str) -> Option<String> {

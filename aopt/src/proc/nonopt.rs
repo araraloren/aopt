@@ -25,7 +25,7 @@ impl From<Uid> for NonOptMatcher {
 }
 
 impl Matcher for NonOptMatcher {
-    fn uid(&self) -> Uid {
+    fn get_uid(&self) -> Uid {
         self.uid
     }
 
@@ -47,6 +47,10 @@ impl Matcher for NonOptMatcher {
         } else {
             None
         }
+    }
+
+    fn get_style(&self) -> Style {
+        self.context.as_ref().map_or(Style::Null, |v| v.get_style())
     }
 
     fn process(&mut self, uid: Uid, set: &mut dyn Set) -> Result<Option<&mut Box<dyn Context>>> {
