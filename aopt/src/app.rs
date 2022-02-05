@@ -12,6 +12,39 @@ use crate::parser::Service;
 use crate::set::Set;
 use crate::uid::Uid;
 
+///
+/// A convenient struct using for create application.
+///
+/// # Example
+/// 
+///```ignore
+/// use aopt::app::SingleApp;
+/// use aopt::err::Result;
+/// use aopt::prelude::*;
+///
+/// #[async_std::main]
+/// async fn main() -> Result<()> {
+///     let mut app = SingleApp::<SimpleSet, DefaultService, ForwardPolicy>::default();
+///
+///     app.add_opt("-a=b!")?.commit()?;
+///     app.add_opt("-b=i")?.commit()?;
+///
+///     app.run_async_mut(
+///         ["-a", "-b", "42"].into_iter(),
+///         |ret, app| async move {
+///             if ret {
+///                 dbg!(&app);
+///                 dbg!(app.find("-a")?);
+///                 dbg!(app.find("-b")?);
+///             }
+///             Ok(())
+///         },
+///     )
+///     .await?;
+///
+///     Ok(())
+/// }
+/// ```
 #[derive(Debug)]
 pub struct SingleApp<S, SS, P>
 where
@@ -33,6 +66,20 @@ where
         Self {
             name: "singleapp".into(),
             parser: Parser::<S, SS, P>::default(),
+        }
+    }
+}
+
+impl<S, SS, P> SingleApp<S, SS, P>
+where
+    S: Set + Default,
+    SS: Service + Default,
+    P: Policy<S, SS>,
+{
+    pub fn new_policy(policy: P) -> Self {
+        Self {
+            name: "singleapp".into(),
+            parser: Parser::new_policy(policy),
         }
     }
 }
@@ -85,30 +132,37 @@ where
         self.parser.get_service_mut().get_callback_mut()
     }
 
-    pub fn run_mut<RET, F: FnMut(bool, &mut SingleApp<S, SS, P>) -> Result<RET>>(
-        &mut self,
-        iter: impl Iterator<Item = String>,
-        mut r: F,
-    ) -> Result<RET> {
+    pub fn run_mut<'a, 'b, I, ITER, R, F>(&'a mut self, iter: ITER, mut r: F) -> Result<R>
+    where
+        'a: 'b,
+        I: Into<String>,
+        ITER: Iterator<Item = I>,
+        F: FnMut(bool, &'b mut SingleApp<S, SS, P>) -> Result<R>,
+    {
+        let args: Vec<String> = iter.map(|v| v.into()).collect();
         let parser = &mut self.parser;
-        let ret = parser.parse(&mut ArgStream::from(iter))?;
+        let ret = parser.parse(&mut ArgStream::from(args.into_iter()))?;
 
         r(ret, self)
     }
 
-    pub async fn run_async_mut<
-        RET,
-        FUT: Future<Output = Result<RET>>,
-        F: FnMut(bool, &mut SingleApp<S, SS, P>) -> FUT,
-    >(
-        &mut self,
-        iter: impl Iterator<Item = String>,
+    pub async fn run_async_mut<'a, 'b, I, ITER, R, FUT, F>(
+        &'a mut self,
+        iter: ITER,
         mut r: F,
-    ) -> Result<RET> {
+    ) -> Result<R>
+    where
+        'a: 'b,
+        I: Into<String>,
+        ITER: Iterator<Item = I>,
+        FUT: Future<Output = Result<R>>,
+        F: FnMut(bool, &'b mut SingleApp<S, SS, P>) -> FUT,
+    {
+        let args: Vec<String> = iter.map(|v| v.into()).collect();
         let parser = &mut self.parser;
         let async_ret;
 
-        match parser.parse(&mut ArgStream::from(iter)) {
+        match parser.parse(&mut ArgStream::from(args.into_iter())) {
             Ok(ret) => {
                 let ret = r(ret, self).await;
 
@@ -128,30 +182,31 @@ where
     SS: Service + Default,
     P: Policy<S, SS> + Default,
 {
-    pub fn run<RET, F: FnMut(bool, SingleApp<S, SS, P>) -> Result<RET>>(
-        &mut self,
-        iter: impl Iterator<Item = String>,
-        mut r: F,
-    ) -> Result<RET> {
+    pub fn run<I, ITER, R, F>(&mut self, iter: ITER, mut r: F) -> Result<R>
+    where
+        I: Into<String>,
+        ITER: Iterator<Item = I>,
+        F: FnMut(bool, SingleApp<S, SS, P>) -> Result<R>,
+    {
+        let args: Vec<String> = iter.map(|v| v.into()).collect();
         let parser = &mut self.parser;
-        let ret = parser.parse(&mut ArgStream::from(iter))?;
+        let ret = parser.parse(&mut ArgStream::new(args.into_iter()))?;
 
         r(ret, std::mem::take(self))
     }
 
-    pub async fn run_async<
-        RET,
-        FUT: Future<Output = Result<RET>>,
+    pub async fn run_async<I, ITER, R, FUT, F>(&mut self, iter: ITER, mut r: F) -> Result<R>
+    where
+        I: Into<String>,
+        ITER: Iterator<Item = I>,
+        FUT: Future<Output = Result<R>>,
         F: FnMut(bool, SingleApp<S, SS, P>) -> FUT,
-    >(
-        &mut self,
-        iter: impl Iterator<Item = String>,
-        mut r: F,
-    ) -> Result<RET> {
+    {
+        let args: Vec<String> = iter.map(|v| v.into()).collect();
         let parser = &mut self.parser;
         let async_ret;
 
-        match parser.parse(&mut ArgStream::from(iter)) {
+        match parser.parse(&mut ArgStream::from(args.into_iter())) {
             Ok(ret) => {
                 let ret = r(ret, std::mem::take(self)).await;
 

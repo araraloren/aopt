@@ -22,6 +22,7 @@ use crate::set::Set;
 
 pub use crate::err::Error;
 pub use crate::err::Result;
+pub use crate::app::SingleApp;
 
 /// Create a [`Ustr`](ustr::Ustr) from `&str`.
 pub fn gstr(s: &str) -> ustr::Ustr {
