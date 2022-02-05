@@ -169,7 +169,7 @@ impl SnowBall {
     }
 }
 
-fn parser_command_line(args: Args) -> Result<Parser::<SimpleSet, DefaultService, ForwardPolicy>> {
+fn parser_command_line(args: Args) -> Result<Parser<SimpleSet, DefaultService, ForwardPolicy>> {
     let mut parser = Parser::<SimpleSet, DefaultService, ForwardPolicy>::default();
 
     parser.get_policy_mut().set_strict(true);
@@ -209,7 +209,7 @@ fn parser_command_line(args: Args) -> Result<Parser::<SimpleSet, DefaultService,
     if let Ok(mut commit) = parser.add_opt("stock_id=p@0") {
         commit.set_help("Get follow from single stock id");
         let id = commit.commit()?;
-        parser.set_callback(
+        parser.add_callback(
             id,
             simple_pos_mut_cb!(|_, set, id, _, _| {
                 let mut ret = Ok(None);
@@ -239,7 +239,7 @@ fn parser_command_line(args: Args) -> Result<Parser::<SimpleSet, DefaultService,
     if let Ok(mut commit) = parser.add_opt("stock_file_list=p@1") {
         commit.set_help("Get follow from stock list in file");
         let id = commit.commit()?;
-        parser.set_callback(
+        parser.add_callback(
             id,
             simple_pos_mut_cb!(|_, set, file, _, _| {
                 let mut ret = Ok(None);
@@ -299,7 +299,7 @@ fn parser_command_line(args: Args) -> Result<Parser::<SimpleSet, DefaultService,
 
     let mut stream = ArgStream::new(args.skip(1));
 
-    if ! parser.parse(&mut stream)? {
+    if !parser.parse(&mut stream)? {
         panic!("command line parse failed!");
     }
 
