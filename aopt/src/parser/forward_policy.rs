@@ -13,9 +13,15 @@ use crate::set::OptionInfo;
 use crate::set::Set;
 use ustr::Ustr;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct ForwardPolicy {
     strict: bool,
+}
+
+impl Default for ForwardPolicy {
+    fn default() -> Self {
+        Self { strict: true }
+    }
 }
 
 impl ForwardPolicy {
@@ -159,5 +165,215 @@ impl<S: Set, SS: Service> Policy<S, SS> for ForwardPolicy {
         service.post_check(set)?;
 
         Ok(true)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::err::Result;
+    use crate::getopt;
+    use crate::parser::testutil::*;
+    use crate::prelude::*;
+
+    #[test]
+    fn testing_simple_parser() {
+        assert!(do_simple_test().is_ok());
+        assert!(do_simple_test_failed().is_err());
+        assert!(do_simple_test_failed_non_strict().is_ok());
+    }
+
+    fn do_simple_test_failed_non_strict() -> Result<()> {
+        let mut testing_cases = vec![];
+
+        testing_cases.append(&mut nonopt_testcases());
+        testing_cases.append(&mut long_prefix_opt_testcases());
+        testing_cases.append(&mut shorting_prefix_opt_testcases());
+
+        let mut parser = Parser::<SimpleSet, DefaultService, ForwardPolicy>::default();
+
+        parser.get_policy_mut().set_strict(false);
+
+        for testing_case in testing_cases.iter_mut() {
+            if testing_case.value == Some(OptValue::from("pos6")) {
+                testing_case.set_value(OptValue::from("--unknow-opt"));
+            }
+            testing_case.add_test(&mut parser)?;
+        }
+
+        let args = [
+            "p",
+            "-a=value1",
+            "-a",
+            "value2",
+            "-bvalue3",
+            "-b",
+            "value4",
+            "-c",
+            "-d",
+            "-/e",
+            "-f3.1415926",
+            "-g=2.718281",
+            "-h",
+            "42",
+            "-i-100000",
+            "-j",
+            "foo",
+            "-k=bar",
+            "-l1988",
+            "-m=2202",
+            "-/z12",
+            "-456",
+            "-?",
+            "pos2",
+            "pos3",
+            "pos4",
+            "pos5",
+            "--yopt-int=42",
+            "--aopt",
+            "value5",
+            "--aopt=value6",
+            "--copt=42",
+            "--eopt",
+            "value7",
+            "--fopt=988",
+            "--unknow-opt",
+        ]
+        .iter()
+        .map(|&v| String::from(v));
+
+        if let Some(ret) = getopt!(args, parser)? {
+            for testing_case in testing_cases.iter_mut() {
+                testing_case.check_ret(ret.get_set_mut())?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn do_simple_test_failed() -> Result<()> {
+        let mut testing_cases = vec![];
+
+        testing_cases.append(&mut nonopt_testcases());
+        testing_cases.append(&mut long_prefix_opt_testcases());
+        testing_cases.append(&mut shorting_prefix_opt_testcases());
+
+        let mut parser = Parser::<SimpleSet, DefaultService, ForwardPolicy>::default();
+
+        for testing_case in testing_cases.iter_mut() {
+            testing_case.add_test(&mut parser)?;
+        }
+
+        let mut args = [
+            "p",
+            "-a=value1",
+            "-a",
+            "value2",
+            "-bvalue3",
+            "-b",
+            "value4",
+            "-c",
+            "-d",
+            "-/e",
+            "-f3.1415926",
+            "-g=2.718281",
+            "-h",
+            "42",
+            "-i-100000",
+            "-j",
+            "foo",
+            "-k=bar",
+            "-l1988",
+            "-m=2202",
+            "-/z12",
+            "-456",
+            "-?",
+            "pos2",
+            "pos3",
+            "pos4",
+            "pos5",
+            "pos6",
+            "--yopt-int=42",
+            "--aopt",
+            "value5",
+            "--aopt=value6",
+            "--copt=42",
+            "--eopt",
+            "value7",
+            "--fopt=988",
+            "--unknow-opt",
+        ]
+        .iter()
+        .map(|&v| String::from(v));
+
+        if let Some(ret) = getopt!(&mut args, parser)? {
+            for testing_case in testing_cases.iter_mut() {
+                testing_case.check_ret(ret.get_set_mut())?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn do_simple_test() -> Result<()> {
+        let mut testing_cases = vec![];
+
+        testing_cases.append(&mut nonopt_testcases());
+        testing_cases.append(&mut long_prefix_opt_testcases());
+        testing_cases.append(&mut shorting_prefix_opt_testcases());
+
+        let mut parser = Parser::<SimpleSet, DefaultService, ForwardPolicy>::default();
+
+        for testing_case in testing_cases.iter_mut() {
+            testing_case.add_test(&mut parser)?;
+        }
+
+        let mut args = [
+            "p",
+            "-a=value1",
+            "-a",
+            "value2",
+            "-bvalue3",
+            "-b",
+            "value4",
+            "-c",
+            "-d",
+            "-/e",
+            "-f3.1415926",
+            "-g=2.718281",
+            "-h",
+            "42",
+            "-i-100000",
+            "-j",
+            "foo",
+            "-k=bar",
+            "-l1988",
+            "-m=2202",
+            "-/z12",
+            "-456",
+            "-?",
+            "pos2",
+            "pos3",
+            "pos4",
+            "pos5",
+            "pos6",
+            "--yopt-int=42",
+            "--aopt",
+            "value5",
+            "--aopt=value6",
+            "--copt=42",
+            "--eopt",
+            "value7",
+            "--fopt=988",
+        ]
+        .iter()
+        .map(|&v| String::from(v));
+
+        if let Some(ret) = getopt!(&mut args, parser)? {
+            for testing_case in testing_cases.iter_mut() {
+                testing_case.check_ret(ret.get_set_mut())?;
+            }
+        }
+
+        Ok(())
     }
 }

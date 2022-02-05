@@ -15,6 +15,8 @@ extern crate tracing;
 
 use crate::arg::ArgStream;
 use crate::parser::DynParser;
+use crate::parser::Parser;
+use crate::parser::Policy;
 use crate::parser::Service;
 use crate::set::Set;
 
@@ -26,16 +28,17 @@ pub fn gstr(s: &str) -> ustr::Ustr {
     ustr::Ustr::from(s)
 }
 
-pub fn try_getopt<'a, T, S, SS>(
-    iter: T,
+pub fn getopt_dynparser<'a, I, ITER, S, SS>(
+    iter: ITER,
     parsers: Vec<&'a mut DynParser<S, SS>>,
 ) -> Result<Option<&'a mut DynParser<S, SS>>>
 where
-    T: Iterator<Item = String>,
+    I: Into<String>,
+    ITER: Iterator<Item = I>,
     S: Set + Default,
     SS: Service + Default,
 {
-    let args: Vec<String> = iter.collect();
+    let args: Vec<String> = iter.map(|v| v.into()).collect();
     let count = parsers.len();
     let mut index = 0;
 
@@ -61,103 +64,207 @@ where
     Ok(None)
 }
 
-/// Parse the given string sequence, return the first matched [`Parser`] and [`Set`].
+pub fn getopt_parser<'a, I, ITER, S, SS, P>(
+    iter: ITER,
+    parsers: Vec<&'a mut Parser<S, SS, P>>,
+) -> Result<Option<&'a mut Parser<S, SS, P>>>
+where
+    I: Into<String>,
+    ITER: Iterator<Item = I>,
+    S: Set + Default,
+    SS: Service + Default,
+    P: Policy<S, SS> + Default,
+{
+    let args: Vec<String> = iter.map(|v| v.into()).collect();
+    let count = parsers.len();
+    let mut index = 0;
+
+    for parser in parsers {
+        let mut stream = ArgStream::from(args.clone().into_iter());
+
+        match parser.parse(&mut stream) {
+            Ok(rv) => {
+                if rv {
+                    return Ok(Some(parser));
+                }
+            }
+            Err(e) => {
+                if e.is_special() && index + 1 != count {
+                    continue;
+                } else {
+                    return Err(e);
+                }
+            }
+        }
+        index += 1;
+    }
+    Ok(None)
+}
+
+/// Parse the given string sequence, return the first matched [`DynParser`].
 ///
 /// # Returns
 ///
-/// Will return an Some([`ReturnValue`]) if any [`Parser`] parsing successed, otherwise return None.  
+/// Will return an Ok(Some([`DynParser`])) if any [`DynParser`] parsing successed, otherwise return `Ok(None)`.  
 ///
 /// # Example
 ///
 /// ```rust
-/// use aopt::prelude::*;
 /// use aopt::err::Result;
+/// use aopt::prelude::*;
 ///
 /// fn main() -> Result<()> {
-///     let mut parser = SimpleParser::<UidGenerator>::default();
-///     let mut pre_parser = PreParser::<UidGenerator>::default();
-///     let mut set = SimpleSet::default()
-///         .with_default_creator()
-///         .with_default_prefix();
-///     let mut pre_set = SimpleSet::default()
-///         .with_default_creator()
-///         .with_default_prefix();
-///     set.add_opt("-a=b!")?.commit()?;
-///     set.add_opt("--bopt=i")?.commit()?;
-///     parser.add_callback(
-///         set.add_opt("c=p@-1")?.commit()?,
+///     let mut parser = DynParser::<SimpleSet, DefaultService>::new_policy(ForwardPolicy::default());
+///     let mut pre_parser = DynParser::<SimpleSet, DefaultService>::new_policy(PrePolicy::default());
+///
+///     parser.add_opt("-a=b!")?.commit()?;
+///     parser.add_opt("--bopt=i")?.commit()?;
+///     parser
+///         .add_opt_cb("c=p@-1",
 ///         simple_pos_cb!(|_, _, arg, _, value| {
 ///             assert_eq!(arg, "foo");
 ///             Ok(Some(value))
-///         }),
-///     );
-///     pre_set.add_opt("-d=a")?.commit()?;
-///     pre_set.add_opt("--eopt=s")?.commit()?;
+///         }))?
+///         .commit()?;
+///
+///     pre_parser.add_opt("-d=a")?.commit()?;
+///     pre_parser.add_opt("--eopt=s")?.commit()?;
 ///     {
-///         let ret = getopt!(
+///         let ret = getoptd!(
 ///             &mut ["-a", "--bopt=42", "foo"].iter().map(|&v| String::from(v)),
-///             set,
 ///             parser,
-///             pre_set,
 ///             pre_parser
 ///         )?;
-
+///
 ///         assert!(ret.is_some());
 ///         assert_eq!(
-///             ret.as_ref().unwrap().set().get_value("-a")?,
+///             ret.as_ref().unwrap().get_set().get_value("-a")?,
 ///             Some(&OptValue::from(true))
 ///         );
 ///         assert_eq!(
-///             ret.as_ref().unwrap().set().get_value("--bopt")?,
+///             ret.as_ref().unwrap().get_set().get_value("--bopt")?,
 ///             Some(&OptValue::from(42i64))
 ///         );
 ///     }
 ///     {
-///         let ret = getopt!(
+///         let ret = getoptd!(
 ///             &mut ["-dbar", "-d", "foo", "--eopt=pre", "foo"]
 ///                 .iter()
 ///                 .map(|&v| String::from(v)),
-///             set,
 ///             parser,
-///             pre_set,
 ///             pre_parser
 ///         )?;
 ///         assert!(ret.is_some());
 ///         assert_eq!(
-///             ret.as_ref().unwrap().set().get_value("-d")?,
+///             ret.as_ref().unwrap().get_set().get_value("-d")?,
 ///             Some(&OptValue::from(vec!["bar".to_owned(), "foo".to_owned()]))
 ///         );
 ///         assert_eq!(
-///             ret.as_ref().unwrap().set().get_value("--eopt")?,
+///             ret.as_ref().unwrap().get_set().get_value("--eopt")?,
 ///             Some(&OptValue::from("pre"))
 ///         );
-///         assert_eq!(ret.as_ref().unwrap().parser().get_noa(), ["foo"]);
+///         assert_eq!(
+///             ret.as_ref().unwrap().get_service().get_noa().as_slice(),
+///             ["foo"]
+///         );
 ///     }
 ///     {
-///         assert!(getopt!(
+///         assert!(getoptd!(
 ///             &mut ["-dbar", "-d", "foo", "--eopt=pre", "foo"]
 ///                 .iter()
 ///                 .map(|&v| String::from(v)),
-///             set,
 ///             parser
 ///         )
 ///         .is_err());
 ///     }
 ///     Ok(())
 /// }
-/// ```
-#[macro_export]
-macro_rules! getopt {
-    ($iter:expr, $($parser:expr,)+ ) => {
-        try_getopt($iter, vec![$($parser,)+])
-    };
-}
+///```
+pub use aopt_macro::getoptd;
+
+/// Parse the given string sequence, return the first matched [`Parser`].
+///
+/// # Returns
+///
+/// Will return an Ok(Some([`Parser`])) if any [`Parser`] parsing successed, otherwise return `Ok(None)`.
+///
+/// # Example
+///
+/// ```rust
+/// use aopt::err::Result;
+/// use aopt::prelude::*;
+///
+/// fn main() -> Result<()> {
+///     {
+///         let mut parser = Parser::<SimpleSet, DefaultService, ForwardPolicy>::default();
+///
+///         parser.add_opt("-a=b!")?.commit()?;
+///         parser.add_opt("--bopt=i")?.commit()?;
+///         parser
+///             .add_opt_cb(
+///                 "c=p@-1",
+///                 simple_pos_cb!(|_, _, arg, _, value| {
+///                     assert_eq!(arg, "foo");
+///                     Ok(Some(value))
+///                 }),
+///             )?
+///             .commit()?;
+///
+///         let ret = getopt!(
+///             &mut ["-a", "--bopt=42", "foo"].iter().map(|&v| String::from(v)),
+///             parser,
+///         )?;
+///
+///         assert!(ret.is_some());
+///         assert_eq!(
+///             ret.as_ref().unwrap().get_set().get_value("-a")?,
+///             Some(&OptValue::from(true))
+///         );
+///         assert_eq!(
+///             ret.as_ref().unwrap().get_set().get_value("--bopt")?,
+///             Some(&OptValue::from(42i64))
+///         );
+///     }
+///     {
+///         let mut pre_parser = Parser::<SimpleSet, DefaultService, PrePolicy>::default();
+///
+///         pre_parser.add_opt("-d=a")?.commit()?;
+///         pre_parser.add_opt("--eopt=s")?.commit()?;
+///
+///         let ret = getopt!(
+///             &mut ["-dbar", "-d", "foo", "--eopt=pre", "foo"]
+///                 .iter()
+///                 .map(|&v| String::from(v)),
+///             pre_parser
+///         )?;
+///         assert!(ret.is_some());
+///         assert_eq!(
+///             ret.as_ref().unwrap().get_set().get_value("-d")?,
+///             Some(&OptValue::from(vec!["bar".to_owned(), "foo".to_owned()]))
+///         );
+///         assert_eq!(
+///             ret.as_ref().unwrap().get_set().get_value("--eopt")?,
+///             Some(&OptValue::from("pre"))
+///         );
+///         assert_eq!(
+///             ret.as_ref().unwrap().get_service().get_noa().as_slice(),
+///             ["foo"]
+///         );
+///     }
+///     Ok(())
+/// }
+///```
+pub use aopt_macro::getopt;
 
 pub mod prelude {
+    pub use crate::arg::ArgStream;
     pub use crate::ctx::Context;
     pub use crate::ctx::NonOptContext;
     pub use crate::ctx::OptContext;
     pub use crate::getopt;
+    pub use crate::getopt_dynparser;
+    pub use crate::getopt_parser;
+    pub use crate::getoptd;
     pub use crate::gstr;
     pub use crate::opt::Alias;
     pub use crate::opt::ArrayCreator;
@@ -188,11 +295,14 @@ pub mod prelude {
     pub use crate::opt::Type;
     pub use crate::opt::UintCreator;
     pub use crate::opt::Value;
+    pub use crate::parser::DefaultService;
     pub use crate::parser::DelayPolicy;
-    pub use crate::parser::ForwardPolicy;
     pub use crate::parser::DynParser;
+    pub use crate::parser::ForwardPolicy;
     pub use crate::parser::Parser;
+    pub use crate::parser::Policy;
     pub use crate::parser::PrePolicy;
+    pub use crate::parser::Service;
     pub use crate::proc::Info;
     pub use crate::proc::Matcher;
     pub use crate::proc::NonOptMatcher;
@@ -209,7 +319,6 @@ pub mod prelude {
     pub use crate::simple_opt_mut_cb;
     pub use crate::simple_pos_cb;
     pub use crate::simple_pos_mut_cb;
-    pub use crate::try_getopt;
     pub use crate::uid::{Uid, UidGenerator};
     pub use ustr::Ustr;
     pub use ustr::UstrMap;

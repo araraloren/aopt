@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-
 use std::fmt::Debug;
 
 use crate::{err::Result, prelude::*, set::Commit};
@@ -97,19 +96,22 @@ macro_rules! simple_delay_pos_tweak {
     };
 }
 
-pub struct TestingCase<P: Parser> {
+pub struct TestingCase<S: Set + Default, SS: Service + Default, P: Policy<S, SS> + Default> {
     pub opt: &'static str,
 
     pub value: Option<OptValue>,
 
-    pub commit: Option<Box<dyn FnMut(&mut Commit) -> Result<()>>>,
+    pub commit: Option<Box<dyn FnMut(&mut Commit<S>) -> Result<()>>>,
 
-    pub callback: Option<Box<dyn FnMut(&mut P, Uid, Option<OptChecker>) -> Result<()>>>,
+    pub callback:
+        Option<Box<dyn FnMut(&mut Parser<S, SS, P>, Uid, Option<OptChecker>) -> Result<()>>>,
 
     pub checker: Option<OptChecker>,
 }
 
-impl<P: Parser> Default for TestingCase<P> {
+impl<S: Set + Default, SS: Service + Default, P: Policy<S, SS> + Default> Default
+    for TestingCase<S, SS, P>
+{
     fn default() -> Self {
         Self {
             opt: "",
@@ -121,7 +123,7 @@ impl<P: Parser> Default for TestingCase<P> {
     }
 }
 
-impl<P: Parser> TestingCase<P> {
+impl<S: Set + Default, SS: Service + Default, P: Policy<S, SS> + Default> TestingCase<S, SS, P> {
     pub fn new(opt: &'static str) -> Self {
         Self {
             opt,
@@ -139,14 +141,14 @@ impl<P: Parser> TestingCase<P> {
         self
     }
 
-    pub fn with_commit(mut self, commit: Box<dyn FnMut(&mut Commit) -> Result<()>>) -> Self {
+    pub fn with_commit(mut self, commit: Box<dyn FnMut(&mut Commit<S>) -> Result<()>>) -> Self {
         self.commit = Some(commit);
         self
     }
 
     pub fn with_callback(
         mut self,
-        callback: Box<dyn FnMut(&mut P, Uid, Option<OptChecker>) -> Result<()>>,
+        callback: Box<dyn FnMut(&mut Parser<S, SS, P>, Uid, Option<OptChecker>) -> Result<()>>,
     ) -> Self {
         self.callback = Some(callback);
         self
@@ -185,13 +187,13 @@ impl<P: Parser> TestingCase<P> {
         self.value = Some(value);
     }
 
-    pub fn set_commit(&mut self, commit: Box<dyn FnMut(&mut Commit) -> Result<()>>) {
+    pub fn set_commit(&mut self, commit: Box<dyn FnMut(&mut Commit<S>) -> Result<()>>) {
         self.commit = Some(commit);
     }
 
     pub fn set_callback(
         &mut self,
-        callback: Box<dyn FnMut(&mut P, Uid, Option<OptChecker>) -> Result<()>>,
+        callback: Box<dyn FnMut(&mut Parser<S, SS, P>, Uid, Option<OptChecker>) -> Result<()>>,
     ) {
         self.callback = Some(callback);
     }
@@ -208,13 +210,13 @@ impl<P: Parser> TestingCase<P> {
         self.value.as_ref()
     }
 
-    pub fn get_commit(&self) -> Option<&Box<dyn FnMut(&mut Commit) -> Result<()>>> {
+    pub fn get_commit(&self) -> Option<&Box<dyn FnMut(&mut Commit<S>) -> Result<()>>> {
         self.commit.as_ref()
     }
 
     pub fn get_callback(
         &self,
-    ) -> Option<&Box<dyn FnMut(&mut P, Uid, Option<OptChecker>) -> Result<()>>> {
+    ) -> Option<&Box<dyn FnMut(&mut Parser<S, SS, P>, Uid, Option<OptChecker>) -> Result<()>>> {
         self.callback.as_ref()
     }
 
@@ -222,8 +224,8 @@ impl<P: Parser> TestingCase<P> {
         self.checker.as_ref()
     }
 
-    pub fn add_test(&mut self, set: &mut dyn Set, parser: &mut P) -> Result<()> {
-        let mut commit = set.add_opt(self.opt)?;
+    pub fn add_test(&mut self, parser: &mut Parser<S, SS, P>) -> Result<()> {
+        let mut commit = parser.add_opt(self.opt)?;
 
         if let Some(tweak) = self.commit.as_mut() {
             tweak.as_mut()(&mut commit)?;
@@ -482,7 +484,7 @@ impl OptChecker {
         }
         if let Some(value) = &self.alias {
             for (prefix, name) in value {
-                assert!(opt.match_alias(gstr(prefix), gstr(name)));
+                assert!(opt.match_alias(Ustr::from(prefix), Ustr::from(name)));
             }
         }
         if let Some(checker) = self.checker.as_ref() {
@@ -491,7 +493,8 @@ impl OptChecker {
     }
 }
 
-pub fn nonopt_testcases<P: Parser>() -> Vec<TestingCase<P>> {
+pub fn nonopt_testcases<S: Set + Default, SS: Service + Default, P: Policy<S, SS> + Default>(
+) -> Vec<TestingCase<S, SS, P>> {
     vec![
         TestingCase {
             opt: "n=m",
@@ -650,7 +653,11 @@ pub fn nonopt_testcases<P: Parser>() -> Vec<TestingCase<P>> {
     ]
 }
 
-pub fn long_prefix_opt_testcases<P: Parser>() -> Vec<TestingCase<P>> {
+pub fn long_prefix_opt_testcases<
+    S: Set + Default,
+    SS: Service + Default,
+    P: Policy<S, SS> + Default,
+>() -> Vec<TestingCase<S, SS, P>> {
     vec![
         TestingCase {
             opt: "--aopt=a",
@@ -667,7 +674,7 @@ pub fn long_prefix_opt_testcases<P: Parser>() -> Vec<TestingCase<P>> {
                     ]))
                     .with_alias(vec![("--", "aopt-alias1"), ("--", "aopt-alias2")]),
             ),
-            commit: Some(Box::new(|commit: &mut Commit| -> Result<()> {
+            commit: Some(Box::new(|commit: &mut Commit<S>| -> Result<()> {
                 commit.add_alias("--aopt-alias1")?;
                 commit.add_alias("--aopt-alias2")?;
                 Ok(())
@@ -699,7 +706,7 @@ pub fn long_prefix_opt_testcases<P: Parser>() -> Vec<TestingCase<P>> {
                     .with_callback_value(OptValue::from(42i64))
                     .with_alias(vec![("--", "copt-alias1"), ("--", "copt-alias2")]),
             ),
-            commit: Some(Box::new(|commit: &mut Commit| -> Result<()> {
+            commit: Some(Box::new(|commit: &mut Commit<S>| -> Result<()> {
                 commit.add_alias("--copt-alias1")?;
                 commit.add_alias("--copt-alias2")?;
                 Ok(())
@@ -717,7 +724,7 @@ pub fn long_prefix_opt_testcases<P: Parser>() -> Vec<TestingCase<P>> {
                     .with_name("dopt")
                     .with_deactivate_style(false),
             ),
-            commit: Some(Box::new(|commit: &mut Commit| -> Result<()> {
+            commit: Some(Box::new(|commit: &mut Commit<S>| -> Result<()> {
                 commit.set_default_value(OptValue::from(3.14f64));
                 Ok(())
             })),
@@ -755,7 +762,11 @@ pub fn long_prefix_opt_testcases<P: Parser>() -> Vec<TestingCase<P>> {
     ]
 }
 
-pub fn shorting_prefix_opt_testcases<P: Parser>() -> Vec<TestingCase<P>> {
+pub fn shorting_prefix_opt_testcases<
+    S: Set + Default,
+    SS: Service + Default,
+    P: Policy<S, SS> + Default,
+>() -> Vec<TestingCase<S, SS, P>> {
     vec![
         TestingCase {
             opt: "-a=a",
@@ -944,7 +955,7 @@ pub fn shorting_prefix_opt_testcases<P: Parser>() -> Vec<TestingCase<P>> {
                     .with_callback_value(OptValue::from(42i64))
                     .with_default_value(OptValue::from(4200i64)),
             ),
-            commit: Some(Box::new(|commit: &mut Commit| -> Result<()> {
+            commit: Some(Box::new(|commit: &mut Commit<S>| -> Result<()> {
                 commit.set_default_value(OptValue::from(4200i64));
                 Ok(())
             })),
@@ -962,7 +973,7 @@ pub fn shorting_prefix_opt_testcases<P: Parser>() -> Vec<TestingCase<P>> {
                     .with_deactivate_style(false)
                     .with_callback_value(OptValue::from(42i64)),
             ),
-            commit: Some(Box::new(|commit: &mut Commit| -> Result<()> {
+            commit: Some(Box::new(|commit: &mut Commit<S>| -> Result<()> {
                 commit.add_alias("--yopt")?;
                 commit.add_alias("--yopt-int")?;
                 Ok(())

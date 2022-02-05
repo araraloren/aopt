@@ -4,7 +4,7 @@ mod forward_policy;
 mod pre_policy;
 mod service;
 mod state;
-// pub(crate) mod testutil;
+pub(crate) mod testutil;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -92,23 +92,38 @@ pub trait Service {
     fn reset(&mut self);
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Parser<S, SS, P>
 where
-    S: Set + Default,
-    SS: Service + Default,
-    P: Policy<S, SS> + Default,
+    S: Set,
+    SS: Service,
+    P: Policy<S, SS>,
 {
     policy: P,
     service: SS,
     set: S,
 }
 
-impl<S, SS, P> Deref for Parser<S, SS, P>
+impl<S, SS, P> Default for Parser<S, SS, P>
 where
     S: Set + Default,
     SS: Service + Default,
     P: Policy<S, SS> + Default,
+{
+    fn default() -> Self {
+        Self {
+            policy: P::default(),
+            service: SS::default(),
+            set: S::default(),
+        }
+    }
+}
+
+impl<S, SS, P> Deref for Parser<S, SS, P>
+where
+    S: Set,
+    SS: Service,
+    P: Policy<S, SS>,
 {
     type Target = S;
 
@@ -119,9 +134,9 @@ where
 
 impl<S, SS, P> DerefMut for Parser<S, SS, P>
 where
-    S: Set + Default,
-    SS: Service + Default,
-    P: Policy<S, SS> + Default,
+    S: Set,
+    SS: Service,
+    P: Policy<S, SS>,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.set
@@ -130,15 +145,30 @@ where
 
 impl<S, SS, P> Parser<S, SS, P>
 where
-    S: Set + Default,
-    SS: Service + Default,
-    P: Policy<S, SS> + Default,
+    S: Set,
+    SS: Service,
+    P: Policy<S, SS>,
 {
     pub fn new(set: S, service: SS, policy: P) -> Self {
         Self {
             set,
             service,
             policy,
+        }
+    }
+}
+
+impl<S, SS, P> Parser<S, SS, P>
+where
+    S: Set + Default,
+    SS: Service + Default,
+    P: Policy<S, SS>,
+{
+    pub fn new_policy(policy: P) -> Self {
+        Self {
+            set: S::default(),
+            service: SS::default(),
+            policy: policy,
         }
     }
 
@@ -167,14 +197,23 @@ where
     }
 
     // extern the add_opt function, attach callback to option
-    pub fn add_opt_cb(&mut self, opt_str: &str) -> Result<CallbackCommit<'_, '_, S, SS>> {
+    pub fn add_opt_cb(
+        &mut self,
+        opt_str: &str,
+        callback: OptCallback,
+    ) -> Result<CallbackCommit<'_, '_, S, SS>> {
         let info = CreateInfo::parse(gstr(opt_str), self.get_prefix())?;
 
         debug!(%opt_str, "create option has callback");
-        Ok(CallbackCommit::new(&mut self.set, &mut self.service, info))
+        Ok(CallbackCommit::new(
+            &mut self.set,
+            &mut self.service,
+            info,
+            callback,
+        ))
     }
 
-    pub fn set_callback(&mut self, uid: Uid, callback: OptCallback) {
+    pub fn add_callback(&mut self, uid: Uid, callback: OptCallback) {
         self.get_service_mut()
             .get_callback_mut()
             .insert(uid, RefCell::new(callback));
@@ -191,8 +230,8 @@ where
 
 pub struct DynParser<S, SS>
 where
-    S: Set + Default,
-    SS: Service + Default,
+    S: Set,
+    SS: Service,
 {
     policy: Box<dyn Policy<S, SS>>,
     service: SS,
@@ -201,8 +240,8 @@ where
 
 impl<S, SS> Deref for DynParser<S, SS>
 where
-    S: Set + Default,
-    SS: Service + Default,
+    S: Set,
+    SS: Service,
 {
     type Target = S;
 
@@ -213,8 +252,8 @@ where
 
 impl<S, SS> DerefMut for DynParser<S, SS>
 where
-    S: Set + Default,
-    SS: Service + Default,
+    S: Set,
+    SS: Service,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.set
@@ -223,14 +262,28 @@ where
 
 impl<S, SS> DynParser<S, SS>
 where
-    S: Set + Default,
-    SS: Service + Default,
+    S: Set,
+    SS: Service,
 {
-    pub fn new(set: S, service: SS, policy: Box<dyn Policy<S, SS>>) -> Self {
+    pub fn new<P: Policy<S, SS> + 'static>(set: S, service: SS, policy: P) -> Self {
         Self {
             set,
             service,
-            policy,
+            policy: Box::new(policy),
+        }
+    }
+}
+
+impl<S, SS> DynParser<S, SS>
+where
+    S: Set + Default,
+    SS: Service + Default,
+{
+    pub fn new_policy<P: Policy<S, SS> + 'static>(policy: P) -> Self {
+        Self {
+            set: S::default(),
+            service: SS::default(),
+            policy: Box::new(policy),
         }
     }
 
@@ -259,14 +312,23 @@ where
     }
 
     // extern the add_opt function, attach callback to option
-    pub fn add_opt_cb(&mut self, opt_str: &str) -> Result<CallbackCommit<'_, '_, S, SS>> {
+    pub fn add_opt_cb(
+        &mut self,
+        opt_str: &str,
+        callback: OptCallback,
+    ) -> Result<CallbackCommit<'_, '_, S, SS>> {
         let info = CreateInfo::parse(gstr(opt_str), self.get_prefix())?;
 
         debug!(%opt_str, "create option has callback");
-        Ok(CallbackCommit::new(&mut self.set, &mut self.service, info))
+        Ok(CallbackCommit::new(
+            &mut self.set,
+            &mut self.service,
+            info,
+            callback,
+        ))
     }
 
-    pub fn set_callback(&mut self, uid: Uid, callback: OptCallback) {
+    pub fn add_callback(&mut self, uid: Uid, callback: OptCallback) {
         self.get_service_mut()
             .get_callback_mut()
             .insert(uid, RefCell::new(callback));
@@ -294,7 +356,7 @@ where
         let service = take(parser.get_service_mut());
         let policy = take(parser.get_policy_mut());
 
-        DynParser::new(set, service, Box::new(policy))
+        DynParser::new(set, service, policy)
     }
 }
 
@@ -311,6 +373,6 @@ where
         let service = take(parser.get_service_mut());
         let policy = take(parser.get_policy_mut());
 
-        DynParser::new(set, service, Box::new(policy))
+        DynParser::new(set, service, policy)
     }
 }
