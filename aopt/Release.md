@@ -3,7 +3,11 @@
 
 ## 0.5.2
 
-- refeactor the parser
+- add macro getopt/getoptd
+
+- refactor the parser
+
+- refactor test case
 
 ## 0.5.1
 
