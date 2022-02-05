@@ -26,7 +26,7 @@ pub trait Proc<M: Matcher>: Debug {
     ) -> Result<Vec<ValueKeeper>>;
 }
 
-pub trait Matcher: Debug + Default {
+pub trait Matcher: Debug {
     fn get_uid(&self) -> Uid;
 
     fn add_ctx(&mut self, ctx: Box<dyn Context>);

@@ -146,7 +146,7 @@ impl DefaultService {
 }
 
 impl Service for DefaultService {
-    fn gen_opt<M: Matcher>(
+    fn gen_opt<M: Matcher + Default>(
         &self,
         arg: &crate::arg::Argument,
         style: &ParserState,
@@ -154,7 +154,7 @@ impl Service for DefaultService {
         Ok(style.gen_opt(arg)?)
     }
 
-    fn gen_nonopt<M: Matcher>(
+    fn gen_nonopt<M: Matcher + Default>(
         &self,
         noa: &ustr::Ustr,
         total: usize,
@@ -164,7 +164,7 @@ impl Service for DefaultService {
         Ok(style.gen_nonopt(noa, total as u64, current as u64)?)
     }
 
-    fn matching<M: Matcher, S: Set>(
+    fn matching<M: Matcher + Default, S: Set>(
         &mut self,
         matcher: &mut M,
         set: &mut S,

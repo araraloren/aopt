@@ -35,8 +35,8 @@ pub fn getopt_dynparser<'a, I, ITER, S, SS>(
 where
     I: Into<String>,
     ITER: Iterator<Item = I>,
-    S: Set + Default,
-    SS: Service + Default,
+    S: Set,
+    SS: Service,
 {
     let args: Vec<String> = iter.map(|v| v.into()).collect();
     let count = parsers.len();
@@ -71,9 +71,9 @@ pub fn getopt_parser<'a, I, ITER, S, SS, P>(
 where
     I: Into<String>,
     ITER: Iterator<Item = I>,
-    S: Set + Default,
-    SS: Service + Default,
-    P: Policy<S, SS> + Default,
+    S: Set,
+    SS: Service,
+    P: Policy<S, SS>,
 {
     let args: Vec<String> = iter.map(|v| v.into()).collect();
     let count = parsers.len();

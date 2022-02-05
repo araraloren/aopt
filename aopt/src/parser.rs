@@ -44,9 +44,13 @@ pub trait Policy<S: Set, SS: Service>: Debug {
 }
 
 pub trait Service {
-    fn gen_opt<M: Matcher>(&self, arg: &Argument, style: &ParserState) -> Result<Option<M>>;
+    fn gen_opt<M: Matcher + Default>(
+        &self,
+        arg: &Argument,
+        style: &ParserState,
+    ) -> Result<Option<M>>;
 
-    fn gen_nonopt<M: Matcher>(
+    fn gen_nonopt<M: Matcher + Default>(
         &self,
         noa: &Ustr,
         total: usize,
@@ -54,7 +58,7 @@ pub trait Service {
         style: &ParserState,
     ) -> Result<Option<M>>;
 
-    fn matching<M: Matcher, S: Set>(
+    fn matching<M: Matcher + Default, S: Set>(
         &mut self,
         matcher: &mut M,
         set: &mut S,
@@ -145,21 +149,6 @@ where
 
 impl<S, SS, P> Parser<S, SS, P>
 where
-    S: Set,
-    SS: Service,
-    P: Policy<S, SS>,
-{
-    pub fn new(set: S, service: SS, policy: P) -> Self {
-        Self {
-            set,
-            service,
-            policy,
-        }
-    }
-}
-
-impl<S, SS, P> Parser<S, SS, P>
-where
     S: Set + Default,
     SS: Service + Default,
     P: Policy<S, SS>,
@@ -169,6 +158,21 @@ where
             set: S::default(),
             service: SS::default(),
             policy: policy,
+        }
+    }
+}
+
+impl<S, SS, P> Parser<S, SS, P>
+where
+    S: Set,
+    SS: Service,
+    P: Policy<S, SS>,
+{
+    pub fn new(set: S, service: SS, policy: P) -> Self {
+        Self {
+            set,
+            service,
+            policy,
         }
     }
 
@@ -262,20 +266,6 @@ where
 
 impl<S, SS> DynParser<S, SS>
 where
-    S: Set,
-    SS: Service,
-{
-    pub fn new<P: Policy<S, SS> + 'static>(set: S, service: SS, policy: P) -> Self {
-        Self {
-            set,
-            service,
-            policy: Box::new(policy),
-        }
-    }
-}
-
-impl<S, SS> DynParser<S, SS>
-where
     S: Set + Default,
     SS: Service + Default,
 {
@@ -283,6 +273,20 @@ where
         Self {
             set: S::default(),
             service: SS::default(),
+            policy: Box::new(policy),
+        }
+    }
+}
+
+impl<S, SS> DynParser<S, SS>
+where
+    S: Set,
+    SS: Service,
+{
+    pub fn new<P: Policy<S, SS> + 'static>(set: S, service: SS, policy: P) -> Self {
+        Self {
+            set,
+            service,
             policy: Box::new(policy),
         }
     }

@@ -22,13 +22,7 @@ async fn main() -> color_eyre::Result<()> {
         .init();
     color_eyre::install()?;
 
-    let mut app = SingleApp::<SimpleSet, SimpleParser<UidGenerator>>::default();
-
-    app = app.with_optset(
-        SimpleSet::default()
-            .with_default_creator()
-            .with_default_prefix(),
-    );
+    let mut app = SingleApp::<SimpleSet, DefaultService, ForwardPolicy>::default();
 
     for (opt, long, help, value) in [
         ("-h=b", "-help", "Print help message", None),
@@ -108,8 +102,9 @@ async fn main() -> color_eyre::Result<()> {
 
     Ok(app
         .run_async(std::env::args().skip(1), |ret, app| async move {
-            let set = app.get_optset();
-            let noa = app.get_parser().get_noa();
+            let parser = app.get_parser();
+            let noa = parser.get_service().get_noa();
+            let set = parser.get_set();
             let debug = value_of(set, "--debug")?.as_bool().unwrap_or(&false);
 
             if *debug {
