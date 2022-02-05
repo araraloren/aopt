@@ -9,6 +9,8 @@
 
 - refactor test case
 
+- refactor SingleApp
+
 ## 0.5.1
 
 - fix the callback immutable type paramaters
