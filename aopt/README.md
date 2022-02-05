@@ -9,41 +9,32 @@ use aopt::err::Result;
 use aopt::prelude::*;
 
 fn main() -> Result<()> {
-    let mut parser = SimpleParser::<UidGenerator>::default();
-    let mut set = SimpleSet::default()
-        .with_default_creator()
-        .with_default_prefix();
+    let mut parser = Parser::<SimpleSet, DefaultService, ForwardPolicy>::default();
 
-    set.add_opt("-a=b!")?.commit()?;
-    set.add_opt("--bopt=i")?.commit()?;
-    set.add_opt("-c=a")?.add_alias("--copt")?.commit()?;
-    parser.add_callback(
-        set.add_opt("d=p@-1")?.commit()?,
-        simple_pos_cb!(|_, _, arg, _, value| {
-            assert_eq!(arg, "foo");
-            Ok(Some(value))
-        }),
-    );
+    parser.add_opt("-a=b!")?.commit()?;
+    parser.add_opt("--bopt=i")?.commit()?;
+    parser.add_opt("-c=a")?.add_alias("--copt")?.commit()?;
+    parser
+        .add_opt_cb(
+            "d=p@-1",
+            simple_pos_cb!(|_, _, arg, _, value| {
+                assert_eq!(arg, "foo");
+                Ok(Some(value))
+            }),
+        )?
+        .commit()?;
 
     let ret = getopt!(
-        &mut ["-a", "-c", "foo", "--bopt=42", "foo", "--copt=bar"]
-            .iter()
-            .map(|&v| String::from(v)),
-        set,
+        ["-a", "-c", "foo", "--bopt=42", "foo", "--copt=bar"].into_iter(),
         parser
     )?;
 
     assert!(ret.is_some());
+    let set = ret.as_ref().unwrap().get_set();
+    assert_eq!(set.get_value("-a")?, Some(&OptValue::from(true)));
+    assert_eq!(set.get_value("--bopt")?, Some(&OptValue::from(42i64)));
     assert_eq!(
-        ret.as_ref().unwrap().set().get_value("-a")?,
-        Some(&OptValue::from(true))
-    );
-    assert_eq!(
-        ret.as_ref().unwrap().set().get_value("--bopt")?,
-        Some(&OptValue::from(42i64))
-    );
-    assert_eq!(
-        ret.as_ref().unwrap().set().get_value("--copt")?,
+        set.get_value("--copt")?,
         Some(&OptValue::from(vec!["foo".to_owned(), "bar".to_owned()]))
     );
     Ok(())
