@@ -34,6 +34,25 @@ pub struct ValueKeeper {
     pub value: OptValue,
 }
 
+/// [`Policy`] doing real parsing work.
+/// 
+/// # Example
+/// ```ignore
+/// #[derive(Debug)]
+/// pub struct EmptyPolicy;
+/// 
+/// impl<S: Set, SS: Service> Policy<S, SS> for EmptyPolicy {
+///     fn parse(
+///         &mut self,
+///         set: &mut S,
+///         service: &mut SS,
+///         iter: &mut dyn Iterator<Item = aopt::arg::Argument>,
+///     ) -> Result<bool> {
+///         // ... parsing logical code
+///         Ok(true)
+///     }
+/// }
+/// ```
 pub trait Policy<S: Set, SS: Service>: Debug {
     fn parse(
         &mut self,
@@ -43,13 +62,16 @@ pub trait Policy<S: Set, SS: Service>: Debug {
     ) -> Result<bool>;
 }
 
+/// [`Service`] provide common service using for [`Policy`].
 pub trait Service {
+    /// Generate M base on [`Argument`] and [`ParserState`].
     fn gen_opt<M: Matcher + Default>(
         &self,
         arg: &Argument,
         style: &ParserState,
     ) -> Result<Option<M>>;
 
+    /// Generate M base on position information of `NOA` and [`ParserState`].
     fn gen_nonopt<M: Matcher + Default>(
         &self,
         noa: &Ustr,
@@ -58,6 +80,10 @@ pub trait Service {
         style: &ParserState,
     ) -> Result<Option<M>>;
 
+    /// Matching the `matcher` with [`Opt`](crate::opt::Opt)s in `set`.
+    /// 
+    /// The `invoke` should be false if caller don't want invoke callback when
+    /// [`Opt`](crate::opt::Opt) matched.
     fn matching<M: Matcher + Default, S: Set>(
         &mut self,
         matcher: &mut M,
@@ -65,14 +91,19 @@ pub trait Service {
         invoke: bool,
     ) -> Result<Vec<ValueKeeper>>;
 
+    /// Checking if the `set` data valid.
     fn pre_check<S: Set>(&self, set: &S) -> Result<bool>;
 
+    /// Checking if the `set` data valid.
     fn opt_check<S: Set>(&self, set: &S) -> Result<bool>;
 
+    /// Checking if the `set` data valid.
     fn nonopt_check<S: Set>(&self, set: &S) -> Result<bool>;
 
+    /// Checking if the `set` data valid.
     fn post_check<S: Set>(&self, set: &S) -> Result<bool>;
 
+    /// Invoke callback connected with given [`Opt`](crate::opt::Opt).
     fn invoke<S: Set>(
         &self,
         uid: Uid,
@@ -81,18 +112,25 @@ pub trait Service {
         optvalue: OptValue,
     ) -> Result<Option<OptValue>>;
 
+    /// Return the callback map reference.
     fn get_callback(&self) -> &HashMap<Uid, RefCell<OptCallback>>;
 
+    /// Return the subscriber info vector reference.
     fn get_subscriber_info<I: 'static + Info>(&self) -> &Vec<Box<dyn Info>>;
 
+    /// Return the NOA vector reference.
     fn get_noa(&self) -> &Vec<Ustr>;
 
+    /// Return the callback map mutable reference.
     fn get_callback_mut(&mut self) -> &mut HashMap<Uid, RefCell<OptCallback>>;
 
+    /// Return the subscriber info vector mutable reference.
     fn get_subscriber_info_mut(&mut self) -> &mut Vec<Box<dyn Info>>;
 
+    /// Return the NOA vector mutable reference.
     fn get_noa_mut(&mut self) -> &mut Vec<Ustr>;
 
+    /// Reset the [`Service`].
     fn reset(&mut self);
 }
 
