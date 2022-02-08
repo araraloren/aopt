@@ -16,7 +16,7 @@ use crate::uid::Uid;
 /// A convenient struct using for create application.
 ///
 /// # Example
-/// 
+///
 ///```ignore
 /// use aopt::app::SingleApp;
 /// use aopt::err::Result;

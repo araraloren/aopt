@@ -35,12 +35,12 @@ pub struct ValueKeeper {
 }
 
 /// [`Policy`] doing real parsing work.
-/// 
+///
 /// # Example
 /// ```ignore
 /// #[derive(Debug)]
 /// pub struct EmptyPolicy;
-/// 
+///
 /// impl<S: Set, SS: Service> Policy<S, SS> for EmptyPolicy {
 ///     fn parse(
 ///         &mut self,
@@ -81,7 +81,7 @@ pub trait Service {
     ) -> Result<Option<M>>;
 
     /// Matching the `matcher` with [`Opt`](crate::opt::Opt)s in `set`.
-    /// 
+    ///
     /// The `invoke` should be false if caller don't want invoke callback when
     /// [`Opt`](crate::opt::Opt) matched.
     fn matching<M: Matcher + Default, S: Set>(
@@ -134,6 +134,44 @@ pub trait Service {
     fn reset(&mut self);
 }
 
+/// Parser manage the [`Set`], [`Service`] and [`Policy`].
+///
+/// # Example
+///
+/// ```rust
+/// use aopt::err::Result;
+/// use aopt::prelude::*;
+///
+/// fn main() -> Result<()> {
+///     #[derive(Debug, Default)]
+///     pub struct EmptyPolicy(i64);
+///
+///     impl<S: Set, SS: Service> Policy<S, SS> for EmptyPolicy {
+///         fn parse(
+///             &mut self,
+///             set: &mut S,
+///             service: &mut SS,
+///             iter: &mut dyn Iterator<Item = aopt::arg::Argument>,
+///         ) -> Result<bool> {
+///             println!("In parser policy {} with argument length = {}", self.0, iter.count());
+///             Ok(false)
+///         }
+///     }
+///
+///     let mut parser1 = Parser::<SimpleSet, DefaultService, EmptyPolicy>::default();
+///     let mut parser2 = Parser::<SimpleSet, DefaultService, EmptyPolicy>::new_policy(EmptyPolicy(42));
+///
+///     getopt!(
+///         ["Happy", "Chinese", "new", "year", "!"].into_iter(),
+///         parser1,
+///         parser2
+///     )?;
+///     Ok(())
+/// }
+/// ```
+///
+/// Using it with macro [`getopt`](crate::getopt),
+/// which can process multiple [`Parser`] with same type [`Policy`].
 #[derive(Debug)]
 pub struct Parser<S, SS, P>
 where
@@ -191,6 +229,34 @@ where
     SS: Service + Default,
     P: Policy<S, SS>,
 {
+    /// Initialize the [`Parser`] with specify [`Policy`] and the
+    /// default value of `S` and `SS`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use aopt::err::Result;
+    /// use aopt::prelude::*;
+    ///
+    /// fn main() -> Result<()> {
+    ///     #[derive(Debug)]
+    ///     pub struct EmptyPolicy;
+    ///
+    ///     impl<S: Set, SS: Service> Policy<S, SS> for EmptyPolicy {
+    ///         fn parse(
+    ///             &mut self,
+    ///             set: &mut S,
+    ///             service: &mut SS,
+    ///             iter: &mut dyn Iterator<Item = aopt::arg::Argument>,
+    ///         ) -> Result<bool> {
+    ///             todo!()
+    ///         }
+    ///     }
+    ///
+    ///     dbg!(Parser::<SimpleSet, DefaultService, EmptyPolicy>::new_policy(EmptyPolicy {}));
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn new_policy(policy: P) -> Self {
         Self {
             set: S::default(),
@@ -270,6 +336,63 @@ where
     }
 }
 
+/// DynParser manage the [`Set`], [`Service`] and [`Policy`].
+///
+/// # Example
+///
+/// ```no_run
+/// use aopt::err::Result;
+/// use aopt::prelude::*;
+///
+/// fn main() -> Result<()> {
+///     #[derive(Debug, Default)]
+///     pub struct EmptyPolicy;
+///
+///     impl<S: Set, SS: Service> Policy<S, SS> for EmptyPolicy {
+///         fn parse(
+///             &mut self,
+///             set: &mut S,
+///             service: &mut SS,
+///             iter: &mut dyn Iterator<Item = aopt::arg::Argument>,
+///         ) -> Result<bool> {
+///             dbg!(set);
+///             Ok(false)
+///         }
+///     }
+///
+///     #[derive(Debug, Default)]
+///     pub struct ConsumeIterPolicy;
+///
+///     impl<S: Set, SS: Service> Policy<S, SS> for ConsumeIterPolicy {
+///         fn parse(
+///             &mut self,
+///             set: &mut S,
+///             service: &mut SS,
+///             iter: &mut dyn Iterator<Item = aopt::arg::Argument>,
+///         ) -> Result<bool> {
+///             for item in iter {
+///                 dbg!(item);
+///             }
+///             Ok(true)
+///         }
+///     }
+///
+///     let mut parser1 = DynParser::<SimpleSet, DefaultService>::new_policy(EmptyPolicy::default());
+///
+///     let mut parser2 =
+///         DynParser::<SimpleSet, DefaultService>::new_policy(ConsumeIterPolicy::default());
+///
+///     getoptd!(
+///         ["Happy", "Chinese", "new", "year", "!"].into_iter(),
+///         parser1,
+///         parser2
+///     )?;
+///     Ok(())
+/// }
+/// ```
+///
+/// Using it with macro [`getoptd`](crate::getoptd),
+/// which can process multiple [`Parser`] with different type [`Policy`].
 pub struct DynParser<S, SS>
 where
     S: Set,

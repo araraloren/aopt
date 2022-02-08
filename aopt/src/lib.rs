@@ -20,9 +20,9 @@ use crate::parser::Policy;
 use crate::parser::Service;
 use crate::set::Set;
 
+pub use crate::app::SingleApp;
 pub use crate::err::Error;
 pub use crate::err::Result;
-pub use crate::app::SingleApp;
 
 /// Create a [`Ustr`](ustr::Ustr) from `&str`.
 pub fn gstr(s: &str) -> ustr::Ustr {
