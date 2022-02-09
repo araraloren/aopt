@@ -62,10 +62,12 @@ where
     SS: Service + Default,
     P: Policy<S, SS> + Default,
 {
+    /// The default name of app is `singleapp`.
+    /// And the default parser is `Parser::default()`.
     fn default() -> Self {
         Self {
             name: "singleapp".into(),
-            parser: Parser::<S, SS, P>::default(),
+            parser: Parser::default(),
         }
     }
 }
@@ -76,6 +78,8 @@ where
     SS: Service + Default,
     P: Policy<S, SS>,
 {
+    /// The default name of app is `singleapp`.
+    /// And the parser is `Parser::new_policy(policy)`.
     pub fn new_policy(policy: P) -> Self {
         Self {
             name: "singleapp".into(),
@@ -120,18 +124,51 @@ where
         self.parser = parser;
     }
 
+    /// Insert callback to hash map.
     pub fn add_callback(&mut self, uid: Uid, callback: OptCallback) {
         self.parser.add_callback(uid, callback);
     }
 
+    /// Get the callback hash map reference.
     pub fn get_callback(&self) -> &HashMap<Uid, RefCell<OptCallback>> {
         self.parser.get_service().get_callback()
     }
 
+    /// Get the callback hash map mutable reference.
     pub fn get_callback_mut(&mut self) -> &mut HashMap<Uid, RefCell<OptCallback>> {
         self.parser.get_service_mut().get_callback_mut()
     }
 
+    /// Running function after parsing.
+    /// 
+    /// # Example
+    /// 
+    /// ```ignore
+    /// use aopt::app::SingleApp;
+    /// use aopt::err::Result;
+    /// use aopt::prelude::*;
+    ///
+    /// #[async_std::main]
+    /// async fn main() -> Result<()> {
+    ///     let mut app = SingleApp::<SimpleSet, DefaultService, ForwardPolicy>::default();
+    ///
+    ///     app.add_opt("-a=b!")?.commit()?;
+    ///     app.add_opt("-b=i")?.commit()?;
+    ///
+    ///     app.run_mut(["-a", "-b", "42"].into_iter(), move |ret, app| {
+    ///         if ret {
+    ///             assert_eq!(app.get_value("-a")?, Some(&OptValue::from(true)));
+    ///             assert_eq!(app.get_value("-b")?, Some(&OptValue::from(42i32)));
+    ///             println!("{} running over!", app.get_name());
+    ///         }
+    ///         Ok(())
+    ///     })?;
+    /// 
+    ///     // app still avilable here, SingleApp::run_async_mut pass mutable reference to closure.
+    ///
+    ///     Ok(())
+    /// }
+    ///```
     pub fn run_mut<'a, 'b, I, ITER, R, F>(&'a mut self, iter: ITER, mut r: F) -> Result<R>
     where
         'a: 'b,
@@ -146,6 +183,37 @@ where
         r(ret, self)
     }
 
+    /// Running async function after parsing.
+    /// 
+    /// # Example
+    /// 
+    /// ```ignore
+    /// use aopt::app::SingleApp;
+    /// use aopt::err::Result;
+    /// use aopt::prelude::*;
+    ///
+    /// #[async_std::main]
+    /// async fn main() -> Result<()> {
+    ///     let mut app = SingleApp::<SimpleSet, DefaultService, ForwardPolicy>::default();
+    ///
+    ///     app.add_opt("-a=b!")?.commit()?;
+    ///     app.add_opt("-b=i")?.commit()?;
+    ///
+    ///     app.run_async_mut(["-a", "-b", "42"].into_iter(), |ret, app| async move {
+    ///         if ret {
+    ///             assert_eq!(app.get_value("-a")?, Some(&OptValue::from(true)));
+    ///             assert_eq!(app.get_value("-b")?, Some(&OptValue::from(42i32)));
+    ///             println!("{} running over!", app.get_name());
+    ///         }
+    ///         Ok(())
+    ///     })
+    ///     .await?;
+    /// 
+    ///     // app still avilable here, SingleApp::run_async_mut pass mutable reference to closure.
+    ///
+    ///     Ok(())
+    /// }
+    ///```
     pub async fn run_async_mut<'a, 'b, I, ITER, R, FUT, F>(
         &'a mut self,
         iter: ITER,
@@ -182,6 +250,36 @@ where
     SS: Service + Default,
     P: Policy<S, SS> + Default,
 {
+    /// Running function after parsing.
+    /// 
+    /// # Example
+    /// 
+    /// ```ignore
+    /// use aopt::app::SingleApp;
+    /// use aopt::err::Result;
+    /// use aopt::prelude::*;
+    ///
+    /// #[async_std::main]
+    /// async fn main() -> Result<()> {
+    ///     let mut app = SingleApp::<SimpleSet, DefaultService, ForwardPolicy>::default();
+    ///
+    ///     app.add_opt("-a=b!")?.commit()?;
+    ///     app.add_opt("-b=i")?.commit()?;
+    ///
+    ///     app.run(["-a", "-b", "42"].into_iter(), move |ret, app| {
+    ///         if ret {
+    ///             assert_eq!(app.get_value("-a")?, Some(&OptValue::from(true)));
+    ///             assert_eq!(app.get_value("-b")?, Some(&OptValue::from(42i32)));
+    ///             println!("{} running over!", app.get_name());
+    ///         }
+    ///         Ok(())
+    ///     })?;
+    /// 
+    ///     // app not avilable here, SingleApp::run take the ownership of app
+    ///
+    ///     Ok(())
+    /// }
+    ///```
     pub fn run<I, ITER, R, F>(&mut self, iter: ITER, mut r: F) -> Result<R>
     where
         I: Into<String>,
@@ -195,6 +293,37 @@ where
         r(ret, std::mem::take(self))
     }
 
+    /// Running async function after parsing.
+    /// 
+    /// # Example
+    /// 
+    /// ```ignore
+    /// use aopt::app::SingleApp;
+    /// use aopt::err::Result;
+    /// use aopt::prelude::*;
+    ///
+    /// #[async_std::main]
+    /// async fn main() -> Result<()> {
+    ///     let mut app = SingleApp::<SimpleSet, DefaultService, ForwardPolicy>::default();
+    ///
+    ///     app.add_opt("-a=b!")?.commit()?;
+    ///     app.add_opt("-b=i")?.commit()?;
+    ///
+    ///     app.run_async(["-a", "-b", "42"].into_iter(), |ret, app| async move {
+    ///         if ret {
+    ///             assert_eq!(app.get_value("-a")?, Some(&OptValue::from(true)));
+    ///             assert_eq!(app.get_value("-b")?, Some(&OptValue::from(42i32)));
+    ///             println!("{} running over!", app.get_name());
+    ///         }
+    ///         Ok(())
+    ///     })
+    ///     .await?;
+    /// 
+    ///     // app not avilable here, SingleApp::run_async take the ownership of app
+    ///
+    ///     Ok(())
+    /// }
+    ///```
     pub async fn run_async<I, ITER, R, FUT, F>(&mut self, iter: ITER, mut r: F) -> Result<R>
     where
         I: Into<String>,
