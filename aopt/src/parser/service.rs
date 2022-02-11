@@ -60,8 +60,8 @@ impl DefaultService {
                         let has_callback = self.get_callback().contains_key(&uid);
 
                         if has_callback {
-                            // invoke callback of current option/non-option
-                            // make matched true, if any of non-option callback return Some(*)
+                            // invoke callback of current Opt/NonOpt
+                            // make matched true, if any of NonOpt callback return Some(*)
                             value = self.invoke(
                                 uid,
                                 set,
@@ -69,12 +69,12 @@ impl DefaultService {
                                 value.unwrap(),
                             )?;
                             if value.is_none() {
-                                // Ok(None) treat as user said current non-option not matched
+                                // Ok(None) treat as user said current NonOpt not matched
                                 matched = true;
                             }
                         }
                         // reborrow the opt avoid the compiler error
-                        // reset the matcher, we need match all the non-option
+                        // reset the matcher, we need match all the NonOpt
                         debug!(?value, "get callback return value");
                         set[uid].as_mut().set_invoke(false);
                         matcher.reset();

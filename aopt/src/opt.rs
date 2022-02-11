@@ -33,6 +33,7 @@ pub use self::help::HelpInfo;
 pub use self::index::Index as OptIndex;
 pub use self::nonopt::CmdCreator;
 pub use self::nonopt::MainCreator;
+pub use self::nonopt::NonOpt;
 pub use self::nonopt::PosCreator;
 pub use self::opt::ArrayCreator;
 pub use self::opt::BoolCreator;
@@ -173,7 +174,7 @@ pub trait Index {
     /// Set the index of current option.
     fn set_index(&mut self, index: OptIndex);
 
-    /// Check if current option matched given non-option position.
+    /// Check if current option matched given [`NonOpt`](crate::opt::NonOpt) position.
     fn match_index(&self, total: u64, current: u64) -> bool;
 }
 

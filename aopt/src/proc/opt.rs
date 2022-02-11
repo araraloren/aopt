@@ -6,6 +6,7 @@ use crate::opt::Style;
 use crate::set::Set;
 use crate::uid::Uid;
 
+/// The [`Matcher`] using for [`Opt`](crate::opt::Opt).
 #[derive(Debug, Default)]
 pub struct OptMatcher {
     uid: Uid,

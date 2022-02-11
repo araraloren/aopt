@@ -1,6 +1,6 @@
-/// Index using for non-option.
+/// Index using for [`NonOpt`](crate::opt::NonOpt).
 ///
-/// The non-option index is the position of non-option-argument(NOA) index, its base on 1.
+/// The [`NonOpt`](crate::opt::NonOpt) index is the position of non-option-argument(NOA) index, its base on 1.
 ///
 /// # Example
 ///

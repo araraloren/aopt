@@ -52,12 +52,12 @@ pub trait Context: Debug {
     /// Set the matching uid.
     fn set_matched_uid(&mut self, _uid: Option<Uid>) {}
 
-    /// Get the matching non-option index.
+    /// Get the matching [`NonOpt`](crate::opt::NonOpt) index.
     fn get_matched_index(&self) -> Option<usize> {
         None
     }
 
-    /// Set the matching non-option index.
+    /// Set the matching [`NonOpt`](crate::opt::NonOpt) index.
     fn set_matched_index(&mut self, _index: Option<usize>) {}
 
     /// Get current context support style.

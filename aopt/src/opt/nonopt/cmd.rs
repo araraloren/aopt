@@ -198,7 +198,7 @@ impl Value for CmdOpt {
         self.value = value;
     }
 
-    /// Can't change the default value of non-opt
+    /// Can't change the default value of [`NonOpt`](crate::opt::NonOpt)
     fn set_default_value(&mut self, _value: OptValue) {}
 
     fn parse_value(&self, _string: Ustr) -> Result<OptValue> {

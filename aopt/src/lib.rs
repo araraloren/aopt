@@ -280,6 +280,7 @@ pub mod prelude {
     pub use crate::opt::IntCreator;
     pub use crate::opt::MainCreator;
     pub use crate::opt::Name;
+    pub use crate::opt::NonOpt;
     pub use crate::opt::Opt;
     pub use crate::opt::OptCallback;
     pub use crate::opt::OptIndex;

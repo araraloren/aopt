@@ -16,13 +16,13 @@ pub enum Style {
     /// The style indicate option support set multiple option in one string, such as `-ade` means set `-a`, `-d` and `-e`.
     Multiple,
 
-    /// The style indicate the non-option is set base on position(base on 1).
+    /// The style indicate the [`NonOpt`](crate::opt::NonOpt) is set base on position(base on 1).
     Pos,
 
-    /// The style indicate the non-option is set in first position.
+    /// The style indicate the [`NonOpt`](crate::opt::NonOpt) is set in first position.
     Cmd,
 
-    /// The Main style non-option no need set, its callback will always be called.
+    /// The Main style [`NonOpt`](crate::opt::NonOpt) no need set, its callback will always be called.
     Main,
 
     /// Reserve using for user define style option.

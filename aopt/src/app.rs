@@ -140,9 +140,9 @@ where
     }
 
     /// Running function after parsing.
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// ```ignore
     /// use aopt::app::SingleApp;
     /// use aopt::err::Result;
@@ -163,7 +163,7 @@ where
     ///         }
     ///         Ok(())
     ///     })?;
-    /// 
+    ///
     ///     // app still avilable here, SingleApp::run_async_mut pass mutable reference to closure.
     ///
     ///     Ok(())
@@ -184,9 +184,9 @@ where
     }
 
     /// Running async function after parsing.
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// ```ignore
     /// use aopt::app::SingleApp;
     /// use aopt::err::Result;
@@ -208,7 +208,7 @@ where
     ///         Ok(())
     ///     })
     ///     .await?;
-    /// 
+    ///
     ///     // app still avilable here, SingleApp::run_async_mut pass mutable reference to closure.
     ///
     ///     Ok(())
@@ -251,9 +251,9 @@ where
     P: Policy<S, SS> + Default,
 {
     /// Running function after parsing.
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// ```ignore
     /// use aopt::app::SingleApp;
     /// use aopt::err::Result;
@@ -274,7 +274,7 @@ where
     ///         }
     ///         Ok(())
     ///     })?;
-    /// 
+    ///
     ///     // app not avilable here, SingleApp::run take the ownership of app
     ///
     ///     Ok(())
@@ -294,9 +294,9 @@ where
     }
 
     /// Running async function after parsing.
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// ```ignore
     /// use aopt::app::SingleApp;
     /// use aopt::err::Result;
@@ -318,7 +318,7 @@ where
     ///         Ok(())
     ///     })
     ///     .await?;
-    /// 
+    ///
     ///     // app not avilable here, SingleApp::run_async take the ownership of app
     ///
     ///     Ok(())
