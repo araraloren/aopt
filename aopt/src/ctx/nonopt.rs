@@ -9,6 +9,7 @@ use crate::opt::OptValue;
 use crate::opt::Style;
 use crate::uid::Uid;
 
+/// The [`Context`] using for matching [`NonOpt`](crate::opt::NonOpt).
 #[derive(Debug)]
 pub struct NonOptContext {
     name: Ustr,
@@ -42,9 +43,12 @@ impl NonOptContext {
 
 impl Context for NonOptContext {
     fn process(&mut self, opt: &mut dyn Opt) -> Result<bool> {
+        // 1. matching the option style.
         let mut matched = opt.match_style(self.style);
 
         if matched {
+            // 2. matching the option name only.
+            // 3. matching the option index. 
             matched =
                 matched && (opt.match_name(self.name) && opt.match_index(self.total, self.current));
         }
@@ -54,8 +58,10 @@ impl Context for NonOptContext {
             let value = opt
                 .parse_value(self.name)
                 .map_err(|_| Error::sp_invalid_argument(opt.get_hint()))?;
+            // 4. call the Opt::parse_value generate and set the value.
             self.set_value(value);
             debug!("get return value {:?}!", self.get_value());
+            // 5. set the invoke flag.
             opt.set_invoke(true);
             self.matched_uid = Some(opt.get_uid());
             self.matched_index = Some(self.current as usize);
