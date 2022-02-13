@@ -54,7 +54,7 @@ impl Matcher for NonOptMatcher {
         self.context.as_ref().map_or(Style::Null, |v| v.get_style())
     }
 
-    fn process(&mut self, uid: Uid, set: &mut dyn Set) -> Result<Option<&mut Box<dyn Context>>> {
+    fn process<S: Set>(&mut self, uid: Uid, set: &mut S) -> Result<Option<&mut Box<dyn Context>>> {
         let opt = set[uid].as_mut();
 
         info!(?uid, "process nonopt");
@@ -77,7 +77,7 @@ impl Matcher for NonOptMatcher {
         Ok(None)
     }
 
-    fn undo(&mut self, set: &mut dyn Set) {
+    fn undo<S: Set>(&mut self, set: &mut S) {
         if let Some(ctx) = self.context.as_mut() {
             if let Some(uid) = ctx.get_matched_uid() {
                 ctx.undo(set[uid].as_mut());

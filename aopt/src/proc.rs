@@ -48,10 +48,10 @@ pub trait Matcher: Debug {
     /// # Return
     ///
     /// Return the [`Context`] that matched successful. Or return [`None`] if not matched.
-    fn process(&mut self, uid: Uid, set: &mut dyn Set) -> Result<Option<&mut Box<dyn Context>>>;
+    fn process<S: Set>(&mut self, uid: Uid, set: &mut S) -> Result<Option<&mut Box<dyn Context>>>;
 
     /// Revert the change applied by [`process`](Matcher::process).
-    fn undo(&mut self, set: &mut dyn Set);
+    fn undo<S: Set>(&mut self, set: &mut S);
 
     /// If all the [`Context`] matched.
     fn is_matched(&self) -> bool;

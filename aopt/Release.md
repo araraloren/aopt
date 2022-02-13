@@ -1,6 +1,10 @@
 
 # Relase note
 
+## 0.5.3
+
+- change dyn Set to type parameter of Matcher
+
 ## 0.5.2
 
 - add macro getopt/getoptd
