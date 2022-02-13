@@ -1,6 +1,6 @@
 [package]
 name = "snow"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2018"
 license = "MPL-2.0"
 description = "Example - simple spyder get follow people count on xueqiu.com"
@@ -10,7 +10,7 @@ categories = ["command-line-interface"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aopt = {version = "0.5.2", path = "../aopt" }
+aopt = {version = "0.5.3", path = "../aopt" }
 aopt-help = { version = "0.2.5", path = "../aopt-help" }
 tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }
 color-eyre = "0.5.11"
