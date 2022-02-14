@@ -17,6 +17,7 @@ use crate::err::Result;
 use crate::gstr;
 use crate::opt::{OptCallback, OptValue};
 use crate::proc::{Info, Matcher};
+use crate::set::SimpleSet;
 use crate::set::{CreateInfo, Set};
 use crate::uid::Uid;
 
@@ -26,6 +27,15 @@ pub use forward_policy::ForwardPolicy;
 pub use pre_policy::PrePolicy;
 pub use service::DefaultService;
 pub use state::ParserState;
+
+/// Default [`Parser`] that using [`ForwardPolicy`].
+pub type ForwardParser = Parser<SimpleSet, DefaultService, ForwardPolicy>;
+
+/// Default [`Parser`] that using [`PrePolicy`].
+pub type PreParser = Parser<SimpleSet, DefaultService, PrePolicy>;
+
+/// Default [`Parser`] that using [`DelayPolicy`].
+pub type DelayParser = Parser<SimpleSet, DefaultService, DelayPolicy>;
 
 #[derive(Debug, Clone)]
 pub struct ValueKeeper {

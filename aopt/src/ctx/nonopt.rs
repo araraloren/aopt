@@ -48,7 +48,7 @@ impl Context for NonOptContext {
 
         if matched {
             // 2. matching the option name only.
-            // 3. matching the option index. 
+            // 3. matching the option index.
             matched =
                 matched && (opt.match_name(self.name) && opt.match_index(self.total, self.current));
         }

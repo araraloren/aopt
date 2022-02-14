@@ -298,11 +298,14 @@ pub mod prelude {
     pub use crate::opt::UintCreator;
     pub use crate::opt::Value;
     pub use crate::parser::DefaultService;
+    pub use crate::parser::DelayParser;
     pub use crate::parser::DelayPolicy;
     pub use crate::parser::DynParser;
+    pub use crate::parser::ForwardParser;
     pub use crate::parser::ForwardPolicy;
     pub use crate::parser::Parser;
     pub use crate::parser::Policy;
+    pub use crate::parser::PreParser;
     pub use crate::parser::PrePolicy;
     pub use crate::parser::Service;
     pub use crate::proc::Info;
