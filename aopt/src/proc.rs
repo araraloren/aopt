@@ -13,8 +13,17 @@ use crate::uid::Uid;
 pub use nonopt::NonOptMatcher;
 pub use opt::OptMatcher;
 
-pub trait Info: Debug {
-    fn info_uid(&self) -> Uid;
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        pub trait Info: Debug + Send + Sync {
+            fn info_uid(&self) -> Uid;
+        }
+    }
+    else {
+        pub trait Info: Debug {
+            fn info_uid(&self) -> Uid;
+        }
+    }
 }
 
 /// Trait using for process [`Matcher`].

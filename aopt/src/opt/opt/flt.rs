@@ -32,6 +32,13 @@ pub struct FltOpt {
     help_info: HelpInfo,
 }
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        unsafe impl Send for FltOpt { }
+        unsafe impl Sync for FltOpt { }
+    }
+}
+
 impl TryFrom<CreateInfo> for FltOpt {
     type Error = Error;
 

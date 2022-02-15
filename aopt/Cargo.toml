@@ -15,6 +15,9 @@ readme = "README.md"
 [dependencies]
 thiserror = "1.0.30"
 tracing = "0.1.29"
-tracing-subscriber = "0.3.2"
 ustr = "0.8.1"
 aopt-macro = { version = "0.0.2 ", path = "../aopt-macro" }
+cfg-if = "1.0.0"
+
+[features]
+sync = []

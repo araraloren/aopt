@@ -291,6 +291,13 @@ pub struct OptChecker {
     pub checker: Option<Checker>,
 }
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        unsafe impl Send for OptChecker { }
+        unsafe impl Sync for OptChecker { }
+    }
+}
+
 impl Default for OptChecker {
     fn default() -> Self {
         Self {

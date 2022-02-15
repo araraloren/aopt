@@ -1,4 +1,3 @@
-mod callback;
 mod help;
 mod index;
 mod parser;
@@ -14,20 +13,43 @@ use ustr::Ustr;
 use crate::err::Result;
 use crate::uid::Uid;
 
-pub use self::callback::Callback as OptCallback;
-pub use self::callback::CallbackType;
-pub use self::callback::MainCallback as MainFn;
-pub use self::callback::MainMutCallback as MainFnMut;
-pub use self::callback::OptCallback as OptFn;
-pub use self::callback::OptMutCallback as OptFnMut;
-pub use self::callback::PosCallback as PosFn;
-pub use self::callback::PosMutCallback as PosFnMut;
-pub use self::callback::SimpleMainCallback;
-pub use self::callback::SimpleMainMutCallback;
-pub use self::callback::SimpleOptCallback;
-pub use self::callback::SimpleOptMutCallback;
-pub use self::callback::SimplePosCallback;
-pub use self::callback::SimplePosMutCallback;
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        mod callback_sync;
+        pub use self::callback_sync::Callback as OptCallback;
+        pub use self::callback_sync::CallbackType;
+        pub use self::callback_sync::MainCallback as MainFn;
+        pub use self::callback_sync::MainMutCallback as MainFnMut;
+        pub use self::callback_sync::OptCallback as OptFn;
+        pub use self::callback_sync::OptMutCallback as OptFnMut;
+        pub use self::callback_sync::PosCallback as PosFn;
+        pub use self::callback_sync::PosMutCallback as PosFnMut;
+        pub use self::callback_sync::SimpleMainCallback;
+        pub use self::callback_sync::SimpleMainMutCallback;
+        pub use self::callback_sync::SimpleOptCallback;
+        pub use self::callback_sync::SimpleOptMutCallback;
+        pub use self::callback_sync::SimplePosCallback;
+        pub use self::callback_sync::SimplePosMutCallback;
+    }
+    else {
+        mod callback;
+        pub use self::callback::Callback as OptCallback;
+        pub use self::callback::CallbackType;
+        pub use self::callback::MainCallback as MainFn;
+        pub use self::callback::MainMutCallback as MainFnMut;
+        pub use self::callback::OptCallback as OptFn;
+        pub use self::callback::OptMutCallback as OptFnMut;
+        pub use self::callback::PosCallback as PosFn;
+        pub use self::callback::PosMutCallback as PosFnMut;
+        pub use self::callback::SimpleMainCallback;
+        pub use self::callback::SimpleMainMutCallback;
+        pub use self::callback::SimpleOptCallback;
+        pub use self::callback::SimpleOptMutCallback;
+        pub use self::callback::SimplePosCallback;
+        pub use self::callback::SimplePosMutCallback;
+    }
+}
+
 pub use self::help::create_help_hint;
 pub use self::help::HelpInfo;
 pub use self::index::Index as OptIndex;
@@ -200,8 +222,59 @@ pub trait Help {
     fn get_help_info(&self) -> &HelpInfo;
 }
 
-/// The option trait.
-pub trait Opt:
-    Type + Identifier + Name + Callback + Alias + Optional + Value + Index + Help + Debug
-{
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        /// The option trait.
+        pub trait Opt:
+        Type + Identifier + Name + Callback + Alias + Optional + Value + Index + Help + Debug + Send + Sync
+        { }
+    }
+    else {
+        /// The option trait.
+        pub trait Opt:
+        Type + Identifier + Name + Callback + Alias + Optional + Value + Index + Help + Debug
+        { }
+    }
+}
+
+#[macro_export]
+macro_rules! simple_main_cb {
+    ($block:expr) => {
+        OptCallback::Main(Box::new(SimpleMainCallback::new($block)))
+    };
+}
+
+#[macro_export]
+macro_rules! simple_main_mut_cb {
+    ($block:expr) => {
+        OptCallback::MainMut(Box::new(SimpleMainMutCallback::new($block)))
+    };
+}
+
+#[macro_export]
+macro_rules! simple_pos_cb {
+    ($block:expr) => {
+        OptCallback::Pos(Box::new(SimplePosCallback::new($block)))
+    };
+}
+
+#[macro_export]
+macro_rules! simple_pos_mut_cb {
+    ($block:expr) => {
+        OptCallback::PosMut(Box::new(SimplePosMutCallback::new($block)))
+    };
+}
+
+#[macro_export]
+macro_rules! simple_opt_cb {
+    ($block:expr) => {
+        OptCallback::Opt(Box::new(SimpleOptCallback::new($block)))
+    };
+}
+
+#[macro_export]
+macro_rules! simple_opt_mut_cb {
+    ($block:expr) => {
+        OptCallback::OptMut(Box::new(SimpleOptMutCallback::new($block)))
+    };
 }

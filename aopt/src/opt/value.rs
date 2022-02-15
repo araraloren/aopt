@@ -2,6 +2,43 @@ use std::any::Any;
 use std::convert::From;
 use std::fmt::Debug;
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        pub trait AnyTrait : Any + Debug + Send + Sync {
+            fn as_any(&self) -> &dyn Any;
+
+            fn as_any_mut(&mut self) -> &mut dyn Any;
+        }
+
+        impl<T: Any + Debug + Send + Sync> AnyTrait for T {
+            fn as_any(&self) -> &dyn Any {
+                self
+            }
+
+            fn as_any_mut(&mut self) -> &mut dyn Any {
+                self
+            }
+        }
+    }
+    else {
+        pub trait AnyTrait: Any + Debug {
+            fn as_any(&self) -> &dyn Any;
+
+            fn as_any_mut(&mut self) -> &mut dyn Any;
+        }
+
+        impl<T: Any + Debug> AnyTrait for T {
+            fn as_any(&self) -> &dyn Any {
+                self
+            }
+
+            fn as_any_mut(&mut self) -> &mut dyn Any {
+                self
+            }
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum Value {
     Int(i64),
@@ -16,7 +53,7 @@ pub enum Value {
 
     Array(Vec<String>),
 
-    Any(Box<dyn Any>),
+    Any(Box<dyn AnyTrait>),
 
     Null,
 }
@@ -118,7 +155,7 @@ impl Default for Value {
 }
 
 impl Value {
-    pub fn from_any<T: Any>(t: Box<T>) -> Self {
+    pub fn from_any<T: AnyTrait>(t: Box<T>) -> Self {
         Self::Any(t)
     }
 
@@ -171,16 +208,16 @@ impl Value {
         }
     }
 
-    pub fn as_any(&self) -> Option<&Box<dyn Any>> {
+    pub fn as_any(&self) -> Option<&Box<dyn AnyTrait>> {
         match self {
             Self::Any(v) => Some(v),
             _ => None,
         }
     }
 
-    pub fn downcast_ref<T: Any>(&self) -> Option<&T> {
+    pub fn downcast_ref<T: AnyTrait>(&self) -> Option<&T> {
         match self {
-            Self::Any(v) => v.as_ref().downcast_ref::<T>(),
+            Self::Any(v) => v.as_ref().as_any().downcast_ref::<T>(),
             _ => None,
         }
     }
@@ -234,16 +271,16 @@ impl Value {
         }
     }
 
-    pub fn as_any_mut(&mut self) -> Option<&mut Box<dyn Any>> {
+    pub fn as_any_mut(&mut self) -> Option<&mut Box<dyn AnyTrait>> {
         match self {
             Self::Any(v) => Some(v),
             _ => None,
         }
     }
 
-    pub fn downcast_mut<T: Any>(&mut self) -> Option<&mut T> {
+    pub fn downcast_mut<T: AnyTrait>(&mut self) -> Option<&mut T> {
         match self {
-            Self::Any(v) => v.as_mut().downcast_mut::<T>(),
+            Self::Any(v) => v.as_mut().as_any_mut().downcast_mut::<T>(),
             _ => None,
         }
     }

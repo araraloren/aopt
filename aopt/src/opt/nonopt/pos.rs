@@ -28,6 +28,13 @@ pub struct PosOpt {
     help_info: HelpInfo,
 }
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        unsafe impl Send for PosOpt { }
+        unsafe impl Sync for PosOpt { }
+    }
+}
+
 impl TryFrom<CreateInfo> for PosOpt {
     type Error = Error;
 

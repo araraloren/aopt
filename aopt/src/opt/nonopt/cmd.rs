@@ -27,6 +27,13 @@ pub struct CmdOpt {
     help_info: HelpInfo,
 }
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        unsafe impl Send for CmdOpt { }
+        unsafe impl Sync for CmdOpt { }
+    }
+}
+
 impl TryFrom<CreateInfo> for CmdOpt {
     type Error = Error;
 

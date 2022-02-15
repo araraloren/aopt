@@ -32,6 +32,13 @@ pub struct IntOpt {
     help_info: HelpInfo,
 }
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        unsafe impl Send for IntOpt { }
+        unsafe impl Sync for IntOpt { }
+    }
+}
+
 impl TryFrom<CreateInfo> for IntOpt {
     type Error = Error;
 

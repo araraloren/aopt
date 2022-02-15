@@ -37,6 +37,13 @@ pub mod path {
         help_info: HelpInfo,
     }
 
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "sync")] {
+            unsafe impl Send for PathOpt { }
+            unsafe impl Sync for PathOpt { }
+        }
+    }
+
     impl TryFrom<CreateInfo> for PathOpt {
         type Error = Error;
 

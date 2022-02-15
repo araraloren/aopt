@@ -24,6 +24,13 @@ pub struct MainOpt {
     help_info: HelpInfo,
 }
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        unsafe impl Send for MainOpt { }
+        unsafe impl Sync for MainOpt { }
+    }
+}
+
 impl TryFrom<CreateInfo> for MainOpt {
     type Error = Error;
 

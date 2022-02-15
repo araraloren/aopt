@@ -21,12 +21,25 @@ pub use self::info::FilterInfo;
 pub use self::info::OptionInfo;
 pub use self::simple_set::SimpleSet;
 
-pub trait Creator: Debug {
-    fn get_type_name(&self) -> Ustr;
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        pub trait Creator: Debug + Send + Sync {
+            fn get_type_name(&self) -> Ustr;
 
-    fn is_support_deactivate_style(&self) -> bool;
+            fn is_support_deactivate_style(&self) -> bool;
 
-    fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>>;
+            fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>>;
+        }
+    }
+    else {
+        pub trait Creator: Debug {
+            fn get_type_name(&self) -> Ustr;
+
+            fn is_support_deactivate_style(&self) -> bool;
+
+            fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>>;
+        }
+    }
 }
 
 pub trait Set: Debug + PrefixSet + OptionSet + CreatorSet {}

@@ -34,6 +34,13 @@ pub struct BoolOpt {
     help_info: HelpInfo,
 }
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        unsafe impl Send for BoolOpt { }
+        unsafe impl Sync for BoolOpt { }
+    }
+}
+
 impl TryFrom<CreateInfo> for BoolOpt {
     type Error = Error;
 

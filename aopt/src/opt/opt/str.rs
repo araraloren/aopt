@@ -32,6 +32,13 @@ pub struct StrOpt {
     help_info: HelpInfo,
 }
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        unsafe impl Send for StrOpt { }
+        unsafe impl Sync for StrOpt { }
+    }
+}
+
 impl TryFrom<CreateInfo> for StrOpt {
     type Error = Error;
 
