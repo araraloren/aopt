@@ -1,5 +1,5 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::ops::DerefMut;
 
 use super::state::ParserState;
@@ -18,12 +18,50 @@ use crate::Result;
 use ustr::Ustr;
 
 #[derive(Debug, Default)]
+pub struct CallbackStore(pub HashMap<Uid, OptCallback>);
+
+impl Deref for CallbackStore {
+    type Target = HashMap<Uid, OptCallback>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for CallbackStore {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl CallbackStore {
+    pub fn add_callback(&mut self, uid: Uid, cb: OptCallback) {
+        self.0.insert(uid, cb);
+    }
+
+    pub fn get_callback(&self, uid: &Uid) -> Option<&OptCallback> {
+        self.0.get(uid)
+    }
+
+    pub fn get_callback_mut(&mut self, uid: &Uid) -> Option<&mut OptCallback> {
+        self.0.get_mut(uid)
+    }
+
+    pub fn for_each(&self, f: impl Fn(&Uid, &OptCallback) -> Result<bool>) -> Result<bool> {
+        for (uid, cb) in self.0.iter() {
+            f(uid, cb)?;
+        }
+        Ok(true)
+    }
+}
+
+#[derive(Debug, Default)]
 pub struct DefaultService {
     noa: Vec<Ustr>,
 
     subscriber_info: Vec<Box<dyn Info>>,
 
-    callback_info: HashMap<Uid, RefCell<OptCallback>>,
+    callback_store: CallbackStore,
 }
 
 impl DefaultService {
@@ -43,10 +81,11 @@ impl DefaultService {
         _invoke: bool,
     ) -> Result<Vec<ValueKeeper>> {
         let mut matched = true;
+        let subscriber_infos: Vec<Uid> =
+            self.subscriber_info.iter().map(|v| v.info_uid()).collect();
 
         debug!(?matcher, "process matcher in nonopt way: ");
-        for info in self.subscriber_info.iter() {
-            let uid = info.info_uid();
+        for uid in subscriber_infos {
             let ctx = matcher.process(uid, set).unwrap_or(None);
 
             if let Some(ctx) = ctx {
@@ -174,19 +213,21 @@ impl Service for DefaultService {
     }
 
     fn pre_check<S: Set>(&self, set: &S) -> Result<bool> {
-        for (uid, callback) in &self.callback_info {
+        self.callback_store.for_each(|uid, cb| {
             if let Some(opt) = set.get_opt(*uid) {
-                if !opt.is_accept_callback_type(callback.borrow().to_callback_type()) {
-                    return Err(Error::opt_unsupport_callback_type(
+                if !opt.is_accept_callback_type(cb.to_callback_type()) {
+                    Err(Error::opt_unsupport_callback_type(
                         opt.get_hint().as_ref(),
-                        &format!("{:?}", callback.borrow().to_callback_type()),
-                    ));
+                        &format!("{:?}", cb.to_callback_type()),
+                    ))
+                } else {
+                    Ok(true)
                 }
             } else {
                 warn!(%uid, "callback has unknow option uid");
+                Ok(true)
             }
-        }
-        Ok(true)
+        })
     }
 
     fn opt_check<S: Set>(&self, set: &S) -> Result<bool> {
@@ -298,15 +339,15 @@ impl Service for DefaultService {
     }
 
     fn invoke<S: Set>(
-        &self,
+        &mut self,
         uid: Uid,
         set: &mut S,
         noa_idx: usize,
         value: OptValue,
     ) -> Result<Option<OptValue>> {
-        if let Some(callback) = self.callback_info.get(&uid) {
+        if let Some(callback) = self.callback_store.get_callback_mut(&uid) {
             debug!("calling callback of option<{}>", uid);
-            match callback.borrow_mut().deref_mut() {
+            match callback {
                 OptCallback::Opt(cb) => cb.as_mut().call(uid, set, value),
                 OptCallback::OptMut(cb) => cb.as_mut().call(uid, set, value),
                 OptCallback::Pos(cb) => {
@@ -332,8 +373,8 @@ impl Service for DefaultService {
         }
     }
 
-    fn get_callback(&self) -> &HashMap<Uid, RefCell<OptCallback>> {
-        &self.callback_info
+    fn get_callback(&self) -> &CallbackStore {
+        &self.callback_store
     }
 
     fn get_subscriber_info<I: 'static + Info>(&self) -> &Vec<Box<dyn Info>> {
@@ -344,8 +385,8 @@ impl Service for DefaultService {
         &self.noa
     }
 
-    fn get_callback_mut(&mut self) -> &mut HashMap<Uid, RefCell<OptCallback>> {
-        &mut self.callback_info
+    fn get_callback_mut(&mut self) -> &mut CallbackStore {
+        &mut self.callback_store
     }
 
     fn get_subscriber_info_mut(&mut self) -> &mut Vec<Box<dyn Info>> {
@@ -358,7 +399,7 @@ impl Service for DefaultService {
 
     fn reset(&mut self) {
         self.subscriber_info.clear();
-        self.callback_info.clear();
+        self.callback_store.clear();
         self.noa.clear();
     }
 }

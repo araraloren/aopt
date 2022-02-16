@@ -1,6 +1,14 @@
 
 # Relase note
 
+## 0.5.4
+
+- make Service::invoke paramter self mutable
+
+- add a callback store type
+
+- remove callback api from SingleApp
+
 ## 0.5.3
 
 - change dyn Set to type parameter of Matcher

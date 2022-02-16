@@ -172,6 +172,9 @@ pub enum Callback {
     Null,
 }
 
+unsafe impl Send for Callback {}
+unsafe impl Sync for Callback {}
+
 impl Default for Callback {
     fn default() -> Self {
         Self::Null

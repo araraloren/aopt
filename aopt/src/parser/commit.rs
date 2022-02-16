@@ -5,7 +5,6 @@ use crate::set::Commit;
 use crate::set::CreateInfo;
 use crate::set::Set;
 use crate::uid::Uid;
-use std::cell::RefCell;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
@@ -48,7 +47,7 @@ impl<'a, 'b, S: Set, SS: Service> CallbackCommit<'a, 'b, S, SS> {
         let uid = self.set_commit.commit()?;
         self.service_ref
             .get_callback_mut()
-            .insert(uid, RefCell::new(std::mem::take(&mut self.callback)));
+            .add_callback(uid, std::mem::take(&mut self.callback));
         Ok(uid)
     }
 }

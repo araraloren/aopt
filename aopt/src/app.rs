@@ -1,5 +1,3 @@
-use std::cell::RefCell;
-use std::collections::HashMap;
 use std::future::Future;
 use std::ops::{Deref, DerefMut};
 
@@ -127,16 +125,6 @@ where
     /// Insert callback to hash map.
     pub fn add_callback(&mut self, uid: Uid, callback: OptCallback) {
         self.parser.add_callback(uid, callback);
-    }
-
-    /// Get the callback hash map reference.
-    pub fn get_callback(&self) -> &HashMap<Uid, RefCell<OptCallback>> {
-        self.parser.get_service().get_callback()
-    }
-
-    /// Get the callback hash map mutable reference.
-    pub fn get_callback_mut(&mut self) -> &mut HashMap<Uid, RefCell<OptCallback>> {
-        self.parser.get_service_mut().get_callback_mut()
     }
 
     /// Running function after parsing.

@@ -6,8 +6,6 @@ mod service;
 mod state;
 pub(crate) mod testutil;
 
-use std::cell::RefCell;
-use std::collections::HashMap;
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
 use ustr::Ustr;
@@ -25,6 +23,7 @@ pub use commit::CallbackCommit;
 pub use delay_policy::DelayPolicy;
 pub use forward_policy::ForwardPolicy;
 pub use pre_policy::PrePolicy;
+pub use service::CallbackStore;
 pub use service::DefaultService;
 pub use state::ParserState;
 
@@ -115,7 +114,7 @@ pub trait Service {
 
     /// Invoke callback connected with given [`Opt`](crate::opt::Opt).
     fn invoke<S: Set>(
-        &self,
+        &mut self,
         uid: Uid,
         set: &mut S,
         noa_idx: usize,
@@ -123,7 +122,7 @@ pub trait Service {
     ) -> Result<Option<OptValue>>;
 
     /// Return the callback map reference.
-    fn get_callback(&self) -> &HashMap<Uid, RefCell<OptCallback>>;
+    fn get_callback(&self) -> &CallbackStore;
 
     /// Return the subscriber info vector reference.
     fn get_subscriber_info<I: 'static + Info>(&self) -> &Vec<Box<dyn Info>>;
@@ -132,7 +131,7 @@ pub trait Service {
     fn get_noa(&self) -> &Vec<Ustr>;
 
     /// Return the callback map mutable reference.
-    fn get_callback_mut(&mut self) -> &mut HashMap<Uid, RefCell<OptCallback>>;
+    fn get_callback_mut(&mut self) -> &mut CallbackStore;
 
     /// Return the subscriber info vector mutable reference.
     fn get_subscriber_info_mut(&mut self) -> &mut Vec<Box<dyn Info>>;
@@ -334,7 +333,7 @@ where
     pub fn add_callback(&mut self, uid: Uid, callback: OptCallback) {
         self.get_service_mut()
             .get_callback_mut()
-            .insert(uid, RefCell::new(callback));
+            .add_callback(uid, callback);
     }
 
     pub fn parse(&mut self, iter: &mut dyn Iterator<Item = Argument>) -> Result<bool> {
@@ -506,7 +505,7 @@ where
     pub fn add_callback(&mut self, uid: Uid, callback: OptCallback) {
         self.get_service_mut()
             .get_callback_mut()
-            .insert(uid, RefCell::new(callback));
+            .add_callback(uid, callback);
     }
 
     pub fn parse(&mut self, iter: &mut dyn Iterator<Item = Argument>) -> Result<bool> {
