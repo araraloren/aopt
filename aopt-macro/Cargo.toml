@@ -1,6 +1,6 @@
 [package]
 name = "aopt-macro"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["araraloren <araraloren@gmail.com>"]
 edition = "2021"
 license = "MPL-2.0"

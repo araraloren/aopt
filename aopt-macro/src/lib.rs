@@ -59,7 +59,9 @@ pub fn getoptd(input: TokenStream) -> TokenStream {
         Expr::Reference(reference) => {
             if reference.mutability.is_some() {
                 quote! {
-                    #reference
+                    quote! {
+                        parsers.push(#reference);
+                    }
                 }
             } else {
                 syn::Error::new_spanned(reference, "need an instance or a mutable reference")
@@ -99,7 +101,7 @@ pub fn getopt(input: TokenStream) -> TokenStream {
         Expr::Reference(reference) => {
             if reference.mutability.is_some() {
                 quote! {
-                    #reference
+                    parsers.push(#reference);
                 }
             } else {
                 syn::Error::new_spanned(reference, "need an instance or a mutable reference")
