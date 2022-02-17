@@ -16,7 +16,7 @@ readme = "README.md"
 thiserror = "1.0.30"
 tracing = "0.1.29"
 ustr = "0.8.1"
-aopt-macro = { version = "0.0.2 ", path = "../aopt-macro" }
+aopt-macro = "0.0.3"
 cfg-if = "1.0.0"
 
 [features]

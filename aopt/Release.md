@@ -3,6 +3,10 @@
 
 ## 0.5.4
 
+- fix aopt-macro dependence
+
+- add sync feature
+
 - make Service::invoke paramter self mutable
 
 - add a callback store type
