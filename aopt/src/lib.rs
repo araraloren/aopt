@@ -1,3 +1,258 @@
+//! A flexible and typed getopt like command line tools for rust.
+//!
+//! ## Example
+//!
+//! ```rust
+//! use aopt::app::SingleApp;
+//! use aopt::prelude::*;
+//!
+//! #[async_std::main]
+//! async fn main() -> color_eyre::Result<()> {
+//!     tracing_subscriber::fmt::fmt()
+//!         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+//!         .init();
+//!     color_eyre::install()?;
+//!     let mut app = SingleApp::<SimpleSet, DefaultService, ForwardPolicy>::default();
+//!
+//!     app.set_name("test-app".into());
+//!     // add a new prefix `+` to app
+//!     app.add_prefix("+".into());
+//!     // add option `depth` with prefix `--` and type `i`
+//!     app.add_opt("--depth=i")?
+//!         .set_help("set the search depth of directory")
+//!         .commit()?;
+//!     // add option `source` with prefix `--` and type `a`
+//!     app.add_opt("--source=a!")?
+//!         .add_alias("+S")? // add an alias +S
+//!         .set_help("add search source directory")
+//!         .commit()?;
+//!     // add option deactivate style `r` with prefix `-` and type `b`
+//!     app.add_opt("-r=b/")?
+//!         .set_help("disable recurse directory option")
+//!         .commit()?;
+//!     app.add_opt_cb(
+//!         "--debug=b",
+//!         simple_opt_cb!(|_, _, value| {
+//!             if let Some(&v) = value.as_bool() {
+//!                 if v {
+//!                     println!("::: open debug mode");
+//!                 }
+//!             }
+//!             Ok(Some(value))
+//!         }),
+//!     )?
+//!     .commit()?;
+//!
+//!     app.run_async_mut(
+//!         [
+//!             "--depth=42",
+//!             "+S",
+//!             "./",
+//!             "+Sfoo/",
+//!             "--source",
+//!             "bar/",
+//!             "-/r",
+//!         ]
+//!         .into_iter(),
+//!         |ret, app| async move {
+//!             if ret {
+//!                 println!("APP: {}", app.get_name());
+//!                 for opt in app.opt_iter() {
+//!                     let value = opt.get_value();
+//!
+//!                     if value.is_null() {
+//!                         println!("OPTION: `{}` -> : not set", opt.get_name());
+//!                     } else {
+//!                         println!("OPTION: `{}` -> : {:?}", opt.get_name(), value);
+//!                     }
+//!                 }
+//!             }
+//!             Ok(())
+//!         },
+//!     )
+//!     .await?;
+//!
+//!     Ok(())
+//! }
+//! ```
+//! 
+//! The above code output:
+//! 
+//! ```txt
+//! APP: test-app
+//! OPTION: `depth` -> : Int(42)
+//! OPTION: `source` -> : Array(["./", "foo/", "bar/"])
+//! OPTION: `r` -> : Bool(false)
+//! OPTION: `debug` -> : not set
+//! ```
+//!
+//! ## Setup
+//!
+//! Add the following to your `Cargo.toml` file:
+//!
+//! ```toml
+//! [dependencies]
+//! aopt = "0.5"
+//! ```
+//! 
+//! ### Enable `sync` feature
+//! 
+//! If you want the utils of current crate implement [`Send`] and [`Sync`], you can enable `sync` feature. 
+//! 
+//! ```toml
+//! [dependencies]
+//! aopt = { version = "0.5", features = [ "sync" ] }
+//! ```
+//! 
+//! ## Feature
+//! 
+//! In following example, the parser type is `Parser<SimpleSet, DefaultService, ForwardPolicy>`.
+//! 
+//! ### Option
+//! 
+//! See the option create string help here: [`parse_option_str`](crate::opt::parse_option_str).
+//! 
+//! The implementation of option is [`Opt`](crate::opt::Opt). 
+//! It is matched prefix and name of option argument.
+//! 
+//! * Type support 
+//! 
+//! Common type options are built-in support. 
+//! Such as [`b`](crate::opt::opt::BoolOpt) and [`s`](crate::opt::opt::StrOpt).
+//! With typed option support, you can keep typed value, 
+//! and customize the behavior when the user set it. 
+//! And you can add new type if necessary.
+//! 
+//! #### Example
+//! 
+//! ```rust
+//! parser.add_opt("--foo=b")?.commit()?; // add option `foo` with type `b`
+//! parser.add_opt("--bar=s")?.commit()?; // add option `bar` with type `s`
+//! ```
+//! 
+//! #### Built-in type
+//! 
+//! [`b`](crate::opt::opt::BoolOpt) with value type [`bool`].
+//! 
+//! [`i`](crate::opt::opt::IntOpt) with value type [`i64`]. 
+//! 
+//! [`u`](crate::opt::opt::UintOpt) with value type [`u64`].
+//! 
+//! [`f`](crate::opt::opt::FltOpt) with value type [`f64`].
+//! 
+//! [`s`](crate::opt::opt::StrOpt) with value type [`String`].
+//! 
+//! [`a`](crate::opt::opt::ArrayOpt) with value type [`Vec`].
+//! 
+//! #### Any type option
+//! 
+//! [`PathOpt`](crate::opt::opt::PathOpt) is an exmaple option keep [`PathBuf`](std::path::PathBuf) inside.
+//! 
+//! * Callback support
+//! 
+//! The option can have associate [`OptCallback`](crate::opt::OptCallback).
+//! The [`Parser`] will call it if user set the option.
+//! 
+//! #### Example
+//! 
+//! ```rust
+//! parser.add_opt_cb("--foo=s", 
+//!     simple_opt_cb!(|uid, set, value| {
+//!     assert_eq!(value, OptValue::from("bar"));
+//!     Ok(Some(value))
+//! }))?.commit()?
+//! // user can set the option `foo` like: `app.exe --foo=bar`
+//! ```
+//! 
+//! * Prefix support
+//! 
+//! You can customize the prefix.
+//! 
+//! #### Example
+//! 
+//! ```rust
+//! parser.add_prefix("+".into()); // add support for prefix `+`
+//! parser.add_opt("+F=a")?.commit()?;
+//! // user can set the option `F` like: `app.exe +F foo +F bar`
+//! ```
+//! 
+//! * Alias support
+//! 
+//! You can have one or more alias.
+//! 
+//! #### Example
+//! 
+//! ```rust
+//! parser.add_opt("--foo=s")?.add_alias("-f")?.commit()?;
+//! // user can set the option `foo` like: `app.exe -f value`
+//! ```
+//! 
+//! * Value support
+//! 
+//! You can keep a type value in the option, and it can have a default value.
+//! 
+//! ### non-option
+//! 
+//! In implementation side, [`NonOpt`](crate::opt::NonOpt) is based on [`Opt`](crate::opt::Opt).
+//! Unlike the option matched with name and prefix of option argument.
+//! The non-option is matched with [`OptIndex`](crate::opt::OptIndex)(based on 1) or name of non-option argument.
+//! 
+//! * `p`: [`PosOpt`](crate::opt::nonopt::PosOpt)
+//! 
+//! The `PosOpt` will match the index, and call the callback with type [`PosFn`](crate::opt::PosFn).
+//! 
+//! #### Example
+//! 
+//! ```rust
+//! parser.add_opt("--foo=b")?.commit()?; // add option `foo` with type `b`
+//! parser.add_opt("--bar=s")?.commit()?; // add option `bar` with type `s`
+//! parser.add_opt("arg=p@1", 
+//!     simple_pos_cb!(|uid, set, arg, index, value| {
+//!     // will get `foo` inside value here
+//!     assert_eq!(value, OptValue::from("foo"));
+//!     Ok(Some(value))
+//! }))?.commit()?;
+//! // user can set the option like: `app.exe --foo --bar value foo`
+//! ```
+//! 
+//! * `c`: [`CmdOpt`](crate::opt::nonopt::CmdOpt)
+//! 
+//! The `CmdOpt` is an specify [`PosOpt`](crate::opt::nonopt::PosOpt) with [`Forward`](crate::opt::OptIndex::Forward)(1).
+//! It will match the name, and call the callback with type [`MainFn`](crate::opt::MainFn).
+//! 
+//! #### Example
+//! 
+//! ```rust
+//! parser.add_opt("--foo=b")?.commit()?; // add option `foo` with type `b`
+//! parser.add_opt("--bar=s")?.commit()?; // add option `bar` with type `s`
+//! parser.add_opt("show=c", 
+//!     simple_main_cb!(|uid, set, args, value| {
+//!     assert_eq!(args, &["show", "foo"]);
+//!     Ok(Some(value))
+//! }))?.commit()?;
+//! // user can set the option like: `app.exe show --foo --bar value foo`
+//! 
+//! ```
+//! * `m`: [`MainOpt`](crate::opt::nonopt::MainOpt)
+//! 
+//! The `MainOpt` will always be called with the callback type [`MainFn`](crate::opt::MainFn).
+//! 
+//! #### Example
+//! 
+//! ```rust
+//! parser.add_opt("--foo=b")?.commit()?; // add option `foo` with type `b`
+//! parser.add_opt("--bar=s")?.commit()?; // add option `bar` with type `s`
+//! parser.add_opt("default_main=m", 
+//!     simple_main_cb!(|uid, set, args, value| {
+//!     assert_eq!(args, &["foo", "bar"]);
+//!     Ok(Some(value))
+//! }))?.commit()?;
+//! // user can set the option like: `app.exe --foo --bar value foo bar`
+//! ```
+//! 
+//! ### Policy
+//! 
+//! TBD
 pub mod app;
 pub mod arg;
 pub mod ctx;
