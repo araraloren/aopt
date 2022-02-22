@@ -34,6 +34,10 @@ impl DelayPolicy {
         self.strict = strict;
     }
 
+    pub fn get_strict(&self) -> bool {
+        self.strict
+    }
+
     pub fn add_delay_value(&mut self, value: ValueKeeper) {
         self.value_keeper.push(value);
     }

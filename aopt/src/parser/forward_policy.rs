@@ -37,6 +37,10 @@ impl ForwardPolicy {
     pub fn set_strict(&mut self, strict: bool) {
         self.strict = strict;
     }
+
+    pub fn get_strict(&self) -> bool {
+        self.strict
+    }
 }
 
 impl<S: Set, SS: Service> Policy<S, SS> for ForwardPolicy {
