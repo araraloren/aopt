@@ -252,7 +252,70 @@
 //! 
 //! ### Policy
 //! 
-//! TBD
+//! [`Policy`] is responsible for analyze the input command argument,
+//! and match it with option in given [`Set`].
+//! 
+//! #### ForwardPolicy
+//! 
+//! Parsing step of [`ForwardPolicy`](crate::parser::ForwardPolicy):
+//! 
+//! * Go through the command line arguments.
+//! 
+//!     If the argument like an option.
+//! 
+//!     - Generate and process [`OptMatcher`](crate::proc::OptMatcher) of [`PSEqualWithValue`](crate::parser::ParserState::PSEqualWithValue)、[`PSArgument`](crate::parser::ParserState::PSArgument)、[`PSBoolean`](crate::parser::ParserState::PSBoolean)、[`PSMultipleOption`](crate::parser::ParserState::PSMultipleOption) and [`PSEmbeddedValue`](crate::parser::ParserState::PSEmbeddedValue). Invoke the callback if the any option matched.
+//! 
+//!     - Return an Err if the option not matched and the strict flag is true.
+//! 
+//!     Otherwise, add it to `NOA`(non-option argument) array.
+//! 
+//! * Generate and process [`NonOptMatcher`](crate::proc::NonOptMatcher) of [`PSNonCmd`](crate::parser::ParserState::PSNonCmd).
+//! 
+//! * Go through the `NOA` array, and generate and process [`NonOptMatcher`](crate::proc::NonOptMatcher) of [`PSNonPos`](crate::parser::ParserState::PSNonPos).
+//! 
+//! * Generate and process [`NonOptMatcher`](crate::proc::NonOptMatcher) of [`PSNonMain`](crate::parser::ParserState::PSNonMain).
+//! 
+//! #### PrePolicy
+//! 
+//! Parsing step of [`PrePolicy`](crate::parser::PrePolicy):
+//! 
+//! * Go through the command line arguments.
+//! 
+//!     If the argument like an option.
+//! 
+//!     - Generate and process [`OptMatcher`](crate::proc::OptMatcher) of [`PSEqualWithValue`](crate::parser::ParserState::PSEqualWithValue)、[`PSArgument`](crate::parser::ParserState::PSArgument)、[`PSBoolean`](crate::parser::ParserState::PSBoolean)、[`PSMultipleOption`](crate::parser::ParserState::PSMultipleOption) and [`PSEmbeddedValue`](crate::parser::ParserState::PSEmbeddedValue), call the callback if the any option matched.
+//! 
+//!     - __Add it to `NOA` array if the option not matched.__
+//! 
+//!     Otherwise, add it to `NOA`(non-option argument) array.
+//! 
+//! * Generate and process [`NonOptMatcher`](crate::proc::NonOptMatcher) of [`PSNonCmd`](crate::parser::ParserState::PSNonCmd).
+//! 
+//! * Go through the `NOA` array, and generate and process [`NonOptMatcher`](crate::proc::NonOptMatcher) of [`PSNonPos`](crate::parser::ParserState::PSNonPos).
+//! 
+//! * Generate and process [`NonOptMatcher`](crate::proc::NonOptMatcher) of [`PSNonMain`](crate::parser::ParserState::PSNonMain).
+//! 
+//! #### DelayPolicy
+//! 
+//! Parsing step of [`DelayPolicy`](crate::parser::DelayPolicy):
+//! 
+//! * Go through the command line arguments.
+//! 
+//!     If the argument like an option.
+//! 
+//!     - Generate and process [`OptMatcher`](crate::proc::OptMatcher) of [`PSDelayEqualWithValue`](crate::parser::ParserState::PSDelayEqualWithValue)、[`PSDelayArgument`](crate::parser::ParserState::PSDelayArgument)、[`PSDelayBoolean`](crate::parser::ParserState::PSDelayBoolean)、[`PSDelayMultipleOption`](crate::parser::ParserState::PSDelayMultipleOption) and [`PSDelayEmbeddedValue`](crate::parser::ParserState::PSDelayEmbeddedValue). Add the callback invoke context to [`ValueKeeper`](crate::parser::ValueKeeper) array if any option matched.
+//! 
+//!     - Return an Err if the option not matched and the strict flag is true.
+//! 
+//!     Otherwise, add it to `NOA`(non-option argument) array.
+//! 
+//! * Generate and process [`NonOptMatcher`](crate::proc::NonOptMatcher) of [`PSNonCmd`](crate::parser::ParserState::PSNonCmd).
+//! 
+//! * Go through the `NOA` array, and generate and process [`NonOptMatcher`](crate::proc::NonOptMatcher) of [`PSNonPos`](crate::parser::ParserState::PSNonPos).
+//! 
+//! * __Invoke the callback that saved in [`ValueKeeper`](crate::parser::ValueKeeper) array.__
+//! 
+//! * Generate and process [`NonOptMatcher`](crate::proc::NonOptMatcher) of [`PSNonMain`](crate::parser::ParserState::PSNonMain).
 pub mod app;
 pub mod arg;
 pub mod ctx;
