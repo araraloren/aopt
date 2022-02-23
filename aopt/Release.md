@@ -1,6 +1,12 @@
 
 # Relase note
 
+## 0.5.5
+
+- add get_strict api to policy
+
+- update documents
+
 ## 0.5.4
 
 - fix aopt-macro dependence

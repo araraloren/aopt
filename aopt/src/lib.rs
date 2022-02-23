@@ -106,7 +106,7 @@
 //! 
 //! ## Feature
 //! 
-//! In following example, the parser type is `Parser<SimpleSet, DefaultService, ForwardPolicy>`.
+//! In following example, the type of `parser` is `Parser<SimpleSet, DefaultService, ForwardPolicy>`.
 //! 
 //! ### Option
 //! 
@@ -303,7 +303,7 @@
 //! 
 //!     If the argument like an option.
 //! 
-//!     - Generate and process [`OptMatcher`](crate::proc::OptMatcher) of [`PSDelayEqualWithValue`](crate::parser::ParserState::PSDelayEqualWithValue)、[`PSDelayArgument`](crate::parser::ParserState::PSDelayArgument)、[`PSDelayBoolean`](crate::parser::ParserState::PSDelayBoolean)、[`PSDelayMultipleOption`](crate::parser::ParserState::PSDelayMultipleOption) and [`PSDelayEmbeddedValue`](crate::parser::ParserState::PSDelayEmbeddedValue). Add the callback invoke context to [`ValueKeeper`](crate::parser::ValueKeeper) array if any option matched.
+//!     - Generate and process [`OptMatcher`](crate::proc::OptMatcher) of [`PSDelayEqualWithValue`](crate::parser::ParserState::PSDelayEqualWithValue)、[`PSDelayArgument`](crate::parser::ParserState::PSDelayArgument)、[`PSDelayBoolean`](crate::parser::ParserState::PSDelayBoolean)、[`PSDelayMultipleOption`](crate::parser::ParserState::PSDelayMultipleOption) and [`PSDelayEmbeddedValue`](crate::parser::ParserState::PSDelayEmbeddedValue). __Add the callback invoke context to [`ValueKeeper`](crate::parser::ValueKeeper) array if any option matched__.
 //! 
 //!     - Return an Err if the option not matched and the strict flag is true.
 //! 

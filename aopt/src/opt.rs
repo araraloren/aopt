@@ -237,6 +237,14 @@ cfg_if::cfg_if! {
     }
 }
 
+/// Create a [`OptCallback::Main`](crate::opt::OptCallback::Main)(Box<[`SimpleMainCallback`](crate::opt::SimpleMainCallback)>) from given block.
+/// 
+/// ## Example
+/// 
+/// ```ignore
+/// // block type is `Fn(Uid, &dyn Set, &[&str], OptValue) -> Result<Option<OptValue>>`
+/// simple_main_cb!(|uid, set, args, value| { Ok(Some(value)) });
+/// ```
 #[macro_export]
 macro_rules! simple_main_cb {
     ($block:expr) => {
@@ -244,6 +252,14 @@ macro_rules! simple_main_cb {
     };
 }
 
+/// Create a [`OptCallback::MainMut`](crate::opt::OptCallback::MainMut)(Box<[`SimpleMainMutCallback`](crate::opt::SimpleMainMutCallback)>) from given block.
+/// 
+/// ## Example
+/// 
+/// ```ignore
+/// // block type is `FnMut(Uid, &mut dyn Set, &[&str], OptValue) -> Result<Option<OptValue>>`
+/// simple_main_mut_cb!(|uid, set, args, value| { Ok(Some(value)) });
+/// ```
 #[macro_export]
 macro_rules! simple_main_mut_cb {
     ($block:expr) => {
@@ -251,6 +267,14 @@ macro_rules! simple_main_mut_cb {
     };
 }
 
+/// Create a [`OptCallback::Pos`](crate::opt::OptCallback::Pos)(Box<[`SimplePosCallback`](crate::opt::SimplePosCallback)>) from given block.
+/// 
+/// ## Example
+/// 
+/// ```ignore
+/// // block type is `Fn(Uid, &dyn Set, &str, u64, OptValue) -> Result<Option<OptValue>>`
+/// simple_pos_cb!(|uid, set, arg, noa_i, value| { Ok(Some(value)) });
+/// ```
 #[macro_export]
 macro_rules! simple_pos_cb {
     ($block:expr) => {
@@ -258,6 +282,14 @@ macro_rules! simple_pos_cb {
     };
 }
 
+/// Create a [`OptCallback::PosMut`](crate::opt::OptCallback::PosMut)(Box<[`SimplePosMutCallback`](crate::opt::SimplePosMutCallback)>) from given block.
+/// 
+/// ## Example
+/// 
+/// ```ignore
+/// // block type is `FnMut(Uid, &mut dyn Set, &str, u64, OptValue) -> Result<Option<OptValue>>`
+/// simple_pos_mut_cb!(|uid, set, arg, noa_i, value| { Ok(Some(value)) });
+/// ```
 #[macro_export]
 macro_rules! simple_pos_mut_cb {
     ($block:expr) => {
@@ -265,6 +297,14 @@ macro_rules! simple_pos_mut_cb {
     };
 }
 
+/// Create a [`OptCallback::Opt`](crate::opt::OptCallback::Opt)(Box<[`SimpleOptCallback`](crate::opt::SimpleOptCallback)>) from given block.
+/// 
+/// ## Example
+/// 
+/// ```ignore
+/// // block type is `Fn(Uid, &dyn Set, OptValue) -> Result<Option<OptValue>>`
+/// simple_opt_cb!(|uid, set, value| { Ok(Some(value)) });
+/// ```
 #[macro_export]
 macro_rules! simple_opt_cb {
     ($block:expr) => {
@@ -272,6 +312,14 @@ macro_rules! simple_opt_cb {
     };
 }
 
+/// Create a [`OptCallback::OptMut`](crate::opt::OptCallback::OptMut)(Box<[`SimpleOptMutCallback`](crate::opt::SimpleOptMutCallback)>) from given block.
+/// 
+/// ## Example
+/// 
+/// ```ignore
+/// // block type is `FnMut(Uid, &mut dyn Set, OptValue) -> Result<Option<OptValue>>`
+/// simple_opt_mut_cb!(|uid, set, value| { Ok(Some(value)) });
+/// ```
 #[macro_export]
 macro_rules! simple_opt_mut_cb {
     ($block:expr) => {
