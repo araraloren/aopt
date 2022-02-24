@@ -39,6 +39,7 @@ cfg_if::cfg_if! {
     }
 }
 
+/// The value type of option.
 #[derive(Debug)]
 pub enum Value {
     Int(i64),
@@ -345,6 +346,7 @@ impl Value {
         *self = Self::Null;
     }
 
+    /// Append string if current value is [`Value::Array`].
     pub fn app_str(&mut self, string: String) -> &mut Self {
         match self {
             Self::Array(v) => {

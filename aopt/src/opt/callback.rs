@@ -10,7 +10,7 @@ use crate::uid::Uid;
 ///
 /// Since rust has a lot of restrict on reference.
 /// So we can't store block code into option itself of [`Set`](crate::set::Set).
-/// Instead we put the callback code into [`Parser`](crate::parser::Parser).
+/// Instead we put the callback code into [`Service`](crate::parser::Service).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum CallbackType {
     Opt,
@@ -105,14 +105,17 @@ impl<'a> From<&'a Callback> for CallbackType {
     }
 }
 
+/// Callback trait using for [`Callback::Opt`], associated callback type is [`CallbackType::Opt`].
 pub trait OptCallback: Debug {
     fn call(&mut self, uid: Uid, set: &dyn Set, value: OptValue) -> Result<Option<OptValue>>;
 }
 
+/// Callback trait using for [`Callback::OptMut`], associated callback type is [`CallbackType::OptMut`].
 pub trait OptMutCallback: Debug {
     fn call(&mut self, uid: Uid, set: &mut dyn Set, value: OptValue) -> Result<Option<OptValue>>;
 }
 
+/// Callback trait using for [`Callback::Pos`], associated callback type is [`CallbackType::Pos`].
 pub trait PosCallback: Debug {
     fn call(
         &mut self,
@@ -124,6 +127,7 @@ pub trait PosCallback: Debug {
     ) -> Result<Option<OptValue>>;
 }
 
+/// Callback trait using for [`Callback::PosMut`], associated callback type is [`CallbackType::PosMut`].
 pub trait PosMutCallback: Debug {
     fn call(
         &mut self,
@@ -135,6 +139,7 @@ pub trait PosMutCallback: Debug {
     ) -> Result<Option<OptValue>>;
 }
 
+/// Callback trait using for [`Callback::Main`], associated callback type is [`CallbackType::Main`].
 pub trait MainCallback: Debug {
     fn call(
         &mut self,
@@ -145,6 +150,7 @@ pub trait MainCallback: Debug {
     ) -> Result<Option<OptValue>>;
 }
 
+/// Callback trait using for [`Callback::MainMut`], associated callback type is [`CallbackType::MainMut`].
 pub trait MainMutCallback: Debug {
     fn call(
         &mut self,
@@ -155,6 +161,7 @@ pub trait MainMutCallback: Debug {
     ) -> Result<Option<OptValue>>;
 }
 
+/// The callback type hold block code.
 #[derive(Debug)]
 pub enum Callback {
     Opt(Box<dyn OptCallback>),
