@@ -18,35 +18,35 @@ cfg_if::cfg_if! {
         mod callback_sync;
         pub use self::callback_sync::Callback as OptCallback;
         pub use self::callback_sync::CallbackType;
-        pub use self::callback_sync::MainCallback as MainFn;
-        pub use self::callback_sync::MainMutCallback as MainFnMut;
-        pub use self::callback_sync::OptCallback as OptFn;
-        pub use self::callback_sync::OptMutCallback as OptFnMut;
-        pub use self::callback_sync::PosCallback as PosFn;
-        pub use self::callback_sync::PosMutCallback as PosFnMut;
-        pub use self::callback_sync::SimpleMainCallback;
-        pub use self::callback_sync::SimpleMainMutCallback;
-        pub use self::callback_sync::SimpleOptCallback;
-        pub use self::callback_sync::SimpleOptMutCallback;
-        pub use self::callback_sync::SimplePosCallback;
-        pub use self::callback_sync::SimplePosMutCallback;
+        pub use self::callback_sync::MainFn;
+        pub use self::callback_sync::MainFnMut;
+        pub use self::callback_sync::OptFn;
+        pub use self::callback_sync::OptFnMut;
+        pub use self::callback_sync::PosFn;
+        pub use self::callback_sync::PosFnMut;
+        pub use self::callback_sync::SimpleMainFn;
+        pub use self::callback_sync::SimpleMainFnMut;
+        pub use self::callback_sync::SimpleOptFn;
+        pub use self::callback_sync::SimpleOptFnMut;
+        pub use self::callback_sync::SimplePosFn;
+        pub use self::callback_sync::SimplePosFnMut;
     }
     else {
         mod callback;
         pub use self::callback::Callback as OptCallback;
         pub use self::callback::CallbackType;
-        pub use self::callback::MainCallback as MainFn;
-        pub use self::callback::MainMutCallback as MainFnMut;
-        pub use self::callback::OptCallback as OptFn;
-        pub use self::callback::OptMutCallback as OptFnMut;
-        pub use self::callback::PosCallback as PosFn;
-        pub use self::callback::PosMutCallback as PosFnMut;
-        pub use self::callback::SimpleMainCallback;
-        pub use self::callback::SimpleMainMutCallback;
-        pub use self::callback::SimpleOptCallback;
-        pub use self::callback::SimpleOptMutCallback;
-        pub use self::callback::SimplePosCallback;
-        pub use self::callback::SimplePosMutCallback;
+        pub use self::callback::MainFn;
+        pub use self::callback::MainFnMut;
+        pub use self::callback::OptFn;
+        pub use self::callback::OptFnMut;
+        pub use self::callback::PosFn;
+        pub use self::callback::PosFnMut;
+        pub use self::callback::SimpleMainFn;
+        pub use self::callback::SimpleMainFnMut;
+        pub use self::callback::SimpleOptFn;
+        pub use self::callback::SimpleOptFnMut;
+        pub use self::callback::SimplePosFn;
+        pub use self::callback::SimplePosFnMut;
     }
 }
 
@@ -237,7 +237,7 @@ cfg_if::cfg_if! {
     }
 }
 
-/// Create a [`OptCallback::Main`](crate::opt::OptCallback::Main)(Box<[`SimpleMainCallback`](crate::opt::SimpleMainCallback)>) from given block.
+/// Create a [`OptCallback::Main`](crate::opt::OptCallback::Main)(Box<[`SimpleMainFn`](crate::opt::SimpleMainFn)>) from given block.
 /// 
 /// ## Example
 /// 
@@ -248,11 +248,11 @@ cfg_if::cfg_if! {
 #[macro_export]
 macro_rules! simple_main_cb {
     ($block:expr) => {
-        OptCallback::Main(Box::new(SimpleMainCallback::new($block)))
+        OptCallback::Main(Box::new(SimpleMainFn::new($block)))
     };
 }
 
-/// Create a [`OptCallback::MainMut`](crate::opt::OptCallback::MainMut)(Box<[`SimpleMainMutCallback`](crate::opt::SimpleMainMutCallback)>) from given block.
+/// Create a [`OptCallback::MainMut`](crate::opt::OptCallback::MainMut)(Box<[`SimpleMainFnMut`](crate::opt::SimpleMainFnMut)>) from given block.
 /// 
 /// ## Example
 /// 
@@ -263,11 +263,11 @@ macro_rules! simple_main_cb {
 #[macro_export]
 macro_rules! simple_main_mut_cb {
     ($block:expr) => {
-        OptCallback::MainMut(Box::new(SimpleMainMutCallback::new($block)))
+        OptCallback::MainMut(Box::new(SimpleMainFnMut::new($block)))
     };
 }
 
-/// Create a [`OptCallback::Pos`](crate::opt::OptCallback::Pos)(Box<[`SimplePosCallback`](crate::opt::SimplePosCallback)>) from given block.
+/// Create a [`OptCallback::Pos`](crate::opt::OptCallback::Pos)(Box<[`SimplePosFn`](crate::opt::SimplePosFn)>) from given block.
 /// 
 /// ## Example
 /// 
@@ -278,11 +278,11 @@ macro_rules! simple_main_mut_cb {
 #[macro_export]
 macro_rules! simple_pos_cb {
     ($block:expr) => {
-        OptCallback::Pos(Box::new(SimplePosCallback::new($block)))
+        OptCallback::Pos(Box::new(SimplePosFn::new($block)))
     };
 }
 
-/// Create a [`OptCallback::PosMut`](crate::opt::OptCallback::PosMut)(Box<[`SimplePosMutCallback`](crate::opt::SimplePosMutCallback)>) from given block.
+/// Create a [`OptCallback::PosMut`](crate::opt::OptCallback::PosMut)(Box<[`SimplePosFnMut`](crate::opt::SimplePosFnMut)>) from given block.
 /// 
 /// ## Example
 /// 
@@ -293,11 +293,11 @@ macro_rules! simple_pos_cb {
 #[macro_export]
 macro_rules! simple_pos_mut_cb {
     ($block:expr) => {
-        OptCallback::PosMut(Box::new(SimplePosMutCallback::new($block)))
+        OptCallback::PosMut(Box::new(SimplePosFnMut::new($block)))
     };
 }
 
-/// Create a [`OptCallback::Opt`](crate::opt::OptCallback::Opt)(Box<[`SimpleOptCallback`](crate::opt::SimpleOptCallback)>) from given block.
+/// Create a [`OptCallback::Opt`](crate::opt::OptCallback::Opt)(Box<[`SimpleOptFn`](crate::opt::SimpleOptFn)>) from given block.
 /// 
 /// ## Example
 /// 
@@ -308,11 +308,11 @@ macro_rules! simple_pos_mut_cb {
 #[macro_export]
 macro_rules! simple_opt_cb {
     ($block:expr) => {
-        OptCallback::Opt(Box::new(SimpleOptCallback::new($block)))
+        OptCallback::Opt(Box::new(SimpleOptFn::new($block)))
     };
 }
 
-/// Create a [`OptCallback::OptMut`](crate::opt::OptCallback::OptMut)(Box<[`SimpleOptMutCallback`](crate::opt::SimpleOptMutCallback)>) from given block.
+/// Create a [`OptCallback::OptMut`](crate::opt::OptCallback::OptMut)(Box<[`SimpleOptFnMut`](crate::opt::SimpleOptFnMut)>) from given block.
 /// 
 /// ## Example
 /// 
@@ -323,6 +323,6 @@ macro_rules! simple_opt_cb {
 #[macro_export]
 macro_rules! simple_opt_mut_cb {
     ($block:expr) => {
-        OptCallback::OptMut(Box::new(SimpleOptMutCallback::new($block)))
+        OptCallback::OptMut(Box::new(SimpleOptFnMut::new($block)))
     };
 }

@@ -605,12 +605,12 @@ pub mod prelude {
     pub use crate::opt::OptValue;
     pub use crate::opt::Optional;
     pub use crate::opt::PosCreator;
-    pub use crate::opt::SimpleMainCallback;
-    pub use crate::opt::SimpleMainMutCallback;
-    pub use crate::opt::SimpleOptCallback;
-    pub use crate::opt::SimpleOptMutCallback;
-    pub use crate::opt::SimplePosCallback;
-    pub use crate::opt::SimplePosMutCallback;
+    pub use crate::opt::SimpleMainFn;
+    pub use crate::opt::SimpleMainFnMut;
+    pub use crate::opt::SimpleOptFn;
+    pub use crate::opt::SimpleOptFnMut;
+    pub use crate::opt::SimplePosFn;
+    pub use crate::opt::SimplePosFnMut;
     pub use crate::opt::StrCreator;
     pub use crate::opt::Type;
     pub use crate::opt::UintCreator;

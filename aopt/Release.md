@@ -7,6 +7,8 @@
 
 - update documents
 
+- change the name of Callback type
+
 ## 0.5.4
 
 - fix aopt-macro dependence
