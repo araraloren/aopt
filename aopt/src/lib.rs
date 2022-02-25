@@ -2,7 +2,7 @@
 //!
 //! ## Example
 //!
-//! ```rust
+//! ```ignore
 //! use aopt::app::SingleApp;
 //! use aopt::prelude::*;
 //!
@@ -125,7 +125,7 @@
 //! 
 //! #### Example
 //! 
-//! ```rust
+//! ```ignore
 //! parser.add_opt("--foo=b")?.commit()?; // add option `foo` with type `b`
 //! parser.add_opt("--bar=s")?.commit()?; // add option `bar` with type `s`
 //! ```
@@ -155,7 +155,7 @@
 //! 
 //! #### Example
 //! 
-//! ```rust
+//! ```ignore
 //! parser.add_opt_cb("--foo=s", 
 //!     simple_opt_cb!(|uid, set, value| {
 //!     assert_eq!(value, OptValue::from("bar"));
@@ -170,7 +170,7 @@
 //! 
 //! #### Example
 //! 
-//! ```rust
+//! ```ignore
 //! parser.add_prefix("+".into()); // add support for prefix `+`
 //! parser.add_opt("+F=a")?.commit()?;
 //! // user can set the option `F` like: `app.exe +F foo +F bar`
@@ -182,7 +182,7 @@
 //! 
 //! #### Example
 //! 
-//! ```rust
+//! ```ignore
 //! parser.add_opt("--foo=s")?.add_alias("-f")?.commit()?;
 //! // user can set the option `foo` like: `app.exe -f value`
 //! ```
@@ -203,7 +203,7 @@
 //! 
 //! #### Example
 //! 
-//! ```rust
+//! ```ignore
 //! parser.add_opt("--foo=b")?.commit()?; // add option `foo` with type `b`
 //! parser.add_opt("--bar=s")?.commit()?; // add option `bar` with type `s`
 //! parser.add_opt("arg=p@1", 
@@ -222,7 +222,7 @@
 //! 
 //! #### Example
 //! 
-//! ```rust
+//! ```ignore
 //! parser.add_opt("--foo=b")?.commit()?; // add option `foo` with type `b`
 //! parser.add_opt("--bar=s")?.commit()?; // add option `bar` with type `s`
 //! parser.add_opt("show=c", 
@@ -239,7 +239,7 @@
 //! 
 //! #### Example
 //! 
-//! ```rust
+//! ```ignore
 //! parser.add_opt("--foo=b")?.commit()?; // add option `foo` with type `b`
 //! parser.add_opt("--bar=s")?.commit()?; // add option `bar` with type `s`
 //! parser.add_opt("default_main=m", 

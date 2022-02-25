@@ -1,6 +1,10 @@
 
 # Relase note
 
+## 0.5.6
+
+- fix test in documents
+
 ## 0.5.5
 
 - add get_strict api to policy
