@@ -12,6 +12,7 @@ use crate::opt::OptValue;
 use crate::proc::Info;
 use crate::uid::Uid;
 
+/// Information using for create option.
 #[derive(Debug, Clone, Default)]
 pub struct CreateInfo {
     uid: Uid,
@@ -312,6 +313,7 @@ impl TryFrom<DataKeeper> for CreateInfo {
     }
 }
 
+/// Information using for find option in the [`Set`](crate::set::Set).
 #[derive(Debug, Clone, Default)]
 pub struct FilterInfo {
     deactivate_style: Option<bool>,

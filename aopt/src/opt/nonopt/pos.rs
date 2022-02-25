@@ -242,6 +242,7 @@ impl Help for PosOpt {
     }
 }
 
+/// [`Creator`] implementation of option type [`PosOpt`].
 #[derive(Debug, Default, Clone)]
 pub struct PosCreator;
 

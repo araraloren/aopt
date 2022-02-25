@@ -247,6 +247,7 @@ impl From<Box<dyn MainFnMut>> for Callback {
     }
 }
 
+/// Simple struct implemented [`OptFn`].
 pub struct SimpleOptFn<'a, T>(T, PhantomData<&'a T>)
 where
     T: 'a + Fn(Uid, &dyn Set, OptValue) -> Result<Option<OptValue>>;
@@ -280,6 +281,7 @@ where
     }
 }
 
+/// Simple struct implemented [`OptFnMut`].
 pub struct SimpleOptFnMut<'a, T>(T, PhantomData<&'a T>)
 where
     T: 'a + FnMut(Uid, &mut dyn Set, OptValue) -> Result<Option<OptValue>>;
@@ -313,6 +315,7 @@ where
     }
 }
 
+/// Simple struct implemented [`PosFn`].
 pub struct SimplePosFn<'a, T>(T, PhantomData<&'a T>)
 where
     T: 'a + Fn(Uid, &dyn Set, &str, u64, OptValue) -> Result<Option<OptValue>>;
@@ -353,6 +356,7 @@ where
     }
 }
 
+/// Simple struct implemented [`PosFnMut`].
 pub struct SimplePosFnMut<'a, T>(T, PhantomData<&'a T>)
 where
     T: 'a + FnMut(Uid, &mut dyn Set, &str, u64, OptValue) -> Result<Option<OptValue>>;
@@ -393,6 +397,7 @@ where
     }
 }
 
+/// Simple struct implemented [`MainFn`].
 pub struct SimpleMainFn<'a, T>(T, PhantomData<&'a T>)
 where
     T: 'a + Fn(Uid, &dyn Set, &[&str], OptValue) -> Result<Option<OptValue>>;
@@ -432,6 +437,7 @@ where
     }
 }
 
+/// Simple struct implemented [`MainFnMut`].
 pub struct SimpleMainFnMut<'a, T>(T, PhantomData<&'a T>)
 where
     T: 'a + FnMut(Uid, &mut dyn Set, &[&str], OptValue) -> Result<Option<OptValue>>;

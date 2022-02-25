@@ -264,6 +264,7 @@ impl Help for BoolOpt {
     }
 }
 
+/// [`Creator`] implementation of option type [`BoolOpt`].
 #[derive(Debug, Default, Clone)]
 pub struct BoolCreator;
 

@@ -225,6 +225,7 @@ impl Help for MainOpt {
     }
 }
 
+/// [`Creator`] implementation of option type [`MainOpt`].
 #[derive(Debug, Default, Clone)]
 pub struct MainCreator;
 

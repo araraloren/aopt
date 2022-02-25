@@ -23,6 +23,7 @@ pub use self::simple_set::SimpleSet;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "sync")] {
+        /// Trait using for create [`Opt`] with given [`CreateInfo`].
         pub trait Creator: Debug + Send + Sync {
             fn get_type_name(&self) -> Ustr;
 
@@ -32,6 +33,7 @@ cfg_if::cfg_if! {
         }
     }
     else {
+        /// Trait using for create [`Opt`] with given [`CreateInfo`].
         pub trait Creator: Debug {
             fn get_type_name(&self) -> Ustr;
 

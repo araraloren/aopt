@@ -263,6 +263,7 @@ impl Help for FltOpt {
     }
 }
 
+/// [`Creator`] implementation of option type [`FltOpt`].
 #[derive(Debug, Default, Clone)]
 pub struct FltCreator;
 

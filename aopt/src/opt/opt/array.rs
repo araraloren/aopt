@@ -272,6 +272,7 @@ impl Help for ArrayOpt {
     }
 }
 
+/// [`Creator`] implementation of option type [`ArrayOpt`].
 #[derive(Debug, Default, Clone)]
 pub struct ArrayCreator;
 

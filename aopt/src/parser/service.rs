@@ -17,6 +17,7 @@ use crate::Error;
 use crate::Result;
 use ustr::Ustr;
 
+/// Simple wrapper of `HashMap<Uid, OptCallback>`.
 #[derive(Debug, Default)]
 pub struct CallbackStore(pub HashMap<Uid, OptCallback>);
 
@@ -55,6 +56,7 @@ impl CallbackStore {
     }
 }
 
+/// Simple implementation of [`Service`].
 #[derive(Debug, Default)]
 pub struct DefaultService {
     noa: Vec<Ustr>,

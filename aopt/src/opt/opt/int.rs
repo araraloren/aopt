@@ -263,6 +263,7 @@ impl Help for IntOpt {
     }
 }
 
+/// [`Creator`] implementation of option type [`IntOpt`].
 #[derive(Debug, Default, Clone)]
 pub struct IntCreator;
 

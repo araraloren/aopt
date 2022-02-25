@@ -10,7 +10,7 @@ use crate::uid::Uid;
 ///
 /// Since rust has a lot of restrict on reference.
 /// So we can't store block code into option itself of [`Set`](crate::set::Set).
-/// Instead we put the callback code into [`Parser`](crate::parser::Parser).
+/// Instead we put the callback code into [`Service`](crate::parser::Service).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum CallbackType {
     Opt,
@@ -105,14 +105,17 @@ impl<'a> From<&'a Callback> for CallbackType {
     }
 }
 
+/// Callback trait using for [`Callback::Opt`], associated callback type is [`CallbackType::Opt`].
 pub trait OptFn: Debug + Send + Sync {
     fn call(&mut self, uid: Uid, set: &dyn Set, value: OptValue) -> Result<Option<OptValue>>;
 }
 
+/// Callback trait using for [`Callback::OptMut`], associated callback type is [`CallbackType::OptMut`].
 pub trait OptFnMut: Debug + Send + Sync {
     fn call(&mut self, uid: Uid, set: &mut dyn Set, value: OptValue) -> Result<Option<OptValue>>;
 }
 
+/// Callback trait using for [`Callback::Pos`], associated callback type is [`CallbackType::Pos`].
 pub trait PosFn: Debug + Send + Sync {
     fn call(
         &mut self,
@@ -124,6 +127,7 @@ pub trait PosFn: Debug + Send + Sync {
     ) -> Result<Option<OptValue>>;
 }
 
+/// Callback trait using for [`Callback::PosMut`], associated callback type is [`CallbackType::PosMut`].
 pub trait PosFnMut: Debug + Send + Sync {
     fn call(
         &mut self,
@@ -135,6 +139,7 @@ pub trait PosFnMut: Debug + Send + Sync {
     ) -> Result<Option<OptValue>>;
 }
 
+/// Callback trait using for [`Callback::Main`], associated callback type is [`CallbackType::Main`].
 pub trait MainFn: Debug + Send + Sync {
     fn call(
         &mut self,
@@ -145,6 +150,7 @@ pub trait MainFn: Debug + Send + Sync {
     ) -> Result<Option<OptValue>>;
 }
 
+/// Callback trait using for [`Callback::MainMut`], associated callback type is [`CallbackType::MainMut`].
 pub trait MainFnMut: Debug + Send + Sync {
     fn call(
         &mut self,
@@ -155,6 +161,7 @@ pub trait MainFnMut: Debug + Send + Sync {
     ) -> Result<Option<OptValue>>;
 }
 
+/// The callback type hold block code.
 #[derive(Debug)]
 pub enum Callback {
     Opt(Box<dyn OptFn>),
@@ -243,6 +250,7 @@ impl From<Box<dyn MainFnMut>> for Callback {
     }
 }
 
+/// Simple struct implemented [`OptFn`].
 pub struct SimpleOptFn<'a, T>(T, PhantomData<&'a T>)
 where
     T: 'a + Fn(Uid, &dyn Set, OptValue) -> Result<Option<OptValue>> + Send + Sync;
@@ -276,6 +284,7 @@ where
     }
 }
 
+/// Simple struct implemented [`OptFnMut`].
 pub struct SimpleOptFnMut<'a, T>(T, PhantomData<&'a T>)
 where
     T: 'a + FnMut(Uid, &mut dyn Set, OptValue) -> Result<Option<OptValue>> + Send + Sync;
@@ -309,6 +318,7 @@ where
     }
 }
 
+/// Simple struct implemented [`PosFn`].
 pub struct SimplePosFn<'a, T>(T, PhantomData<&'a T>)
 where
     T: 'a + Fn(Uid, &dyn Set, &str, u64, OptValue) -> Result<Option<OptValue>> + Send + Sync;
@@ -349,6 +359,7 @@ where
     }
 }
 
+/// Simple struct implemented [`PosFnMut`].
 pub struct SimplePosFnMut<'a, T>(T, PhantomData<&'a T>)
 where
     T: 'a + FnMut(Uid, &mut dyn Set, &str, u64, OptValue) -> Result<Option<OptValue>> + Send + Sync;
@@ -389,6 +400,7 @@ where
     }
 }
 
+/// Simple struct implemented [`MainFn`].
 pub struct SimpleMainFn<'a, T>(T, PhantomData<&'a T>)
 where
     T: 'a + Fn(Uid, &dyn Set, &[&str], OptValue) -> Result<Option<OptValue>> + Send + Sync;
@@ -428,6 +440,7 @@ where
     }
 }
 
+/// Simple struct implemented [`MainFnMut`].
 pub struct SimpleMainFnMut<'a, T>(T, PhantomData<&'a T>)
 where
     T: 'a + FnMut(Uid, &mut dyn Set, &[&str], OptValue) -> Result<Option<OptValue>> + Send + Sync;

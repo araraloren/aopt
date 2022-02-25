@@ -261,6 +261,7 @@ impl Help for StrOpt {
     }
 }
 
+/// [`Creator`] implementation of option type [`StrOpt`].
 #[derive(Debug, Default, Clone)]
 pub struct StrCreator;
 

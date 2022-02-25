@@ -263,6 +263,7 @@ impl Help for UintOpt {
     }
 }
 
+/// [`Creator`] implementation of option type [`UintOpt`].
 #[derive(Debug, Default, Clone)]
 pub struct UintCreator;
 

@@ -235,6 +235,7 @@ impl Help for CmdOpt {
     }
 }
 
+/// [`Creator`] implementation of option type [`CmdOpt`].
 #[derive(Debug, Default, Clone)]
 pub struct CmdCreator;
 
