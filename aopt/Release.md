@@ -1,6 +1,10 @@
 
 # Relase note
 
+## 0.5.7
+
+- Change the alias hint character
+
 ## 0.5.6
 
 - fix test in documents

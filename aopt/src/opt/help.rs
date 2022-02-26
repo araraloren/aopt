@@ -93,37 +93,43 @@ impl<'a> From<&'a mut CreateInfo> for HelpInfo {
 
 /// The help function using for generate help hint of option.
 pub fn create_help_hint(ci: &CreateInfo) -> Ustr {
-    let mut ret = String::default();
+    let mut names = vec![ String::default(), ];
 
     // adding prefix
     if let Some(prefix) = ci.get_prefix() {
-        ret += prefix.as_ref();
+        names[0] += prefix.as_ref();
     }
     // adding deactivate style
     if ci.get_support_deactivate_style() {
-        ret += "/";
+        names[0] += "/";
     }
     // adding name
-    ret += ci.get_name().as_ref();
-    // adding index
-    let index_string = ci.get_index().to_string();
-    if !index_string.is_empty() {
-        ret += &format!("@{}", index_string);
-    }
+    names[0] += ci.get_name().as_ref();
+    
     // adding alias
     for alias in ci.get_alias() {
         if ci.get_support_deactivate_style() {
             for prefix in ci.get_support_prefix() {
                 if alias.starts_with(prefix.as_str()) {
                     if let Some(name) = alias.get(prefix.len()..alias.len()) {
-                        ret += &format!("|{}/{}", prefix, name);
+                        names.push(format!("{}/{}", prefix, name));
                         break;
                     }
                 }
             }
         } else {
-            ret += &format!("|{}", alias);
+            names.push(format!("{}", alias));
         }
+    }
+
+    names.sort_by(|v1, v2| v1.len().cmp(&v2.len()));
+
+    let mut ret = names.join(",");
+
+    // adding index
+    let index_string = ci.get_index().to_string();
+    if !index_string.is_empty() {
+        ret += &format!("@{}", index_string);
     }
 
     ret.into()
