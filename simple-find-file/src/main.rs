@@ -237,6 +237,7 @@ fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout, DefaultFormat> {
                 opt.get_name(),
                 opt.get_hint(),
                 opt.get_help(),
+                opt.get_type_name(),
                 opt.get_optional(),
             ));
         }
@@ -245,7 +246,7 @@ fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout, DefaultFormat> {
     global.set_header(gstr(
         "Search the given directory, show the file match the filter conditions",
     ));
-    global.set_footer(gstr("Create by araraloren, V0.2.0"));
+    global.set_footer(gstr(&format!("Create by araraloren {}", env!("CARGO_PKG_VERSION"))));
 
     help
 }

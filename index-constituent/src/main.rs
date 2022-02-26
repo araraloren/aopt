@@ -416,7 +416,7 @@ fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout, DefaultFormat> {
 
     help.set_name("index".into());
 
-    let version = gstr("Create by araraloren, V0.1.0");
+    let version = gstr(&format!("Create by araraloren {}", env!("CARGO_PKG_VERSION")));
     let global = help.store.get_global_mut();
 
     global.set_header(gstr("Search and list index constituents"));
@@ -447,6 +447,7 @@ fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout, DefaultFormat> {
                         opt.get_name(),
                         opt.get_hint(),
                         opt.get_help(),
+                        opt.get_type_name(),
                         opt.get_optional(),
                     ));
                 }

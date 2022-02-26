@@ -1,6 +1,6 @@
 [package]
 name = "index"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 license = "MPL-2.0"
 description = "Example - simple spyder get index constituents"
@@ -10,8 +10,8 @@ categories = ["command-line-interface", "spyder"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aopt = {version = "0.5.3", path = "../aopt" }
-aopt-help = { version = "0.2.5", path = "../aopt-help" }
+aopt = { path = "../aopt" }
+aopt-help = { path = "../aopt-help" }
 tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }
 color-eyre = "0.5.11"
 reqwest = { version = "0.11.6", features = ["json", "gzip", "cookies"] }
