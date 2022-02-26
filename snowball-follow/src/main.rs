@@ -409,7 +409,10 @@ fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout, DefaultFormat> {
     }
 
     global.set_header(gstr("Get the follow people number in https://xueqiu.com/"));
-    global.set_footer(gstr(&format!("Create by araraloren {}", env!("CARGO_PKG_VERSION"))));
+    global.set_footer(gstr(&format!(
+        "Create by araraloren {}",
+        env!("CARGO_PKG_VERSION")
+    )));
 
     help
 }

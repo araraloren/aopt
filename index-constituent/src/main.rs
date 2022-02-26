@@ -416,7 +416,10 @@ fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout, DefaultFormat> {
 
     help.set_name("index".into());
 
-    let version = gstr(&format!("Create by araraloren {}", env!("CARGO_PKG_VERSION")));
+    let version = gstr(&format!(
+        "Create by araraloren {}",
+        env!("CARGO_PKG_VERSION")
+    ));
     let global = help.store.get_global_mut();
 
     global.set_header(gstr("Search and list index constituents"));

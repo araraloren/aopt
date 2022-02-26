@@ -246,7 +246,10 @@ fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout, DefaultFormat> {
     global.set_header(gstr(
         "Search the given directory, show the file match the filter conditions",
     ));
-    global.set_footer(gstr(&format!("Create by araraloren {}", env!("CARGO_PKG_VERSION"))));
+    global.set_footer(gstr(&format!(
+        "Create by araraloren {}",
+        env!("CARGO_PKG_VERSION")
+    )));
 
     help
 }

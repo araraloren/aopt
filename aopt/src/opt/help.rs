@@ -93,7 +93,7 @@ impl<'a> From<&'a mut CreateInfo> for HelpInfo {
 
 /// The help function using for generate help hint of option.
 pub fn create_help_hint(ci: &CreateInfo) -> Ustr {
-    let mut names = vec![ String::default(), ];
+    let mut names = vec![String::default()];
 
     // adding prefix
     if let Some(prefix) = ci.get_prefix() {
@@ -105,7 +105,7 @@ pub fn create_help_hint(ci: &CreateInfo) -> Ustr {
     }
     // adding name
     names[0] += ci.get_name().as_ref();
-    
+
     // adding alias
     for alias in ci.get_alias() {
         if ci.get_support_deactivate_style() {
