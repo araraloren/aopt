@@ -13,49 +13,57 @@ fn main() {
 
         global.add_opt(OptStore::new(
             "tempfile".into(),
-            "-t|--temp=s".into(),
+            "-t|--temp".into(),
+            "str".into(),
             "Set tempoary file name".into(),
             true,
         ));
         global.add_opt(OptStore::new(
             "tool".into(),
-            "--tool=s".into(),
+            "--tool".into(),
+            "str".into(),
             "Set fetch tool name".into(),
             true,
         ));
         global.add_opt(OptStore::new(
             "encoding".into(),
-            "-e|--encoding=s".into(),
+            "-e|--encoding".into(),
+            "str".into(),
             "Set webpage encoding".into(),
             true,
         ));
         global.add_opt(OptStore::new(
             "beg".into(),
-            "-b|--beg-index=i".into(),
+            "-b|--beg-index".into(),
+            "int".into(),
             "Set begin index".into(),
             true,
         ));
         global.add_opt(OptStore::new(
             "end".into(),
-            "-e|--end-index=i".into(),
+            "-e|--end-index".into(),
+            "int".into(),
             "Set end index".into(),
             true,
         ));
         global.add_opt(OptStore::new(
             "type".into(),
-            "--type=s".into(),
+            "--type".into(),
+            "str".into(),
             "Set webpage type".into(),
             true,
         ));
         global.add_opt(OptStore::new(
             "output".into(),
-            "-o|--output=s".into(),
+            "-o|--output".into(),
+            "str".into(),
             "Set output directory".into(),
             true,
         ));
         global.add_opt(OptStore::new(
             "extension".into(),
-            "-e|--extension=s".into(),
+            "-e|--extension".into(),
+            "str".into(),
             "Set output file extension".into(),
             true,
         ));
@@ -87,19 +95,22 @@ fn main() {
         ));
         store.add_opt(OptStore::new(
             "O".into(),
-            "-O|--optimize=i".into(),
+            "-O|--optimize".into(),
+            "int".into(),
             "Set optimization level".into(),
             true,
         ));
         store.add_opt(OptStore::new(
             "L".into(),
-            "-L|--link=s".into(),
+            "-L|--link".into(),
+            "str".into(),
             "Add link library".into(),
             true,
         ));
         store.add_opt(OptStore::new(
             "S".into(),
-            "-S=b".into(),
+            "-S".into(),
+            "bool".into(),
             "Show assembly output".into(),
             true,
         ));
@@ -123,19 +134,22 @@ fn main() {
         ));
         store.add_opt(OptStore::new(
             "O".into(),
-            "-O|--optimize=i".into(),
+            "-O|--optimize".into(),
+            "int".into(),
             "Set optimization level".into(),
             true,
         ));
         store.add_opt(OptStore::new(
             "L".into(),
-            "-L|--link=s".into(),
+            "-L|--link".into(),
+            "str".into(),
             "Add link library".into(),
             true,
         ));
         store.add_opt(OptStore::new(
             "S".into(),
-            "-S=b".into(),
+            "-S".into(),
+            "bool".into(),
             "Show assembly output".into(),
             true,
         ));
@@ -159,19 +173,22 @@ fn main() {
         ));
         store.add_opt(OptStore::new(
             "O".into(),
-            "-O|--optimize=i".into(),
+            "-O|--optimize".into(),
+            "int".into(),
             "Set optimization level".into(),
             true,
         ));
         store.add_opt(OptStore::new(
             "L".into(),
-            "-L|--link=s".into(),
+            "-L|--link".into(),
+            "str".into(),
             "Add link library".into(),
             true,
         ));
         store.add_opt(OptStore::new(
             "S".into(),
-            "-S=b".into(),
+            "-S".into(),
+            "bool".into(),
             "Show assembly output".into(),
             true,
         ));
@@ -195,19 +212,22 @@ fn main() {
         ));
         store.add_opt(OptStore::new(
             "O".into(),
-            "-O|--optimize=i".into(),
+            "-O|--optimize".into(),
+            "int".into(),
             "Set optimization level".into(),
             true,
         ));
         store.add_opt(OptStore::new(
             "L".into(),
-            "-L|--link=s".into(),
+            "-L|--link".into(),
+            "str".into(),
             "Add link library".into(),
             true,
         ));
         store.add_opt(OptStore::new(
             "S".into(),
-            "-S=b".into(),
+            "-S".into(),
+            "bool".into(),
             "Show assembly output".into(),
             true,
         ));
@@ -231,19 +251,22 @@ fn main() {
         ));
         store.add_opt(OptStore::new(
             "O".into(),
-            "-O|--optimize=i".into(),
+            "-O|--optimize".into(),
+            "int".into(),
             "Set optimization level".into(),
             true,
         ));
         store.add_opt(OptStore::new(
             "L".into(),
-            "-L|--link=s".into(),
+            "-L|--link".into(),
+            "str".into(),
             "Add link library".into(),
             true,
         ));
         store.add_opt(OptStore::new(
             "S".into(),
-            "-S=b".into(),
+            "-S".into(),
+            "bool".into(),
             "Show assembly output".into(),
             true,
         ));

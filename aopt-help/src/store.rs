@@ -317,15 +317,18 @@ pub struct OptStore {
 
     help: Ustr,
 
+    type_name: Ustr,
+
     optional: bool,
 }
 
 impl OptStore {
-    pub fn new(name: Ustr, hint: Ustr, help: Ustr, optional: bool) -> Self {
+    pub fn new(name: Ustr, hint: Ustr, help: Ustr, type_name: Ustr, optional: bool) -> Self {
         Self {
             name,
             hint,
             help,
+            type_name,
             optional,
         }
     }
@@ -345,6 +348,11 @@ impl OptStore {
         self
     }
 
+    pub fn set_type_name(&mut self, type_name: Ustr) -> &mut Self {
+        self.type_name = type_name;
+        self
+    }
+
     pub fn set_optional(&mut self, optional: bool) -> &mut Self {
         self.optional = optional;
         self
@@ -360,6 +368,10 @@ impl OptStore {
 
     pub fn get_help(&self) -> &Ustr {
         &self.help
+    }
+
+    pub fn get_type_name(&self) -> &Ustr {
+        &self.type_name
     }
 
     pub fn get_optional(&self) -> bool {

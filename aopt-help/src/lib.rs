@@ -377,6 +377,7 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
         for opt_store in cmd_store.opt_iter() {
             opt_info.push(vec![
                 opt_store.get_hint().as_ref(),
+                opt_store.get_type_name().as_ref(),
                 opt_store.get_help().as_ref(),
             ]);
         }
