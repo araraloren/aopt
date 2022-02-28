@@ -7,6 +7,8 @@
 
 - fix pos force required error display
 
+- fix callback commit issue caused by *DerefMut*
+
 ## 0.5.6
 
 - fix test in documents
