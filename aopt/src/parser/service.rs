@@ -328,7 +328,7 @@ impl Service for DefaultService {
                 valid = pos_valid;
             }
             if !valid {
-                return Err(Error::sp_pos_force_require(*index, names.join(" | ")));
+                return Err(Error::sp_pos_force_require(names.join(" | ")));
             }
             names.clear();
         }

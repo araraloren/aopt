@@ -58,13 +58,13 @@ impl Display for ErrorStr {
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("Argument error: `{0}`")]
+    #[error("Argument error: {0}")]
     FromArgumentError(#[from] ArgumentError),
 
-    #[error("Construct error: `{0}`")]
+    #[error("Construct error: {0}")]
     FromConstrutError(#[from] ConstructError),
 
-    #[error("Special error: `{0}`")]
+    #[error("Special error: {0}")]
     FromSpecialError(#[from] SpecialError),
 
     #[error("{0}")]
@@ -200,8 +200,8 @@ impl Error {
     }
 
     /// Create SpecialError::POSForceRequired error
-    pub fn sp_pos_force_require<T: Into<ErrorStr>>(p: u64, t: T) -> Self {
-        SpecialError::POSForceRequired(p, t.into()).into()
+    pub fn sp_pos_force_require<T: Into<ErrorStr>>(t: T) -> Self {
+        SpecialError::POSForceRequired(t.into()).into()
     }
 
     /// Create SpecialError::InvalidOptionName error
@@ -303,8 +303,8 @@ pub enum SpecialError {
     #[error("Invalid value for option `{0}`")]
     InvalidArgumentForOption(ErrorStr),
 
-    #[error("POS `{1} @{0}` is force required")]
-    POSForceRequired(u64, ErrorStr),
+    #[error("POS `{0}` is force required")]
+    POSForceRequired(ErrorStr),
 
     #[error("Invalid option name: `{0}`")]
     InvalidOptionName(ErrorStr),

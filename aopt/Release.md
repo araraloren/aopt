@@ -3,7 +3,9 @@
 
 ## 0.5.7
 
-- Change the alias hint character
+- change the alias hint character
+
+- fix pos force required error display
 
 ## 0.5.6
 
