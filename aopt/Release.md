@@ -1,6 +1,12 @@
 
 # Relase note
 
+## 0.5.8
+
+- update documents
+
+- add some api to OptValue
+
 ## 0.5.7
 
 - change the alias hint character

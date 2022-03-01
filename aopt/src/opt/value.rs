@@ -356,6 +356,39 @@ impl Value {
         }
         self
     }
+
+    /// Append strings of other value if current value is [`Value::Array`].
+    pub fn merge(&mut self, other: &Self) -> &mut Self {
+        match self {
+            Self::Array(v) => {
+                if let Some(ov) = other.as_vec() {
+                    for item in ov {
+                        v.push(item.clone());
+                    }
+                }
+            }
+            _ => {}
+        }
+        self
+    }
+
+    /// Append strings of other value if current value is [`Value::Array`].
+    ///
+    /// The function will take ownership of strings in other value.
+    pub fn merge_mut(&mut self, other: &mut Self) -> &mut Self {
+        match self {
+            Self::Array(v) => {
+                if let Some(ov) = other.as_vec_mut() {
+                    let moved_ov = std::mem::take(ov);
+                    for item in moved_ov {
+                        v.push(item);
+                    }
+                }
+            }
+            _ => {}
+        }
+        self
+    }
 }
 
 impl Clone for Value {

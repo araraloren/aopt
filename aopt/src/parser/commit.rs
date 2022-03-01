@@ -11,7 +11,6 @@ use crate::uid::Uid;
 
 use ustr::Ustr;
 
-/// Simple wrapper of [`Commit`], add callback support.
 #[derive(Debug)]
 pub struct CallbackCommit<'a, 'b, S: Set, SS: Service> {
     set: &'a mut S,
