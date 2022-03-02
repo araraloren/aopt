@@ -43,7 +43,7 @@ impl ForwardPolicy {
     }
 }
 
-impl<S: Set, SS: Service> Policy<S, SS> for ForwardPolicy {
+impl<S: Set, SS: Service<S>> Policy<S, SS> for ForwardPolicy {
     fn parse(
         &mut self,
         set: &mut S,
@@ -193,7 +193,7 @@ mod test {
         testing_cases.append(&mut long_prefix_opt_testcases());
         testing_cases.append(&mut shorting_prefix_opt_testcases());
 
-        let mut parser = Parser::<SimpleSet, DefaultService, ForwardPolicy>::default();
+        let mut parser = ForwardParser::default();
 
         parser.get_policy_mut().set_strict(false);
 
@@ -261,7 +261,7 @@ mod test {
         testing_cases.append(&mut long_prefix_opt_testcases());
         testing_cases.append(&mut shorting_prefix_opt_testcases());
 
-        let mut parser = Parser::<SimpleSet, DefaultService, ForwardPolicy>::default();
+        let mut parser = ForwardParser::default();
 
         for testing_case in testing_cases.iter_mut() {
             testing_case.add_test(&mut parser)?;
@@ -325,7 +325,7 @@ mod test {
         testing_cases.append(&mut long_prefix_opt_testcases());
         testing_cases.append(&mut shorting_prefix_opt_testcases());
 
-        let mut parser = Parser::<SimpleSet, DefaultService, ForwardPolicy>::default();
+        let mut parser = ForwardParser::default();
 
         for testing_case in testing_cases.iter_mut() {
             testing_case.add_test(&mut parser)?;

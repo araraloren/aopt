@@ -5,13 +5,12 @@ use super::CreatorSet;
 use super::Filter;
 use super::FilterInfo;
 use super::FilterMut;
-use super::Index;
-use super::IndexMut;
 use super::Iter;
 use super::IterMut;
 use super::OptionSet;
 use super::PrefixSet;
 use super::Set;
+use super::SetIndex;
 use super::Uid;
 use crate::err::Error;
 use crate::err::Result;
@@ -217,17 +216,17 @@ impl PrefixSet for SimpleSet {
     }
 }
 
-impl Index<Uid> for SimpleSet {
+impl<I: SetIndex<SimpleSet>> std::ops::Index<I> for SimpleSet {
     type Output = Box<dyn Opt>;
 
-    fn index(&self, index: Uid) -> &Self::Output {
-        self.get_opt(index).unwrap()
+    fn index(&self, index: I) -> &Self::Output {
+        index.ref_from(self).unwrap()
     }
 }
 
-impl IndexMut<Uid> for SimpleSet {
-    fn index_mut(&mut self, index: Uid) -> &mut Self::Output {
-        self.get_opt_mut(index).unwrap()
+impl<I: SetIndex<SimpleSet>> std::ops::IndexMut<I> for SimpleSet {
+    fn index_mut(&mut self, index: I) -> &mut Self::Output {
+        index.mut_from(self).unwrap()
     }
 }
 

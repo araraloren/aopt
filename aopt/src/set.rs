@@ -1,10 +1,10 @@
 mod commit;
 mod filter;
+mod index;
 mod info;
 mod simple_set;
 
 use std::fmt::Debug;
-use std::ops::{Index, IndexMut};
 use std::slice::{Iter, IterMut};
 use ustr::Ustr;
 
@@ -16,6 +16,7 @@ use crate::uid::Uid;
 pub use self::commit::Commit;
 pub use self::filter::Filter;
 pub use self::filter::FilterMut;
+pub use self::index::SetIndex;
 pub use self::info::CreateInfo;
 pub use self::info::FilterInfo;
 pub use self::info::OptionInfo;
@@ -54,9 +55,7 @@ pub trait PrefixSet {
     fn clr_prefix(&mut self);
 }
 
-pub trait OptionSet:
-    Index<Uid, Output = Box<dyn Opt>> + IndexMut<Uid> + AsRef<[Box<dyn Opt>]> + AsMut<[Box<dyn Opt>]>
-{
+pub trait OptionSet {
     fn add_opt(&mut self, opt_str: &str) -> Result<Commit<'_, Self>>
     where
         Self: Sized;

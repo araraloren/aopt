@@ -28,13 +28,13 @@ pub use service::DefaultService;
 pub use state::ParserState;
 
 /// Default [`Parser`] that using [`ForwardPolicy`].
-pub type ForwardParser = Parser<SimpleSet, DefaultService, ForwardPolicy>;
+pub type ForwardParser = Parser<SimpleSet, DefaultService<SimpleSet>, ForwardPolicy>;
 
 /// Default [`Parser`] that using [`PrePolicy`].
-pub type PreParser = Parser<SimpleSet, DefaultService, PrePolicy>;
+pub type PreParser = Parser<SimpleSet, DefaultService<SimpleSet>, PrePolicy>;
 
 /// Default [`Parser`] that using [`DelayPolicy`].
-pub type DelayParser = Parser<SimpleSet, DefaultService, DelayPolicy>;
+pub type DelayParser = Parser<SimpleSet, DefaultService<SimpleSet>, DelayPolicy>;
 
 #[derive(Debug, Clone)]
 pub struct ValueKeeper {
@@ -50,7 +50,7 @@ pub struct ValueKeeper {
 /// #[derive(Debug)]
 /// pub struct EmptyPolicy;
 ///
-/// impl<S: Set, SS: Service> Policy<S, SS> for EmptyPolicy {
+/// impl<S: Set, SS: Service<S>> Policy<S, SS> for EmptyPolicy {
 ///     fn parse(
 ///         &mut self,
 ///         set: &mut S,
@@ -62,7 +62,7 @@ pub struct ValueKeeper {
 ///     }
 /// }
 /// ```
-pub trait Policy<S: Set, SS: Service>: Debug {
+pub trait Policy<S: Set, SS: Service<S>>: Debug {
     fn parse(
         &mut self,
         set: &mut S,
@@ -72,7 +72,7 @@ pub trait Policy<S: Set, SS: Service>: Debug {
 }
 
 /// [`Service`] provide common service using for [`Policy`].
-pub trait Service {
+pub trait Service<S: Set> {
     /// Generate M base on [`Argument`] and [`ParserState`].
     fn gen_opt<M: Matcher + Default>(
         &self,
@@ -93,7 +93,7 @@ pub trait Service {
     ///
     /// The `invoke` should be false if caller don't want invoke callback when
     /// [`Opt`](crate::opt::Opt) matched.
-    fn matching<M: Matcher + Default, S: Set>(
+    fn matching<M: Matcher + Default>(
         &mut self,
         matcher: &mut M,
         set: &mut S,
@@ -101,19 +101,19 @@ pub trait Service {
     ) -> Result<Vec<ValueKeeper>>;
 
     /// Checking if the `set` data valid.
-    fn pre_check<S: Set>(&self, set: &S) -> Result<bool>;
+    fn pre_check(&self, set: &S) -> Result<bool>;
 
     /// Checking if the `set` data valid.
-    fn opt_check<S: Set>(&self, set: &S) -> Result<bool>;
+    fn opt_check(&self, set: &S) -> Result<bool>;
 
     /// Checking if the `set` data valid.
-    fn nonopt_check<S: Set>(&self, set: &S) -> Result<bool>;
+    fn nonopt_check(&self, set: &S) -> Result<bool>;
 
     /// Checking if the `set` data valid.
-    fn post_check<S: Set>(&self, set: &S) -> Result<bool>;
+    fn post_check(&self, set: &S) -> Result<bool>;
 
     /// Invoke callback connected with given [`Opt`](crate::opt::Opt).
-    fn invoke<S: Set>(
+    fn invoke(
         &mut self,
         uid: Uid,
         set: &mut S,
@@ -122,7 +122,7 @@ pub trait Service {
     ) -> Result<Option<OptValue>>;
 
     /// Return the callback map reference.
-    fn get_callback(&self) -> &CallbackStore;
+    fn get_callback(&self) -> &CallbackStore<S>;
 
     /// Return the subscriber info vector reference.
     fn get_subscriber_info<I: 'static + Info>(&self) -> &Vec<Box<dyn Info>>;
@@ -131,7 +131,7 @@ pub trait Service {
     fn get_noa(&self) -> &Vec<Ustr>;
 
     /// Return the callback map mutable reference.
-    fn get_callback_mut(&mut self) -> &mut CallbackStore;
+    fn get_callback_mut(&mut self) -> &mut CallbackStore<S>;
 
     /// Return the subscriber info vector mutable reference.
     fn get_subscriber_info_mut(&mut self) -> &mut Vec<Box<dyn Info>>;
@@ -185,7 +185,7 @@ pub trait Service {
 pub struct Parser<S, SS, P>
 where
     S: Set,
-    SS: Service,
+    SS: Service<S>,
     P: Policy<S, SS>,
 {
     policy: P,
@@ -196,7 +196,7 @@ where
 impl<S, SS, P> Default for Parser<S, SS, P>
 where
     S: Set + Default,
-    SS: Service + Default,
+    SS: Service<S> + Default,
     P: Policy<S, SS> + Default,
 {
     fn default() -> Self {
@@ -211,7 +211,7 @@ where
 impl<S, SS, P> Deref for Parser<S, SS, P>
 where
     S: Set,
-    SS: Service,
+    SS: Service<S>,
     P: Policy<S, SS>,
 {
     type Target = S;
@@ -224,7 +224,7 @@ where
 impl<S, SS, P> DerefMut for Parser<S, SS, P>
 where
     S: Set,
-    SS: Service,
+    SS: Service<S>,
     P: Policy<S, SS>,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
@@ -235,7 +235,7 @@ where
 impl<S, SS, P> Parser<S, SS, P>
 where
     S: Set + Default,
-    SS: Service + Default,
+    SS: Service<S> + Default,
     P: Policy<S, SS>,
 {
     /// Initialize the [`Parser`] with specify [`Policy`] and the
@@ -251,7 +251,7 @@ where
     ///     #[derive(Debug)]
     ///     pub struct EmptyPolicy;
     ///
-    ///     impl<S: Set, SS: Service> Policy<S, SS> for EmptyPolicy {
+    ///     impl<S: Set, SS: Service<S>> Policy<S, SS> for EmptyPolicy {
     ///         fn parse(
     ///             &mut self,
     ///             set: &mut S,
@@ -278,7 +278,7 @@ where
 impl<S, SS, P> Parser<S, SS, P>
 where
     S: Set,
-    SS: Service,
+    SS: Service<S>,
     P: Policy<S, SS>,
 {
     pub fn new(set: S, service: SS, policy: P) -> Self {
@@ -317,7 +317,7 @@ where
     pub fn add_opt_cb(
         &mut self,
         opt_str: &str,
-        callback: OptCallback,
+        callback: OptCallback<S>,
     ) -> Result<CallbackCommit<'_, '_, S, SS>> {
         let info = CreateInfo::parse(gstr(opt_str), self.get_prefix())?;
 
@@ -330,7 +330,7 @@ where
         ))
     }
 
-    pub fn add_callback(&mut self, uid: Uid, callback: OptCallback) {
+    pub fn add_callback(&mut self, uid: Uid, callback: OptCallback<S>) {
         self.get_service_mut()
             .get_callback_mut()
             .add_callback(uid, callback);
@@ -357,7 +357,7 @@ where
 ///     #[derive(Debug, Default)]
 ///     pub struct EmptyPolicy;
 ///
-///     impl<S: Set, SS: Service> Policy<S, SS> for EmptyPolicy {
+///     impl<S: Set, SS: Service<S>> Policy<S, SS> for EmptyPolicy {
 ///         fn parse(
 ///             &mut self,
 ///             set: &mut S,
@@ -372,7 +372,7 @@ where
 ///     #[derive(Debug, Default)]
 ///     pub struct ConsumeIterPolicy;
 ///
-///     impl<S: Set, SS: Service> Policy<S, SS> for ConsumeIterPolicy {
+///     impl<S: Set, SS: Service<S>> Policy<S, SS> for ConsumeIterPolicy {
 ///         fn parse(
 ///             &mut self,
 ///             set: &mut S,
@@ -405,7 +405,7 @@ where
 pub struct DynParser<S, SS>
 where
     S: Set,
-    SS: Service,
+    SS: Service<S>,
 {
     policy: Box<dyn Policy<S, SS>>,
     service: SS,
@@ -415,7 +415,7 @@ where
 impl<S, SS> Deref for DynParser<S, SS>
 where
     S: Set,
-    SS: Service,
+    SS: Service<S>,
 {
     type Target = S;
 
@@ -427,7 +427,7 @@ where
 impl<S, SS> DerefMut for DynParser<S, SS>
 where
     S: Set,
-    SS: Service,
+    SS: Service<S>,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.set
@@ -437,7 +437,7 @@ where
 impl<S, SS> DynParser<S, SS>
 where
     S: Set + Default,
-    SS: Service + Default,
+    SS: Service<S> + Default,
 {
     pub fn new_policy<P: Policy<S, SS> + 'static>(policy: P) -> Self {
         Self {
@@ -451,7 +451,7 @@ where
 impl<S, SS> DynParser<S, SS>
 where
     S: Set,
-    SS: Service,
+    SS: Service<S>,
 {
     pub fn new<P: Policy<S, SS> + 'static>(set: S, service: SS, policy: P) -> Self {
         Self {
@@ -489,7 +489,7 @@ where
     pub fn add_opt_cb(
         &mut self,
         opt_str: &str,
-        callback: OptCallback,
+        callback: OptCallback<S>,
     ) -> Result<CallbackCommit<'_, '_, S, SS>> {
         let info = CreateInfo::parse(gstr(opt_str), self.get_prefix())?;
 
@@ -502,7 +502,7 @@ where
         ))
     }
 
-    pub fn add_callback(&mut self, uid: Uid, callback: OptCallback) {
+    pub fn add_callback(&mut self, uid: Uid, callback: OptCallback<S>) {
         self.get_service_mut()
             .get_callback_mut()
             .add_callback(uid, callback);
@@ -520,7 +520,7 @@ where
 impl<S, SS, P> From<Parser<S, SS, P>> for DynParser<S, SS>
 where
     S: Set + Default,
-    SS: Service + Default,
+    SS: Service<S> + Default,
     P: Policy<S, SS> + Default + 'static,
 {
     fn from(mut parser: Parser<S, SS, P>) -> Self {
@@ -537,7 +537,7 @@ where
 impl<'a, S, SS, P> From<&'a mut Parser<S, SS, P>> for DynParser<S, SS>
 where
     S: Set + Default,
-    SS: Service + Default,
+    SS: Service<S> + Default,
     P: Policy<S, SS> + Default + 'static,
 {
     fn from(parser: &'a mut Parser<S, SS, P>) -> Self {

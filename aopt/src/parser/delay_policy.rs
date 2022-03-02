@@ -43,7 +43,7 @@ impl DelayPolicy {
     }
 }
 
-impl<S: Set, SS: Service> Policy<S, SS> for DelayPolicy {
+impl<S: Set, SS: Service<S>> Policy<S, SS> for DelayPolicy {
     fn parse(
         &mut self,
         set: &mut S,
@@ -158,7 +158,7 @@ impl<S: Set, SS: Service> Policy<S, SS> for DelayPolicy {
             } else {
                 Some(value)
             };
-            set[id].as_mut().set_callback_ret(ret_value)?;
+            set.get_opt_mut(id).unwrap().set_callback_ret(ret_value)?;
         }
 
         info!("do opt check");
@@ -219,7 +219,7 @@ mod test {
             .with_default_delay_pos_tweak(),
         );
 
-        let mut parser = Parser::<SimpleSet, DefaultService, DelayPolicy>::default();
+        let mut parser = DelayParser::default();
 
         for testing_case in testing_cases.iter_mut() {
             testing_case.add_test(&mut parser)?;

@@ -169,8 +169,8 @@ impl SnowBall {
     }
 }
 
-fn parser_command_line(args: Args) -> Result<Parser<SimpleSet, DefaultService, ForwardPolicy>> {
-    let mut parser = Parser::<SimpleSet, DefaultService, ForwardPolicy>::default();
+fn parser_command_line(args: Args) -> Result<Parser<SimpleSet, DefaultService<SimpleSet>, ForwardPolicy>> {
+    let mut parser = Parser::<SimpleSet, DefaultService<SimpleSet>, ForwardPolicy>::default();
 
     parser.get_policy_mut().set_strict(true);
 
@@ -211,7 +211,7 @@ fn parser_command_line(args: Args) -> Result<Parser<SimpleSet, DefaultService, F
         let id = commit.commit()?;
         parser.add_callback(
             id,
-            simple_pos_mut_cb!(|_, set, id, _, _| {
+            simple_pos_mut_cb!(|_, set: &mut SimpleSet, id, _, _| {
                 let mut ret = Ok(None);
 
                 if let Some(stock_number) = convert_line_to_stock_number(id) {
@@ -241,7 +241,7 @@ fn parser_command_line(args: Args) -> Result<Parser<SimpleSet, DefaultService, F
         let id = commit.commit()?;
         parser.add_callback(
             id,
-            simple_pos_mut_cb!(|_, set, file, _, _| {
+            simple_pos_mut_cb!(|_, set: &mut SimpleSet, file, _, _| {
                 let mut ret = Ok(None);
                 let fh = Path::new(file);
                 let debug = *set

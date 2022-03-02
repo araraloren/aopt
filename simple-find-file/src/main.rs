@@ -13,7 +13,7 @@ fn main() -> color_eyre::Result<()> {
         .init();
     color_eyre::install()?;
 
-    let mut parser = Parser::<SimpleSet, DefaultService, ForwardPolicy>::default();
+    let mut parser = Parser::<SimpleSet, DefaultService<SimpleSet>, ForwardPolicy>::default();
 
     parser.get_set_mut().add_prefix(gstr("+"));
 
@@ -78,7 +78,7 @@ fn main() -> color_eyre::Result<()> {
             let id = commit.commit()?;
             parser.add_callback(
                 id,
-                simple_opt_mut_cb!(move |_, set_cb, value| {
+                simple_opt_mut_cb!(move |_, set_cb: &mut SimpleSet, value| {
                     let filter_type = filter_type.copy_value_from(&value);
                     let ret = filter_file(set_cb, "directory", &filter_type)
                         .iter()
@@ -104,7 +104,7 @@ fn main() -> color_eyre::Result<()> {
         let id = commit.commit()?;
         parser.add_callback(
             id,
-            simple_main_cb!(|_, set, _, value| {
+            simple_main_cb!(|_, set: &SimpleSet, _, value| {
                 let mut is_need_help = false;
 
                 if let Some(help_value) = set.filter("--help")?.find() {

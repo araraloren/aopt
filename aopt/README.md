@@ -100,9 +100,9 @@ fn main() -> Result<()> {
     list.add_opt("-source=s")?.add_alias("-s")?.commit()?;
     list.add_opt_cb(
         "main=m",
-        simple_main_cb!(|_, _, _, _| {
+        simple_main_cb!(|_, _, _, value| {
             println!("invoke list command");
-            Ok(None)
+            Ok(Some(value))
         }),
     )?
     .commit()?;
@@ -115,9 +115,9 @@ fn main() -> Result<()> {
     update
         .add_opt_cb(
             "main=m",
-            simple_main_cb!(|_, _, _, _| {
+            simple_main_cb!(|_, _, _, value| {
                 println!("invoke update command");
-                Ok(None)
+                Ok(Some(value))
             }),
         )?
         .commit()?;
@@ -130,9 +130,13 @@ fn main() -> Result<()> {
     install
         .add_opt_cb(
             "name=p!@2",
-            simple_pos_cb!(|_, _, arg, _, _| {
-                println!("invoke install command: {}", arg);
-                Ok(None)
+            simple_pos_cb!(|_, _, arg, _, value| {
+                if arg == "software" {
+                    println!("invoke install command: {}", arg);
+                    Ok(Some(value))
+                } else {
+                    Ok(None)
+                }
             }),
         )?
         .commit()?;
@@ -143,6 +147,12 @@ fn main() -> Result<()> {
     Ok(())
 }
 ```
+
+* `app.exe in software` output `invoke install command: software`.
+
+* `app.exe in foo` output `command not matched`.
+
+* `app.exe 
 
 ### More
 

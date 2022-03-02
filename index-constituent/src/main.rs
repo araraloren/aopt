@@ -22,7 +22,7 @@ async fn main() -> color_eyre::Result<()> {
         .init();
     color_eyre::install()?;
 
-    let mut app = SingleApp::<SimpleSet, DefaultService, ForwardPolicy>::default();
+    let mut app = SingleApp::<SimpleSet, DefaultService<SimpleSet>, ForwardPolicy>::default();
 
     for (opt, long, help, value) in [
         ("-h=b", "-help", "Print help message", None),

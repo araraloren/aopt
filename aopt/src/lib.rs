@@ -355,7 +355,7 @@ where
     I: Into<String>,
     ITER: Iterator<Item = I>,
     S: Set,
-    SS: Service,
+    SS: Service<S>,
 {
     let args: Vec<String> = iter.map(|v| v.into()).collect();
     let count = parsers.len();
@@ -391,7 +391,7 @@ where
     I: Into<String>,
     ITER: Iterator<Item = I>,
     S: Set,
-    SS: Service,
+    SS: Service<S>,
     P: Policy<S, SS>,
 {
     let args: Vec<String> = iter.map(|v| v.into()).collect();
@@ -635,6 +635,7 @@ pub mod prelude {
     pub use crate::set::OptionSet;
     pub use crate::set::PrefixSet;
     pub use crate::set::Set;
+    pub use crate::set::SetIndex;
     pub use crate::set::SimpleSet;
     pub use crate::simple_main_cb;
     pub use crate::simple_main_mut_cb;

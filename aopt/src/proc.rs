@@ -27,13 +27,8 @@ cfg_if::cfg_if! {
 }
 
 /// Trait using for process [`Matcher`].
-pub trait Proc<M: Matcher>: Debug {
-    fn process<S: Set>(
-        &mut self,
-        matcher: &mut M,
-        set: &mut S,
-        invoke: bool,
-    ) -> Result<Vec<ValueKeeper>>;
+pub trait Proc<S: Set, M: Matcher>: Debug {
+    fn process(&mut self, matcher: &mut M, set: &mut S, invoke: bool) -> Result<Vec<ValueKeeper>>;
 }
 
 /// Trait using for hold [`Context`], and matched with [`Opt`](crate::opt::Opt) in [`Set`].

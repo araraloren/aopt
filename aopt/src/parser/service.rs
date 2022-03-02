@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::default;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
@@ -19,36 +20,40 @@ use ustr::Ustr;
 
 /// Simple wrapper of `HashMap<Uid, OptCallback>`.
 #[derive(Debug, Default)]
-pub struct CallbackStore(pub HashMap<Uid, OptCallback>);
+pub struct CallbackStore<S: Set>(pub HashMap<Uid, OptCallback<S>>);
 
-impl Deref for CallbackStore {
-    type Target = HashMap<Uid, OptCallback>;
+impl<S: Set> Deref for CallbackStore<S> {
+    type Target = HashMap<Uid, OptCallback<S>>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl DerefMut for CallbackStore {
+impl<S: Set> DerefMut for CallbackStore<S> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
-impl CallbackStore {
-    pub fn add_callback(&mut self, uid: Uid, cb: OptCallback) {
+impl<S: Set> CallbackStore<S> {
+    pub fn new() -> Self {
+        Self(HashMap::default())
+    }
+
+    pub fn add_callback(&mut self, uid: Uid, cb: OptCallback<S>) {
         self.0.insert(uid, cb);
     }
 
-    pub fn get_callback(&self, uid: &Uid) -> Option<&OptCallback> {
+    pub fn get_callback(&self, uid: &Uid) -> Option<&OptCallback<S>> {
         self.0.get(uid)
     }
 
-    pub fn get_callback_mut(&mut self, uid: &Uid) -> Option<&mut OptCallback> {
+    pub fn get_callback_mut(&mut self, uid: &Uid) -> Option<&mut OptCallback<S>> {
         self.0.get_mut(uid)
     }
 
-    pub fn for_each(&self, f: impl Fn(&Uid, &OptCallback) -> Result<bool>) -> Result<bool> {
+    pub fn for_each(&self, f: impl Fn(&Uid, &OptCallback<S>) -> Result<bool>) -> Result<bool> {
         for (uid, cb) in self.0.iter() {
             f(uid, cb)?;
         }
@@ -57,18 +62,32 @@ impl CallbackStore {
 }
 
 /// Simple implementation of [`Service`].
-#[derive(Debug, Default)]
-pub struct DefaultService {
+#[derive(Debug)]
+pub struct DefaultService<S: Set> {
     noa: Vec<Ustr>,
 
     subscriber_info: Vec<Box<dyn Info>>,
 
-    callback_store: CallbackStore,
+    callback_store: CallbackStore<S>,
 }
 
-impl DefaultService {
+impl<S: Set + Default> Default for DefaultService<S> {
+    fn default() -> Self {
+        Self {
+            callback_store: CallbackStore::new(),
+            noa: Vec::default(),
+            subscriber_info: Vec::default(),
+        }
+    }
+}
+
+impl<S: Set> DefaultService<S> {
     pub fn new() -> Self {
-        Self { ..Self::default() }
+        Self {
+            callback_store: CallbackStore::new(),
+            noa: Vec::default(),
+            subscriber_info: Vec::default(),
+        }
     }
 
     pub fn register<I: 'static + Info>(&mut self, info: I) -> &mut Self {
@@ -76,7 +95,7 @@ impl DefaultService {
         self
     }
 
-    pub fn matching_nonopt<M: Matcher, S: Set>(
+    pub fn matching_nonopt<M: Matcher>(
         &mut self,
         matcher: &mut M,
         set: &mut S,
@@ -92,7 +111,7 @@ impl DefaultService {
 
             if let Some(ctx) = ctx {
                 if ctx.is_matched() {
-                    let opt = set[uid].as_mut();
+                    let opt = set.get_opt(uid).unwrap();
                     let invoke_callback = opt.is_need_invoke();
                     let mut value = ctx.take_value();
 
@@ -117,12 +136,12 @@ impl DefaultService {
                         // reborrow the opt avoid the compiler error
                         // reset the matcher, we need match all the NonOpt
                         debug!(?value, "get callback return value");
-                        set[uid].as_mut().set_invoke(false);
+                        set.get_opt_mut(uid).unwrap().set_invoke(false);
                         matcher.reset();
                     }
 
                     // set the value after invoke
-                    set[uid].as_mut().set_callback_ret(value)?;
+                    set.get_opt_mut(uid).unwrap().set_callback_ret(value)?;
                 }
             }
         }
@@ -132,7 +151,7 @@ impl DefaultService {
         Ok(vec![])
     }
 
-    pub fn matching_opt<M: Matcher, S: Set>(
+    pub fn matching_opt<M: Matcher>(
         &mut self,
         msg: &mut M,
         set: &mut S,
@@ -148,7 +167,8 @@ impl DefaultService {
 
             if let Some(ctx) = ctx {
                 if ctx.is_matched() {
-                    let opt = set[uid].as_mut();
+                    // just unwrap it, the uid must exists
+                    let opt = set.get_opt_mut(uid).unwrap();
                     let invoke_callback = opt.is_need_invoke();
                     let value = ctx.take_value();
 
@@ -175,7 +195,7 @@ impl DefaultService {
                 } else {
                     Some(value)
                 };
-                set[id].as_mut().set_callback_ret(ret_value)?;
+                set.get_opt_mut(id).unwrap().set_callback_ret(ret_value)?;
             }
             return Ok(vec![]);
         }
@@ -186,7 +206,7 @@ impl DefaultService {
     }
 }
 
-impl Service for DefaultService {
+impl<S: Set> Service<S> for DefaultService<S> {
     fn gen_opt<M: Matcher + Default>(
         &self,
         arg: &crate::arg::Argument,
@@ -205,7 +225,7 @@ impl Service for DefaultService {
         Ok(style.gen_nonopt(noa, total as u64, current as u64)?)
     }
 
-    fn matching<M: Matcher + Default, S: Set>(
+    fn matching<M: Matcher + Default>(
         &mut self,
         matcher: &mut M,
         set: &mut S,
@@ -214,7 +234,7 @@ impl Service for DefaultService {
         Ok(self.process(matcher, set, invoke)?)
     }
 
-    fn pre_check<S: Set>(&self, set: &S) -> Result<bool> {
+    fn pre_check(&self, set: &S) -> Result<bool> {
         self.callback_store.for_each(|uid, cb| {
             if let Some(opt) = set.get_opt(*uid) {
                 if !opt.is_accept_callback_type(cb.to_callback_type()) {
@@ -232,7 +252,7 @@ impl Service for DefaultService {
         })
     }
 
-    fn opt_check<S: Set>(&self, set: &S) -> Result<bool> {
+    fn opt_check(&self, set: &S) -> Result<bool> {
         for opt in set.opt_iter() {
             if opt.as_ref().match_style(Style::Boolean)
                 || opt.as_ref().match_style(Style::Argument)
@@ -244,7 +264,7 @@ impl Service for DefaultService {
         Ok(true)
     }
 
-    fn nonopt_check<S: Set>(&self, set: &S) -> Result<bool> {
+    fn nonopt_check(&self, set: &S) -> Result<bool> {
         const MAX_INDEX: u64 = u64::MAX;
 
         let mut index_map: HashMap<u64, Vec<Uid>> = HashMap::new();
@@ -336,11 +356,11 @@ impl Service for DefaultService {
         Ok(true)
     }
 
-    fn post_check<S: Set>(&self, _set: &S) -> Result<bool> {
+    fn post_check(&self, _set: &S) -> Result<bool> {
         Ok(true)
     }
 
-    fn invoke<S: Set>(
+    fn invoke(
         &mut self,
         uid: Uid,
         set: &mut S,
@@ -375,7 +395,7 @@ impl Service for DefaultService {
         }
     }
 
-    fn get_callback(&self) -> &CallbackStore {
+    fn get_callback(&self) -> &CallbackStore<S> {
         &self.callback_store
     }
 
@@ -387,7 +407,7 @@ impl Service for DefaultService {
         &self.noa
     }
 
-    fn get_callback_mut(&mut self) -> &mut CallbackStore {
+    fn get_callback_mut(&mut self) -> &mut CallbackStore<S> {
         &mut self.callback_store
     }
 
@@ -406,13 +426,8 @@ impl Service for DefaultService {
     }
 }
 
-impl<M: Matcher> Proc<M> for DefaultService {
-    fn process<S: Set>(
-        &mut self,
-        msg: &mut M,
-        set: &mut S,
-        invoke: bool,
-    ) -> Result<Vec<ValueKeeper>> {
+impl<S: Set, M: Matcher> Proc<S, M> for DefaultService<S> {
+    fn process(&mut self, msg: &mut M, set: &mut S, invoke: bool) -> Result<Vec<ValueKeeper>> {
         match msg.get_style() {
             Style::Boolean | Style::Argument | Style::Multiple => {
                 self.matching_opt(msg, set, invoke)
