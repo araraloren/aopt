@@ -27,17 +27,14 @@ use crate::uid::Uid;
 ///     app.add_opt("-a=b!")?.commit()?;
 ///     app.add_opt("-b=i")?.commit()?;
 ///
-///     app.run_async_mut(
-///         ["-a", "-b", "42"].into_iter(),
-///         |ret, app| async move {
-///             if ret {
-///                 dbg!(&app);
-///                 dbg!(app.find("-a")?);
-///                 dbg!(app.find("-b")?);
-///             }
-///             Ok(())
-///         },
-///     )
+///     app.run_async_mut(["-a", "-b", "42"].into_iter(), |ret, app| async move {
+///         if ret {
+///             dbg!(&app);
+///             dbg!(app.find("-a")?);
+///             dbg!(app.find("-b")?);
+///         }
+///         Ok(())
+///     })
 ///     .await?;
 ///
 ///     Ok(())
@@ -47,7 +44,7 @@ use crate::uid::Uid;
 pub struct SingleApp<S, SS, P>
 where
     S: Set,
-    SS: Service,
+    SS: Service<S>,
     P: Policy<S, SS>,
 {
     name: String,
@@ -57,7 +54,7 @@ where
 impl<S, SS, P> Default for SingleApp<S, SS, P>
 where
     S: Set + Default,
-    SS: Service + Default,
+    SS: Service<S> + Default,
     P: Policy<S, SS> + Default,
 {
     /// The default name of app is `singleapp`.
@@ -73,7 +70,7 @@ where
 impl<S, SS, P> SingleApp<S, SS, P>
 where
     S: Set + Default,
-    SS: Service + Default,
+    SS: Service<S> + Default,
     P: Policy<S, SS>,
 {
     /// The default name of app is `singleapp`.
@@ -89,7 +86,7 @@ where
 impl<S, SS, P> SingleApp<S, SS, P>
 where
     S: Set,
-    SS: Service,
+    SS: Service<S>,
     P: Policy<S, SS>,
 {
     pub fn new(name: String, parser: Parser<S, SS, P>) -> Self {
@@ -123,7 +120,7 @@ where
     }
 
     /// Insert callback to hash map.
-    pub fn add_callback(&mut self, uid: Uid, callback: OptCallback) {
+    pub fn add_callback(&mut self, uid: Uid, callback: OptCallback<S>) {
         self.parser.add_callback(uid, callback);
     }
 
@@ -131,13 +128,12 @@ where
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```rust
     /// use aopt::app::SingleApp;
     /// use aopt::err::Result;
     /// use aopt::prelude::*;
     ///
-    /// #[async_std::main]
-    /// async fn main() -> Result<()> {
+    /// fn main() -> Result<()> {
     ///     let mut app = SingleApp::<SimpleSet, DefaultService, ForwardPolicy>::default();
     ///
     ///     app.add_opt("-a=b!")?.commit()?;
@@ -235,20 +231,19 @@ where
 impl<S, SS, P> SingleApp<S, SS, P>
 where
     S: Set + Default,
-    SS: Service + Default,
+    SS: Service<S> + Default,
     P: Policy<S, SS> + Default,
 {
     /// Running function after parsing.
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```rust
     /// use aopt::app::SingleApp;
     /// use aopt::err::Result;
     /// use aopt::prelude::*;
     ///
-    /// #[async_std::main]
-    /// async fn main() -> Result<()> {
+    /// fn main() -> Result<()> {
     ///     let mut app = SingleApp::<SimpleSet, DefaultService, ForwardPolicy>::default();
     ///
     ///     app.add_opt("-a=b!")?.commit()?;
@@ -341,7 +336,7 @@ where
 impl<S, SS, P> Deref for SingleApp<S, SS, P>
 where
     S: Set,
-    SS: Service,
+    SS: Service<S>,
     P: Policy<S, SS>,
 {
     type Target = Parser<S, SS, P>;
@@ -355,7 +350,7 @@ where
 impl<S, SS, P> DerefMut for SingleApp<S, SS, P>
 where
     S: Set,
-    SS: Service,
+    SS: Service<S>,
     P: Policy<S, SS>,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {

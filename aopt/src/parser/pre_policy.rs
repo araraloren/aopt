@@ -21,7 +21,7 @@ impl PrePolicy {
     }
 }
 
-impl<S: Set, SS: Service> Policy<S, SS> for PrePolicy {
+impl<S: Set, SS: Service<S>> Policy<S, SS> for PrePolicy {
     fn parse(
         &mut self,
         set: &mut S,
@@ -161,7 +161,7 @@ mod test {
         testing_cases.append(&mut long_prefix_opt_testcases());
         testing_cases.append(&mut shorting_prefix_opt_testcases());
 
-        let mut parser = Parser::<SimpleSet, DefaultService, PrePolicy>::default();
+        let mut parser = PreParser::default();
 
         for testing_case in testing_cases.iter_mut() {
             if testing_case.value == Some(OptValue::from("pos6")) {

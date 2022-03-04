@@ -1,10 +1,10 @@
 mod commit;
 mod filter;
+mod index;
 mod info;
 mod simple_set;
 
 use std::fmt::Debug;
-use std::ops::{Index, IndexMut};
 use std::slice::{Iter, IterMut};
 use ustr::Ustr;
 
@@ -16,6 +16,7 @@ use crate::uid::Uid;
 pub use self::commit::Commit;
 pub use self::filter::Filter;
 pub use self::filter::FilterMut;
+pub use self::index::SetIndex;
 pub use self::info::CreateInfo;
 pub use self::info::FilterInfo;
 pub use self::info::OptionInfo;
@@ -31,6 +32,8 @@ cfg_if::cfg_if! {
 
             fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>>;
         }
+
+        pub trait Set: Debug + PrefixSet + OptionSet + CreatorSet + Send + Sync {}
     }
     else {
         /// Trait using for create [`Opt`] with given [`CreateInfo`].
@@ -41,10 +44,10 @@ cfg_if::cfg_if! {
 
             fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>>;
         }
+
+        pub trait Set: Debug + PrefixSet + OptionSet + CreatorSet {}
     }
 }
-
-pub trait Set: Debug + PrefixSet + OptionSet + CreatorSet {}
 
 pub trait PrefixSet {
     fn add_prefix(&mut self, prefix: Ustr);
@@ -54,9 +57,7 @@ pub trait PrefixSet {
     fn clr_prefix(&mut self);
 }
 
-pub trait OptionSet:
-    Index<Uid, Output = Box<dyn Opt>> + IndexMut<Uid> + AsRef<[Box<dyn Opt>]> + AsMut<[Box<dyn Opt>]>
-{
+pub trait OptionSet {
     fn add_opt(&mut self, opt_str: &str) -> Result<Commit<'_, Self>>
     where
         Self: Sized;

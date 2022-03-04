@@ -55,22 +55,22 @@ impl Matcher for NonOptMatcher {
     }
 
     fn process<S: Set>(&mut self, uid: Uid, set: &mut S) -> Result<Option<&mut Box<dyn Context>>> {
-        let opt = set[uid].as_mut();
-
-        info!(?uid, "process nonopt");
-        if opt.match_style(Style::Cmd)
-            || opt.match_style(Style::Main)
-            || opt.match_style(Style::Pos)
-        {
-            if let Some(ctx) = self.context.as_mut() {
-                if !ctx.is_matched() {
-                    if ctx.process(opt)? {
-                        self.consoume_argument =
-                            self.consoume_argument || ctx.is_comsume_argument();
+        if let Some(opt) = set.get_opt_mut(uid) {
+            info!(?uid, "process nonopt");
+            if opt.match_style(Style::Cmd)
+                || opt.match_style(Style::Main)
+                || opt.match_style(Style::Pos)
+            {
+                if let Some(ctx) = self.context.as_mut() {
+                    if !ctx.is_matched() {
+                        if ctx.process(opt.as_mut())? {
+                            self.consoume_argument =
+                                self.consoume_argument || ctx.is_comsume_argument();
+                            return Ok(Some(ctx));
+                        }
+                    } else {
                         return Ok(Some(ctx));
                     }
-                } else {
-                    return Ok(Some(ctx));
                 }
             }
         }
@@ -80,7 +80,9 @@ impl Matcher for NonOptMatcher {
     fn undo<S: Set>(&mut self, set: &mut S) {
         if let Some(ctx) = self.context.as_mut() {
             if let Some(uid) = ctx.get_matched_uid() {
-                ctx.undo(set[uid].as_mut());
+                if let Some(opt) = set.get_opt_mut(uid) {
+                    ctx.undo(opt.as_mut());
+                }
             }
         }
     }

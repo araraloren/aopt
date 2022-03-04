@@ -1,18 +1,18 @@
 use std::fmt::Debug;
 
-pub type Uid = u64;
+pub type Uid = usize;
 
 pub trait Generator: Debug {
     /// Get current uid .
     fn get(&self) -> Uid;
 
-    fn set(&mut self, uid: u64);
+    fn set(&mut self, uid: Uid);
 
     fn acq(&mut self) -> Uid;
 
     fn rel(&mut self);
 
-    fn skip(&mut self, offset: u64) {
+    fn skip(&mut self, offset: Uid) {
         self.set(self.get() + offset);
     }
 
@@ -37,7 +37,7 @@ impl Generator for UidGenerator {
         self.uid
     }
 
-    fn set(&mut self, uid: u64) {
+    fn set(&mut self, uid: Uid) {
         self.uid = uid;
     }
 
@@ -51,8 +51,8 @@ impl Generator for UidGenerator {
     }
 }
 
-impl From<u64> for UidGenerator {
-    fn from(v: u64) -> Self {
+impl From<usize> for UidGenerator {
+    fn from(v: usize) -> Self {
         Self { uid: v.into() }
     }
 }

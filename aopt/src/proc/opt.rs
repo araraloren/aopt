@@ -51,14 +51,15 @@ impl Matcher for OptMatcher {
     }
 
     fn process<S: Set>(&mut self, uid: Uid, set: &mut S) -> Result<Option<&mut Box<dyn Context>>> {
-        let opt = set[uid].as_mut();
-
-        info!(?uid, "process opt");
-        for ctx in self.context.iter_mut() {
-            if !ctx.is_matched() {
-                if ctx.process(opt)? {
-                    self.consoume_argument = self.consoume_argument || ctx.is_comsume_argument();
-                    return Ok(Some(ctx));
+        if let Some(opt) = set.get_opt_mut(uid) {
+            info!(?uid, "process opt");
+            for ctx in self.context.iter_mut() {
+                if !ctx.is_matched() {
+                    if ctx.process(opt.as_mut())? {
+                        self.consoume_argument =
+                            self.consoume_argument || ctx.is_comsume_argument();
+                        return Ok(Some(ctx));
+                    }
                 }
             }
         }
@@ -68,7 +69,9 @@ impl Matcher for OptMatcher {
     fn undo<S: Set>(&mut self, set: &mut S) {
         self.context.iter_mut().for_each(|v| {
             if let Some(uid) = v.get_matched_uid() {
-                v.undo(set[uid].as_mut())
+                if let Some(opt) = set.get_opt_mut(uid) {
+                    v.undo(opt.as_mut());
+                }
             }
         });
     }

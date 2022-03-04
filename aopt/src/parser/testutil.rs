@@ -10,8 +10,8 @@ macro_rules! simple_opt_tweak {
 
             parser.add_callback(
                 uid,
-                simple_opt_mut_cb!(move |uid, set, value| {
-                    let opt = set[uid].as_mut();
+                simple_opt_mut_cb!(move |uid, set: &mut S, value| {
+                    let opt = set.get_opt_mut(uid).unwrap().as_mut();
 
                     if let Some(checker) = checker.take() {
                         checker.checking(opt, &value);
@@ -32,8 +32,8 @@ macro_rules! simple_main_tweak {
 
             parser.add_callback(
                 uid,
-                simple_main_mut_cb!(move |uid, set, _, value| {
-                    let opt = set[uid].as_mut();
+                simple_main_mut_cb!(move |uid, set: &mut S, _, value| {
+                    let opt = set.get_opt_mut(uid).unwrap().as_mut();
 
                     if let Some(checker) = checker.take() {
                         checker.checking(opt, &value);
@@ -54,8 +54,8 @@ macro_rules! simple_pos_tweak {
 
             parser.add_callback(
                 uid,
-                simple_pos_mut_cb!(move |uid, set, arg, _, value| {
-                    let opt = set[uid].as_mut();
+                simple_pos_mut_cb!(move |uid, set: &mut S, arg, _, value| {
+                    let opt = set.get_opt_mut(uid).unwrap().as_mut();
 
                     if let Some(checker) = checker.take() {
                         checker.checking(opt, &value);
@@ -76,8 +76,8 @@ macro_rules! simple_delay_pos_tweak {
 
             parser.add_callback(
                 uid,
-                simple_pos_mut_cb!(move |uid, set, arg, _, value| {
-                    let opt = set[uid].as_mut();
+                simple_pos_mut_cb!(move |uid, set: &mut S, arg, _, value| {
+                    let opt = set.get_opt_mut(uid).unwrap().as_mut();
 
                     if let Some(checker) = checker.take() {
                         checker.checking(opt, &value);
@@ -96,7 +96,11 @@ macro_rules! simple_delay_pos_tweak {
     };
 }
 
-pub struct TestingCase<S: Set + Default, SS: Service + Default, P: Policy<S, SS> + Default> {
+pub struct TestingCase<
+    S: 'static + Set + Default,
+    SS: Service<S> + Default,
+    P: Policy<S, SS> + Default,
+> {
     pub opt: &'static str,
 
     pub value: Option<OptValue>,
@@ -109,7 +113,7 @@ pub struct TestingCase<S: Set + Default, SS: Service + Default, P: Policy<S, SS>
     pub checker: Option<OptChecker>,
 }
 
-impl<S: Set + Default, SS: Service + Default, P: Policy<S, SS> + Default> Default
+impl<S: 'static + Set + Default, SS: Service<S> + Default, P: Policy<S, SS> + Default> Default
     for TestingCase<S, SS, P>
 {
     fn default() -> Self {
@@ -123,7 +127,9 @@ impl<S: Set + Default, SS: Service + Default, P: Policy<S, SS> + Default> Defaul
     }
 }
 
-impl<S: Set + Default, SS: Service + Default, P: Policy<S, SS> + Default> TestingCase<S, SS, P> {
+impl<S: 'static + Set + Default, SS: Service<S> + Default, P: Policy<S, SS> + Default>
+    TestingCase<S, SS, P>
+{
     pub fn new(opt: &'static str) -> Self {
         Self {
             opt,
@@ -240,7 +246,7 @@ impl<S: Set + Default, SS: Service + Default, P: Policy<S, SS> + Default> Testin
         Ok(())
     }
 
-    pub fn check_ret(&mut self, set: &mut dyn Set) -> Result<()> {
+    pub fn check_ret(&mut self, set: &mut S) -> Result<()> {
         if let Some(value) = &self.value {
             if let Some(real_ret) = set.get_value(self.opt)? {
                 assert_eq!(value, real_ret);
@@ -500,8 +506,11 @@ impl OptChecker {
     }
 }
 
-pub fn nonopt_testcases<S: Set + Default, SS: Service + Default, P: Policy<S, SS> + Default>(
-) -> Vec<TestingCase<S, SS, P>> {
+pub fn nonopt_testcases<
+    S: 'static + Set + Default,
+    SS: Service<S> + Default,
+    P: Policy<S, SS> + Default,
+>() -> Vec<TestingCase<S, SS, P>> {
     vec![
         TestingCase {
             opt: "n=m",
@@ -661,8 +670,8 @@ pub fn nonopt_testcases<S: Set + Default, SS: Service + Default, P: Policy<S, SS
 }
 
 pub fn long_prefix_opt_testcases<
-    S: Set + Default,
-    SS: Service + Default,
+    S: 'static + Set + Default,
+    SS: Service<S> + Default,
     P: Policy<S, SS> + Default,
 >() -> Vec<TestingCase<S, SS, P>> {
     vec![
@@ -770,8 +779,8 @@ pub fn long_prefix_opt_testcases<
 }
 
 pub fn shorting_prefix_opt_testcases<
-    S: Set + Default,
-    SS: Service + Default,
+    S: 'static + Set + Default,
+    SS: Service<S> + Default,
     P: Policy<S, SS> + Default,
 >() -> Vec<TestingCase<S, SS, P>> {
     vec![

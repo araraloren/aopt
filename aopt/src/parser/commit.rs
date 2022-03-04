@@ -12,19 +12,19 @@ use crate::uid::Uid;
 use ustr::Ustr;
 
 #[derive(Debug)]
-pub struct CallbackCommit<'a, 'b, S: Set, SS: Service> {
+pub struct CallbackCommit<'a, 'b, S: Set, SS: Service<S>> {
     set: &'a mut S,
     info: CreateInfo,
     service_ref: &'b mut SS,
-    callback: OptCallback,
+    callback: OptCallback<S>,
 }
 
-impl<'a, 'b, S: Set, SS: Service> CallbackCommit<'a, 'b, S, SS> {
+impl<'a, 'b, S: Set, SS: Service<S>> CallbackCommit<'a, 'b, S, SS> {
     pub fn new(
         set: &'a mut S,
         service: &'b mut SS,
         info: CreateInfo,
-        callback: OptCallback,
+        callback: OptCallback<S>,
     ) -> Self {
         Self {
             set,

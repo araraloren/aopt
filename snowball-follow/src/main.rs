@@ -8,7 +8,6 @@ use std::{env::Args, io::Stdout};
 use aopt::arg::ArgStream;
 use aopt::err::create_error;
 use aopt::err::Result;
-use aopt::parser::DefaultService;
 use aopt::prelude::*;
 use aopt_help::prelude::*;
 use reqwest::header;
@@ -211,7 +210,7 @@ fn parser_command_line(args: Args) -> Result<Parser<SimpleSet, DefaultService, F
         let id = commit.commit()?;
         parser.add_callback(
             id,
-            simple_pos_mut_cb!(|_, set, id, _, _| {
+            simple_pos_mut_cb!(|_, set: &mut SimpleSet, id, _, _| {
                 let mut ret = Ok(None);
 
                 if let Some(stock_number) = convert_line_to_stock_number(id) {
@@ -241,7 +240,7 @@ fn parser_command_line(args: Args) -> Result<Parser<SimpleSet, DefaultService, F
         let id = commit.commit()?;
         parser.add_callback(
             id,
-            simple_pos_mut_cb!(|_, set, file, _, _| {
+            simple_pos_mut_cb!(|_, set: &mut SimpleSet, file, _, _| {
                 let mut ret = Ok(None);
                 let fh = Path::new(file);
                 let debug = *set
