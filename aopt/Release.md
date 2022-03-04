@@ -5,6 +5,8 @@
 
 - refactor set as type parameter
 
+- refactor index access of SimpleSet
+
 ## 0.5.8
 
 - update documents

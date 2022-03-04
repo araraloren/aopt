@@ -17,16 +17,18 @@ fn main() -> Result<()> {
 
     // default prefix of SimpleSet is '-' and '--'
     single_app.add_prefix("+".into());
-    single_app.add_opt("--depth=i")?
+    single_app
+        .add_opt("--depth=i")?
         .set_help("set the search depth of directory")
         .commit()?;
-    single_app.add_opt("-r=b/")?
+    single_app
+        .add_opt("-r=b/")?
         .set_help("disable recurse directory option")
         .commit()?;
 
     fn display_depth_and_source(
         _: Uid,
-        set: &mut dyn Set,
+        set: &mut SimpleSet,
         value: OptValue,
     ) -> aopt::err::Result<Option<OptValue>> {
         let depth = set.get_value("--depth")?.unwrap().as_int().unwrap_or(&0);
@@ -41,23 +43,32 @@ fn main() -> Result<()> {
         .commit()?;
 
     single_app.add_opt("--debug=b")?.commit()?;
-    single_app.add_opt_cb(
-        "destination=p!@-1",
-        simple_pos_cb!(move |_, set, arg, _, _| {
-            let mapped: Vec<(String, String)> = set[srcid].get_value().as_vec().unwrap()
-                .iter().map(|v| {
-                    println!("Save copy location({}) to destination({})", v, arg);
-                    (v.clone(), arg.into())
-                }).collect();
-            // you can even keep Any to OptValue
-            Ok(Some(OptValue::from_any(Box::new(mapped))))
-        }),
-    )?.commit()?;
+    single_app
+        .add_opt_cb(
+            "destination=p!@-1",
+            simple_pos_cb!(move |_, set: &SimpleSet, arg, _, _| {
+                let mapped: Vec<(String, String)> = set[srcid]
+                    .get_value()
+                    .as_vec()
+                    .unwrap()
+                    .iter()
+                    .map(|v| {
+                        println!("Save copy location({}) to destination({})", v, arg);
+                        (v.clone(), arg.into())
+                    })
+                    .collect();
+                // you can even keep Any to OptValue
+                Ok(Some(OptValue::from_any(Box::new(mapped))))
+            }),
+        )?
+        .commit()?;
 
     single_app.run_mut(&mut std::env::args().skip(1), |ret, app| {
         if ret {
-            if let Some(any_value) = app.get_value("destination")? {
-                let mapped: &Vec<(String, String)> = any_value.downcast_ref().unwrap();
+            if let Some(mapped) = app["destination"]
+                .get_value()
+                .downcast_ref::<&Vec<(String, String)>>()
+            {
                 mapped.iter().for_each(|(v, arg)| {
                     println!("Will copy location({}) to destination({})", v, arg);
                 })
@@ -100,8 +111,14 @@ fn main() -> Result<()> {
     list.add_opt("-source=s")?.add_alias("-s")?.commit()?;
     list.add_opt_cb(
         "main=m",
-        simple_main_cb!(|_, _, _, value| {
-            println!("invoke list command");
+        simple_main_cb!(|_, set: &SimpleSet, _, value| {
+            println!(
+                "invoke list command: debug={:?}, force={:?}, local-only={:?}, source={:?}",
+                set["debug"].get_value(),
+                set["force"].get_value(),
+                set["local-only"].get_value(),
+                set["source"].get_value()
+            );
             Ok(Some(value))
         }),
     )?
@@ -115,8 +132,13 @@ fn main() -> Result<()> {
     update
         .add_opt_cb(
             "main=m",
-            simple_main_cb!(|_, _, _, value| {
-                println!("invoke update command");
+            simple_main_cb!(|_, set: &SimpleSet, _, value| {
+                println!(
+                    "invoke update command: debug={:?}, force={:?}, source={:?}",
+                    set["debug"].get_value(),
+                    set["force"].get_value(),
+                    set["source"].get_value()
+                );
                 Ok(Some(value))
             }),
         )?
@@ -125,14 +147,19 @@ fn main() -> Result<()> {
     install.add_opt("install=c")?.commit()?;
     install.add_opt("in=c")?.commit()?;
     install.add_opt("-debug=b")?.commit()?;
-    install.add_opt("-override=b")?.add_alias("-o")?.commit()?;
+    install.add_opt("-override=b/")?.add_alias("-o")?.commit()?;
     install.add_opt("-source=s")?.add_alias("-s")?.commit()?;
     install
         .add_opt_cb(
             "name=p!@2",
-            simple_pos_cb!(|_, _, arg, _, value| {
+            simple_pos_cb!(|_, set: &SimpleSet, arg, _, value| {
                 if arg == "software" {
-                    println!("invoke install command: {}", arg);
+                    println!(
+                        "invoke install command: debug={:?}, override={:?}, source={:?}",
+                        set["debug"].get_value(),
+                        set["override"].get_value(),
+                        set["source"].get_value()
+                    );
                     Ok(Some(value))
                 } else {
                     Ok(None)
@@ -148,11 +175,13 @@ fn main() -> Result<()> {
 }
 ```
 
-* `app.exe in software` output `invoke install command: software`.
+* `app.exe ls -source lib.rs -debug` output `invoke list command: debug=Bool(true), force=Null, local-only=Null, source=Str("lib.rs")`.
 
-* `app.exe in foo` output `command not matched`.
+* `app.exe update -force -source=crates.io` output `invoke update command: debug=Null, force=Bool(true), source=Str("crates.io")`.
 
-* `app.exe 
+* `app.exe in software -/o -s crates.io` output `invoke install command: debug=Null, override=Bool(false), source=Str("crates.io")`.
+
+* `app.exe in aopt` output `command not matched`.
 
 ### More
 

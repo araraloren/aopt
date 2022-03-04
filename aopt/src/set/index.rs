@@ -27,6 +27,13 @@ impl_num_index_for!(i16);
 impl_num_index_for!(i32);
 impl_num_index_for!(i64);
 impl_num_index_for!(i128);
+impl_num_index_for!(u8);
+impl_num_index_for!(u16);
+impl_num_index_for!(u32);
+impl_num_index_for!(u64);
+impl_num_index_for!(u128);
+impl_num_index_for!(usize);
+impl_num_index_for!(isize);
 
 impl<'a, T: Set> SetIndex<T> for &'a str {
     fn ref_from<'s>(&self, set: &'s T) -> Option<&'s Box<dyn Opt>> {
