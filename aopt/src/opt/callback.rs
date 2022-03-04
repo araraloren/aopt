@@ -248,25 +248,25 @@ impl<S: Set> From<Box<dyn MainFnMut<S>>> for Callback<S> {
 }
 
 /// Simple struct implemented [`OptFn`].
-pub struct SimpleOptFn<'a, S, T>(T, PhantomData<&'a T>, PhantomData<S>)
+pub struct SimpleOptFn<S, T>(T, PhantomData<S>)
 where
-    S: Set,
-    T: 'a + Fn(Uid, &S, OptValue) -> Result<Option<OptValue>>;
+    S: 'static + Set,
+    T: 'static + Fn(Uid, &S, OptValue) -> Result<Option<OptValue>>;
 
-impl<'a, S, T> SimpleOptFn<'a, S, T>
+impl<S, T> SimpleOptFn<S, T>
 where
-    S: Set,
-    T: 'a + Fn(Uid, &S, OptValue) -> Result<Option<OptValue>>,
+    S: 'static + Set,
+    T: 'static + Fn(Uid, &S, OptValue) -> Result<Option<OptValue>>,
 {
     pub fn new(cb: T) -> Self {
-        Self(cb, PhantomData::default(), PhantomData::default())
+        Self(cb, PhantomData::default())
     }
 }
 
-impl<'a, S, T> Debug for SimpleOptFn<'a, S, T>
+impl<S, T> Debug for SimpleOptFn<S, T>
 where
-    S: Set,
-    T: 'a + Fn(Uid, &S, OptValue) -> Result<Option<OptValue>>,
+    S: 'static + Set,
+    T: 'static + Fn(Uid, &S, OptValue) -> Result<Option<OptValue>>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SimpleOptFn")
@@ -275,10 +275,10 @@ where
     }
 }
 
-impl<'a, S, T> OptFn<S> for SimpleOptFn<'a, S, T>
+impl<S, T> OptFn<S> for SimpleOptFn<S, T>
 where
-    S: Set,
-    T: 'a + Fn(Uid, &S, OptValue) -> Result<Option<OptValue>>,
+    S: 'static + Set,
+    T: 'static + Fn(Uid, &S, OptValue) -> Result<Option<OptValue>>,
 {
     fn call(&mut self, uid: Uid, set: &S, value: OptValue) -> Result<Option<OptValue>> {
         self.0(uid, set, value)
@@ -286,25 +286,25 @@ where
 }
 
 /// Simple struct implemented [`OptFnMut`].
-pub struct SimpleOptFnMut<'a, S, T>(T, PhantomData<&'a T>, PhantomData<S>)
+pub struct SimpleOptFnMut<S, T>(T, PhantomData<S>)
 where
-    S: Set,
-    T: 'a + for<'b> FnMut(Uid, &'b mut S, OptValue) -> Result<Option<OptValue>>;
+    S: 'static + Set,
+    T: 'static + for<'b> FnMut(Uid, &'b mut S, OptValue) -> Result<Option<OptValue>>;
 
-impl<'a, S, T> SimpleOptFnMut<'a, S, T>
+impl<S, T> SimpleOptFnMut<S, T>
 where
-    S: Set,
-    T: 'a + for<'b> FnMut(Uid, &'b mut S, OptValue) -> Result<Option<OptValue>>,
+    S: 'static + Set,
+    T: 'static + for<'b> FnMut(Uid, &'b mut S, OptValue) -> Result<Option<OptValue>>,
 {
     pub fn new(cb: T) -> Self {
-        Self(cb, PhantomData::default(), PhantomData::default())
+        Self(cb, PhantomData::default())
     }
 }
 
-impl<'a, S, T> Debug for SimpleOptFnMut<'a, S, T>
+impl<S, T> Debug for SimpleOptFnMut<S, T>
 where
-    S: Set,
-    T: 'a + for<'b> FnMut(Uid, &'b mut S, OptValue) -> Result<Option<OptValue>>,
+    S: 'static + Set,
+    T: 'static + FnMut(Uid, &mut S, OptValue) -> Result<Option<OptValue>>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SimpleOptFnMut")
@@ -313,10 +313,10 @@ where
     }
 }
 
-impl<'a, S, T> OptFnMut<S> for SimpleOptFnMut<'a, S, T>
+impl<S, T> OptFnMut<S> for SimpleOptFnMut<S, T>
 where
-    S: Set,
-    T: 'a + for<'b> FnMut(Uid, &'b mut S, OptValue) -> Result<Option<OptValue>>,
+    S: 'static + Set,
+    T: 'static + for<'b> FnMut(Uid, &'b mut S, OptValue) -> Result<Option<OptValue>>,
 {
     fn call(&mut self, uid: Uid, set: &mut S, value: OptValue) -> Result<Option<OptValue>> {
         self.0(uid, set, value)
@@ -324,25 +324,25 @@ where
 }
 
 /// Simple struct implemented [`PosFn`].
-pub struct SimplePosFn<'a, S, T>(T, PhantomData<&'a T>, PhantomData<S>)
+pub struct SimplePosFn<S, T>(T, PhantomData<S>)
 where
-    S: Set,
-    T: 'a + Fn(Uid, &S, &str, u64, OptValue) -> Result<Option<OptValue>>;
+    S: 'static + Set,
+    T: 'static + Fn(Uid, &S, &str, u64, OptValue) -> Result<Option<OptValue>>;
 
-impl<'a, S, T> SimplePosFn<'a, S, T>
+impl<S, T> SimplePosFn<S, T>
 where
-    S: Set,
-    T: 'a + Fn(Uid, &S, &str, u64, OptValue) -> Result<Option<OptValue>>,
+    S: 'static + Set,
+    T: 'static + Fn(Uid, &S, &str, u64, OptValue) -> Result<Option<OptValue>>,
 {
     pub fn new(cb: T) -> Self {
-        Self(cb, PhantomData::default(), PhantomData::default())
+        Self(cb, PhantomData::default())
     }
 }
 
-impl<'a, S, T> Debug for SimplePosFn<'a, S, T>
+impl<S, T> Debug for SimplePosFn<S, T>
 where
-    S: Set,
-    T: 'a + Fn(Uid, &S, &str, u64, OptValue) -> Result<Option<OptValue>>,
+    S: 'static + Set,
+    T: 'static + Fn(Uid, &S, &str, u64, OptValue) -> Result<Option<OptValue>>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SimplePosFn")
@@ -351,10 +351,10 @@ where
     }
 }
 
-impl<'a, S, T> PosFn<S> for SimplePosFn<'a, S, T>
+impl<S, T> PosFn<S> for SimplePosFn<S, T>
 where
-    S: Set,
-    T: 'a + Fn(Uid, &S, &str, u64, OptValue) -> Result<Option<OptValue>>,
+    S: 'static + Set,
+    T: 'static + Fn(Uid, &S, &str, u64, OptValue) -> Result<Option<OptValue>>,
 {
     fn call(
         &mut self,
@@ -369,25 +369,25 @@ where
 }
 
 /// Simple struct implemented [`PosFnMut`].
-pub struct SimplePosFnMut<'a, S, T>(T, PhantomData<&'a T>, PhantomData<S>)
+pub struct SimplePosFnMut<S, T>(T, PhantomData<S>)
 where
-    S: Set,
-    T: 'a + FnMut(Uid, &mut S, &str, u64, OptValue) -> Result<Option<OptValue>>;
+    S: 'static + Set,
+    T: 'static + FnMut(Uid, &mut S, &str, u64, OptValue) -> Result<Option<OptValue>>;
 
-impl<'a, S, T> SimplePosFnMut<'a, S, T>
+impl<S, T> SimplePosFnMut<S, T>
 where
-    S: Set,
-    T: 'a + FnMut(Uid, &mut S, &str, u64, OptValue) -> Result<Option<OptValue>>,
+    S: 'static + Set,
+    T: 'static + FnMut(Uid, &mut S, &str, u64, OptValue) -> Result<Option<OptValue>>,
 {
     pub fn new(cb: T) -> Self {
-        Self(cb, PhantomData::default(), PhantomData::default())
+        Self(cb, PhantomData::default())
     }
 }
 
-impl<'a, S, T> Debug for SimplePosFnMut<'a, S, T>
+impl<S, T> Debug for SimplePosFnMut<S, T>
 where
-    S: Set,
-    T: 'a + FnMut(Uid, &mut S, &str, u64, OptValue) -> Result<Option<OptValue>>,
+    S: 'static + Set,
+    T: 'static + FnMut(Uid, &mut S, &str, u64, OptValue) -> Result<Option<OptValue>>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SimplePosFnMut")
@@ -396,10 +396,10 @@ where
     }
 }
 
-impl<'a, S, T> PosFnMut<S> for SimplePosFnMut<'a, S, T>
+impl<S, T> PosFnMut<S> for SimplePosFnMut<S, T>
 where
-    S: Set,
-    T: 'a + FnMut(Uid, &mut S, &str, u64, OptValue) -> Result<Option<OptValue>>,
+    S: 'static + Set,
+    T: 'static + FnMut(Uid, &mut S, &str, u64, OptValue) -> Result<Option<OptValue>>,
 {
     fn call(
         &mut self,
@@ -414,25 +414,25 @@ where
 }
 
 /// Simple struct implemented [`MainFn`].
-pub struct SimpleMainFn<'a, S, T>(T, PhantomData<&'a T>, PhantomData<S>)
+pub struct SimpleMainFn<S, T>(T, PhantomData<S>)
 where
-    S: Set,
-    T: 'a + Fn(Uid, &S, &[&str], OptValue) -> Result<Option<OptValue>>;
+    S: 'static + Set,
+    T: 'static + Fn(Uid, &S, &[&str], OptValue) -> Result<Option<OptValue>>;
 
-impl<'a, S, T> SimpleMainFn<'a, S, T>
+impl<S, T> SimpleMainFn<S, T>
 where
-    S: Set,
-    T: 'a + Fn(Uid, &S, &[&str], OptValue) -> Result<Option<OptValue>>,
+    S: 'static + Set,
+    T: 'static + Fn(Uid, &S, &[&str], OptValue) -> Result<Option<OptValue>>,
 {
     pub fn new(cb: T) -> Self {
-        Self(cb, PhantomData::default(), PhantomData::default())
+        Self(cb, PhantomData::default())
     }
 }
 
-impl<'a, S, T> Debug for SimpleMainFn<'a, S, T>
+impl<S, T> Debug for SimpleMainFn<S, T>
 where
-    S: Set,
-    T: 'a + Fn(Uid, &S, &[&str], OptValue) -> Result<Option<OptValue>>,
+    S: 'static + Set,
+    T: 'static + Fn(Uid, &S, &[&str], OptValue) -> Result<Option<OptValue>>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SimpleMainFn")
@@ -441,10 +441,10 @@ where
     }
 }
 
-impl<'a, S, T> MainFn<S> for SimpleMainFn<'a, S, T>
+impl<S, T> MainFn<S> for SimpleMainFn<S, T>
 where
-    S: Set,
-    T: 'a + Fn(Uid, &S, &[&str], OptValue) -> Result<Option<OptValue>>,
+    S: 'static + Set,
+    T: 'static + Fn(Uid, &S, &[&str], OptValue) -> Result<Option<OptValue>>,
 {
     fn call(
         &mut self,
@@ -458,25 +458,25 @@ where
 }
 
 /// Simple struct implemented [`MainFnMut`].
-pub struct SimpleMainFnMut<'a, S, T>(T, PhantomData<&'a T>, PhantomData<S>)
+pub struct SimpleMainFnMut<S, T>(T, PhantomData<S>)
 where
-    S: Set,
-    T: 'a + FnMut(Uid, &mut S, &[&str], OptValue) -> Result<Option<OptValue>>;
+    S: 'static + Set,
+    T: 'static + FnMut(Uid, &mut S, &[&str], OptValue) -> Result<Option<OptValue>>;
 
-impl<'a, S, T> SimpleMainFnMut<'a, S, T>
+impl<S, T> SimpleMainFnMut<S, T>
 where
-    S: Set,
-    T: 'a + FnMut(Uid, &mut S, &[&str], OptValue) -> Result<Option<OptValue>>,
+    S: 'static + Set,
+    T: 'static + FnMut(Uid, &mut S, &[&str], OptValue) -> Result<Option<OptValue>>,
 {
     pub fn new(cb: T) -> Self {
-        Self(cb, PhantomData::default(), PhantomData::default())
+        Self(cb, PhantomData::default())
     }
 }
 
-impl<'a, S, T> Debug for SimpleMainFnMut<'a, S, T>
+impl<S, T> Debug for SimpleMainFnMut<S, T>
 where
-    S: Set,
-    T: 'a + FnMut(Uid, &mut S, &[&str], OptValue) -> Result<Option<OptValue>>,
+    S: 'static + Set,
+    T: 'static + FnMut(Uid, &mut S, &[&str], OptValue) -> Result<Option<OptValue>>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SimpleMainFnMut")
@@ -485,10 +485,10 @@ where
     }
 }
 
-impl<'a, S, T> MainFnMut<S> for SimpleMainFnMut<'a, S, T>
+impl<S, T> MainFnMut<S> for SimpleMainFnMut<S, T>
 where
-    S: Set,
-    T: 'a + FnMut(Uid, &mut S, &[&str], OptValue) -> Result<Option<OptValue>>,
+    S: 'static + Set,
+    T: 'static + FnMut(Uid, &mut S, &[&str], OptValue) -> Result<Option<OptValue>>,
 {
     fn call(
         &mut self,

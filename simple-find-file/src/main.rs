@@ -13,7 +13,7 @@ fn main() -> color_eyre::Result<()> {
         .init();
     color_eyre::install()?;
 
-    let mut parser = Parser::<SimpleSet, DefaultService<SimpleSet>, ForwardPolicy>::default();
+    let mut parser = Parser::<SimpleSet, DefaultService, ForwardPolicy>::default();
 
     parser.get_set_mut().add_prefix(gstr("+"));
 

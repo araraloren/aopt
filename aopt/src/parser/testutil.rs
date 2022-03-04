@@ -96,7 +96,11 @@ macro_rules! simple_delay_pos_tweak {
     };
 }
 
-pub struct TestingCase<S: 'static  + Set + Default, SS: Service<S> + Default, P: Policy<S, SS> + Default> {
+pub struct TestingCase<
+    S: 'static + Set + Default,
+    SS: Service<S> + Default,
+    P: Policy<S, SS> + Default,
+> {
     pub opt: &'static str,
 
     pub value: Option<OptValue>,
@@ -109,7 +113,7 @@ pub struct TestingCase<S: 'static  + Set + Default, SS: Service<S> + Default, P:
     pub checker: Option<OptChecker>,
 }
 
-impl<S: 'static  + Set + Default, SS: Service<S> + Default, P: Policy<S, SS> + Default> Default
+impl<S: 'static + Set + Default, SS: Service<S> + Default, P: Policy<S, SS> + Default> Default
     for TestingCase<S, SS, P>
 {
     fn default() -> Self {
@@ -123,7 +127,9 @@ impl<S: 'static  + Set + Default, SS: Service<S> + Default, P: Policy<S, SS> + D
     }
 }
 
-impl<S: 'static  + Set + Default, SS: Service<S> + Default, P: Policy<S, SS> + Default> TestingCase<S, SS, P> {
+impl<S: 'static + Set + Default, SS: Service<S> + Default, P: Policy<S, SS> + Default>
+    TestingCase<S, SS, P>
+{
     pub fn new(opt: &'static str) -> Self {
         Self {
             opt,
@@ -500,8 +506,11 @@ impl OptChecker {
     }
 }
 
-pub fn nonopt_testcases<S: 'static  + Set + Default, SS: Service<S> + Default, P: Policy<S, SS> + Default>(
-) -> Vec<TestingCase<S, SS, P>> {
+pub fn nonopt_testcases<
+    S: 'static + Set + Default,
+    SS: Service<S> + Default,
+    P: Policy<S, SS> + Default,
+>() -> Vec<TestingCase<S, SS, P>> {
     vec![
         TestingCase {
             opt: "n=m",
@@ -661,7 +670,7 @@ pub fn nonopt_testcases<S: 'static  + Set + Default, SS: Service<S> + Default, P
 }
 
 pub fn long_prefix_opt_testcases<
-    S: 'static  + Set + Default,
+    S: 'static + Set + Default,
     SS: Service<S> + Default,
     P: Policy<S, SS> + Default,
 >() -> Vec<TestingCase<S, SS, P>> {
@@ -770,7 +779,7 @@ pub fn long_prefix_opt_testcases<
 }
 
 pub fn shorting_prefix_opt_testcases<
-    S: 'static  + Set + Default,
+    S: 'static + Set + Default,
     SS: Service<S> + Default,
     P: Policy<S, SS> + Default,
 >() -> Vec<TestingCase<S, SS, P>> {

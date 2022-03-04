@@ -242,7 +242,7 @@ cfg_if::cfg_if! {
 /// ## Example
 ///
 /// ```ignore
-/// // block type is `Fn(Uid, &dyn Set, &[&str], OptValue) -> Result<Option<OptValue>>`
+/// // block type is `Fn(Uid, &S, &[&str], OptValue) -> Result<Option<OptValue>>`
 /// simple_main_cb!(|uid, set, args, value| { Ok(Some(value)) });
 /// ```
 #[macro_export]
@@ -257,7 +257,7 @@ macro_rules! simple_main_cb {
 /// ## Example
 ///
 /// ```ignore
-/// // block type is `FnMut(Uid, &mut dyn Set, &[&str], OptValue) -> Result<Option<OptValue>>`
+/// // block type is `FnMut(Uid, &mut S, &[&str], OptValue) -> Result<Option<OptValue>>`
 /// simple_main_mut_cb!(|uid, set, args, value| { Ok(Some(value)) });
 /// ```
 #[macro_export]
@@ -272,7 +272,7 @@ macro_rules! simple_main_mut_cb {
 /// ## Example
 ///
 /// ```ignore
-/// // block type is `Fn(Uid, &dyn Set, &str, u64, OptValue) -> Result<Option<OptValue>>`
+/// // block type is `Fn(Uid, &S, &str, u64, OptValue) -> Result<Option<OptValue>>`
 /// simple_pos_cb!(|uid, set, arg, noa_i, value| { Ok(Some(value)) });
 /// ```
 #[macro_export]
@@ -287,7 +287,7 @@ macro_rules! simple_pos_cb {
 /// ## Example
 ///
 /// ```ignore
-/// // block type is `FnMut(Uid, &mut dyn Set, &str, u64, OptValue) -> Result<Option<OptValue>>`
+/// // block type is `FnMut(Uid, &mut S, &str, u64, OptValue) -> Result<Option<OptValue>>`
 /// simple_pos_mut_cb!(|uid, set, arg, noa_i, value| { Ok(Some(value)) });
 /// ```
 #[macro_export]
@@ -302,7 +302,7 @@ macro_rules! simple_pos_mut_cb {
 /// ## Example
 ///
 /// ```ignore
-/// // block type is `Fn(Uid, &dyn Set, OptValue) -> Result<Option<OptValue>>`
+/// // block type is `Fn(Uid, &S, OptValue) -> Result<Option<OptValue>>`
 /// simple_opt_cb!(|uid, set, value| { Ok(Some(value)) });
 /// ```
 #[macro_export]
@@ -317,7 +317,7 @@ macro_rules! simple_opt_cb {
 /// ## Example
 ///
 /// ```ignore
-/// // block type is `FnMut(Uid, &mut dyn Set, OptValue) -> Result<Option<OptValue>>`
+/// // block type is `FnMut(Uid, &mut S, OptValue) -> Result<Option<OptValue>>`
 /// simple_opt_mut_cb!(|uid, set, value| { Ok(Some(value)) });
 /// ```
 #[macro_export]

@@ -8,7 +8,6 @@ use std::{env::Args, io::Stdout};
 use aopt::arg::ArgStream;
 use aopt::err::create_error;
 use aopt::err::Result;
-use aopt::parser::DefaultService;
 use aopt::prelude::*;
 use aopt_help::prelude::*;
 use reqwest::header;
@@ -169,8 +168,8 @@ impl SnowBall {
     }
 }
 
-fn parser_command_line(args: Args) -> Result<Parser<SimpleSet, DefaultService<SimpleSet>, ForwardPolicy>> {
-    let mut parser = Parser::<SimpleSet, DefaultService<SimpleSet>, ForwardPolicy>::default();
+fn parser_command_line(args: Args) -> Result<Parser<SimpleSet, DefaultService, ForwardPolicy>> {
+    let mut parser = Parser::<SimpleSet, DefaultService, ForwardPolicy>::default();
 
     parser.get_policy_mut().set_strict(true);
 

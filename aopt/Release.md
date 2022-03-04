@@ -1,6 +1,10 @@
 
 # Relase note
 
+## 0.6.0
+
+- refactor set as type parameter
+
 ## 0.5.8
 
 - update documents

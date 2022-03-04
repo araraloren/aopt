@@ -24,17 +24,19 @@ pub use delay_policy::DelayPolicy;
 pub use forward_policy::ForwardPolicy;
 pub use pre_policy::PrePolicy;
 pub use service::CallbackStore;
-pub use service::DefaultService;
+pub use service::SimpleService;
 pub use state::ParserState;
 
+pub type DefaultService = SimpleService<SimpleSet>;
+
 /// Default [`Parser`] that using [`ForwardPolicy`].
-pub type ForwardParser = Parser<SimpleSet, DefaultService<SimpleSet>, ForwardPolicy>;
+pub type ForwardParser = Parser<SimpleSet, DefaultService, ForwardPolicy>;
 
 /// Default [`Parser`] that using [`PrePolicy`].
-pub type PreParser = Parser<SimpleSet, DefaultService<SimpleSet>, PrePolicy>;
+pub type PreParser = Parser<SimpleSet, DefaultService, PrePolicy>;
 
 /// Default [`Parser`] that using [`DelayPolicy`].
-pub type DelayParser = Parser<SimpleSet, DefaultService<SimpleSet>, DelayPolicy>;
+pub type DelayParser = Parser<SimpleSet, DefaultService, DelayPolicy>;
 
 #[derive(Debug, Clone)]
 pub struct ValueKeeper {
@@ -155,7 +157,7 @@ pub trait Service<S: Set> {
 ///     #[derive(Debug, Default)]
 ///     pub struct EmptyPolicy(i64);
 ///
-///     impl<S: Set, SS: Service> Policy<S, SS> for EmptyPolicy {
+///     impl<S: Set, SS: Service<S>> Policy<S, SS> for EmptyPolicy {
 ///         fn parse(
 ///             &mut self,
 ///             set: &mut S,

@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::default;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
@@ -63,7 +62,7 @@ impl<S: Set> CallbackStore<S> {
 
 /// Simple implementation of [`Service`].
 #[derive(Debug)]
-pub struct DefaultService<S: Set> {
+pub struct SimpleService<S: Set> {
     noa: Vec<Ustr>,
 
     subscriber_info: Vec<Box<dyn Info>>,
@@ -71,7 +70,7 @@ pub struct DefaultService<S: Set> {
     callback_store: CallbackStore<S>,
 }
 
-impl<S: Set + Default> Default for DefaultService<S> {
+impl<S: Set + Default> Default for SimpleService<S> {
     fn default() -> Self {
         Self {
             callback_store: CallbackStore::new(),
@@ -81,7 +80,7 @@ impl<S: Set + Default> Default for DefaultService<S> {
     }
 }
 
-impl<S: Set> DefaultService<S> {
+impl<S: Set> SimpleService<S> {
     pub fn new() -> Self {
         Self {
             callback_store: CallbackStore::new(),
@@ -206,7 +205,7 @@ impl<S: Set> DefaultService<S> {
     }
 }
 
-impl<S: Set> Service<S> for DefaultService<S> {
+impl<S: Set> Service<S> for SimpleService<S> {
     fn gen_opt<M: Matcher + Default>(
         &self,
         arg: &crate::arg::Argument,
@@ -426,7 +425,7 @@ impl<S: Set> Service<S> for DefaultService<S> {
     }
 }
 
-impl<S: Set, M: Matcher> Proc<S, M> for DefaultService<S> {
+impl<S: Set, M: Matcher> Proc<S, M> for SimpleService<S> {
     fn process(&mut self, msg: &mut M, set: &mut S, invoke: bool) -> Result<Vec<ValueKeeper>> {
         match msg.get_style() {
             Style::Boolean | Style::Argument | Style::Multiple => {

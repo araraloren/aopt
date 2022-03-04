@@ -27,17 +27,14 @@ use crate::uid::Uid;
 ///     app.add_opt("-a=b!")?.commit()?;
 ///     app.add_opt("-b=i")?.commit()?;
 ///
-///     app.run_async_mut(
-///         ["-a", "-b", "42"].into_iter(),
-///         |ret, app| async move {
-///             if ret {
-///                 dbg!(&app);
-///                 dbg!(app.find("-a")?);
-///                 dbg!(app.find("-b")?);
-///             }
-///             Ok(())
-///         },
-///     )
+///     app.run_async_mut(["-a", "-b", "42"].into_iter(), |ret, app| async move {
+///         if ret {
+///             dbg!(&app);
+///             dbg!(app.find("-a")?);
+///             dbg!(app.find("-b")?);
+///         }
+///         Ok(())
+///     })
 ///     .await?;
 ///
 ///     Ok(())
@@ -131,13 +128,12 @@ where
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```rust
     /// use aopt::app::SingleApp;
     /// use aopt::err::Result;
     /// use aopt::prelude::*;
     ///
-    /// #[async_std::main]
-    /// async fn main() -> Result<()> {
+    /// fn main() -> Result<()> {
     ///     let mut app = SingleApp::<SimpleSet, DefaultService, ForwardPolicy>::default();
     ///
     ///     app.add_opt("-a=b!")?.commit()?;
@@ -242,13 +238,12 @@ where
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```rust
     /// use aopt::app::SingleApp;
     /// use aopt::err::Result;
     /// use aopt::prelude::*;
     ///
-    /// #[async_std::main]
-    /// async fn main() -> Result<()> {
+    /// fn main() -> Result<()> {
     ///     let mut app = SingleApp::<SimpleSet, DefaultService, ForwardPolicy>::default();
     ///
     ///     app.add_opt("-a=b!")?.commit()?;

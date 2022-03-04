@@ -32,6 +32,8 @@ cfg_if::cfg_if! {
 
             fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>>;
         }
+
+        pub trait Set: Debug + PrefixSet + OptionSet + CreatorSet + Send + Sync {}
     }
     else {
         /// Trait using for create [`Opt`] with given [`CreateInfo`].
@@ -42,10 +44,10 @@ cfg_if::cfg_if! {
 
             fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>>;
         }
+
+        pub trait Set: Debug + PrefixSet + OptionSet + CreatorSet {}
     }
 }
-
-pub trait Set: Debug + PrefixSet + OptionSet + CreatorSet {}
 
 pub trait PrefixSet {
     fn add_prefix(&mut self, prefix: Ustr);

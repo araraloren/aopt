@@ -626,6 +626,7 @@ pub mod prelude {
     pub use crate::parser::PreParser;
     pub use crate::parser::PrePolicy;
     pub use crate::parser::Service;
+    pub use crate::parser::SimpleService;
     pub use crate::proc::Info;
     pub use crate::proc::Matcher;
     pub use crate::proc::NonOptMatcher;
