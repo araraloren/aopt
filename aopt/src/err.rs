@@ -129,6 +129,11 @@ impl Error {
         ConstructError::InvalidRetValueOfCallback(t.into()).into()
     }
 
+    /// Create ConstructError::CanNotInsertPOSIfCMDExists error
+    pub fn opt_can_not_insert_pos() -> Self {
+        ConstructError::CanNotInsertPOSIfCMDExists.into()
+    }
+
     /// Create ConstructError::MissingOptionType error
     pub fn opt_missing_type<T: Into<ErrorStr>>(t: T) -> Self {
         ConstructError::MissingOptionType(t.into()).into()
@@ -202,6 +207,11 @@ impl Error {
     /// Create SpecialError::POSForceRequired error
     pub fn sp_pos_force_require<T: Into<ErrorStr>>(t: T) -> Self {
         SpecialError::POSForceRequired(t.into()).into()
+    }
+
+    /// Create SpecialError::CMDForceRequired error
+    pub fn sp_cmd_force_require<T: Into<ErrorStr>>(t: T) -> Self {
+        SpecialError::CMDForceRequired(t.into()).into()
     }
 
     /// Create SpecialError::InvalidOptionName error
@@ -286,6 +296,9 @@ pub enum ConstructError {
 
     #[error("Invalid callback return value type: `{0}`")]
     InvalidRetValueOfCallback(ErrorStr),
+
+    #[error("Can not have force required POS if CMD exists")]
+    CanNotInsertPOSIfCMDExists,
 }
 
 /// Special error using for parser.
@@ -305,6 +318,9 @@ pub enum SpecialError {
 
     #[error("POS `{0}` is force required")]
     POSForceRequired(ErrorStr),
+
+    #[error("CMD `{0}` is force required")]
+    CMDForceRequired(ErrorStr),
 
     #[error("Invalid option name: `{0}`")]
     InvalidOptionName(ErrorStr),

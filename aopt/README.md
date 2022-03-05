@@ -183,7 +183,137 @@ fn main() -> Result<()> {
 
 * `app.exe in aopt` output `command not matched`.
 
-### More
+## Example3
+
+With `getopd!` and `DynParser`, you can match and process the command with different `Policy`.
+
+```rust
+use aopt::prelude::*;
+
+fn main() -> aopt::Result<()> {
+    let mut list = DynParser::<SimpleSet, DefaultService>::new_policy(DelayPolicy::default());
+
+    list.add_opt("list=c")?.commit()?;
+    list.add_opt_cb(
+        "-f=b",
+        simple_opt_mut_cb!(|_, _, value| {
+            println!("filter directory with file type");
+            Ok(Some(value))
+        }),
+    )?
+    .commit()?;
+    list.add_opt_cb(
+        "-d=b",
+        simple_opt_mut_cb!(|_, _, value| {
+            println!("filter directory with directory type");
+            Ok(Some(value))
+        }),
+    )?
+    .commit()?;
+    list.add_opt_cb(
+        "-l=b",
+        simple_opt_mut_cb!(|_, _, value| {
+            println!("filter directory with symbol link type");
+            Ok(Some(value))
+        }),
+    )?
+    .commit()?;
+    list.add_opt_cb(
+        "directory=p!@2",
+        simple_pos_cb!(|_, _, dir, _, value| {
+            println!("reading `{}` and save the directorys into option", dir);
+            Ok(Some(value))
+        }),
+    )?
+    .commit()?;
+    list.add_opt_cb(
+        "main=m",
+        simple_main_cb!(|_, _, _, value| {
+            println!("process the list req");
+            Ok(Some(value))
+        }),
+    )?
+    .commit()?;
+
+    let mut copy = DynParser::<SimpleSet, DefaultService>::new_policy(ForwardPolicy::default());
+
+    copy.add_opt("copy=c")?.commit()?;
+    copy.add_opt_cb(
+        "-r=b",
+        simple_opt_mut_cb!(|_, _, value| {
+            println!("copy the directory with recurse mode");
+            Ok(Some(value))
+        }),
+    )?
+    .commit()?;
+    copy.add_opt_cb(
+        "-l=b/",
+        simple_opt_mut_cb!(|_, _, value| {
+            println!("don't copy the symbol link");
+            Ok(Some(value))
+        }),
+    )?
+    .commit()?;
+    copy.add_opt_cb(
+        "destine=p!@2",
+        simple_pos_cb!(|_, _, dir, _, value| {
+            println!("set the destine directory to {}", dir);
+            Ok(Some(value))
+        }),
+    )?
+    .commit()?;
+    copy.add_opt_cb(
+        "source=p!@>2",
+        simple_pos_cb!(|_, _, dir, _, value| {
+            println!("add {} to copy list", dir);
+            Ok(Some(value))
+        }),
+    )?
+    .commit()?;
+    copy.add_opt_cb(
+        "main=m",
+        simple_main_cb!(|_, _, _, value| {
+            println!("process the copy req");
+            Ok(Some(value))
+        }),
+    )?
+    .commit()?;
+
+    if getoptd!(&mut std::env::args().skip(1), list, copy)?.is_none() {
+        println!("not matched");
+    }
+
+    Ok(())
+}
+```
+
+* With `app.exe copy src foo -/l -r`, got output 
+
+```txt
+don't copy the symbol link
+copy the directory with recurse mode
+set the destine directory to src
+add foo to copy list
+process the copy req
+```
+
+* With `app.exe list -f -l src`, got output 
+
+```txt
+reading `src` and save the directorys into option
+filter directory with file type
+filter directory with symbol link type
+process the list req
+```
+
+* With `app.exe copy src`, got output 
+
+```txt
+set the destine directory to src
+not matched
+```
+
+## More
 
 - simple-find-file
 
@@ -196,6 +326,10 @@ Get the follow count of stock in `xueqiu.com`, try it using [`cargo install --pa
 - index constituent
 
 Search and list the constituent of index, try it using [`cargo install --path index-constituent`](https://github.com/araraloren/aopt/tree/main/index-constituent)
+
+## Release log
+
+Follow the [link](https://github.com/araraloren/aopt/blob/main/aopt/Release.md).
 
 ## LICENSE
 

@@ -7,6 +7,10 @@
 
 - refactor index access of SimpleSet
 
+- change the nonopt_check to cmd_check and pos_check
+
+- fix the check logical of CMD POS and MAIN
+
 ## 0.5.8
 
 - update documents

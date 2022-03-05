@@ -6,6 +6,7 @@ use super::state::ParserState;
 use super::Service;
 use super::ValueKeeper;
 use crate::opt::OptCallback;
+use crate::opt::OptIndex;
 use crate::opt::OptValue;
 use crate::opt::Style;
 use crate::proc::Info;
@@ -233,6 +234,8 @@ impl<S: Set> Service<S> for SimpleService<S> {
         Ok(self.process(matcher, set, invoke)?)
     }
 
+    /// Check the [Callback](crate::opt::callback::Callback)'s type is matched with option [`CallbackType`](crate::opt::callback::CallbackType).
+    /// Check CMD and force required POS@1 are not exists same time.
     fn pre_check(&self, set: &S) -> Result<bool> {
         self.callback_store.for_each(|uid, cb| {
             if let Some(opt) = set.get_opt(*uid) {
@@ -248,9 +251,28 @@ impl<S: Set> Service<S> for SimpleService<S> {
                 warn!(%uid, "callback has unknow option uid");
                 Ok(true)
             }
-        })
+        })?;
+        let has_cmd = set.opt_iter().any(|v| v.match_style(Style::Cmd));
+
+        const MAX_INDEX: u64 = u64::MAX;
+
+        if has_cmd {
+            for opt in set.opt_iter() {
+                if opt.as_ref().match_style(Style::Pos) {
+                    if let Some(index) = opt.as_ref().get_index() {
+                        let index = index.calc_index(MAX_INDEX, 1).unwrap_or(MAX_INDEX);
+                        if index == 1 && !opt.as_ref().get_optional() {
+                            // if we have cmd, can not have force required POS @1
+                            return Err(Error::opt_can_not_insert_pos());
+                        }
+                    }
+                }
+            }
+        }
+        Ok(true)
     }
 
+    /// Check if the option is valid.
     fn opt_check(&self, set: &S) -> Result<bool> {
         for opt in set.opt_iter() {
             if opt.as_ref().match_style(Style::Boolean)
@@ -263,99 +285,105 @@ impl<S: Set> Service<S> for SimpleService<S> {
         Ok(true)
     }
 
-    fn nonopt_check(&self, set: &S) -> Result<bool> {
-        const MAX_INDEX: u64 = u64::MAX;
-
+    /// Check if the POS is valid.
+    /// For which POS is have certainty position, POS has same position are replaceble even it is force reuqired.
+    /// For which POS is have uncertainty position, it must be set if it is force reuqired.
+    fn pos_check(&self, set: &S) -> Result<bool> {
+        // for POS has certainty position, POS has same position are replaceble even it is force reuqired.
         let mut index_map: HashMap<u64, Vec<Uid>> = HashMap::new();
+        // for POS has uncertainty position, it must be set if it is force reuqired
+        let mut float_vec: Vec<Uid> = vec![];
 
         for opt in set.opt_iter() {
-            if opt.as_ref().match_style(Style::Pos)
-                || opt.as_ref().match_style(Style::Cmd)
-                || opt.as_ref().match_style(Style::Main)
-            {
-                if let Some(index) = opt.as_ref().get_index() {
-                    let index = index.calc_index(MAX_INDEX, 1).unwrap_or(MAX_INDEX);
-                    let entry = index_map.entry(index).or_insert(vec![]);
-
-                    entry.push(opt.as_ref().get_uid());
+            if opt.as_ref().match_style(Style::Pos) {
+                if let Some(index) = opt.get_index() {
+                    match index {
+                        OptIndex::Forward(_) | OptIndex::Backward(_) => {
+                            if let Some(index) = index.calc_index(u64::MAX, 1) {
+                                let entry = index_map.entry(index).or_insert(vec![]);
+                                entry.push(opt.get_uid());
+                            }
+                        }
+                        OptIndex::List(v) => {
+                            for index in v {
+                                let entry = index_map.entry(*index).or_insert(vec![]);
+                                entry.push(opt.get_uid());
+                            }
+                        }
+                        OptIndex::Except(_)
+                        | OptIndex::Greater(_)
+                        | OptIndex::Less(_)
+                        | OptIndex::AnyWhere => {
+                            float_vec.push(opt.get_uid());
+                        }
+                        OptIndex::Null => {}
+                    }
                 }
             }
         }
-
-        trace!(?index_map, "non-opt check information");
-
         let mut names = vec![];
 
+        trace!(?index_map, ?float_vec, "pos check information");
         for (index, uids) in index_map.iter() {
-            let valid;
+            // if any of POS is force required, then it must set by user
+            let mut pos_valid = true;
 
-            // <cmd1> <cmd2> <pos3> [pos4] [pos5]
-            // any of thing at position 1
-            if index == &1 || index == &0 {
-                let mut cmd_count = 0;
-                let mut cmd_valid = false;
-                let mut pos_valid = true;
-                let mut force_valid = false;
+            for uid in uids {
+                let opt = set.get_opt(*uid).unwrap();
+                let opt_valid = opt.check().is_ok();
 
-                for uid in uids {
-                    let opt = set.get_opt(*uid).unwrap();
-
-                    if opt.match_style(Style::Cmd) {
-                        cmd_count += 1;
-                        // set the cmd will valid the check
-                        // if any of cmd is valid, break out
-                        cmd_valid = cmd_valid || opt.check().is_ok();
-                        if cmd_valid {
-                            break;
-                        }
-                        names.push(opt.get_hint().to_owned());
-                    } else if opt.match_style(Style::Pos) {
-                        let opt_valid = opt.check().is_ok();
-
-                        pos_valid = pos_valid && opt_valid;
-                        if opt_valid && !opt.get_optional() {
-                            force_valid = true;
-                            names.push(opt.get_hint().to_owned());
-                        }
-                    }
+                pos_valid = pos_valid && opt_valid;
+                if !opt_valid {
+                    names.push(opt.get_hint().to_owned());
                 }
-
-                debug!(%cmd_valid, %pos_valid, %force_valid, "in default nonopt-check");
-
-                // if we have CMD, then the CMD must be set or any POS is set
-                // if all nonopt @1 are POS, it's normally like @2..
-                if cmd_count > 0 {
-                    valid = cmd_valid || (pos_valid && force_valid);
-                } else {
-                    valid = pos_valid;
-                }
-            } else {
-                // <pos1> [pos2] [pos3] [pos4] [pos5]
-                // if any of POS is force required, then it must set by user
-                let mut pos_valid = true;
-
-                for uid in uids {
-                    let opt = set.get_opt(*uid).unwrap();
-                    let opt_valid = opt.check().is_ok();
-
-                    pos_valid = pos_valid && opt_valid;
-                    if !opt_valid {
-                        names.push(opt.get_hint().to_owned());
-                    }
-                }
-                debug!(%pos_valid, "in default nonopt-check");
-                valid = pos_valid;
             }
-            if !valid {
+            debug!(%pos_valid, "in default pos check @ pos {}", index);
+            if !pos_valid {
                 return Err(Error::sp_pos_force_require(names.join(" | ")));
             }
             names.clear();
         }
-
+        if float_vec.len() > 0 {
+            float_vec
+                .iter()
+                .filter(|&uid| set.get_opt(*uid).unwrap().check().is_err())
+                .for_each(|&uid| {
+                    names.push(set.get_opt(uid).unwrap().get_hint().to_owned());
+                });
+            if names.len() > 0 {
+                debug!(?names, "in default float pos check @ pos");
+                return Err(Error::sp_pos_force_require(names.join(" | ")));
+            }
+        }
         Ok(true)
     }
 
-    fn post_check(&self, _set: &S) -> Result<bool> {
+    fn cmd_check(&self, set: &S) -> Result<bool> {
+        let mut names = vec![];
+        let mut valid = false;
+
+        for opt in set.opt_iter() {
+            if opt.as_ref().match_style(Style::Cmd) {
+                valid = valid || opt.check().is_ok();
+                if valid {
+                    break;
+                } else {
+                    names.push(opt.get_hint().to_owned());
+                }
+            }
+        }
+        if !valid && names.len() > 0 {
+            return Err(Error::sp_cmd_force_require(names.join(" | ")));
+        }
+        Ok(true)
+    }
+
+    fn post_check(&self, set: &S) -> Result<bool> {
+        for opt in set.opt_iter() {
+            if opt.as_ref().match_style(Style::Main) {
+                opt.check()?;
+            }
+        }
         Ok(true)
     }
 

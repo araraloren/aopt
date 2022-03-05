@@ -109,7 +109,10 @@ pub trait Service<S: Set> {
     fn opt_check(&self, set: &S) -> Result<bool>;
 
     /// Checking if the `set` data valid.
-    fn nonopt_check(&self, set: &S) -> Result<bool>;
+    fn pos_check(&self, set: &S) -> Result<bool>;
+
+    /// Checking if the `set` data valid.
+    fn cmd_check(&self, set: &S) -> Result<bool>;
 
     /// Checking if the `set` data valid.
     fn post_check(&self, set: &S) -> Result<bool>;

@@ -107,6 +107,8 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for PrePolicy {
                 service.matching(&mut proc, set, true)?;
             }
 
+            service.cmd_check(set)?;
+
             let gen_style = ParserState::PSNonPos;
 
             info!("start process {:?} ...", &gen_style);
@@ -124,7 +126,7 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for PrePolicy {
 
         // check pos and cmd
         info!("do nonopt check");
-        service.nonopt_check(set)?;
+        service.pos_check(set)?;
 
         let gen_style = ParserState::PSNonMain;
 
