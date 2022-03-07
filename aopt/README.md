@@ -2,6 +2,24 @@
 
 A flexible and typed getopt like command line tools for rust.
 
+## Setup
+
+Add the following to your `Cargo.toml` file:
+
+```toml
+[dependencies]
+aopt = "0.5"
+```
+
+### Enable `sync` feature
+
+If you want the utils of current crate implement [`Send`] and [`Sync`], you can enable `sync` feature.
+
+```toml
+[dependencies]
+aopt = { version = "0.5", features = [ "sync" ] }
+```
+
 ## Example1
 
 `SingleApp` can help you create a simple tools command.

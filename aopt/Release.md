@@ -1,6 +1,10 @@
 
 # Relase note
 
+## 0.6.1
+
+- add policy change api to Parser and DynParser
+
 ## 0.6.0
 
 - refactor set as type parameter

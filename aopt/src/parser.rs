@@ -302,6 +302,11 @@ where
         &mut self.policy
     }
 
+    pub fn set_policy(&mut self, policy: P) -> &mut Self {
+        self.policy = policy;
+        self
+    }
+
     pub fn get_service(&self) -> &SS {
         &self.service
     }
@@ -310,12 +315,22 @@ where
         &mut self.service
     }
 
+    pub fn set_service(&mut self, service: SS) -> &mut Self {
+        self.service = service;
+        self
+    }
+
     pub fn get_set(&self) -> &S {
         &self.set
     }
 
     pub fn get_set_mut(&mut self) -> &mut S {
         &mut self.set
+    }
+
+    pub fn set_set(&mut self, set: S) -> &mut Self {
+        self.set = set;
+        self
     }
 
     // extern the add_opt function, attach callback to option
@@ -474,6 +489,11 @@ where
         self.policy.as_mut()
     }
 
+    pub fn set_policy<P: Policy<S, SS> + 'static>(&mut self, policy: P) -> &mut Self {
+        self.policy = Box::new(policy);
+        self
+    }
+
     pub fn get_service(&self) -> &SS {
         &self.service
     }
@@ -482,12 +502,22 @@ where
         &mut self.service
     }
 
+    pub fn set_service(&mut self, service: SS) -> &mut Self {
+        self.service = service;
+        self
+    }
+
     pub fn get_set(&self) -> &S {
         &self.set
     }
 
     pub fn get_set_mut(&mut self) -> &mut S {
         &mut self.set
+    }
+
+    pub fn set_set(&mut self, set: S) -> &mut Self {
+        self.set = set;
+        self
     }
 
     // extern the add_opt function, attach callback to option
