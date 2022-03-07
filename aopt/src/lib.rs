@@ -88,7 +88,7 @@
 //!
 //! ## Setup
 //!
-//! Add the following to your `Cargo.toml` file:
+//! Add following to your `Cargo.toml` file:
 //!
 //! ```toml
 //! [dependencies]
