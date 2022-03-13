@@ -5,6 +5,10 @@
 
 - add policy change api to Parser and DynParser
 
+- add take_* to Value
+
+- change meger_* of Value
+
 ## 0.6.0
 
 - refactor set as type parameter

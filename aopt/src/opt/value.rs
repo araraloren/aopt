@@ -418,6 +418,48 @@ impl Value {
             _ => None,
         }
     }
+
+    pub fn take_int(&mut self) -> Option<i64> {
+        match self {
+            Self::Int(v) => Some(std::mem::take(v)),
+            _ => None,
+        }
+    }
+
+    pub fn take_uint(&mut self) -> Option<u64> {
+        match self {
+            Self::Uint(v) => Some(std::mem::take(v)),
+            _ => None,
+        }
+    }
+
+    pub fn take_flt(&mut self) -> Option<f64> {
+        match self {
+            Self::Flt(v) => Some(std::mem::take(v)),
+            _ => None,
+        }
+    }
+
+    pub fn take_str(&mut self) -> Option<String> {
+        match self {
+            Self::Str(v) => Some(std::mem::take(v)),
+            _ => None,
+        }
+    }
+
+    pub fn take_bool(&mut self) -> Option<bool> {
+        match self {
+            Self::Bool(v) => Some(std::mem::take(v)),
+            _ => None,
+        }
+    }
+
+    pub fn take_vec(&mut self) -> Option<Vec<String>> {
+        match self {
+            Self::Array(v) => Some(std::mem::take(v)),
+            _ => None,
+        }
+    }
 }
 
 impl Clone for Value {
