@@ -346,8 +346,8 @@ impl Value {
         *self = Self::Null;
     }
 
-    /// Append string if current value is [`Value::Array`].
-    pub fn app_str(&mut self, string: String) -> &mut Self {
+    /// Add string if current value is [`Value::Array`].
+    pub fn add_str(&mut self, string: String) -> &mut Self {
         match self {
             Self::Array(v) => {
                 v.push(string);
@@ -357,14 +357,12 @@ impl Value {
         self
     }
 
-    /// Append strings of other value if current value is [`Value::Array`].
-    pub fn merge(&mut self, other: &Self) -> &mut Self {
+    /// Append string if current value is [`Value::Array`].
+    pub fn app_str(&mut self, values: &[String]) -> &mut Self {
         match self {
             Self::Array(v) => {
-                if let Some(ov) = other.as_vec() {
-                    for item in ov {
-                        v.push(item.clone());
-                    }
+                for value in values {
+                    v.push(value.clone());
                 }
             }
             _ => {}
@@ -372,22 +370,53 @@ impl Value {
         self
     }
 
-    /// Append strings of other value if current value is [`Value::Array`].
+    /// Return a new value contains inner strings and other's strings if type is [`Value::Array`].
     ///
-    /// The function will take ownership of strings in other value.
-    pub fn merge_mut(&mut self, other: &mut Self) -> &mut Self {
+    /// It will take the ownership of strings of current value.
+    pub fn merge(&mut self, other: &Self) -> Option<Self> {
         match self {
-            Self::Array(v) => {
-                if let Some(ov) = other.as_vec_mut() {
-                    let moved_ov = std::mem::take(ov);
-                    for item in moved_ov {
-                        v.push(item);
+            Self::Array(values) => {
+                let mut ret = vec![];
+
+                if let Some(ov) = other.as_vec() {
+                    for value in values {
+                        ret.push(std::mem::take(value))
                     }
+                    for item in ov {
+                        ret.push(item.clone());
+                    }
+                    Some(Self::from(ret))
+                } else {
+                    None
                 }
             }
-            _ => {}
+            _ => None,
         }
-        self
+    }
+
+    /// Return a new value contains inner strings and other's strings if type is [`Value::Array`].
+    ///
+    /// It will take the ownership of strings of current value.
+    /// And also will take ownership of strings in other value.
+    pub fn merge_mut(&mut self, other: &mut Self) -> Option<Self> {
+        match self {
+            Self::Array(values) => {
+                let mut ret = vec![];
+
+                if let Some(ov) = other.as_vec_mut() {
+                    for value in values {
+                        ret.push(std::mem::take(value))
+                    }
+                    for value in ov {
+                        ret.push(std::mem::take(value));
+                    }
+                    Some(Self::from(ret))
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
     }
 }
 

@@ -244,9 +244,7 @@ impl Value for ArrayOpt {
     }
 
     fn parse_value(&self, string: Ustr) -> Result<OptValue> {
-        let mut real_value = OptValue::from(vec![]);
-        real_value.app_str(string.to_string());
-        Ok(real_value)
+        Ok(OptValue::from(vec![string.to_string()]))
     }
 
     fn has_value(&self) -> bool {
