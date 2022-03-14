@@ -363,6 +363,21 @@ where
 
         policy.parse(set, service, iter)
     }
+
+    pub fn reset(&mut self) {
+        self.service.reset();
+        self.set.reset();
+    }
+}
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        unsafe impl<S, SS, P> Send for Parser<S, SS, P>
+            where S: Set, SS: Service<S>, P: Policy<S, SS> { }
+
+        unsafe impl<S, SS, P> Sync for Parser<S, SS, P>
+            where S: Set, SS: Service<S>, P: Policy<S, SS> { }
+    }
 }
 
 /// DynParser manage the [`Set`], [`Service`] and [`Policy`].
@@ -550,6 +565,11 @@ where
 
         policy.parse(set, service, iter)
     }
+
+    pub fn reset(&mut self) {
+        self.service.reset();
+        self.set.reset();
+    }
 }
 
 impl<S, SS, P> From<Parser<S, SS, P>> for DynParser<S, SS>
@@ -583,5 +603,15 @@ where
         let policy = take(parser.get_policy_mut());
 
         DynParser::new(set, service, policy)
+    }
+}
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        unsafe impl<S, SS> Send for DynParser<S, SS>
+            where S: Set, SS: Service<S> { }
+
+        unsafe impl<S, SS> Sync for DynParser<S, SS>
+            where S: Set, SS: Service<S> { }
     }
 }

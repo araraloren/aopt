@@ -9,6 +9,10 @@
 
 - change meger_* of Value
 
+- add reset to Parser
+
+- implement Sync/Send for Parser
+
 ## 0.6.0
 
 - refactor set as type parameter
