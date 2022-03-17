@@ -234,7 +234,7 @@ impl Value for StrOpt {
         self.default_value = value;
     }
 
-    fn parse_value(&self, string: Ustr) -> Result<OptValue> {
+    fn parse_value(&self, string: Ustr, _disable: bool, _index: u64) -> Result<OptValue> {
         Ok(OptValue::from(string.as_ref()))
     }
 

@@ -57,7 +57,11 @@ impl ParserState {
         Ok(string.clone())
     }
 
-    pub fn gen_opt<M: Matcher + Default>(&self, arg: &Argument) -> Result<Option<M>> {
+    pub fn gen_opt<M: Matcher + Default>(
+        &self,
+        arg: &Argument,
+        arg_index: u64,
+    ) -> Result<Option<M>> {
         let mut ret: Vec<Box<dyn Context>> = vec![];
 
         match self {
@@ -70,6 +74,7 @@ impl ParserState {
                         Style::Argument,
                         false,
                         arg.is_disabled(),
+                        arg_index,
                     )));
                 }
             }
@@ -82,6 +87,7 @@ impl ParserState {
                         Style::Argument,
                         true,
                         arg.is_disabled(),
+                        arg_index,
                     )));
                 }
             }
@@ -98,6 +104,7 @@ impl ParserState {
                                 Style::Argument,
                                 false,
                                 arg.is_disabled(),
+                                arg_index,
                             )));
                         }
                     }
@@ -115,6 +122,7 @@ impl ParserState {
                                     Style::Multiple,
                                     false,
                                     arg.is_disabled(),
+                                    arg_index,
                                 )));
                             }
                         }
@@ -130,6 +138,7 @@ impl ParserState {
                         Style::Boolean,
                         false,
                         arg.is_disabled(),
+                        arg_index,
                     )));
                 }
             }
@@ -142,6 +151,7 @@ impl ParserState {
                         Style::Argument,
                         false,
                         arg.is_disabled(),
+                        arg_index,
                     )));
                 }
             }
@@ -154,6 +164,7 @@ impl ParserState {
                         Style::Argument,
                         true,
                         arg.is_disabled(),
+                        arg_index,
                     )));
                 }
             }
@@ -170,6 +181,7 @@ impl ParserState {
                                 Style::Argument,
                                 false,
                                 arg.is_disabled(),
+                                arg_index,
                             )));
                         }
                     }
@@ -187,6 +199,7 @@ impl ParserState {
                                     Style::Multiple,
                                     false,
                                     arg.is_disabled(),
+                                    arg_index,
                                 )));
                             }
                         }
@@ -202,6 +215,7 @@ impl ParserState {
                         Style::Boolean,
                         false,
                         arg.is_disabled(),
+                        arg_index,
                     )));
                 }
             }

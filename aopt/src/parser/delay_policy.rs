@@ -52,6 +52,7 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for DelayPolicy {
     ) -> Result<bool> {
         // copy the prefix, so we don't need borrow set
         let prefix: Vec<Ustr> = set.get_prefix().iter().map(|v| v.clone()).collect();
+        let mut iter = iter.enumerate();
 
         // add info to Service
         for opt in set.opt_iter() {
@@ -76,7 +77,7 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for DelayPolicy {
         // iterate the Arguments, generate option context
         // send it to Publisher
         info!("start process option ...");
-        while let Some(mut arg) = iter.next() {
+        while let Some((index, mut arg)) = iter.next() {
             let mut matched = false;
             let mut consume = false;
 
@@ -85,7 +86,9 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for DelayPolicy {
                 if ret {
                     debug!(?arg, "after parsing ...");
                     for gen_style in &parser_state {
-                        if let Some(mut proc) = service.gen_opt::<OptMatcher>(&arg, &gen_style)? {
+                        if let Some(mut proc) =
+                            service.gen_opt::<OptMatcher>(&arg, &gen_style, index as u64)?
+                        {
                             let value_keeper = service.matching(&mut proc, set, false)?;
 
                             if proc.is_matched() {

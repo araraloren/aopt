@@ -56,7 +56,7 @@ impl Context for NonOptContext {
         trace!(?self, ?opt, "matching ...");
         if matched {
             let value = opt
-                .parse_value(self.name)
+                .parse_value(self.name, false, self.current)
                 .map_err(|_| Error::sp_invalid_argument(opt.get_hint()))?;
             // 4. call the Opt::parse_value generate and set the value.
             self.set_value(value);

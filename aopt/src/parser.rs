@@ -80,6 +80,7 @@ pub trait Service<S: Set> {
         &self,
         arg: &Argument,
         style: &ParserState,
+        arg_index: u64,
     ) -> Result<Option<M>>;
 
     /// Generate M base on position information of `NOA` and [`ParserState`].

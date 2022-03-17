@@ -28,6 +28,8 @@ pub struct OptContext {
     matched_uid: Option<Uid>,
 
     disable: bool,
+
+    arg_index: u64,
 }
 
 impl OptContext {
@@ -38,6 +40,7 @@ impl OptContext {
         style: Style,
         consume_arg: bool,
         disable: bool,
+        arg_index: u64,
     ) -> Self {
         Self {
             prefix,
@@ -48,6 +51,7 @@ impl OptContext {
             value: None,
             matched_uid: None,
             disable,
+            arg_index,
         }
     }
 }
@@ -71,17 +75,17 @@ impl Context for OptContext {
             if self.is_comsume_argument() && self.argument.is_none() {
                 return Err(Error::sp_missing_argument(opt.get_hint()));
             }
-            // 5. check the deactivate style.
-            if !opt.is_deactivate_style() && self.disable {
-                return Err(Error::sp_unsupport_deactivate_style(opt.get_hint()));
-            } else {
-                let value = opt
-                    .parse_value(self.argument.unwrap_or(gstr("")))
-                    .map_err(|_| Error::sp_invalid_argument(opt.get_hint()))?;
-                // 6. call the Opt::parse_value generate and set the value.
-                self.set_value(value);
-                debug!("get return and will set value {:?}!", self.get_value());
-            }
+            // 5. parsing the value
+            let value = opt
+                .parse_value(
+                    self.argument.unwrap_or(gstr("")),
+                    self.disable,
+                    self.arg_index,
+                )
+                .map_err(|_| Error::sp_invalid_argument(opt.get_hint()))?;
+            // 6. call the Opt::parse_value generate and set the value.
+            self.set_value(value);
+            debug!("get return and will set value {:?}!", self.get_value());
             // 7. set the invoke flag.
             opt.set_invoke(true);
             self.matched_uid = Some(opt.get_uid());

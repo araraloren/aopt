@@ -237,8 +237,12 @@ impl Value for BoolOpt {
         self.default_value = value;
     }
 
-    fn parse_value(&self, _string: Ustr) -> Result<OptValue> {
-        Ok(OptValue::from(!self.is_deactivate_style()))
+    fn parse_value(&self, _string: Ustr, disable: bool, _index: u64) -> Result<OptValue> {
+        if !self.is_deactivate_style() && disable {
+            return Err(Error::sp_unsupport_deactivate_style(self.get_hint()));
+        } else {
+            Ok(OptValue::from(!self.is_deactivate_style()))
+        }
     }
 
     fn has_value(&self) -> bool {

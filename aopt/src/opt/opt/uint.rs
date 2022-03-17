@@ -234,7 +234,7 @@ impl Value for UintOpt {
         self.default_value = value;
     }
 
-    fn parse_value(&self, string: Ustr) -> Result<OptValue> {
+    fn parse_value(&self, string: Ustr, _disable: bool, _index: u64) -> Result<OptValue> {
         Ok(OptValue::from(string.parse::<u64>().map_err(|e| {
             Error::opt_parsing_value_failed(string.as_ref(), &format!("{:?}", e))
         })?))

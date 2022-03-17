@@ -215,7 +215,7 @@ impl Value for PosOpt {
 
     fn set_default_value(&mut self, _value: OptValue) {}
 
-    fn parse_value(&self, _string: Ustr) -> Result<OptValue> {
+    fn parse_value(&self, _string: Ustr, _disable: bool, _index: u64) -> Result<OptValue> {
         Ok(OptValue::from(true))
     }
 
@@ -355,7 +355,7 @@ mod test {
         assert_eq!(pos.get_value().is_null(), true);
         assert_eq!(pos.get_default_value().is_null(), true);
         assert_eq!(pos.has_value(), false);
-        let value = pos.parse_value("".into());
+        let value = pos.parse_value("".into(), false, 0);
         assert_eq!(value.is_ok(), true);
         let value = value.unwrap();
         assert_eq!(value.is_bool(), true);

@@ -179,7 +179,7 @@ pub trait Value {
     fn set_default_value(&mut self, value: OptValue);
 
     /// Parse command line item and return an [`OptValue`].
-    fn parse_value(&self, string: Ustr) -> Result<OptValue>;
+    fn parse_value(&self, string: Ustr, disable: bool, index: u64) -> Result<OptValue>;
 
     /// Check if the option has a valid value.
     fn has_value(&self) -> bool;

@@ -243,7 +243,7 @@ pub mod path {
             self.default_value = value;
         }
 
-        fn parse_value(&self, string: Ustr) -> Result<OptValue> {
+        fn parse_value(&self, string: Ustr, _disable: bool, _index: u64) -> Result<OptValue> {
             use std::path::PathBuf;
             Ok(OptValue::from_any(Box::new(PathBuf::from(string.as_ref()))))
         }

@@ -211,8 +211,9 @@ impl<S: Set> Service<S> for SimpleService<S> {
         &self,
         arg: &crate::arg::Argument,
         style: &ParserState,
+        arg_index: u64,
     ) -> Result<Option<M>> {
-        Ok(style.gen_opt(arg)?)
+        Ok(style.gen_opt(arg, arg_index)?)
     }
 
     fn gen_nonopt<M: Matcher + Default>(
