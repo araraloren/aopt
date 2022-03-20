@@ -5,6 +5,8 @@
 
 - add index parameter when parsing option value, not affect exist code logical
 
+- update aopt-macro version
+
 ## 0.6.1
 
 - add policy change api to Parser and DynParser

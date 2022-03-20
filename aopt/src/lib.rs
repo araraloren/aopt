@@ -575,6 +575,9 @@ pub use aopt_macro::getoptd;
 ///```
 pub use aopt_macro::getopt;
 
+/// Generate help message of Set.
+pub use aopt_macro::getopt_help;
+
 pub mod prelude {
     pub use crate::arg::ArgStream;
     pub use crate::ctx::Context;
@@ -582,6 +585,7 @@ pub mod prelude {
     pub use crate::ctx::OptContext;
     pub use crate::getopt;
     pub use crate::getopt_dynparser;
+    pub use crate::getopt_help;
     pub use crate::getopt_parser;
     pub use crate::getoptd;
     pub use crate::gstr;
