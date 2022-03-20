@@ -13,7 +13,7 @@ readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aopt-macro = {version = "0.1.0", path = "../aopt-macro"}
+aopt-macro = {version = "0.1.0"}
 thiserror = "1.0.30"
 tracing = "0.1.29"
 ustr = "0.8.1"
