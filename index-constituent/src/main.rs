@@ -1,7 +1,5 @@
 mod spyder;
 
-use std::io::Stdout;
-
 use aopt::app::SingleApp;
 use aopt::err::create_error;
 use aopt::err::Result;
@@ -383,7 +381,7 @@ fn value_of<'a>(set: &'a dyn Set, opt: &str) -> Result<&'a OptValue> {
         .get_value())
 }
 
-fn print_help(set: &dyn Set, force: bool) -> Result<bool> {
+fn print_help<S: Set>(set: &S, force: bool) -> Result<bool> {
     let mut is_need_help = false;
 
     if let Ok(Some(opt)) = set.find("help") {
@@ -392,7 +390,7 @@ fn print_help(set: &dyn Set, force: bool) -> Result<bool> {
         }
     }
     if is_need_help || force {
-        let mut app_help = simple_help_generate(set);
+        let mut app_help = getopt_help!(set, SEARCH_CMD, CONS_CMD);
 
         if *value_of(set, SEARCH_CMD)?.as_bool().unwrap_or(&false) {
             app_help
@@ -404,61 +402,9 @@ fn print_help(set: &dyn Set, force: bool) -> Result<bool> {
                 .map_err(|e| create_error(format!("can not write help to stdout: {:?}", e)))?;
         } else {
             app_help
-                .print_cmd_help(None)
+                .print_help()
                 .map_err(|e| create_error(format!("can not write help to stdout: {:?}", e)))?;
         }
     }
     Ok(is_need_help)
-}
-
-fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout, DefaultFormat> {
-    let mut help = AppHelp::default();
-
-    help.set_name("index".into());
-
-    let version = gstr(&format!(
-        "Create by araraloren {}",
-        env!("CARGO_PKG_VERSION")
-    ));
-    let global = help.store.get_global_mut();
-
-    global.set_header(gstr("Search and list index constituents"));
-    global.set_footer(version.clone());
-
-    for cmd_name in [SEARCH_CMD, CONS_CMD] {
-        if let Ok(Some(opt)) = set.find(cmd_name) {
-            let mut search_cmd = help.store.new_cmd(cmd_name.into());
-
-            search_cmd
-                .set_footer(version.clone())
-                .set_hint(opt.get_hint())
-                .set_help(opt.get_help());
-
-            for opt in set.opt_iter() {
-                if opt.match_style(aopt::opt::Style::Pos) {
-                    search_cmd.add_pos(PosStore::new(
-                        opt.get_name(),
-                        opt.get_hint(),
-                        opt.get_help(),
-                        opt.get_index().unwrap().to_string().into(),
-                        opt.get_optional(),
-                    ));
-                } else if !opt.match_style(aopt::opt::Style::Main)
-                    && !opt.match_style(aopt::opt::Style::Cmd)
-                {
-                    search_cmd.add_opt(OptStore::new(
-                        opt.get_name(),
-                        opt.get_hint(),
-                        opt.get_help(),
-                        opt.get_type_name(),
-                        opt.get_optional(),
-                    ));
-                }
-            }
-
-            search_cmd.commit();
-        }
-    }
-
-    help
 }
