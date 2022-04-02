@@ -347,10 +347,10 @@ pub fn gstr(s: &str) -> ustr::Ustr {
     ustr::Ustr::from(s)
 }
 
-pub fn getopt_dynparser<'a, I, ITER, S, SS>(
+pub fn getopt_dynparser<I, ITER, S, SS>(
     iter: ITER,
-    parsers: Vec<&'a mut DynParser<S, SS>>,
-) -> Result<Option<&'a mut DynParser<S, SS>>>
+    parsers: Vec<&mut DynParser<S, SS>>,
+) -> Result<Option<&mut DynParser<S, SS>>>
 where
     I: Into<String>,
     ITER: Iterator<Item = I>,
@@ -383,10 +383,10 @@ where
     Ok(None)
 }
 
-pub fn getopt_parser<'a, I, ITER, S, SS, P>(
+pub fn getopt_parser<I, ITER, S, SS, P>(
     iter: ITER,
-    parsers: Vec<&'a mut Parser<S, SS, P>>,
-) -> Result<Option<&'a mut Parser<S, SS, P>>>
+    parsers: Vec<&mut Parser<S, SS, P>>,
+) -> Result<Option<&mut Parser<S, SS, P>>>
 where
     I: Into<String>,
     ITER: Iterator<Item = I>,
@@ -578,12 +578,15 @@ pub use aopt_macro::getopt;
 /// Generate help message of Set.
 pub use aopt_macro::getopt_help;
 
+pub use aopt_macro::getopt_add;
+
 pub mod prelude {
     pub use crate::arg::ArgStream;
     pub use crate::ctx::Context;
     pub use crate::ctx::NonOptContext;
     pub use crate::ctx::OptContext;
     pub use crate::getopt;
+    pub use crate::getopt_add;
     pub use crate::getopt_dynparser;
     pub use crate::getopt_help;
     pub use crate::getopt_parser;
@@ -636,6 +639,7 @@ pub mod prelude {
     pub use crate::proc::NonOptMatcher;
     pub use crate::proc::OptMatcher;
     pub use crate::proc::Proc;
+    pub use crate::set::CreateInfo;
     pub use crate::set::CreatorSet;
     pub use crate::set::OptionSet;
     pub use crate::set::PrefixSet;

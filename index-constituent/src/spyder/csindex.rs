@@ -37,7 +37,7 @@ impl CSIndex {
         Ok(Self {
             client,
             debug,
-            page_size: page_size,
+            page_size,
         })
     }
 
@@ -120,7 +120,7 @@ impl super::Spyder for CSIndex {
                                             }
                                             "consNumber" => {
                                                 item.number =
-                                                    json_to_number(&inner_value).unwrap_or(0);
+                                                    json_to_number(inner_value).unwrap_or(0);
                                             }
                                             _ => {}
                                         }
@@ -173,39 +173,36 @@ impl super::Spyder for CSIndex {
 
                     ret.set_total(10);
                     for (name, value) in json.entries() {
-                        match name {
-                            "data" => {
-                                for (name, value) in value.entries() {
-                                    if name == "weightList" {
-                                        for member in value.members() {
-                                            let mut item = Item::default();
+                        if name == "data" {
+                            for (name, value) in value.entries() {
+                                if name == "weightList" {
+                                    for member in value.members() {
+                                        let mut item = Item::default();
 
-                                            for (name, inner_value) in member.entries() {
-                                                match name {
-                                                    "securityCode" => {
-                                                        item.code = String::from(
-                                                            inner_value.as_str().unwrap_or(""),
-                                                        );
-                                                    }
-                                                    "securityName" => {
-                                                        item.name = String::from(
-                                                            inner_value.as_str().unwrap_or(""),
-                                                        );
-                                                    }
-                                                    "weight" => {
-                                                        item.number = json_to_number(&inner_value)
-                                                            .unwrap_or(0);
-                                                    }
-                                                    _ => {}
+                                        for (name, inner_value) in member.entries() {
+                                            match name {
+                                                "securityCode" => {
+                                                    item.code = String::from(
+                                                        inner_value.as_str().unwrap_or(""),
+                                                    );
                                                 }
+                                                "securityName" => {
+                                                    item.name = String::from(
+                                                        inner_value.as_str().unwrap_or(""),
+                                                    );
+                                                }
+                                                "weight" => {
+                                                    item.number =
+                                                        json_to_number(inner_value).unwrap_or(0);
+                                                }
+                                                _ => {}
                                             }
-                                            ret.push(item);
                                         }
-                                        return Ok(ret);
+                                        ret.push(item);
                                     }
+                                    return Ok(ret);
                                 }
                             }
-                            _ => {}
                         }
                     }
                 }

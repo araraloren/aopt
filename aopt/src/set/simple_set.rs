@@ -183,7 +183,7 @@ impl CreatorSet for SimpleSet {
 
     fn add_creator(&mut self, creator: Box<dyn Creator>) {
         let opt_type = creator.get_type_name();
-        self.creator.insert(opt_type.into(), creator);
+        self.creator.insert(opt_type, creator);
     }
 
     fn app_creator(&mut self, creator: Vec<Box<dyn Creator>>) {
@@ -193,18 +193,18 @@ impl CreatorSet for SimpleSet {
     }
 
     fn rem_creator(&mut self, opt_type: Ustr) -> bool {
-        self.creator.remove(&opt_type.into()).is_some()
+        self.creator.remove(&opt_type).is_some()
     }
 
-    fn get_creator(&self, opt_type: Ustr) -> Option<&Box<dyn Creator>> {
-        self.creator.get(&opt_type.into())
+    fn get_creator(&self, opt_type: Ustr) -> Option<&dyn Creator> {
+        self.creator.get(&opt_type).map(|v| v.as_ref())
     }
 }
 
 impl PrefixSet for SimpleSet {
     fn add_prefix(&mut self, prefix: Ustr) {
         self.prefix.push(prefix);
-        self.prefix.sort_by(|a, b| b.len().cmp(&a.len()));
+        self.prefix.sort_by_key(|b| std::cmp::Reverse(b.len()));
     }
 
     fn get_prefix(&self) -> &[Ustr] {

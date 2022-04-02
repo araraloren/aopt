@@ -54,12 +54,9 @@ impl Matcher for OptMatcher {
         if let Some(opt) = set.get_opt_mut(uid) {
             info!(?uid, "process opt");
             for ctx in self.context.iter_mut() {
-                if !ctx.is_matched() {
-                    if ctx.process(opt.as_mut())? {
-                        self.consoume_argument =
-                            self.consoume_argument || ctx.is_comsume_argument();
-                        return Ok(Some(ctx));
-                    }
+                if !ctx.is_matched() && ctx.process(opt.as_mut())? {
+                    self.consoume_argument = self.consoume_argument || ctx.is_comsume_argument();
+                    return Ok(Some(ctx));
                 }
             }
         }
@@ -77,9 +74,7 @@ impl Matcher for OptMatcher {
     }
 
     fn is_matched(&self) -> bool {
-        self.context
-            .iter()
-            .fold(true, |acc, x| acc && x.is_matched())
+        self.context.iter().all(|x| x.is_matched())
     }
 
     fn is_comsume_argument(&self) -> bool {

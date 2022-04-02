@@ -56,17 +56,21 @@ impl<'a> Wrapped<'a> {
     pub fn len(&self) -> usize {
         self.cows.len()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
 #[derive(Debug)]
 pub struct Wrapper<'a, 'b> {
-    data: &'a Vec<Vec<&'b str>>,
+    data: &'a [Vec<&'b str>],
 
     output: Vec<Vec<Wrapped<'b>>>,
 }
 
 impl<'a, 'b> Wrapper<'a, 'b> {
-    pub fn new(data: &'a Vec<Vec<&'b str>>) -> Self {
+    pub fn new(data: &'a [Vec<&'b str>]) -> Self {
         Self {
             data,
             output: vec![],
@@ -114,5 +118,9 @@ impl<'a, 'b> Wrapper<'a, 'b> {
 
     pub fn len(&self) -> usize {
         self.output.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }

@@ -40,7 +40,7 @@ impl TryFrom<CreateInfo> for MainOpt {
 
         Ok(Self {
             uid: ci.get_uid(),
-            name: ci.get_name().clone(),
+            name: ci.get_name(),
             value: OptValue::Null,
             need_invoke: false,
             help_info,
@@ -64,10 +64,7 @@ impl Type for MainOpt {
     }
 
     fn match_style(&self, style: Style) -> bool {
-        match style {
-            Style::Main => true,
-            _ => false,
-        }
+        matches!(style, Style::Main)
     }
 
     fn check(&self) -> Result<()> {
@@ -103,10 +100,7 @@ impl Callback for MainOpt {
     }
 
     fn is_accept_callback_type(&self, callback_type: CallbackType) -> bool {
-        match callback_type {
-            CallbackType::Main | CallbackType::MainMut => true,
-            _ => false,
-        }
+        matches!(callback_type, CallbackType::Main | CallbackType::MainMut)
     }
 
     fn set_callback_ret(&mut self, ret: Option<OptValue>) -> Result<()> {
@@ -245,12 +239,10 @@ impl Creator for MainCreator {
     }
 
     fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>> {
-        if create_info.get_support_deactivate_style() {
-            if !self.is_support_deactivate_style() {
-                return Err(Error::opt_unsupport_deactivate_style(
-                    create_info.get_name(),
-                ));
-            }
+        if create_info.get_support_deactivate_style() && !self.is_support_deactivate_style() {
+            return Err(Error::opt_unsupport_deactivate_style(
+                create_info.get_name(),
+            ));
         }
 
         assert_eq!(create_info.get_type_name(), self.get_type_name());

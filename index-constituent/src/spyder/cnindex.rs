@@ -51,7 +51,7 @@ impl CNIndex {
     }
 
     pub fn get_search_content_uri(&self) -> String {
-        format!("http://www.cnindex.com.cn/index/search")
+        "http://www.cnindex.com.cn/index/search".to_string()
     }
 
     pub fn get_cons_content_uri(
@@ -147,7 +147,7 @@ impl super::Spyder for CNIndex {
                                                 }
                                                 "samplesize" => {
                                                     item.number =
-                                                        json_to_number(&inner_value).unwrap_or(0);
+                                                        json_to_number(inner_value).unwrap_or(0);
                                                 }
                                                 _ => {}
                                             }
@@ -214,7 +214,7 @@ impl super::Spyder for CNIndex {
                                                 }
                                                 "weight" => {
                                                     item.number =
-                                                        json_to_number(&inner_value).unwrap_or(0);
+                                                        json_to_number(inner_value).unwrap_or(0);
                                                 }
                                                 _ => {}
                                             }

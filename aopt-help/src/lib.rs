@@ -220,7 +220,7 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
             }
 
             out += self.writer.write(buffer.as_bytes())?;
-            out += self.writer.write(format!("\n").as_bytes())?;
+            out += self.writer.write("\n".as_bytes())?;
         }
         Ok(out)
     }
@@ -230,7 +230,7 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
         let sec_store = self
             .store
             .get_sec(section)
-            .ok_or(Error::InvalidSecName(section.to_string()))?;
+            .ok_or_else(|| Error::InvalidSecName(section.to_string()))?;
 
         for cmd_name in sec_store.cmd_iter() {
             if let Some(cmd_store) = self.store.get_cmd(*cmd_name) {
@@ -279,7 +279,7 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
         let cmd_store = if let Some(cmd_name) = cmd {
             self.store
                 .get_cmd(cmd_name)
-                .ok_or(Error::InvalidCmdName(cmd_name.to_string()))?
+                .ok_or_else(|| Error::InvalidCmdName(cmd_name.to_string()))?
         } else {
             self.store.get_global()
         };
@@ -327,7 +327,7 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
         let cmd_store = if let Some(cmd_name) = cmd {
             self.store
                 .get_cmd(cmd_name)
-                .ok_or(Error::InvalidCmdName(cmd_name.to_string()))?
+                .ok_or_else(|| Error::InvalidCmdName(cmd_name.to_string()))?
         } else {
             self.store.get_global()
         };
@@ -345,7 +345,7 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
         let cmd_store = if let Some(cmd_name) = cmd {
             self.store
                 .get_cmd(cmd_name)
-                .ok_or(Error::InvalidCmdName(cmd_name.to_string()))?
+                .ok_or_else(|| Error::InvalidCmdName(cmd_name.to_string()))?
         } else {
             self.store.get_global()
         };
@@ -364,7 +364,7 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
         let cmd_store = if let Some(cmd_name) = cmd {
             self.store
                 .get_cmd(cmd_name)
-                .ok_or(Error::InvalidCmdName(cmd_name.to_string()))?
+                .ok_or_else(|| Error::InvalidCmdName(cmd_name.to_string()))?
         } else {
             self.store.get_global()
         };
@@ -411,7 +411,7 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
         let cmd_store = if let Some(cmd_name) = cmd {
             self.store
                 .get_cmd(cmd_name)
-                .ok_or(Error::InvalidCmdName(cmd_name.to_string()))?
+                .ok_or_else(|| Error::InvalidCmdName(cmd_name.to_string()))?
         } else {
             self.store.get_global()
         };

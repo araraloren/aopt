@@ -52,11 +52,11 @@ pub mod path {
             let help_info = HelpInfo::from(&mut ci);
             let prefix = ci
                 .get_prefix()
-                .ok_or(Error::opt_missing_prefix(ci.get_name(), ci.get_type_name()))?;
+                .ok_or_else(|| Error::opt_missing_prefix(ci.get_name(), ci.get_type_name()))?;
 
             Ok(Self {
                 uid: ci.get_uid(),
-                name: ci.get_name().clone(),
+                name: ci.get_name(),
                 prefix,
                 optional: ci.get_optional(),
                 value: OptValue::default(),
@@ -82,10 +82,7 @@ pub mod path {
         }
 
         fn match_style(&self, style: Style) -> bool {
-            match style {
-                Style::Argument => true,
-                _ => false,
-            }
+            matches!(style, Style::Argument)
         }
 
         fn check(&self) -> Result<()> {
@@ -121,14 +118,7 @@ pub mod path {
         }
 
         fn is_accept_callback_type(&self, callback_type: CallbackType) -> bool {
-            if self.is_need_invoke() {
-                match callback_type {
-                    CallbackType::Opt | CallbackType::OptMut => true,
-                    _ => false,
-                }
-            } else {
-                false
-            }
+            matches!(callback_type, CallbackType::Opt | CallbackType::OptMut)
         }
 
         fn set_callback_ret(&mut self, ret: Option<OptValue>) -> Result<()> {
@@ -291,12 +281,10 @@ pub mod path {
         }
 
         fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>> {
-            if create_info.get_support_deactivate_style() {
-                if !self.is_support_deactivate_style() {
-                    return Err(Error::opt_unsupport_deactivate_style(
-                        create_info.get_name(),
-                    ));
-                }
+            if create_info.get_support_deactivate_style() && !self.is_support_deactivate_style() {
+                return Err(Error::opt_unsupport_deactivate_style(
+                    create_info.get_name(),
+                ));
             }
 
             assert_eq!(create_info.get_type_name(), self.get_type_name());

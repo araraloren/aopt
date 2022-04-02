@@ -10,8 +10,8 @@ use spyder::csindex::CSIndex;
 use spyder::Spyder;
 use spyder::SpyderIndexData;
 
-const SEARCH_CMD: &'static str = "search";
-const CONS_CMD: &'static str = "cons";
+const SEARCH_CMD: &str = "search";
+const CONS_CMD: &str = "cons";
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
@@ -61,9 +61,9 @@ async fn main() -> color_eyre::Result<()> {
         simple_opt_cb!(|_, _, value| {
             match value.as_str().unwrap_or(&String::default()).as_str() {
                 "CS" | "CN" => Ok(Some(value)),
-                _ => Err(create_error(format!(
-                    "The type must be one of [\"CS\", \"CN\"]!"
-                ))),
+                _ => Err(create_error(
+                    "The type must be one of [\"CS\", \"CN\"]!".to_string(),
+                )),
             }
         }),
     );
@@ -79,9 +79,9 @@ async fn main() -> color_eyre::Result<()> {
         simple_opt_cb!(|_, _, value| {
             match value.as_int().unwrap_or(&0) {
                 5 | 10 | 20 | 30 => Ok(Some(value)),
-                _ => Err(create_error(format!(
-                    "The page size must be one of [5, 10, 20, 30]!"
-                ))),
+                _ => Err(create_error(
+                    "The page size must be one of [5, 10, 20, 30]!".to_string(),
+                )),
             }
         }),
     );
@@ -377,7 +377,7 @@ async fn display_cons_of<'a, 'b, 'c>(ctx: &SearchCtx<'a, 'b, 'c>) -> Result<Spyd
 fn value_of<'a>(set: &'a dyn Set, opt: &str) -> Result<&'a OptValue> {
     Ok(set
         .find(opt)?
-        .ok_or(create_error(format!("can not get option {}", opt)))?
+        .ok_or_else(|| create_error(format!("can not get option {}", opt)))?
         .get_value())
 }
 

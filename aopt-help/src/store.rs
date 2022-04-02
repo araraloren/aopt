@@ -28,7 +28,7 @@ impl Store {
     }
 
     pub fn attach_cmd(&mut self, sec: Ustr, cmd: Ustr) -> bool {
-        if let Some(_) = self.get_cmd(cmd) {
+        if self.get_cmd(cmd).is_some() {
             if let Some(sec_store) = self.get_sec_mut(sec) {
                 sec_store.attach_cmd(cmd);
                 return true;

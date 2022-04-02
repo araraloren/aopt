@@ -33,7 +33,7 @@ impl<'pre> ParserPattern<'pre> {
     }
 
     pub fn starts(&self, ch: char, skip_len: usize) -> bool {
-        self.pattern.chars().skip(skip_len).nth(0) == Some(ch)
+        self.pattern.chars().nth(skip_len + 1) == Some(ch)
     }
 
     pub fn len(&self) -> usize {
@@ -41,7 +41,7 @@ impl<'pre> ParserPattern<'pre> {
     }
 
     pub fn clone_pattern(&self) -> Ustr {
-        self.pattern.clone()
+        self.pattern
     }
 }
 

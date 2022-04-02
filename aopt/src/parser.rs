@@ -4,6 +4,7 @@ mod forward_policy;
 mod pre_policy;
 mod service;
 mod state;
+#[allow(clippy::all)]
 pub(crate) mod testutil;
 
 use std::fmt::Debug;
@@ -276,7 +277,7 @@ where
         Self {
             set: S::default(),
             service: SS::default(),
-            policy: policy,
+            policy,
         }
     }
 }

@@ -160,7 +160,7 @@ where
         ITER: Iterator<Item = I>,
         F: FnMut(bool, &'b mut SingleApp<S, SS, P>) -> Result<R>,
     {
-        let args: Vec<String> = iter.map(|v| v.into()).collect();
+        let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
         let ret = parser.parse(&mut ArgStream::from(args.into_iter()))?;
 
@@ -210,7 +210,7 @@ where
         FUT: Future<Output = Result<R>>,
         F: FnMut(bool, &'b mut SingleApp<S, SS, P>) -> FUT,
     {
-        let args: Vec<String> = iter.map(|v| v.into()).collect();
+        let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
         let async_ret;
 
@@ -269,7 +269,7 @@ where
         ITER: Iterator<Item = I>,
         F: FnMut(bool, SingleApp<S, SS, P>) -> Result<R>,
     {
-        let args: Vec<String> = iter.map(|v| v.into()).collect();
+        let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
         let ret = parser.parse(&mut ArgStream::new(args.into_iter()))?;
 
@@ -314,7 +314,7 @@ where
         FUT: Future<Output = Result<R>>,
         F: FnMut(bool, SingleApp<S, SS, P>) -> FUT,
     {
-        let args: Vec<String> = iter.map(|v| v.into()).collect();
+        let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
         let async_ret;
 

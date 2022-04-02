@@ -348,24 +348,18 @@ impl Value {
 
     /// Add string if current value is [`Value::Array`].
     pub fn add_str(&mut self, string: String) -> &mut Self {
-        match self {
-            Self::Array(v) => {
-                v.push(string);
-            }
-            _ => {}
+        if let Self::Array(v) = self {
+            v.push(string);
         }
         self
     }
 
     /// Append string if current value is [`Value::Array`].
     pub fn app_str(&mut self, values: &[String]) -> &mut Self {
-        match self {
-            Self::Array(v) => {
-                for value in values {
-                    v.push(value.clone());
-                }
+        if let Self::Array(v) = self {
+            for value in values {
+                v.push(value.clone());
             }
-            _ => {}
         }
         self
     }
@@ -489,10 +483,9 @@ impl Debug for CloneHelper {
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         match self {
-            Self::Null => match other {
-                Self::Null => true,
-                _ => false,
-            },
+            Self::Null => {
+                matches!(other, Self::Null)
+            }
             Value::Int(v) => match other {
                 Self::Int(ov) => *v == *ov,
                 _ => false,

@@ -86,22 +86,24 @@ pub trait OptionSet {
 
     fn reset(&mut self);
 
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     // some help functions access option data
 
     fn get_value(&self, opt_str: &str) -> Result<Option<&OptValue>> {
-        Ok(self.find(opt_str)?.and_then(|v| Some(v.get_value())))
+        Ok(self.find(opt_str)?.map(|v| v.get_value()))
     }
 
     fn get_value_mut(&mut self, opt_str: &str) -> Result<Option<&mut OptValue>> {
-        Ok(self
-            .find_mut(opt_str)?
-            .and_then(|v| Some(v.get_value_mut())))
+        Ok(self.find_mut(opt_str)?.map(|v| v.get_value_mut()))
     }
 
     fn set_value(&mut self, opt_str: &str, value: OptValue) -> Result<Option<&mut Box<dyn Opt>>> {
-        Ok(self.find_mut(opt_str)?.and_then(|v| {
+        Ok(self.find_mut(opt_str)?.map(|v| {
             v.set_value(value);
-            Some(v)
+            v
         }))
     }
 }
@@ -115,5 +117,5 @@ pub trait CreatorSet {
 
     fn rem_creator(&mut self, opt_type: Ustr) -> bool;
 
-    fn get_creator(&self, opt_type: Ustr) -> Option<&Box<dyn Creator>>;
+    fn get_creator(&self, opt_type: Ustr) -> Option<&dyn Creator>;
 }

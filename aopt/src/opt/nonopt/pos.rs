@@ -44,7 +44,7 @@ impl TryFrom<CreateInfo> for PosOpt {
 
         Ok(Self {
             uid: ci.get_uid(),
-            name: ci.get_name().clone(),
+            name: ci.get_name(),
             optional: ci.get_optional(),
             value: OptValue::Null,
             index: std::mem::take(ci.get_index_mut()),
@@ -70,10 +70,7 @@ impl Type for PosOpt {
     }
 
     fn match_style(&self, style: Style) -> bool {
-        match style {
-            Style::Pos => true,
-            _ => false,
-        }
+        matches!(style, Style::Pos)
     }
 
     fn check(&self) -> Result<()> {
@@ -109,10 +106,7 @@ impl Callback for PosOpt {
     }
 
     fn is_accept_callback_type(&self, callback_type: CallbackType) -> bool {
-        match callback_type {
-            CallbackType::Pos | CallbackType::PosMut => true,
-            _ => false,
-        }
+        matches!(callback_type, CallbackType::Pos | CallbackType::PosMut)
     }
 
     fn set_callback_ret(&mut self, ret: Option<OptValue>) -> Result<()> {
@@ -185,12 +179,10 @@ impl Index for PosOpt {
     }
 
     fn match_index(&self, total: u64, current: u64) -> bool {
-        match self.get_index() {
-            Some(realindex) => match realindex.calc_index(total, current) {
-                Some(realindex) => return realindex == current,
-                None => {}
-            },
-            None => {}
+        if let Some(realindex) = self.get_index() {
+            if let Some(realindex) = realindex.calc_index(total, current) {
+                return realindex == current;
+            }
         }
         false
     }
@@ -262,12 +254,10 @@ impl Creator for PosCreator {
     }
 
     fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>> {
-        if create_info.get_support_deactivate_style() {
-            if !self.is_support_deactivate_style() {
-                return Err(Error::opt_unsupport_deactivate_style(
-                    create_info.get_name(),
-                ));
-            }
+        if create_info.get_support_deactivate_style() && !self.is_support_deactivate_style() {
+            return Err(Error::opt_unsupport_deactivate_style(
+                create_info.get_name(),
+            ));
         }
         if create_info.get_index().is_null() {
             return Err(Error::opt_missing_index(create_info.get_name()));

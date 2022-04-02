@@ -36,52 +36,31 @@ impl Default for CallbackType {
 
 impl CallbackType {
     pub fn is_opt(&self) -> bool {
-        match self {
-            Self::Opt => true,
-            _ => false,
-        }
+        matches!(self, Self::Opt)
     }
 
     pub fn is_opt_mut(&self) -> bool {
-        match self {
-            Self::OptMut => true,
-            _ => false,
-        }
+        matches!(self, Self::OptMut)
     }
 
     pub fn is_pos(&self) -> bool {
-        match self {
-            Self::Pos => true,
-            _ => false,
-        }
+        matches!(self, Self::Pos)
     }
 
     pub fn is_pos_mut(&self) -> bool {
-        match self {
-            Self::PosMut => true,
-            _ => false,
-        }
+        matches!(self, Self::PosMut)
     }
 
     pub fn is_main(&self) -> bool {
-        match self {
-            Self::Main => true,
-            _ => false,
-        }
+        matches!(self, Self::Main)
     }
 
     pub fn is_main_mut(&self) -> bool {
-        match self {
-            Self::MainMut => true,
-            _ => false,
-        }
+        matches!(self, Self::MainMut)
     }
 
     pub fn is_null(&self) -> bool {
-        match self {
-            Self::Null => true,
-            _ => false,
-        }
+        matches!(self, Self::Null)
     }
 }
 

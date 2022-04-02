@@ -43,7 +43,7 @@ impl TryFrom<CreateInfo> for CmdOpt {
 
         Ok(Self {
             uid: ci.get_uid(),
-            name: ci.get_name().clone(),
+            name: ci.get_name(),
             value: OptValue::Null,
             index: OptIndex::forward(1),
             need_invoke: false,
@@ -68,10 +68,7 @@ impl Type for CmdOpt {
     }
 
     fn match_style(&self, style: Style) -> bool {
-        match style {
-            Style::Cmd => true,
-            _ => false,
-        }
+        matches!(style, Style::Cmd)
     }
 
     fn check(&self) -> Result<()> {
@@ -107,10 +104,7 @@ impl Callback for CmdOpt {
     }
 
     fn is_accept_callback_type(&self, callback_type: CallbackType) -> bool {
-        match callback_type {
-            CallbackType::Main | CallbackType::MainMut => true,
-            _ => false,
-        }
+        matches!(callback_type, CallbackType::Main | CallbackType::MainMut)
     }
 
     fn set_callback_ret(&mut self, ret: Option<OptValue>) -> Result<()> {
@@ -255,12 +249,10 @@ impl Creator for CmdCreator {
     }
 
     fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>> {
-        if create_info.get_support_deactivate_style() {
-            if !self.is_support_deactivate_style() {
-                return Err(Error::opt_unsupport_deactivate_style(
-                    create_info.get_name(),
-                ));
-            }
+        if create_info.get_support_deactivate_style() && !self.is_support_deactivate_style() {
+            return Err(Error::opt_unsupport_deactivate_style(
+                create_info.get_name(),
+            ));
         }
         assert_eq!(create_info.get_type_name(), self.get_type_name());
         let opt: CmdOpt = create_info.try_into()?;

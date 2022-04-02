@@ -270,8 +270,7 @@ impl Parse for ParameterOrNormalArgs {
                 name = Some(syn::Ident::new("default", proc_macro2::Span::call_site()));
                 input.parse::<syn::Token![=]>()?;
                 value = input.parse()?;
-            }
-            else {
+            } else {
                 value = input.parse()?;
             }
         } else {
@@ -395,14 +394,12 @@ pub fn getopt_add(input: TokenStream) -> TokenStream {
                     create_info = create_info.and_then(|mut ci| { ci.set_help(value); Ok(ci) });
                 }}
             }
+            else if callback.is_none() {
+                callback = Some(expr.clone());
+                quote! { }
+            }
             else {
-                if callback.is_none() {
-                    callback = Some(expr.clone());
-                    quote! { }
-                }
-                else { 
-                    syn::Error::new_spanned(syn::Ident::new("default", proc_macro2::Span::call_site()), "Not support more than three position arguments").to_compile_error()
-                }
+                syn::Error::new_spanned(syn::Ident::new("default", proc_macro2::Span::call_site()), "Not support more than three position arguments").to_compile_error()
             }
         }
     }));

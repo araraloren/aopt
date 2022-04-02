@@ -17,7 +17,7 @@ pub struct PrePolicy;
 
 impl PrePolicy {
     pub fn new() -> Self {
-        Self { ..Self::default() }
+        Self::default()
     }
 }
 
@@ -29,7 +29,7 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for PrePolicy {
         iter: &mut dyn Iterator<Item = Argument>,
     ) -> Result<bool> {
         // copy the prefix, so we don't need borrow set
-        let prefix: Vec<Ustr> = set.get_prefix().iter().map(|v| v.clone()).collect();
+        let prefix: Vec<Ustr> = set.get_prefix().to_vec();
         let mut iter = iter.enumerate();
 
         // add info to Service
@@ -65,7 +65,7 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for PrePolicy {
                     debug!(?arg, "after parsing ...");
                     for gen_style in &parser_state {
                         if let Some(mut proc) =
-                            service.gen_opt::<OptMatcher>(&arg, &gen_style, index as u64)?
+                            service.gen_opt::<OptMatcher>(&arg, gen_style, index as u64)?
                         {
                             service.matching(&mut proc, set, true)?;
 
@@ -87,7 +87,7 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for PrePolicy {
             } else if !matched {
                 debug!("!!! {:?} not matching, will add it to noa", &arg);
                 if let Some(noa) = &arg.current {
-                    service.get_noa_mut().push(noa.clone());
+                    service.get_noa_mut().push(*noa);
                 }
             }
         }

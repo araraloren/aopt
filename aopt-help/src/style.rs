@@ -46,7 +46,6 @@ impl Default for Style {
 
 impl Style {
     pub fn take(&mut self) -> Self {
-        let old_v = std::mem::take(self);
-        old_v
+        std::mem::take(self)
     }
 }

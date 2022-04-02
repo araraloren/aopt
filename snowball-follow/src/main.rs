@@ -14,8 +14,8 @@ use reqwest::header;
 use reqwest::Client;
 
 const STOCK_NUMBER_LEN: usize = 6;
-const STOCK_SHANGHAI: &'static str = "SH";
-const STOCK_SHENZHEN: &'static str = "SZ";
+const STOCK_SHANGHAI: &str = "SH";
+const STOCK_SHENZHEN: &str = "SZ";
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
@@ -43,7 +43,7 @@ async fn main() -> color_eyre::Result<()> {
             }
         }
     }
-    if ids.len() > 0 {
+    if ids.is_empty() {
         let start = get_value_from_set(set, "start")?.as_int().unwrap_or(&0);
         let count = get_value_from_set(set, "count")?.as_int().unwrap_or(&14);
         let interval = get_value_from_set(set, "interval")?
@@ -74,7 +74,7 @@ async fn main() -> color_eyre::Result<()> {
 fn get_value_from_set<'a>(set: &'a dyn Set, opt: &str) -> Result<&'a OptValue> {
     Ok(set
         .find(opt)?
-        .ok_or(create_error(format!("can not get option value")))?
+        .ok_or_else(|| create_error("can not get option value".to_string()))?
         .get_value())
 }
 
@@ -153,14 +153,9 @@ impl SnowBall {
         if res.status().is_success() {
             let text = res.text().await?;
 
-            if let Ok(json) = json::parse(&text) {
-                match json {
-                    json::JsonValue::Object(v) => {
-                        if let Some(count) = v.get("totalcount") {
-                            ret = count.as_i64().unwrap_or(0);
-                        }
-                    }
-                    _ => {}
+            if let Ok(json::JsonValue::Object(v)) = json::parse(&text) {
+                if let Some(count) = v.get("totalcount") {
+                    ret = count.as_i64().unwrap_or(0);
                 }
             }
         }
@@ -219,14 +214,12 @@ fn parser_command_line(args: Args) -> Result<Parser<SimpleSet, DefaultService, F
 
                         if value_mut.is_null() {
                             *value_mut = OptValue::from(vec![stock_number]);
+                        } else if let Some(vec_mut) = value_mut.as_vec_mut() {
+                            vec_mut.push(stock_number);
                         } else {
-                            if let Some(vec_mut) = value_mut.as_vec_mut() {
-                                vec_mut.push(stock_number);
-                            } else {
-                                ret = Err(create_error(format!(
-                                    "can not get vec mut ref from value"
-                                )));
-                            }
+                            ret = Err(create_error(
+                                "can not get vec mut ref from value".to_string(),
+                            ));
                         }
                     }
                 }
@@ -306,7 +299,7 @@ fn parser_command_line(args: Args) -> Result<Parser<SimpleSet, DefaultService, F
 }
 
 fn convert_line_to_stock_number(line: &str) -> Option<String> {
-    if line.len() > 0 && line.len() <= 6 || line.len() == 8 {
+    if line.is_empty() && line.len() <= 6 || line.len() == 8 {
         if line.starts_with(STOCK_SHANGHAI) || line.starts_with(STOCK_SHENZHEN) {
             for char in line.chars().skip(2) {
                 if !char.is_ascii_digit() {
@@ -326,19 +319,18 @@ fn convert_line_to_stock_number(line: &str) -> Option<String> {
         } else {
             return Some(normalize_stock_number(line));
         }
-    } else if line.len() == 9 {
-        if line.ends_with(&format!(".{}", STOCK_SHANGHAI))
-            || line.ends_with(&format!(".{}", STOCK_SHENZHEN))
-        {
-            for char in line.chars().rev().skip(3) {
-                if !char.is_ascii_digit() {
-                    return None;
-                }
+    } else if line.len() == 9
+        && (line.ends_with(&format!(".{}", STOCK_SHANGHAI))
+            || line.ends_with(&format!(".{}", STOCK_SHENZHEN)))
+    {
+        for char in line.chars().rev().skip(3) {
+            if !char.is_ascii_digit() {
+                return None;
             }
-            let splited: Vec<&str> = line.split(".").collect();
-
-            return Some(format!("{}{}", splited[1], splited[0]));
         }
+        let splited: Vec<&str> = line.split('.').collect();
+
+        return Some(format!("{}{}", splited[1], splited[0]));
     }
     None
 }

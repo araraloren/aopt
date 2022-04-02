@@ -53,8 +53,8 @@ impl ParserState {
     }
 
     fn do_unwrap(name: &str, value: &Option<Ustr>) -> Result<Ustr> {
-        let string = value.as_ref().ok_or(Self::gen_unwrap_error(name))?;
-        Ok(string.clone())
+        let string = value.as_ref().ok_or_else(|| Self::gen_unwrap_error(name))?;
+        Ok(*string)
     }
 
     pub fn gen_opt<M: Matcher + Default>(
@@ -70,7 +70,7 @@ impl ParserState {
                     ret.push(Box::new(OptContext::new(
                         Self::do_unwrap("prefix", arg.get_prefix())?,
                         Self::do_unwrap("name", arg.get_name())?,
-                        arg.get_value().clone(),
+                        *arg.get_value(),
                         Style::Argument,
                         false,
                         arg.is_disabled(),
@@ -83,7 +83,7 @@ impl ParserState {
                     ret.push(Box::new(OptContext::new(
                         Self::do_unwrap("prefix", arg.get_prefix())?,
                         Self::do_unwrap("name", arg.get_name())?,
-                        arg.next.clone(),
+                        arg.next,
                         Style::Argument,
                         true,
                         arg.is_disabled(),
@@ -147,7 +147,7 @@ impl ParserState {
                     ret.push(Box::new(OptContext::new(
                         Self::do_unwrap("prefix", arg.get_prefix())?,
                         Self::do_unwrap("name", arg.get_name())?,
-                        arg.get_value().clone(),
+                        *arg.get_value(),
                         Style::Argument,
                         false,
                         arg.is_disabled(),
@@ -160,7 +160,7 @@ impl ParserState {
                     ret.push(Box::new(OptContext::new(
                         Self::do_unwrap("prefix", arg.get_prefix())?,
                         Self::do_unwrap("name", arg.get_name())?,
-                        arg.next.clone(),
+                        arg.next,
                         Style::Argument,
                         true,
                         arg.is_disabled(),
@@ -221,17 +221,15 @@ impl ParserState {
             }
             _ => {}
         }
-        Ok(if ret.len() == 0 {
-            None
-        } else {
+        Ok(ret.is_empty().then(|| {
             let mut proc = M::default();
 
             for item in ret {
                 proc.add_ctx(item);
             }
 
-            Some(proc)
-        })
+            proc
+        }))
     }
 
     pub fn gen_nonopt<M: Matcher + Default>(
@@ -245,7 +243,7 @@ impl ParserState {
         match self {
             Self::PSNonMain => {
                 ret.push(Box::new(NonOptContext::new(
-                    noa.clone(),
+                    *noa,
                     Style::Main,
                     total,
                     current,
@@ -253,7 +251,7 @@ impl ParserState {
             }
             Self::PSNonPos => {
                 ret.push(Box::new(NonOptContext::new(
-                    noa.clone(),
+                    *noa,
                     Style::Pos,
                     total,
                     current,
@@ -261,7 +259,7 @@ impl ParserState {
             }
             Self::PSNonCmd => {
                 ret.push(Box::new(NonOptContext::new(
-                    noa.clone(),
+                    *noa,
                     Style::Cmd,
                     total,
                     current,
@@ -269,16 +267,14 @@ impl ParserState {
             }
             _ => {}
         }
-        Ok(if ret.len() == 0 {
-            None
-        } else {
+        Ok(ret.is_empty().then(|| {
             let mut proc = M::default();
 
             for item in ret {
                 proc.add_ctx(item);
             }
 
-            Some(proc)
-        })
+            proc
+        }))
     }
 }

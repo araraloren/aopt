@@ -53,7 +53,7 @@ impl Generator for UidGenerator {
 
 impl From<usize> for UidGenerator {
     fn from(v: usize) -> Self {
-        Self { uid: v.into() }
+        Self { uid: v }
     }
 }
 

@@ -1,4 +1,3 @@
-
 use std::os::windows::prelude::MetadataExt;
 use std::path::Path;
 
@@ -30,7 +29,7 @@ fn main() -> color_eyre::Result<()> {
                         Err(create_error(format!("Directory access error: {:?}", dir)))
                     }
                 } else {
-                    Err(create_error(format!("Directory can not be empty!")))
+                    Err(create_error("Directory can not be empty!".to_string()))
                 }
             }),
         );
@@ -80,7 +79,7 @@ fn main() -> color_eyre::Result<()> {
                 id,
                 simple_opt_mut_cb!(move |_, set_cb: &mut SimpleSet, value| {
                     let filter_type = filter_type.copy_value_from(&value);
-                    let ret = filter_file(set_cb, "directory", &filter_type)
+                    let ret = filter_file(set_cb, "directory", filter_type)
                         .iter()
                         .map(|&v| String::from(v))
                         .collect::<Vec<String>>();
@@ -195,9 +194,7 @@ impl FilterType {
     pub fn filter(&self, path: &str) -> bool {
         if let Ok(meta) = std::fs::symlink_metadata(path) {
             match self {
-                FilterType::All => {
-                    return true;
-                }
+                FilterType::All => true,
                 FilterType::Dir => meta.is_dir(),
                 FilterType::Link => meta.file_type().is_symlink(),
                 FilterType::File => meta.is_file(),

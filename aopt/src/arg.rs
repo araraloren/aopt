@@ -79,10 +79,7 @@ impl<T: Iterator<Item = String>> ArgStream<T> {
 impl<T: Iterator<Item = String>> From<T> for ArgStream<T> {
     fn from(mut v: T) -> Self {
         let first = v.next();
-        Self {
-            iter: v,
-            first: first,
-        }
+        Self { iter: v, first }
     }
 }
 

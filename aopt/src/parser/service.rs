@@ -115,7 +115,7 @@ impl<S: Set> SimpleService<S> {
                     let invoke_callback = opt.is_need_invoke();
                     let mut value = ctx.take_value();
 
-                    assert_eq!(value.is_some(), true);
+                    assert!(value.is_some());
                     if invoke_callback {
                         let has_callback = self.get_callback().contains_key(&uid);
 
@@ -172,7 +172,7 @@ impl<S: Set> SimpleService<S> {
                     let invoke_callback = opt.is_need_invoke();
                     let value = ctx.take_value();
 
-                    assert_eq!(value.is_some(), true);
+                    assert!(value.is_some());
                     if invoke_callback {
                         opt.set_invoke(false);
                     }
@@ -213,7 +213,7 @@ impl<S: Set> Service<S> for SimpleService<S> {
         style: &ParserState,
         arg_index: u64,
     ) -> Result<Option<M>> {
-        Ok(style.gen_opt(arg, arg_index)?)
+        style.gen_opt(arg, arg_index)
     }
 
     fn gen_nonopt<M: Matcher + Default>(
@@ -223,7 +223,7 @@ impl<S: Set> Service<S> for SimpleService<S> {
         current: usize,
         style: &ParserState,
     ) -> Result<Option<M>> {
-        Ok(style.gen_nonopt(noa, total as u64, current as u64)?)
+        style.gen_nonopt(noa, total as u64, current as u64)
     }
 
     fn matching<M: Matcher + Default>(
@@ -232,10 +232,10 @@ impl<S: Set> Service<S> for SimpleService<S> {
         set: &mut S,
         invoke: bool,
     ) -> Result<Vec<ValueKeeper>> {
-        Ok(self.process(matcher, set, invoke)?)
+        self.process(matcher, set, invoke)
     }
 
-    /// Check the [Callback](crate::opt::callback::Callback)'s type is matched with option [`CallbackType`](crate::opt::callback::CallbackType).
+    /// Check the [Callback](crate::opt::OptCallback)'s type is matched with option [`CallbackType`](crate::opt::CallbackType).
     /// Check CMD and force required POS@1 are not exists same time.
     fn pre_check(&self, set: &S) -> Result<bool> {
         self.callback_store.for_each(|uid, cb| {
@@ -344,14 +344,14 @@ impl<S: Set> Service<S> for SimpleService<S> {
             }
             names.clear();
         }
-        if float_vec.len() > 0 {
+        if !float_vec.is_empty() {
             float_vec
                 .iter()
                 .filter(|&uid| set.get_opt(*uid).unwrap().check().is_err())
                 .for_each(|&uid| {
                     names.push(set.get_opt(uid).unwrap().get_hint().to_owned());
                 });
-            if names.len() > 0 {
+            if !names.is_empty() {
                 debug!(?names, "in default float pos check @ pos");
                 return Err(Error::sp_pos_force_require(names.join(" | ")));
             }
@@ -373,7 +373,7 @@ impl<S: Set> Service<S> for SimpleService<S> {
                 }
             }
         }
-        if !valid && names.len() > 0 {
+        if !valid && !names.is_empty() {
             return Err(Error::sp_cmd_force_require(names.join(" | ")));
         }
         Ok(true)

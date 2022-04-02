@@ -37,7 +37,7 @@ pub trait Format: From<Style> {
         String::from("\nOPT:\n")
     }
 
-    fn format_opt_line(&self, rows: &Vec<String>) -> String {
+    fn format_opt_line(&self, rows: &[String]) -> String {
         rows.join(&" ".repeat(self.current_style().row_spacing))
     }
 
@@ -49,7 +49,7 @@ pub trait Format: From<Style> {
         String::from("\nPOS:\n")
     }
 
-    fn format_pos_line(&self, rows: &Vec<String>) -> String {
+    fn format_pos_line(&self, rows: &[String]) -> String {
         rows.join(&" ".repeat(self.current_style().row_spacing))
     }
 
@@ -61,7 +61,7 @@ pub trait Format: From<Style> {
         format!("\n{}\n", help)
     }
 
-    fn format_sec_line(&self, rows: &Vec<String>) -> String {
+    fn format_sec_line(&self, rows: &[String]) -> String {
         rows.join(&" ".repeat(self.current_style().row_spacing))
     }
 

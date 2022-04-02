@@ -189,7 +189,7 @@ impl CreateInfo {
             for prefix in self.support_prefix.iter() {
                 if alias.starts_with(prefix.as_ref()) {
                     if let Some(name) = alias.get(prefix.len()..) {
-                        ret.push((prefix.clone(), name.into()));
+                        ret.push((*prefix, name.into()));
                         break;
                     }
                 }
@@ -282,9 +282,8 @@ impl CreateInfo {
         let data_keeper = parse_option_str(pattern, prefix)?;
         let mut ret: Self = data_keeper.try_into()?;
 
-        ret.set_support_prefix(prefix.iter().map(|v| v.clone()).collect::<Vec<Ustr>>());
-
-        return Ok(ret);
+        ret.set_support_prefix(prefix.to_vec());
+        Ok(ret)
     }
 }
 
@@ -296,16 +295,16 @@ impl TryFrom<DataKeeper> for CreateInfo {
         let index = data_keeper.gen_index();
         let name = data_keeper
             .name
-            .ok_or(Error::opt_missing_name(data_keeper.pattern))?;
+            .ok_or_else(|| Error::opt_missing_name(data_keeper.pattern))?;
         let type_ = data_keeper
             .type_name
-            .ok_or(Error::opt_missing_type(data_keeper.pattern))?;
+            .ok_or_else(|| Error::opt_missing_type(data_keeper.pattern))?;
 
         Ok(Self {
             name,
             index,
             type_name: type_,
-            prefix: data_keeper.prefix.map(|v| v.clone()),
+            prefix: data_keeper.prefix,
             support_deactivate_style: data_keeper.deactivate.unwrap_or(false),
             optional: !data_keeper.optional.unwrap_or(false),
             ..Self::default()
@@ -394,15 +393,15 @@ impl FilterInfo {
     }
 
     pub fn get_type_name(&self) -> Ustr {
-        self.type_name.clone().unwrap()
+        self.type_name.unwrap()
     }
 
     pub fn get_name(&self) -> Ustr {
-        self.name.clone().unwrap()
+        self.name.unwrap()
     }
 
     pub fn get_prefix(&self) -> Ustr {
-        self.prefix.clone().unwrap()
+        self.prefix.unwrap()
     }
 
     pub fn get_index(&self) -> &OptIndex {
@@ -497,7 +496,7 @@ impl From<DataKeeper> for FilterInfo {
         let index = data_keeper.gen_index();
 
         Self {
-            prefix: data_keeper.prefix.map(|v| v.clone()),
+            prefix: data_keeper.prefix,
             name: data_keeper.name,
             type_name: data_keeper.type_name,
             index: if has_index { Some(index) } else { None },
