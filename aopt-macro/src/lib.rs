@@ -2,12 +2,16 @@ extern crate syn;
 
 use proc_macro::TokenStream;
 use quote::quote;
+use syn::ext::IdentExt;
 use syn::parse::Parse;
 use syn::parse::ParseStream;
 use syn::punctuated::Punctuated;
 use syn::token::Comma;
 use syn::{parse_macro_input, Expr};
 
+/// Parsing arguments using for `getopt!` or `getoptd!`.
+///
+/// Arguments should be like: `$iter`(getopt input arguments), `$($parser),+`(one or more parser)
 #[derive(Debug)]
 struct GetoptArgs {
     iter: Expr,
@@ -18,22 +22,12 @@ impl Parse for GetoptArgs {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let mut parsers = Punctuated::new();
         let iter: Expr = input.parse()?;
-        let comma: Comma = input.parse()?;
+        let _: Comma = input.parse()?;
+        let first: Expr = input.parse()?;
 
-        while !input.is_empty() {
-            let parser: Expr = input.parse()?;
-            let next_comma: syn::Result<Comma> = input.parse();
-
-            parsers.push(parser);
-            match next_comma {
-                Ok(is_comma) => {
-                    parsers.push_punct(is_comma);
-                }
-                Err(_) => {
-                    // last parser
-                    parsers.push_punct(comma);
-                }
-            }
+        parsers.push(first);
+        while input.peek(Comma) {
+            parsers.push_punct(input.parse()?);
         }
 
         Ok(Self { iter, parsers })
@@ -122,6 +116,9 @@ pub fn getopt(input: TokenStream) -> TokenStream {
     ret.into()
 }
 
+/// Parsing arguments using for `getopt_help!`.
+///
+/// Arguments should be like: `$set`(option set), `$($cmd_name),*`(zero or more cmd name)
 #[derive(Debug)]
 struct HelpArgs {
     set: Expr,
@@ -132,22 +129,14 @@ impl Parse for HelpArgs {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let mut cmds = Punctuated::new();
         let set: Expr = input.parse()?;
-        let comma: syn::Result<Comma> = input.parse();
 
-        if let Ok(comma) = comma {
+        if input.peek(Comma) && input.parse::<Comma>().is_ok() {
             while !input.is_empty() {
-                let cmd: Expr = input.parse()?;
-                let next_comma: syn::Result<Comma> = input.parse();
-
-                cmds.push(cmd);
-                match next_comma {
-                    Ok(is_comma) => {
-                        cmds.push_punct(is_comma);
-                    }
-                    Err(_) => {
-                        // last parser
-                        cmds.push_punct(comma);
-                    }
+                cmds.push(input.parse()?);
+                if input.peek(Comma) {
+                    cmds.push_punct(input.parse()?);
+                } else {
+                    break;
                 }
             }
         }
@@ -257,6 +246,184 @@ pub fn getopt_help(input: TokenStream) -> TokenStream {
         }});
     }
     let ret = quote! {{ #help_code }};
+
+    ret.into()
+}
+
+#[derive(Debug)]
+struct ParameterOrNormalArgs {
+    name: Option<syn::Ident>,
+    value: Expr,
+}
+
+impl Parse for ParameterOrNormalArgs {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut name = None;
+        let value;
+
+        if input.peek2(syn::token::Eq) {
+            if input.peek(syn::Ident::peek_any) {
+                name = Some(input.parse()?);
+                input.parse::<syn::Token![=]>()?;
+                value = input.parse()?;
+            } else if input.peek(syn::Token![default]) {
+                name = Some(syn::Ident::new("default", proc_macro2::Span::call_site()));
+                input.parse::<syn::Token![=]>()?;
+                value = input.parse()?;
+            }
+            else {
+                value = input.parse()?;
+            }
+        } else {
+            value = input.parse()?;
+        }
+        Ok(Self { name, value })
+    }
+}
+
+/// Parsing arguments using for `opt_create!`.
+///
+/// Arguments should be like: `$init`(option create string), `$help?`(help message),
+/// `$callback?`(callback), `$($ident = $value),*`(zero or more setting)
+#[derive(Debug)]
+struct CreateArgs {
+    parser: Expr,
+    init: Expr,
+    parameter_args: Punctuated<ParameterOrNormalArgs, Comma>,
+}
+
+impl Parse for CreateArgs {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut parameter_args = Punctuated::new();
+        let parser: Expr = input.parse()?;
+        let _: Comma = input.parse()?;
+        let init: Expr = input.parse()?;
+
+        if input.peek(Comma) && input.parse::<Comma>().is_ok() {
+            while !input.is_empty() {
+                let arg: ParameterOrNormalArgs = input.parse()?;
+
+                parameter_args.push(arg);
+                if input.peek(Comma) {
+                    parameter_args.push_punct(input.parse()?);
+                } else {
+                    break;
+                }
+            }
+        }
+
+        Ok(Self {
+            parser,
+            init,
+            parameter_args,
+        })
+    }
+}
+
+#[proc_macro]
+pub fn getopt_add(input: TokenStream) -> TokenStream {
+    let getopt_args = parse_macro_input!(input as CreateArgs);
+    let init = getopt_args.init;
+    let parser = getopt_args.parser;
+    let mut found_help = false;
+    let mut callback = None;
+    let mut output = quote! {
+        let init_string = #init.into();
+        let mut create_info = CreateInfo::parse(init_string, #parser.get_prefix());
+    };
+
+    output.extend(getopt_args.parameter_args.iter().map(|v| {
+        let name = &v.name;
+        let expr = &v.value;
+
+        if let Some(name) = name {
+            match name.to_string().as_str() {
+                "help" => {
+                    quote! {{
+                        let value = #expr.into();
+                        create_info = create_info.and_then(|mut ci| { ci.set_help(value); Ok(ci) });
+                    }}
+                }
+                "name" => {
+                    quote! {{
+                        let value = #expr.into();
+                        create_info = create_info.and_then(|mut ci| { ci.set_name(value); Ok(ci) });
+                    }}
+                }
+                "prefix" => {
+                    quote! {{
+                        let value = #expr.into();
+                        create_info = create_info.and_then(|mut ci| { ci.set_prefix(value); Ok(ci) });
+                    }}
+                }
+                "index" => {
+                    quote! {{
+                        let value = #expr.into();
+                        create_info = create_info.and_then(|mut ci| { ci.set_index(value); Ok(ci) });
+                    }}
+                }
+                "default" => {
+                    quote! {{
+                        let value = #expr;
+                        create_info = create_info.and_then(|mut ci| { ci.set_default_value(value); Ok(ci) });
+                    }}
+                }
+                "hint" => {
+                    quote! {{
+                        let value = #expr.into();
+                        create_info = create_info.and_then(|mut ci| { ci.set_hint(value); Ok(ci) });
+                    }}
+                }
+                "alias" => {
+                    quote! {{
+                        let value = #expr.into();
+                        create_info = create_info.and_then(|mut ci| { ci.add_alias(value)?; Ok(ci) });
+                    }}
+                }
+                "callback" => {
+                    callback = Some(expr.clone());
+                    quote! {}
+                }
+                _ => syn::Error::new_spanned(name, "Not support option field name").to_compile_error(),
+            }
+        }
+        else {
+            if !found_help {
+                found_help = true;
+                quote! {{
+                    let value = #expr.into();
+                    create_info = create_info.and_then(|mut ci| { ci.set_help(value); Ok(ci) });
+                }}
+            }
+            else {
+                if callback.is_none() {
+                    callback = Some(expr.clone());
+                    quote! { }
+                }
+                else { 
+                    syn::Error::new_spanned(syn::Ident::new("default", proc_macro2::Span::call_site()), "Not support more than three position arguments").to_compile_error()
+                }
+            }
+        }
+    }));
+
+    output.extend(quote! {
+        let uid = create_info.and_then(|mut ci| #parser.add_opt_ci(ci));
+    });
+
+    if let Some(callback) = callback {
+        output.extend(quote! {
+            let uid = uid.and_then(|uid| {
+                #parser.add_callback(uid, #callback);
+                Ok(uid)
+            });
+        });
+    }
+
+    let ret = quote! {{
+        #output
+        uid
+    }};
 
     ret.into()
 }
