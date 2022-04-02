@@ -30,8 +30,7 @@ impl Parse for GetoptArgs {
             parsers.push_punct(input.parse()?);
             if input.is_empty() {
                 break;
-            }
-            else {
+            } else {
                 parsers.push(input.parse()?);
             }
         }
