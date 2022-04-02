@@ -162,7 +162,7 @@ impl State {
             Self::Prefix => {
                 for prefix in pattern.get_prefixs() {
                     if pattern.get_pattern().starts_with(prefix.as_ref()) {
-                        data_keeper.prefix = Some(prefix.clone());
+                        data_keeper.prefix = Some(*prefix);
                         index.inc(prefix.len());
                         break;
                     }
@@ -340,14 +340,8 @@ mod test {
                     except.0.unwrap_or(""),
                     dk.prefix.unwrap_or(default).as_ref()
                 );
-                assert_eq!(
-                    except.1.unwrap_or(""),
-                    dk.name.unwrap_or(default.clone()).as_ref()
-                );
-                assert_eq!(
-                    except.2.unwrap_or(""),
-                    dk.value.unwrap_or(default.clone()).as_ref()
-                );
+                assert_eq!(except.1.unwrap_or(""), dk.name.unwrap_or(default).as_ref());
+                assert_eq!(except.2.unwrap_or(""), dk.value.unwrap_or(default).as_ref());
                 assert_eq!(except.3, dk.disable);
             }
         } else {

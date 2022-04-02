@@ -63,7 +63,7 @@ impl Argument {
     /// When the result not have a valid name.
     pub fn parse(&mut self, prefix: &[Ustr]) -> Result<bool> {
         if let Some(pattern) = &self.current {
-            self.data_keeper = parse_argument(pattern.clone(), prefix)?;
+            self.data_keeper = parse_argument(*pattern, prefix)?;
 
             // must have prefix and name
             if self.data_keeper.prefix.is_none() {

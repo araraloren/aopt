@@ -276,6 +276,7 @@ impl Creator for PosCreator {
 mod test {
     use super::*;
 
+    #[allow(clippy::all)]
     #[test]
     fn make_type_pos_work() {
         let creator = PosCreator::default();

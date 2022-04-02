@@ -5,6 +5,8 @@
 
 - fix documents
 
+- fix clippy
+
 ## 0.6.2
 
 - add index parameter when parsing option value, not affect exist code logical

@@ -33,11 +33,11 @@ impl HelpInfo {
     }
 
     pub fn get_hint(&self) -> Ustr {
-        self.hint.clone()
+        self.hint
     }
 
     pub fn get_help(&self) -> Ustr {
-        self.help.clone()
+        self.help
     }
 
     pub fn get_hint_mut(&mut self) -> &mut Ustr {
@@ -60,7 +60,7 @@ impl HelpInfo {
 
     pub fn clone_and_generate_hint(&self, opt: &dyn Opt) -> Self {
         Self {
-            help: self.help.clone(),
+            help: self.help,
             hint: format!(
                 "{}{}{}={}{}",
                 if opt.get_optional() { "[" } else { "<" },
@@ -83,7 +83,7 @@ impl<'a> From<&'a mut CreateInfo> for HelpInfo {
         Self {
             help: take(help_info.get_help_mut()),
             hint: if help_info.get_hint().is_empty() {
-                create_help_hint(&ci)
+                create_help_hint(ci)
             } else {
                 take(help_info.get_hint_mut())
             },
@@ -122,7 +122,7 @@ pub fn create_help_hint(ci: &CreateInfo) -> Ustr {
         }
     }
 
-    names.sort_by(|v1, v2| v1.len().cmp(&v2.len()));
+    names.sort_by_key(|v1| v1.len());
 
     let mut ret = names.join(",");
 

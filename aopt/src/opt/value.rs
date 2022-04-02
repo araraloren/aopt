@@ -287,59 +287,35 @@ impl Value {
     }
 
     pub fn is_int(&self) -> bool {
-        match self {
-            Self::Int(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Int(_))
     }
 
     pub fn is_uint(&self) -> bool {
-        match self {
-            Self::Uint(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Uint(_))
     }
 
     pub fn is_flt(&self) -> bool {
-        match self {
-            Self::Flt(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Flt(_))
     }
 
     pub fn is_str(&self) -> bool {
-        match self {
-            Self::Str(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Str(_))
     }
 
     pub fn is_bool(&self) -> bool {
-        match self {
-            Self::Bool(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Bool(_))
     }
 
     pub fn is_vec(&self) -> bool {
-        match self {
-            Self::Array(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Array(_))
     }
 
     pub fn is_any(&self) -> bool {
-        match self {
-            Self::Any(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Any(_))
     }
 
     pub fn is_null(&self) -> bool {
-        match self {
-            Self::Null => true,
-            _ => false,
-        }
+        matches!(self, Self::Null)
     }
 
     pub fn reset(&mut self) {

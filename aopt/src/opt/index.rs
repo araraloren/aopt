@@ -141,10 +141,7 @@ impl Index {
     }
 
     pub fn is_null(&self) -> bool {
-        match self {
-            Self::Null => true,
-            _ => false,
-        }
+        matches!(self, Self::Null)
     }
 
     /// Compare the NOA information with current Index.
@@ -232,9 +229,7 @@ impl ToString for Index {
             Index::Less(v) => {
                 format!("<{}", v)
             }
-            Index::AnyWhere => {
-                format!("*")
-            }
+            Index::AnyWhere => "*".to_string(),
             Index::Null => String::default(),
         }
     }

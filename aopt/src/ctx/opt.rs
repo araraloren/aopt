@@ -78,7 +78,7 @@ impl Context for OptContext {
             // 5. parsing the value
             let value = opt
                 .parse_value(
-                    self.argument.unwrap_or(gstr("")),
+                    self.argument.unwrap_or_else(|| gstr("")),
                     self.disable,
                     self.arg_index,
                 )

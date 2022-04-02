@@ -72,7 +72,7 @@ impl<T: Iterator<Item = String>> ArgStream<T> {
         Self::from(t)
     }
     fn map_item(item: Option<String>) -> Option<Ustr> {
-        item.map_or(None, |v| Some(gstr(&v)))
+        item.map(|v| gstr(&v))
     }
 }
 

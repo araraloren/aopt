@@ -386,21 +386,19 @@ pub fn getopt_add(input: TokenStream) -> TokenStream {
                 _ => syn::Error::new_spanned(name, "Not support option field name").to_compile_error(),
             }
         }
+        else if !found_help {
+            found_help = true;
+            quote! {{
+                let value = #expr.into();
+                create_info = create_info.and_then(|mut ci| { ci.set_help(value); Ok(ci) });
+            }}
+        }
+        else if callback.is_none() {
+            callback = Some(expr.clone());
+            quote! { }
+        }
         else {
-            if !found_help {
-                found_help = true;
-                quote! {{
-                    let value = #expr.into();
-                    create_info = create_info.and_then(|mut ci| { ci.set_help(value); Ok(ci) });
-                }}
-            }
-            else if callback.is_none() {
-                callback = Some(expr.clone());
-                quote! { }
-            }
-            else {
-                syn::Error::new_spanned(syn::Ident::new("default", proc_macro2::Span::call_site()), "Not support more than three position arguments").to_compile_error()
-            }
+            syn::Error::new_spanned(syn::Ident::new("default", proc_macro2::Span::call_site()), "Not support more than three position arguments").to_compile_error()
         }
     }));
 

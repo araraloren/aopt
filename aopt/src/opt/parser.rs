@@ -165,9 +165,9 @@ impl DataKeeper {
             Index::backward(self.backward_index.unwrap())
         } else if self.anywhere.unwrap_or(false) {
             Index::anywhere()
-        } else if self.list.len() > 0 {
+        } else if !self.list.is_empty() {
             Index::list(std::mem::take(&mut self.list))
-        } else if self.except.len() > 0 {
+        } else if !self.except.is_empty() {
             Index::except(std::mem::take(&mut self.except))
         } else if self.greater.is_some() {
             Index::greater(self.greater.unwrap())
@@ -182,8 +182,8 @@ impl DataKeeper {
         self.forward_index.is_some()
             || self.backward_index.is_some()
             || self.anywhere.is_some()
-            || self.list.len() > 0
-            || self.except.len() > 0
+            || !self.list.is_empty()
+            || !self.except.is_empty()
             || self.greater.is_some()
             || self.less.is_some()
     }
@@ -202,11 +202,7 @@ impl State {
         "*"
     }
 
-    pub fn self_transition<'vec, 'pre>(
-        &mut self,
-        index: &ParseIndex,
-        pattern: &ParserPattern<'pre>,
-    ) {
+    pub fn self_transition<'pre>(&mut self, index: &ParseIndex, pattern: &ParserPattern<'pre>) {
         let index_not_end = pattern.len() > index.get();
         let next_state = match self.clone() {
             Self::PreCheck => Self::Prefix,
@@ -230,7 +226,7 @@ impl State {
             }
             Self::Equal => Self::Type,
             Self::Type | Self::Deactivate | Self::Optional => {
-                if let Some(ch) = pattern.chars(index.get()).nth(0) {
+                if let Some(ch) = pattern.chars(index.get()).next() {
                     match ch {
                         '!' => Self::Optional,
                         '/' => Self::Deactivate,
@@ -244,17 +240,17 @@ impl State {
             Self::Index => {
                 let (_, index_part) = pattern.get_pattern().split_at(index.get());
 
-                if index_part.starts_with("+[") || index_part.starts_with("[") {
+                if index_part.starts_with("+[") || index_part.starts_with('[') {
                     Self::List
                 } else if index_part.starts_with("-[") {
                     Self::Except
-                } else if index_part.starts_with("-") {
+                } else if index_part.starts_with('-') {
                     Self::BackwardIndex
                 } else if index_part == Self::anywhere_symbol() {
                     Self::AnyWhere
-                } else if index_part.starts_with(">") {
+                } else if index_part.starts_with('>') {
                     Self::Greater
-                } else if index_part.starts_with("<") {
+                } else if index_part.starts_with('<') {
                     Self::Less
                 } else {
                     Self::FowradIndex
@@ -294,7 +290,7 @@ impl State {
             Self::Prefix => {
                 for prefix in pattern.get_prefixs() {
                     if pattern.get_pattern().starts_with(prefix.as_ref()) {
-                        data_keeper.prefix = Some(prefix.clone());
+                        data_keeper.prefix = Some(*prefix);
                         index.inc(prefix.len());
                         break;
                     }
@@ -5119,13 +5115,10 @@ mod test {
                     except.0.unwrap_or(""),
                     dk.prefix.unwrap_or(default).as_ref()
                 );
-                assert_eq!(
-                    except.1.unwrap_or(""),
-                    dk.name.unwrap_or(default.clone()).as_ref()
-                );
+                assert_eq!(except.1.unwrap_or(""), dk.name.unwrap_or(default).as_ref());
                 assert_eq!(
                     except.2.unwrap_or(""),
-                    dk.type_name.unwrap_or(default.clone()).as_ref()
+                    dk.type_name.unwrap_or(default).as_ref()
                 );
                 assert_eq!(except.3, index);
                 assert_eq!(except.4, dk.deactivate.unwrap_or(false));

@@ -73,10 +73,7 @@ pub enum Error {
 
 impl Error {
     pub fn is_special(&self) -> bool {
-        match self {
-            Self::FromSpecialError(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::FromSpecialError(_))
     }
 
     /// Create Error::CustomError error

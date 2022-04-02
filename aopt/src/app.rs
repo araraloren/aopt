@@ -162,7 +162,7 @@ where
     {
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
-        let ret = parser.parse(&mut ArgStream::from(args.into_iter()))?;
+        let ret = parser.parse(&mut ArgStream::from(args))?;
 
         r(ret, self)
     }
@@ -214,7 +214,7 @@ where
         let parser = &mut self.parser;
         let async_ret;
 
-        match parser.parse(&mut ArgStream::from(args.into_iter())) {
+        match parser.parse(&mut ArgStream::from(args)) {
             Ok(ret) => {
                 let ret = r(ret, self).await;
 
@@ -271,7 +271,7 @@ where
     {
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
-        let ret = parser.parse(&mut ArgStream::new(args.into_iter()))?;
+        let ret = parser.parse(&mut ArgStream::new(args))?;
 
         r(ret, std::mem::take(self))
     }
@@ -318,7 +318,7 @@ where
         let parser = &mut self.parser;
         let async_ret;
 
-        match parser.parse(&mut ArgStream::from(args.into_iter())) {
+        match parser.parse(&mut ArgStream::from(args)) {
             Ok(ret) => {
                 let ret = r(ret, std::mem::take(self)).await;
 
