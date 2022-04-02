@@ -28,6 +28,12 @@ impl Parse for GetoptArgs {
         parsers.push(first);
         while input.peek(Comma) {
             parsers.push_punct(input.parse()?);
+            if input.is_empty() {
+                break;
+            }
+            else {
+                parsers.push(input.parse()?);
+            }
         }
 
         Ok(Self { iter, parsers })

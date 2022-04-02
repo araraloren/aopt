@@ -1,3 +1,5 @@
+use std::ops::Not;
+
 use crate::arg::Argument;
 use crate::ctx::Context;
 use crate::ctx::NonOptContext;
@@ -221,7 +223,7 @@ impl ParserState {
             }
             _ => {}
         }
-        Ok(ret.is_empty().then(|| {
+        Ok(ret.is_empty().not().then(|| {
             let mut proc = M::default();
 
             for item in ret {
@@ -267,7 +269,7 @@ impl ParserState {
             }
             _ => {}
         }
-        Ok(ret.is_empty().then(|| {
+        Ok(ret.is_empty().not().then(|| {
             let mut proc = M::default();
 
             for item in ret {

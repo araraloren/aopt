@@ -8,3 +8,6 @@ members = [
     "simple-find-file",
     "index-constituent"
 ]
+
+[patch.crates-io]
+aopt-macro = { path = "aopt-macro/"}
