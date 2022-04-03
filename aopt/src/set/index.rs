@@ -38,23 +38,23 @@ impl_num_index_for!(isize);
 impl<'a, T: Set> SetIndex<T> for &'a str {
     fn ref_from<'s>(&self, set: &'s T) -> Option<&'s Box<dyn Opt>> {
         set.find(self)
-            .unwrap_or_else(|_| panic!("Can not find current option: {}", self))
+            .unwrap_or_else(|e| panic!("Can not find option {}: {:?}", self, e))
     }
 
     fn mut_from<'s>(&self, set: &'s mut T) -> Option<&'s mut Box<dyn Opt>> {
         set.find_mut(self)
-            .unwrap_or_else(|_| panic!("Can not find current option: {}", self))
+            .unwrap_or_else(|e| panic!("Can not find option {}: {:?}", self, e))
     }
 }
 
 impl<T: Set> SetIndex<T> for String {
     fn ref_from<'s>(&self, set: &'s T) -> Option<&'s Box<dyn Opt>> {
         set.find(self)
-            .unwrap_or_else(|_| panic!("Can not find current option: {}", self))
+            .unwrap_or_else(|e| panic!("Can not find option {}: {:?}", self, e))
     }
 
     fn mut_from<'s>(&self, set: &'s mut T) -> Option<&'s mut Box<dyn Opt>> {
         set.find_mut(self)
-            .unwrap_or_else(|_| panic!("Can not find current option: {}", self))
+            .unwrap_or_else(|e| panic!("Can not find option {}: {:?}", self, e))
     }
 }
