@@ -578,6 +578,76 @@ pub use aopt_macro::getopt;
 /// Generate help message of Set.
 pub use aopt_macro::getopt_help;
 
+/// Add option to `Parser`.
+///
+/// # Example
+/// ```rust
+/// use aopt::err::Result;
+/// use aopt::prelude::*;
+///
+/// fn main() -> Result<()> {
+///     let mut parser = ForwardParser::default();
+///
+///     getopt_add!(parser, "--aopt=s!", "Help message of aopt")?;
+///     getopt_add!(
+///         parser,
+///         "--bopt=b",
+///         alias = "-b",
+///         help = "Help message of bopt"
+///     )?;
+///     getopt_add!(parser, "--copt=a", name = "选项c", prefix = "-")?;
+///     getopt_add!(
+///         parser,
+///         "--dopt=b/",
+///         "Help message of dopt",
+///         simple_opt_cb!(|_, _, v| {
+///             assert_eq!(v, OptValue::from(false));
+///             Ok(Some(v))
+///         })
+///     )?;
+///     getopt_add!(
+///         parser,
+///         "--eopt=i",
+///         callback = simple_opt_cb!(|_, _, v| {
+///             assert_eq!(v, OptValue::from(42i64));
+///             Ok(Some(v))
+///         })
+///     )?;
+///     getopt_add!(
+///         parser,
+///         "fopt=p",
+///         index = OptIndex::forward(1),
+///         callback = simple_pos_cb!(|_, _, arg, _, v| {
+///             assert_eq!(arg, "foo");
+///             Ok(Some(v))
+///         })
+///     )?;
+///     getopt_add!(parser, "--gopt=u", default = OptValue::from(42u64))?;
+///     getopt_add!(
+///         parser,
+///         "hopt=m",
+///         callback = simple_main_cb!(|_, set: &SimpleSet, _, v| {
+///             assert_eq!(set["--aopt"].get_help(), "Help message of aopt");
+///             assert_eq!(set["--bopt"].get_help(), "Help message of bopt");
+///             assert_eq!(set["--dopt"].get_help(), "Help message of dopt");
+///             assert_eq!(set["选项c"].get_name(), "选项c");
+///             assert_eq!(set["选项c"].get_prefix(), "-");
+///             assert_eq!(set["gopt"].get_value(), &OptValue::from(42u64));
+///             assert_eq!(set["aopt"].get_value(), &OptValue::from("bar"));
+///             assert_eq!(set["bopt"].get_value(), &OptValue::from(true));
+///             Ok(Some(v))
+///         })
+///     )?;
+///     getopt!(
+///         &mut ["--aopt", "bar", "-b", "foo", "--/dopt", "--eopt=42"]
+///             .iter()
+///             .map(|&v| String::from(v)),
+///         parser,
+///     )?;
+///
+///     Ok(())
+/// }
+/// ```
 pub use aopt_macro::getopt_add;
 
 pub mod prelude {
