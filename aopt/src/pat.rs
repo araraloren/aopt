@@ -1,6 +1,3 @@
-use std::iter::Skip;
-use std::str::Chars;
-
 use ustr::Ustr;
 
 /// Pattern holder of the user input command line
@@ -9,35 +6,58 @@ use ustr::Ustr;
 pub struct ParserPattern<'pre> {
     pattern: Ustr,
 
+    pattern_chars: Vec<char>,
+
     support_prefix: &'pre [Ustr],
 }
 
 impl<'pre> ParserPattern<'pre> {
-    pub fn new(pattern: Ustr, prefix: &'pre [Ustr]) -> Self {
+    pub fn new(pattern: Ustr, support_prefix: &'pre [Ustr]) -> Self {
         Self {
             pattern,
-            support_prefix: prefix,
+            pattern_chars: pattern.chars().collect(),
+            support_prefix,
         }
     }
 
-    pub fn get_prefixs(&self) -> &'pre [Ustr] {
+    pub fn get_prefix(&self) -> Option<&Ustr> {
         self.support_prefix
+            .iter()
+            .find(|v| self.pattern.starts_with(v.as_ref()))
     }
 
     pub fn get_pattern(&self) -> &str {
         self.pattern.as_ref()
     }
 
-    pub fn chars(&self, skip_len: usize) -> Skip<Chars> {
-        self.pattern.chars().skip(skip_len)
+    pub fn get_chars(&self, offset: usize) -> &[char] {
+        &self.pattern_chars[offset..]
+    }
+
+    pub fn get_subchars(&self, from: usize, end: usize) -> &[char] {
+        &self.pattern_chars[from..end]
+    }
+
+    pub fn get_substr(&self, from: usize, end: usize) -> Ustr {
+        crate::gstr(&self.pattern_chars[from..end].iter().fold(
+            String::with_capacity(end - from + 1),
+            |mut a, v| {
+                a.push(*v);
+                a
+            },
+        ))
     }
 
     pub fn starts(&self, ch: char, skip_len: usize) -> bool {
-        self.pattern.chars().nth(skip_len) == Some(ch)
+        self.pattern_chars.get(skip_len) == Some(&ch)
     }
 
     pub fn len(&self) -> usize {
-        self.pattern.len()
+        self.pattern_chars.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn clone_pattern(&self) -> Ustr {

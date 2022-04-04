@@ -154,18 +154,15 @@ impl State {
 
         match current_state {
             Self::PreCheck => {
-                if pattern.get_pattern().is_empty() {
+                if pattern.is_empty() {
                     warn!("got an empty pattern");
                     return Ok(false);
                 }
             }
             Self::Prefix => {
-                for prefix in pattern.get_prefixs() {
-                    if pattern.get_pattern().starts_with(prefix.as_ref()) {
-                        data_keeper.prefix = Some(*prefix);
-                        index.inc(prefix.len());
-                        break;
-                    }
+                if let Some(prefix) = pattern.get_prefix() {
+                    data_keeper.prefix = Some(*prefix);
+                    index.inc(prefix.chars().count());
                 }
             }
             Self::Disable => {
@@ -176,10 +173,10 @@ impl State {
                 let start = index.get();
 
                 // get the chars until we meet '=' or reach the end
-                for (cur, ch) in pattern.chars(start).enumerate() {
+                for (cur, ch) in pattern.get_chars(start).iter().enumerate() {
                     let mut name_end = 0;
                     // the name not include '=', so > 1
-                    if ch == VALUE_SPLIT_CHAR {
+                    if *ch == VALUE_SPLIT_CHAR {
                         if cur >= 1 {
                             name_end = start + cur;
                         } else if cur == 0 {
@@ -190,22 +187,11 @@ impl State {
                         name_end = start + cur + 1;
                     }
                     if name_end > 0 {
-                        let name = pattern.get_pattern().get(start..name_end);
+                        let name = pattern.get_substr(start, name_end);
 
-                        if let Some(name) = name {
-                            data_keeper.name = Some(name.into());
-                            index.set(name_end);
-                        } else {
-                            error!(
-                                ?pattern,
-                                "accessing string [{}, {}) failed", start, name_end
-                            );
-                            return Err(Error::arg_pattern_out_of_range(
-                                pattern.get_pattern(),
-                                start,
-                                name_end,
-                            ));
-                        }
+                        debug!("get name from '{:?}': '{}'", pattern, name);
+                        data_keeper.name = Some(name);
+                        index.set(name_end);
                         break;
                     }
                 }
@@ -216,24 +202,11 @@ impl State {
             Self::Value => {
                 if !index.is_end() {
                     // if we are here, the left chars is value
-                    let value = pattern.get_pattern().get(index.get()..);
+                    let value = pattern.get_substr(index.get(), index.len());
 
-                    if let Some(value) = value {
-                        data_keeper.value = Some(value.into());
-                        index.set(index.len());
-                    } else {
-                        error!(
-                            ?pattern,
-                            "accessing string [{}, {}) failed",
-                            index.get(),
-                            index.len()
-                        );
-                        return Err(Error::arg_pattern_out_of_range(
-                            pattern.get_pattern(),
-                            index.get(),
-                            index.len(),
-                        ));
-                    }
+                    debug!("get value from {:?}: {}", pattern, value);
+                    data_keeper.value = Some(value);
+                    index.set(index.len());
                 } else {
                     error!(?pattern, "syntax error! require an value after '='.");
                     return Err(Error::arg_missing_value(pattern.get_pattern()));

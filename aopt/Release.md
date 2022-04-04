@@ -1,11 +1,15 @@
 
 # Relase note
 
-## 0.6.3
+## 0.6.5
 
 - fix documents
 
 - fix clippy
+
+- fix the parser of option set string
+
+- update the parser test case
 
 ## 0.6.2
 

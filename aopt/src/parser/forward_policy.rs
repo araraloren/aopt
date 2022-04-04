@@ -185,7 +185,7 @@ mod test {
     use crate::prelude::*;
 
     #[test]
-    fn testing_simple_parser() {
+    fn testing_forward_parser() {
         assert!(do_simple_test().is_ok());
         assert!(do_simple_test_failed().is_err());
         assert!(do_simple_test_failed_non_strict().is_ok());

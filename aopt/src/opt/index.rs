@@ -207,30 +207,38 @@ impl Default for Index {
 impl ToString for Index {
     fn to_string(&self) -> String {
         match self {
-            Index::Forward(v) => {
-                format!("{}", v)
+            Self::AnyWhere => "Index::anywhere()".to_owned(),
+            Self::Null => "Index::default()".to_owned(),
+            Self::Forward(v) => {
+                format!("Index::forward({})", v)
             }
-            Index::Backward(v) => {
-                format!("-{}", v)
+            Self::Backward(v) => {
+                format!("Index::backward({})", v)
             }
-            Index::List(v) => {
-                let strs: Vec<String> = v.iter().map(|v| format!("{}", v)).collect();
-
-                format!("[{}]", strs.join(", "))
+            Self::List(v) => {
+                format!(
+                    "Index::list(vec![{}])",
+                    v.iter()
+                        .map(|v| format!("{}", v))
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )
             }
-            Index::Except(v) => {
-                let strs: Vec<String> = v.iter().map(|v| format!("{}", v)).collect();
-
-                format!("-[{}]", strs.join(", "))
+            Self::Except(v) => {
+                format!(
+                    "Index::except(vec![{}])",
+                    v.iter()
+                        .map(|v| format!("{}", v))
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )
             }
-            Index::Greater(v) => {
-                format!(">{}", v)
+            Self::Greater(v) => {
+                format!("Index::greater({})", v)
             }
-            Index::Less(v) => {
-                format!("<{}", v)
+            Self::Less(v) => {
+                format!("Index::less({})", v)
             }
-            Index::AnyWhere => "*".to_string(),
-            Index::Null => String::default(),
         }
     }
 }
