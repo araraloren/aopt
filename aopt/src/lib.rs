@@ -578,7 +578,26 @@ pub use aopt_macro::getopt;
 /// Generate help message of Set.
 pub use aopt_macro::getopt_help;
 
-/// Add option to `Parser`.
+/// Add option to `Parser`: `getopt_add!($Parser, $Create-String, $Help?, $Callback?, $($key=$value),*)`.
+/// 
+/// `$Create-String` is option create string,
+/// `$Help` and `$Callback` are optional, and the available key list are:
+/// 
+/// - [`help`](crate::set::CreateInfo::set_help)
+/// 
+/// - [`name`](crate::set::CreateInfo::set_name)
+/// 
+/// - [`prefix`](crate::set::CreateInfo::set_prefix)
+/// 
+/// - [`index`](crate::set::CreateInfo::set_index)
+/// 
+/// - [`default`](crate::set::CreateInfo::set_default_value)
+/// 
+/// - [`hint`](crate::set::CreateInfo::set_hint)
+/// 
+/// - [`alias`](crate::set::CreateInfo::add_alias)
+/// 
+/// - [`callback`](crate::parser::Parser::add_callback)
 ///
 /// # Example
 /// ```rust
