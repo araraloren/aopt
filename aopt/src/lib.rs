@@ -420,7 +420,7 @@ where
     Ok(None)
 }
 
-/// Parse the given string sequence, return the first matched [`DynParser`].
+/// Parse the given string sequence, return the first matched [`DynParser`]: `getopt!($Iterator, $($DynParser),+)`.
 ///
 /// # Returns
 ///
@@ -501,7 +501,7 @@ where
 ///```
 pub use aopt_macro::getoptd;
 
-/// Parse the given string sequence, return the first matched [`Parser`].
+/// Parse the given string sequence, return the first matched [`Parser`]: `getopt!($Iterator, $($Parser),+)`.
 ///
 /// # Returns
 ///
@@ -575,28 +575,96 @@ pub use aopt_macro::getoptd;
 ///```
 pub use aopt_macro::getopt;
 
-/// Generate help message of Set.
+/// Generate help message of Set: `getopt_help!($Set, $($cmd_name),*)`.
+///
+/// # Example
+/// ```ignore
+/// use aopt::err::Result;
+/// use aopt::prelude::*;
+/// use aopt_help::prelude::*;
+///
+/// fn main() -> Result<()> {
+///     let mut parser = ForwardParser::default();
+///
+///     getopt_add!(parser, "--aopt=s!", "Help message of aopt")?;
+///     getopt_add!(
+///         parser,
+///         "--bopt=b",
+///         alias = "-b",
+///         help = "Help message of bopt"
+///     )?;
+///     getopt_add!(parser, "--copt=a", name = "选项c", prefix = "-")?;
+///     getopt_add!(
+///         parser,
+///         "--dopt=b/",
+///         "Help message of dopt",
+///         simple_opt_cb!(|_, _, v| {
+///             Ok(Some(v))
+///         })
+///     )?;
+///     getopt_add!(
+///         parser,
+///         "--eopt=i",
+///         callback = simple_opt_cb!(|_, _, v| {
+///             Ok(Some(v))
+///         })
+///     )?;
+///     getopt_add!(
+///         parser,
+///         "fopt=p",
+///         index = OptIndex::forward(1),
+///         callback = simple_pos_cb!(|_, _, _, _, v| {
+///             Ok(Some(v))
+///         })
+///     )?;
+///     getopt_add!(parser, "--gopt=u", default = OptValue::from(42u64))?;
+///
+///     getopt_help!(parser.get_set()).print_cmd_help(None).unwrap();
+///
+///     Ok(())
+/// }
+/// ```
+///
+/// Above code will generate output like:
+/// ```txt
+/// usage: simple-exmaple <--aopt> [-b,--bopt] [-选项c] [--/dopt] [--eopt] [--gopt] **ARGS**
+///
+/// Simple example for aopt-help.
+///
+/// POS:
+///   fopt@1
+///
+/// OPT:
+///   --aopt         s      Help message of aopt
+///   -b,--bopt      b      Help message of bopt
+///   -选项c         a
+///   --/dopt        b      Help message of dopt
+///   --eopt         i
+///   --gopt         u
+///
+/// Create by araraloren v0.5.42
+/// ```
 pub use aopt_macro::getopt_help;
 
 /// Add option to `Parser`: `getopt_add!($Parser, $Create-String, $Help?, $Callback?, $($key=$value),*)`.
-/// 
+///
 /// `$Create-String` is option create string,
 /// `$Help` and `$Callback` are optional, and the available key list are:
-/// 
+///
 /// - [`help`](crate::set::CreateInfo::set_help)
-/// 
+///
 /// - [`name`](crate::set::CreateInfo::set_name)
-/// 
+///
 /// - [`prefix`](crate::set::CreateInfo::set_prefix)
-/// 
+///
 /// - [`index`](crate::set::CreateInfo::set_index)
-/// 
+///
 /// - [`default`](crate::set::CreateInfo::set_default_value)
-/// 
+///
 /// - [`hint`](crate::set::CreateInfo::set_hint)
-/// 
+///
 /// - [`alias`](crate::set::CreateInfo::add_alias)
-/// 
+///
 /// - [`callback`](crate::parser::Parser::add_callback)
 ///
 /// # Example

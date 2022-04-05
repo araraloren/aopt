@@ -1,9 +1,11 @@
 
 # Relase note
 
-## 
+## 0.6.6
 
 - update documents
+
+- fix the display of option index
 
 ## 0.6.5
 
