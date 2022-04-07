@@ -69,8 +69,6 @@ pub use crate::wrapper::Wrapped;
 pub use crate::wrapper::Wrapper;
 
 pub mod prelude {
-    pub use crate::err::Error;
-    pub use crate::err::Result;
     pub use crate::format::Format;
     pub use crate::printer::Printer;
     pub use crate::store::CmdMut;
