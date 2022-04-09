@@ -77,15 +77,16 @@ pub trait Service<S: Set> {
         &self,
         arg: &Argument,
         style: &ParserState,
-        arg_index: u64,
+        index: usize,
+        total: usize,
     ) -> Result<Option<M>>;
 
     /// Generate M base on position information of `NOA` and [`ParserState`].
     fn gen_nonopt<M: Matcher + Default>(
         &self,
         noa: &Ustr,
+        index: usize,
         total: usize,
-        current: usize,
         style: &ParserState,
     ) -> Result<Option<M>>;
 

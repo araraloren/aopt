@@ -22,10 +22,9 @@ impl PrePolicy {
 }
 
 impl<S: Set, SS: Service<S>> Policy<S, SS> for PrePolicy {
-    fn parse(&mut self, set: &mut S, service: &mut SS, iter: &mut ArgStream) -> Result<bool> {
+    fn parse(&mut self, set: &mut S, service: &mut SS, argstream: &mut ArgStream) -> Result<bool> {
         // copy the prefix, so we don't need borrow set
         let prefix: Vec<Ustr> = set.get_prefix().to_vec();
-        let mut iter = iter.enumerate();
 
         // add info to Service
         for opt in set.opt_iter() {
@@ -50,6 +49,9 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for PrePolicy {
         // iterate the Arguments, generate option context
         // send it to Publisher
         info!("start process option ...");
+        let total = argstream.len();
+        let mut iter = argstream.enumerate();
+
         while let Some((index, mut arg)) = iter.next() {
             let mut matched = false;
             let mut consume = false;
@@ -60,7 +62,7 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for PrePolicy {
                     debug!(?arg, "after parsing ...");
                     for gen_style in &parser_state {
                         if let Some(mut proc) =
-                            service.gen_opt::<OptMatcher>(&arg, gen_style, index as u64)?
+                            service.gen_opt::<OptMatcher>(&arg, gen_style, index, total)?
                         {
                             service.matching(&mut proc, set, true)?;
 
@@ -87,20 +89,19 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for PrePolicy {
             }
         }
 
-        let noa = service.get_noa().clone();
-
-        trace!(?noa, "current non-option argument");
         info!("do opt check");
         service.opt_check(set)?;
 
-        let noa_count = noa.len();
+        let service_noa = service.get_noa().clone();
+        let noa_count = service_noa.len();
 
+        trace!(?service_noa, "current non-option argument");
         if noa_count > 0 {
             let gen_style = ParserState::PSNonCmd;
 
             info!("start process {:?} ...", &gen_style);
             if let Some(mut proc) =
-                service.gen_nonopt::<NonOptMatcher>(&noa[0], noa_count, 1, &gen_style)?
+                service.gen_nonopt::<NonOptMatcher>(&service_noa[0], 1, noa_count, &gen_style)?
             {
                 service.matching(&mut proc, set, true)?;
             }
@@ -112,9 +113,9 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for PrePolicy {
             info!("start process {:?} ...", &gen_style);
             for index in 1..=noa_count {
                 if let Some(mut proc) = service.gen_nonopt::<NonOptMatcher>(
-                    &noa[index - 1],
-                    noa_count,
+                    &service_noa[index - 1],
                     index,
+                    noa_count,
                     &gen_style,
                 )? {
                     service.matching(&mut proc, set, true)?;
@@ -130,7 +131,7 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for PrePolicy {
 
         info!("start process {:?} ...", &gen_style);
         if let Some(mut proc) =
-            service.gen_nonopt::<NonOptMatcher>(&Ustr::default(), noa_count, 1, &gen_style)?
+            service.gen_nonopt::<NonOptMatcher>(&Ustr::default(), 1, noa_count, &gen_style)?
         {
             service.matching(&mut proc, set, true)?;
         }

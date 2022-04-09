@@ -179,7 +179,13 @@ pub trait Value {
     fn set_default_value(&mut self, value: OptValue);
 
     /// Parse command line item and return an [`OptValue`].
-    fn parse_value(&self, string: Ustr, disable: bool, index: u64) -> Result<OptValue>;
+    fn parse_value(
+        &self,
+        string: Ustr,
+        disable: bool,
+        index: usize,
+        total: usize,
+    ) -> Result<OptValue>;
 
     /// Check if the option has a valid value.
     fn has_value(&self) -> bool;
@@ -197,7 +203,7 @@ pub trait Index {
     fn set_index(&mut self, index: OptIndex);
 
     /// Check if current option matched given [`NonOpt`](crate::opt::NonOpt) position.
-    fn match_index(&self, total: u64, current: u64) -> bool;
+    fn match_index(&self, index: usize, total: usize) -> bool;
 }
 
 /// The Help trait of option.

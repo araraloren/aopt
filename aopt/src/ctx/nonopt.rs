@@ -16,9 +16,9 @@ pub struct NonOptContext {
 
     style: Style,
 
-    total: u64,
+    total: usize,
 
-    current: u64,
+    index: usize,
 
     value: Option<OptValue>,
 
@@ -28,12 +28,12 @@ pub struct NonOptContext {
 }
 
 impl NonOptContext {
-    pub fn new(name: Ustr, style: Style, total: u64, current: u64) -> Self {
+    pub fn new(name: Ustr, style: Style, index: usize, total: usize) -> Self {
         Self {
             name,
             style,
             total,
-            current,
+            index,
             value: None,
             matched_index: None,
             matched_uid: None,
@@ -50,13 +50,13 @@ impl Context for NonOptContext {
             // 2. matching the option name only.
             // 3. matching the option index.
             matched =
-                matched && (opt.match_name(self.name) && opt.match_index(self.total, self.current));
+                matched && (opt.match_name(self.name) && opt.match_index(self.total, self.index));
         }
         info!(%matched, "Matching context with non-opt<{}>", opt.get_uid());
         trace!(?self, ?opt, "matching ...");
         if matched {
             let value = opt
-                .parse_value(self.name, false, self.current)
+                .parse_value(self.name, false, self.index, self.total)
                 .map_err(|_| Error::sp_invalid_argument(opt.get_hint()))?;
             // 4. call the Opt::parse_value generate and set the value.
             self.set_value(value);
@@ -64,7 +64,7 @@ impl Context for NonOptContext {
             // 5. set the invoke flag.
             opt.set_invoke(true);
             self.matched_uid = Some(opt.get_uid());
-            self.matched_index = Some(self.current as usize);
+            self.matched_index = Some(self.index as usize);
         }
         Ok(matched)
     }

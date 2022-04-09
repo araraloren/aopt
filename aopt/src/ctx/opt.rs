@@ -29,7 +29,9 @@ pub struct OptContext {
 
     disable: bool,
 
-    arg_index: u64,
+    index: usize,
+
+    total: usize,
 }
 
 impl OptContext {
@@ -40,7 +42,8 @@ impl OptContext {
         style: Style,
         consume_arg: bool,
         disable: bool,
-        arg_index: u64,
+        index: usize,
+        total: usize,
     ) -> Self {
         Self {
             prefix,
@@ -51,7 +54,8 @@ impl OptContext {
             value: None,
             matched_uid: None,
             disable,
-            arg_index,
+            index,
+            total,
         }
     }
 }
@@ -80,7 +84,8 @@ impl Context for OptContext {
                 .parse_value(
                     self.argument.unwrap_or_else(|| gstr("")),
                     self.disable,
-                    self.arg_index,
+                    self.index,
+                    self.total,
                 )
                 .map_err(|_| Error::sp_invalid_argument(opt.get_hint()))?;
             // 6. call the Opt::parse_value generate and set the value.

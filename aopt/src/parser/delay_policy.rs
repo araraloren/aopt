@@ -44,10 +44,9 @@ impl DelayPolicy {
 }
 
 impl<S: Set, SS: Service<S>> Policy<S, SS> for DelayPolicy {
-    fn parse(&mut self, set: &mut S, service: &mut SS, iter: &mut ArgStream) -> Result<bool> {
+    fn parse(&mut self, set: &mut S, service: &mut SS, argstream: &mut ArgStream) -> Result<bool> {
         // copy the prefix, so we don't need borrow set
         let prefix: Vec<Ustr> = set.get_prefix().to_vec();
-        let mut iter = iter.enumerate();
 
         // add info to Service
         for opt in set.opt_iter() {
@@ -72,24 +71,25 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for DelayPolicy {
         // iterate the Arguments, generate option context
         // send it to Publisher
         info!("start process option ...");
+        let total = argstream.len();
+        let mut iter = argstream.enumerate();
+
         while let Some((index, mut arg)) = iter.next() {
             let mut matched = false;
             let mut consume = false;
 
-            debug!(?arg, "iterator Argument ...");
+            debug!("before parsing = {:?}", &arg);
             if let Ok(ret) = arg.parse(&prefix) {
                 if ret {
-                    debug!(?arg, "after parsing ...");
+                    debug!("parsing success = {:?}", arg.get_data_keeper());
                     for gen_style in &parser_state {
                         if let Some(mut proc) =
-                            service.gen_opt::<OptMatcher>(&arg, gen_style, index as u64)?
+                            service.gen_opt::<OptMatcher>(&arg, gen_style, index, total)?
                         {
                             let value_keeper = service.matching(&mut proc, set, false)?;
 
                             if proc.is_matched() {
-                                for value in value_keeper {
-                                    self.add_delay_value(value);
-                                }
+                                self.value_keeper.extend(value_keeper);
                                 matched = true;
                             }
                             if proc.is_comsume_argument() {
@@ -120,17 +120,16 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for DelayPolicy {
             }
         }
 
-        let noa = service.get_noa().clone();
+        let service_noa = service.get_noa().clone();
+        let noa_total = service_noa.len();
 
-        trace!(?noa, "current non-option argument");
-        let noa_count = noa.len();
-
-        if noa_count > 0 {
+        trace!(?service_noa, "current non-option argument");
+        if noa_total > 0 {
             let gen_style = ParserState::PSNonCmd;
 
             info!("start process {:?} ...", &gen_style);
             if let Some(mut proc) =
-                service.gen_nonopt::<NonOptMatcher>(&noa[0], noa_count, 1, &gen_style)?
+                service.gen_nonopt::<NonOptMatcher>(&service_noa[0], 1, noa_total, &gen_style)?
             {
                 service.matching(&mut proc, set, true)?;
             }
@@ -140,11 +139,11 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for DelayPolicy {
             let gen_style = ParserState::PSNonPos;
 
             info!("start process {:?} ...", &gen_style);
-            for index in 1..=noa_count {
+            for index in 1..=noa_total {
                 if let Some(mut proc) = service.gen_nonopt::<NonOptMatcher>(
-                    &noa[index - 1],
-                    noa_count,
+                    &service_noa[index - 1],
                     index,
+                    noa_total,
                     &gen_style,
                 )? {
                     service.matching(&mut proc, set, true)?;
@@ -172,7 +171,7 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for DelayPolicy {
 
         info!("start process {:?} ...", &gen_style);
         if let Some(mut proc) =
-            service.gen_nonopt::<NonOptMatcher>(&Ustr::default(), noa_count, 1, &gen_style)?
+            service.gen_nonopt::<NonOptMatcher>(&Ustr::default(), 1, noa_total, &gen_style)?
         {
             service.matching(&mut proc, set, true)?;
         }

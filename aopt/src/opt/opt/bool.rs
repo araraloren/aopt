@@ -205,7 +205,7 @@ impl Index for BoolOpt {
         // option can set anywhere
     }
 
-    fn match_index(&self, _total: u64, _current: u64) -> bool {
+    fn match_index(&self, _index: usize, _total: usize) -> bool {
         true
     }
 }
@@ -231,7 +231,13 @@ impl Value for BoolOpt {
         self.default_value = value;
     }
 
-    fn parse_value(&self, _string: Ustr, disable: bool, _index: u64) -> Result<OptValue> {
+    fn parse_value(
+        &self,
+        _string: Ustr,
+        disable: bool,
+        _index: usize,
+        _total: usize,
+    ) -> Result<OptValue> {
         if !self.is_deactivate_style() && disable {
             Err(Error::sp_unsupport_deactivate_style(self.get_hint()))
         } else {

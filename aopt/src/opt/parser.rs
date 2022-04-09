@@ -142,19 +142,19 @@ pub struct DataKeeper {
 
     pub optional: Option<bool>,
 
-    pub forward_index: Option<u64>,
+    pub forward_index: Option<usize>,
 
-    pub backward_index: Option<u64>,
+    pub backward_index: Option<usize>,
 
     pub anywhere: Option<bool>,
 
-    pub list: Vec<u64>,
+    pub list: Vec<usize>,
 
-    pub except: Vec<u64>,
+    pub except: Vec<usize>,
 
-    pub greater: Option<u64>,
+    pub greater: Option<usize>,
 
-    pub less: Option<u64>,
+    pub less: Option<usize>,
 }
 
 impl DataKeeper {
@@ -361,7 +361,7 @@ impl State {
             }
             Self::FowradIndex => {
                 let index_part = pattern.get_chars(index.get());
-                let ret = Self::parse_as_u64(pattern, index_part)?;
+                let ret = Self::parse_as_usize(pattern, index_part)?;
 
                 if ret > 0 {
                     data_keeper.forward_index = Some(ret);
@@ -372,7 +372,7 @@ impl State {
             }
             Self::BackwardIndex => {
                 let index_part = pattern.get_chars(index.get() + 1);
-                let ret = Self::parse_as_u64(pattern, index_part)?;
+                let ret = Self::parse_as_usize(pattern, index_part)?;
 
                 if ret > 0 {
                     data_keeper.backward_index = Some(ret);
@@ -388,14 +388,14 @@ impl State {
                 if index_part[0] == '+' {
                     start_index += 1;
                 }
-                data_keeper.list = Self::parse_as_u64_sequence(
+                data_keeper.list = Self::parse_as_usize_sequence(
                     pattern,
                     pattern.get_subchars(start_index, index.len()),
                 )?;
                 index.set(index.len());
             }
             Self::Except => {
-                data_keeper.except = Self::parse_as_u64_sequence(
+                data_keeper.except = Self::parse_as_usize_sequence(
                     pattern,
                     pattern.get_subchars(index.get() + 2, index.len()),
                 )?;
@@ -407,14 +407,14 @@ impl State {
             }
             Self::Greater => {
                 let index_part = pattern.get_chars(index.get() + 1);
-                let ret = Self::parse_as_u64(pattern, index_part)?;
+                let ret = Self::parse_as_usize(pattern, index_part)?;
 
                 data_keeper.greater = Some(ret);
                 index.set(index.len());
             }
             Self::Less => {
                 let index_part = pattern.get_chars(index.get() + 1);
-                let ret = Self::parse_as_u64(pattern, index_part)?;
+                let ret = Self::parse_as_usize(pattern, index_part)?;
 
                 data_keeper.less = Some(ret);
                 index.set(index.len());
@@ -435,9 +435,9 @@ impl State {
     }
 
     // the index number is small in generally
-    fn parse_as_u64<'pre>(pattern: &ParserPattern<'pre>, data: &[char]) -> Result<u64> {
+    fn parse_as_usize<'pre>(pattern: &ParserPattern<'pre>, data: &[char]) -> Result<usize> {
         let mut count = 0;
-        let mut ret = 0u64;
+        let mut ret = 0usize;
 
         for ch in data {
             // skip '+'
@@ -451,7 +451,7 @@ impl State {
                         pattern.get_pattern().to_string(),
                         format!("{:?} is not a valid number", data),
                     )
-                })? as u64;
+                })? as usize;
         }
         if count == 0 {
             return Err(Error::opt_parsing_index_failed(
@@ -462,10 +462,10 @@ impl State {
         Ok(ret)
     }
 
-    fn parse_as_u64_sequence<'pre>(
+    fn parse_as_usize_sequence<'pre>(
         pattern: &ParserPattern<'pre>,
         data: &[char],
-    ) -> Result<Vec<u64>> {
+    ) -> Result<Vec<usize>> {
         let mut ret = vec![];
         let mut last = 0usize;
 
@@ -481,7 +481,7 @@ impl State {
                         format!("{:?} is not a valid number sequence", data),
                     ));
                 }
-                ret.push(Self::parse_as_u64(pattern, &data[last..index])?);
+                ret.push(Self::parse_as_usize(pattern, &data[last..index])?);
                 last = index + 1;
             }
         }

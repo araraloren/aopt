@@ -202,7 +202,7 @@ impl Index for FltOpt {
         // option can set anywhere
     }
 
-    fn match_index(&self, _total: u64, _current: u64) -> bool {
+    fn match_index(&self, _index: usize, _total: usize) -> bool {
         true
     }
 }
@@ -228,7 +228,13 @@ impl Value for FltOpt {
         self.default_value = value;
     }
 
-    fn parse_value(&self, string: Ustr, _disable: bool, _index: u64) -> Result<OptValue> {
+    fn parse_value(
+        &self,
+        string: Ustr,
+        _disable: bool,
+        _index: usize,
+        _total: usize,
+    ) -> Result<OptValue> {
         Ok(OptValue::from(string.parse::<f64>().map_err(|e| {
             Error::opt_parsing_value_failed(string.as_ref(), &format!("{:?}", e))
         })?))

@@ -172,10 +172,10 @@ impl Index for CmdOpt {
 
     fn set_index(&mut self, _index: OptIndex) {}
 
-    fn match_index(&self, total: u64, current: u64) -> bool {
+    fn match_index(&self, index: usize, total: usize) -> bool {
         if let Some(realindex) = self.get_index() {
-            if let Some(realindex) = realindex.calc_index(total, current) {
-                return realindex == current;
+            if let Some(realindex) = realindex.calc_index(index, total) {
+                return realindex == index;
             }
         }
         false
@@ -202,7 +202,13 @@ impl Value for CmdOpt {
     /// Can't change the default value of [`NonOpt`](crate::opt::NonOpt)
     fn set_default_value(&mut self, _value: OptValue) {}
 
-    fn parse_value(&self, _string: Ustr, _disable: bool, _index: u64) -> Result<OptValue> {
+    fn parse_value(
+        &self,
+        _string: Ustr,
+        _disable: bool,
+        _index: usize,
+        _total: usize,
+    ) -> Result<OptValue> {
         Ok(OptValue::from(true))
     }
 
@@ -335,7 +341,7 @@ mod test {
         assert_eq!(cmd.get_value().is_null(), true);
         assert_eq!(cmd.get_default_value().is_null(), true);
         assert_eq!(cmd.has_value(), false);
-        let value = cmd.parse_value("".into(), false, 0);
+        let value = cmd.parse_value("".into(), false, 0, 0);
         assert_eq!(value.is_ok(), true);
         let value = value.unwrap();
         assert_eq!(value.is_bool(), true);

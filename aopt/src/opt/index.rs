@@ -30,7 +30,7 @@ pub enum Index {
     /// `@2` will matching `"pos2"`.
     ///
     /// `@3` will matching `"pos3"`.
-    Forward(u64),
+    Forward(usize),
 
     /// The backward index of NOA.
     ///
@@ -43,7 +43,7 @@ pub enum Index {
     /// `@-2` will matching `"pos2"`.
     ///
     /// `@-3` will matching `"pos1"`.
-    Backward(u64),
+    Backward(usize),
 
     /// The include list of forward index of NOA.
     ///
@@ -56,7 +56,7 @@ pub enum Index {
     /// `@[1,2]` will matching `"pos1"` or `"pos2"`.
     ///
     /// `@[1,2,3]` will matching `"pos1"`, `"pos2"` or `"pos3"`.
-    List(Vec<u64>),
+    List(Vec<usize>),
 
     /// The exclude list of forward index of NOA.
     ///
@@ -69,7 +69,7 @@ pub enum Index {
     /// `@-[3]` will matching `"pos1"` or `"pos2"`.
     ///
     /// `@-[2]` will matching `"pos1"` or `"pos3"`.
-    Except(Vec<u64>),
+    Except(Vec<usize>),
 
     /// The NOA which index bigger than given position.
     ///
@@ -82,7 +82,7 @@ pub enum Index {
     /// `@>2` will matching `"pos3"`.
     ///
     /// `@>1` will matching `"pos2"` or `"pos3"`.
-    Greater(u64),
+    Greater(usize),
 
     /// The NOA which index little than given position.
     ///
@@ -93,7 +93,7 @@ pub enum Index {
     /// `@<4` will matching `"pos1"`, `"pos2"` or `"pos3"`.
     ///
     /// `@<2` will matching `"pos1"`.
-    Less(u64),
+    Less(usize),
 
     /// The anywhere position of NOA.
     ///
@@ -108,27 +108,27 @@ pub enum Index {
 }
 
 impl Index {
-    pub fn forward(index: u64) -> Self {
+    pub fn forward(index: usize) -> Self {
         Self::Forward(index)
     }
 
-    pub fn backward(index: u64) -> Self {
+    pub fn backward(index: usize) -> Self {
         Self::Backward(index)
     }
 
-    pub fn list(list: Vec<u64>) -> Self {
+    pub fn list(list: Vec<usize>) -> Self {
         Self::List(list)
     }
 
-    pub fn except(list: Vec<u64>) -> Self {
+    pub fn except(list: Vec<usize>) -> Self {
         Self::Except(list)
     }
 
-    pub fn greater(index: u64) -> Self {
+    pub fn greater(index: usize) -> Self {
         Self::Greater(index)
     }
 
-    pub fn less(index: u64) -> Self {
+    pub fn less(index: usize) -> Self {
         Self::Less(index)
     }
 
@@ -145,7 +145,7 @@ impl Index {
     }
 
     /// Compare the NOA information with current Index.
-    pub fn calc_index(&self, total: u64, current: u64) -> Option<u64> {
+    pub fn calc_index(&self, index: usize, total: usize) -> Option<usize> {
         match self {
             Self::Forward(offset) => {
                 let offset = *offset;
@@ -165,32 +165,32 @@ impl Index {
                 for offset in list {
                     let offset = *offset;
 
-                    if offset <= total && offset == current {
+                    if offset <= total && offset == index {
                         return Some(offset);
                     }
                 }
             }
             Self::Except(list) => {
-                if current <= total && !list.contains(&current) {
-                    return Some(current);
+                if index <= total && !list.contains(&index) {
+                    return Some(index);
                 }
             }
             Self::Greater(offset) => {
                 let offset = *offset;
 
-                if offset <= total && offset < current {
-                    return Some(current);
+                if offset <= total && offset < index {
+                    return Some(index);
                 }
             }
             Self::Less(offset) => {
                 let offset = *offset;
 
-                if offset <= total && offset > current {
-                    return Some(current);
+                if offset <= total && offset > index {
+                    return Some(index);
                 }
             }
             Self::AnyWhere => {
-                return Some(current);
+                return Some(index);
             }
             _ => {}
         }

@@ -211,19 +211,20 @@ impl<S: Set> Service<S> for SimpleService<S> {
         &self,
         arg: &crate::arg::Argument,
         style: &ParserState,
-        arg_index: u64,
+        index: usize,
+        total: usize,
     ) -> Result<Option<M>> {
-        style.gen_opt(arg, arg_index)
+        style.gen_opt(arg, index, total)
     }
 
     fn gen_nonopt<M: Matcher + Default>(
         &self,
         noa: &ustr::Ustr,
+        index: usize,
         total: usize,
-        current: usize,
         style: &ParserState,
     ) -> Result<Option<M>> {
-        style.gen_nonopt(noa, total as u64, current as u64)
+        style.gen_nonopt(noa, index, total)
     }
 
     fn matching<M: Matcher + Default>(
@@ -255,7 +256,7 @@ impl<S: Set> Service<S> for SimpleService<S> {
         })?;
         let has_cmd = set.opt_iter().any(|v| v.match_style(Style::Cmd));
 
-        const MAX_INDEX: u64 = u64::MAX;
+        const MAX_INDEX: usize = usize::MAX;
 
         if has_cmd {
             for opt in set.opt_iter() {
@@ -291,7 +292,7 @@ impl<S: Set> Service<S> for SimpleService<S> {
     /// For which POS is have uncertainty position, it must be set if it is force reuqired.
     fn pos_check(&self, set: &S) -> Result<bool> {
         // for POS has certainty position, POS has same position are replaceble even it is force reuqired.
-        let mut index_map: HashMap<u64, Vec<Uid>> = HashMap::new();
+        let mut index_map: HashMap<usize, Vec<Uid>> = HashMap::new();
         // for POS has uncertainty position, it must be set if it is force reuqired
         let mut float_vec: Vec<Uid> = vec![];
 
@@ -300,7 +301,7 @@ impl<S: Set> Service<S> for SimpleService<S> {
                 if let Some(index) = opt.get_index() {
                     match index {
                         OptIndex::Forward(_) | OptIndex::Backward(_) => {
-                            if let Some(index) = index.calc_index(u64::MAX, 1) {
+                            if let Some(index) = index.calc_index(usize::MAX, 1) {
                                 let entry = index_map.entry(index).or_insert(vec![]);
                                 entry.push(opt.get_uid());
                             }

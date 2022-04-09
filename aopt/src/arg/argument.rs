@@ -28,6 +28,10 @@ impl Argument {
         }
     }
 
+    pub fn get_data_keeper(&self) -> &DataKeeper {
+        &self.data_keeper
+    }
+
     pub fn get_prefix(&self) -> &Option<Ustr> {
         &self.data_keeper.prefix
     }

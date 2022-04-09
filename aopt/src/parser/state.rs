@@ -62,7 +62,8 @@ impl ParserState {
     pub fn gen_opt<M: Matcher + Default>(
         &self,
         arg: &Argument,
-        arg_index: u64,
+        index: usize,
+        total: usize,
     ) -> Result<Option<M>> {
         let mut ret: Vec<Box<dyn Context>> = vec![];
 
@@ -76,7 +77,8 @@ impl ParserState {
                         Style::Argument,
                         false,
                         arg.is_disabled(),
-                        arg_index,
+                        index,
+                        total,
                     )));
                 }
             }
@@ -89,7 +91,8 @@ impl ParserState {
                         Style::Argument,
                         true,
                         arg.is_disabled(),
-                        arg_index,
+                        index,
+                        total,
                     )));
                 }
             }
@@ -106,7 +109,8 @@ impl ParserState {
                                 Style::Argument,
                                 false,
                                 arg.is_disabled(),
-                                arg_index,
+                                index,
+                                total,
                             )));
                         }
                     }
@@ -124,7 +128,8 @@ impl ParserState {
                                     Style::Multiple,
                                     false,
                                     arg.is_disabled(),
-                                    arg_index,
+                                    index,
+                                    total,
                                 )));
                             }
                         }
@@ -140,7 +145,8 @@ impl ParserState {
                         Style::Boolean,
                         false,
                         arg.is_disabled(),
-                        arg_index,
+                        index,
+                        total,
                     )));
                 }
             }
@@ -153,7 +159,8 @@ impl ParserState {
                         Style::Argument,
                         false,
                         arg.is_disabled(),
-                        arg_index,
+                        index,
+                        total,
                     )));
                 }
             }
@@ -166,7 +173,8 @@ impl ParserState {
                         Style::Argument,
                         true,
                         arg.is_disabled(),
-                        arg_index,
+                        index,
+                        total,
                     )));
                 }
             }
@@ -183,7 +191,8 @@ impl ParserState {
                                 Style::Argument,
                                 false,
                                 arg.is_disabled(),
-                                arg_index,
+                                index,
+                                total,
                             )));
                         }
                     }
@@ -201,7 +210,8 @@ impl ParserState {
                                     Style::Multiple,
                                     false,
                                     arg.is_disabled(),
-                                    arg_index,
+                                    index,
+                                    total,
                                 )));
                             }
                         }
@@ -217,7 +227,8 @@ impl ParserState {
                         Style::Boolean,
                         false,
                         arg.is_disabled(),
-                        arg_index,
+                        index,
+                        total,
                     )));
                 }
             }
@@ -237,8 +248,8 @@ impl ParserState {
     pub fn gen_nonopt<M: Matcher + Default>(
         &self,
         noa: &Ustr,
-        total: u64,
-        current: u64,
+        index: usize,
+        total: usize,
     ) -> Result<Option<M>> {
         let mut ret: Vec<Box<dyn Context>> = vec![];
 
@@ -247,25 +258,15 @@ impl ParserState {
                 ret.push(Box::new(NonOptContext::new(
                     *noa,
                     Style::Main,
+                    index,
                     total,
-                    current,
                 )));
             }
             Self::PSNonPos => {
-                ret.push(Box::new(NonOptContext::new(
-                    *noa,
-                    Style::Pos,
-                    total,
-                    current,
-                )));
+                ret.push(Box::new(NonOptContext::new(*noa, Style::Pos, index, total)));
             }
             Self::PSNonCmd => {
-                ret.push(Box::new(NonOptContext::new(
-                    *noa,
-                    Style::Cmd,
-                    total,
-                    current,
-                )));
+                ret.push(Box::new(NonOptContext::new(*noa, Style::Cmd, index, total)));
             }
             _ => {}
         }

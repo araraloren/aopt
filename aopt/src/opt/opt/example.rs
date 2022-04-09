@@ -207,7 +207,7 @@ pub mod path {
             // option can set anywhere
         }
 
-        fn match_index(&self, _total: u64, _current: u64) -> bool {
+        fn match_index(&self, _index: usize, _total: usize) -> bool {
             true
         }
     }
@@ -233,7 +233,13 @@ pub mod path {
             self.default_value = value;
         }
 
-        fn parse_value(&self, string: Ustr, _disable: bool, _index: u64) -> Result<OptValue> {
+        fn parse_value(
+            &self,
+            string: Ustr,
+            _disable: bool,
+            _index: usize,
+            _total: usize,
+        ) -> Result<OptValue> {
             use std::path::PathBuf;
             Ok(OptValue::from_any(Box::new(PathBuf::from(string.as_ref()))))
         }
