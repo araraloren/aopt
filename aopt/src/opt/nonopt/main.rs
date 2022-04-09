@@ -301,11 +301,11 @@ mod test {
         assert_eq!(main.get_alias(), None);
 
         assert_eq!(main.get_index(), None);
-        assert_eq!(main.match_index(6, 1), true);
-        assert_eq!(main.match_index(6, 3), true);
+        assert_eq!(main.match_index(1, 6), true);
+        assert_eq!(main.match_index(3, 6), true);
         main.set_index(OptIndex::forward(1));
         assert_eq!(main.get_index(), None);
-        assert_eq!(main.match_index(6, 9), true);
+        assert_eq!(main.match_index(9, 6), true);
 
         assert_eq!(main.get_name(), gstr("main"));
         assert_eq!(main.get_prefix(), gstr(""));

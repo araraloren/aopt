@@ -320,13 +320,13 @@ mod test {
         assert_eq!(pos.get_alias(), None);
 
         assert_eq!(pos.get_index(), Some(&OptIndex::forward(1)));
-        assert_eq!(pos.match_index(6, 1), true);
-        assert_eq!(pos.match_index(6, 2), false);
+        assert_eq!(pos.match_index(1, 6), true);
+        assert_eq!(pos.match_index(2, 6), false);
         pos.set_index(OptIndex::forward(3));
-        assert_eq!(pos.match_index(6, 1), false);
-        assert_eq!(pos.match_index(6, 3), true);
+        assert_eq!(pos.match_index(1, 6), false);
+        assert_eq!(pos.match_index(3, 6), true);
         assert_eq!(pos.get_index(), Some(&OptIndex::forward(3)));
-        assert_eq!(pos.match_index(6, 9), false);
+        assert_eq!(pos.match_index(9, 6), false);
 
         assert_eq!(pos.get_name(), gstr("pos"));
         assert_eq!(pos.get_prefix(), gstr(""));

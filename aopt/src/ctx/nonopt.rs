@@ -50,7 +50,7 @@ impl Context for NonOptContext {
             // 2. matching the option name only.
             // 3. matching the option index.
             matched =
-                matched && (opt.match_name(self.name) && opt.match_index(self.total, self.index));
+                matched && (opt.match_name(self.name) && opt.match_index(self.index, self.total));
         }
         info!(%matched, "Matching context with non-opt<{}>", opt.get_uid());
         trace!(?self, ?opt, "matching ...");

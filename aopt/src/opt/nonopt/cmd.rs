@@ -309,13 +309,13 @@ mod test {
         assert_eq!(cmd.get_alias(), None);
 
         assert_eq!(cmd.get_index(), Some(&OptIndex::forward(1)));
-        assert_eq!(cmd.match_index(6, 1), true);
-        assert_eq!(cmd.match_index(6, 2), false);
+        assert_eq!(cmd.match_index(1, 6), true);
+        assert_eq!(cmd.match_index(2, 6), false);
         cmd.set_index(OptIndex::forward(3));
-        assert_eq!(cmd.match_index(6, 1), true);
-        assert_eq!(cmd.match_index(6, 3), false);
+        assert_eq!(cmd.match_index(1, 6), true);
+        assert_eq!(cmd.match_index(3, 6), false);
         assert_eq!(cmd.get_index(), Some(&OptIndex::forward(1)));
-        assert_eq!(cmd.match_index(6, 9), false);
+        assert_eq!(cmd.match_index(9, 6), false);
 
         assert_eq!(cmd.get_name(), gstr("cmd"));
         assert_eq!(cmd.get_prefix(), gstr(""));
