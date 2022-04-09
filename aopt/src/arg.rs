@@ -1,9 +1,10 @@
 mod argument;
 mod parser;
 
-use std::convert::From;
 use std::fmt::Debug;
 use std::iter::Iterator;
+use std::ops::Deref;
+use std::ops::DerefMut;
 
 use ustr::Ustr;
 
@@ -53,59 +54,81 @@ pub use parser::DataKeeper;
 ///     Ok(())
 /// }
 /// ```
-pub struct ArgStream<T: Iterator<Item = String>> {
-    iter: T,
-    first: Option<String>,
+#[derive(Debug)]
+pub struct ArgStream {
+    args: Vec<Ustr>,
+    curr: usize,
 }
 
-impl<T: Iterator<Item = String>> Debug for ArgStream<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ArgStream")
-            .field("iter", &"{...}")
-            .field("first", &self.first)
-            .finish()
+impl ArgStream {
+    pub fn new<I, ITER>(iter: ITER) -> Self
+    where
+        I: Into<String>,
+        ITER: Iterator<Item = I>,
+    {
+        let iter = iter.map(|v| gstr(&v.into()));
+        Self {
+            args: iter.collect(),
+            curr: 0,
+        }
+    }
+
+    pub fn current(&self) -> usize {
+        self.curr
     }
 }
 
-impl<T: Iterator<Item = String>> ArgStream<T> {
-    pub fn new(t: T) -> Self {
-        Self::from(t)
-    }
-    fn map_item(item: Option<String>) -> Option<Ustr> {
-        item.map(|v| gstr(&v))
+impl Deref for ArgStream {
+    type Target = [Ustr];
+
+    fn deref(&self) -> &Self::Target {
+        &self.args
     }
 }
 
-impl<T: Iterator<Item = String>> From<T> for ArgStream<T> {
-    fn from(mut v: T) -> Self {
-        let first = v.next();
-        Self { iter: v, first }
+impl DerefMut for ArgStream {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.args
     }
 }
 
-impl<T: Iterator<Item = String>> Iterator for ArgStream<T> {
+impl Default for ArgStream {
+    fn default() -> Self {
+        ArgStream::new(std::env::args())
+    }
+}
+
+impl Iterator for ArgStream {
     type Item = Argument;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.first.is_some() {
-            let next = self.iter.next();
-            let arg = Argument::new(
-                Self::map_item(self.first.take()),
-                Self::map_item(next.clone()),
-            );
-
-            self.first = next;
-            Some(arg)
+        let curr = self.curr;
+        if curr < self.len() {
+            self.curr += 1;
+            Some(Argument::new(
+                self.args.get(curr).copied(),
+                self.args.get(curr + 1).copied(),
+            ))
         } else {
             None
         }
     }
 }
 
+impl ExactSizeIterator for ArgStream {
+    fn len(&self) -> usize {
+        self.args.len()
+    }
+}
+
+impl<T: Iterator<Item = String>> From<T> for ArgStream {
+    fn from(t: T) -> Self {
+        Self::new(t)
+    }
+}
+
 #[cfg(test)]
 mod test {
-
-    use std::fmt::Debug;
 
     use super::ArgStream;
     use crate::gstr;
@@ -191,8 +214,8 @@ mod test {
         }
     }
 
-    fn testing_one_iterator<'pre, 'vec: 'pre, T: Iterator<Item = String> + Debug>(
-        argstream: ArgStream<T>,
+    fn testing_one_iterator<'pre, 'vec: 'pre>(
+        argstream: ArgStream,
         prefixs: &'vec Vec<Ustr>,
         data_check: &Vec<String>,
         check: &Vec<Vec<&str>>,

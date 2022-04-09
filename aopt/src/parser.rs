@@ -11,6 +11,7 @@ use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
 use ustr::Ustr;
 
+use crate::arg::ArgStream;
 use crate::arg::Argument;
 use crate::err::Result;
 use crate::gstr;
@@ -66,12 +67,7 @@ pub struct ValueKeeper {
 /// }
 /// ```
 pub trait Policy<S: Set, SS: Service<S>>: Debug {
-    fn parse(
-        &mut self,
-        set: &mut S,
-        service: &mut SS,
-        iter: &mut dyn Iterator<Item = Argument>,
-    ) -> Result<bool>;
+    fn parse(&mut self, set: &mut S, service: &mut SS, iter: &mut ArgStream) -> Result<bool>;
 }
 
 /// [`Service`] provide common service using for [`Policy`].
@@ -167,7 +163,7 @@ pub trait Service<S: Set> {
 ///             &mut self,
 ///             set: &mut S,
 ///             service: &mut SS,
-///             iter: &mut dyn Iterator<Item = aopt::arg::Argument>,
+///             iter: &mut ArgStream,
 ///         ) -> Result<bool> {
 ///             println!("In parser policy {} with argument length = {}", self.0, iter.count());
 ///             Ok(false)
@@ -263,7 +259,7 @@ where
     ///             &mut self,
     ///             set: &mut S,
     ///             service: &mut SS,
-    ///             iter: &mut dyn Iterator<Item = aopt::arg::Argument>,
+    ///             iter: &mut ArgStream,
     ///         ) -> Result<bool> {
     ///             todo!()
     ///         }
@@ -358,7 +354,7 @@ where
             .add_callback(uid, callback);
     }
 
-    pub fn parse(&mut self, iter: &mut dyn Iterator<Item = Argument>) -> Result<bool> {
+    pub fn parse(&mut self, iter: &mut ArgStream) -> Result<bool> {
         let service = &mut self.service;
         let policy = &mut self.policy;
         let set = &mut self.set;
@@ -399,7 +395,7 @@ cfg_if::cfg_if! {
 ///             &mut self,
 ///             set: &mut S,
 ///             service: &mut SS,
-///             iter: &mut dyn Iterator<Item = aopt::arg::Argument>,
+///             iter: &mut ArgStream,
 ///         ) -> Result<bool> {
 ///             dbg!(set);
 ///             Ok(false)
@@ -414,7 +410,7 @@ cfg_if::cfg_if! {
 ///             &mut self,
 ///             set: &mut S,
 ///             service: &mut SS,
-///             iter: &mut dyn Iterator<Item = aopt::arg::Argument>,
+///             iter: &mut ArgStream,
 ///         ) -> Result<bool> {
 ///             for item in iter {
 ///                 dbg!(item);
@@ -560,7 +556,7 @@ where
             .add_callback(uid, callback);
     }
 
-    pub fn parse(&mut self, iter: &mut dyn Iterator<Item = Argument>) -> Result<bool> {
+    pub fn parse(&mut self, iter: &mut ArgStream) -> Result<bool> {
         let service = &mut self.service;
         let policy = &mut self.policy;
         let set = &mut self.set;

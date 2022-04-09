@@ -3,7 +3,7 @@ use std::fmt::Debug;
 
 use super::Policy;
 use super::Service;
-use crate::arg::Argument;
+use crate::arg::ArgStream;
 use crate::err::Error;
 use crate::err::Result;
 use crate::proc::Matcher;
@@ -44,12 +44,7 @@ impl ForwardPolicy {
 }
 
 impl<S: Set, SS: Service<S>> Policy<S, SS> for ForwardPolicy {
-    fn parse(
-        &mut self,
-        set: &mut S,
-        service: &mut SS,
-        iter: &mut dyn Iterator<Item = Argument>,
-    ) -> Result<bool> {
+    fn parse(&mut self, set: &mut S, service: &mut SS, iter: &mut ArgStream) -> Result<bool> {
         // copy the prefix, so we don't need borrow set
         let prefix: Vec<Ustr> = set.get_prefix().to_vec();
         let mut iter = iter.enumerate();
