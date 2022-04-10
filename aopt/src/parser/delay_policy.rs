@@ -3,6 +3,7 @@ use std::fmt::Debug;
 
 use super::Policy;
 use super::Service;
+use crate::arg::create_prefix_regexs;
 use crate::arg::ArgStream;
 use crate::err::Error;
 use crate::err::Result;
@@ -45,9 +46,6 @@ impl DelayPolicy {
 
 impl<S: Set, SS: Service<S>> Policy<S, SS> for DelayPolicy {
     fn parse(&mut self, set: &mut S, service: &mut SS, argstream: &mut ArgStream) -> Result<bool> {
-        // copy the prefix, so we don't need borrow set
-        let prefix: Vec<Ustr> = set.get_prefix().to_vec();
-
         // add info to Service
         for opt in set.opt_iter() {
             service
@@ -72,6 +70,7 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for DelayPolicy {
         // send it to Publisher
         info!("start process option ...");
         let total = argstream.len();
+        let regexs = create_prefix_regexs(set.get_prefix())?;
         let mut iter = argstream.enumerate();
 
         while let Some((index, mut arg)) = iter.next() {
@@ -79,7 +78,7 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for DelayPolicy {
             let mut consume = false;
 
             debug!("before parsing = {:?}", &arg);
-            if let Ok(ret) = arg.parse(&prefix) {
+            if let Ok(ret) = arg.parse(&regexs) {
                 if ret {
                     debug!("parsing success = {:?}", arg.get_data_keeper());
                     for gen_style in &parser_state {

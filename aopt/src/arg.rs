@@ -1,5 +1,4 @@
 mod argument;
-mod parser;
 
 use std::fmt::Debug;
 use std::iter::Iterator;
@@ -10,9 +9,10 @@ use ustr::Ustr;
 
 use crate::gstr;
 
+pub use argument::create_prefix_regexs;
+pub use argument::parse_argument;
 pub use argument::Argument;
-pub use parser::parse_argument;
-pub use parser::DataKeeper;
+pub use argument::DataKeeper;
 
 /// The wrapper of command line items, it will output [`Argument`].
 ///
@@ -130,9 +130,9 @@ impl<T: Iterator<Item = String>> From<T> for ArgStream {
 #[cfg(test)]
 mod test {
 
-    use super::ArgStream;
+    use super::{create_prefix_regexs, ArgStream};
     use crate::gstr;
-    use ustr::Ustr;
+    use regex::Regex;
 
     #[test]
     fn make_sure_arg_stream_work() {
@@ -168,7 +168,7 @@ mod test {
 
             testing_one_iterator(
                 ArgStream::new(data),
-                &vec![gstr("--"), gstr("-")],
+                &create_prefix_regexs(&vec![gstr("--"), gstr("-")]).unwrap(),
                 &data_check,
                 &check,
             );
@@ -207,7 +207,7 @@ mod test {
 
             testing_one_iterator(
                 ArgStream::new(data),
-                &vec![gstr("+"), gstr("")],
+                &create_prefix_regexs(&vec![gstr("--"), gstr("-")]).unwrap(),
                 &data_check,
                 &check,
             );
@@ -216,7 +216,7 @@ mod test {
 
     fn testing_one_iterator<'pre, 'vec: 'pre>(
         argstream: ArgStream,
-        prefixs: &'vec Vec<Ustr>,
+        regexs: &'vec Vec<Regex>,
         data_check: &Vec<String>,
         check: &Vec<Vec<&str>>,
     ) {
@@ -233,7 +233,7 @@ mod test {
                 arg.next.as_ref().unwrap_or(&default_str),
                 data_check.get(index + 1).unwrap_or(&default_data)
             );
-            if let Ok(ret) = arg.parse(prefixs) {
+            if let Ok(ret) = arg.parse(regexs) {
                 if ret {
                     assert_eq!(
                         arg.get_prefix().as_ref().unwrap_or(&default_str),

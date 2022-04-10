@@ -186,6 +186,11 @@ impl Error {
         ConstructError::InvalidOptionAlias(t.into()).into()
     }
 
+    /// Create ConstructError::InvaldiOptionPrefix error
+    pub fn opt_invalid_prefix<T: Into<ErrorStr>>(t: T) -> Self {
+        ConstructError::InvaldiOptionPrefix(t.into()).into()
+    }
+
     /// Create SpecialError::OptionForceRequired error
     pub fn sp_option_force_require<T: Into<ErrorStr>>(t: T) -> Self {
         SpecialError::OptionForceRequired(t.into()).into()
@@ -287,6 +292,9 @@ pub enum ConstructError {
 
     #[error("Invalid alias `{0}`, check the option prefix or name")]
     InvalidOptionAlias(ErrorStr),
+
+    #[error("Invalid prefix: `{0}`")]
+    InvaldiOptionPrefix(ErrorStr),
 
     #[error("Failed parsing `{0}` as option value: {1}")]
     ParsingValueFailed(ErrorStr, ErrorStr),

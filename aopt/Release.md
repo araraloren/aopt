@@ -1,6 +1,14 @@
 
 # Relase note
 
+## 0.7.0
+
+- refactor ArgStream
+
+- improve the parse_value of Opt
+
+- refactor the input argument parser
+
 ## 0.6.6
 
 - update documents
