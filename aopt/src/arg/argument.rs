@@ -273,6 +273,44 @@ mod test {
                 try_to_verify_one_task(gstr(case.0), &regexs, case.1);
             }
         }
+        {
+            // test 3
+            let test_cases = vec![
+                ("", None),
+                ("+选项", Some((Some("+"), Some("选项"), None, false))),
+                ("+/选项", Some((Some("+"), Some("选项"), None, true))),
+                (
+                    "+选项=值",
+                    Some((Some("+"), Some("选项"), Some("值"), false)),
+                ),
+                (
+                    "++选项foo",
+                    Some((Some("++"), Some("选项foo"), None, false)),
+                ),
+                (
+                    "++/选项foo",
+                    Some((Some("++"), Some("选项foo"), None, true)),
+                ),
+                (
+                    "++选项=bar",
+                    Some((Some("++"), Some("选项"), Some("bar"), false)),
+                ),
+                ("选项", None),
+                ("/选项", None),
+                ("选项=b", None),
+                ("选项", None),
+                ("/选项", None),
+                ("选项=bar", None),
+                ("++=xar", Some((Some("+"), Some("+"), Some("xar"), false))),
+                ("+选项=", Some((Some("+"), Some("选项"), None, false))),
+            ];
+
+            let regexs = create_prefix_regexs(&vec![gstr("++"), gstr("+")]).unwrap();
+
+            for case in test_cases.iter() {
+                try_to_verify_one_task(gstr(case.0), &regexs, case.1);
+            }
+        }
     }
 
     fn try_to_verify_one_task(
