@@ -114,13 +114,13 @@ impl Argument {
 ///
 /// ```rust
 /// use aopt::arg::parse_argument;
-/// use aopt::arg::create_prefix_regexs;
+/// use aopt::arg::create_regexs;
 /// use ustr::Ustr;
 /// use aopt::gstr;
 /// use aopt::err::Result;
 ///
 /// fn main() -> Result<()> {
-///     let regexs = create_prefix_regexs(&[gstr("--"), gstr("-")])?;
+///     let regexs = create_regexs(&[gstr("--"), gstr("-")])?;
 ///
 ///     {// parse option with value
 ///         let dk = parse_argument(gstr("--foo=32"), &regexs)?;
@@ -160,7 +160,7 @@ pub fn parse_argument(pattern: Ustr, regexs: &[Regex]) -> Result<DataKeeper> {
     Err(Error::arg_parsing_failed(pattern))
 }
 
-pub fn create_prefix_regexs(prefix: &[Ustr]) -> Result<Vec<Regex>> {
+pub fn create_regexs(prefix: &[Ustr]) -> Result<Vec<Regex>> {
     let mut ret = vec![];
 
     for prefix in prefix {
@@ -180,7 +180,7 @@ mod test {
     use regex::Regex;
     use ustr::Ustr;
 
-    use crate::arg::create_prefix_regexs;
+    use crate::arg::create_regexs;
     use crate::arg::parse_argument;
     use crate::gstr;
 
@@ -209,7 +209,7 @@ mod test {
                 ("-foo=", Some((Some("-"), Some("foo"), None, false))),
             ];
 
-            let regexs = create_prefix_regexs(&vec![gstr("--"), gstr("-"), gstr("")]).unwrap();
+            let regexs = create_regexs(&vec![gstr("--"), gstr("-"), gstr("")]).unwrap();
 
             for case in test_cases.iter() {
                 try_to_verify_one_task(gstr(case.0), &regexs, case.1);
@@ -238,7 +238,7 @@ mod test {
                 ("-foo=", Some((Some("-"), Some("foo"), None, false))),
             ];
 
-            let regexs = create_prefix_regexs(&vec![gstr("--"), gstr("-")]).unwrap();
+            let regexs = create_regexs(&vec![gstr("--"), gstr("-")]).unwrap();
 
             for case in test_cases.iter() {
                 try_to_verify_one_task(gstr(case.0), &regexs, case.1);
@@ -267,7 +267,7 @@ mod test {
                 ("+foo=", Some((Some("+"), Some("foo"), None, false))),
             ];
 
-            let regexs = create_prefix_regexs(&vec![gstr("++"), gstr("+")]).unwrap();
+            let regexs = create_regexs(&vec![gstr("++"), gstr("+")]).unwrap();
 
             for case in test_cases.iter() {
                 try_to_verify_one_task(gstr(case.0), &regexs, case.1);
@@ -305,7 +305,7 @@ mod test {
                 ("+选项=", Some((Some("+"), Some("选项"), None, false))),
             ];
 
-            let regexs = create_prefix_regexs(&vec![gstr("++"), gstr("+")]).unwrap();
+            let regexs = create_regexs(&vec![gstr("++"), gstr("+")]).unwrap();
 
             for case in test_cases.iter() {
                 try_to_verify_one_task(gstr(case.0), &regexs, case.1);

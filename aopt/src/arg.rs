@@ -9,7 +9,7 @@ use ustr::Ustr;
 
 use crate::gstr;
 
-pub use argument::create_prefix_regexs;
+pub use argument::create_regexs;
 pub use argument::parse_argument;
 pub use argument::Argument;
 pub use argument::DataKeeper;
@@ -130,7 +130,7 @@ impl<T: Iterator<Item = String>> From<T> for ArgStream {
 #[cfg(test)]
 mod test {
 
-    use super::{create_prefix_regexs, ArgStream};
+    use super::{create_regexs, ArgStream};
     use crate::gstr;
     use regex::Regex;
 
@@ -168,7 +168,7 @@ mod test {
 
             testing_one_iterator(
                 ArgStream::new(data),
-                &create_prefix_regexs(&vec![gstr("--"), gstr("-")]).unwrap(),
+                &create_regexs(&vec![gstr("--"), gstr("-")]).unwrap(),
                 &data_check,
                 &check,
             );
@@ -207,7 +207,7 @@ mod test {
 
             testing_one_iterator(
                 ArgStream::new(data),
-                &create_prefix_regexs(&vec![gstr("--"), gstr("-")]).unwrap(),
+                &create_regexs(&vec![gstr("--"), gstr("-")]).unwrap(),
                 &data_check,
                 &check,
             );

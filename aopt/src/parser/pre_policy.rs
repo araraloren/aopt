@@ -3,7 +3,7 @@ use std::fmt::Debug;
 
 use super::Policy;
 use super::Service;
-use crate::arg::create_prefix_regexs;
+use crate::arg::create_regexs;
 use crate::arg::ArgStream;
 use crate::err::Result;
 use crate::proc::Matcher;
@@ -48,7 +48,7 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for PrePolicy {
         // send it to Publisher
         info!("start process option ...");
         let total = argstream.len();
-        let regexs = create_prefix_regexs(set.get_prefix())?;
+        let regexs = create_regexs(set.get_prefix())?;
         let mut iter = argstream.enumerate();
 
         while let Some((index, mut arg)) = iter.next() {
