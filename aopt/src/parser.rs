@@ -614,3 +614,10 @@ cfg_if::cfg_if! {
             where S: Set, SS: Service<S> { }
     }
 }
+
+/// Parser using for parse option create string and input string.
+pub trait TinyParser {
+    type Output;
+
+    fn parse(&self, pattern: &Ustr) -> Result<Self::Output>;
+}

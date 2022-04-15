@@ -3,8 +3,8 @@ use std::fmt::Debug;
 
 use super::Policy;
 use super::Service;
-use crate::arg::create_regexs;
 use crate::arg::ArgStream;
+use crate::arg::ArgumentParser;
 use crate::err::Error;
 use crate::err::Result;
 use crate::parser::ValueKeeper;
@@ -70,7 +70,7 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for DelayPolicy {
         // send it to Publisher
         info!("start process option ...");
         let total = argstream.len();
-        let regexs = create_regexs(set.get_prefix())?;
+        let arg_parser = ArgumentParser::new(set.get_prefix().to_vec())?;
         let mut iter = argstream.enumerate();
 
         while let Some((index, mut arg)) = iter.next() {
@@ -78,7 +78,7 @@ impl<S: Set, SS: Service<S>> Policy<S, SS> for DelayPolicy {
             let mut consume = false;
 
             debug!("before parsing = {:?}", &arg);
-            if let Ok(ret) = arg.parse(&regexs) {
+            if let Ok(ret) = arg.parse(&arg_parser) {
                 if ret {
                     debug!("parsing success = {:?}", arg.get_data_keeper());
                     for gen_style in &parser_state {
