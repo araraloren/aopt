@@ -1,17 +1,17 @@
 use super::info::FilterInfo;
-use super::Set;
+use super::OptionSet;
 use crate::gstr;
 use crate::opt::{Opt, OptIndex};
 
 #[derive(Debug)]
-pub struct Filter<'a> {
-    set: &'a dyn Set,
+pub struct Filter<'a, S: OptionSet> {
+    set: &'a S,
 
     info: FilterInfo,
 }
 
-impl<'a> Filter<'a> {
-    pub fn new(set: &'a dyn Set, info: FilterInfo) -> Self {
+impl<'a, S: OptionSet> Filter<'a, S> {
+    pub fn new(set: &'a S, info: FilterInfo) -> Self {
         Self { set, info }
     }
 
@@ -67,14 +67,14 @@ impl<'a> Filter<'a> {
 }
 
 #[derive(Debug)]
-pub struct FilterMut<'a> {
-    set: &'a mut dyn Set,
+pub struct FilterMut<'a, S: OptionSet> {
+    set: &'a mut S,
 
     info: FilterInfo,
 }
 
-impl<'a> FilterMut<'a> {
-    pub fn new(set: &'a mut dyn Set, info: FilterInfo) -> Self {
+impl<'a, S: OptionSet> FilterMut<'a, S> {
+    pub fn new(set: &'a mut S, info: FilterInfo) -> Self {
         Self { set, info }
     }
 

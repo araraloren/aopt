@@ -2,6 +2,7 @@ mod commit;
 mod filter;
 mod index;
 mod info;
+mod parser;
 mod simple_set;
 
 use std::fmt::Debug;
@@ -20,6 +21,8 @@ pub use self::index::SetIndex;
 pub use self::info::CreateInfo;
 pub use self::info::FilterInfo;
 pub use self::info::OptionInfo;
+pub use self::parser::DataKeeper;
+pub use self::parser::OptConstructor;
 pub use self::simple_set::SimpleSet;
 
 cfg_if::cfg_if! {
@@ -58,6 +61,10 @@ pub trait PrefixSet {
 }
 
 pub trait OptionSet {
+    fn gen_create_info(&mut self, opt_str: &str) -> Result<CreateInfo>;
+
+    fn gen_filter_info(&mut self, opt_str: &str) -> Result<FilterInfo>;
+
     fn add_opt(&mut self, opt_str: &str) -> Result<Commit<'_, Self>>
     where
         Self: Sized;
@@ -80,9 +87,13 @@ pub trait OptionSet {
 
     fn find_mut(&mut self, opt_str: &str) -> Result<Option<&mut Box<dyn Opt>>>;
 
-    fn filter(&self, opt_str: &str) -> Result<Filter>;
+    fn filter(&self, opt_str: &str) -> Result<Filter<'_, Self>>
+    where
+        Self: Sized;
 
-    fn filter_mut(&mut self, opt_str: &str) -> Result<FilterMut>;
+    fn filter_mut(&mut self, opt_str: &str) -> Result<FilterMut<'_, Self>>
+    where
+        Self: Sized;
 
     fn reset(&mut self);
 

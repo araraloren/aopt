@@ -263,6 +263,7 @@ impl Creator for MainCreator {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::set::OptConstructor;
 
     #[test]
     fn make_type_main_work() {
@@ -272,7 +273,8 @@ mod test {
         // main not support deactivate style
         assert_eq!(creator.is_support_deactivate_style(), false);
 
-        let mut ci = CreateInfo::parse(gstr("main=m"), &[]).unwrap();
+        let mut ci =
+            CreateInfo::parse(&OptConstructor::new(vec![]).unwrap(), gstr("main=m")).unwrap();
 
         ci.set_uid(1);
 

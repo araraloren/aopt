@@ -1,6 +1,5 @@
 mod help;
 mod index;
-mod parser;
 mod style;
 mod value;
 
@@ -63,8 +62,6 @@ pub use self::opt::FltCreator;
 pub use self::opt::IntCreator;
 pub use self::opt::StrCreator;
 pub use self::opt::UintCreator;
-pub use self::parser::parse_option_str;
-pub use self::parser::DataKeeper;
 pub use self::style::Style;
 pub use self::value::CloneHelper;
 pub use self::value::Value as OptValue;

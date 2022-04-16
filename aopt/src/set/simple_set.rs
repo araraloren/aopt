@@ -7,6 +7,7 @@ use super::FilterInfo;
 use super::FilterMut;
 use super::Iter;
 use super::IterMut;
+use super::OptConstructor;
 use super::OptionSet;
 use super::PrefixSet;
 use super::Set;
@@ -14,7 +15,6 @@ use super::SetIndex;
 use super::Uid;
 use crate::err::Error;
 use crate::err::Result;
-use crate::gstr;
 use crate::opt::ArrayCreator;
 use crate::opt::BoolCreator;
 use crate::opt::CmdCreator;
@@ -79,13 +79,25 @@ impl SimpleSet {
             .with_creator(Box::new(MainCreator::default()))
             .with_creator(Box::new(PosCreator::default()))
     }
+
+    pub fn get_parser(&self) -> Result<OptConstructor> {
+        OptConstructor::new(self.get_prefix().to_vec())
+    }
 }
 
 impl Set for SimpleSet {}
 
 impl OptionSet for SimpleSet {
+    fn gen_create_info(&mut self, opt_str: &str) -> Result<CreateInfo> {
+        CreateInfo::parse(&self.get_parser()?, opt_str.into())
+    }
+
+    fn gen_filter_info(&mut self, opt_str: &str) -> Result<FilterInfo> {
+        FilterInfo::parse(&self.get_parser()?, opt_str.into())
+    }
+
     fn add_opt(&mut self, opt_str: &str) -> Result<Commit<Self>> {
-        let info = CreateInfo::parse(gstr(opt_str), self.get_prefix())?;
+        let info = CreateInfo::parse(&self.get_parser()?, opt_str.into())?;
 
         debug!(%opt_str, "create option");
         Ok(Commit::new(self, info))
@@ -138,7 +150,7 @@ impl OptionSet for SimpleSet {
     }
 
     fn find(&self, opt_str: &str) -> Result<Option<&Box<dyn Opt>>> {
-        let fi = FilterInfo::parse(gstr(opt_str), self.get_prefix())?;
+        let fi = FilterInfo::parse(&self.get_parser()?, opt_str.into())?;
         for opt in self.opt_iter() {
             if fi.match_opt(opt.as_ref()) {
                 return Ok(Some(opt));
@@ -148,7 +160,7 @@ impl OptionSet for SimpleSet {
     }
 
     fn find_mut(&mut self, opt_str: &str) -> Result<Option<&mut Box<dyn Opt>>> {
-        let fi = FilterInfo::parse(gstr(opt_str), self.get_prefix())?;
+        let fi = FilterInfo::parse(&self.get_parser()?, opt_str.into())?;
         for opt in self.opt_iter_mut() {
             if fi.match_opt(opt.as_ref()) {
                 return Ok(Some(opt));
@@ -157,15 +169,15 @@ impl OptionSet for SimpleSet {
         Ok(None)
     }
 
-    fn filter(&self, opt_str: &str) -> Result<Filter> {
+    fn filter(&self, opt_str: &str) -> Result<Filter<'_, Self>> {
         Ok(Filter::new(
             self,
-            FilterInfo::parse(gstr(opt_str), self.get_prefix())?,
+            FilterInfo::parse(&self.get_parser()?, opt_str.into())?,
         ))
     }
 
-    fn filter_mut(&mut self, opt_str: &str) -> Result<FilterMut> {
-        let info = FilterInfo::parse(gstr(opt_str), self.get_prefix())?;
+    fn filter_mut(&mut self, opt_str: &str) -> Result<FilterMut<'_, Self>> {
+        let info = FilterInfo::parse(&self.get_parser()?, opt_str.into())?;
         Ok(FilterMut::new(self, info))
     }
 

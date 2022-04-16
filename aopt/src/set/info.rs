@@ -3,13 +3,13 @@ use ustr::Ustr;
 
 use crate::err::Error;
 use crate::err::Result;
-use crate::opt::parse_option_str;
-use crate::opt::DataKeeper;
 use crate::opt::HelpInfo;
 use crate::opt::Opt;
 use crate::opt::OptIndex;
 use crate::opt::OptValue;
+use crate::parser::PrefixedParser;
 use crate::proc::Info;
+use crate::set::DataKeeper;
 use crate::uid::Uid;
 
 /// Information using for create option.
@@ -278,11 +278,19 @@ impl CreateInfo {
         &mut self.help
     }
 
-    pub fn parse(pattern: Ustr, prefix: &[Ustr]) -> Result<Self> {
-        let data_keeper = parse_option_str(pattern, prefix)?;
-        let mut ret: Self = data_keeper.try_into()?;
+    pub fn parse<T: TryInto<CreateInfo>, TP: PrefixedParser<Output = T>>(
+        parser: &TP,
+        pattern: Ustr,
+    ) -> Result<Self>
+    where
+        <T as TryInto<CreateInfo>>::Error: std::fmt::Debug,
+    {
+        let data_keeper = parser.parse(pattern)?;
+        let mut ret: Self = data_keeper.try_into().map_err(|e| {
+            Error::raise_error(format!("Can not convert DataKeeper to CreateInfo: {:?}", e))
+        })?;
 
-        ret.set_support_prefix(prefix.to_vec());
+        ret.set_support_prefix(parser.get_prefixs().to_vec());
         Ok(ret)
     }
 }
@@ -432,8 +440,11 @@ impl FilterInfo {
         self.index.is_some()
     }
 
-    pub fn parse(pattern: Ustr, prefix: &[Ustr]) -> Result<Self> {
-        Ok(parse_option_str(pattern, prefix)?.into())
+    pub fn parse<T: Into<FilterInfo>, TP: PrefixedParser<Output = T>>(
+        parser: &TP,
+        pattern: Ustr,
+    ) -> Result<Self> {
+        Ok(parser.parse(pattern)?.into())
     }
 
     pub fn match_opt(&self, opt: &dyn Opt) -> bool {

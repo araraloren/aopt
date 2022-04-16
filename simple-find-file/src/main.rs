@@ -132,7 +132,7 @@ fn main() -> color_eyre::Result<()> {
     Ok(())
 }
 
-fn filter_file<'a>(set: &'a dyn Set, opt: &str, filter_type: &FilterType) -> Vec<&'a str> {
+fn filter_file<'a, S: Set>(set: &'a S, opt: &str, filter_type: &FilterType) -> Vec<&'a str> {
     let mut ret = vec![];
     if let Ok(filter) = set.filter(opt) {
         if let Some(dir_opt) = filter.find() {

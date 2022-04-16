@@ -333,7 +333,7 @@ pub fn getopt_add(input: TokenStream) -> TokenStream {
     let mut callback = None;
     let mut output = quote! {
         let init_string = #init.into();
-        let mut create_info = CreateInfo::parse(init_string, #parser.get_prefix());
+        let mut create_info = #parser.gen_create_info(init_string);
     };
 
     output.extend(getopt_args.parameter_args.iter().map(|v| {

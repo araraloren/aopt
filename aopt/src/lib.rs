@@ -326,8 +326,6 @@ pub mod proc;
 pub mod set;
 pub mod uid;
 
-pub(crate) mod pat;
-
 #[macro_use]
 extern crate tracing;
 

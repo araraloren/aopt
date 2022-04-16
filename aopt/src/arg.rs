@@ -9,7 +9,7 @@ use ustr::Ustr;
 use crate::err::Error;
 use crate::err::Result;
 use crate::gstr;
-use crate::parser::TinyParser;
+use crate::parser::PrefixedParser;
 
 /// Keeper the information of input command line arguments.
 #[derive(Debug, Clone, Default)]
@@ -46,7 +46,7 @@ pub struct DataKeeper {
 ///
 /// ```rust
 /// use aopt::arg::ArgumentParser;
-/// use aopt::parser::TinyParser;
+/// use aopt::parser::PrefixedParser;
 /// use aopt::gstr;
 /// use aopt::err::Result;
 ///
@@ -54,7 +54,7 @@ pub struct DataKeeper {
 ///     let parser = ArgumentParser::new(vec![gstr("--"), gstr("-")])?;
 ///
 ///     {// parse option with value
-///         let dk = parser.parse(&gstr("--foo=32"))?;
+///         let dk = parser.parse(gstr("--foo=32"))?;
 ///
 ///         assert_eq!(dk.prefix, Some(gstr("--")));
 ///         assert_eq!(dk.name, Some(gstr("foo")));
@@ -62,7 +62,7 @@ pub struct DataKeeper {
 ///         assert_eq!(dk.disable, false);
 ///     }
 ///     {// parse boolean option
-///         let dk = parser.parse(&gstr("--/bar"))?;
+///         let dk = parser.parse(gstr("--/bar"))?;
 ///
 ///         assert_eq!(dk.prefix, Some(gstr("--")));
 ///         assert_eq!(dk.name, Some(gstr("bar")));
@@ -70,7 +70,7 @@ pub struct DataKeeper {
 ///         assert_eq!(dk.disable, true);
 ///     }
 ///     {// parse other string
-///         let dk = parser.parse(&gstr("-=bar"));
+///         let dk = parser.parse(gstr("-=bar"));
 ///
 ///         assert!(dk.is_err());
 ///     }
@@ -120,10 +120,10 @@ impl ArgumentParser {
     }
 }
 
-impl TinyParser for ArgumentParser {
+impl PrefixedParser for ArgumentParser {
     type Output = DataKeeper;
 
-    fn parse(&self, pattern: &Ustr) -> Result<Self::Output> {
+    fn parse(&self, pattern: Ustr) -> Result<Self::Output> {
         for prefix in self.get_prefixs() {
             if pattern.starts_with(prefix.as_str()) {
                 let (_, left_part) = pattern.split_at(prefix.len());
@@ -144,6 +144,10 @@ impl TinyParser for ArgumentParser {
             }
         }
         Err(Error::arg_parsing_failed(pattern))
+    }
+
+    fn get_prefixs(&self) -> &[Ustr] {
+        &self.prefixs
     }
 }
 
@@ -207,9 +211,12 @@ impl Argument {
     /// - [`ArgumentError::MissingName`](crate::err::ArgumentError::MissingName)
     ///
     /// When the result not have a valid name.
-    pub fn parse<TP: TinyParser<Output = DataKeeper>>(&mut self, tiny_parser: &TP) -> Result<bool> {
+    pub fn parse<TP: PrefixedParser<Output = DataKeeper>>(
+        &mut self,
+        tiny_parser: &TP,
+    ) -> Result<bool> {
         if let Some(pattern) = &self.current {
-            self.data_keeper = tiny_parser.parse(pattern)?;
+            self.data_keeper = tiny_parser.parse(*pattern)?;
 
             return Ok(true);
         }
@@ -336,7 +343,7 @@ mod test {
     use super::ArgStream;
     use super::ArgumentParser;
     use crate::gstr;
-    use crate::parser::TinyParser;
+    use crate::parser::PrefixedParser;
     use ustr::Ustr;
 
     #[test]
@@ -592,7 +599,7 @@ mod test {
         parser: &ArgumentParser,
         except: Option<(Option<&str>, Option<&str>, Option<&str>, bool)>,
     ) {
-        let ret = parser.parse(&pattern);
+        let ret = parser.parse(pattern);
 
         if let Ok(dk) = ret {
             assert!(except.is_some());

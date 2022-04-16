@@ -14,11 +14,10 @@ use ustr::Ustr;
 use crate::arg::ArgStream;
 use crate::arg::Argument;
 use crate::err::Result;
-use crate::gstr;
 use crate::opt::{OptCallback, OptValue};
 use crate::proc::{Info, Matcher};
+use crate::set::Set;
 use crate::set::SimpleSet;
-use crate::set::{CreateInfo, Set};
 use crate::uid::Uid;
 
 pub use commit::CallbackCommit;
@@ -338,7 +337,7 @@ where
         opt_str: &str,
         callback: OptCallback<S>,
     ) -> Result<CallbackCommit<'_, '_, S, SS>> {
-        let info = CreateInfo::parse(gstr(opt_str), self.get_prefix())?;
+        let info = self.set.gen_create_info(opt_str)?;
 
         debug!(%opt_str, "create option has callback");
         Ok(CallbackCommit::new(
@@ -540,7 +539,7 @@ where
         opt_str: &str,
         callback: OptCallback<S>,
     ) -> Result<CallbackCommit<'_, '_, S, SS>> {
-        let info = CreateInfo::parse(gstr(opt_str), self.get_prefix())?;
+        let info = self.set.gen_create_info(opt_str)?;
 
         debug!(%opt_str, "create option has callback");
         Ok(CallbackCommit::new(
@@ -616,8 +615,10 @@ cfg_if::cfg_if! {
 }
 
 /// Parser using for parse option create string and input string.
-pub trait TinyParser {
+pub trait PrefixedParser: std::fmt::Debug {
     type Output;
 
-    fn parse(&self, pattern: &Ustr) -> Result<Self::Output>;
+    fn parse(&self, pattern: Ustr) -> Result<Self::Output>;
+
+    fn get_prefixs(&self) -> &[Ustr];
 }

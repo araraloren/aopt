@@ -280,6 +280,8 @@ impl Creator for PosCreator {
 
 #[cfg(test)]
 mod test {
+    use crate::set::OptConstructor;
+
     use super::*;
 
     #[allow(clippy::all)]
@@ -291,7 +293,8 @@ mod test {
         // pos not support deactivate style
         assert_eq!(creator.is_support_deactivate_style(), false);
 
-        let mut ci = CreateInfo::parse(gstr("pos=p@1"), &[]).unwrap();
+        let mut ci =
+            CreateInfo::parse(&OptConstructor::new(vec![]).unwrap(), gstr("pos=p@1")).unwrap();
 
         ci.set_uid(1);
 

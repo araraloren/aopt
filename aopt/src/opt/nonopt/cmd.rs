@@ -271,6 +271,7 @@ impl Creator for CmdCreator {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::set::OptConstructor;
 
     #[test]
     fn make_type_cmd_work() {
@@ -280,7 +281,8 @@ mod test {
         // cmd not support deactivate style
         assert_eq!(creator.is_support_deactivate_style(), false);
 
-        let mut ci = CreateInfo::parse(gstr("cmd=c"), &[]).unwrap();
+        let mut ci =
+            CreateInfo::parse(&OptConstructor::new(vec![]).unwrap(), gstr("cmd=c")).unwrap();
 
         ci.set_uid(1);
 
