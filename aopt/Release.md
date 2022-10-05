@@ -1,6 +1,10 @@
 
 # Relase note
 
+## 0.6.7
+
+- fix the noa process issue
+
 ## 0.6.6
 
 - update documents

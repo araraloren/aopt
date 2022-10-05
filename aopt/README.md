@@ -8,7 +8,7 @@ Add following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-aopt = "0.5"
+aopt = "0.6"
 ```
 
 ### Enable `sync` feature

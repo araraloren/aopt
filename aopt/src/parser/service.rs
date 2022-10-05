@@ -101,12 +101,12 @@ impl<S: Set> SimpleService<S> {
         set: &mut S,
         _invoke: bool,
     ) -> Result<Vec<ValueKeeper>> {
-        let mut matched = true;
         let subscriber_infos: Vec<Uid> =
             self.subscriber_info.iter().map(|v| v.info_uid()).collect();
 
         debug!(?matcher, "process matcher in nonopt way: ");
         for uid in subscriber_infos {
+            let mut matched = true;
             let ctx = matcher.process(uid, set).unwrap_or(None);
 
             if let Some(ctx) = ctx {
@@ -130,7 +130,7 @@ impl<S: Set> SimpleService<S> {
                             )?;
                             if value.is_none() {
                                 // Ok(None) treat as user said current NonOpt not matched
-                                matched = true;
+                                matched = false;
                             }
                         }
                         // reborrow the opt avoid the compiler error
@@ -144,9 +144,9 @@ impl<S: Set> SimpleService<S> {
                     set.get_opt_mut(uid).unwrap().set_callback_ret(value)?;
                 }
             }
-        }
-        if !matched {
-            matcher.undo(set);
+            if !matched {
+                matcher.undo(set);
+            }
         }
         Ok(vec![])
     }
