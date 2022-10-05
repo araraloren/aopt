@@ -1,6 +1,6 @@
-/// Index using for [`NonOpt`](crate::opt::NonOpt).
+/// Index using for option match.
 ///
-/// The [`NonOpt`](crate::opt::NonOpt) index is the position of non-option-argument(NOA) index, its base on 1.
+/// The index is the position of left arguments (non-option arguments, NOA) index, its base on 1.
 ///
 /// # Example
 ///
@@ -108,6 +108,42 @@ pub enum Index {
 }
 
 impl Index {
+    pub fn is_null(&self) -> bool {
+        matches!(self, Self::Null)
+    }
+
+    pub fn is_forward(&self) -> bool {
+        matches!(self, Self::Forward(_))
+    }
+
+    pub fn is_backward(&self) -> bool {
+        matches!(self, Self::Backward(_))
+    }
+
+    pub fn is_list(&self) -> bool {
+        matches!(self, Self::List(_))
+    }
+
+    pub fn is_except(&self) -> bool {
+        matches!(self, Self::Except(_))
+    }
+
+    pub fn is_greater(&self) -> bool {
+        matches!(self, Self::Greater(_))
+    }
+
+    pub fn is_less(&self) -> bool {
+        matches!(self, Self::Less(_))
+    }
+
+    pub fn is_anywhere(&self) -> bool {
+        matches!(self, Self::AnyWhere)
+    }
+
+    pub fn to_help(&self) -> String {
+        String::default()
+    }
+
     pub fn forward(index: usize) -> Self {
         Self::Forward(index)
     }
@@ -140,57 +176,52 @@ impl Index {
         Self::Null
     }
 
-    pub fn is_null(&self) -> bool {
-        matches!(self, Self::Null)
-    }
-
-    /// Compare the NOA information with current Index.
-    pub fn calc_index(&self, index: usize, total: usize) -> Option<usize> {
+    pub fn calc_index(&self, noa_index: usize, noa_count: usize) -> Option<usize> {
         match self {
             Self::Forward(offset) => {
                 let offset = *offset;
 
-                if offset <= total {
+                if offset <= noa_count {
                     return Some(offset);
                 }
             }
             Self::Backward(offset) => {
                 let offset = *offset;
 
-                if offset <= total {
-                    return Some(total - offset + 1);
+                if offset <= noa_count {
+                    return Some(noa_count - offset + 1);
                 }
             }
             Self::List(list) => {
                 for offset in list {
                     let offset = *offset;
 
-                    if offset <= total && offset == index {
+                    if offset <= noa_count && offset == noa_index {
                         return Some(offset);
                     }
                 }
             }
             Self::Except(list) => {
-                if index <= total && !list.contains(&index) {
-                    return Some(index);
+                if noa_index <= noa_count && !list.contains(&noa_index) {
+                    return Some(noa_index);
                 }
             }
             Self::Greater(offset) => {
                 let offset = *offset;
 
-                if offset <= total && offset < index {
-                    return Some(index);
+                if offset <= noa_count && offset < noa_index {
+                    return Some(noa_index);
                 }
             }
             Self::Less(offset) => {
                 let offset = *offset;
 
-                if offset <= total && offset > index {
-                    return Some(index);
+                if offset <= noa_count && offset > noa_index {
+                    return Some(noa_index);
                 }
             }
             Self::AnyWhere => {
-                return Some(index);
+                return Some(noa_index);
             }
             _ => {}
         }
@@ -207,11 +238,19 @@ impl Default for Index {
 impl ToString for Index {
     fn to_string(&self) -> String {
         match self {
+            Index::AnyWhere => "*".to_string(),
+            Index::Null => String::default(),
             Index::Forward(v) => {
                 format!("{}", v)
             }
             Index::Backward(v) => {
                 format!("-{}", v)
+            }
+            Index::Greater(v) => {
+                format!(">{}", v)
+            }
+            Index::Less(v) => {
+                format!("<{}", v)
             }
             Index::List(v) => {
                 let strs: Vec<String> = v.iter().map(|v| format!("{}", v)).collect();
@@ -223,14 +262,6 @@ impl ToString for Index {
 
                 format!("-[{}]", strs.join(", "))
             }
-            Index::Greater(v) => {
-                format!(">{}", v)
-            }
-            Index::Less(v) => {
-                format!("<{}", v)
-            }
-            Index::AnyWhere => "*".to_string(),
-            Index::Null => String::default(),
         }
     }
 }

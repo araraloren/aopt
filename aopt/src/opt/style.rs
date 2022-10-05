@@ -1,12 +1,19 @@
 /// Option style
 ///
-/// The [`Parser`](crate::parser::Parser) will generate [`Context`](crate::ctx::Context) which support
-/// specified [`Style`].
-/// And when [`Matcher`](crate::proc::Matcher) process the opt, it will check the
-/// [`Opt`](crate::opt::Opt) whether support that style.
-///
-#[derive(Debug, Clone, PartialEq, Eq, Copy)]
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Style {
+    Null,
+
+    /// The style indicate the option are set base on position(base on 1).
+    Pos,
+
+    /// The style indicate the option are set in first position.
+    Cmd,
+
+    /// The Main style option no need set, its callback will always be called.
+    Main,
+
     /// The style indicate option don't need argument, such as `--boolean`, `-b` or with no prefix `b`.
     Boolean,
 
@@ -14,21 +21,10 @@ pub enum Style {
     Argument,
 
     /// The style indicate option support set multiple option in one string, such as `-ade` means set `-a`, `-d` and `-e`.
-    Multiple,
-
-    /// The style indicate the [`NonOpt`](crate::opt::NonOpt) is set base on position(base on 1).
-    Pos,
-
-    /// The style indicate the [`NonOpt`](crate::opt::NonOpt) is set in first position.
-    Cmd,
-
-    /// The Main style [`NonOpt`](crate::opt::NonOpt) no need set, its callback will always be called.
-    Main,
+    Combined,
 
     /// Reserve using for user define style option.
-    Other,
-
-    Null,
+    Reserve(u64),
 }
 
 impl Default for Style {

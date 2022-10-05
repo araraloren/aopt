@@ -1,90 +1,142 @@
-use super::info::CreateInfo;
-use super::{OptionSet, Result, Set, Uid};
+use std::fmt::Debug;
 
-use crate::gstr;
-use crate::opt::HelpInfo;
+use super::Prefixed;
+use crate::opt::Config;
+use crate::opt::ConfigValue;
+use crate::opt::Creator;
+use crate::opt::Information;
+use crate::opt::Opt;
+use crate::opt::OptCallback;
 use crate::opt::OptIndex;
-use crate::opt::OptValue;
-use ustr::Ustr;
+use crate::opt::OptParser;
+use crate::set::OptSet;
+use crate::set::Set;
+use crate::Error;
+use crate::Str;
+use crate::Uid;
 
-#[derive(Debug)]
-pub struct Commit<'a, S: OptionSet> {
-    set: &'a mut S,
-
-    info: CreateInfo,
+/// Create option using given configurations.
+pub struct Commit<'a, T, Parser, Ctor>
+where
+    T: Opt,
+    Ctor: Creator<Opt = T>,
+    Parser: OptParser + Debug,
+    Ctor::Config: Config + ConfigValue,
+{
+    info: Ctor::Config,
+    set: &'a mut OptSet<T, Parser, Ctor>,
 }
 
-impl<'a, S: Set> Commit<'a, S> {
-    pub fn new(set: &'a mut S, info: CreateInfo) -> Self {
+impl<'a, T, Parser, Ctor> Commit<'a, T, Parser, Ctor>
+where
+    T: Opt,
+    Ctor: Creator<Opt = T>,
+    Parser: OptParser + Prefixed + Debug,
+    Parser::Output: Information,
+    Ctor::Config: Config + ConfigValue + Default,
+{
+    pub fn new(set: &'a mut OptSet<T, Parser, Ctor>, info: Ctor::Config) -> Self {
         Self { set, info }
     }
 
-    pub fn set_deactivate_style(&mut self, deactivate_style: bool) -> &mut Self {
-        self.info.set_support_deactivate_style(deactivate_style);
+    pub fn config(&self) -> &Ctor::Config {
+        &self.info
+    }
+
+    pub fn config_mut(&mut self) -> &mut Ctor::Config {
+        &mut self.info
+    }
+
+    /// Set the option name of commit configuration.
+    pub fn set_name<S: Into<Str>>(&mut self, name: S) -> &mut Self {
+        self.info.set_name(name);
         self
     }
 
-    pub fn set_optional(&mut self, optional: bool) -> &mut Self {
-        self.info.set_optional(optional);
+    /// Set the option prefix of commit configuration.
+    pub fn set_prefix<S: Into<Str>>(&mut self, prefix: S) -> &mut Self {
+        self.info.set_prefix(prefix);
         self
     }
 
-    pub fn set_type_name(&mut self, type_name: &str) -> &mut Self {
-        self.info.set_type_name(gstr(type_name));
+    /// Set the option type name of commit configuration.
+    pub fn set_type_name<S: Into<Str>>(&mut self, type_name: S) -> &mut Self {
+        self.info.set_type_name(type_name);
         self
     }
 
-    pub fn set_name(&mut self, name: &str) -> &mut Self {
-        self.info.set_name(gstr(name));
-        self
-    }
-
-    pub fn set_prefix(&mut self, prefix: &str) -> &mut Self {
-        self.info.set_prefix(gstr(prefix));
-        self
-    }
-
+    /// Set the option index of commit configuration.
     pub fn set_index(&mut self, index: OptIndex) -> &mut Self {
         self.info.set_index(index);
         self
     }
 
-    pub fn set_default_value(&mut self, value: OptValue) -> &mut Self {
-        self.info.set_default_value(value);
-        self
-    }
-
-    pub fn set_hint(&mut self, hint: &str) -> &mut Self {
-        self.info.set_hint(gstr(hint));
-        self
-    }
-
-    pub fn set_help(&mut self, help: &str) -> &mut Self {
-        self.info.set_help(gstr(help));
-        self
-    }
-
-    pub fn set_help_info(&mut self, help_info: HelpInfo) -> &mut Self {
-        self.info.set_help_info(help_info);
-        self
-    }
-
-    pub fn add_alias(&mut self, alias: &str) -> Result<&mut Self> {
-        self.info.add_alias(gstr(alias))?;
-        Ok(self)
-    }
-
-    pub fn rem_alias(&mut self, alias: Ustr) -> &mut Self {
-        self.info.rem_alias(alias);
-        self
-    }
-
+    /// Clear all the alias of commit configuration.
     pub fn clr_alias(&mut self) -> &mut Self {
         self.info.clr_alias();
         self
     }
 
-    pub fn commit(&mut self) -> Result<Uid> {
-        self.set.add_opt_ci(std::mem::take(&mut self.info))
+    /// Remove the given alias of commit configuration.
+    pub fn rem_alias<S: Into<Str>>(&mut self, alias: S) -> &mut Self {
+        self.info.rem_alias(alias);
+        self
+    }
+
+    /// Add given alias into the commit configuration.
+    pub fn add_alias<S: Into<Str>>(&mut self, alias: S) -> &mut Self {
+        self.info.add_alias(alias);
+        self
+    }
+
+    /// Set the option optional of commit configuration.
+    pub fn set_optional(&mut self, optional: bool) -> &mut Self {
+        self.info.set_optional(optional);
+        self
+    }
+
+    /// Set the option hint message of commit configuration.
+    pub fn set_hint<S: Into<Str>>(&mut self, hint: S) -> &mut Self {
+        self.info.set_hint(hint);
+        self
+    }
+
+    /// Set the option help message of commit configuration.
+    pub fn set_help<S: Into<Str>>(&mut self, help: S) -> &mut Self {
+        self.info.set_help(help);
+        self
+    }
+
+    /// Set the option deactivate style of commit configuration.
+    pub fn set_deactivate_style(&mut self, deactivate_style: bool) -> &mut Self {
+        self.info.set_deactivate_style(deactivate_style);
+        self
+    }
+
+    /// Set the option callback of commit configuration.
+    pub fn set_callback<U>(&mut self, callback: OptCallback<U>) -> &mut Self
+    where
+        T: 'static,
+    {
+        self.info.set_callback(callback);
+        self
+    }
+
+    /// Run the commit.
+    ///
+    /// It create an option using given type [`Creator`].
+    /// And add it to referenced [`OptSet`], return the new option [`Uid`].
+    pub fn run(&mut self) -> Result<Uid, Error> {
+        let info = std::mem::take(&mut self.info);
+        let type_name = info.gen_type_name()?;
+        let opt = self
+            .set
+            .get_creator(&type_name)
+            .as_mut()
+            .ok_or_else(|| Error::con_unsupport_option_type(type_name))?
+            .create_with(info)
+            .map_err(|e| e.into())?;
+
+        Ok(self.set.insert(opt))
     }
 }
