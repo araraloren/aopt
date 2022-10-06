@@ -1,3 +1,5 @@
+use serde::ser::SerializeStruct;
+use serde::Serialize;
 use std::any::Any;
 
 use super::Information;
@@ -155,6 +157,30 @@ pub struct OptConfig {
     deactivate_style: Option<bool>,
 
     callback: Option<Box<dyn Any>>,
+}
+
+/// Notice: callback will not serialized.
+impl Serialize for OptConfig {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut s = serializer.serialize_struct("OptConfig", 11)?;
+        let callback_none: Option<bool> = None;
+
+        s.serialize_field("type_name", &self.type_name)?;
+        s.serialize_field("uid", &self.uid)?;
+        s.serialize_field("name", &self.name)?;
+        s.serialize_field("prefix", &self.prefix)?;
+        s.serialize_field("optional", &self.optional)?;
+        s.serialize_field("index", &self.index)?;
+        s.serialize_field("alias", &self.alias)?;
+        s.serialize_field("help", &self.help)?;
+        s.serialize_field("support_prefix", &self.support_prefix)?;
+        s.serialize_field("deactivate_style", &self.deactivate_style)?;
+        s.serialize_field("callback", &callback_none)?;
+        s.end()
+    }
 }
 
 impl OptConfig {

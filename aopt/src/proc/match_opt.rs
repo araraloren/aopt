@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use super::Match;
@@ -12,8 +13,7 @@ use crate::Error;
 use crate::Str;
 use crate::Uid;
 
-#[derive(Debug)]
-pub struct OptMatch<S: Set> {
+pub struct OptMatch<S> {
     prefix: Str,
 
     name: Str,
@@ -35,10 +35,23 @@ pub struct OptMatch<S: Set> {
     marker: PhantomData<S>,
 }
 
-impl<S> Default for OptMatch<S>
-where
-    S: Set,
-{
+impl<S> Debug for OptMatch<S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OptMatch")
+            .field("prefix", &self.prefix)
+            .field("name", &self.name)
+            .field("style", &self.style)
+            .field("argument", &self.argument)
+            .field("matched_uid", &self.matched_uid)
+            .field("disbale", &self.disbale)
+            .field("consume_arg", &self.consume_arg)
+            .field("index", &self.index)
+            .field("total", &self.total)
+            .finish()
+    }
+}
+
+impl<S> Default for OptMatch<S> {
     fn default() -> Self {
         Self {
             prefix: Str::default(),
@@ -193,6 +206,7 @@ where
                 matched = false;
             }
         }
+        println!(": {}", matched);
         Ok(matched)
     }
 }

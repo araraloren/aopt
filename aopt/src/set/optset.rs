@@ -38,13 +38,12 @@ use crate::Uid;
 ///     Ok(())
 /// # }
 /// ```
-#[derive(Debug)]
 pub struct OptSet<T, Parser, Ctor>
 where
     T: Opt,
     Ctor: Creator<Opt = T>,
     Ctor::Config: Config,
-    Parser: OptParser + Debug,
+    Parser: OptParser,
 {
     parser: Parser,
     opts: Vec<T>,
@@ -52,12 +51,29 @@ where
     creators: Vec<Ctor>,
 }
 
+impl<T, Parser, Ctor> Debug for OptSet<T, Parser, Ctor>
+where
+    T: Opt + Debug,
+    Ctor: Creator<Opt = T> + Debug,
+    Ctor::Config: Config + Debug,
+    Parser: OptParser + Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OptSet")
+            .field("parser", &self.parser)
+            .field("opts", &self.opts)
+            .field("keys", &self.keys)
+            .field("creators", &self.creators)
+            .finish()
+    }
+}
+
 impl<T, Parser, Ctor> Default for OptSet<T, Parser, Ctor>
 where
     T: Opt,
     Ctor: Creator<Opt = T>,
     Ctor::Config: Config,
-    Parser: OptParser + Debug + Default,
+    Parser: OptParser + Default,
 {
     fn default() -> Self {
         Self {
@@ -73,7 +89,7 @@ impl<T, Parser, Ctor> OptSet<T, Parser, Ctor>
 where
     T: Opt,
     Ctor: Creator<Opt = T>,
-    Parser: OptParser + Prefixed + Debug,
+    Parser: OptParser + Prefixed,
     Parser::Output: Information,
     Ctor::Config: Config + ConfigValue + Default,
 {
@@ -203,7 +219,7 @@ where
     T: Opt,
     Ctor: Creator<Opt = T>,
     Ctor::Config: Config,
-    Parser: OptParser + Debug,
+    Parser: OptParser,
 {
     type Opt = T;
 
@@ -243,7 +259,7 @@ impl<T, Parser, Ctor> OptParser for OptSet<T, Parser, Ctor>
 where
     T: Opt,
     Ctor: Creator<Opt = T>,
-    Parser: OptParser + Prefixed + Debug,
+    Parser: OptParser + Prefixed,
     Parser::Output: Information,
     Ctor::Config: Config + ConfigValue + Default,
 {
@@ -260,7 +276,7 @@ impl<T, Parser, Ctor> Prefixed for OptSet<T, Parser, Ctor>
 where
     T: Opt,
     Ctor: Creator<Opt = T>,
-    Parser: OptParser + Prefixed + Debug,
+    Parser: OptParser + Prefixed,
     Parser::Output: Information,
     Ctor::Config: Config + ConfigValue + Default,
 {

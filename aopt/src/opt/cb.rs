@@ -5,33 +5,33 @@ use crate::ctx::Context;
 use crate::prelude::Services;
 use crate::{Error, Str};
 
-type InnerCallbackType<T> =
-    Box<dyn FnMut(&mut T, &Context, &mut Services) -> Result<Option<Str>, Error>>;
+type InnerCallbackType<Opt> =
+    Box<dyn FnMut(&mut Opt, &mut Services, Context) -> Result<Option<Str>, Error>>;
 
 #[derive(Default)]
-pub struct OptCallback<T>(Option<InnerCallbackType<T>>)
+pub struct OptCallback<Opt>(Option<InnerCallbackType<Opt>>)
 where
-    T: 'static;
+    Opt: 'static;
 
-impl<T> OptCallback<T>
+impl<Opt> OptCallback<Opt>
 where
-    T: 'static,
+    Opt: 'static,
 {
     pub fn new<H>(handler: H) -> Self
     where
-        H: FnMut(&mut T, &Context, &mut Services) -> Result<Option<Str>, Error> + 'static,
+        H: FnMut(&mut Opt, &mut Services, Context) -> Result<Option<Str>, Error> + 'static,
     {
         Self(Some(Box::new(handler)))
     }
 
     pub fn invoke(
         &mut self,
-        opt: &mut T,
-        ctx: &Context,
+        opt: &mut Opt,
         ser: &mut Services,
+        ctx: Context,
     ) -> Result<Option<Str>, Error> {
         if let Some(func) = &mut self.0 {
-            (func)(opt, ctx, ser)
+            (func)(opt, ser, ctx)
         } else {
             Ok(None)
         }
@@ -43,19 +43,17 @@ where
     }
 }
 
-impl<T, H> From<H> for OptCallback<T>
+impl<Opt, H> From<H> for OptCallback<Opt>
 where
-    H: FnMut(&mut T, &Context, &mut Services) -> Result<Option<Str>, Error> + 'static,
+    H: FnMut(&mut Opt, &mut Services, Context) -> Result<Option<Str>, Error> + 'static,
 {
     fn from(handler: H) -> Self {
         Self::new(handler)
     }
 }
 
-impl<T> Debug for OptCallback<T> {
+impl<Opt> Debug for OptCallback<Opt> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("ACallback")
-            .field(&"private callback".to_string())
-            .finish()
+        f.debug_tuple("OptCallback").field(&"{...}").finish()
     }
 }

@@ -121,11 +121,11 @@ macro_rules! simple_impl_opt {
                 self.callback.is_some()
             }
 
-            fn _invoke(&mut self, ctx: &Context, ser: &mut Services) -> Result<Option<Str>, Error> {
+            fn _invoke(&mut self, ser: &mut Services, ctx: Context) -> Result<Option<Str>, Error> {
                 let store_func = std::mem::replace(&mut self.callback, None);
 
                 if let Some(mut func) = store_func {
-                    let ret = func.invoke(self, ctx, ser);
+                    let ret = func.invoke(self, ser, ctx);
 
                     // store the callback back
                     self.callback = Some(func);
@@ -255,11 +255,11 @@ macro_rules! simple_impl_noa {
                 self.callback.is_some()
             }
 
-            fn _invoke(&mut self, ctx: &Context, ser: &mut Services) -> Result<Option<Str>, Error> {
+            fn _invoke(&mut self, ser: &mut Services, ctx: Context) -> Result<Option<Str>, Error> {
                 let store_func = std::mem::replace(&mut self.callback, None);
 
                 if let Some(mut func) = store_func {
-                    let ret = func.invoke(self, ctx, ser);
+                    let ret = func.invoke(self, ser, ctx);
 
                     // store the callback back
                     self.callback = Some(func);
@@ -267,6 +267,187 @@ macro_rules! simple_impl_noa {
                 } else {
                     Ok(None)
                 }
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! simple_impl_opt_for {
+    ($type:ty) => {
+        impl Opt for $type {
+            fn reset(&mut self) {
+                self._reset()
+            }
+
+            fn check(&self) -> bool {
+                self._check()
+            }
+
+            fn get_uid(&self) -> Uid {
+                self._get_uid()
+            }
+
+            fn set_uid(&mut self, uid: Uid) {
+                self._set_uid(uid)
+            }
+
+            fn set_setted(&mut self, setted: bool) {
+                self._set_setted(setted)
+            }
+
+            fn get_setted(&self) -> bool {
+                self._get_setted()
+            }
+
+            fn get_type_name(&self) -> Str {
+                self._get_type_name()
+            }
+
+            fn is_deactivate_style(&self) -> bool {
+                self._is_deactivate_style()
+            }
+
+            fn match_style(&self, style: OptStyle) -> bool {
+                self._match_style(style)
+            }
+
+            fn has_callback(&self) -> bool {
+                self._has_callback()
+            }
+
+            fn invoke_callback(
+                &mut self,
+                ser: &mut Services,
+                ctx: Context,
+            ) -> Result<Option<Str>, Error> {
+                self._invoke(ser, ctx)
+            }
+
+            fn check_value(
+                &mut self,
+                arg: Option<Str>,
+                disable: bool,
+                index: (usize, usize),
+            ) -> Result<bool, Error> {
+                self._chk_value(arg, disable, index)
+            }
+        }
+
+        impl Name for $type {
+            fn get_name(&self) -> Str {
+                self._get_name()
+            }
+
+            fn set_name(&mut self, name: Str) {
+                self._set_name(name)
+            }
+
+            fn match_name(&self, name: Str) -> bool {
+                self._match_name(name)
+            }
+        }
+
+        impl Prefix for $type {
+            fn get_prefix(&self) -> Option<Str> {
+                self._get_prefix()
+            }
+
+            fn set_prefix(&mut self, prefix: Option<Str>) {
+                self._set_prefix(prefix)
+            }
+
+            fn match_prefix(&self, prefix: Option<Str>) -> bool {
+                self._match_prefix(prefix)
+            }
+        }
+
+        impl Optional for $type {
+            fn get_optional(&self) -> bool {
+                self._get_optional()
+            }
+
+            fn set_optional(&mut self, optional: bool) {
+                self._set_optional(optional)
+            }
+
+            fn match_optional(&self, optional: bool) -> bool {
+                self._match_optional(optional)
+            }
+        }
+
+        impl Alias for $type {
+            fn get_alias(&self) -> Option<&Vec<(Str, Str)>> {
+                self._get_alias()
+            }
+
+            fn add_alias(&mut self, prefix: Str, name: Str) {
+                self._add_alias(prefix, name)
+            }
+
+            fn rem_alias(&mut self, prefix: Str, name: Str) {
+                self._rem_alias(prefix, name)
+            }
+
+            fn match_alias(&self, prefix: Str, name: Str) -> bool {
+                self._match_alias(prefix, name)
+            }
+        }
+
+        impl Help for $type {
+            fn get_hint(&self) -> Str {
+                self._get_hint()
+            }
+
+            fn get_help(&self) -> Str {
+                self._get_help()
+            }
+
+            fn set_hint(&mut self, hint: Str) {
+                self._set_hint(hint)
+            }
+
+            fn set_help(&mut self, help: Str) {
+                self._set_help(help)
+            }
+        }
+
+        impl Index for $type {
+            fn get_index(&self) -> Option<&OptIndex> {
+                self._get_index()
+            }
+
+            fn set_index(&mut self, index: Option<OptIndex>) {
+                self._set_index(index)
+            }
+
+            fn match_index(&self, index: Option<(usize, usize)>) -> bool {
+                self._match_index(index)
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! simple_impl_creator_for {
+    ($type:ty) => {
+        impl Creator for $type {
+            type Opt = <$type as ACreator>::Opt;
+
+            type Config = <$type as ACreator>::Config;
+
+            type Error = Error;
+
+            fn get_type_name(&self) -> Str {
+                self._get_type_name()
+            }
+
+            fn is_support_deactivate_style(&self) -> bool {
+                self._support_deactivate_style()
+            }
+
+            fn create_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
+                self._create_with(config)
             }
         }
     };

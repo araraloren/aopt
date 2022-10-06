@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use super::Service;
 use crate::astr;
 use crate::Error;
@@ -24,9 +26,20 @@ use crate::Uid;
 /// # }
 ///
 /// ```
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct ValueService<V> {
     rets: HashMap<Uid, Vec<V>>,
+}
+
+impl<V> Debug for ValueService<V>
+where
+    V: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ValueService")
+            .field("rets", &self.rets)
+            .finish()
+    }
 }
 
 impl<V> ValueService<V> {

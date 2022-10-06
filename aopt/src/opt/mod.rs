@@ -108,7 +108,7 @@ pub trait Opt: Name + Help + Alias + Index + Prefix + Optional + Debug {
 
     fn has_callback(&self) -> bool;
 
-    fn invoke_callback(&mut self, ctx: &Context, ser: &mut Services) -> Result<Option<Str>, Error>;
+    fn invoke_callback(&mut self, ser: &mut Services, ctx: Context) -> Result<Option<Str>, Error>;
 
     fn check_value(
         &mut self,

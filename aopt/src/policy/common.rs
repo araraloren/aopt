@@ -37,7 +37,7 @@ where
         ret = set
             .get_mut(uid)
             .unwrap()
-            .invoke_callback(&saver.ctx, ser)?
+            .invoke_callback(ser, saver.ctx)?
             .map(|v| Value::from(v));
     } else {
         // default value
@@ -140,7 +140,7 @@ where
                 ret = set
                     .get_mut(uid)
                     .unwrap()
-                    .invoke_callback(&ctx, ser)?
+                    .invoke_callback(ser, ctx)?
                     .map(|v| Value::from(v));
                 matched = ret.is_some();
             } else {

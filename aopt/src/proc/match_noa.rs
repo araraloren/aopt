@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use super::Match;
@@ -11,8 +12,7 @@ use crate::Error;
 use crate::Str;
 use crate::Uid;
 
-#[derive(Debug)]
-pub struct NOAMatch<S: Set> {
+pub struct NOAMatch<S> {
     name: Str,
 
     style: OptStyle,
@@ -28,10 +28,21 @@ pub struct NOAMatch<S: Set> {
     marker: PhantomData<S>,
 }
 
-impl<S> Default for NOAMatch<S>
-where
-    S: Set,
-{
+impl<S> Debug for NOAMatch<S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NOAMatch")
+            .field("name", &self.name)
+            .field("style", &self.style)
+            .field("noa_index", &self.noa_index)
+            .field("noa_total", &self.noa_total)
+            .field("matched_uid", &self.matched_uid)
+            .field("matched_index", &self.matched_index)
+            .field("marker", &self.marker)
+            .finish()
+    }
+}
+
+impl<S> Default for NOAMatch<S> {
     fn default() -> Self {
         Self {
             name: Str::default(),

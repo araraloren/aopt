@@ -12,7 +12,7 @@ pub struct Map(HashMap<TypeId, Box<dyn Any>>);
 
 impl Debug for Map {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Map").field(&"private data").finish()
+        f.debug_tuple("Map").field(&"{...}").finish()
     }
 }
 
@@ -120,7 +120,7 @@ pub struct RcMap(Rc<Map>);
 
 impl Debug for RcMap {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("RcMap").field(&"Rc(private data)").finish()
+        f.debug_tuple("RcMap").field(&self.0).finish()
     }
 }
 

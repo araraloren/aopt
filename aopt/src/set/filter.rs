@@ -85,18 +85,33 @@ pub struct Filter<'a, T, Parser, Ctor>
 where
     T: Opt,
     Ctor: Creator<Opt = T>,
-    Parser: OptParser + Debug,
+    Parser: OptParser,
     Ctor::Config: Config + ConfigValue,
 {
     info: Ctor::Config,
     set: &'a OptSet<T, Parser, Ctor>,
 }
 
+impl<'a, T, Parser, Ctor> Debug for Filter<'a, T, Parser, Ctor>
+where
+    T: Opt,
+    Ctor: Creator<Opt = T> + Debug,
+    Parser: OptParser + Debug,
+    Ctor::Config: Config + ConfigValue + Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Filter")
+            .field("info", &self.info)
+            .field("set", &self.set)
+            .finish()
+    }
+}
+
 impl<'a, T, Parser, Ctor> Filter<'a, T, Parser, Ctor>
 where
     T: Opt,
     Ctor: Creator<Opt = T>,
-    Parser: OptParser + Prefixed + Debug,
+    Parser: OptParser + Prefixed,
     Parser::Output: Information,
     Ctor::Config: Config + ConfigValue + Default,
 {
@@ -156,18 +171,33 @@ pub struct FilterMut<'a, T, Parser, Ctor>
 where
     T: Opt,
     Ctor: Creator<Opt = T>,
-    Parser: OptParser + Debug,
+    Parser: OptParser,
     Ctor::Config: Config + ConfigValue,
 {
     info: Ctor::Config,
     set: &'a mut OptSet<T, Parser, Ctor>,
 }
 
+impl<'a, T, Parser, Ctor> Debug for FilterMut<'a, T, Parser, Ctor>
+where
+    T: Opt,
+    Ctor: Creator<Opt = T> + Debug,
+    Parser: OptParser + Debug,
+    Ctor::Config: Config + ConfigValue + Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FilterMut")
+            .field("info", &self.info)
+            .field("set", &self.set)
+            .finish()
+    }
+}
+
 impl<'a, T, Parser, Ctor> FilterMut<'a, T, Parser, Ctor>
 where
     T: Opt,
     Ctor: Creator<Opt = T>,
-    Parser: OptParser + Prefixed + Debug,
+    Parser: OptParser + Prefixed,
     Parser::Output: Information,
     Ctor::Config: Config + ConfigValue + Default,
 {

@@ -2,7 +2,7 @@ use crate::Str;
 
 /// The help information of option.
 ///
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct Help {
     /// The option hint is used in `usage`.
     hint: Str,

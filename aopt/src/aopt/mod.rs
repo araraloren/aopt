@@ -6,7 +6,6 @@ pub(crate) mod aopt_main;
 pub(crate) mod aopt_pos;
 pub(crate) mod aopt_str;
 pub(crate) mod aopt_uint;
-pub(crate) mod creator;
 pub(crate) mod data;
 pub(crate) mod simple_macro;
 
@@ -26,7 +25,6 @@ pub use self::aopt_str::StrCreator;
 pub use self::aopt_str::StrOpt;
 pub use self::aopt_uint::UintCreator;
 pub use self::aopt_uint::UintOpt;
-pub use self::creator::ACreator;
 pub use self::data::UserData;
 
 use std::fmt::Debug;
@@ -34,6 +32,7 @@ use std::fmt::Debug;
 use crate::ctx::Context;
 use crate::err::Error;
 use crate::opt::Alias;
+use crate::opt::Creator;
 use crate::opt::Help;
 use crate::opt::Index;
 use crate::opt::Name;
@@ -43,6 +42,8 @@ use crate::opt::OptStyle;
 use crate::opt::Optional;
 use crate::opt::Prefix;
 use crate::prelude::Services;
+use crate::simple_impl_creator_for;
+use crate::simple_impl_opt_for;
 use crate::Str;
 use crate::Uid;
 
@@ -124,152 +125,62 @@ pub trait AOpt: Debug {
 
     fn _has_callback(&self) -> bool;
 
-    fn _invoke(&mut self, ctx: &Context, ser: &mut Services) -> Result<Option<Str>, Error>;
+    fn _invoke(&mut self, ser: &mut Services, ctx: Context) -> Result<Option<Str>, Error>;
 }
 
-impl Opt for Box<dyn AOpt> {
-    fn reset(&mut self) {
-        self._reset()
-    }
+simple_impl_opt_for!(BoolOpt);
+simple_impl_opt_for!(FltOpt);
+simple_impl_opt_for!(IntOpt);
+simple_impl_opt_for!(StrOpt);
+simple_impl_opt_for!(UintOpt);
+simple_impl_opt_for!(CmdOpt);
+simple_impl_opt_for!(MainOpt);
+simple_impl_opt_for!(PosOpt);
+simple_impl_opt_for!(Box<dyn AOpt>);
 
-    fn check(&self) -> bool {
-        self._check()
-    }
+pub trait ACreator {
+    type Opt;
+    type Config;
 
-    fn get_uid(&self) -> Uid {
-        self._get_uid()
-    }
+    fn _get_type_name(&self) -> Str;
 
-    fn set_uid(&mut self, uid: Uid) {
-        self._set_uid(uid)
-    }
+    fn _support_deactivate_style(&self) -> bool;
 
-    fn set_setted(&mut self, setted: bool) {
-        self._set_setted(setted)
-    }
+    fn _create_with(&mut self, config: Self::Config) -> Result<Self::Opt, Error>;
+}
 
-    fn get_setted(&self) -> bool {
-        self._get_setted()
+impl<Opt, Config> std::fmt::Debug for Box<dyn ACreator<Opt = Opt, Config = Config>> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Box")
+            .field(&format!("ACreator({})", self.get_type_name()))
+            .finish()
     }
+}
+
+impl<Opt, Config> Creator for Box<dyn ACreator<Opt = Opt, Config = Config>> {
+    type Opt = Opt;
+
+    type Config = Config;
+
+    type Error = Error;
 
     fn get_type_name(&self) -> Str {
         self._get_type_name()
     }
 
-    fn is_deactivate_style(&self) -> bool {
-        self._is_deactivate_style()
+    fn is_support_deactivate_style(&self) -> bool {
+        self._support_deactivate_style()
     }
 
-    fn match_style(&self, style: OptStyle) -> bool {
-        self._match_style(style)
-    }
-
-    fn has_callback(&self) -> bool {
-        self._has_callback()
-    }
-
-    fn invoke_callback(&mut self, ctx: &Context, ser: &mut Services) -> Result<Option<Str>, Error> {
-        self._invoke(ctx, ser)
-    }
-
-    fn check_value(
-        &mut self,
-        arg: Option<Str>,
-        disable: bool,
-        index: (usize, usize),
-    ) -> Result<bool, Error> {
-        self._chk_value(arg, disable, index)
+    fn create_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
+        self._create_with(config)
     }
 }
 
-impl Name for Box<dyn AOpt> {
-    fn get_name(&self) -> Str {
-        self._get_name()
-    }
-
-    fn set_name(&mut self, name: Str) {
-        self._set_name(name)
-    }
-
-    fn match_name(&self, name: Str) -> bool {
-        self._match_name(name)
-    }
-}
-
-impl Prefix for Box<dyn AOpt> {
-    fn get_prefix(&self) -> Option<Str> {
-        self._get_prefix()
-    }
-
-    fn set_prefix(&mut self, prefix: Option<Str>) {
-        self._set_prefix(prefix)
-    }
-
-    fn match_prefix(&self, prefix: Option<Str>) -> bool {
-        self._match_prefix(prefix)
-    }
-}
-
-impl Optional for Box<dyn AOpt> {
-    fn get_optional(&self) -> bool {
-        self._get_optional()
-    }
-
-    fn set_optional(&mut self, optional: bool) {
-        self._set_optional(optional)
-    }
-
-    fn match_optional(&self, optional: bool) -> bool {
-        self._match_optional(optional)
-    }
-}
-
-impl Alias for Box<dyn AOpt> {
-    fn get_alias(&self) -> Option<&Vec<(Str, Str)>> {
-        self._get_alias()
-    }
-
-    fn add_alias(&mut self, prefix: Str, name: Str) {
-        self._add_alias(prefix, name)
-    }
-
-    fn rem_alias(&mut self, prefix: Str, name: Str) {
-        self._rem_alias(prefix, name)
-    }
-
-    fn match_alias(&self, prefix: Str, name: Str) -> bool {
-        self._match_alias(prefix, name)
-    }
-}
-
-impl Help for Box<dyn AOpt> {
-    fn get_hint(&self) -> Str {
-        self._get_hint()
-    }
-
-    fn get_help(&self) -> Str {
-        self._get_help()
-    }
-
-    fn set_hint(&mut self, hint: Str) {
-        self._set_hint(hint)
-    }
-
-    fn set_help(&mut self, help: Str) {
-        self._set_help(help)
-    }
-}
-
-impl Index for Box<dyn AOpt> {
-    fn get_index(&self) -> Option<&OptIndex> {
-        self._get_index()
-    }
-
-    fn set_index(&mut self, index: Option<OptIndex>) {
-        self._set_index(index)
-    }
-
-    fn match_index(&self, index: Option<(usize, usize)>) -> bool {
-        self._match_index(index)
-    }
-}
+simple_impl_creator_for!(BoolCreator);
+simple_impl_creator_for!(FltCreator);
+simple_impl_creator_for!(IntCreator);
+simple_impl_creator_for!(UintCreator);
+simple_impl_creator_for!(CmdCreator);
+simple_impl_creator_for!(MainCreator);
+simple_impl_creator_for!(PosCreator);

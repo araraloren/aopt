@@ -20,18 +20,33 @@ pub struct Commit<'a, T, Parser, Ctor>
 where
     T: Opt,
     Ctor: Creator<Opt = T>,
-    Parser: OptParser + Debug,
+    Parser: OptParser,
     Ctor::Config: Config + ConfigValue,
 {
     info: Ctor::Config,
     set: &'a mut OptSet<T, Parser, Ctor>,
 }
 
+impl<'a, T, Parser, Ctor> Debug for Commit<'a, T, Parser, Ctor>
+where
+    T: Opt,
+    Ctor: Creator<Opt = T> + Debug,
+    Parser: OptParser + Debug,
+    Ctor::Config: Config + ConfigValue + Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Commit")
+            .field("info", &self.info)
+            .field("set", &self.set)
+            .finish()
+    }
+}
+
 impl<'a, T, Parser, Ctor> Commit<'a, T, Parser, Ctor>
 where
     T: Opt,
     Ctor: Creator<Opt = T>,
-    Parser: OptParser + Prefixed + Debug,
+    Parser: OptParser + Prefixed,
     Parser::Output: Information,
     Ctor::Config: Config + ConfigValue + Default,
 {

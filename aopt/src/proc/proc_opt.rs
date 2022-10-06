@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use super::Match;
 use super::OptMatch;
 use super::Process;
@@ -8,17 +10,22 @@ use crate::Error;
 use crate::Uid;
 
 /// OptProcess matching the [`Opt`] against [`OptMatch`].
-#[derive(Debug)]
-pub struct OptProcess<S: Set> {
+pub struct OptProcess<S> {
     matches: Vec<OptMatch<S>>,
 
     consume_arg: bool,
 }
 
-impl<S> OptProcess<S>
-where
-    S: Set,
-{
+impl<S> Debug for OptProcess<S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OptProcess")
+            .field("matches", &self.matches)
+            .field("consume_arg", &self.consume_arg)
+            .finish()
+    }
+}
+
+impl<S> OptProcess<S> {
     pub fn new(matches: Vec<OptMatch<S>>) -> Self {
         Self {
             matches,

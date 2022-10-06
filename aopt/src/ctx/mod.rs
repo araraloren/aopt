@@ -8,23 +8,19 @@ pub use self::handler::Handler;
 
 use std::fmt::Debug;
 
-use crate::prelude::Services;
-use crate::set::Set;
+use crate::ser::Services;
 use crate::Error;
 use crate::Uid;
 
 /// The callback used in [`InvokeService`](crate::ser::InvokeService`).
-pub trait Callback<S>
-where
-    S: Set,
-{
+pub trait Callback<Set> {
     type Value;
     type Error: Into<Error>;
 
     fn invoke(
         &mut self,
         uid: Uid,
-        set: &mut S,
+        set: &mut Set,
         ser: &mut Services,
         ctx: Context,
     ) -> Result<Self::Value, Self::Error>;
@@ -32,7 +28,6 @@ where
 
 impl<Func, Set, Value, Err> Callback<Set> for Func
 where
-    Set: crate::set::Set,
     Err: Into<Error>,
     Func: FnMut(Uid, &mut Set, &mut Services, Context) -> Result<Value, Err>,
 {
@@ -73,7 +68,6 @@ impl<Set, Value, Error> Debug for Callbacks<Set, Value, Error> {
 /// ```
 pub fn wrap_callback<Set, H, Args, Value, Error>(mut handler: H) -> Callbacks<Set, Value, Error>
 where
-    Set: crate::set::Set,
     Error: Into<crate::Error>,
     H::Output: Into<Option<Value>>,
     H: Handler<Set, Args, Error = Error> + 'static,

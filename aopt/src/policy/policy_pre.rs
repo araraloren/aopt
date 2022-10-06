@@ -33,19 +33,11 @@ use crate::Str;
 /// [`PrePolicy`] will return the left `NOA`s after parsing.
 /// [`PrePolicy`] don't consume the `NOA` when process [`NOAMatch`](crate::proc::NOAMatch).
 #[derive(Debug, Clone)]
-pub struct PrePolicy<S, V>
-where
-    V: From<Str>,
-    S: Set + OptParser,
-{
+pub struct PrePolicy<S, V> {
     marker_s: PhantomData<(S, V)>,
 }
 
-impl<S, V> Default for PrePolicy<S, V>
-where
-    V: From<Str>,
-    S: Set + OptParser,
-{
+impl<S, V> Default for PrePolicy<S, V> {
     fn default() -> Self {
         Self {
             marker_s: PhantomData::default(),

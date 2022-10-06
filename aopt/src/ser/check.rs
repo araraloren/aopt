@@ -12,9 +12,7 @@ use crate::StrJoin;
 use crate::Uid;
 
 #[derive(Debug, Default)]
-pub struct CheckService<S, V>(PhantomData<(S, V)>)
-where
-    S: Set;
+pub struct CheckService<S, V>(PhantomData<(S, V)>);
 
 impl<S, V> CheckService<S, V>
 where
@@ -171,10 +169,7 @@ where
     }
 }
 
-impl<S, V> Service for CheckService<S, V>
-where
-    S: Set,
-{
+impl<S, V> Service for CheckService<S, V> {
     fn service_name() -> crate::Str {
         astr("CheckService")
     }

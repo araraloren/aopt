@@ -17,7 +17,7 @@
 ///             |    option -b
 ///         option -a and its value
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum Index {
     /// The forward index of NOA.
     ///

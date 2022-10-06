@@ -1,35 +1,33 @@
 use super::Context;
-use crate::prelude::Services;
-use crate::set::Set;
+use crate::ser::Services;
 use crate::Error;
 use crate::Uid;
 
 /// Implement the trait if your want use your type in the
 /// [`Callback`](super::Callback) of [`InvokeService`](crate::ser::InvokeService).
-pub trait ExtractFromCtx<S>
+pub trait ExtractFromCtx<Set>
 where
     Self: Sized,
-    S: Set,
 {
     type Error: Into<Error>;
 
     fn extract_from(
         uid: Uid,
-        set: &S,
+        set: &Set,
         ser: &mut Services,
         ctx: Context,
     ) -> Result<Self, Self::Error>;
 }
 
-impl<S> ExtractFromCtx<S> for ()
+impl<Set> ExtractFromCtx<Set> for ()
 where
-    S: Set,
+    Set: crate::set::Set,
 {
     type Error = Error;
 
     fn extract_from(
         _uid: Uid,
-        _set: &S,
+        _set: &Set,
         _ser: &mut Services,
         _ctx: Context,
     ) -> Result<Self, Self::Error> {
@@ -39,16 +37,15 @@ where
 
 macro_rules! impl_extracter_for {
     ($($arg:ident)*) => {
-        impl<S, $($arg,)*> ExtractFromCtx<S> for ($($arg,)*)
+        impl<Set, $($arg,)*> ExtractFromCtx<Set> for ($($arg,)*)
         where
-            S: Set,
             $(
-                $arg: ExtractFromCtx<S, Error = Error> + 'static,
+                $arg: ExtractFromCtx<Set, Error = Error> + 'static,
             )*
         {
             type Error = Error;
 
-            fn extract_from(uid: Uid, set: &S, ser: &mut Services, ctx: Context) -> Result<Self, Self::Error> {
+            fn extract_from(uid: Uid, set: &Set, ser: &mut Services, ctx: Context) -> Result<Self, Self::Error> {
                 Ok(($($arg::extract_from(uid, set, ser, ctx.clone())?,)*))
             }
         }

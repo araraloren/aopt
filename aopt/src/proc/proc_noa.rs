@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use super::Match;
 use super::NOAMatch;
 use super::Process;
@@ -8,17 +10,22 @@ use crate::Error;
 use crate::Uid;
 
 /// OptProcess matching the [`Opt`] against [`NOAMatch`].
-#[derive(Debug)]
-pub struct NOAProcess<S: Set> {
+pub struct NOAProcess<S> {
     matches: Option<NOAMatch<S>>,
 
     consume_arg: bool,
 }
 
-impl<S> NOAProcess<S>
-where
-    S: Set,
-{
+impl<S> Debug for NOAProcess<S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NOAProcess")
+            .field("matches", &self.matches)
+            .field("consume_arg", &self.consume_arg)
+            .finish()
+    }
+}
+
+impl<S> NOAProcess<S> {
     pub fn new(matches: Option<NOAMatch<S>>) -> Self {
         Self {
             matches,
