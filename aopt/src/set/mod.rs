@@ -60,10 +60,6 @@ where
     }
 }
 
-pub trait ASetExt {
-    fn new_default() -> Self;
-}
-
 /// Prefix using for parsing option string.
 pub trait Prefixed {
     fn get_prefix(&self) -> &[Str];

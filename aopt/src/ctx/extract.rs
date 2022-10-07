@@ -40,7 +40,7 @@ macro_rules! impl_extracter_for {
         impl<Set, $($arg,)*> ExtractFromCtx<Set> for ($($arg,)*)
         where
             $(
-                $arg: ExtractFromCtx<Set, Error = Error> + 'static,
+                $arg: ExtractFromCtx<Set, Error = Error>,
             )*
         {
             type Error = Error;

@@ -3,7 +3,6 @@ use std::marker::PhantomData;
 
 use super::process_non_opt;
 use super::process_opt;
-use super::APolicyExt;
 use super::Guess;
 use super::GuessNOACfg;
 use super::GuessOptCfg;
@@ -11,39 +10,32 @@ use super::NOAGuess;
 use super::OptGuess;
 use super::Policy;
 use super::UserStyle;
+use crate::aext::APolicyExt;
+use crate::aext::AServiceExt;
+use crate::aext::ASetExt;
 use crate::arg::Args;
 use crate::arg::CLOptParser;
 use crate::astr;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::proc::Process;
-use crate::ser::AServiceExt;
 use crate::ser::CheckService;
 use crate::ser::InvokeService;
 use crate::ser::Services;
 use crate::ser::ServicesExt;
-use crate::set::ASetExt;
 use crate::set::Prefixed;
 use crate::set::Set;
 use crate::Error;
 use crate::Str;
 
 #[derive(Debug, Clone)]
-pub struct ForwardPolicy<S, V>
-where
-    V: From<Str>,
-    S: Set + OptParser,
-{
+pub struct ForwardPolicy<S, V> {
     strict: bool,
 
     marker_s: PhantomData<(S, V)>,
 }
 
-impl<S, V> Default for ForwardPolicy<S, V>
-where
-    V: From<Str>,
-    S: Set + OptParser,
-{
+impl<S, V> Default for ForwardPolicy<S, V> {
     fn default() -> Self {
         Self {
             strict: true,
@@ -52,24 +44,19 @@ where
     }
 }
 
-impl<S, V> APolicyExt<S, V> for ForwardPolicy<S, V>
-where
-    V: From<Str> + 'static,
-    S::Opt: Opt,
-    S: Set + OptParser + Debug + 'static,
-{
+impl<S: 'static, V: 'static> APolicyExt<S, V> for ForwardPolicy<S, V> {
     fn new_set<T>() -> T
     where
-        T: ASetExt + Set + OptParser + Debug + 'static,
+        T: ASetExt + Set + OptParser,
     {
-        T::new_default()
+        T::new_set()
     }
 
     fn new_services<T>() -> T
     where
         T: AServiceExt<S, V>,
     {
-        T::new_default()
+        T::new_services()
     }
 }
 

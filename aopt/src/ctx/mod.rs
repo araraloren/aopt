@@ -71,7 +71,7 @@ where
     Error: Into<crate::Error>,
     H::Output: Into<Option<Value>>,
     H: Handler<Set, Args, Error = Error> + 'static,
-    Args: ExtractFromCtx<Set, Error = Error> + 'static,
+    Args: ExtractFromCtx<Set, Error = Error>,
 {
     Box::new(
         move |uid: Uid, set: &mut Set, ser: &mut Services, ctx: Context| {

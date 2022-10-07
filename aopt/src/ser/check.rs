@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use super::Service;
@@ -5,29 +6,41 @@ use crate::astr;
 use crate::opt::Opt;
 use crate::opt::OptIndex;
 use crate::opt::OptStyle;
-use crate::set::Set;
 use crate::Error;
 use crate::HashMap;
 use crate::StrJoin;
 use crate::Uid;
 
-#[derive(Debug, Default)]
-pub struct CheckService<S, V>(PhantomData<(S, V)>);
+pub struct CheckService<Set, Value>(PhantomData<(Set, Value)>);
 
-impl<S, V> CheckService<S, V>
-where
-    S: Set,
-    S::Opt: Opt,
-{
+impl<Set, Value> Debug for CheckService<Set, Value> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CheckService").finish()
+    }
+}
+
+impl<Set, Value> Default for CheckService<Set, Value> {
+    fn default() -> Self {
+        Self(PhantomData::default())
+    }
+}
+
+impl<Set, Value> CheckService<Set, Value> {
     pub fn new() -> Self {
         Self(PhantomData::default())
     }
+}
 
-    pub fn opt<'a>(set: &'a S, id: &Uid) -> &'a dyn Opt {
+impl<Set, Value> CheckService<Set, Value>
+where
+    Set: crate::set::Set,
+    Set::Opt: Opt,
+{
+    pub fn opt<'a>(set: &'a Set, id: &Uid) -> &'a dyn Opt {
         set.get(*id).unwrap()
     }
 
-    pub fn pre_check(&self, set: &mut S) -> Result<bool, Error> {
+    pub fn pre_check(&self, set: &mut Set) -> Result<bool, Error> {
         let has_cmd = set
             .keys()
             .iter()
@@ -53,7 +66,7 @@ where
         Ok(true)
     }
 
-    pub fn opt_check(&self, set: &mut S) -> Result<bool, Error> {
+    pub fn opt_check(&self, set: &mut Set) -> Result<bool, Error> {
         Ok(set
             .keys()
             .iter()
@@ -69,7 +82,7 @@ where
     /// Check if the POS is valid.
     /// For which POS is have certainty position, POS has same position are replaceble even it is force reuqired.
     /// For which POS is have uncertainty position, it must be set if it is force reuqired.
-    pub fn pos_check(&self, set: &mut S) -> Result<bool, Error> {
+    pub fn pos_check(&self, set: &mut Set) -> Result<bool, Error> {
         // for POS has certainty position, POS has same position are replaceble even it is force reuqired.
         let mut index_map = HashMap::<usize, Vec<Uid>>::default();
         // for POS has uncertainty position, it must be set if it is force reuqired
@@ -138,7 +151,7 @@ where
         Ok(true)
     }
 
-    pub fn cmd_check(&self, set: &mut S) -> Result<bool, Error> {
+    pub fn cmd_check(&self, set: &mut Set) -> Result<bool, Error> {
         let mut names = vec![];
         let mut valid = false;
 
@@ -160,7 +173,7 @@ where
         Ok(true)
     }
 
-    pub fn post_check(&self, set: &mut S) -> Result<bool, Error> {
+    pub fn post_check(&self, set: &mut Set) -> Result<bool, Error> {
         Ok(set
             .keys()
             .iter()
@@ -169,7 +182,7 @@ where
     }
 }
 
-impl<S, V> Service for CheckService<S, V> {
+impl<Set, Value> Service for CheckService<Set, Value> {
     fn service_name() -> crate::Str {
         astr("CheckService")
     }

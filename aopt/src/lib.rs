@@ -1,3 +1,4 @@
+pub mod aext;
 pub mod aopt;
 pub mod arg;
 pub mod ctx;
@@ -9,14 +10,13 @@ pub mod proc;
 pub mod ser;
 pub mod set;
 pub mod str;
-//pub mod data;
 
+use aext::ASetExt;
 use aopt::ACreator;
 use aopt::AOpt;
 use opt::OptConfig;
 use opt::OptStringParser;
 use ser::Services;
-use set::ASetExt;
 use set::OptSet;
 
 pub type Uid = u64;
@@ -53,7 +53,7 @@ impl DefaultSetConfig for SimpleSet {
 }
 
 impl ASetExt for SimpleSet {
-    fn new_default() -> Self {
+    fn new_set() -> Self {
         Self::default().with_default_prefix().with_default_creator()
     }
 }
@@ -75,6 +75,9 @@ where
 
 pub mod prelude {
     //pub use crate::data;
+    pub use crate::aext::APolicyExt;
+    pub use crate::aext::AServiceExt;
+    pub use crate::aext::ASetExt;
     pub use crate::aopt::ACreator;
     pub use crate::aopt::AOpt;
     pub use crate::aopt::BoolCreator;
@@ -124,7 +127,6 @@ pub mod prelude {
     pub use crate::opt::OptStyle;
     pub use crate::opt::Optional;
     pub use crate::opt::Prefix;
-    pub use crate::policy::APolicyExt;
     pub use crate::policy::ContextSaver;
     pub use crate::policy::DelayPolicy;
     pub use crate::policy::ForwardPolicy;
@@ -136,7 +138,6 @@ pub mod prelude {
     pub use crate::proc::OptMatch;
     pub use crate::proc::OptProcess;
     pub use crate::proc::Process;
-    pub use crate::ser::AServiceExt;
     pub use crate::ser::CheckService;
     pub use crate::ser::DataService;
     pub use crate::ser::InvokeService;
@@ -144,7 +145,6 @@ pub mod prelude {
     pub use crate::ser::Services;
     pub use crate::ser::ServicesExt;
     pub use crate::ser::ValueService;
-    pub use crate::set::ASetExt;
     pub use crate::set::Commit;
     pub use crate::set::OptSet;
     pub use crate::set::Prefixed;

@@ -18,14 +18,9 @@ pub use self::policy_pre::PrePolicy;
 
 use crate::arg::Args;
 use crate::ctx::Context;
-use crate::opt::Opt;
-use crate::opt::OptParser;
-use crate::prelude::AServiceExt;
 use crate::ser::Services;
-use crate::set::ASetExt;
 use crate::set::Set;
 use crate::Error;
-use crate::Str;
 use crate::Uid;
 use std::fmt::Debug;
 
@@ -51,19 +46,4 @@ pub trait Policy {
         ser: &mut Services,
         set: &mut Self::Set,
     ) -> Result<Option<Self::Value>, Self::Error>;
-}
-
-pub trait APolicyExt<S, V>
-where
-    V: From<Str> + 'static,
-    S::Opt: Opt,
-    S: Set + OptParser + Debug + 'static,
-{
-    fn new_set<T>() -> T
-    where
-        T: ASetExt + Set + OptParser + Debug + 'static;
-
-    fn new_services<T>() -> T
-    where
-        T: AServiceExt<S, V>;
 }

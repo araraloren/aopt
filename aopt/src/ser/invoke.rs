@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use super::ExtractFromCtx;
 use super::Handler;
 use super::Services;
@@ -7,7 +9,6 @@ use crate::ctx::Callbacks;
 use crate::ctx::Context;
 use crate::opt::Opt;
 use crate::ser::Service;
-use crate::set::Set;
 use crate::Error;
 use crate::HashMap;
 use crate::Str;
@@ -48,26 +49,36 @@ use crate::Uid;
 ///     Ok(())
 /// }
 /// ```
-#[derive(Debug, Default)]
-pub struct InvokeService<S, V>
-where
-    S: Set,
-{
-    callbacks: HashMap<Uid, Callbacks<S, V, Error>>,
+pub struct InvokeService<Set, Value> {
+    callbacks: HashMap<Uid, Callbacks<Set, Value, Error>>,
 }
 
-impl<S, V> InvokeService<S, V>
-where
-    S: Set,
-    V: From<Str>,
-{
+impl<Set, Value> Debug for InvokeService<Set, Value> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("InvokeService")
+            .field("callbacks", &self.callbacks)
+            .finish()
+    }
+}
+
+impl<Set, Value> Default for InvokeService<Set, Value> {
+    fn default() -> Self {
+        Self {
+            callbacks: HashMap::default(),
+        }
+    }
+}
+
+impl<Set, Value> InvokeService<Set, Value> {
     pub fn new() -> Self {
         Self {
             callbacks: HashMap::default(),
         }
     }
+}
 
-    pub fn register_raw(&mut self, uid: Uid, handler: Callbacks<S, V, Error>) -> &mut Self {
+impl<Set, Value> InvokeService<Set, Value> {
+    pub fn register_raw(&mut self, uid: Uid, handler: Callbacks<Set, Value, Error>) -> &mut Self {
         self.callbacks.insert(uid, handler);
         self
     }
@@ -75,8 +86,8 @@ where
     /// Register a callback that will called by [`Policy`](crate::policy::Policy) when option setted.
     pub fn register<H, Args>(&mut self, uid: Uid, handler: H) -> &mut Self
     where
-        Args: ExtractFromCtx<S, Error = Error> + 'static,
-        H: Handler<S, Args, Output = Option<V>, Error = Error> + 'static,
+        Args: ExtractFromCtx<Set, Error = Error> + 'static,
+        H: Handler<Set, Args, Output = Option<Value>, Error = Error> + 'static,
     {
         self.callbacks.insert(uid, wrap_callback(handler));
         self
@@ -87,20 +98,20 @@ where
     }
 }
 
-impl<S, V> InvokeService<S, V>
+impl<Set, Value> InvokeService<Set, Value>
 where
-    S: Set,
-    V: From<Str>,
-    S::Opt: Opt,
+    Set: crate::set::Set,
+    Value: From<Str>,
+    Set::Opt: Opt,
 {
     /// Invoke the callback saved in [`InvokeService`], return None if the callback not exist.
     pub fn invoke(
         &mut self,
         uid: Uid,
-        set: &mut S,
+        set: &mut Set,
         ser: &mut Services,
         ctx: Context,
-    ) -> Result<Option<V>, Error> {
+    ) -> Result<Option<Value>, Error> {
         if let Some(callback) = self.callbacks.get_mut(&uid) {
             Ok(callback.invoke(uid, set, ser, ctx)?)
         } else {
@@ -109,10 +120,7 @@ where
     }
 }
 
-impl<S, V> Service for InvokeService<S, V>
-where
-    S: Set,
-{
+impl<S, V> Service for InvokeService<S, V> {
     fn service_name() -> Str {
         astr("InvokeService")
     }

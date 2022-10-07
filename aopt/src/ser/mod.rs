@@ -5,20 +5,19 @@ pub(crate) mod value;
 
 pub use self::check::CheckService;
 pub use self::invoke::InvokeService;
-use self::noa::NOAService;
+pub use self::noa::NOAService;
 pub use self::value::ValueService;
 
 pub type DataService = RcMap;
 
 use std::fmt::Debug;
 
+use crate::aext::AServiceExt;
 use crate::astr;
 use crate::ctx::ExtractFromCtx;
 use crate::ctx::Handler;
 use crate::map::Map;
 use crate::map::RcMap;
-use crate::opt::Opt;
-use crate::set::Set;
 use crate::typeid;
 use crate::Error;
 use crate::Str;
@@ -194,76 +193,13 @@ impl ServicesExt for Services {
     }
 }
 
-pub trait AServiceExt<S, V>
-where
-    S: Set + 'static,
-    V: From<Str> + 'static,
-    S::Opt: Opt,
-{
-    fn new_default() -> Self;
-
-    fn noa_service(&self) -> &NOAService;
-
-    fn noa_service_mut(&mut self) -> &mut NOAService;
-
-    fn data_service(&self) -> &DataService;
-
-    fn data_service_mut(&mut self) -> &mut DataService;
-
-    fn value_service(&self) -> &ValueService<V>;
-
-    fn value_service_mut(&mut self) -> &mut ValueService<V>;
-
-    fn invoke_service(&self) -> &InvokeService<S, V>;
-
-    fn invoke_service_mut(&mut self) -> &mut InvokeService<S, V>;
-
-    fn check_service(&self) -> &CheckService<S, V>;
-
-    fn check_service_mut(&mut self) -> &mut CheckService<S, V>;
-
-    fn get_data<T>(&self) -> Option<&T>
-    where
-        T: 'static;
-
-    fn get_data_mut<T>(&mut self) -> Option<&mut T>
-    where
-        T: 'static;
-
-    fn ins_data<T>(&mut self, value: T) -> Option<T>
-    where
-        T: 'static;
-
-    fn rem_data<T>(&mut self) -> Option<T>
-    where
-        T: 'static;
-
-    fn get_val(&self, uid: Uid) -> Option<&V>;
-
-    fn get_vals(&self, uid: Uid) -> Option<&Vec<V>>;
-
-    fn get_val_mut(&mut self, uid: Uid) -> Option<&mut V>;
-
-    fn get_vals_mut(&mut self, uid: Uid) -> Option<&mut Vec<V>>;
-
-    fn reg_callback<H, Args>(&mut self, uid: Uid, handler: H) -> &mut Self
-    where
-        Args: ExtractFromCtx<S, Error = Error> + 'static,
-        H: Handler<S, Args, Output = Option<V>, Error = Error> + 'static;
-}
-
-impl<S, V> AServiceExt<S, V> for Services
-where
-    S: Set + 'static,
-    V: From<Str> + 'static,
-    S::Opt: Opt,
-{
-    fn new_default() -> Self {
+impl<Set: 'static, Value: 'static> AServiceExt<Set, Value> for Services {
+    fn new_services() -> Self {
         Services::new()
-            .with(ValueService::<V>::new())
+            .with(ValueService::<Value>::new())
             .with(DataService::new())
-            .with(InvokeService::<S, V>::new())
-            .with(CheckService::<S, V>::new())
+            .with(InvokeService::<Set, Value>::new())
+            .with(CheckService::<Set, Value>::new())
     }
 
     fn noa_service(&self) -> &NOAService {
@@ -282,54 +218,28 @@ where
         self.get_mut::<DataService>().unwrap()
     }
 
-    fn value_service(&self) -> &ValueService<V>
-    where
-        V: From<Str> + 'static,
-    {
-        self.get::<ValueService<V>>().unwrap()
+    fn value_service(&self) -> &ValueService<Value> {
+        self.get::<ValueService<Value>>().unwrap()
     }
 
-    fn value_service_mut(&mut self) -> &mut ValueService<V>
-    where
-        V: From<Str> + 'static,
-    {
-        self.get_mut::<ValueService<V>>().unwrap()
+    fn value_service_mut(&mut self) -> &mut ValueService<Value> {
+        self.get_mut::<ValueService<Value>>().unwrap()
     }
 
-    fn invoke_service(&self) -> &InvokeService<S, V>
-    where
-        S: Set + 'static,
-        V: From<Str> + 'static,
-        S::Opt: Opt,
-    {
-        self.get::<InvokeService<S, V>>().unwrap()
+    fn invoke_service(&self) -> &InvokeService<Set, Value> {
+        self.get::<InvokeService<Set, Value>>().unwrap()
     }
 
-    fn invoke_service_mut(&mut self) -> &mut InvokeService<S, V>
-    where
-        S: Set + 'static,
-        V: From<Str> + 'static,
-        S::Opt: Opt,
-    {
-        self.get_mut::<InvokeService<S, V>>().unwrap()
+    fn invoke_service_mut(&mut self) -> &mut InvokeService<Set, Value> {
+        self.get_mut::<InvokeService<Set, Value>>().unwrap()
     }
 
-    fn check_service(&self) -> &CheckService<S, V>
-    where
-        S: Set + 'static,
-        V: From<Str> + 'static,
-        S::Opt: Opt,
-    {
-        self.get::<CheckService<S, V>>().unwrap()
+    fn check_service(&self) -> &CheckService<Set, Value> {
+        self.get::<CheckService<Set, Value>>().unwrap()
     }
 
-    fn check_service_mut(&mut self) -> &mut CheckService<S, V>
-    where
-        S: Set + 'static,
-        V: From<Str> + 'static,
-        S::Opt: Opt,
-    {
-        self.get_mut::<CheckService<S, V>>().unwrap()
+    fn check_service_mut(&mut self) -> &mut CheckService<Set, Value> {
+        self.get_mut::<CheckService<Set, Value>>().unwrap()
     }
 
     fn get_data<T>(&self) -> Option<&T>
@@ -360,30 +270,30 @@ where
         self.get_mut::<DataService>().and_then(|v| v.remove::<T>())
     }
 
-    fn get_val(&self, uid: Uid) -> Option<&V> {
-        self.get::<ValueService<V>>().and_then(|v| v.val(uid))
+    fn get_val(&self, uid: Uid) -> Option<&Value> {
+        self.get::<ValueService<Value>>().and_then(|v| v.val(uid))
     }
 
-    fn get_vals(&self, uid: Uid) -> Option<&Vec<V>> {
-        self.get::<ValueService<V>>().and_then(|v| v.vals(uid))
+    fn get_vals(&self, uid: Uid) -> Option<&Vec<Value>> {
+        self.get::<ValueService<Value>>().and_then(|v| v.vals(uid))
     }
 
-    fn get_val_mut(&mut self, uid: Uid) -> Option<&mut V> {
-        self.get_mut::<ValueService<V>>()
+    fn get_val_mut(&mut self, uid: Uid) -> Option<&mut Value> {
+        self.get_mut::<ValueService<Value>>()
             .and_then(|v| v.val_mut(uid))
     }
 
-    fn get_vals_mut(&mut self, uid: Uid) -> Option<&mut Vec<V>> {
-        self.get_mut::<ValueService<V>>()
+    fn get_vals_mut(&mut self, uid: Uid) -> Option<&mut Vec<Value>> {
+        self.get_mut::<ValueService<Value>>()
             .and_then(|v| v.vals_mut(uid))
     }
 
     fn reg_callback<H, Args>(&mut self, uid: Uid, handler: H) -> &mut Self
     where
-        Args: ExtractFromCtx<S, Error = Error> + 'static,
-        H: Handler<S, Args, Output = Option<V>, Error = Error> + 'static,
+        Args: ExtractFromCtx<Set, Error = Error> + 'static,
+        H: Handler<Set, Args, Output = Option<Value>, Error = Error> + 'static,
     {
-        if let Some(v) = self.get_mut::<InvokeService<S, V>>() {
+        if let Some(v) = self.get_mut::<InvokeService<Set, Value>>() {
             v.register(uid, handler);
         } else {
             panic!(
