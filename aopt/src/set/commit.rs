@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use super::Prefixed;
+use super::PreSet;
 use crate::opt::Config;
 use crate::opt::ConfigValue;
 use crate::opt::Creator;
@@ -46,7 +46,7 @@ impl<'a, T, Parser, Ctor> Commit<'a, T, Parser, Ctor>
 where
     T: Opt,
     Ctor: Creator<Opt = T>,
-    Parser: OptParser + Prefixed,
+    Parser: OptParser + PreSet,
     Parser::Output: Information,
     Ctor::Config: Config + ConfigValue + Default,
 {
@@ -54,11 +54,11 @@ where
         Self { set, info }
     }
 
-    pub fn config(&self) -> &Ctor::Config {
+    pub fn cfg(&self) -> &Ctor::Config {
         &self.info
     }
 
-    pub fn config_mut(&mut self) -> &mut Ctor::Config {
+    pub fn cfg_mut(&mut self) -> &mut Ctor::Config {
         &mut self.info
     }
 
@@ -69,20 +69,20 @@ where
     }
 
     /// Set the option prefix of commit configuration.
-    pub fn set_prefix<S: Into<Str>>(&mut self, prefix: S) -> &mut Self {
-        self.info.set_prefix(prefix);
+    pub fn set_pre<S: Into<Str>>(&mut self, prefix: S) -> &mut Self {
+        self.info.set_pre(prefix);
         self
     }
 
     /// Set the option type name of commit configuration.
-    pub fn set_type_name<S: Into<Str>>(&mut self, type_name: S) -> &mut Self {
-        self.info.set_type_name(type_name);
+    pub fn set_ty<S: Into<Str>>(&mut self, type_name: S) -> &mut Self {
+        self.info.set_ty(type_name);
         self
     }
 
     /// Set the option index of commit configuration.
-    pub fn set_index(&mut self, index: OptIndex) -> &mut Self {
-        self.info.set_index(index);
+    pub fn set_idx(&mut self, index: OptIndex) -> &mut Self {
+        self.info.set_idx(index);
         self
     }
 
@@ -105,8 +105,8 @@ where
     }
 
     /// Set the option optional of commit configuration.
-    pub fn set_optional(&mut self, optional: bool) -> &mut Self {
-        self.info.set_optional(optional);
+    pub fn set_opt(&mut self, optional: bool) -> &mut Self {
+        self.info.set_opt(optional);
         self
     }
 
@@ -123,8 +123,8 @@ where
     }
 
     /// Set the option deactivate style of commit configuration.
-    pub fn set_deactivate_style(&mut self, deactivate_style: bool) -> &mut Self {
-        self.info.set_deactivate_style(deactivate_style);
+    pub fn set_deact(&mut self, deactivate_style: bool) -> &mut Self {
+        self.info.set_deact(deactivate_style);
         self
     }
 
@@ -143,13 +143,13 @@ where
     /// And add it to referenced [`OptSet`], return the new option [`Uid`].
     pub fn run(&mut self) -> Result<Uid, Error> {
         let info = std::mem::take(&mut self.info);
-        let type_name = info.gen_type_name()?;
+        let type_name = info.gen_ty()?;
         let opt = self
             .set
-            .get_creator(&type_name)
+            .ctor(&type_name)
             .as_mut()
             .ok_or_else(|| Error::con_unsupport_option_type(type_name))?
-            .create_with(info)
+            .new_with(info)
             .map_err(|e| e.into())?;
 
         Ok(self.set.insert(opt))

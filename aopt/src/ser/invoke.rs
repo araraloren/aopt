@@ -1,12 +1,12 @@
 use std::fmt::Debug;
 
-use super::ExtractFromCtx;
+use super::ExtractCtx;
 use super::Handler;
 use super::Services;
 use crate::astr;
 use crate::ctx::wrap_callback;
 use crate::ctx::Callbacks;
-use crate::ctx::Context;
+use crate::ctx::Ctx;
 use crate::opt::Opt;
 use crate::ser::Service;
 use crate::Error;
@@ -18,31 +18,31 @@ use crate::Uid;
 ///
 /// # Example
 /// ```rust
-/// # use aopt_stable::aopt::UserData;
 /// # use aopt_stable::prelude::*;
 /// # use aopt_stable::Error;
 /// # use aopt_stable::Result;
+/// # use ctx::Data;
 /// #
 /// pub struct Arg(Str);
 ///
-/// // implement ExtractFromCtx for your type
-/// impl ExtractFromCtx<SimpleSet> for Arg {
+/// // implement ExtractCtx for your type
+/// impl ExtractCtx<SimSet> for Arg {
 ///     type Error = Error;
 ///
-///     fn extract_from(_uid: Uid, _set: &SimpleSet, _ser: &mut Services, ctx: Context) -> Result<Self> {
-///         Ok(Arg(ctx.get_argument().unwrap_or_default()))
+///     fn extract(_uid: Uid, _set: &SimSet, _ser: &Services, ctx: &Ctx) -> Result<Self> {
+///         Ok(Arg(ctx.arg().unwrap_or_default()))
 ///     }
 /// }
 ///
 /// fn main() -> Result<()> {
-///     let mut is = InvokeService::<SimpleSet, Str>::new();
+///     let mut is = InvokeService::<SimSet, Str>::new();
 ///
 ///     // you can register callback into InvokeService
-///     is.register(0, |_uid: Uid, _set: &mut SimpleSet| Ok(None));
-///     is.register(0, |_uid: Uid, _set: &mut SimpleSet, arg: Arg| {
+///     is.reg(0, |_uid: Uid, _set: &mut SimSet| Ok(None));
+///     is.reg(0, |_uid: Uid, _set: &mut SimSet, arg: Arg| {
 ///         Ok(Some(arg.0.clone()))
 ///     });
-///     is.register(0, |_uid: Uid, _set: &mut SimpleSet, data: UserData<i64>| {
+///     is.reg(0, |_uid: Uid, _set: &mut SimSet, data: Data<i64>| {
 ///         Ok(Some(Str::from(data.to_string())))
 ///     });
 ///
@@ -78,16 +78,17 @@ impl<Set, Value> InvokeService<Set, Value> {
 }
 
 impl<Set, Value> InvokeService<Set, Value> {
-    pub fn register_raw(&mut self, uid: Uid, handler: Callbacks<Set, Value, Error>) -> &mut Self {
+    pub fn reg_raw(&mut self, uid: Uid, handler: Callbacks<Set, Value, Error>) -> &mut Self {
         self.callbacks.insert(uid, handler);
         self
     }
 
     /// Register a callback that will called by [`Policy`](crate::policy::Policy) when option setted.
-    pub fn register<H, Args>(&mut self, uid: Uid, handler: H) -> &mut Self
+    pub fn reg<H, Args>(&mut self, uid: Uid, handler: H) -> &mut Self
     where
-        Args: ExtractFromCtx<Set, Error = Error> + 'static,
-        H: Handler<Set, Args, Output = Option<Value>, Error = Error> + 'static,
+        H::Output: Into<Option<Value>>,
+        Args: ExtractCtx<Set, Error = Error> + 'static,
+        H: Handler<Set, Args, Error = Error> + 'static,
     {
         self.callbacks.insert(uid, wrap_callback(handler));
         self
@@ -101,16 +102,35 @@ impl<Set, Value> InvokeService<Set, Value> {
 impl<Set, Value> InvokeService<Set, Value>
 where
     Set: crate::set::Set,
-    Value: From<Str>,
     Set::Opt: Opt,
 {
     /// Invoke the callback saved in [`InvokeService`], return None if the callback not exist.
+    ///
+    /// # Note
+    /// ```txt
+    ///  _______________________________________________________________________
+    /// |   |Uid, &mut Set, &mut Services, { Other Args }| -> T: Into<Option<Value>>
+    ///         |
+    ///      wrapped
+    ///         |
+    ///         v
+    ///  ___________________________________________________________________
+    /// |   |Uid, &mut Set, &mut Services, Ctx| -> Option<Value>
+    /// |       { Other Args create through ExtractFromCtx::extract_from }
+    /// |       { Call the source fn, convert T to Option<Value> }
+    ///         |
+    ///      invoked
+    ///         |
+    ///         v
+    ///  ______________________________________________________
+    /// |   : Callbacks<Set, Value>::invoke(uid, set, ser, ctx) -> Option<Value>
+    /// ```
     pub fn invoke(
         &mut self,
         uid: Uid,
         set: &mut Set,
         ser: &mut Services,
-        ctx: Context,
+        ctx: Ctx,
     ) -> Result<Option<Value>, Error> {
         if let Some(callback) = self.callbacks.get_mut(&uid) {
             Ok(callback.invoke(uid, set, ser, ctx)?)

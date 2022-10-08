@@ -17,7 +17,7 @@ pub use self::policy_forward::ForwardPolicy;
 pub use self::policy_pre::PrePolicy;
 
 use crate::arg::Args;
-use crate::ctx::Context;
+use crate::ctx::Ctx;
 use crate::ser::Services;
 use crate::set::Set;
 use crate::Error;
@@ -25,12 +25,12 @@ use crate::Uid;
 use std::fmt::Debug;
 
 #[derive(Debug, Clone)]
-pub struct ContextSaver {
+pub struct CtxSaver {
     /// option uid
     pub uid: Uid,
 
     /// invoke context
-    pub ctx: Context,
+    pub ctx: Ctx,
 }
 
 // todo ! change the Ret to Value; Add Ret for return value;
@@ -45,5 +45,5 @@ pub trait Policy {
         args: Args,
         ser: &mut Services,
         set: &mut Self::Set,
-    ) -> Result<Option<Self::Value>, Self::Error>;
+    ) -> Result<Option<Self::Ret>, Self::Error>;
 }

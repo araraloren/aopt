@@ -83,11 +83,11 @@ macro_rules! simple_impl_opt {
             }
 
             fn _get_hint(&self) -> Str {
-                self.help.get_hint()
+                self.help.hint()
             }
 
             fn _get_help(&self) -> Str {
-                self.help.get_help()
+                self.help.help()
             }
 
             fn _set_hint(&mut self, hint: Str) {
@@ -121,7 +121,7 @@ macro_rules! simple_impl_opt {
                 self.callback.is_some()
             }
 
-            fn _invoke(&mut self, ser: &mut Services, ctx: Context) -> Result<Option<Str>, Error> {
+            fn _invoke(&mut self, ser: &mut Services, ctx: &Ctx) -> Result<Option<Str>, Error> {
                 let store_func = std::mem::replace(&mut self.callback, None);
 
                 if let Some(mut func) = store_func {
@@ -215,11 +215,11 @@ macro_rules! simple_impl_noa {
             }
 
             fn _get_hint(&self) -> Str {
-                self.help.get_hint()
+                self.help.hint()
             }
 
             fn _get_help(&self) -> Str {
-                self.help.get_help()
+                self.help.help()
             }
 
             fn _set_hint(&mut self, hint: Str) {
@@ -255,7 +255,7 @@ macro_rules! simple_impl_noa {
                 self.callback.is_some()
             }
 
-            fn _invoke(&mut self, ser: &mut Services, ctx: Context) -> Result<Option<Str>, Error> {
+            fn _invoke(&mut self, ser: &mut Services, ctx: &Ctx) -> Result<Option<Str>, Error> {
                 let store_func = std::mem::replace(&mut self.callback, None);
 
                 if let Some(mut func) = store_func {
@@ -284,7 +284,7 @@ macro_rules! simple_impl_opt_for {
                 self._check()
             }
 
-            fn get_uid(&self) -> Uid {
+            fn uid(&self) -> Uid {
                 self._get_uid()
             }
 
@@ -296,19 +296,19 @@ macro_rules! simple_impl_opt_for {
                 self._set_setted(setted)
             }
 
-            fn get_setted(&self) -> bool {
+            fn setted(&self) -> bool {
                 self._get_setted()
             }
 
-            fn get_type_name(&self) -> Str {
+            fn ty(&self) -> Str {
                 self._get_type_name()
             }
 
-            fn is_deactivate_style(&self) -> bool {
+            fn is_deact(&self) -> bool {
                 self._is_deactivate_style()
             }
 
-            fn match_style(&self, style: OptStyle) -> bool {
+            fn mat_sty(&self, style: OptStyle) -> bool {
                 self._match_style(style)
             }
 
@@ -316,15 +316,11 @@ macro_rules! simple_impl_opt_for {
                 self._has_callback()
             }
 
-            fn invoke_callback(
-                &mut self,
-                ser: &mut Services,
-                ctx: Context,
-            ) -> Result<Option<Str>, Error> {
+            fn invoke(&mut self, ser: &mut Services, ctx: &Ctx) -> Result<Option<Str>, Error> {
                 self._invoke(ser, ctx)
             }
 
-            fn check_value(
+            fn val(
                 &mut self,
                 arg: Option<Str>,
                 disable: bool,
@@ -335,7 +331,7 @@ macro_rules! simple_impl_opt_for {
         }
 
         impl Name for $type {
-            fn get_name(&self) -> Str {
+            fn name(&self) -> Str {
                 self._get_name()
             }
 
@@ -343,41 +339,41 @@ macro_rules! simple_impl_opt_for {
                 self._set_name(name)
             }
 
-            fn match_name(&self, name: Str) -> bool {
+            fn mat_name(&self, name: Str) -> bool {
                 self._match_name(name)
             }
         }
 
         impl Prefix for $type {
-            fn get_prefix(&self) -> Option<Str> {
+            fn pre(&self) -> Option<Str> {
                 self._get_prefix()
             }
 
-            fn set_prefix(&mut self, prefix: Option<Str>) {
+            fn set_pre(&mut self, prefix: Option<Str>) {
                 self._set_prefix(prefix)
             }
 
-            fn match_prefix(&self, prefix: Option<Str>) -> bool {
+            fn mat_pre(&self, prefix: Option<Str>) -> bool {
                 self._match_prefix(prefix)
             }
         }
 
         impl Optional for $type {
-            fn get_optional(&self) -> bool {
+            fn opt(&self) -> bool {
                 self._get_optional()
             }
 
-            fn set_optional(&mut self, optional: bool) {
+            fn set_opt(&mut self, optional: bool) {
                 self._set_optional(optional)
             }
 
-            fn match_optional(&self, optional: bool) -> bool {
+            fn mat_opt(&self, optional: bool) -> bool {
                 self._match_optional(optional)
             }
         }
 
         impl Alias for $type {
-            fn get_alias(&self) -> Option<&Vec<(Str, Str)>> {
+            fn alias(&self) -> Option<&Vec<(Str, Str)>> {
                 self._get_alias()
             }
 
@@ -389,17 +385,17 @@ macro_rules! simple_impl_opt_for {
                 self._rem_alias(prefix, name)
             }
 
-            fn match_alias(&self, prefix: Str, name: Str) -> bool {
+            fn mat_alias(&self, prefix: Str, name: Str) -> bool {
                 self._match_alias(prefix, name)
             }
         }
 
         impl Help for $type {
-            fn get_hint(&self) -> Str {
+            fn hint(&self) -> Str {
                 self._get_hint()
             }
 
-            fn get_help(&self) -> Str {
+            fn help(&self) -> Str {
                 self._get_help()
             }
 
@@ -413,15 +409,15 @@ macro_rules! simple_impl_opt_for {
         }
 
         impl Index for $type {
-            fn get_index(&self) -> Option<&OptIndex> {
+            fn idx(&self) -> Option<&OptIndex> {
                 self._get_index()
             }
 
-            fn set_index(&mut self, index: Option<OptIndex>) {
+            fn set_idx(&mut self, index: Option<OptIndex>) {
                 self._set_index(index)
             }
 
-            fn match_index(&self, index: Option<(usize, usize)>) -> bool {
+            fn mat_idx(&self, index: Option<(usize, usize)>) -> bool {
                 self._match_index(index)
             }
         }
@@ -438,15 +434,15 @@ macro_rules! simple_impl_creator_for {
 
             type Error = Error;
 
-            fn get_type_name(&self) -> Str {
+            fn ty(&self) -> Str {
                 self._get_type_name()
             }
 
-            fn is_support_deactivate_style(&self) -> bool {
+            fn sp_deact(&self) -> bool {
                 self._support_deactivate_style()
             }
 
-            fn create_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
+            fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
                 self._create_with(config)
             }
         }

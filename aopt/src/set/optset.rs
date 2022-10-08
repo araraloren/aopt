@@ -4,7 +4,7 @@ use super::Commit;
 use super::Filter;
 use super::FilterMatcher;
 use super::FilterMut;
-use super::Prefixed;
+use super::PreSet;
 use crate::opt::Config;
 use crate::opt::ConfigValue;
 use crate::opt::Creator;
@@ -27,9 +27,9 @@ use crate::Uid;
 ///     let mut set = OptSet::<Box<dyn AOpt>, OptStringParser, Box<dyn ACreator<Opt = Box<dyn AOpt>, Config = OptConfig>>>::default();
 ///
 ///     // add prefix for option
-///     set.add_prefix("/");
+///     set.add_pre("/");
 ///     // add bool creator
-///     set.add_creator(BoolCreator::boxed());
+///     set.add_ctor(BoolCreator::boxed());
 ///     // create a bool option
 ///     set.add_opt("/foo=b")?.run()?;
 ///     // filter the set option
@@ -89,7 +89,7 @@ impl<T, Parser, Ctor> OptSet<T, Parser, Ctor>
 where
     T: Opt,
     Ctor: Creator<Opt = T>,
-    Parser: OptParser + Prefixed,
+    Parser: OptParser + PreSet,
     Parser::Output: Information,
     Ctor::Config: Config + ConfigValue + Default,
 {
@@ -102,40 +102,38 @@ where
         }
     }
 
-    pub fn with_prefix(mut self, prefix: &str) -> Self {
-        self.add_prefix(prefix);
+    pub fn with_pre(mut self, prefix: &str) -> Self {
+        self.add_pre(prefix);
         self
     }
 
-    pub fn with_creator(mut self, creator: Ctor) -> Self {
-        self.add_creator(creator);
+    pub fn with_ctor(mut self, creator: Ctor) -> Self {
+        self.add_ctor(creator);
         self
     }
 
-    pub fn add_creator(&mut self, creator: Ctor) -> &mut Self {
+    pub fn add_ctor(&mut self, creator: Ctor) -> &mut Self {
         self.creators.push(creator);
         self
     }
 
-    pub fn has_creator<S: Into<Str>>(&self, type_name: S) -> bool {
+    pub fn has_ctor<S: Into<Str>>(&self, type_name: S) -> bool {
         let type_name = type_name.into();
 
-        self.creators.iter().any(|v| v.get_type_name() == type_name)
+        self.creators.iter().any(|v| v.ty() == type_name)
     }
 
-    pub fn get_creator<S: Into<Str>>(&mut self, type_name: S) -> Option<&mut Ctor> {
+    pub fn ctor<S: Into<Str>>(&mut self, type_name: S) -> Option<&mut Ctor> {
         let type_name = type_name.into();
 
-        self.creators
-            .iter_mut()
-            .find(|v| v.get_type_name() == type_name)
+        self.creators.iter_mut().find(|v| v.ty() == type_name)
     }
 
-    pub fn get_parser(&self) -> &Parser {
+    pub fn parser(&self) -> &Parser {
         &self.parser
     }
 
-    pub fn get_parser_mut(&mut self) -> &mut Parser {
+    pub fn parser_mut(&mut self) -> &mut Parser {
         &mut self.parser
     }
 
@@ -157,7 +155,7 @@ where
     ) -> Result<Commit<'_, T, Parser, Ctor>, Error> {
         Ok(Commit::new(
             self,
-            <Ctor::Config as Config>::new(self.get_parser(), opt_str.into())?,
+            <Ctor::Config as Config>::new(self.parser(), opt_str.into())?,
         ))
     }
 
@@ -168,20 +166,20 @@ where
     pub fn filter<S: Into<Str>>(&self, opt_str: S) -> Result<Filter<'_, T, Parser, Ctor>, Error> {
         Ok(Filter::new(
             self,
-            <Ctor::Config as Config>::new(self.get_parser(), opt_str.into())?,
+            <Ctor::Config as Config>::new(self.parser(), opt_str.into())?,
         ))
     }
 
     /// Filter the option, return the reference of first matched [`Opt`].
     pub fn find<S: Into<Str>>(&self, opt_str: S) -> Result<Option<&T>, Error> {
-        let info = <Ctor::Config as Config>::new(self.get_parser(), opt_str.into())?;
-        Ok(self.iter().find(|opt| info.match_opt(*opt)))
+        let info = <Ctor::Config as Config>::new(self.parser(), opt_str.into())?;
+        Ok(self.iter().find(|opt| info.mat_opt(*opt)))
     }
 
     /// Filter the option, return an iterator of reference of [`Opt`]s.
     pub fn find_all<S: Into<Str>>(&self, opt_str: S) -> Result<impl Iterator<Item = &T>, Error> {
-        let info = <Ctor::Config as Config>::new(self.get_parser(), opt_str.into())?;
-        Ok(self.iter().filter(move |opt| info.match_opt(*opt)))
+        let info = <Ctor::Config as Config>::new(self.parser(), opt_str.into())?;
+        Ok(self.iter().filter(move |opt| info.mat_opt(*opt)))
     }
 
     /// Filter the option by configuration.
@@ -194,14 +192,14 @@ where
     ) -> Result<FilterMut<'_, T, Parser, Ctor>, Error> {
         Ok(FilterMut::new(
             self,
-            <Ctor::Config as Config>::new(self.get_parser(), opt_str.into())?,
+            <Ctor::Config as Config>::new(self.parser(), opt_str.into())?,
         ))
     }
 
     /// Filter the option, return the mutable reference of first matched [`Opt`].
     pub fn find_mut<S: Into<Str>>(&mut self, opt_str: S) -> Result<Option<&mut T>, Error> {
-        let info = <Ctor::Config as Config>::new(self.get_parser(), opt_str.into())?;
-        Ok(self.iter_mut().find(|opt| info.match_opt(*opt)))
+        let info = <Ctor::Config as Config>::new(self.parser(), opt_str.into())?;
+        Ok(self.iter_mut().find(|opt| info.mat_opt(*opt)))
     }
 
     /// Filter the option, return an iterator of mutable reference of [`Opt`]s.
@@ -209,8 +207,8 @@ where
         &mut self,
         opt_str: S,
     ) -> Result<impl Iterator<Item = &mut T>, Error> {
-        let info = <Ctor::Config as Config>::new(self.get_parser(), opt_str.into())?;
-        Ok(self.iter_mut().filter(move |opt| info.match_opt(*opt)))
+        let info = <Ctor::Config as Config>::new(self.parser(), opt_str.into())?;
+        Ok(self.iter_mut().filter(move |opt| info.mat_opt(*opt)))
     }
 }
 
@@ -259,7 +257,7 @@ impl<T, Parser, Ctor> OptParser for OptSet<T, Parser, Ctor>
 where
     T: Opt,
     Ctor: Creator<Opt = T>,
-    Parser: OptParser + Prefixed,
+    Parser: OptParser + PreSet,
     Parser::Output: Information,
     Ctor::Config: Config + ConfigValue + Default,
 {
@@ -268,25 +266,25 @@ where
     type Error = Parser::Error;
 
     fn parse(&self, pattern: Str) -> Result<Self::Output, Self::Error> {
-        self.get_parser().parse(pattern)
+        self.parser().parse(pattern)
     }
 }
 
-impl<T, Parser, Ctor> Prefixed for OptSet<T, Parser, Ctor>
+impl<T, Parser, Ctor> PreSet for OptSet<T, Parser, Ctor>
 where
     T: Opt,
     Ctor: Creator<Opt = T>,
-    Parser: OptParser + Prefixed,
+    Parser: OptParser + PreSet,
     Parser::Output: Information,
     Ctor::Config: Config + ConfigValue + Default,
 {
-    fn add_prefix(&mut self, prefix: &str) -> &mut Self {
-        self.get_parser_mut().add_prefix(prefix);
+    fn add_pre(&mut self, prefix: &str) -> &mut Self {
+        self.parser_mut().add_pre(prefix);
         self
     }
 
-    fn get_prefix(&self) -> &[Str] {
-        self.get_parser().get_prefix()
+    fn pre(&self) -> &[Str] {
+        self.parser().pre()
     }
 }
 
@@ -302,7 +300,7 @@ mod test {
     }
 
     fn test_add_option_impl() -> Result<(), Error> {
-        let mut set = SimpleSet::default()
+        let mut set = SimSet::default()
             .with_default_creator()
             .with_default_prefix();
 
@@ -344,7 +342,7 @@ mod test {
         assert_eq!(set.find_all("=p")?.count(), 4);
         assert_eq!(set.find_all_mut("=p")?.count(), 4);
         assert_eq!(set.find_all("=p@4")?.count(), 2);
-        assert!(set.filter("posd")?.set_optional(false).find().is_some());
+        assert!(set.filter("posd")?.set_opt(false).find().is_some());
         assert!(set.filter("=p")?.set_name("pose").find().is_none());
 
         assert!(set.find("main")?.is_some());
@@ -355,7 +353,7 @@ mod test {
         assert!(set.find_mut("--boolf=b/")?.is_some());
         assert_eq!(set.find_all("=b")?.count(), 8);
         assert_eq!(set.find_all("=b!")?.count(), 3);
-        assert_eq!(set.filter("=b")?.set_optional(false).find_all().count(), 3);
+        assert_eq!(set.filter("=b")?.set_opt(false).find_all().count(), 3);
         assert!(set.filter("--boolg=b!")?.find().is_some());
         assert!(set.filter("-boolg=b!")?.find().is_none());
 
@@ -366,13 +364,7 @@ mod test {
         assert!(set.find_mut("-floatd=f!")?.is_some());
         assert_eq!(set.find_all("=f")?.count(), 5);
         assert_eq!(set.find_all("=f!")?.count(), 2);
-        assert_eq!(
-            set.filter_mut("=f")?
-                .set_deactivate_style(true)
-                .find_all()
-                .count(),
-            0
-        );
+        assert_eq!(set.filter_mut("=f")?.set_deact(true).find_all().count(), 0);
 
         assert!(set.find("--=i")?.is_some());
         assert!(set.find("--intb")?.is_some());
@@ -380,17 +372,11 @@ mod test {
         assert!(set.find_mut("--intb=i!")?.is_some());
         assert_eq!(set.find_all_mut("=i")?.count(), 4);
         assert_eq!(set.find_all_mut("=i!")?.count(), 2);
-        assert_eq!(
-            set.filter_mut("=i")?.set_optional(true).find_all().count(),
-            2
-        );
-        assert_eq!(
-            set.filter_mut("=i")?.set_optional(false).find_all().count(),
-            2
-        );
+        assert_eq!(set.filter_mut("=i")?.set_opt(true).find_all().count(), 2);
+        assert_eq!(set.filter_mut("=i")?.set_opt(false).find_all().count(), 2);
 
-        set.add_prefix("+");
-        set.add_prefix("/");
+        set.add_pre("+");
+        set.add_pre("/");
 
         assert!(set.add_opt("--stra=s")?.add_alias("/stre").run().is_ok());
         assert!(set.add_opt("--strb=s!")?.add_alias("/strf").run().is_ok());
@@ -422,16 +408,16 @@ mod test {
         assert_eq!(set.find_all("--=u")?.count(), 2);
         assert_eq!(set.find_all("--=u!")?.count(), 1);
 
-        assert_eq!(set.filter("")?.set_prefix("+").find_all().count(), 4);
-        assert_eq!(set.filter("")?.set_prefix("/").find_all().count(), 4);
+        assert_eq!(set.filter("")?.set_pre("+").find_all().count(), 4);
+        assert_eq!(set.filter("")?.set_pre("/").find_all().count(), 4);
 
         assert!(set
             .add_opt("")?
             .set_name("foo")
-            .set_prefix("/")
-            .set_optional(false)
-            .set_type_name("b")
-            .set_deactivate_style(true)
+            .set_pre("/")
+            .set_opt(false)
+            .set_ty("b")
+            .set_deact(true)
             .run()
             .is_ok());
         assert!(set.find("/foo")?.is_some());

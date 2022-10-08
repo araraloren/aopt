@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::arg::Args;
+use crate::arg::args::ArgsIter;
 use crate::arg::CLOpt;
 use crate::opt::OptStyle;
 use crate::proc::NOAMatch;
@@ -59,46 +59,65 @@ pub fn valueof(name: &str, value: &Option<Str>) -> Result<Str, Error> {
 }
 
 #[derive(Debug)]
-pub struct GuessOptCfg<'a> {
-    pub args: &'a Args,
+pub struct GuessOptCfg {
+    pub idx: usize,
+
+    pub len: usize,
+
+    pub arg: Option<Str>,
 
     pub clopt: CLOpt,
 }
 
-impl<'a> GuessOptCfg<'a> {
-    pub fn new(args: &'a Args, clopt: CLOpt) -> Self {
-        Self { args, clopt }
+impl GuessOptCfg {
+    pub fn new<T, I>(iter: &ArgsIter<I>, clopt: CLOpt) -> Self
+    where
+        I: Iterator<Item = T> + Clone,
+        T: Into<Str>,
+    {
+        Self {
+            idx: iter.idx(),
+            len: iter.len(),
+            arg: iter.arg().cloned(),
+            clopt,
+        }
+    }
+
+    pub fn idx(&self) -> usize {
+        self.idx
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    pub fn arg(&self) -> Option<&Str> {
+        self.arg.as_ref()
     }
 }
 
 #[derive(Debug)]
-pub struct OptGuess<'a, S>(PhantomData<&'a S>)
-where
-    S: Set;
+pub struct OptGuess<S>(PhantomData<S>);
 
-impl<'a, S> OptGuess<'a, S>
-where
-    S: Set,
-{
+impl<S> OptGuess<S> {
     pub fn new() -> Self {
         Self(PhantomData::default())
     }
-}
 
-impl<'a, S> Default for OptGuess<'a, S>
-where
-    S: Set,
-{
-    fn default() -> Self {
-        Self(PhantomData::default())
+    fn bool2str(value: bool) -> Str {
+        if value {
+            Str::from("true")
+        } else {
+            Str::from("false")
+        }
     }
 }
 
-impl<'a, S> Guess for OptGuess<'a, S>
+impl<S> Guess for OptGuess<S>
 where
     S: Set,
 {
-    type Config = GuessOptCfg<'a>;
+    type Config = GuessOptCfg;
 
     type Process = OptProcess<S>;
 
@@ -108,9 +127,8 @@ where
         cfg: Self::Config,
     ) -> Result<Option<Self::Process>, Error> {
         let mut matches = vec![];
-        let args = cfg.args;
-        let index = args.get_index();
-        let count = args.len();
+        let index = cfg.idx();
+        let count = cfg.len();
         let clopt = &cfg.clopt;
 
         match style {
@@ -118,13 +136,13 @@ where
                 if clopt.value.is_some() {
                     matches.push(
                         OptMatch::default()
-                            .with_index(index)
-                            .with_total(count)
-                            .with_argument(clopt.value.clone())
-                            .with_style(OptStyle::Argument)
-                            .with_disable(clopt.disable)
+                            .with_idx(index)
+                            .with_len(count)
+                            .with_arg(clopt.value.clone())
+                            .with_sty(OptStyle::Argument)
+                            .with_dsb(clopt.disable)
                             .with_name(valueof("name", &clopt.name)?)
-                            .with_prefix(valueof("prefix", &clopt.prefix)?),
+                            .with_pre(valueof("prefix", &clopt.prefix)?),
                     );
                 }
             }
@@ -132,14 +150,14 @@ where
                 if clopt.value.is_none() {
                     matches.push(
                         OptMatch::default()
-                            .with_index(index)
-                            .with_total(count)
-                            .with_consume_arg(true)
-                            .with_argument(args.get_next().cloned())
-                            .with_style(OptStyle::Argument)
-                            .with_disable(clopt.disable)
+                            .with_idx(index)
+                            .with_len(count)
+                            .with_consume(true)
+                            .with_arg(cfg.arg().cloned())
+                            .with_sty(OptStyle::Argument)
+                            .with_dsb(clopt.disable)
                             .with_name(valueof("name", &clopt.name)?)
-                            .with_prefix(valueof("prefix", &clopt.prefix)?),
+                            .with_pre(valueof("prefix", &clopt.prefix)?),
                     );
                 }
             }
@@ -151,13 +169,13 @@ where
 
                             matches.push(
                                 OptMatch::default()
-                                    .with_index(index)
-                                    .with_total(count)
-                                    .with_argument(Some(name_value.1.into()))
-                                    .with_style(OptStyle::Argument)
-                                    .with_disable(clopt.disable)
+                                    .with_idx(index)
+                                    .with_len(count)
+                                    .with_arg(Some(name_value.1.into()))
+                                    .with_sty(OptStyle::Argument)
+                                    .with_dsb(clopt.disable)
                                     .with_name(name_value.0.into())
-                                    .with_prefix(valueof("prefix", &clopt.prefix)?),
+                                    .with_pre(valueof("prefix", &clopt.prefix)?),
                             );
                         }
                     }
@@ -170,13 +188,13 @@ where
                             for char in name.chars() {
                                 matches.push(
                                     OptMatch::default()
-                                        .with_index(index)
-                                        .with_total(count)
-                                        .with_argument(Some(Str::default()))
-                                        .with_style(OptStyle::Combined)
-                                        .with_disable(clopt.disable)
+                                        .with_idx(index)
+                                        .with_len(count)
+                                        .with_arg(Some(Self::bool2str(!clopt.disable)))
+                                        .with_sty(OptStyle::Combined)
+                                        .with_dsb(clopt.disable)
                                         .with_name(format!("{}", char).into())
-                                        .with_prefix(valueof("prefix", &clopt.prefix)?),
+                                        .with_pre(valueof("prefix", &clopt.prefix)?),
                                 );
                             }
                         }
@@ -187,13 +205,13 @@ where
                 if clopt.value.is_none() {
                     matches.push(
                         OptMatch::default()
-                            .with_index(index)
-                            .with_total(count)
-                            .with_argument(Some(Str::default()))
-                            .with_style(OptStyle::Boolean)
-                            .with_disable(clopt.disable)
+                            .with_idx(index)
+                            .with_len(count)
+                            .with_arg(Some(Self::bool2str(!clopt.disable)))
+                            .with_sty(OptStyle::Boolean)
+                            .with_dsb(clopt.disable)
                             .with_name(valueof("name", &clopt.name)?)
-                            .with_prefix(valueof("prefix", &clopt.prefix)?),
+                            .with_pre(valueof("prefix", &clopt.prefix)?),
                     );
                 }
             }
@@ -207,48 +225,34 @@ where
 }
 
 pub struct GuessNOACfg<'a> {
-    args: &'a Args,
-    name: Option<Str>,
-    index: Option<usize>,
+    iter: &'a [Str],
+    index: usize,
+    name: Str,
 }
 
 impl<'a> GuessNOACfg<'a> {
-    pub fn new(args: &'a Args, name: Option<Str>, index: Option<usize>) -> Self {
-        Self { args, name, index }
+    pub fn new(iter: &'a [Str], name: Str, index: usize) -> Self {
+        Self { iter, name, index }
     }
 
-    pub fn get_name_or(&self, index: usize) -> Str {
-        if let Some(name) = &self.name {
-            name.clone()
-        } else {
-            self.args[index].clone()
-        }
+    pub fn idx(&self) -> usize {
+        self.index
     }
 
-    pub fn get_index_or(&self) -> usize {
-        self.index.unwrap_or_else(|| self.args.get_index())
+    pub fn name(&self) -> Str {
+        self.name.clone()
+    }
+
+    pub fn arg(&self) -> Option<&str> {
+        todo!()
     }
 }
 
 #[derive(Debug)]
-pub struct NOAGuess<'a, S>(PhantomData<&'a S>)
-where
-    S: Set;
+pub struct NOAGuess<'a, S>(PhantomData<&'a S>);
 
-impl<'a, S> NOAGuess<'a, S>
-where
-    S: Set,
-{
+impl<'a, S> NOAGuess<'a, S> {
     pub fn new() -> Self {
-        Self(PhantomData::default())
-    }
-}
-
-impl<'a, S> Default for NOAGuess<'a, S>
-where
-    S: Set,
-{
-    fn default() -> Self {
         Self(PhantomData::default())
     }
 }
@@ -267,38 +271,37 @@ where
         cfg: Self::Config,
     ) -> Result<Option<Self::Process>, Error> {
         let mat;
-        let args = cfg.args;
-        // get pos from cfg or default pos
-        let pos = cfg.get_index_or();
-        let name = cfg.get_name_or(pos);
-        let count = args.len();
+        let iter = cfg.iter;
+        let pos = cfg.idx();
+        let name = cfg.name();
+        let count = iter.len();
 
         match style {
             UserStyle::Main => {
                 mat = Some(
                     NOAMatch::default()
                         .with_name(name)
-                        .with_index(pos)
-                        .with_total(count)
-                        .with_style(OptStyle::Main),
+                        .with_idx(pos)
+                        .with_len(count)
+                        .with_sty(OptStyle::Main),
                 );
             }
             UserStyle::Pos => {
                 mat = Some(
                     NOAMatch::default()
                         .with_name(name)
-                        .with_index(pos + 1) // when style is pos, noa index is [1..=noa_count]
-                        .with_total(count)
-                        .with_style(OptStyle::Pos),
+                        .with_idx(pos)
+                        .with_len(count)
+                        .with_sty(OptStyle::Pos),
                 );
             }
             UserStyle::Cmd => {
                 mat = Some(
                     NOAMatch::default()
                         .with_name(name)
-                        .with_index(pos)
-                        .with_total(count)
-                        .with_style(OptStyle::Cmd),
+                        .with_idx(pos)
+                        .with_len(count)
+                        .with_sty(OptStyle::Cmd),
                 );
             }
             _ => {

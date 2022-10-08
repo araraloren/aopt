@@ -21,7 +21,7 @@ pub use self::style::Style as OptStyle;
 
 use std::fmt::Debug;
 
-use crate::ctx::Context;
+use crate::ctx::Ctx;
 use crate::prelude::Services;
 use crate::Error;
 use crate::Str;
@@ -36,51 +36,51 @@ pub trait OptParser {
 }
 
 pub trait Name {
-    fn get_name(&self) -> Str;
+    fn name(&self) -> Str;
 
     fn set_name(&mut self, name: Str);
 
-    fn match_name(&self, name: Str) -> bool;
+    fn mat_name(&self, name: Str) -> bool;
 }
 
 pub trait Prefix {
-    fn get_prefix(&self) -> Option<Str>;
+    fn pre(&self) -> Option<Str>;
 
-    fn set_prefix(&mut self, prefix: Option<Str>);
+    fn set_pre(&mut self, prefix: Option<Str>);
 
-    fn match_prefix(&self, prefix: Option<Str>) -> bool;
+    fn mat_pre(&self, prefix: Option<Str>) -> bool;
 }
 
 pub trait Optional {
-    fn get_optional(&self) -> bool;
+    fn opt(&self) -> bool;
 
-    fn set_optional(&mut self, optional: bool);
+    fn set_opt(&mut self, optional: bool);
 
-    fn match_optional(&self, optional: bool) -> bool;
+    fn mat_opt(&self, optional: bool) -> bool;
 }
 
 pub trait Alias {
-    fn get_alias(&self) -> Option<&Vec<(Str, Str)>>;
+    fn alias(&self) -> Option<&Vec<(Str, Str)>>;
 
     fn add_alias(&mut self, prefix: Str, name: Str);
 
     fn rem_alias(&mut self, prefix: Str, name: Str);
 
-    fn match_alias(&self, prefix: Str, name: Str) -> bool;
+    fn mat_alias(&self, prefix: Str, name: Str) -> bool;
 }
 
 pub trait Index {
-    fn get_index(&self) -> Option<&OptIndex>;
+    fn idx(&self) -> Option<&OptIndex>;
 
-    fn set_index(&mut self, index: Option<OptIndex>);
+    fn set_idx(&mut self, index: Option<OptIndex>);
 
-    fn match_index(&self, index: Option<(usize, usize)>) -> bool;
+    fn mat_idx(&self, index: Option<(usize, usize)>) -> bool;
 }
 
 pub trait Help {
-    fn get_hint(&self) -> Str;
+    fn hint(&self) -> Str;
 
-    fn get_help(&self) -> Str;
+    fn help(&self) -> Str;
 
     fn set_hint(&mut self, hint: Str);
 
@@ -92,25 +92,25 @@ pub trait Opt: Name + Help + Alias + Index + Prefix + Optional + Debug {
 
     fn check(&self) -> bool;
 
-    fn get_uid(&self) -> Uid;
+    fn uid(&self) -> Uid;
 
     fn set_uid(&mut self, uid: Uid);
 
-    fn set_setted(&mut self, setted: bool);
+    fn setted(&self) -> bool;
 
-    fn get_setted(&self) -> bool;
+    fn ty(&self) -> Str;
 
-    fn get_type_name(&self) -> Str;
+    fn is_deact(&self) -> bool;
 
-    fn is_deactivate_style(&self) -> bool;
-
-    fn match_style(&self, style: OptStyle) -> bool;
+    fn mat_sty(&self, style: OptStyle) -> bool;
 
     fn has_callback(&self) -> bool;
 
-    fn invoke_callback(&mut self, ser: &mut Services, ctx: Context) -> Result<Option<Str>, Error>;
+    fn set_setted(&mut self, setted: bool);
 
-    fn check_value(
+    fn invoke(&mut self, ser: &mut Services, ctx: &Ctx) -> Result<Option<Str>, Error>;
+
+    fn val(
         &mut self,
         arg: Option<Str>,
         disable: bool,

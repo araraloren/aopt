@@ -1,12 +1,12 @@
 use std::any::Any;
 use std::fmt::Debug;
 
-use crate::ctx::Context;
+use crate::ctx::Ctx;
 use crate::prelude::Services;
 use crate::{Error, Str};
 
 type InnerCallbackType<Opt> =
-    Box<dyn FnMut(&mut Opt, &mut Services, Context) -> Result<Option<Str>, Error>>;
+    Box<dyn FnMut(&mut Opt, &mut Services, &Ctx) -> Result<Option<Str>, Error>>;
 
 #[derive(Default)]
 pub struct OptCallback<Opt>(Option<InnerCallbackType<Opt>>)
@@ -19,7 +19,7 @@ where
 {
     pub fn new<H>(handler: H) -> Self
     where
-        H: FnMut(&mut Opt, &mut Services, Context) -> Result<Option<Str>, Error> + 'static,
+        H: FnMut(&mut Opt, &mut Services, &Ctx) -> Result<Option<Str>, Error> + 'static,
     {
         Self(Some(Box::new(handler)))
     }
@@ -28,7 +28,7 @@ where
         &mut self,
         opt: &mut Opt,
         ser: &mut Services,
-        ctx: Context,
+        ctx: &Ctx,
     ) -> Result<Option<Str>, Error> {
         if let Some(func) = &mut self.0 {
             (func)(opt, ser, ctx)
@@ -45,7 +45,7 @@ where
 
 impl<Opt, H> From<H> for OptCallback<Opt>
 where
-    H: FnMut(&mut Opt, &mut Services, Context) -> Result<Option<Str>, Error> + 'static,
+    H: FnMut(&mut Opt, &mut Services, &Ctx) -> Result<Option<Str>, Error> + 'static,
 {
     fn from(handler: H) -> Self {
         Self::new(handler)

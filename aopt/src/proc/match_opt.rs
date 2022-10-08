@@ -77,66 +77,66 @@ where
         self
     }
 
-    pub fn with_prefix(mut self, prefix: Str) -> Self {
+    pub fn with_pre(mut self, prefix: Str) -> Self {
         self.prefix = prefix;
         self
     }
 
-    pub fn with_style(mut self, style: OptStyle) -> Self {
+    pub fn with_sty(mut self, style: OptStyle) -> Self {
         self.style = style;
         self
     }
 
-    pub fn with_argument(mut self, argument: Option<Str>) -> Self {
+    pub fn with_arg(mut self, argument: Option<Str>) -> Self {
         self.argument = argument;
         self
     }
 
-    pub fn with_disable(mut self, disbale: bool) -> Self {
+    pub fn with_dsb(mut self, disbale: bool) -> Self {
         self.disbale = disbale;
         self
     }
 
-    pub fn with_index(mut self, index: usize) -> Self {
+    pub fn with_idx(mut self, index: usize) -> Self {
         self.index = index;
         self
     }
 
-    pub fn with_total(mut self, total: usize) -> Self {
+    pub fn with_len(mut self, total: usize) -> Self {
         self.total = total;
         self
     }
 
-    pub fn with_consume_arg(mut self, consume_arg: bool) -> Self {
+    pub fn with_consume(mut self, consume_arg: bool) -> Self {
         self.consume_arg = consume_arg;
         self
     }
 
-    pub fn get_name(&self) -> Str {
+    pub fn name(&self) -> Str {
         self.name.clone()
     }
 
-    pub fn get_prefix(&self) -> Option<Str> {
+    pub fn pre(&self) -> Option<Str> {
         Some(self.prefix.clone())
     }
 
-    pub fn get_argument(&self) -> Option<Str> {
+    pub fn arg(&self) -> Option<Str> {
         self.argument.clone()
     }
 
-    pub fn get_style(&self) -> OptStyle {
+    pub fn sty(&self) -> OptStyle {
         self.style
     }
 
-    pub fn get_deactivate(&self) -> bool {
+    pub fn dsb(&self) -> bool {
         self.disbale
     }
 
-    pub fn get_index(&self) -> usize {
+    pub fn idx(&self) -> usize {
         self.index
     }
 
-    pub fn get_total(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.total
     }
 }
@@ -153,27 +153,27 @@ where
         self.matched_uid = None;
     }
 
-    fn is_matched(&self) -> bool {
+    fn is_mat(&self) -> bool {
         self.matched_uid.is_some()
     }
 
-    fn get_matched_uid(&self) -> Option<Uid> {
+    fn mat_uid(&self) -> Option<Uid> {
         self.matched_uid
     }
 
-    fn set_matched_uid(&mut self, uid: Uid) {
+    fn set_uid(&mut self, uid: Uid) {
         self.matched_uid = Some(uid);
     }
 
-    fn get_style(&self) -> OptStyle {
+    fn sty(&self) -> OptStyle {
         self.style
     }
 
-    fn get_argument(&self) -> Option<Str> {
+    fn arg(&self) -> Option<Str> {
         self.argument.clone()
     }
 
-    fn is_consume_argument(&self) -> bool {
+    fn consume(&self) -> bool {
         self.consume_arg
     }
 
@@ -184,29 +184,28 @@ where
     }
 
     /// Match the [`Opt`]'s name, prefix and style.
-    /// Then call the [`check_value`](Opt::check_value) check the argument.
+    /// Then call the [`val`](Opt::val) check the argument.
     /// If matched, set the setted of [`Opt`] and return true.
     fn process(&mut self, opt: &mut <Self::Set as Set>::Opt) -> Result<bool, Self::Error> {
-        let mut matched = opt.match_style(self.style);
+        let mut matched = opt.mat_sty(self.style);
 
         if matched {
             matched = matched
-                && ((opt.match_name(self.get_name()) && opt.match_prefix(self.get_prefix()))
-                    || opt.match_alias(self.prefix.clone(), self.get_name()));
+                && ((opt.mat_name(self.name()) && opt.mat_pre(self.pre()))
+                    || opt.mat_alias(self.prefix.clone(), self.name()));
         }
         if matched {
-            if self.is_consume_argument() && self.argument.is_none() {
-                return Err(Error::sp_missing_argument(opt.get_hint()));
+            if self.consume() && self.argument.is_none() {
+                return Err(Error::sp_missing_argument(opt.hint()));
             }
             // set the value of current option
-            if opt.check_value(self.get_argument(), self.disbale, (self.index, self.total))? {
+            if opt.val(self.arg(), self.disbale, (self.index, self.total))? {
                 opt.set_setted(true);
-                self.matched_uid = Some(opt.get_uid());
+                self.matched_uid = Some(opt.uid());
             } else {
                 matched = false;
             }
         }
-        println!(": {}", matched);
         Ok(matched)
     }
 }

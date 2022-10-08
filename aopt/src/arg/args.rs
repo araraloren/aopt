@@ -1,11 +1,12 @@
 use std::ops::Deref;
+use std::ops::DerefMut;
 
 use super::ArgParser;
 use crate::astr;
 use crate::Str;
 
 #[derive(Debug, Clone)]
-pub struct Args(Vec<Str>, usize);
+pub struct Args(Vec<Str>);
 
 impl Args {
     pub fn new<I, ITER>(iter: ITER) -> Self
@@ -15,55 +16,27 @@ impl Args {
     {
         let iter = iter.map(|v| v.into());
 
-        Self(iter.collect(), 0)
+        Self(iter.collect())
     }
 
-    pub fn inner(&self) -> &Vec<Str> {
-        &self.0
+    /// Collect arguments using [`args`](std::env::args), and skip first argument.
+    pub fn new_args() -> Self {
+        Self(std::env::args().skip(1).map(|v| astr(v)).collect())
     }
 
-    pub fn inner_iter(&self) -> std::slice::Iter<'_, Str> {
-        self.0.iter()
+    pub fn iter(&self) -> ArgsIter<std::slice::Iter<Str>> {
+        ArgsIter::new(self.0.iter(), 0, self.len())
     }
 
-    /// Increment the argument index.
-    pub fn skip(&mut self) {
-        self.1 += 1;
-    }
-
-    pub fn get_index(&self) -> usize {
-        self.1
-    }
-
-    pub fn get_curr(&self) -> Option<&Str> {
-        self.0.get(self.get_index())
-    }
-
-    pub fn get_next(&self) -> Option<&Str> {
-        self.0.get(self.get_index() + 1)
-    }
-
-    pub fn is_last(&self) -> bool {
-        self.1 >= self.0.len()
-    }
-
-    /// Parsing current command line argument item with given [`ArgParser`] `P`.
-    pub fn parse<P: ArgParser>(
-        &self,
-        parser: &mut P,
-        prefixs: &[Str],
-    ) -> Result<P::Output, P::Error> {
-        parser.parse(self.0[self.1].clone(), prefixs)
-    }
-
-    pub fn len(&self) -> usize {
-        self.0.len()
+    pub fn into_iter(self) -> ArgsIter<std::vec::IntoIter<Str>> {
+        let len = self.len();
+        ArgsIter::new(self.0.into_iter(), 0, len)
     }
 }
 
 impl From<Vec<Str>> for Args {
     fn from(v: Vec<Str>) -> Self {
-        Args(v, 0)
+        Args(v)
     }
 }
 
@@ -81,25 +54,100 @@ impl Deref for Args {
     }
 }
 
-impl From<std::env::Args> for Args {
-    fn from(v: std::env::Args) -> Self {
-        Args(
-            v.collect::<Vec<String>>()
-                .iter()
-                .map(|v| astr(v.as_str()))
-                .collect(),
-            0,
-        )
+impl DerefMut for Args {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
-/// The default value of [`Args`] are `std::env::args()[1..]`.
 impl Default for Args {
     fn default() -> Self {
-        Self(
-            std::env::args().skip(1).map(|v| astr(v.as_str())).collect(),
-            0,
-        )
+        Self(Vec::default())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ArgsIter<I> {
+    iter: I,
+    index: usize,
+    total: usize,
+    args: (Option<Str>, Option<Str>),
+}
+
+impl<T, I> ArgsIter<I>
+where
+    I: Iterator<Item = T> + Clone,
+    T: Into<Str>,
+{
+    pub fn new(mut iter: I, index: usize, total: usize) -> Self {
+        let first = iter.next().map(|v| v.into());
+        Self {
+            iter,
+            index,
+            total,
+            args: (None, first),
+        }
+    }
+
+    pub fn cur(&self) -> Option<&Str> {
+        self.args.0.as_ref()
+    }
+
+    pub fn arg(&self) -> Option<&Str> {
+        self.args.1.as_ref()
+    }
+
+    pub fn idx(&self) -> usize {
+        self.index - 1
+    }
+
+    pub fn is_last(&self) -> bool {
+        self.index > self.total
+    }
+
+    /// Parsing current command line argument item with given [`ArgParser`] `P`.
+    pub fn parse<P: ArgParser>(
+        &self,
+        parser: &mut P,
+        prefixs: &[Str],
+    ) -> Result<P::Output, P::Error> {
+        let pattern = self.args.0.clone();
+        parser.parse(pattern.unwrap(), prefixs)
+    }
+
+    pub fn len(&self) -> usize {
+        self.total
+    }
+}
+
+impl<T, I> Iterator for ArgsIter<I>
+where
+    I: Iterator<Item = T> + Clone,
+    T: Into<Str>,
+{
+    type Item = Str;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.args.0 = self.args.1.take();
+        self.args.1 = self.iter.next().map(|v| v.into());
+        self.index += 1;
+        self.args.0.clone()
+    }
+}
+
+impl<T, I> ExactSizeIterator for ArgsIter<I>
+where
+    T: Into<Str>,
+    I: Iterator<Item = T> + Clone + ExactSizeIterator,
+{
+    fn len(&self) -> usize {
+        let (lower, upper) = self.iter.size_hint();
+        // Note: This assertion is overly defensive, but it checks the invariant
+        // guaranteed by the trait. If this trait were rust-internal,
+        // we could use debug_assert!; assert_eq! will check all Rust user
+        // implementations too.
+        assert_eq!(upper, Some(lower));
+        lower
     }
 }
 
@@ -111,35 +159,38 @@ mod test {
 
     #[test]
     fn test_args() {
-        let mut args = Args::new(["--opt", "value", "--bool", "pos"].into_iter());
+        let args = Args::new(["--opt", "value", "--bool", "pos"].into_iter());
+        let mut iter = args.iter();
 
-        assert_eq!(args.get_index(), 0);
-        assert_eq!(args.get_curr(), Some(&astr("--opt")));
-        assert_eq!(args.get_next(), Some(&astr("value")));
+        iter.next();
 
-        args.skip();
+        assert_eq!(iter.idx(), 0);
+        assert_eq!(iter.cur(), Some(&astr("--opt")));
+        assert_eq!(iter.arg(), Some(&astr("value")));
 
-        assert_eq!(args.get_index(), 1);
-        assert_eq!(args.get_curr(), Some(&astr("value")));
-        assert_eq!(args.get_next(), Some(&astr("--bool")));
+        iter.next();
 
-        args.skip();
+        assert_eq!(iter.idx(), 1);
+        assert_eq!(iter.cur(), Some(&astr("value")));
+        assert_eq!(iter.arg(), Some(&astr("--bool")));
 
-        assert_eq!(args.get_index(), 2);
-        assert_eq!(args.get_curr(), Some(&astr("--bool")));
-        assert_eq!(args.get_next(), Some(&astr("pos")));
+        iter.next();
 
-        args.skip();
+        assert_eq!(iter.idx(), 2);
+        assert_eq!(iter.cur(), Some(&astr("--bool")));
+        assert_eq!(iter.arg(), Some(&astr("pos")));
 
-        assert_eq!(args.get_index(), 3);
-        assert_eq!(args.get_curr(), Some(&astr("pos")));
-        assert_eq!(args.get_next(), None);
+        iter.next();
 
-        args.skip();
+        assert_eq!(iter.idx(), 3);
+        assert_eq!(iter.cur(), Some(&astr("pos")));
+        assert_eq!(iter.arg(), None);
 
-        assert!(args.is_last());
-        assert_eq!(args.get_index(), 4);
-        assert_eq!(args.get_curr(), None);
-        assert_eq!(args.get_next(), None);
+        iter.next();
+
+        assert!(iter.is_last());
+        assert_eq!(iter.idx(), 4);
+        assert_eq!(iter.cur(), None);
+        assert_eq!(iter.arg(), None);
     }
 }

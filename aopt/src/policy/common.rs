@@ -1,6 +1,5 @@
-use super::ContextSaver;
-use crate::arg::Args;
-use crate::ctx::Context;
+use super::CtxSaver;
+use crate::ctx::Ctx;
 use crate::opt::Opt;
 use crate::proc::NOAProcess;
 use crate::proc::OptProcess;
@@ -14,7 +13,7 @@ use crate::Str;
 use crate::Uid;
 
 pub fn invoke_callback_opt<Set, Value>(
-    saver: ContextSaver,
+    saver: CtxSaver,
     set: &mut Set,
     ser: &mut Services,
     inv_ser: &mut InvokeService<Set, Value>,
@@ -37,27 +36,27 @@ where
         ret = set
             .get_mut(uid)
             .unwrap()
-            .invoke_callback(ser, saver.ctx)?
+            .invoke(ser, &saver.ctx)?
             .map(|v| Value::from(v));
     } else {
         // default value
-        ret = saver.ctx.get_argument().map(|v| Value::from(v));
+        ret = saver.ctx.arg().map(|v| Value::from(v));
     }
     // save the value to ValueService
     if let Some(ret) = ret {
-        ser.get_service_mut::<ValueService<Value>>()?.ins(uid, ret);
+        ser.ser_mut::<ValueService<Value>>()?.ins(uid, ret);
     }
     Ok(())
 }
 
 pub fn process_opt<Set, Value>(
-    args: &Args,
+    ctx: &Ctx,
     set: &mut Set,
     ser: &mut Services,
     proc: &mut OptProcess<Set>,
     inv_ser: &mut InvokeService<Set, Value>,
     invoke: bool,
-) -> Result<Vec<ContextSaver>, Error>
+) -> Result<Vec<CtxSaver>, Error>
 where
     Set::Opt: Opt,
     Value: From<Str> + 'static,
@@ -69,41 +68,44 @@ where
 
     for uid in keys {
         if let Ok(Some(index)) = proc.process(uid, set) {
-            let mat = proc.get_match(index).unwrap(); // always true
+            let mat = proc.mat(index).unwrap(); // always true
 
             // save the context
-            context_savers.push(ContextSaver {
+            context_savers.push(CtxSaver {
                 uid,
-                ctx: Context::default()
-                    .with_uid(uid)
-                    .with_name(mat.get_name())
-                    .with_prefix(mat.get_prefix())
-                    .with_style(mat.get_style())
-                    .with_args(args.clone())
-                    .with_argument(mat.get_argument())
-                    .with_deactivate(mat.get_deactivate()),
+                ctx: ctx
+                    .clone()
+                    // .with_idx(idx) set when process option
+                    // .with_len(len) set before process options
+                    // .with_args(args) set before process options
+                    .with_uid(uid) // current uid == uid in matcher
+                    .with_name(mat.name())
+                    .with_pre(mat.pre())
+                    .with_sty(mat.sty())
+                    .with_arg(mat.arg())
+                    .with_dsb(mat.dsb()),
             });
         }
     }
-    if proc.is_matched() && invoke {
+    if proc.is_mat() && invoke {
         for saver in context_savers {
             invoke_callback_opt(saver, set, ser, inv_ser)?;
         }
         Ok(vec![])
     } else {
-        (!proc.is_matched()).then(|| proc.undo(set));
+        (!proc.is_mat()).then(|| proc.undo(set));
 
         Ok(context_savers)
     }
 }
 
 pub fn process_non_opt<Set, Value>(
-    args: &Args,
+    ctx: &Ctx,
     set: &mut Set,
     ser: &mut Services,
     proc: &mut NOAProcess<Set>,
     inv_ser: &mut InvokeService<Set, Value>,
-) -> Result<Vec<ContextSaver>, Error>
+) -> Result<Vec<CtxSaver>, Error>
 where
     Set::Opt: Opt,
     Value: From<Str> + 'static,
@@ -115,17 +117,20 @@ where
     for uid in keys {
         if let Ok(Some(index)) = proc.process(uid, set) {
             let mut matched = true;
-            let mat = proc.get_match(index).unwrap(); // always true
+            let mat = proc.mat(index).unwrap(); // always true
 
             // save the context
-            let ctx = Context::default()
+            let ctx = ctx
+                .clone()
+                // .with_idx(idx) set when process option
+                // .with_len(len) set before process options
+                // .with_args(args) set before process options
                 .with_name(mat.get_name())
-                .with_prefix(mat.get_prefix())
-                .with_style(mat.get_style())
-                .with_uid(uid)
-                .with_args(args.clone())
-                .with_argument(mat.get_argument())
-                .with_deactivate(mat.get_deactivate());
+                .with_pre(mat.pre())
+                .with_sty(mat.sty())
+                .with_uid(uid) // current uid == uid in matcher
+                .with_arg(mat.arg())
+                .with_dsb(mat.dsb());
 
             let ret;
             let has_callback_is = inv_ser.has(uid);
@@ -140,16 +145,16 @@ where
                 ret = set
                     .get_mut(uid)
                     .unwrap()
-                    .invoke_callback(ser, ctx)?
+                    .invoke(ser, &ctx)?
                     .map(|v| Value::from(v));
                 matched = ret.is_some();
             } else {
                 // default value
-                ret = ctx.get_args().get_curr().map(|v| Value::from(v.clone()));
+                ret = ctx.arg_of().map(|v| Value::from(v.clone()));
             }
             // save the value to ValueService
             if let Some(ret) = ret {
-                ser.get_service_mut::<ValueService<Value>>()?.ins(uid, ret);
+                ser.ser_mut::<ValueService<Value>>()?.ins(uid, ret);
             }
             // reset the process if any callback return None
             if !matched {

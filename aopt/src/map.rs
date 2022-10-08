@@ -84,17 +84,17 @@ impl Map {
 }
 
 pub trait MapExt {
-    fn get_type<T>(&self) -> Result<&T, Error>
+    fn ty<T>(&self) -> Result<&T, Error>
     where
         T: 'static;
 
-    fn get_type_mut<T>(&mut self) -> Result<&mut T, Error>
+    fn ty_mut<T>(&mut self) -> Result<&mut T, Error>
     where
         T: 'static;
 }
 
 impl MapExt for Map {
-    fn get_type<T>(&self) -> Result<&T, Error>
+    fn ty<T>(&self) -> Result<&T, Error>
     where
         T: 'static,
     {
@@ -104,7 +104,7 @@ impl MapExt for Map {
         })
     }
 
-    fn get_type_mut<T>(&mut self) -> Result<&mut T, Error>
+    fn ty_mut<T>(&mut self) -> Result<&mut T, Error>
     where
         T: 'static,
     {
@@ -190,17 +190,17 @@ impl RcMap {
 }
 
 pub trait RcMapExt {
-    fn get_type<T>(&self) -> Result<&T, Error>
+    fn ty<T>(&self) -> Result<&T, Error>
     where
         T: 'static;
 
-    fn get_typemut<T>(&mut self) -> Result<&mut T, Error>
+    fn ty_mut<T>(&mut self) -> Result<&mut T, Error>
     where
         T: 'static;
 }
 
 impl RcMapExt for RcMap {
-    fn get_type<T>(&self) -> Result<&T, Error>
+    fn ty<T>(&self) -> Result<&T, Error>
     where
         T: 'static,
     {
@@ -210,7 +210,7 @@ impl RcMapExt for RcMap {
         })
     }
 
-    fn get_typemut<T>(&mut self) -> Result<&mut T, Error>
+    fn ty_mut<T>(&mut self) -> Result<&mut T, Error>
     where
         T: 'static,
     {
@@ -253,17 +253,17 @@ mod test {
 
         // check the value get from map
         assert_eq!(map.get::<Widget>(), Some(&Widget(1)));
-        assert_eq!(map.get_type::<Widget>().unwrap(), &Widget(1));
+        assert_eq!(map.ty::<Widget>().unwrap(), &Widget(1));
 
         // modify the value in the map
         if let Some(v) = map.get_mut::<Widget>() {
             v.0 = 2
         };
         assert_eq!(map.get::<Widget>(), Some(&Widget(2)));
-        if let Ok(v) = map.get_type_mut::<u32>() {
+        if let Ok(v) = map.ty_mut::<u32>() {
             *v = 42;
         }
-        assert_eq!(map.get_type::<u32>().unwrap(), &42);
+        assert_eq!(map.ty::<u32>().unwrap(), &42);
 
         // remove the self-define type
         map.remove::<Widget>();

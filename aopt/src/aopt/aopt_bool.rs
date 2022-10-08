@@ -1,6 +1,6 @@
 use super::ACreator;
 use super::AOpt;
-use crate::ctx::Context;
+use crate::ctx::Ctx;
 use crate::err::Error;
 use crate::opt::ConfigValue;
 use crate::opt::OptCallback;
@@ -133,13 +133,13 @@ impl ACreator for BoolCreator {
     }
 
     fn _create_with(&mut self, config: Self::Config) -> Result<Self::Opt, Error> {
-        let deactivate_style = config.get_deactivate_style().unwrap_or(false);
+        let deactivate_style = config.deact().unwrap_or(false);
 
         if deactivate_style && !self._support_deactivate_style() {
             return Err(Error::con_unsupport_deactivate_style(config.gen_name()?));
         }
 
-        debug_assert_eq!(config.get_type_name().unwrap(), self._get_type_name());
+        debug_assert_eq!(config.ty().unwrap(), self._get_type_name());
 
         let opt: BoolOpt = config.try_into()?;
 
@@ -151,12 +151,12 @@ impl TryFrom<OptConfig> for BoolOpt {
     type Error = Error;
 
     fn try_from(mut cfg: OptConfig) -> Result<Self, Self::Error> {
-        let prefix = Some(cfg.gen_prefix()?);
-        let deactivate_style = cfg.get_deactivate_style().unwrap_or(false);
-        let optional = cfg.take_optional().unwrap_or(true);
+        let prefix = Some(cfg.gen_pre()?);
+        let deactivate_style = cfg.deact().unwrap_or(false);
+        let optional = cfg.take_opt().unwrap_or(true);
 
         debug_assert!(
-            cfg.get_index().is_none(),
+            cfg.idx().is_none(),
             "Bool option not support index configruation"
         );
         Ok(Self::default()

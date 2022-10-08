@@ -1,7 +1,7 @@
 use regex::Regex;
 
 use super::{OptConstrctInfo, OptParser};
-use crate::set::Prefixed;
+use crate::set::PreSet;
 use crate::Error;
 use crate::Str;
 
@@ -49,7 +49,7 @@ use crate::Str;
 /// use test_crate::opt::Information;
 ///
 /// fn main() -> Result<()> {
-///     let parser = OptStringParser::default().with_prefix("--");
+///     let parser = OptStringParser::default().with_pre("--");
 ///     let ret = parser.parse("--aopt=t!/".into())?;
 ///
 ///     assert_eq!(ret.prefix, Some(astr("--")));
@@ -79,7 +79,7 @@ use crate::Str;
 ///     assert_eq!(ret.except, []);
 ///     assert_eq!(ret.greater, None);
 ///     assert_eq!(ret.less, None);
-///     assert_eq!(ret.get_index(), Some(&OptIndex::list(vec![1, 2, 3])));
+///     assert_eq!(ret.idx(), Some(&OptIndex::list(vec![1, 2, 3])));
 ///
 ///     Ok(())
 /// }
@@ -100,12 +100,12 @@ impl Default for OptStringParser {
     }
 }
 
-impl Prefixed for OptStringParser {
-    fn get_prefix(&self) -> &[Str] {
+impl PreSet for OptStringParser {
+    fn pre(&self) -> &[Str] {
         &self.prefix
     }
 
-    fn add_prefix(&mut self, prefix: &str) -> &mut Self {
+    fn add_pre(&mut self, prefix: &str) -> &mut Self {
         self.prefix.push(prefix.into());
         self.prefix.sort_by_key(|b| std::cmp::Reverse(b.len()));
         self
@@ -120,16 +120,16 @@ impl OptStringParser {
         }
     }
 
-    pub fn with_prefix(mut self, prefix: &str) -> Self {
-        self.add_prefix(prefix);
+    pub fn with_pre(mut self, prefix: &str) -> Self {
+        self.add_pre(prefix);
         self
     }
 
-    pub fn get_regex(&self) -> &Regex {
+    pub fn regex(&self) -> &Regex {
         &self.regex
     }
 
-    pub fn rem_prefix(&mut self, prefix: &str) -> &mut Self {
+    pub fn rem_pre(&mut self, prefix: &str) -> &mut Self {
         for (idx, value) in self.prefix.iter().enumerate() {
             if *value == prefix {
                 self.prefix.remove(idx);
@@ -201,7 +201,7 @@ impl OptStringParser {
     ) -> Result<OptConstrctInfo, Error> {
         let (_, left_part) = pattern.split_at(prefix.len());
 
-        if let Some(cap) = self.get_regex().captures(left_part) {
+        if let Some(cap) = self.regex().captures(left_part) {
             let mut deactivate = None;
             let mut optional = None;
             let mut forward_index = None;
@@ -266,19 +266,19 @@ impl OptStringParser {
                 }
             }
             Ok(OptConstrctInfo::default()
-                .with_prefix(Some(prefix))
-                .with_deactivate(deactivate)
-                .with_optional(optional)
-                .with_forward(forward_index)
-                .with_backward(backward_index)
-                .with_anywhere(anywhere)
-                .with_list(list)
-                .with_except(except)
-                .with_greater(greater)
-                .with_less(less)
-                .with_pattern(pattern.clone())
+                .with_pre(Some(prefix))
+                .with_deact(deactivate)
+                .with_opt(optional)
+                .with_fwd(forward_index)
+                .with_bwd(backward_index)
+                .with_aw(anywhere)
+                .with_ls(list)
+                .with_exp(except)
+                .with_gt(greater)
+                .with_le(less)
+                .with_pat(pattern.clone())
                 .with_name(cap.get(IDX_NAME).map(|v| Str::from(v.as_str())))
-                .with_type_name(cap.get(IDX_TYPE).map(|v| Str::from(v.as_str()))))
+                .with_ty(cap.get(IDX_TYPE).map(|v| Str::from(v.as_str()))))
         } else {
             Err(Error::con_parsing_failed(pattern))
         }
@@ -309,7 +309,7 @@ impl OptParser for OptStringParser {
                     if let Ok(mut data_keeper) =
                         self.parse_creator_string(pattern.clone(), prefix.clone())
                     {
-                        data_keeper.gen_index();
+                        data_keeper.gen_idx();
                         return Ok(data_keeper);
                     }
                 }
@@ -317,7 +317,7 @@ impl OptParser for OptStringParser {
             // pass en empty prefix to the parser
             if let Ok(mut data_keeper) = self.parse_creator_string(pattern.clone(), Str::from("")) {
                 data_keeper.prefix = None;
-                data_keeper.gen_index();
+                data_keeper.gen_idx();
                 return Ok(data_keeper);
             }
         }
@@ -3318,9 +3318,7 @@ mod test {
                     )),
                 ),
             ];
-            let parser = OptStringParser::default()
-                .with_prefix("--")
-                .with_prefix("-");
+            let parser = OptStringParser::default().with_pre("--").with_pre("-");
 
             for case in test_cases.iter() {
                 try_to_verify_one_task(astr(case.0), &parser, &case.1);
@@ -3346,7 +3344,7 @@ mod test {
             assert!(except.is_some());
 
             if let Some(except) = except {
-                let index = dk.get_index();
+                let index = dk.idx();
 
                 assert_eq!(except.0, dk.prefix);
                 assert_eq!(except.1, dk.name);

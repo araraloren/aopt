@@ -18,19 +18,19 @@ pub struct CLOpt {
 }
 
 impl CLOpt {
-    pub fn get_name(&self) -> Option<Str> {
+    pub fn name(&self) -> Option<Str> {
         self.name.clone()
     }
 
-    pub fn get_value(&self) -> Option<Str> {
+    pub fn val(&self) -> Option<Str> {
         self.value.clone()
     }
 
-    pub fn get_prefix(&self) -> Option<Str> {
+    pub fn pre(&self) -> Option<Str> {
         self.prefix.clone()
     }
 
-    pub fn get_disable(&self) -> bool {
+    pub fn dsb(&self) -> bool {
         self.disable
     }
 }
@@ -100,7 +100,7 @@ impl CLOptParser {
         Self(regex)
     }
 
-    pub fn get_regex(&self) -> &Regex {
+    pub fn regex(&self) -> &Regex {
         &self.0
     }
 }
@@ -122,7 +122,7 @@ impl ArgParser for CLOptParser {
             if pattern.starts_with(prefix.as_str()) {
                 let (_, left_part) = pattern.split_at(prefix.len());
 
-                if let Some(cap) = self.get_regex().captures(left_part) {
+                if let Some(cap) = self.regex().captures(left_part) {
                     //log!(format!("Regex result -> {:?}", cap));
                     return Ok(Self::Output {
                         name: Some(
@@ -147,6 +147,7 @@ mod test {
 
     use super::ArgParser;
     use super::CLOptParser;
+    use crate::arg::args::ArgsIter;
     use crate::arg::Args;
     use crate::astr;
     use crate::Str;
@@ -184,7 +185,7 @@ mod test {
             ];
 
             testing_one_iterator(
-                Args::new(data),
+                Args::new(data).iter(),
                 vec![astr("--"), astr("-")],
                 &data_check,
                 &check,
@@ -222,7 +223,7 @@ mod test {
             ];
 
             testing_one_iterator(
-                Args::new(data),
+                Args::new(data).iter(),
                 vec![astr("+"), astr("")],
                 &data_check,
                 &check,
@@ -230,8 +231,8 @@ mod test {
         }
     }
 
-    fn testing_one_iterator(
-        mut args: Args,
+    fn testing_one_iterator<T: Into<Str>, I: Iterator<Item = T> + Clone>(
+        mut args: ArgsIter<I>,
         prefixs: Vec<Str>,
         data_check: &Vec<&str>,
         check: &Vec<Vec<&str>>,
@@ -241,18 +242,18 @@ mod test {
         let default_item = "";
         let mut parser = CLOptParser::default();
 
-        while !args.is_last() {
-            let index = args.get_index();
+        while let Some(_) = args.next() {
+            let index = args.idx();
 
             assert_eq!(
-                args.get_curr().unwrap_or(&default_str),
+                args.cur().unwrap_or(&default_str),
                 data_check.get(index).unwrap_or(&default_data)
             );
             assert_eq!(
-                args.get_next().unwrap_or(&default_str),
+                args.arg().unwrap_or(&default_str),
                 data_check.get(index + 1).unwrap_or(&default_data)
             );
-            if let Some(curr) = args.get_curr() {
+            if let Some(curr) = args.cur() {
                 if let Ok(ret) = parser.parse(curr.clone(), &prefixs) {
                     let check_item = &check[index];
 
@@ -270,8 +271,6 @@ mod test {
                     );
                 }
             }
-
-            args.skip();
         }
     }
 

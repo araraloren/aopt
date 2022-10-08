@@ -26,11 +26,11 @@ impl Help {
         self
     }
 
-    pub fn get_hint(&self) -> Str {
+    pub fn hint(&self) -> Str {
         self.hint.clone()
     }
 
-    pub fn get_help(&self) -> Str {
+    pub fn help(&self) -> Str {
         self.help.clone()
     }
 

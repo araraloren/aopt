@@ -65,17 +65,17 @@ where
         self
     }
 
-    pub fn with_style(mut self, style: OptStyle) -> Self {
+    pub fn with_sty(mut self, style: OptStyle) -> Self {
         self.style = style;
         self
     }
 
-    pub fn with_index(mut self, index: usize) -> Self {
+    pub fn with_idx(mut self, index: usize) -> Self {
         self.noa_index = index;
         self
     }
 
-    pub fn with_total(mut self, total: usize) -> Self {
+    pub fn with_len(mut self, total: usize) -> Self {
         self.noa_total = total;
         self
     }
@@ -84,27 +84,27 @@ where
         self.name.clone()
     }
 
-    pub fn get_prefix(&self) -> Option<Str> {
+    pub fn pre(&self) -> Option<Str> {
         None
     }
 
-    pub fn get_argument(&self) -> Option<Str> {
+    pub fn arg(&self) -> Option<Str> {
         None
     }
 
-    pub fn get_style(&self) -> OptStyle {
+    pub fn sty(&self) -> OptStyle {
         self.style
     }
 
-    pub fn get_deactivate(&self) -> bool {
+    pub fn dsb(&self) -> bool {
         false
     }
 
-    pub fn get_index(&self) -> usize {
+    pub fn idx(&self) -> usize {
         self.noa_index
     }
 
-    pub fn get_total(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.noa_total
     }
 }
@@ -122,27 +122,27 @@ where
         self.matched_uid = None;
     }
 
-    fn is_matched(&self) -> bool {
+    fn is_mat(&self) -> bool {
         self.matched_uid.is_some()
     }
 
-    fn get_matched_uid(&self) -> Option<Uid> {
+    fn mat_uid(&self) -> Option<Uid> {
         self.matched_uid
     }
 
-    fn set_matched_uid(&mut self, uid: Uid) {
+    fn set_uid(&mut self, uid: Uid) {
         self.matched_uid = Some(uid);
     }
 
-    fn get_style(&self) -> OptStyle {
+    fn sty(&self) -> OptStyle {
         self.style
     }
 
-    fn get_argument(&self) -> Option<Str> {
+    fn arg(&self) -> Option<Str> {
         None
     }
 
-    fn is_consume_argument(&self) -> bool {
+    fn consume(&self) -> bool {
         false
     }
 
@@ -153,27 +153,27 @@ where
     }
 
     /// Match the [`Opt`]'s name, prefix and style, index.
-    /// Then call the [`check_value`](Opt::check_value) check the argument.
+    /// Then call the [`val`](Opt::val) check the argument.
     /// If matched, set the setted of [`Opt`] and return true.
     fn process(&mut self, opt: &mut <Self::Set as Set>::Opt) -> Result<bool, Self::Error> {
-        let mut matched = opt.match_style(self.style);
+        let mut matched = opt.mat_sty(self.style);
 
         if matched {
             matched = matched
-                && (opt.match_name(self.get_name())
-                    && opt.match_prefix(self.get_prefix())
-                    && opt.match_index(Some((self.noa_index as usize, self.noa_total as usize))));
+                && (opt.mat_name(self.get_name())
+                    && opt.mat_pre(self.pre())
+                    && opt.mat_idx(Some((self.noa_index as usize, self.noa_total as usize))));
         }
         if matched {
             // set the value of current option
-            if opt.check_value(
+            if opt.val(
                 Some(self.get_name()),
                 false,
                 (self.noa_index, self.noa_total),
             )? {
                 opt.set_setted(true);
                 self.matched_index = Some(self.noa_index);
-                self.matched_uid = Some(opt.get_uid());
+                self.matched_uid = Some(opt.uid());
             } else {
                 matched = false;
             }

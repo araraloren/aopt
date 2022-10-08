@@ -1,83 +1,33 @@
-pub mod aext;
 pub mod aopt;
 pub mod arg;
 pub mod ctx;
 pub mod err;
+pub mod ext;
 pub(crate) mod map;
 pub mod opt;
 pub mod policy;
 pub mod proc;
 pub mod ser;
 pub mod set;
+pub mod sim;
 pub mod str;
-
-use aext::ASetExt;
-use aopt::ACreator;
-use aopt::AOpt;
-use opt::OptConfig;
-use opt::OptStringParser;
-use ser::Services;
-use set::OptSet;
 
 pub type Uid = u64;
 pub type HashMap<K, V> = ahash::HashMap<K, V>;
-pub type SimpleOpt = Box<dyn AOpt>;
-pub type SimpleCreator = Box<dyn ACreator<Opt = SimpleOpt, Config = OptConfig>>;
-pub type SimpleServices = Services;
-pub type SimpleSet = OptSet<SimpleOpt, OptStringParser, SimpleCreator>;
-
-pub trait DefaultSetConfig {
-    fn with_default_prefix(self) -> Self;
-
-    fn with_default_creator(self) -> Self;
-}
-
-impl DefaultSetConfig for SimpleSet {
-    fn with_default_prefix(mut self) -> Self {
-        self = self.with_prefix("--").with_prefix("-");
-        self
-    }
-
-    fn with_default_creator(mut self) -> Self {
-        self = self
-            .with_creator(aopt::BoolCreator::boxed())
-            .with_creator(aopt::FltCreator::boxed())
-            .with_creator(aopt::IntCreator::boxed())
-            .with_creator(aopt::StrCreator::boxed())
-            .with_creator(aopt::UintCreator::boxed())
-            .with_creator(aopt::CmdCreator::boxed())
-            .with_creator(aopt::PosCreator::boxed())
-            .with_creator(aopt::MainCreator::boxed());
-        self
-    }
-}
-
-impl ASetExt for SimpleSet {
-    fn new_set() -> Self {
-        Self::default().with_default_prefix().with_default_creator()
-    }
-}
-
 pub use self::err::Error;
 pub use self::err::Result;
 pub use self::str::astr;
 pub use self::str::Str;
 pub use self::str::StrJoin;
 
-use std::any::TypeId;
-
-pub(crate) fn typeid<T>() -> TypeId
+pub(crate) fn typeid<T>() -> std::any::TypeId
 where
     T: 'static,
 {
-    TypeId::of::<T>()
+    std::any::TypeId::of::<T>()
 }
 
 pub mod prelude {
-    //pub use crate::data;
-    pub use crate::aext::APolicyExt;
-    pub use crate::aext::AServiceExt;
-    pub use crate::aext::ASetExt;
     pub use crate::aopt::ACreator;
     pub use crate::aopt::AOpt;
     pub use crate::aopt::BoolCreator;
@@ -98,12 +48,17 @@ pub mod prelude {
     pub use crate::aopt::UintOpt;
     pub use crate::arg::Args;
     pub use crate::astr;
+    pub use crate::ctx;
     pub use crate::ctx::wrap_callback;
     pub use crate::ctx::Callback;
     pub use crate::ctx::Callbacks;
-    pub use crate::ctx::Context;
-    pub use crate::ctx::ExtractFromCtx;
+    pub use crate::ctx::Ctx;
+    pub use crate::ctx::ExtractCtx;
     pub use crate::ctx::Handler;
+    pub use crate::ext::APolicyExt;
+    pub use crate::ext::AServiceExt;
+    pub use crate::ext::ASetConfigExt;
+    pub use crate::ext::ASetExt;
     pub use crate::map::Map;
     pub use crate::map::MapExt;
     pub use crate::map::RcMap;
@@ -127,7 +82,7 @@ pub mod prelude {
     pub use crate::opt::OptStyle;
     pub use crate::opt::Optional;
     pub use crate::opt::Prefix;
-    pub use crate::policy::ContextSaver;
+    pub use crate::policy::CtxSaver;
     pub use crate::policy::DelayPolicy;
     pub use crate::policy::ForwardPolicy;
     pub use crate::policy::Policy;
@@ -147,14 +102,13 @@ pub mod prelude {
     pub use crate::ser::ValueService;
     pub use crate::set::Commit;
     pub use crate::set::OptSet;
-    pub use crate::set::Prefixed;
+    pub use crate::set::PreSet;
     pub use crate::set::Set;
     pub use crate::set::SetExt;
-    pub use crate::DefaultSetConfig;
-    pub use crate::SimpleCreator;
-    pub use crate::SimpleOpt;
-    pub use crate::SimpleServices;
-    pub use crate::SimpleSet;
+    pub use crate::sim::SimCtor;
+    pub use crate::sim::SimOpt;
+    pub use crate::sim::SimSer;
+    pub use crate::sim::SimSet;
     pub use crate::Str;
     pub use crate::Uid;
 }

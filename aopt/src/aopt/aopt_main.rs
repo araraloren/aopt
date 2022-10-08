@@ -1,6 +1,6 @@
 use super::ACreator;
 use super::AOpt;
-use crate::ctx::Context;
+use crate::ctx::Ctx;
 use crate::err::Error;
 use crate::opt::ConfigValue;
 use crate::opt::OptCallback;
@@ -114,13 +114,13 @@ impl ACreator for MainCreator {
     }
 
     fn _create_with(&mut self, config: Self::Config) -> Result<Self::Opt, Error> {
-        let deactivate_style = config.get_deactivate_style().unwrap_or(false);
+        let deactivate_style = config.deact().unwrap_or(false);
 
         if deactivate_style && !self._support_deactivate_style() {
             return Err(Error::con_unsupport_deactivate_style(config.gen_name()?));
         }
 
-        debug_assert_eq!(config.get_type_name().unwrap(), self._get_type_name());
+        debug_assert_eq!(config.ty().unwrap(), self._get_type_name());
 
         let opt: MainOpt = config.try_into()?;
 
@@ -132,27 +132,27 @@ impl TryFrom<OptConfig> for MainOpt {
     type Error = Error;
 
     fn try_from(mut cfg: OptConfig) -> Result<Self, Self::Error> {
-        if let Some(v) = cfg.get_alias() {
+        if let Some(v) = cfg.alias() {
             debug_assert!(v.is_empty(), "Main option not support alias configruation")
         }
         debug_assert!(
-            cfg.get_optional().unwrap_or(true),
+            cfg.opt().unwrap_or(true),
             "Main option only have default optional configuration"
         );
         debug_assert!(
-            cfg.get_index().is_none(),
+            cfg.idx().is_none(),
             "Main option only have default index configuration"
         );
         debug_assert!(
-            cfg.get_prefix().is_none(),
+            cfg.pre().is_none(),
             "Main option not support prefix configruation"
         );
         debug_assert!(
-            !cfg.get_deactivate_style().unwrap_or(false),
+            !cfg.deact().unwrap_or(false),
             "Main option not support deactivate style configuration"
         );
         Ok(Self::default()
-            .with_uid(cfg.get_uid())
+            .with_uid(cfg.uid())
             .with_name(cfg.gen_name()?)
             .with_help(cfg.gen_opt_help(false)?)
             .with_index(None)

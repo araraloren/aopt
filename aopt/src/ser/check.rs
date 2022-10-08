@@ -44,7 +44,7 @@ where
         let has_cmd = set
             .keys()
             .iter()
-            .any(|key| Self::opt(set, key).match_style(OptStyle::Cmd));
+            .any(|key| Self::opt(set, key).mat_sty(OptStyle::Cmd));
 
         const MAX_INDEX: usize = usize::MAX;
 
@@ -52,10 +52,10 @@ where
             for key in set.keys() {
                 let opt = Self::opt(set, key);
 
-                if opt.match_style(OptStyle::Pos) {
-                    if let Some(index) = opt.get_index() {
+                if opt.mat_sty(OptStyle::Pos) {
+                    if let Some(index) = opt.idx() {
                         let index = index.calc_index(MAX_INDEX, 1).unwrap_or(MAX_INDEX);
-                        if index == 1 && !opt.get_optional() {
+                        if index == 1 && !opt.opt() {
                             // if we have cmd, can not have force required POS @1
                             return Err(Error::con_can_not_insert_pos());
                         }
@@ -72,9 +72,9 @@ where
             .iter()
             .filter(|v| {
                 let opt = Self::opt(set, *v);
-                opt.match_style(OptStyle::Argument)
-                    || opt.match_style(OptStyle::Boolean)
-                    || opt.match_style(OptStyle::Combined)
+                opt.mat_sty(OptStyle::Argument)
+                    || opt.mat_sty(OptStyle::Boolean)
+                    || opt.mat_sty(OptStyle::Combined)
             })
             .all(|v| Self::opt(set, v).check()))
     }
@@ -91,26 +91,26 @@ where
         for key in set.keys() {
             let opt = Self::opt(set, key);
 
-            if opt.match_style(OptStyle::Pos) {
-                if let Some(index) = opt.get_index() {
+            if opt.mat_sty(OptStyle::Pos) {
+                if let Some(index) = opt.idx() {
                     match index {
                         OptIndex::Forward(_) | OptIndex::Backward(_) => {
                             if let Some(index) = index.calc_index(usize::MAX, 1) {
                                 let entry = index_map.entry(index).or_insert(vec![]);
-                                entry.push(opt.get_uid());
+                                entry.push(opt.uid());
                             }
                         }
                         OptIndex::List(v) => {
                             for index in v {
                                 let entry = index_map.entry(*index).or_insert(vec![]);
-                                entry.push(opt.get_uid());
+                                entry.push(opt.uid());
                             }
                         }
                         OptIndex::Except(_)
                         | OptIndex::Greater(_)
                         | OptIndex::Less(_)
                         | OptIndex::AnyWhere => {
-                            float_vec.push(opt.get_uid());
+                            float_vec.push(opt.uid());
                         }
                         OptIndex::Null => {}
                     }
@@ -129,7 +129,7 @@ where
 
                 pos_valid = pos_valid && opt_valid;
                 if !opt_valid {
-                    names.push(opt.get_hint().to_owned());
+                    names.push(opt.hint().to_owned());
                 }
             }
             if !pos_valid {
@@ -142,7 +142,7 @@ where
                 .iter()
                 .filter(|&uid| !Self::opt(set, uid).check())
                 .for_each(|uid| {
-                    names.push(Self::opt(set, uid).get_hint());
+                    names.push(Self::opt(set, uid).hint());
                 });
             if !names.is_empty() {
                 return Err(Error::sp_pos_force_require(names.join(" | ")));
@@ -158,12 +158,12 @@ where
         for key in set.keys() {
             let opt = Self::opt(set, key);
 
-            if opt.match_style(OptStyle::Cmd) {
+            if opt.mat_sty(OptStyle::Cmd) {
                 valid = valid || opt.check();
                 if valid {
                     break;
                 } else {
-                    names.push(opt.get_hint().to_owned());
+                    names.push(opt.hint().to_owned());
                 }
             }
         }
@@ -177,7 +177,7 @@ where
         Ok(set
             .keys()
             .iter()
-            .filter(|v| Self::opt(set, *v).match_style(OptStyle::Main))
+            .filter(|v| Self::opt(set, *v).mat_sty(OptStyle::Main))
             .all(|v| Self::opt(set, v).check()))
     }
 }

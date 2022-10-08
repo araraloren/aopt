@@ -38,22 +38,22 @@ pub trait Set {
 }
 
 pub trait SetExt<Opt> {
-    fn get_opt(&self, id: Uid) -> Result<&Opt, Error>;
+    fn opt(&self, id: Uid) -> Result<&Opt, Error>;
 
-    fn get_opt_mut(&mut self, id: Uid) -> Result<&mut Opt, Error>;
+    fn opt_mut(&mut self, id: Uid) -> Result<&mut Opt, Error>;
 }
 
 impl<Opt, S> SetExt<Opt> for S
 where
     S: Set<Opt = Opt>,
 {
-    fn get_opt(&self, id: Uid) -> Result<&Opt, Error> {
+    fn opt(&self, id: Uid) -> Result<&Opt, Error> {
         debug_assert!(self.has(id), "Invalid uid for Set");
         self.get(id)
             .ok_or_else(|| Error::raise_error(format!("Invalid uid {id} for Set")))
     }
 
-    fn get_opt_mut(&mut self, id: Uid) -> Result<&mut Opt, Error> {
+    fn opt_mut(&mut self, id: Uid) -> Result<&mut Opt, Error> {
         debug_assert!(self.has(id), "Invalid uid for Set");
         self.get_mut(id)
             .ok_or_else(|| Error::raise_error(format!("Invalid uid {id} for Set")))
@@ -61,8 +61,8 @@ where
 }
 
 /// Prefix using for parsing option string.
-pub trait Prefixed {
-    fn get_prefix(&self) -> &[Str];
+pub trait PreSet {
+    fn pre(&self) -> &[Str];
 
-    fn add_prefix(&mut self, prefix: &str) -> &mut Self;
+    fn add_pre(&mut self, prefix: &str) -> &mut Self;
 }

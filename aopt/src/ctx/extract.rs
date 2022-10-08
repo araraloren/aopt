@@ -1,52 +1,60 @@
-use super::Context;
+use super::Ctx;
 use crate::ser::Services;
 use crate::Error;
 use crate::Uid;
 
 /// Implement the trait if your want use your type in the
 /// [`Callback`](super::Callback) of [`InvokeService`](crate::ser::InvokeService).
-pub trait ExtractFromCtx<Set>
+pub trait ExtractCtx<Set>
 where
     Self: Sized,
 {
     type Error: Into<Error>;
 
-    fn extract_from(
-        uid: Uid,
-        set: &Set,
-        ser: &mut Services,
-        ctx: Context,
-    ) -> Result<Self, Self::Error>;
+    fn extract(uid: Uid, set: &Set, ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error>;
 }
 
-impl<Set> ExtractFromCtx<Set> for ()
+impl<Set> ExtractCtx<Set> for ()
 where
     Set: crate::set::Set,
 {
     type Error = Error;
 
-    fn extract_from(
-        _uid: Uid,
-        _set: &Set,
-        _ser: &mut Services,
-        _ctx: Context,
-    ) -> Result<Self, Self::Error> {
+    fn extract(_uid: Uid, _set: &Set, _ser: &Services, _ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(())
+    }
+}
+
+/// Supress the error result.
+/// Return the `Ok(Some(T))` if successful, otherwise return `Ok(None)`.
+impl<T, Err, Set> ExtractCtx<Set> for Option<T>
+where
+    Err: Into<Error>,
+    Set: crate::set::Set,
+    T: ExtractCtx<Set, Error = Err>,
+{
+    type Error = Err;
+
+    fn extract(uid: Uid, set: &Set, ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+        match T::extract(uid, set, ser, ctx) {
+            Ok(value) => Ok(Some(value)),
+            Err(_) => Ok(None),
+        }
     }
 }
 
 macro_rules! impl_extracter_for {
     ($($arg:ident)*) => {
-        impl<Set, $($arg,)*> ExtractFromCtx<Set> for ($($arg,)*)
+        impl<Set, $($arg,)*> ExtractCtx<Set> for ($($arg,)*)
         where
             $(
-                $arg: ExtractFromCtx<Set, Error = Error>,
+                $arg: ExtractCtx<Set, Error = Error>,
             )*
         {
             type Error = Error;
 
-            fn extract_from(uid: Uid, set: &Set, ser: &mut Services, ctx: Context) -> Result<Self, Self::Error> {
-                Ok(($($arg::extract_from(uid, set, ser, ctx.clone())?,)*))
+            fn extract(uid: Uid, set: &Set, ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+                Ok(($($arg::extract(uid, set, ser, ctx)?,)*))
             }
         }
     };

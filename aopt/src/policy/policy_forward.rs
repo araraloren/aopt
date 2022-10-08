@@ -10,12 +10,13 @@ use super::NOAGuess;
 use super::OptGuess;
 use super::Policy;
 use super::UserStyle;
-use crate::aext::APolicyExt;
-use crate::aext::AServiceExt;
-use crate::aext::ASetExt;
 use crate::arg::Args;
 use crate::arg::CLOptParser;
 use crate::astr;
+use crate::ctx::Ctx;
+use crate::ext::APolicyExt;
+use crate::ext::AServiceExt;
+use crate::ext::ASetExt;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::proc::Process;
@@ -23,7 +24,7 @@ use crate::ser::CheckService;
 use crate::ser::InvokeService;
 use crate::ser::Services;
 use crate::ser::ServicesExt;
-use crate::set::Prefixed;
+use crate::set::PreSet;
 use crate::set::Set;
 use crate::Error;
 use crate::Str;
@@ -90,11 +91,11 @@ impl<S, V> Policy for ForwardPolicy<S, V>
 where
     V: From<Str> + 'static,
     S::Opt: Opt,
-    S: Set + OptParser + Prefixed + Debug + 'static,
+    S: Set + OptParser + PreSet + Debug + 'static,
 {
-    type Ret = V;
+    type Ret = bool;
 
-    type Value = bool;
+    type Value = V;
 
     type Set = S;
 
@@ -105,37 +106,38 @@ where
         args: Args,
         ser: &mut Services,
         set: &mut Self::Set,
-    ) -> Result<Option<Self::Value>, Self::Error> {
-        ser.get_service::<CheckService<S, V>>()?.pre_check(set)?;
+    ) -> Result<Option<Self::Ret>, Self::Error> {
+        ser.ser::<CheckService<S, V>>()?.pre_check(set)?;
 
         // take the invoke service, avoid borrow the ser
-        let mut inv_ser = ser.take_service::<InvokeService<S, V>>()?;
-        let opt_styles = [
+        let mut is = ser.take_ser::<InvokeService<S, V>>()?;
+        let stys = [
             UserStyle::EqualWithValue,
             UserStyle::Argument,
             UserStyle::Boolean,
             UserStyle::CombinedOption,
             UserStyle::EmbeddedValue,
         ];
-        let main_args = args.clone();
-        let mut args = args;
-        let mut left_args = vec![];
+        let mut noa_args = Args::default();
+        let mut iter = args.iter();
         let mut parser = CLOptParser::default();
+        let mut opt_ctx = Ctx::default().with_args(args.clone()).with_len(args.len());
 
-        while !args.is_last() {
+        while let Some(_) = iter.next() {
             let mut matched = false;
             let mut consume = false;
 
-            if let Ok(clopt) = args.parse(&mut parser, set.get_prefix()) {
-                for style in opt_styles.iter() {
+            if let Ok(clopt) = iter.parse(&mut parser, set.pre()) {
+                for style in stys.iter() {
                     if let Some(mut proc) =
-                        OptGuess::new().guess(style, GuessOptCfg::new(&args, clopt.clone()))?
+                        OptGuess::new().guess(style, GuessOptCfg::new(&iter, clopt.clone()))?
                     {
-                        process_opt::<S, V>(&args, set, ser, &mut proc, &mut inv_ser, true)?;
-                        if proc.is_matched() {
+                        opt_ctx.set_idx(iter.idx());
+                        process_opt::<S, V>(&opt_ctx, set, ser, &mut proc, &mut is, true)?;
+                        if proc.is_mat() {
                             matched = true;
                         }
-                        if proc.is_consume_argument() {
+                        if proc.consume() {
                             consume = true;
                         }
                         if matched {
@@ -144,63 +146,65 @@ where
                     }
                 }
                 if !matched && self.get_strict() {
-                    let name = clopt.get_name();
+                    let name = clopt.name();
                     return Err(Error::sp_invalid_option_name(name.unwrap_or_default()));
                 }
             }
 
             // if consume the argument, skip it
             if matched && consume {
-                args.skip();
+                iter.next();
             } else if !matched {
                 // add it to NOA if current argument not matched
-                if let Some(arg) = args.get_curr() {
-                    left_args.push(arg.clone());
+                if let Some(arg) = iter.cur() {
+                    noa_args.push(arg.clone());
                 }
             }
-
-            // skip current argument
-            args.skip();
         }
 
-        ser.get_service::<CheckService<S, V>>()?.opt_check(set)?;
+        ser.ser::<CheckService<S, V>>()?.opt_check(set)?;
 
-        let noa_total = left_args.len();
-
-        if noa_total > 0 {
-            let mut args = Args::from(left_args);
+        // when style is pos, noa index is [1..=len]
+        if noa_args.len() > 0 {
+            let mut noa_ctx = Ctx::default()
+                .with_args(noa_args.clone())
+                .with_len(noa_args.len());
 
             if let Some(mut proc) = NOAGuess::new().guess(
                 &UserStyle::Cmd,
-                GuessNOACfg::new(&args, args.get(0).cloned(), Some(1)),
+                GuessNOACfg::new(&noa_args, noa_args[0].clone(), 1),
             )? {
-                process_non_opt::<S, V>(&args, set, ser, &mut proc, &mut inv_ser)?;
+                noa_ctx.set_idx(1);
+                process_non_opt::<S, V>(&noa_ctx, set, ser, &mut proc, &mut is)?;
             }
 
-            ser.get_service::<CheckService<S, V>>()?.cmd_check(set)?;
+            ser.ser::<CheckService<S, V>>()?.cmd_check(set)?;
 
-            while !args.is_last() {
-                if let Some(mut proc) =
-                    NOAGuess::new().guess(&UserStyle::Pos, GuessNOACfg::new(&args, None, None))?
+            for (idx, arg) in noa_args.iter().enumerate() {
+                if let Some(mut proc) = NOAGuess::new()
+                    .guess(&UserStyle::Pos, GuessNOACfg::new(&noa_args, arg, idx + 1))?
                 {
-                    process_non_opt::<S, V>(&args, set, ser, &mut proc, &mut inv_ser)?;
+                    noa_ctx.set_idx(idx + 1);
+                    process_non_opt::<S, V>(&noa_ctx, set, ser, &mut proc, &mut is)?;
                 }
-                args.skip();
             }
         } else {
-            ser.get_service::<CheckService<S, V>>()?.cmd_check(set)?;
+            ser.ser::<CheckService<S, V>>()?.cmd_check(set)?;
         }
-        ser.get_service::<CheckService<S, V>>()?.pos_check(set)?;
+        ser.ser::<CheckService<S, V>>()?.pos_check(set)?;
+
+        let main_args = args;
+        let main_ctx = opt_ctx.set_idx(0);
 
         if let Some(mut proc) = NOAGuess::new().guess(
             &UserStyle::Main,
-            GuessNOACfg::new(&main_args, Some(astr("Main")), Some(0)),
+            GuessNOACfg::new(&main_args, astr("Main"), 0),
         )? {
-            process_non_opt::<S, V>(&main_args, set, ser, &mut proc, &mut inv_ser)?;
+            process_non_opt::<S, V>(&main_ctx, set, ser, &mut proc, &mut is)?;
         }
 
-        ser.get_service::<CheckService<S, V>>()?.post_check(set)?;
-        ser.register(inv_ser);
+        ser.ser::<CheckService<S, V>>()?.post_check(set)?;
+        ser.reg(is);
 
         Ok(Some(true))
     }

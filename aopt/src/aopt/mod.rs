@@ -6,7 +6,6 @@ pub(crate) mod aopt_main;
 pub(crate) mod aopt_pos;
 pub(crate) mod aopt_str;
 pub(crate) mod aopt_uint;
-pub(crate) mod data;
 pub(crate) mod simple_macro;
 
 pub use self::aopt_bool::BoolCreator;
@@ -25,11 +24,10 @@ pub use self::aopt_str::StrCreator;
 pub use self::aopt_str::StrOpt;
 pub use self::aopt_uint::UintCreator;
 pub use self::aopt_uint::UintOpt;
-pub use self::data::UserData;
 
 use std::fmt::Debug;
 
-use crate::ctx::Context;
+use crate::ctx::Ctx;
 use crate::err::Error;
 use crate::opt::Alias;
 use crate::opt::Creator;
@@ -125,7 +123,7 @@ pub trait AOpt: Debug {
 
     fn _has_callback(&self) -> bool;
 
-    fn _invoke(&mut self, ser: &mut Services, ctx: Context) -> Result<Option<Str>, Error>;
+    fn _invoke(&mut self, ser: &mut Services, ctx: &Ctx) -> Result<Option<Str>, Error>;
 }
 
 simple_impl_opt_for!(BoolOpt);
@@ -152,7 +150,7 @@ pub trait ACreator {
 impl<Opt, Config> std::fmt::Debug for Box<dyn ACreator<Opt = Opt, Config = Config>> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Box")
-            .field(&format!("ACreator({})", self.get_type_name()))
+            .field(&format!("ACreator({})", self.ty()))
             .finish()
     }
 }
@@ -164,15 +162,15 @@ impl<Opt, Config> Creator for Box<dyn ACreator<Opt = Opt, Config = Config>> {
 
     type Error = Error;
 
-    fn get_type_name(&self) -> Str {
+    fn ty(&self) -> Str {
         self._get_type_name()
     }
 
-    fn is_support_deactivate_style(&self) -> bool {
+    fn sp_deact(&self) -> bool {
         self._support_deactivate_style()
     }
 
-    fn create_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
+    fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
         self._create_with(config)
     }
 }

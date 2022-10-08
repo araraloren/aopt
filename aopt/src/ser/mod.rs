@@ -12,10 +12,10 @@ pub type DataService = RcMap;
 
 use std::fmt::Debug;
 
-use crate::aext::AServiceExt;
 use crate::astr;
-use crate::ctx::ExtractFromCtx;
+use crate::ctx::ExtractCtx;
 use crate::ctx::Handler;
+use crate::ext::AServiceExt;
 use crate::map::Map;
 use crate::map::RcMap;
 use crate::typeid;
@@ -61,19 +61,19 @@ impl Service for DataService {
 ///     let mut services = Services::new().with(MyVec(vec![42i32]));
 ///
 ///     // get value from of service
-///     assert_eq!(services.get_service::<MyVec>()?.0[0], 42);
+///     assert_eq!(services.ser::<MyVec>()?.0[0], 42);
 ///     // modfify the service value
-///     services.get_service_mut::<MyVec>()?.0.push(18);
+///     services.ser_mut::<MyVec>()?.0.push(18);
 ///     // check the value of MyVec
-///     assert_eq!(services.get_service::<MyVec>()?.0[1], 18);
+///     assert_eq!(services.ser::<MyVec>()?.0[1], 18);
 ///
 ///     // register a new service
-///     services.register(I32(42));
-///     assert!(services.contain::<I32>());
+///     services.reg(I32(42));
+///     assert!(services.has::<I32>());
 ///
 ///     // unregister service from
-///     services.unregister::<MyVec>();
-///     assert!(!services.contain::<MyVec>());
+///     services.unreg::<MyVec>();
+///     assert!(!services.has::<MyVec>());
 ///
 ///     Ok(())
 /// # }
@@ -90,7 +90,7 @@ impl Services {
     where
         T: Service + 'static,
     {
-        self.register(value);
+        self.reg(value);
         self
     }
 
@@ -99,7 +99,7 @@ impl Services {
     }
 
     /// Return true if [`Services`] contain a service type T.
-    pub fn contain<T>(&self) -> bool
+    pub fn has<T>(&self) -> bool
     where
         T: Service + 'static,
     {
@@ -120,14 +120,14 @@ impl Services {
         self.0.get_mut::<T>()
     }
 
-    pub fn unregister<T>(&mut self) -> Option<T>
+    pub fn unreg<T>(&mut self) -> Option<T>
     where
         T: Service + 'static,
     {
         self.0.remove::<T>()
     }
 
-    pub fn register<T>(&mut self, value: T) -> Option<T>
+    pub fn reg<T>(&mut self, value: T) -> Option<T>
     where
         T: Service + 'static,
     {
@@ -136,25 +136,25 @@ impl Services {
 }
 
 pub trait ServicesExt {
-    fn get_service<T>(&self) -> Result<&T, Error>
+    fn ser<T>(&self) -> Result<&T, Error>
     where
         T: Service + 'static;
 
-    fn get_service_mut<T>(&mut self) -> Result<&mut T, Error>
+    fn ser_mut<T>(&mut self) -> Result<&mut T, Error>
     where
         T: Service + 'static;
 
-    fn take_service<T>(&mut self) -> Result<T, Error>
+    fn take_ser<T>(&mut self) -> Result<T, Error>
     where
         T: Service + 'static;
 }
 
 impl ServicesExt for Services {
-    fn get_service<T>(&self) -> Result<&T, Error>
+    fn ser<T>(&self) -> Result<&T, Error>
     where
         T: Service + 'static,
     {
-        debug_assert!(self.contain::<T>(), "Unknown type for Services");
+        debug_assert!(self.has::<T>(), "Unknown type for Services");
         self.get::<T>().ok_or_else(|| {
             Error::raise_error(format!(
                 "Unknown type {} for Services: {:?}",
@@ -164,11 +164,11 @@ impl ServicesExt for Services {
         })
     }
 
-    fn get_service_mut<T>(&mut self) -> Result<&mut T, Error>
+    fn ser_mut<T>(&mut self) -> Result<&mut T, Error>
     where
         T: Service + 'static,
     {
-        debug_assert!(self.contain::<T>(), "Unknown type for Services");
+        debug_assert!(self.has::<T>(), "Unknown type for Services");
         self.get_mut::<T>().ok_or_else(|| {
             Error::raise_error(format!(
                 "Unknown type {} for Services: {:?}",
@@ -178,12 +178,12 @@ impl ServicesExt for Services {
         })
     }
 
-    fn take_service<T>(&mut self) -> Result<T, Error>
+    fn take_ser<T>(&mut self) -> Result<T, Error>
     where
         T: Service + 'static,
     {
-        debug_assert!(self.contain::<T>(), "Unknown type for Services");
-        self.unregister::<T>().ok_or_else(|| {
+        debug_assert!(self.has::<T>(), "Unknown type for Services");
+        self.unreg::<T>().ok_or_else(|| {
             Error::raise_error(format!(
                 "Unknown type {} for Services: {:?}",
                 T::service_name(),
@@ -202,54 +202,54 @@ impl<Set: 'static, Value: 'static> AServiceExt<Set, Value> for Services {
             .with(CheckService::<Set, Value>::new())
     }
 
-    fn noa_service(&self) -> &NOAService {
+    fn noa_ser(&self) -> &NOAService {
         self.get::<NOAService>().unwrap()
     }
 
-    fn noa_service_mut(&mut self) -> &mut NOAService {
+    fn noa_ser_mut(&mut self) -> &mut NOAService {
         self.get_mut::<NOAService>().unwrap()
     }
 
-    fn data_service(&self) -> &DataService {
+    fn data_ser(&self) -> &DataService {
         self.get::<DataService>().unwrap()
     }
 
-    fn data_service_mut(&mut self) -> &mut DataService {
+    fn data_ser_mut(&mut self) -> &mut DataService {
         self.get_mut::<DataService>().unwrap()
     }
 
-    fn value_service(&self) -> &ValueService<Value> {
+    fn val_ser(&self) -> &ValueService<Value> {
         self.get::<ValueService<Value>>().unwrap()
     }
 
-    fn value_service_mut(&mut self) -> &mut ValueService<Value> {
+    fn val_ser_mut(&mut self) -> &mut ValueService<Value> {
         self.get_mut::<ValueService<Value>>().unwrap()
     }
 
-    fn invoke_service(&self) -> &InvokeService<Set, Value> {
+    fn invoke_ser(&self) -> &InvokeService<Set, Value> {
         self.get::<InvokeService<Set, Value>>().unwrap()
     }
 
-    fn invoke_service_mut(&mut self) -> &mut InvokeService<Set, Value> {
+    fn invoke_ser_mut(&mut self) -> &mut InvokeService<Set, Value> {
         self.get_mut::<InvokeService<Set, Value>>().unwrap()
     }
 
-    fn check_service(&self) -> &CheckService<Set, Value> {
+    fn check_ser(&self) -> &CheckService<Set, Value> {
         self.get::<CheckService<Set, Value>>().unwrap()
     }
 
-    fn check_service_mut(&mut self) -> &mut CheckService<Set, Value> {
+    fn check_ser_mut(&mut self) -> &mut CheckService<Set, Value> {
         self.get_mut::<CheckService<Set, Value>>().unwrap()
     }
 
-    fn get_data<T>(&self) -> Option<&T>
+    fn data<T>(&self) -> Option<&T>
     where
         T: 'static,
     {
         self.get::<DataService>().and_then(|v| v.get::<T>())
     }
 
-    fn get_data_mut<T>(&mut self) -> Option<&mut T>
+    fn data_mut<T>(&mut self) -> Option<&mut T>
     where
         T: 'static,
     {
@@ -270,31 +270,31 @@ impl<Set: 'static, Value: 'static> AServiceExt<Set, Value> for Services {
         self.get_mut::<DataService>().and_then(|v| v.remove::<T>())
     }
 
-    fn get_val(&self, uid: Uid) -> Option<&Value> {
+    fn val(&self, uid: Uid) -> Option<&Value> {
         self.get::<ValueService<Value>>().and_then(|v| v.val(uid))
     }
 
-    fn get_vals(&self, uid: Uid) -> Option<&Vec<Value>> {
+    fn vals(&self, uid: Uid) -> Option<&Vec<Value>> {
         self.get::<ValueService<Value>>().and_then(|v| v.vals(uid))
     }
 
-    fn get_val_mut(&mut self, uid: Uid) -> Option<&mut Value> {
+    fn val_mut(&mut self, uid: Uid) -> Option<&mut Value> {
         self.get_mut::<ValueService<Value>>()
             .and_then(|v| v.val_mut(uid))
     }
 
-    fn get_vals_mut(&mut self, uid: Uid) -> Option<&mut Vec<Value>> {
+    fn vals_mut(&mut self, uid: Uid) -> Option<&mut Vec<Value>> {
         self.get_mut::<ValueService<Value>>()
             .and_then(|v| v.vals_mut(uid))
     }
 
     fn reg_callback<H, Args>(&mut self, uid: Uid, handler: H) -> &mut Self
     where
-        Args: ExtractFromCtx<Set, Error = Error> + 'static,
-        H: Handler<Set, Args, Output = Option<Value>, Error = Error> + 'static,
+        Args: ExtractCtx<Set, Error = Error> + 'static,
+        H: Handler<Set, Args, Output = Value, Error = Error> + 'static,
     {
         if let Some(v) = self.get_mut::<InvokeService<Set, Value>>() {
-            v.register(uid, handler);
+            v.reg(uid, handler);
         } else {
             panic!(
                 "Can not get InvokeServices from Services, pls check the callback return value! "

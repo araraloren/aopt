@@ -57,28 +57,26 @@ where
     }
 
     /// Return the style of inner [`NOAMatch`].
-    fn get_style(&self) -> OptStyle {
-        self.matches
-            .as_ref()
-            .map_or(OptStyle::Null, |v| v.get_style())
+    fn sty(&self) -> OptStyle {
+        self.matches.as_ref().map_or(OptStyle::Null, |v| v.sty())
     }
 
     /// Return true if the process successful.
-    fn is_matched(&self) -> bool {
-        self.matches.as_ref().map_or(false, |v| v.is_matched())
+    fn is_mat(&self) -> bool {
+        self.matches.as_ref().map_or(false, |v| v.is_mat())
     }
 
     /// Return true if the process need consume an argument.
-    fn is_consume_argument(&self) -> bool {
+    fn consume(&self) -> bool {
         self.consume_arg
     }
 
-    fn add_match(&mut self, mat: NOAMatch<S>) -> &mut Self {
+    fn add_mat(&mut self, mat: NOAMatch<S>) -> &mut Self {
         self.matches = Some(mat);
         self
     }
 
-    fn get_match(&self, index: usize) -> Option<&NOAMatch<S>> {
+    fn mat(&self, index: usize) -> Option<&NOAMatch<S>> {
         if index == 0 {
             self.matches.as_ref()
         } else {
@@ -86,7 +84,7 @@ where
         }
     }
 
-    fn get_match_mut(&mut self, index: usize) -> Option<&mut NOAMatch<S>> {
+    fn mat_mut(&mut self, index: usize) -> Option<&mut NOAMatch<S>> {
         if index == 0 {
             self.matches.as_mut()
         } else {
@@ -97,7 +95,7 @@ where
     /// Undo the process modification.
     fn undo(&mut self, set: &mut Self::Set) -> Result<(), Self::Error> {
         if let Some(mat) = self.matches.as_mut() {
-            if let Some(uid) = mat.get_matched_uid() {
+            if let Some(uid) = mat.mat_uid() {
                 if let Some(opt) = set.get_mut(uid) {
                     mat.undo(opt)?;
                 }
@@ -109,14 +107,14 @@ where
     /// Match the given [`Opt`] against inner [`NOAMatch`], return the index (always 0) if successful.
     fn process(&mut self, uid: Uid, set: &mut Self::Set) -> Result<Option<usize>, Self::Error> {
         if let Some(opt) = set.get_mut(uid) {
-            let style_check = opt.match_style(OptStyle::Cmd)
-                || opt.match_style(OptStyle::Main)
-                || opt.match_style(OptStyle::Pos);
+            let style_check = opt.mat_sty(OptStyle::Cmd)
+                || opt.mat_sty(OptStyle::Main)
+                || opt.mat_sty(OptStyle::Pos);
 
             if style_check {
                 if let Some(mat) = self.matches.as_mut() {
-                    if !mat.is_matched() && mat.process(opt)? {
-                        self.consume_arg = self.consume_arg || mat.is_consume_argument();
+                    if !mat.is_mat() && mat.process(opt)? {
+                        self.consume_arg = self.consume_arg || mat.consume();
                         return Ok(Some(0));
                     }
                 }

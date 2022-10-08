@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use super::Prefixed;
+use super::PreSet;
 use crate::opt::Config;
 use crate::opt::ConfigValue;
 use crate::opt::Creator;
@@ -16,7 +16,7 @@ pub trait FilterMatcher<T>
 where
     T: Opt,
 {
-    fn match_opt(&self, opt: &T) -> bool;
+    fn mat_opt(&self, opt: &T) -> bool;
 }
 
 impl<C, T> FilterMatcher<T> for C
@@ -24,26 +24,26 @@ where
     T: Opt,
     C: Config + ConfigValue,
 {
-    fn match_opt(&self, opt: &T) -> bool {
+    fn mat_opt(&self, opt: &T) -> bool {
         let mut ret = true;
 
-        if ret && self.has_deactivate_style() {
-            ret = ret && (self.get_deactivate_style().unwrap() == opt.is_deactivate_style());
+        if ret && self.has_deact() {
+            ret = ret && (self.deact().unwrap() == opt.is_deact());
         }
-        if ret && self.has_optional() {
-            ret = ret && (self.get_optional().unwrap() == opt.get_optional());
+        if ret && self.has_opt() {
+            ret = ret && (self.opt().unwrap() == opt.opt());
         }
-        if ret && self.has_type_name() {
-            ret = ret && (self.get_type_name().unwrap() == opt.get_type_name());
+        if ret && self.has_ty() {
+            ret = ret && (self.ty().unwrap() == opt.ty());
         }
-        if ret && self.has_prefix() {
+        if ret && self.has_pre() {
             // don't call match prefix
-            let mut matched = opt.get_prefix() == self.get_prefix();
+            let mut matched = opt.pre() == self.pre();
 
             if !matched {
-                let prefix = self.get_prefix().unwrap();
+                let prefix = self.pre().unwrap();
 
-                if let Some(alias) = opt.get_alias().as_ref() {
+                if let Some(alias) = opt.alias().as_ref() {
                     for item in alias.iter() {
                         if item.0 == prefix {
                             matched = true;
@@ -56,11 +56,11 @@ where
         }
         if ret && self.has_name() {
             // don't call match name
-            let name = self.get_name().unwrap();
-            let mut matched = opt.get_name() == name;
+            let name = self.name().unwrap();
+            let mut matched = opt.name() == name;
 
             if !matched {
-                if let Some(alias) = opt.get_alias().as_ref() {
+                if let Some(alias) = opt.alias().as_ref() {
                     for item in alias.iter() {
                         if item.1 == name {
                             matched = true;
@@ -71,9 +71,9 @@ where
             }
             ret = ret && matched;
         }
-        if ret && self.has_index() {
-            if let Some(index) = opt.get_index() {
-                ret = ret && (self.get_index().unwrap() == index);
+        if ret && self.has_idx() {
+            if let Some(index) = opt.idx() {
+                ret = ret && (self.idx().unwrap() == index);
             }
         }
         ret
@@ -111,7 +111,7 @@ impl<'a, T, Parser, Ctor> Filter<'a, T, Parser, Ctor>
 where
     T: Opt,
     Ctor: Creator<Opt = T>,
-    Parser: OptParser + Prefixed,
+    Parser: OptParser + PreSet,
     Parser::Output: Information,
     Ctor::Config: Config + ConfigValue + Default,
 {
@@ -126,43 +126,43 @@ where
     }
 
     /// Set the option prefix of filter configuration.
-    pub fn set_prefix<S: Into<Str>>(&mut self, prefix: S) -> &mut Self {
-        self.info.set_prefix(prefix);
+    pub fn set_pre<S: Into<Str>>(&mut self, prefix: S) -> &mut Self {
+        self.info.set_pre(prefix);
         self
     }
 
     /// Set the option type name of filter configuration.
-    pub fn set_type_name<S: Into<Str>>(&mut self, type_name: S) -> &mut Self {
-        self.info.set_type_name(type_name);
+    pub fn set_ty<S: Into<Str>>(&mut self, type_name: S) -> &mut Self {
+        self.info.set_ty(type_name);
         self
     }
 
     /// Set the option index of filter configuration.
-    pub fn set_index(&mut self, index: OptIndex) -> &mut Self {
-        self.info.set_index(index);
+    pub fn set_idx(&mut self, index: OptIndex) -> &mut Self {
+        self.info.set_idx(index);
         self
     }
 
     /// Set the option optional of filter configuration.
-    pub fn set_optional(&mut self, optional: bool) -> &mut Self {
-        self.info.set_optional(optional);
+    pub fn set_opt(&mut self, optional: bool) -> &mut Self {
+        self.info.set_opt(optional);
         self
     }
 
     /// Set the option deactivate style of filter configuration.
-    pub fn set_deactivate_style(&mut self, deactivate_style: bool) -> &mut Self {
-        self.info.set_deactivate_style(deactivate_style);
+    pub fn set_deact(&mut self, deactivate_style: bool) -> &mut Self {
+        self.info.set_deact(deactivate_style);
         self
     }
 
     /// Find the option by configuration, return None if not found.
     pub fn find(&self) -> Option<&'_ T> {
-        self.set.iter().find(|opt| self.info.match_opt(*opt))
+        self.set.iter().find(|opt| self.info.mat_opt(*opt))
     }
 
     /// Find the option by configuration, return an iterator of `&T`.
     pub fn find_all(&self) -> impl Iterator<Item = &T> {
-        self.set.iter().filter(|opt| self.info.match_opt(*opt))
+        self.set.iter().filter(|opt| self.info.mat_opt(*opt))
     }
 }
 
@@ -197,7 +197,7 @@ impl<'a, T, Parser, Ctor> FilterMut<'a, T, Parser, Ctor>
 where
     T: Opt,
     Ctor: Creator<Opt = T>,
-    Parser: OptParser + Prefixed,
+    Parser: OptParser + PreSet,
     Parser::Output: Information,
     Ctor::Config: Config + ConfigValue + Default,
 {
@@ -212,42 +212,42 @@ where
     }
 
     /// Set the option prefix of filter configuration.
-    pub fn set_prefix<S: Into<Str>>(&mut self, prefix: S) -> &mut Self {
-        self.info.set_prefix(prefix);
+    pub fn set_pre<S: Into<Str>>(&mut self, prefix: S) -> &mut Self {
+        self.info.set_pre(prefix);
         self
     }
 
     /// Set the option type name of filter configuration.
-    pub fn set_type_name<S: Into<Str>>(&mut self, type_name: S) -> &mut Self {
-        self.info.set_type_name(type_name);
+    pub fn set_ty<S: Into<Str>>(&mut self, type_name: S) -> &mut Self {
+        self.info.set_ty(type_name);
         self
     }
 
     /// Set the option index of filter configuration.
-    pub fn set_index(&mut self, index: OptIndex) -> &mut Self {
-        self.info.set_index(index);
+    pub fn set_idx(&mut self, index: OptIndex) -> &mut Self {
+        self.info.set_idx(index);
         self
     }
 
     /// Set the option optional of filter configuration.
-    pub fn set_optional(&mut self, optional: bool) -> &mut Self {
-        self.info.set_optional(optional);
+    pub fn set_opt(&mut self, optional: bool) -> &mut Self {
+        self.info.set_opt(optional);
         self
     }
 
     /// Set the option deactivate style of filter configuration.
-    pub fn set_deactivate_style(&mut self, deactivate_style: bool) -> &mut Self {
-        self.info.set_deactivate_style(deactivate_style);
+    pub fn set_deact(&mut self, deactivate_style: bool) -> &mut Self {
+        self.info.set_deact(deactivate_style);
         self
     }
 
     /// Find the option by configuration, return None if not found.
     pub fn find(&mut self) -> Option<&mut T> {
-        self.set.iter_mut().find(|opt| self.info.match_opt(*opt))
+        self.set.iter_mut().find(|opt| self.info.mat_opt(*opt))
     }
 
     /// Find the option by configuration, return an iterator of `&mut T`.
     pub fn find_all(&mut self) -> impl Iterator<Item = &mut T> {
-        self.set.iter_mut().filter(|opt| self.info.match_opt(*opt))
+        self.set.iter_mut().filter(|opt| self.info.mat_opt(*opt))
     }
 }

@@ -21,17 +21,17 @@ pub trait Match {
 
     fn reset(&mut self);
 
-    fn is_matched(&self) -> bool;
+    fn is_mat(&self) -> bool;
 
-    fn get_matched_uid(&self) -> Option<Uid>;
+    fn mat_uid(&self) -> Option<Uid>;
 
-    fn set_matched_uid(&mut self, uid: Uid);
+    fn set_uid(&mut self, uid: Uid);
 
-    fn get_style(&self) -> OptStyle;
+    fn sty(&self) -> OptStyle;
 
-    fn get_argument(&self) -> Option<Str>;
+    fn arg(&self) -> Option<Str>;
 
-    fn is_consume_argument(&self) -> bool;
+    fn consume(&self) -> bool;
 
     fn undo(&mut self, opt: &mut <Self::Set as Set>::Opt) -> Result<(), Self::Error>;
 
@@ -50,17 +50,17 @@ pub trait Process<M: Match> {
 
     fn count(&self) -> usize;
 
-    fn get_style(&self) -> OptStyle;
+    fn sty(&self) -> OptStyle;
 
-    fn is_matched(&self) -> bool;
+    fn is_mat(&self) -> bool;
 
-    fn is_consume_argument(&self) -> bool;
+    fn consume(&self) -> bool;
 
-    fn add_match(&mut self, mat: M) -> &mut Self;
+    fn add_mat(&mut self, mat: M) -> &mut Self;
 
-    fn get_match(&self, index: usize) -> Option<&M>;
+    fn mat(&self, index: usize) -> Option<&M>;
 
-    fn get_match_mut(&mut self, index: usize) -> Option<&mut M>;
+    fn mat_mut(&mut self, index: usize) -> Option<&mut M>;
 
     fn undo(&mut self, set: &mut Self::Set) -> Result<(), Self::Error>;
 
