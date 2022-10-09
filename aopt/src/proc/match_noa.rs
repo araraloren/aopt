@@ -17,6 +17,8 @@ pub struct NOAMatch<S> {
 
     style: OptStyle,
 
+    arg: Option<Str>,
+
     noa_index: usize,
 
     noa_total: usize,
@@ -33,6 +35,7 @@ impl<S> Debug for NOAMatch<S> {
         f.debug_struct("NOAMatch")
             .field("name", &self.name)
             .field("style", &self.style)
+            .field("arg", &self.arg)
             .field("noa_index", &self.noa_index)
             .field("noa_total", &self.noa_total)
             .field("matched_uid", &self.matched_uid)
@@ -47,6 +50,7 @@ impl<S> Default for NOAMatch<S> {
         Self {
             name: Str::default(),
             style: OptStyle::default(),
+            arg: None,
             noa_index: 0,
             noa_total: 0,
             matched_uid: None,
@@ -80,6 +84,11 @@ where
         self
     }
 
+    pub fn with_arg(mut self, arg: Option<Str>) -> Self {
+        self.arg = arg;
+        self
+    }
+
     pub fn get_name(&self) -> Str {
         self.name.clone()
     }
@@ -89,7 +98,7 @@ where
     }
 
     pub fn arg(&self) -> Option<Str> {
-        None
+        self.arg.clone()
     }
 
     pub fn sty(&self) -> OptStyle {

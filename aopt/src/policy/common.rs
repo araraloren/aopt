@@ -150,7 +150,7 @@ where
                 matched = ret.is_some();
             } else {
                 // default value
-                ret = ctx.arg_of().map(|v| Value::from(v.clone()));
+                ret = ctx.orig_arg().map(|v| Value::from(v.clone()));
             }
             // save the value to ValueService
             if let Some(ret) = ret {

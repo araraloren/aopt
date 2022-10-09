@@ -267,6 +267,14 @@ impl<'a, S> NOAGuess<'a, S> {
     pub fn new() -> Self {
         Self(PhantomData::default())
     }
+
+    fn bool2str(value: bool) -> Str {
+        if value {
+            Str::from("true")
+        } else {
+            Str::from("false")
+        }
+    }
 }
 
 impl<'a, S> Guess for NOAGuess<'a, S>
@@ -295,7 +303,8 @@ where
                         .with_name(name)
                         .with_idx(pos)
                         .with_len(count)
-                        .with_sty(OptStyle::Main),
+                        .with_sty(OptStyle::Main)
+                        .with_arg(Some(Self::bool2str(true))),
                 );
             }
             UserStyle::Pos => {
@@ -304,7 +313,8 @@ where
                         .with_name(name)
                         .with_idx(pos)
                         .with_len(count)
-                        .with_sty(OptStyle::Pos),
+                        .with_sty(OptStyle::Pos)
+                        .with_arg(Some(Self::bool2str(true))),
                 );
             }
             UserStyle::Cmd => {
@@ -313,7 +323,8 @@ where
                         .with_name(name)
                         .with_idx(pos)
                         .with_len(count)
-                        .with_sty(OptStyle::Cmd),
+                        .with_sty(OptStyle::Cmd)
+                        .with_arg(Some(Self::bool2str(true))),
                 );
             }
             _ => {
