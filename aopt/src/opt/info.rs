@@ -14,13 +14,13 @@ pub trait Information {
 
     fn has_deact(&self) -> bool;
 
-    fn name(&self) -> Option<Str>;
+    fn name(&self) -> Option<&Str>;
 
-    fn pre(&self) -> Option<Str>;
+    fn pre(&self) -> Option<&Str>;
 
     fn opt(&self) -> Option<bool>;
 
-    fn ty(&self) -> Option<Str>;
+    fn ty(&self) -> Option<&Str>;
 
     fn idx(&self) -> Option<&OptIndex>;
 
@@ -193,20 +193,20 @@ impl Information for OptConstrctInfo {
         self.deactivate.is_some()
     }
 
-    fn name(&self) -> Option<Str> {
-        self.name.clone()
+    fn name(&self) -> Option<&Str> {
+        self.name.as_ref()
     }
 
-    fn pre(&self) -> Option<Str> {
-        self.prefix.clone()
+    fn pre(&self) -> Option<&Str> {
+        self.prefix.as_ref()
     }
 
     fn opt(&self) -> Option<bool> {
         self.optional
     }
 
-    fn ty(&self) -> Option<Str> {
-        self.type_name.clone()
+    fn ty(&self) -> Option<&Str> {
+        self.type_name.as_ref()
     }
 
     fn idx(&self) -> Option<&OptIndex> {

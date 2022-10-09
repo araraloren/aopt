@@ -35,16 +35,16 @@ macro_rules! simple_impl_opt {
                 }
             }
 
-            fn _get_name(&self) -> Str {
-                self.name.clone()
+            fn _get_name(&self) -> &Str {
+                &self.name
             }
 
             fn _set_name(&mut self, name: Str) {
                 self.name = name;
             }
 
-            fn _get_prefix(&self) -> Option<Str> {
-                self.prefix.clone()
+            fn _get_prefix(&self) -> Option<&Str> {
+                self.prefix.as_ref()
             }
 
             fn _set_prefix(&mut self, prefix: Option<Str>) {
@@ -67,26 +67,26 @@ macro_rules! simple_impl_opt {
                 self.alias.push((prefix, name))
             }
 
-            fn _rem_alias(&mut self, prefix: Str, name: Str) {
+            fn _rem_alias(&mut self, prefix: &Str, name: &Str) {
                 if let Some((i, _)) = self
                     .alias
                     .iter()
                     .enumerate()
-                    .find(|(_, v)| v.0 == prefix && v.1 == name)
+                    .find(|(_, v)| &v.0 == prefix && &v.1 == name)
                 {
                     self.alias.remove(i);
                 }
             }
 
-            fn _match_alias(&self, prefix: Str, name: Str) -> bool {
-                self.alias.iter().any(|v| v.0 == prefix && v.1 == name)
+            fn _match_alias(&self, prefix: &Str, name: &Str) -> bool {
+                self.alias.iter().any(|v| &v.0 == prefix && &v.1 == name)
             }
 
-            fn _get_hint(&self) -> Str {
+            fn _get_hint(&self) -> &Str {
                 self.help.hint()
             }
 
-            fn _get_help(&self) -> Str {
+            fn _get_help(&self) -> &Str {
                 self.help.help()
             }
 
@@ -110,7 +110,7 @@ macro_rules! simple_impl_opt {
 
             fn _chk_value(
                 &mut self,
-                _arg: Option<Str>,
+                _arg: Option<&Str>,
                 disable: bool,
                 _index: (usize, usize),
             ) -> Result<bool, Error> {
@@ -175,19 +175,19 @@ macro_rules! simple_impl_noa {
                 }
             }
 
-            fn _get_name(&self) -> Str {
-                self.name.clone()
+            fn _get_name(&self) -> &Str {
+                &self.name
             }
 
             fn _set_name(&mut self, name: Str) {
                 self.name = name;
             }
 
-            fn _match_name(&self, name: Str) -> bool {
+            fn _match_name(&self, name: &Str) -> bool {
                 ($name_mat)(self, name)
             }
 
-            fn _get_prefix(&self) -> Option<Str> {
+            fn _get_prefix(&self) -> Option<&Str> {
                 None
             }
 
@@ -208,17 +208,17 @@ macro_rules! simple_impl_noa {
 
             fn _add_alias(&mut self, _prefix: Str, _name: Str) { }
 
-            fn _rem_alias(&mut self, _prefix: Str, _name: Str) { }
+            fn _rem_alias(&mut self, _prefix: &Str, _name: &Str) { }
 
-            fn _match_alias(&self, _prefix: Str, _name: Str) -> bool {
+            fn _match_alias(&self, _prefix: &Str, _name: &Str) -> bool {
                 false
             }
 
-            fn _get_hint(&self) -> Str {
+            fn _get_hint(&self) -> &Str {
                 self.help.hint()
             }
 
-            fn _get_help(&self) -> Str {
+            fn _get_help(&self) -> &Str {
                 self.help.help()
             }
 
@@ -244,7 +244,7 @@ macro_rules! simple_impl_noa {
 
             fn _chk_value(
                 &mut self,
-                _arg: Option<Str>,
+                _arg: Option<&Str>,
                 _disable: bool,
                 _index: (usize, usize),
             ) -> Result<bool, Error> {
@@ -322,7 +322,7 @@ macro_rules! simple_impl_opt_for {
 
             fn val(
                 &mut self,
-                arg: Option<Str>,
+                arg: Option<&Str>,
                 disable: bool,
                 index: (usize, usize),
             ) -> Result<bool, Error> {
@@ -331,7 +331,7 @@ macro_rules! simple_impl_opt_for {
         }
 
         impl Name for $type {
-            fn name(&self) -> Str {
+            fn name(&self) -> &Str {
                 self._get_name()
             }
 
@@ -339,13 +339,13 @@ macro_rules! simple_impl_opt_for {
                 self._set_name(name)
             }
 
-            fn mat_name(&self, name: Str) -> bool {
+            fn mat_name(&self, name: &Str) -> bool {
                 self._match_name(name)
             }
         }
 
         impl Prefix for $type {
-            fn pre(&self) -> Option<Str> {
+            fn pre(&self) -> Option<&Str> {
                 self._get_prefix()
             }
 
@@ -353,7 +353,7 @@ macro_rules! simple_impl_opt_for {
                 self._set_prefix(prefix)
             }
 
-            fn mat_pre(&self, prefix: Option<Str>) -> bool {
+            fn mat_pre(&self, prefix: Option<&Str>) -> bool {
                 self._match_prefix(prefix)
             }
         }
@@ -381,21 +381,21 @@ macro_rules! simple_impl_opt_for {
                 self._add_alias(prefix, name)
             }
 
-            fn rem_alias(&mut self, prefix: Str, name: Str) {
+            fn rem_alias(&mut self, prefix: &Str, name: &Str) {
                 self._rem_alias(prefix, name)
             }
 
-            fn mat_alias(&self, prefix: Str, name: Str) -> bool {
+            fn mat_alias(&self, prefix: &Str, name: &Str) -> bool {
                 self._match_alias(prefix, name)
             }
         }
 
         impl Help for $type {
-            fn hint(&self) -> Str {
+            fn hint(&self) -> &Str {
                 self._get_hint()
             }
 
-            fn help(&self) -> Str {
+            fn help(&self) -> &Str {
                 self._get_help()
             }
 

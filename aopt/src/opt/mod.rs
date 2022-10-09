@@ -36,19 +36,19 @@ pub trait OptParser {
 }
 
 pub trait Name {
-    fn name(&self) -> Str;
+    fn name(&self) -> &Str;
 
     fn set_name(&mut self, name: Str);
 
-    fn mat_name(&self, name: Str) -> bool;
+    fn mat_name(&self, name: &Str) -> bool;
 }
 
 pub trait Prefix {
-    fn pre(&self) -> Option<Str>;
+    fn pre(&self) -> Option<&Str>;
 
     fn set_pre(&mut self, prefix: Option<Str>);
 
-    fn mat_pre(&self, prefix: Option<Str>) -> bool;
+    fn mat_pre(&self, prefix: Option<&Str>) -> bool;
 }
 
 pub trait Optional {
@@ -64,9 +64,9 @@ pub trait Alias {
 
     fn add_alias(&mut self, prefix: Str, name: Str);
 
-    fn rem_alias(&mut self, prefix: Str, name: Str);
+    fn rem_alias(&mut self, prefix: &Str, name: &Str);
 
-    fn mat_alias(&self, prefix: Str, name: Str) -> bool;
+    fn mat_alias(&self, prefix: &Str, name: &Str) -> bool;
 }
 
 pub trait Index {
@@ -78,9 +78,9 @@ pub trait Index {
 }
 
 pub trait Help {
-    fn hint(&self) -> Str;
+    fn hint(&self) -> &Str;
 
-    fn help(&self) -> Str;
+    fn help(&self) -> &Str;
 
     fn set_hint(&mut self, hint: Str);
 
@@ -112,7 +112,7 @@ pub trait Opt: Name + Help + Alias + Index + Prefix + Optional + Debug {
 
     fn val(
         &mut self,
-        arg: Option<Str>,
+        arg: Option<&Str>,
         disable: bool,
         index: (usize, usize),
     ) -> Result<bool, Error>;

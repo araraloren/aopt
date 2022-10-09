@@ -29,7 +29,7 @@ pub trait Match {
 
     fn sty(&self) -> OptStyle;
 
-    fn arg(&self) -> Option<Str>;
+    fn arg(&self) -> Option<&Str>;
 
     fn consume(&self) -> bool;
 

@@ -18,16 +18,16 @@ pub struct CLOpt {
 }
 
 impl CLOpt {
-    pub fn name(&self) -> Option<Str> {
-        self.name.clone()
+    pub fn name(&self) -> Option<&Str> {
+        self.name.as_ref()
     }
 
-    pub fn val(&self) -> Option<Str> {
-        self.value.clone()
+    pub fn val(&self) -> Option<&Str> {
+        self.value.as_ref()
     }
 
-    pub fn pre(&self) -> Option<Str> {
-        self.prefix.clone()
+    pub fn pre(&self) -> Option<&Str> {
+        self.prefix.as_ref()
     }
 
     pub fn dsb(&self) -> bool {

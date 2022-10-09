@@ -248,10 +248,6 @@ impl<'a> GuessNOACfg<'a> {
     pub fn name(&self) -> Str {
         self.name.clone()
     }
-
-    pub fn arg(&self) -> Option<&str> {
-        todo!()
-    }
 }
 
 #[derive(Debug)]

@@ -112,16 +112,12 @@ where
         self
     }
 
-    pub fn name(&self) -> Str {
-        self.name.clone()
+    pub fn name(&self) -> &Str {
+        &self.name
     }
 
-    pub fn pre(&self) -> Option<Str> {
-        Some(self.prefix.clone())
-    }
-
-    pub fn arg(&self) -> Option<Str> {
-        self.argument.clone()
+    pub fn pre(&self) -> Option<&Str> {
+        Some(&self.prefix)
     }
 
     pub fn sty(&self) -> OptStyle {
@@ -169,8 +165,8 @@ where
         self.style
     }
 
-    fn arg(&self) -> Option<Str> {
-        self.argument.clone()
+    fn arg(&self) -> Option<&Str> {
+        self.argument.as_ref()
     }
 
     fn consume(&self) -> bool {
@@ -192,7 +188,7 @@ where
         if matched {
             matched = matched
                 && ((opt.mat_name(self.name()) && opt.mat_pre(self.pre()))
-                    || opt.mat_alias(self.prefix.clone(), self.name()));
+                    || opt.mat_alias(&self.prefix, self.name()));
         }
         if matched {
             if self.consume() && self.argument.is_none() {

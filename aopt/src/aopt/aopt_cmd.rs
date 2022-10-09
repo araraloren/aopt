@@ -1,5 +1,6 @@
 use super::ACreator;
 use super::AOpt;
+use crate::astr;
 use crate::ctx::Ctx;
 use crate::err::Error;
 use crate::opt::ConfigValue;
@@ -32,7 +33,7 @@ pub struct CmdOpt {
 
 impl CmdOpt {
     pub fn type_name() -> Str {
-        crate::astr("c")
+        astr("c")
     }
 
     pub fn with_uid(mut self, uid: Uid) -> Self {
@@ -65,7 +66,7 @@ impl CmdOpt {
         self
     }
 
-    fn pri_name_mat(&self, name: Str) -> bool {
+    fn pri_name_mat(&self, name: &Str) -> bool {
         self._get_name() == name
     }
 
@@ -128,8 +129,10 @@ impl ACreator for CmdCreator {
         if deactivate_style && !self._support_deactivate_style() {
             return Err(Error::con_unsupport_deactivate_style(config.gen_name()?));
         }
+        if let Some(ty) = config.ty() {
+            debug_assert_eq!(ty, &self._get_type_name())
+        }
 
-        debug_assert_eq!(config.ty().unwrap(), self._get_type_name());
         let opt: CmdOpt = config.try_into()?;
 
         Ok(Box::new(opt))

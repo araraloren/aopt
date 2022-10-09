@@ -34,7 +34,7 @@ where
             ret = ret && (self.opt().unwrap() == opt.opt());
         }
         if ret && self.has_ty() {
-            ret = ret && (self.ty().unwrap() == opt.ty());
+            ret = ret && (self.ty().unwrap() == &opt.ty());
         }
         if ret && self.has_pre() {
             // don't call match prefix
@@ -45,7 +45,7 @@ where
 
                 if let Some(alias) = opt.alias().as_ref() {
                     for item in alias.iter() {
-                        if item.0 == prefix {
+                        if &item.0 == prefix {
                             matched = true;
                             break;
                         }
@@ -62,7 +62,7 @@ where
             if !matched {
                 if let Some(alias) = opt.alias().as_ref() {
                     for item in alias.iter() {
-                        if item.1 == name {
+                        if &item.1 == name {
                             matched = true;
                             break;
                         }

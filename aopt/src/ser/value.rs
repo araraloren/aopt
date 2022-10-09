@@ -13,6 +13,7 @@ use crate::Uid;
 /// # extern crate aopt as test_crate;
 /// #
 /// # use test_crate::ser::ValueService;
+/// # use test_crate::ser::ValueServiceExt;
 /// #
 /// # fn main() {
 ///     let mut vs = ValueService::<i32>::new();
@@ -21,8 +22,8 @@ use crate::Uid;
 ///     vs.ins(0, 48);
 ///
 ///     assert!(vs.has(0));
-///     assert_eq!(vs.val(0), Some(&48));
-///     assert_eq!(vs.vals(0), Some(&vec![42, 48]));
+///     assert_eq!(vs.val(0).unwrap(), &48);
+///     assert_eq!(vs.vals(0).unwrap(), &vec![42, 48]);
 /// # }
 ///
 /// ```
@@ -53,19 +54,19 @@ impl<V> ValueService<V> {
         self.rets.contains_key(&uid)
     }
 
-    pub fn val(&self, uid: Uid) -> Option<&V> {
+    pub fn get(&self, uid: Uid) -> Option<&V> {
         self.rets.get(&uid).and_then(|v| v.last())
     }
 
-    pub fn vals(&self, uid: Uid) -> Option<&Vec<V>> {
+    pub fn gets(&self, uid: Uid) -> Option<&Vec<V>> {
         self.rets.get(&uid)
     }
 
-    pub fn val_mut(&mut self, uid: Uid) -> Option<&mut V> {
+    pub fn get_mut(&mut self, uid: Uid) -> Option<&mut V> {
         self.rets.get_mut(&uid).and_then(|v| v.last_mut())
     }
 
-    pub fn vals_mut(&mut self, uid: Uid) -> Option<&mut Vec<V>> {
+    pub fn gets_mut(&mut self, uid: Uid) -> Option<&mut Vec<V>> {
         self.rets.get_mut(&uid)
     }
 
@@ -83,37 +84,37 @@ impl<V> Service for ValueService<V> {
 
 /// Extension trait of [`ValueService`].
 pub trait ValueServiceExt<V> {
-    fn get_val(&self, uid: Uid) -> Result<&V, Error>;
+    fn val(&self, uid: Uid) -> Result<&V, Error>;
 
-    fn get_vals(&self, uid: Uid) -> Result<&Vec<V>, Error>;
+    fn vals(&self, uid: Uid) -> Result<&Vec<V>, Error>;
 
-    fn get_val_mut(&mut self, uid: Uid) -> Result<&mut V, Error>;
+    fn val_mut(&mut self, uid: Uid) -> Result<&mut V, Error>;
 
-    fn get_vals_mut(&mut self, uid: Uid) -> Result<&mut Vec<V>, Error>;
+    fn vals_mut(&mut self, uid: Uid) -> Result<&mut Vec<V>, Error>;
 }
 
 impl<V> ValueServiceExt<V> for ValueService<V> {
-    fn get_val(&self, uid: Uid) -> Result<&V, Error> {
+    fn val(&self, uid: Uid) -> Result<&V, Error> {
         debug_assert!(self.has(uid), "Invalid uid for ValueService");
-        self.val(uid)
+        self.get(uid)
             .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for ValueService")))
     }
 
-    fn get_vals(&self, uid: Uid) -> Result<&Vec<V>, Error> {
+    fn vals(&self, uid: Uid) -> Result<&Vec<V>, Error> {
         debug_assert!(self.has(uid), "Invalid uid for ValueService");
-        self.vals(uid)
+        self.gets(uid)
             .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for ValueService")))
     }
 
-    fn get_val_mut(&mut self, uid: Uid) -> Result<&mut V, Error> {
+    fn val_mut(&mut self, uid: Uid) -> Result<&mut V, Error> {
         debug_assert!(self.has(uid), "Invalid uid for ValueService");
-        self.val_mut(uid)
+        self.get_mut(uid)
             .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for ValueService")))
     }
 
-    fn get_vals_mut(&mut self, uid: Uid) -> Result<&mut Vec<V>, Error> {
+    fn vals_mut(&mut self, uid: Uid) -> Result<&mut Vec<V>, Error> {
         debug_assert!(self.has(uid), "Invalid uid for ValueService");
-        self.vals_mut(uid)
+        self.gets_mut(uid)
             .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for ValueService")))
     }
 }

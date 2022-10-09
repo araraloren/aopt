@@ -1,5 +1,6 @@
 use super::ACreator;
 use super::AOpt;
+use crate::astr;
 use crate::ctx::Ctx;
 use crate::err::Error;
 use crate::opt::ConfigValue;
@@ -38,7 +39,7 @@ pub struct BoolOpt {
 
 impl BoolOpt {
     pub fn type_name() -> Str {
-        crate::astr("b")
+        astr("b")
     }
 
     pub fn with_uid(mut self, uid: Uid) -> Self {
@@ -88,7 +89,7 @@ impl BoolOpt {
 
     fn pri_check(
         &mut self,
-        _arg: Option<Str>,
+        _arg: Option<&Str>,
         disable: bool,
         _index: (usize, usize),
     ) -> Result<bool, Error> {
@@ -117,7 +118,7 @@ pub struct BoolCreator;
 
 impl BoolCreator {
     pub fn boxed() -> Box<BoolCreator> {
-        Box::new(Self {})
+        Box::new(Self::default())
     }
 }
 
@@ -140,8 +141,9 @@ impl ACreator for BoolCreator {
         if deactivate_style && !self._support_deactivate_style() {
             return Err(Error::con_unsupport_deactivate_style(config.gen_name()?));
         }
-
-        debug_assert_eq!(config.ty().unwrap(), self._get_type_name());
+        if let Some(ty) = config.ty() {
+            debug_assert_eq!(ty, &self._get_type_name())
+        }
 
         let opt: BoolOpt = config.try_into()?;
 

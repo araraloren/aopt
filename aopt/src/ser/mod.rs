@@ -7,6 +7,7 @@ pub use self::check::CheckService;
 pub use self::invoke::InvokeService;
 pub use self::noa::NOAService;
 pub use self::value::ValueService;
+pub use self::value::ValueServiceExt;
 
 pub type DataService = RcMap;
 
@@ -271,21 +272,21 @@ impl<Set: 'static, Value: 'static> AServiceExt<Set, Value> for Services {
     }
 
     fn val(&self, uid: Uid) -> Option<&Value> {
-        self.get::<ValueService<Value>>().and_then(|v| v.val(uid))
+        self.get::<ValueService<Value>>().and_then(|v| v.get(uid))
     }
 
     fn vals(&self, uid: Uid) -> Option<&Vec<Value>> {
-        self.get::<ValueService<Value>>().and_then(|v| v.vals(uid))
+        self.get::<ValueService<Value>>().and_then(|v| v.gets(uid))
     }
 
     fn val_mut(&mut self, uid: Uid) -> Option<&mut Value> {
         self.get_mut::<ValueService<Value>>()
-            .and_then(|v| v.val_mut(uid))
+            .and_then(|v| v.get_mut(uid))
     }
 
     fn vals_mut(&mut self, uid: Uid) -> Option<&mut Vec<Value>> {
         self.get_mut::<ValueService<Value>>()
-            .and_then(|v| v.vals_mut(uid))
+            .and_then(|v| v.gets_mut(uid))
     }
 
     fn reg_callback<H, Args>(&mut self, uid: Uid, handler: H) -> &mut Self

@@ -26,12 +26,12 @@ impl Help {
         self
     }
 
-    pub fn hint(&self) -> Str {
-        self.hint.clone()
+    pub fn hint(&self) -> &Str {
+        &self.hint
     }
 
-    pub fn help(&self) -> Str {
-        self.help.clone()
+    pub fn help(&self) -> &Str {
+        &self.help
     }
 
     pub fn set_hint<T: Into<Str>>(&mut self, hint: T) -> &mut Self {

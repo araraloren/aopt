@@ -89,16 +89,16 @@ where
         self
     }
 
-    pub fn get_name(&self) -> Str {
-        self.name.clone()
+    pub fn get_name(&self) -> &Str {
+        &self.name
     }
 
-    pub fn pre(&self) -> Option<Str> {
+    pub fn pre(&self) -> Option<&Str> {
         None
     }
 
-    pub fn arg(&self) -> Option<Str> {
-        self.arg.clone()
+    pub fn arg(&self) -> Option<&Str> {
+        self.arg.as_ref()
     }
 
     pub fn sty(&self) -> OptStyle {
@@ -147,7 +147,7 @@ where
         self.style
     }
 
-    fn arg(&self) -> Option<Str> {
+    fn arg(&self) -> Option<&Str> {
         None
     }
 
@@ -176,7 +176,7 @@ where
         if matched {
             // set the value of current option
             if opt.val(
-                Some(self.get_name()),
+                Some(&self.get_name()),
                 false,
                 (self.noa_index, self.noa_total),
             )? {

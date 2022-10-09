@@ -32,7 +32,7 @@ use crate::Uid;
 ///     type Error = Error;
 ///
 ///     fn extract(_uid: Uid, _set: &SimSet, _ser: &Services, ctx: &Ctx) -> Result<Self> {
-///         Ok(Arg(ctx.arg().unwrap_or_default()))
+///         Ok(Arg(ctx.arg().cloned().unwrap_or_default()))
 ///     }
 /// }
 ///

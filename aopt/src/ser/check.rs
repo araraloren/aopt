@@ -142,7 +142,7 @@ where
                 .iter()
                 .filter(|&uid| !Self::opt(set, uid).check())
                 .for_each(|uid| {
-                    names.push(Self::opt(set, uid).hint());
+                    names.push(Self::opt(set, uid).hint().clone());
                 });
             if !names.is_empty() {
                 return Err(Error::sp_pos_force_require(names.join(" | ")));

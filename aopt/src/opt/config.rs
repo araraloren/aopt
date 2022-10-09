@@ -22,13 +22,13 @@ pub trait Config {
 pub trait ConfigValue {
     fn uid(&self) -> Uid;
 
-    fn name(&self) -> Option<Str>;
+    fn name(&self) -> Option<&Str>;
 
     /// Option's prefix string.
-    fn pre(&self) -> Option<Str>;
+    fn pre(&self) -> Option<&Str>;
 
     /// Option's type name.
-    fn ty(&self) -> Option<Str>;
+    fn ty(&self) -> Option<&Str>;
 
     /// Option's index configuration.
     fn idx(&self) -> Option<&OptIndex>;
@@ -37,9 +37,9 @@ pub trait ConfigValue {
 
     fn opt(&self) -> Option<bool>;
 
-    fn hint(&self) -> Str;
+    fn hint(&self) -> &Str;
 
-    fn help(&self) -> Str;
+    fn help(&self) -> &Str;
 
     /// If option support deactivatet style.
     fn deact(&self) -> Option<bool>;
@@ -280,16 +280,16 @@ impl ConfigValue for OptConfig {
         self.uid
     }
 
-    fn name(&self) -> Option<Str> {
-        self.name.clone()
+    fn name(&self) -> Option<&Str> {
+        self.name.as_ref()
     }
 
-    fn pre(&self) -> Option<Str> {
-        self.pre.clone()
+    fn pre(&self) -> Option<&Str> {
+        self.pre.as_ref()
     }
 
-    fn ty(&self) -> Option<Str> {
-        self.ty.clone()
+    fn ty(&self) -> Option<&Str> {
+        self.ty.as_ref()
     }
 
     fn idx(&self) -> Option<&OptIndex> {
@@ -304,11 +304,11 @@ impl ConfigValue for OptConfig {
         self.opt
     }
 
-    fn hint(&self) -> Str {
+    fn hint(&self) -> &Str {
         self.help.hint()
     }
 
-    fn help(&self) -> Str {
+    fn help(&self) -> &Str {
         self.help.help()
     }
 

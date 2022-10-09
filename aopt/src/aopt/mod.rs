@@ -69,19 +69,19 @@ pub trait AOpt: Debug {
 
     fn _match_style(&self, style: OptStyle) -> bool;
 
-    fn _get_name(&self) -> Str;
+    fn _get_name(&self) -> &Str;
 
     fn _set_name(&mut self, name: Str);
 
-    fn _match_name(&self, name: Str) -> bool {
+    fn _match_name(&self, name: &Str) -> bool {
         self._get_name() == name
     }
 
-    fn _get_prefix(&self) -> Option<Str>;
+    fn _get_prefix(&self) -> Option<&Str>;
 
     fn _set_prefix(&mut self, prefix: Option<Str>);
 
-    fn _match_prefix(&self, prefix: Option<Str>) -> bool {
+    fn _match_prefix(&self, prefix: Option<&Str>) -> bool {
         self._get_prefix() == prefix
     }
 
@@ -97,13 +97,13 @@ pub trait AOpt: Debug {
 
     fn _add_alias(&mut self, prefix: Str, name: Str);
 
-    fn _rem_alias(&mut self, prefix: Str, name: Str);
+    fn _rem_alias(&mut self, prefix: &Str, name: &Str);
 
-    fn _match_alias(&self, prefix: Str, name: Str) -> bool;
+    fn _match_alias(&self, prefix: &Str, name: &Str) -> bool;
 
-    fn _get_hint(&self) -> Str;
+    fn _get_hint(&self) -> &Str;
 
-    fn _get_help(&self) -> Str;
+    fn _get_help(&self) -> &Str;
 
     fn _set_hint(&mut self, hint: Str);
 
@@ -117,7 +117,7 @@ pub trait AOpt: Debug {
 
     fn _chk_value(
         &mut self,
-        arg: Option<Str>,
+        arg: Option<&Str>,
         disable: bool,
         index: (usize, usize),
     ) -> Result<bool, Error>;

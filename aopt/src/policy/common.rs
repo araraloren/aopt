@@ -1,6 +1,7 @@
 use super::CtxSaver;
 use crate::ctx::Ctx;
 use crate::opt::Opt;
+use crate::proc::Match;
 use crate::proc::NOAProcess;
 use crate::proc::OptProcess;
 use crate::proc::Process;
@@ -40,7 +41,7 @@ where
             .map(|v| Value::from(v));
     } else {
         // default value
-        ret = saver.ctx.arg().map(|v| Value::from(v));
+        ret = saver.ctx.arg().cloned().map(|v| Value::from(v));
     }
     // save the value to ValueService
     if let Some(ret) = ret {
@@ -79,10 +80,10 @@ where
                     // .with_len(len) set before process options
                     // .with_args(args) set before process options
                     .with_uid(uid) // current uid == uid in matcher
-                    .with_name(mat.name())
-                    .with_pre(mat.pre())
+                    .with_name(mat.name().clone())
+                    .with_pre(mat.pre().cloned())
                     .with_sty(mat.sty())
-                    .with_arg(mat.arg())
+                    .with_arg(mat.arg().cloned())
                     .with_dsb(mat.dsb()),
             });
         }
@@ -125,11 +126,11 @@ where
                 // .with_idx(idx) set when process option
                 // .with_len(len) set before process options
                 // .with_args(args) set before process options
-                .with_name(mat.get_name())
-                .with_pre(mat.pre())
+                .with_name(mat.get_name().clone())
+                .with_pre(mat.pre().cloned())
                 .with_sty(mat.sty())
                 .with_uid(uid) // current uid == uid in matcher
-                .with_arg(mat.arg())
+                .with_arg(mat.arg().cloned())
                 .with_dsb(mat.dsb());
 
             let ret;
@@ -150,7 +151,7 @@ where
                 matched = ret.is_some();
             } else {
                 // default value
-                ret = ctx.orig_arg().map(|v| Value::from(v.clone()));
+                ret = ctx.arg().cloned().map(|v| Value::from(v));
             }
             // save the value to ValueService
             if let Some(ret) = ret {

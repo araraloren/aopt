@@ -134,16 +134,16 @@ impl Ctx {
         self
     }
 
-    pub fn pre(&self) -> Option<Str> {
-        self.pre.clone()
+    pub fn pre(&self) -> Option<&Str> {
+        self.pre.as_ref()
     }
 
     pub fn sty(&self) -> OptStyle {
         self.style
     }
 
-    pub fn name(&self) -> Str {
-        self.name.clone()
+    pub fn name(&self) -> &Str {
+        &self.name
     }
 
     pub fn args(&self) -> &Args {
@@ -163,8 +163,8 @@ impl Ctx {
     }
 
     /// Matching argument generate by [`guess_style`](crate::policy::Guess).
-    pub fn arg(&self) -> Option<Str> {
-        self.arg.clone()
+    pub fn arg(&self) -> Option<&Str> {
+        self.arg.as_ref()
     }
 
     pub fn dsb(&self) -> bool {
@@ -233,7 +233,7 @@ impl<S: Set> ExtractCtx<S> for CtxName {
     type Error = Error;
 
     fn extract(_uid: Uid, _set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(CtxName(ctx.name()))
+        Ok(CtxName(ctx.name().clone()))
     }
 }
 
@@ -259,7 +259,7 @@ impl<S: Set> ExtractCtx<S> for CtxPrefix {
     type Error = Error;
 
     fn extract(_uid: Uid, _set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(CtxPrefix(ctx.pre()))
+        Ok(CtxPrefix(ctx.pre().cloned()))
     }
 }
 
@@ -337,7 +337,7 @@ impl<S: Set> ExtractCtx<S> for CtxMatArg {
     type Error = Error;
 
     fn extract(_uid: Uid, _set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(CtxMatArg(ctx.arg()))
+        Ok(CtxMatArg(ctx.arg().cloned()))
     }
 }
 

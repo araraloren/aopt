@@ -1,5 +1,6 @@
 use super::ACreator;
 use super::AOpt;
+use crate::astr;
 use crate::ctx::Ctx;
 use crate::err::Error;
 use crate::opt::ConfigValue;
@@ -36,7 +37,7 @@ pub struct UintOpt {
 
 impl UintOpt {
     pub fn type_name() -> Str {
-        crate::astr("u")
+        astr("u")
     }
 
     pub fn with_uid(mut self, uid: Uid) -> Self {
@@ -81,7 +82,7 @@ impl UintOpt {
 
     fn pri_check(
         &mut self,
-        arg: Option<Str>,
+        arg: Option<&Str>,
         _disable: bool,
         _index: (usize, usize),
     ) -> Result<bool, Error> {
@@ -134,8 +135,9 @@ impl ACreator for UintCreator {
         if deactivate_style && !self._support_deactivate_style() {
             return Err(Error::con_unsupport_deactivate_style(config.gen_name()?));
         }
-
-        debug_assert_eq!(config.ty().unwrap(), self._get_type_name());
+        if let Some(ty) = config.ty() {
+            debug_assert_eq!(ty, &self._get_type_name())
+        }
 
         let opt: UintOpt = config.try_into()?;
 

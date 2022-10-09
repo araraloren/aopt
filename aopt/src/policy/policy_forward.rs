@@ -147,7 +147,9 @@ where
                 }
                 if !matched && self.get_strict() {
                     let name = clopt.name();
-                    return Err(Error::sp_invalid_option_name(name.unwrap_or_default()));
+                    return Err(Error::sp_invalid_option_name(
+                        name.cloned().unwrap_or_else(|| Str::default()),
+                    ));
                 }
             }
 
