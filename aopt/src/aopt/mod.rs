@@ -35,11 +35,12 @@ use crate::opt::Help;
 use crate::opt::Index;
 use crate::opt::Name;
 use crate::opt::Opt;
+use crate::opt::OptConfig;
 use crate::opt::OptIndex;
 use crate::opt::OptStyle;
 use crate::opt::Optional;
 use crate::opt::Prefix;
-use crate::prelude::Services;
+use crate::ser::Services;
 use crate::simple_impl_creator_for;
 use crate::simple_impl_opt_for;
 use crate::Str;
@@ -183,3 +184,36 @@ simple_impl_creator_for!(UintCreator);
 simple_impl_creator_for!(CmdCreator);
 simple_impl_creator_for!(MainCreator);
 simple_impl_creator_for!(PosCreator);
+
+/// Adding convert into OptConfig support serialize and deserialize.
+impl From<Box<dyn AOpt>> for OptConfig {
+    fn from(v: Box<dyn AOpt>) -> Self {
+        Self::from(&v)
+    }
+}
+
+impl<'a> From<&'a Box<dyn AOpt>> for OptConfig {
+    fn from(v: &'a Box<dyn AOpt>) -> Self {
+        let mut cfg = OptConfig::default()
+            .with_uid(v._get_uid())
+            .with_name(v._get_name())
+            .with_pre(v._get_prefix())
+            .with_opt(v._get_optional())
+            .with_help(v._get_help())
+            .with_hint(v._get_hint())
+            .with_ty(v._get_type_name())
+            .with_deact(v._is_deactivate_style());
+        if let Some(alias) = v._get_alias() {
+            cfg = cfg.with_alias(
+                alias
+                    .iter()
+                    .map(|v| Str::from(format!("{}{}", v.0, v.1)))
+                    .collect(),
+            );
+        }
+        if let Some(idx) = v._get_index() {
+            cfg = cfg.with_idx(idx.clone());
+        }
+        cfg
+    }
+}

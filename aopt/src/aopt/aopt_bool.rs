@@ -13,7 +13,7 @@ use crate::simple_impl_opt;
 use crate::Str;
 use crate::Uid;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct BoolOpt {
     uid: Uid,
 
@@ -23,6 +23,7 @@ pub struct BoolOpt {
 
     prefix: Option<Str>,
 
+    #[serde(skip)]
     setted: bool,
 
     optional: bool,
@@ -31,6 +32,7 @@ pub struct BoolOpt {
 
     alias: Vec<(Str, Str)>,
 
+    #[serde(skip)]
     callback: Option<OptCallback<Self>>,
 }
 

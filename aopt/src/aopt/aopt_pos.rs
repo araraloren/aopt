@@ -13,7 +13,7 @@ use crate::simple_impl_noa;
 use crate::Str;
 use crate::Uid;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct PosOpt {
     uid: Uid,
 
@@ -21,12 +21,14 @@ pub struct PosOpt {
 
     help: OptHelp,
 
+    #[serde(skip)]
     setted: bool,
 
     index: Option<OptIndex>,
 
     optional: bool,
 
+    #[serde(skip)]
     callback: Option<OptCallback<Self>>,
 }
 
