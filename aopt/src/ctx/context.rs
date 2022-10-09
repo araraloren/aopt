@@ -172,8 +172,8 @@ impl Ctx {
     }
 
     /// Get argument from [`Args`]
-    pub fn arg_of(&self) -> Option<&Str> {
-        self.args.get(self.idx)
+    pub fn orig_arg(&self) -> Option<&Str> {
+        self.args.get(self.idx.saturating_sub(1))
     }
 }
 

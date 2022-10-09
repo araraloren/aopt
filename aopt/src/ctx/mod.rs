@@ -2,6 +2,7 @@ pub(crate) mod context;
 pub(crate) mod data;
 pub(crate) mod extract;
 pub(crate) mod handler;
+pub(crate) mod value;
 
 pub use self::context::Ctx;
 pub use self::context::CtxDisbale;
@@ -15,6 +16,7 @@ pub use self::context::CtxUid;
 pub use self::data::Data;
 pub use self::extract::ExtractCtx;
 pub use self::handler::Handler;
+pub use self::value::Value;
 
 use std::fmt::Debug;
 

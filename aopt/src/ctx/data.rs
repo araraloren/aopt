@@ -7,6 +7,7 @@ use std::rc::Rc;
 
 use crate::ctx::Ctx;
 use crate::ctx::ExtractCtx;
+use crate::map::RcMapExt;
 use crate::ser::DataService;
 use crate::ser::Services;
 use crate::ser::ServicesExt;
@@ -52,11 +53,7 @@ impl<T: 'static, S: Set> ExtractCtx<S> for Data<T> {
     type Error = Error;
 
     fn extract(_uid: Uid, _set: &S, ser: &Services, _ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(ser
-            .ser::<DataService>()?
-            .get::<Data<T>>()
-            .ok_or_else(|| Error::raise_error("Can not get data from data service"))?
-            .clone())
+        Ok(ser.ser::<DataService>()?.ty::<Data<T>>()?.clone())
     }
 }
 
