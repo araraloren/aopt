@@ -204,7 +204,6 @@ impl RcMapExt for RcMap {
     where
         T: 'static,
     {
-        debug_assert!(self.contain::<T>(), "Unknown type for RefAnyMap");
         self.get::<T>().ok_or_else(|| {
             Error::raise_error(format!("Unknown type for RefAnyMap: {:?}", typeid::<T>()))
         })
@@ -214,7 +213,6 @@ impl RcMapExt for RcMap {
     where
         T: 'static,
     {
-        debug_assert!(self.contain::<T>(), "Unknown type for RefAnyMap");
         self.get_mut::<T>().ok_or_else(|| {
             Error::raise_error(format!("Unknown type for RefAnyMap: {:?}", typeid::<T>()))
         })
