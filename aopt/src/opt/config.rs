@@ -1,5 +1,3 @@
-use serde::ser::SerializeStruct;
-use serde::Serialize;
 use std::any::Any;
 
 use super::Information;
@@ -139,7 +137,7 @@ pub trait ConfigValue {
 }
 
 /// Contain the information used for create option instance.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct OptConfig {
     ty: Option<Str>,
 
@@ -161,31 +159,8 @@ pub struct OptConfig {
 
     deact: Option<bool>,
 
+    #[serde(skip)]
     callback: Option<Box<dyn Any>>,
-}
-
-/// Notice: callback will not serialized.
-impl Serialize for OptConfig {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut s = serializer.serialize_struct("OptConfig", 11)?;
-        let callback_none: Option<bool> = None;
-
-        s.serialize_field("ty", &self.ty)?;
-        s.serialize_field("uid", &self.uid)?;
-        s.serialize_field("name", &self.name)?;
-        s.serialize_field("pre", &self.pre)?;
-        s.serialize_field("opt", &self.opt)?;
-        s.serialize_field("idx", &self.idx)?;
-        s.serialize_field("alias", &self.alias)?;
-        s.serialize_field("help", &self.help)?;
-        s.serialize_field("sp_pre", &self.sp_pre)?;
-        s.serialize_field("deact", &self.deact)?;
-        s.serialize_field("callback", &callback_none)?;
-        s.end()
-    }
 }
 
 impl OptConfig {
@@ -194,48 +169,53 @@ impl OptConfig {
         self
     }
 
-    pub fn with_deactivate_style(mut self, deactivate_style: bool) -> Self {
+    pub fn with_deact(mut self, deactivate_style: bool) -> Self {
         self.deact = Some(deactivate_style);
         self
     }
 
-    pub fn with_optional(mut self, optional: bool) -> Self {
+    pub fn with_opt(mut self, optional: bool) -> Self {
         self.opt = Some(optional);
         self
     }
 
-    pub fn with_type_name(mut self, type_name: Str) -> Self {
-        self.ty = Some(type_name);
+    pub fn with_ty<S: Into<Str>>(mut self, type_name: S) -> Self {
+        self.ty = Some(type_name.into());
         self
     }
 
-    pub fn with_name(mut self, name: Str) -> Self {
-        self.name = Some(name);
+    pub fn with_name<S: Into<Str>>(mut self, name: S) -> Self {
+        self.name = Some(name.into());
         self
     }
 
-    pub fn with_prefix(mut self, prefix: Option<Str>) -> Self {
-        self.pre = prefix;
+    pub fn with_pre<S: Into<Str>>(mut self, prefix: Option<S>) -> Self {
+        self.pre = prefix.map(|v| v.into());
         self
     }
 
-    pub fn with_index(mut self, index: OptIndex) -> Self {
+    pub fn with_idx(mut self, index: OptIndex) -> Self {
         self.idx = Some(index);
         self
     }
 
-    pub fn with_alias(mut self, alias: Vec<Str>) -> Self {
-        self.alias = alias;
+    pub fn with_alias<S: Into<Str>>(mut self, alias: Vec<S>) -> Self {
+        self.alias = alias.into_iter().map(|v| v.into()).collect();
         self
     }
 
-    pub fn with_help(mut self, help: OptHelp) -> Self {
-        self.help = help;
+    pub fn with_hint<S: Into<Str>>(mut self, hint: S) -> Self {
+        self.help.set_hint(hint.into());
         self
     }
 
-    pub fn with_support_prefix(mut self, support_prefix: Vec<Str>) -> Self {
-        self.sp_pre = support_prefix;
+    pub fn with_help<S: Into<Str>>(mut self, help: S) -> Self {
+        self.help.set_help(help.into());
+        self
+    }
+
+    pub fn with_sppre<S: Into<Str>>(mut self, support_prefix: Vec<S>) -> Self {
+        self.sp_pre = support_prefix.into_iter().map(|v| v.into()).collect();
         self
     }
 
