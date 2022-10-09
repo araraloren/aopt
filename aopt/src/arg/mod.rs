@@ -6,6 +6,7 @@ pub(crate) mod parser_cl;
 pub(crate) mod parser_null;
 
 pub use self::args::Args;
+pub use self::args::ArgsIter;
 pub use self::parser_cl::CLOpt;
 pub use self::parser_cl::CLOptParser;
 pub use self::parser_null::NullParser;

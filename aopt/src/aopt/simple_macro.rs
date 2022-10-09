@@ -422,6 +422,154 @@ macro_rules! simple_impl_opt_for {
             }
         }
     };
+    ($type:ty: $lf:lifetime) => {
+        impl<$lf> Opt for &$lf mut $type {
+            fn reset(&mut self) {
+                self._reset()
+            }
+
+            fn check(&self) -> bool {
+                self._check()
+            }
+
+            fn uid(&self) -> Uid {
+                self._get_uid()
+            }
+
+            fn set_uid(&mut self, uid: Uid) {
+                self._set_uid(uid)
+            }
+
+            fn set_setted(&mut self, setted: bool) {
+                self._set_setted(setted)
+            }
+
+            fn setted(&self) -> bool {
+                self._get_setted()
+            }
+
+            fn ty(&self) -> Str {
+                self._get_type_name()
+            }
+
+            fn is_deact(&self) -> bool {
+                self._is_deactivate_style()
+            }
+
+            fn mat_sty(&self, style: OptStyle) -> bool {
+                self._match_style(style)
+            }
+
+            fn has_callback(&self) -> bool {
+                self._has_callback()
+            }
+
+            fn invoke(&mut self, ser: &mut Services, ctx: &Ctx) -> Result<Option<Str>, Error> {
+                self._invoke(ser, ctx)
+            }
+
+            fn val(
+                &mut self,
+                arg: Option<&Str>,
+                disable: bool,
+                index: (usize, usize),
+            ) -> Result<bool, Error> {
+                self._chk_value(arg, disable, index)
+            }
+        }
+
+        impl<$lf> Name for &$lf mut $type {
+            fn name(&self) -> &Str {
+                self._get_name()
+            }
+
+            fn set_name(&mut self, name: Str) {
+                self._set_name(name)
+            }
+
+            fn mat_name(&self, name: &Str) -> bool {
+                self._match_name(name)
+            }
+        }
+
+        impl<$lf> Prefix for &$lf mut $type {
+            fn pre(&self) -> Option<&Str> {
+                self._get_prefix()
+            }
+
+            fn set_pre(&mut self, prefix: Option<Str>) {
+                self._set_prefix(prefix)
+            }
+
+            fn mat_pre(&self, prefix: Option<&Str>) -> bool {
+                self._match_prefix(prefix)
+            }
+        }
+
+        impl<$lf> Optional for &$lf mut $type {
+            fn opt(&self) -> bool {
+                self._get_optional()
+            }
+
+            fn set_opt(&mut self, optional: bool) {
+                self._set_optional(optional)
+            }
+
+            fn mat_opt(&self, optional: bool) -> bool {
+                self._match_optional(optional)
+            }
+        }
+
+        impl<$lf> Alias for &$lf mut $type {
+            fn alias(&self) -> Option<&Vec<(Str, Str)>> {
+                self._get_alias()
+            }
+
+            fn add_alias(&mut self, prefix: Str, name: Str) {
+                self._add_alias(prefix, name)
+            }
+
+            fn rem_alias(&mut self, prefix: &Str, name: &Str) {
+                self._rem_alias(prefix, name)
+            }
+
+            fn mat_alias(&self, prefix: &Str, name: &Str) -> bool {
+                self._match_alias(prefix, name)
+            }
+        }
+
+        impl<$lf> Help for &$lf mut $type {
+            fn hint(&self) -> &Str {
+                self._get_hint()
+            }
+
+            fn help(&self) -> &Str {
+                self._get_help()
+            }
+
+            fn set_hint(&mut self, hint: Str) {
+                self._set_hint(hint)
+            }
+
+            fn set_help(&mut self, help: Str) {
+                self._set_help(help)
+            }
+        }
+
+        impl<$lf> Index for &$lf mut $type {
+            fn idx(&self) -> Option<&OptIndex> {
+                self._get_index()
+            }
+
+            fn set_idx(&mut self, index: Option<OptIndex>) {
+                self._set_index(index)
+            }
+
+            fn mat_idx(&self, index: Option<(usize, usize)>) -> bool {
+                self._match_index(index)
+            }
+        }
+    };
 }
 
 #[macro_export]

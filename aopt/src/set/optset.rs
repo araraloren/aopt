@@ -51,6 +51,23 @@ where
     creators: Vec<Ctor>,
 }
 
+impl<T, Parser, Ctor> OptSet<T, Parser, Ctor>
+where
+    T: Opt,
+    Ctor: Creator<Opt = T>,
+    Ctor::Config: Config,
+    Parser: OptParser,
+{
+    pub fn new(parser: Parser) -> Self {
+        Self {
+            parser,
+            opts: vec![],
+            keys: vec![],
+            creators: vec![],
+        }
+    }
+}
+
 impl<T, Parser, Ctor> Debug for OptSet<T, Parser, Ctor>
 where
     T: Opt + Debug,
@@ -93,15 +110,6 @@ where
     Parser::Output: Information,
     Ctor::Config: Config + ConfigValue + Default,
 {
-    pub fn new(parser: Parser) -> Self {
-        Self {
-            parser,
-            opts: vec![],
-            keys: vec![],
-            creators: vec![],
-        }
-    }
-
     pub fn with_pre(mut self, prefix: &str) -> Self {
         self.add_pre(prefix);
         self
