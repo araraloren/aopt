@@ -4,9 +4,11 @@ use super::ExtractCtx;
 use super::Handler;
 use super::Services;
 use crate::astr;
-use crate::ctx::wrap_callback;
+use crate::ctx::wrap_handler;
+use crate::ctx::wrap_handler_serde;
 use crate::ctx::Callbacks;
 use crate::ctx::Ctx;
+use crate::ctx::Serializer;
 use crate::opt::Opt;
 use crate::ser::Service;
 use crate::Error;
@@ -18,9 +20,9 @@ use crate::Uid;
 ///
 /// # Example
 /// ```rust
-/// # use aopt_stable::prelude::*;
-/// # use aopt_stable::Error;
-/// # use aopt_stable::Result;
+/// # use aopt::prelude::*;
+/// # use aopt::Error;
+/// # use aopt::Result;
 /// # use ctx::Data;
 /// #
 /// pub struct Arg(Str);
@@ -84,13 +86,32 @@ impl<Set, Value> InvokeService<Set, Value> {
     }
 
     /// Register a callback that will called by [`Policy`](crate::policy::Policy) when option setted.
-    pub fn reg<H, Args>(&mut self, uid: Uid, handler: H) -> &mut Self
+    pub fn reg<Args, Output>(
+        &mut self,
+        uid: Uid,
+        handler: impl Handler<Set, Args, Output = Output, Error = Error> + 'static,
+    ) -> &mut Self
     where
-        H::Output: Into<Option<Value>>,
+        Output: Into<Option<Value>>,
         Args: ExtractCtx<Set, Error = Error> + 'static,
-        H: Handler<Set, Args, Error = Error> + 'static,
     {
-        self.callbacks.insert(uid, wrap_callback(handler));
+        self.callbacks.insert(uid, wrap_handler(handler));
+        self
+    }
+
+    /// Register a callback that will called by [`Policy`](crate::policy::Policy) when option setted.
+    pub fn reg_serde<Args, Output>(
+        &mut self,
+        uid: Uid,
+        handler: impl Handler<Set, Args, Output = Output, Error = Error> + 'static,
+        serializer: impl Serializer<Output = Option<Value>, Error = Error> + 'static,
+    ) -> &mut Self
+    where
+        Output: serde::Serialize,
+        Args: ExtractCtx<Set, Error = Error> + 'static,
+    {
+        self.callbacks
+            .insert(uid, wrap_handler_serde(handler, serializer));
         self
     }
 
@@ -105,26 +126,6 @@ where
     Set::Opt: Opt,
 {
     /// Invoke the callback saved in [`InvokeService`], return None if the callback not exist.
-    ///
-    /// # Note
-    /// ```txt
-    ///  _______________________________________________________________________
-    /// |   |Uid, &mut Set, &mut Services, { Other Args }| -> T: Into<Option<Value>>
-    ///         |
-    ///      wrapped
-    ///         |
-    ///         v
-    ///  ___________________________________________________________________
-    /// |   |Uid, &mut Set, &mut Services, Ctx| -> Option<Value>
-    /// |       { Other Args create through ExtractFromCtx::extract_from }
-    /// |       { Call the source fn, convert T to Option<Value> }
-    ///         |
-    ///      invoked
-    ///         |
-    ///         v
-    ///  ______________________________________________________
-    /// |   : Callbacks<Set, Value>::invoke(uid, set, ser, ctx) -> Option<Value>
-    /// ```
     pub fn invoke(
         &mut self,
         uid: Uid,

@@ -5,7 +5,7 @@ use super::ArgParser;
 use crate::astr;
 use crate::Str;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Args(Vec<Str>);
 
 impl Args {
@@ -21,17 +21,17 @@ impl Args {
 
     /// Collect arguments using [`args`](std::env::args), and skip first argument.
     pub fn new_args() -> Self {
-        Self(std::env::args().skip(1).map(|v| astr(v)).collect())
+        Self(std::env::args().skip(1).map(astr).collect())
     }
 
     pub fn iter(&self) -> ArgsIter<std::slice::Iter<Str>> {
         ArgsIter::new(self.0.iter(), 0, self.len())
     }
 
-    pub fn into_iter(self) -> ArgsIter<std::vec::IntoIter<Str>> {
-        let len = self.len();
-        ArgsIter::new(self.0.into_iter(), 0, len)
-    }
+    // pub fn into_iter(self) -> ArgsIter<std::vec::IntoIter<Str>> {
+    //     let len = self.len();
+    //     ArgsIter::new(self.0.into_iter(), 0, len)
+    // }
 }
 
 impl From<Vec<Str>> for Args {
@@ -57,12 +57,6 @@ impl Deref for Args {
 impl DerefMut for Args {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
-    }
-}
-
-impl Default for Args {
-    fn default() -> Self {
-        Self(Vec::default())
     }
 }
 

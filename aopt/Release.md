@@ -3,11 +3,7 @@
 
 ## 0.7.0
 
-- refactor ArgStream
-
-- improve the parse_value of Opt
-
-- refactor the input argument parser
+- refactor whole project
 
 ## 0.6.6
 

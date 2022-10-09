@@ -49,7 +49,6 @@ pub mod prelude {
     pub use crate::arg::Args;
     pub use crate::astr;
     pub use crate::ctx;
-    pub use crate::ctx::wrap_callback;
     pub use crate::ctx::Callback;
     pub use crate::ctx::Callbacks;
     pub use crate::ctx::Ctx;

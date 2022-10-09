@@ -99,6 +99,12 @@ impl GuessOptCfg {
 #[derive(Debug)]
 pub struct OptGuess<S>(PhantomData<S>);
 
+impl<S> Default for OptGuess<S> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<S> OptGuess<S> {
     pub fn new() -> Self {
         Self(PhantomData::default())
@@ -250,6 +256,12 @@ impl<'a> GuessNOACfg<'a> {
 
 #[derive(Debug)]
 pub struct NOAGuess<'a, S>(PhantomData<&'a S>);
+
+impl<'a, S> Default for NOAGuess<'a, S> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl<'a, S> NOAGuess<'a, S> {
     pub fn new() -> Self {

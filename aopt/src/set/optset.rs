@@ -20,8 +20,8 @@ use crate::Uid;
 ///
 /// # Example
 /// ```rust
-/// # use aopt_stable::prelude::*;
-/// # use aopt_stable::Result;
+/// # use aopt::prelude::*;
+/// # use aopt::Result;
 /// #
 /// # fn main() -> Result<()> {
 ///     let mut set = OptSet::<Box<dyn AOpt>, OptStringParser, Box<dyn ACreator<Opt = Box<dyn AOpt>, Config = OptConfig>>>::default();

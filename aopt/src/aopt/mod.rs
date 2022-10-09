@@ -178,6 +178,7 @@ impl<Opt, Config> Creator for Box<dyn ACreator<Opt = Opt, Config = Config>> {
 simple_impl_creator_for!(BoolCreator);
 simple_impl_creator_for!(FltCreator);
 simple_impl_creator_for!(IntCreator);
+simple_impl_creator_for!(StrCreator);
 simple_impl_creator_for!(UintCreator);
 simple_impl_creator_for!(CmdCreator);
 simple_impl_creator_for!(MainCreator);

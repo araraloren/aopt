@@ -39,7 +39,7 @@ use crate::Str;
 /// # Example
 ///
 /// ```rust
-/// extern crate aopt_stable as test_crate;
+/// extern crate aopt as test_crate;
 ///
 /// use test_crate::astr;
 /// use test_crate::err::Result;

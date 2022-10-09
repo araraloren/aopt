@@ -200,7 +200,7 @@ where
             &UserStyle::Main,
             GuessNOACfg::new(&main_args, astr("Main"), 0),
         )? {
-            process_non_opt::<S, V>(&main_ctx, set, ser, &mut proc, &mut is)?;
+            process_non_opt::<S, V>(main_ctx, set, ser, &mut proc, &mut is)?;
         }
 
         ser.ser::<CheckService<S, V>>()?.post_check(set)?;

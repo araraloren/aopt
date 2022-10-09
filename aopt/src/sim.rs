@@ -30,6 +30,21 @@ pub type SimSer = Services;
 ///
 /// # Examples
 /// ```rust
+/// # use aopt::prelude::*;
+/// #
+/// # fn main() {
+///     let set = SimSet::new_set();
+///
+///     assert_eq!(set.pre(), &[astr("--"), astr("-")]);
+///     assert!(set.has_ctor("b"));
+///     assert!(set.has_ctor("f"));
+///     assert!(set.has_ctor("i"));
+///     assert!(set.has_ctor("u"));
+///     assert!(set.has_ctor("s"));
+///     assert!(set.has_ctor("c"));
+///     assert!(set.has_ctor("p"));
+///     assert!(set.has_ctor("m"));
+/// # }
 /// ```
 pub type SimSet = OptSet<SimOpt, OptStringParser, SimCtor>;
 

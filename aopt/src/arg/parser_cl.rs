@@ -57,7 +57,7 @@ impl CLOpt {
 /// # Example
 ///
 /// ```rust
-/// extern crate aopt_stable as test_crate;
+/// extern crate aopt as test_crate;
 ///
 /// use test_crate::arg::CLOptParser;
 /// use test_crate::arg::ArgParser;

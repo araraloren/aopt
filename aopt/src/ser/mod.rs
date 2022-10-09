@@ -37,8 +37,8 @@ impl Service for DataService {
 ///
 /// # Examples
 /// ```rust
-/// # use aopt_stable::Result;
-/// # use aopt_stable::prelude::*;
+/// # use aopt::Result;
+/// # use aopt::prelude::*;
 /// # fn main() -> Result<()> {
 ///     #[derive(Debug, PartialEq)]
 ///     struct MyVec(pub Vec<i32>);

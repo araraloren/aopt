@@ -212,7 +212,7 @@ where
             GuessNOACfg::new(&main_args, astr("Main"), 0),
         ))? {
             Self::ig_failure(process_non_opt::<S, V>(
-                &main_ctx, set, ser, &mut proc, &mut is,
+                main_ctx, set, ser, &mut proc, &mut is,
             ))?;
         }
 
