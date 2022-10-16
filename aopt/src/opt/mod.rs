@@ -23,7 +23,9 @@ use std::fmt::Debug;
 
 use crate::ctx::Ctx;
 use crate::prelude::Services;
+use crate::Arc;
 use crate::Error;
+use crate::RawString;
 use crate::Str;
 use crate::Uid;
 
@@ -90,7 +92,7 @@ pub trait Help {
 pub trait Opt: Name + Help + Alias + Index + Prefix + Optional + Debug {
     fn reset(&mut self);
 
-    fn check(&self) -> bool;
+    fn valid(&self) -> bool;
 
     fn uid(&self) -> Uid;
 
@@ -104,16 +106,19 @@ pub trait Opt: Name + Help + Alias + Index + Prefix + Optional + Debug {
 
     fn mat_sty(&self, style: OptStyle) -> bool;
 
-    fn has_callback(&self) -> bool;
-
     fn set_setted(&mut self, setted: bool);
 
-    fn invoke(&mut self, ser: &mut Services, ctx: &Ctx) -> Result<Option<Str>, Error>;
-
-    fn val(
+    fn check(
         &mut self,
-        arg: Option<&Str>,
+        val: Option<Arc<RawString>>,
         disable: bool,
         index: (usize, usize),
     ) -> Result<bool, Error>;
+
+    fn val_act(
+        &mut self,
+        val: Option<RawString>,
+        ser: &mut Services,
+        ctx: &Ctx,
+    ) -> Result<(), Error>;
 }

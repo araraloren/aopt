@@ -14,6 +14,8 @@ pub mod str;
 
 pub type Uid = u64;
 pub type HashMap<K, V> = ahash::HashMap<K, V>;
+pub type RawString = std::ffi::OsString;
+pub type Arc<T> = std::rc::Rc<T>;
 pub use self::err::Error;
 pub use self::err::Result;
 pub use self::str::astr;

@@ -11,6 +11,8 @@ use crate::opt::OptIndex;
 use crate::opt::OptStyle;
 use crate::ser::Services;
 use crate::simple_impl_opt;
+use crate::Arc;
+use crate::RawString;
 use crate::Str;
 use crate::Uid;
 
@@ -82,11 +84,18 @@ impl IntOpt {
 
     fn pri_check(
         &mut self,
-        arg: Option<&Str>,
+        arg: Option<Arc<RawString>>,
         _disable: bool,
         _index: (usize, usize),
     ) -> Result<bool, Error> {
         arg.ok_or_else(|| Error::sp_missing_argument(self._get_name()))?
+            .to_str()
+            .ok_or_else(|| {
+                Error::sp_invalid_option_value(
+                    self._get_name().to_string(),
+                    format!("Invalid utf8"),
+                )
+            })?
             .parse::<i64>()
             .map_err(|e| {
                 Error::sp_invalid_option_value(self._get_name().to_string(), e.to_string())

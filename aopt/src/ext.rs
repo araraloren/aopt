@@ -4,7 +4,6 @@ use crate::opt::OptParser;
 use crate::ser::CheckService;
 use crate::ser::DataService;
 use crate::ser::InvokeService;
-use crate::ser::NOAService;
 use crate::ser::ValueService;
 use crate::Error;
 use crate::Uid;
@@ -31,10 +30,6 @@ pub trait APolicyExt<Set: 'static, Value: 'static> {
 
 pub trait AServiceExt<Set: 'static, Value: 'static> {
     fn new_services() -> Self;
-
-    fn noa_ser(&self) -> &NOAService;
-
-    fn noa_ser_mut(&mut self) -> &mut NOAService;
 
     fn data_ser(&self) -> &DataService;
 

@@ -1,3 +1,4 @@
+use std::ffi::OsString;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
@@ -9,6 +10,7 @@ use crate::opt::Opt;
 use crate::opt::OptStyle;
 use crate::opt::Prefix;
 use crate::set::Set;
+use crate::Arc;
 use crate::Error;
 use crate::Str;
 use crate::Uid;
@@ -20,7 +22,7 @@ pub struct OptMatch<S> {
 
     style: OptStyle,
 
-    argument: Option<Str>,
+    argument: Option<Arc<OsString>>,
 
     matched_uid: Option<Uid>,
 
@@ -87,7 +89,7 @@ where
         self
     }
 
-    pub fn with_arg(mut self, argument: Option<Str>) -> Self {
+    pub fn with_arg(mut self, argument: Option<Arc<OsString>>) -> Self {
         self.argument = argument;
         self
     }
@@ -118,10 +120,6 @@ where
 
     pub fn pre(&self) -> Option<&Str> {
         Some(&self.prefix)
-    }
-
-    pub fn sty(&self) -> OptStyle {
-        self.style
     }
 
     pub fn dsb(&self) -> bool {
@@ -165,7 +163,7 @@ where
         self.style
     }
 
-    fn arg(&self) -> Option<&Str> {
+    fn arg(&self) -> Option<&Arc<OsString>> {
         self.argument.as_ref()
     }
 
@@ -195,7 +193,7 @@ where
                 return Err(Error::sp_missing_argument(opt.hint()));
             }
             // set the value of current option
-            if opt.val(self.arg(), self.disbale, (self.index, self.total))? {
+            if opt.check(self.arg().cloned(), self.disbale, (self.index, self.total))? {
                 opt.set_setted(true);
                 self.matched_uid = Some(opt.uid());
             } else {

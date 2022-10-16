@@ -1,3 +1,5 @@
+use std::ffi::OsStr;
+use std::ffi::OsString;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
@@ -6,18 +8,18 @@ use crate::opt::Index;
 use crate::opt::Name;
 use crate::opt::Opt;
 use crate::opt::OptStyle;
+use crate::prelude::Args;
 use crate::prelude::Prefix;
 use crate::set::Set;
+use crate::Arc;
 use crate::Error;
 use crate::Str;
 use crate::Uid;
 
 pub struct NOAMatch<S> {
-    name: Str,
+    args: Arc<Args>,
 
     style: OptStyle,
-
-    arg: Option<Str>,
 
     noa_index: usize,
 
@@ -33,9 +35,8 @@ pub struct NOAMatch<S> {
 impl<S> Debug for NOAMatch<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("NOAMatch")
-            .field("name", &self.name)
+            .field("args", &self.args)
             .field("style", &self.style)
-            .field("arg", &self.arg)
             .field("noa_index", &self.noa_index)
             .field("noa_total", &self.noa_total)
             .field("matched_uid", &self.matched_uid)
@@ -48,9 +49,8 @@ impl<S> Debug for NOAMatch<S> {
 impl<S> Default for NOAMatch<S> {
     fn default() -> Self {
         Self {
-            name: Str::default(),
+            args: Arc::new(Args::default()),
             style: OptStyle::default(),
-            arg: None,
             noa_index: 0,
             noa_total: 0,
             matched_uid: None,
@@ -64,8 +64,8 @@ impl<S> NOAMatch<S>
 where
     S: Set,
 {
-    pub fn with_name(mut self, name: Str) -> Self {
-        self.name = name;
+    pub fn with_args(mut self, args: Arc<Args>) -> Self {
+        self.args = args;
         self
     }
 
@@ -84,25 +84,13 @@ where
         self
     }
 
-    pub fn with_arg(mut self, arg: Option<Str>) -> Self {
-        self.arg = arg;
-        self
-    }
-
-    pub fn get_name(&self) -> &Str {
-        &self.name
+    pub fn name(&self) -> &OsString {
+        // noa index == index + 1
+        &self.args[self.noa_index - 1]
     }
 
     pub fn pre(&self) -> Option<&Str> {
         None
-    }
-
-    pub fn arg(&self) -> Option<&Str> {
-        self.arg.as_ref()
-    }
-
-    pub fn sty(&self) -> OptStyle {
-        self.style
     }
 
     pub fn dsb(&self) -> bool {
@@ -147,7 +135,7 @@ where
         self.style
     }
 
-    fn arg(&self) -> Option<&Str> {
+    fn arg(&self) -> Option<&Arc<OsString>> {
         None
     }
 
@@ -168,15 +156,22 @@ where
         let mut matched = opt.mat_sty(self.style);
 
         if matched {
+            // if the name is valid utf8, pass it to match name
+            if let Some(utf8) = self.name().to_str() {
+                matched = matched && opt.mat_name(&utf8.into());
+            }
+            // or pass a fake string to it
+            else {
+                matched = matched && opt.mat_name(&Str::default());
+            }
             matched = matched
-                && (opt.mat_name(self.get_name())
-                    && opt.mat_pre(self.pre())
-                    && opt.mat_idx(Some((self.noa_index as usize, self.noa_total as usize))));
+                && opt.mat_pre(self.pre())
+                && opt.mat_idx(Some((self.noa_index as usize, self.noa_total as usize)));
         }
         if matched {
             // set the value of current option
-            if opt.val(
-                Some(&self.get_name()),
+            if opt.check(
+                Some(Arc::new(self.name().clone())),
                 false,
                 (self.noa_index, self.noa_total),
             )? {

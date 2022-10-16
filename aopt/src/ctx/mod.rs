@@ -5,14 +5,14 @@ pub(crate) mod handler;
 pub(crate) mod value;
 
 pub use self::context::Ctx;
-pub use self::context::CtxDisbale;
-pub use self::context::CtxIdx;
-pub use self::context::CtxLen;
-pub use self::context::CtxMatArg;
-pub use self::context::CtxName;
-pub use self::context::CtxPrefix;
-pub use self::context::CtxStyle;
-pub use self::context::CtxUid;
+// pub use self::context::CtxDisbale;
+// pub use self::context::CtxIdx;
+// pub use self::context::CtxLen;
+// pub use self::context::CtxMatArg;
+// pub use self::context::CtxName;
+// pub use self::context::CtxPrefix;
+// pub use self::context::CtxStyle;
+// pub use self::context::CtxUid;
 pub use self::data::Data;
 pub use self::extract::ExtractCtx;
 pub use self::handler::Handler;
@@ -34,14 +34,14 @@ pub trait Callback<Set> {
         uid: Uid,
         set: &mut Set,
         ser: &mut Services,
-        ctx: Ctx,
+        ctx: &Ctx,
     ) -> Result<Option<Self::Value>, Self::Error>;
 }
 
 impl<Func, Set, Value, Err> Callback<Set> for Func
 where
     Err: Into<Error>,
-    Func: FnMut(Uid, &mut Set, &mut Services, Ctx) -> Result<Option<Value>, Err>,
+    Func: FnMut(Uid, &mut Set, &mut Services, &Ctx) -> Result<Option<Value>, Err>,
 {
     type Value = Value;
     type Error = Err;
@@ -51,7 +51,7 @@ where
         uid: Uid,
         set: &mut Set,
         ser: &mut Services,
-        ctx: Ctx,
+        ctx: &Ctx,
     ) -> Result<Option<Self::Value>, Self::Error> {
         (self)(uid, set, ser, ctx)
     }
@@ -85,7 +85,7 @@ impl<Set, Value, Error> Debug for Callbacks<Set, Value, Error> {
 ///         |
 ///         v
 ///  ______________________________________________________
-/// |   call Callbacks::invoke(&mut self, Uid, &mut Set, &mut Services, Ctx)
+/// |   call Callbacks::invoke(&mut self, Uid, &mut Set, &mut Services, &Ctx)
 /// |       call Handler::invoke(&mut self, Uid, &mut Set, Args)
 /// |           call Args::extract(Uid, &Set, &Services, &Ctx) -> Args
 /// |           -> T: Into<Option<Value>>
@@ -106,9 +106,9 @@ where
     Args: ExtractCtx<Set, Error = Error>,
 {
     Box::new(
-        move |uid: Uid, set: &mut Set, ser: &mut Services, ctx: Ctx| {
+        move |uid: Uid, set: &mut Set, ser: &mut Services, ctx: &Ctx| {
             Ok(handler
-                .invoke(uid, set, Args::extract(uid, set, ser, &ctx)?)?
+                .invoke(uid, set, Args::extract(uid, set, ser, ctx)?)?
                 .into())
         },
     )
@@ -138,7 +138,7 @@ pub trait Serializer {
 ///         |
 ///         v
 ///  ______________________________________________________
-/// |   call Callbacks::invoke(&mut self, Uid, &mut Set, &mut Services, Ctx)
+/// |   call Callbacks::invoke(&mut self, Uid, &mut Set, &mut Services, &Ctx)
 /// |       call Handler::invoke(&mut self, Uid, &mut Set, Args)
 /// |           call Args::extract(Uid, &Set, &Services, &Ctx) -> Args
 /// |       --> T: serde::Serialize
@@ -155,8 +155,8 @@ where
     Args: ExtractCtx<Set, Error = Error>,
 {
     Box::new(
-        move |uid: Uid, set: &mut Set, ser: &mut Services, ctx: Ctx| {
-            let value: Output = handler.invoke(uid, set, Args::extract(uid, set, ser, &ctx)?)?;
+        move |uid: Uid, set: &mut Set, ser: &mut Services, ctx: &Ctx| {
+            let value: Output = handler.invoke(uid, set, Args::extract(uid, set, ser, ctx)?)?;
 
             Ok(serializer.serialize(value)?)
         },

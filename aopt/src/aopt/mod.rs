@@ -43,6 +43,8 @@ use crate::opt::Prefix;
 use crate::ser::Services;
 use crate::simple_impl_creator_for;
 use crate::simple_impl_opt_for;
+use crate::Arc;
+use crate::RawString;
 use crate::Str;
 use crate::Uid;
 
@@ -51,7 +53,7 @@ pub trait AOpt: Debug {
         self._set_setted(false);
     }
 
-    fn _check(&self) -> bool {
+    fn _valid(&self) -> bool {
         self._get_optional() || self._get_setted()
     }
 
@@ -115,16 +117,19 @@ pub trait AOpt: Debug {
 
     fn _match_index(&self, index: Option<(usize, usize)>) -> bool;
 
-    fn _chk_value(
+    fn _check(
         &mut self,
-        arg: Option<&Str>,
+        val: Option<Arc<RawString>>,
         disable: bool,
         index: (usize, usize),
     ) -> Result<bool, Error>;
 
-    fn _has_callback(&self) -> bool;
-
-    fn _invoke(&mut self, ser: &mut Services, ctx: &Ctx) -> Result<Option<Str>, Error>;
+    fn _val_act(
+        &mut self,
+        val: Option<RawString>,
+        ser: &mut Services,
+        ctx: &Ctx,
+    ) -> Result<(), Error>;
 }
 
 simple_impl_opt_for!(BoolOpt);

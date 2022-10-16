@@ -108,20 +108,11 @@ macro_rules! simple_impl_opt {
                 index.is_none()
             }
 
-            fn _chk_value(
-                &mut self,
-                _arg: Option<&Str>,
-                disable: bool,
-                _index: (usize, usize),
-            ) -> Result<bool, Error> {
-                ($check)(self, _arg, disable, _index)
+            fn _check(&mut self, val: Option<crate::Arc<crate::RawString>>, disable: bool, index: (usize, usize)) -> Result<bool, Error> {
+                $check(self, val, disable, index)
             }
 
-            fn _has_callback(&self) -> bool {
-                self.callback.is_some()
-            }
-
-            fn _invoke(&mut self, ser: &mut Services, ctx: &Ctx) -> Result<Option<Str>, Error> {
+            fn _val_act(&mut self, val: Option<crate::RawString>, ser: &mut Services, ctx: &Ctx) -> Result<(), Error> {
                 let store_func = std::mem::replace(&mut self.callback, None);
 
                 if let Some(mut func) = store_func {
@@ -129,9 +120,9 @@ macro_rules! simple_impl_opt {
 
                     // store the callback back
                     self.callback = Some(func);
-                    ret
+                    todo!()
                 } else {
-                    Ok(None)
+                    Ok(())
                 }
             }
         }
@@ -242,20 +233,11 @@ macro_rules! simple_impl_noa {
                 ($index_mat)(self, index)
             }
 
-            fn _chk_value(
-                &mut self,
-                _arg: Option<&Str>,
-                _disable: bool,
-                _index: (usize, usize),
-            ) -> Result<bool, Error> {
+            fn _check(&mut self, _val: Option<crate::Arc<crate::RawString>>, _disable: bool, _index: (usize, usize)) -> Result<bool, Error> {
                 Ok(true)
             }
 
-            fn _has_callback(&self) -> bool {
-                self.callback.is_some()
-            }
-
-            fn _invoke(&mut self, ser: &mut Services, ctx: &Ctx) -> Result<Option<Str>, Error> {
+            fn _val_act(&mut self, val: Option<crate::RawString>, ser: &mut Services, ctx: &Ctx) -> Result<(), Error> {
                 let store_func = std::mem::replace(&mut self.callback, None);
 
                 if let Some(mut func) = store_func {
@@ -263,9 +245,9 @@ macro_rules! simple_impl_noa {
 
                     // store the callback back
                     self.callback = Some(func);
-                    ret
+                    todo!()
                 } else {
-                    Ok(None)
+                    Ok(())
                 }
             }
         }
@@ -280,8 +262,8 @@ macro_rules! simple_impl_opt_for {
                 self._reset()
             }
 
-            fn check(&self) -> bool {
-                self._check()
+            fn valid(&self) -> bool {
+                self._valid()
             }
 
             fn uid(&self) -> Uid {
@@ -312,21 +294,12 @@ macro_rules! simple_impl_opt_for {
                 self._match_style(style)
             }
 
-            fn has_callback(&self) -> bool {
-                self._has_callback()
+            fn check(&mut self, val: Option<crate::Arc<crate::RawString>>, disable: bool, index: (usize, usize)) -> Result<bool, Error> {
+                self._check(val, disable, index)
             }
 
-            fn invoke(&mut self, ser: &mut Services, ctx: &Ctx) -> Result<Option<Str>, Error> {
-                self._invoke(ser, ctx)
-            }
-
-            fn val(
-                &mut self,
-                arg: Option<&Str>,
-                disable: bool,
-                index: (usize, usize),
-            ) -> Result<bool, Error> {
-                self._chk_value(arg, disable, index)
+            fn val_act(&mut self, val: Option<crate::RawString>, ser: &mut Services, ctx: &Ctx) -> Result<(), Error> {
+                self._val_act(val, ser, ctx)
             }
         }
 
@@ -428,8 +401,8 @@ macro_rules! simple_impl_opt_for {
                 self._reset()
             }
 
-            fn check(&self) -> bool {
-                self._check()
+            fn valid(&self) -> bool {
+                self._valid()
             }
 
             fn uid(&self) -> Uid {
@@ -464,17 +437,17 @@ macro_rules! simple_impl_opt_for {
                 self._has_callback()
             }
 
-            fn invoke(&mut self, ser: &mut Services, ctx: &Ctx) -> Result<Option<Str>, Error> {
-                self._invoke(ser, ctx)
+            fn check(&mut self, val: Option<crate::Arc<crate::RawString>>>, ser: &mut Services, ctx: &Ctx) -> Result<bool, Error> {
+                self._check(val, ser, ctx)
             }
 
-            fn val(
+            fn val_act(
                 &mut self,
-                arg: Option<&Str>,
+                arg: Option<crate::RawString>,
                 disable: bool,
                 index: (usize, usize),
             ) -> Result<bool, Error> {
-                self._chk_value(arg, disable, index)
+                self._val_act(arg, disable, index)
             }
         }
 

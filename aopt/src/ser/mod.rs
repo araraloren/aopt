@@ -1,11 +1,9 @@
 pub(crate) mod check;
 pub(crate) mod invoke;
-pub(crate) mod noa;
 pub(crate) mod value;
 
 pub use self::check::CheckService;
 pub use self::invoke::InvokeService;
-pub use self::noa::NOAService;
 pub use self::value::ValueService;
 pub use self::value::ValueServiceExt;
 
@@ -201,14 +199,6 @@ impl<Set: 'static, Value: 'static> AServiceExt<Set, Value> for Services {
             .with(DataService::new())
             .with(InvokeService::<Set, Value>::new())
             .with(CheckService::<Set, Value>::new())
-    }
-
-    fn noa_ser(&self) -> &NOAService {
-        self.get::<NOAService>().unwrap()
-    }
-
-    fn noa_ser_mut(&mut self) -> &mut NOAService {
-        self.get_mut::<NOAService>().unwrap()
     }
 
     fn data_ser(&self) -> &DataService {

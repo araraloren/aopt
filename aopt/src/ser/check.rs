@@ -76,7 +76,7 @@ where
                     || opt.mat_sty(OptStyle::Boolean)
                     || opt.mat_sty(OptStyle::Combined)
             })
-            .all(|v| Self::opt(set, v).check()))
+            .all(|v| Self::opt(set, v).valid()))
     }
 
     /// Check if the POS is valid.
@@ -125,7 +125,7 @@ where
 
             for uid in uids {
                 let opt = Self::opt(set, uid);
-                let opt_valid = opt.check();
+                let opt_valid = opt.valid();
 
                 pos_valid = pos_valid && opt_valid;
                 if !opt_valid {
@@ -140,7 +140,7 @@ where
         if !float_vec.is_empty() {
             float_vec
                 .iter()
-                .filter(|&uid| !Self::opt(set, uid).check())
+                .filter(|&uid| !Self::opt(set, uid).valid())
                 .for_each(|uid| {
                     names.push(Self::opt(set, uid).hint().clone());
                 });
@@ -159,7 +159,7 @@ where
             let opt = Self::opt(set, key);
 
             if opt.mat_sty(OptStyle::Cmd) {
-                valid = valid || opt.check();
+                valid = valid || opt.valid();
                 if valid {
                     break;
                 } else {
@@ -178,7 +178,7 @@ where
             .keys()
             .iter()
             .filter(|v| Self::opt(set, *v).mat_sty(OptStyle::Main))
-            .all(|v| Self::opt(set, v).check()))
+            .all(|v| Self::opt(set, v).valid()))
     }
 }
 

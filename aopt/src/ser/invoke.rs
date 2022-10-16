@@ -131,7 +131,7 @@ where
         uid: Uid,
         set: &mut Set,
         ser: &mut Services,
-        ctx: Ctx,
+        ctx: &Ctx,
     ) -> Result<Option<Value>, Error> {
         if let Some(callback) = self.callbacks.get_mut(&uid) {
             Ok(callback.invoke(uid, set, ser, ctx)?)

@@ -1,6 +1,8 @@
+use std::ffi::OsStr;
+use std::ffi::OsString;
 use std::marker::PhantomData;
 
-use crate::arg::args::ArgsIter;
+use crate::arg::Args;
 use crate::arg::CLOpt;
 use crate::opt::OptStyle;
 use crate::proc::NOAMatch;
@@ -8,6 +10,7 @@ use crate::proc::NOAProcess;
 use crate::proc::OptMatch;
 use crate::proc::OptProcess;
 use crate::set::Set;
+use crate::Arc;
 use crate::Error;
 use crate::Str;
 
@@ -59,26 +62,22 @@ pub fn valueof(name: &str, value: &Option<Str>) -> Result<Str, Error> {
 }
 
 #[derive(Debug)]
-pub struct GuessOptCfg {
+pub struct GuessOptCfg<'a> {
     pub idx: usize,
 
     pub len: usize,
 
-    pub arg: Option<Str>,
+    pub arg: Option<Arc<OsString>>,
 
-    pub clopt: CLOpt,
+    pub clopt: &'a CLOpt,
 }
 
-impl GuessOptCfg {
-    pub fn new<T, I>(iter: &ArgsIter<I>, clopt: CLOpt) -> Self
-    where
-        I: Iterator<Item = T> + Clone,
-        T: Into<Str>,
-    {
+impl<'a> GuessOptCfg<'a> {
+    pub fn new(idx: usize, len: usize, arg: Option<Arc<OsString>>, clopt: &'a CLOpt) -> Self {
         Self {
-            idx: iter.idx(),
-            len: iter.len(),
-            arg: iter.arg().cloned(),
+            idx,
+            len,
+            arg,
             clopt,
         }
     }
@@ -91,39 +90,39 @@ impl GuessOptCfg {
         self.len
     }
 
-    pub fn arg(&self) -> Option<&Str> {
+    pub fn arg(&self) -> Option<&Arc<OsString>> {
         self.arg.as_ref()
     }
 }
 
 #[derive(Debug)]
-pub struct OptGuess<S>(PhantomData<S>);
+pub struct OptGuess<'a, S>(PhantomData<&'a S>);
 
-impl<S> Default for OptGuess<S> {
+impl<'a, S> Default for OptGuess<'a, S> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<S> OptGuess<S> {
+impl<'a, S> OptGuess<'a, S> {
     pub fn new() -> Self {
         Self(PhantomData::default())
     }
 
-    fn bool2str(value: bool) -> Str {
+    fn bool2str(value: bool) -> Arc<OsStr> {
         if value {
-            Str::from("true")
+            OsString::from("true").into()
         } else {
-            Str::from("false")
+            OsString::from("false").into()
         }
     }
 }
 
-impl<S> Guess for OptGuess<S>
+impl<'a, S> Guess for OptGuess<'a, S>
 where
     S: Set,
 {
-    type Config = GuessOptCfg;
+    type Config = GuessOptCfg<'a>;
 
     type Process = OptProcess<S>;
 
@@ -144,7 +143,7 @@ where
                         OptMatch::default()
                             .with_idx(index)
                             .with_len(count)
-                            .with_arg(clopt.value.clone())
+                            .with_arg(cfg.arg().cloned())
                             .with_sty(OptStyle::Argument)
                             .with_dsb(clopt.disable)
                             .with_name(valueof("name", &clopt.name)?)
@@ -177,7 +176,7 @@ where
                                 OptMatch::default()
                                     .with_idx(index)
                                     .with_len(count)
-                                    .with_arg(Some(name_value.1.into()))
+                                    .with_arg(Some(OsString::from(name_value.1).into()))
                                     .with_sty(OptStyle::Argument)
                                     .with_dsb(clopt.disable)
                                     .with_name(name_value.0.into())
@@ -196,7 +195,7 @@ where
                                     OptMatch::default()
                                         .with_idx(index)
                                         .with_len(count)
-                                        .with_arg(Some(Self::bool2str(!clopt.disable)))
+                                        .with_arg(None)
                                         .with_sty(OptStyle::Combined)
                                         .with_dsb(clopt.disable)
                                         .with_name(format!("{}", char).into())
@@ -213,7 +212,7 @@ where
                         OptMatch::default()
                             .with_idx(index)
                             .with_len(count)
-                            .with_arg(Some(Self::bool2str(!clopt.disable)))
+                            .with_arg(None)
                             .with_sty(OptStyle::Boolean)
                             .with_dsb(clopt.disable)
                             .with_name(valueof("name", &clopt.name)?)
@@ -230,23 +229,23 @@ where
     }
 }
 
-pub struct GuessNOACfg<'a> {
-    iter: &'a [Str],
+pub struct GuessNOACfg {
     index: usize,
-    name: Str,
+    total: usize,
+    args: Arc<Args>,
 }
 
-impl<'a> GuessNOACfg<'a> {
-    pub fn new(iter: &'a [Str], name: Str, index: usize) -> Self {
-        Self { iter, name, index }
+impl GuessNOACfg {
+    pub fn new(args: Arc<Args>, index: usize, total: usize) -> Self {
+        Self { args, index, total }
     }
 
     pub fn idx(&self) -> usize {
         self.index
     }
 
-    pub fn name(&self) -> Str {
-        self.name.clone()
+    pub fn len(&self) -> usize {
+        self.total
     }
 }
 
@@ -264,11 +263,11 @@ impl<'a, S> NOAGuess<'a, S> {
         Self(PhantomData::default())
     }
 
-    fn bool2str(value: bool) -> Str {
+    fn bool2str(value: bool) -> Arc<OsStr> {
         if value {
-            Str::from("true")
+            OsString::from("true").into()
         } else {
-            Str::from("false")
+            OsString::from("false").into()
         }
     }
 }
@@ -277,7 +276,7 @@ impl<'a, S> Guess for NOAGuess<'a, S>
 where
     S: Set,
 {
-    type Config = GuessNOACfg<'a>;
+    type Config = GuessNOACfg;
 
     type Process = NOAProcess<S>;
 
@@ -287,40 +286,36 @@ where
         cfg: Self::Config,
     ) -> Result<Option<Self::Process>, Error> {
         let mat;
-        let iter = cfg.iter;
+        let args = cfg.args.clone();
         let pos = cfg.idx();
-        let name = cfg.name();
-        let count = iter.len();
+        let count = cfg.len();
 
         match style {
             UserStyle::Main => {
                 mat = Some(
                     NOAMatch::default()
-                        .with_name(name)
+                        .with_args(args)
                         .with_idx(pos)
                         .with_len(count)
-                        .with_sty(OptStyle::Main)
-                        .with_arg(Some(Self::bool2str(true))),
+                        .with_sty(OptStyle::Main),
                 );
             }
             UserStyle::Pos => {
                 mat = Some(
                     NOAMatch::default()
-                        .with_name(name)
+                        .with_args(args)
                         .with_idx(pos)
                         .with_len(count)
-                        .with_sty(OptStyle::Pos)
-                        .with_arg(Some(Self::bool2str(true))),
+                        .with_sty(OptStyle::Pos),
                 );
             }
             UserStyle::Cmd => {
                 mat = Some(
                     NOAMatch::default()
-                        .with_name(name)
+                        .with_args(args)
                         .with_idx(pos)
                         .with_len(count)
-                        .with_sty(OptStyle::Cmd)
-                        .with_arg(Some(Self::bool2str(true))),
+                        .with_sty(OptStyle::Cmd),
                 );
             }
             _ => {
