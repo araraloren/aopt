@@ -1,11 +1,12 @@
 pub(crate) mod check;
 pub(crate) mod invoke;
+pub(crate) mod rawval;
 pub(crate) mod value;
 
 pub use self::check::CheckService;
 pub use self::invoke::InvokeService;
-pub use self::value::ValueService;
-pub use self::value::ValueServiceExt;
+pub use self::rawval::RawValService;
+pub use self::rawval::RawValServiceExt;
 
 pub type DataService = RcMap;
 
@@ -195,7 +196,7 @@ impl ServicesExt for Services {
 impl<Set: 'static, Value: 'static> AServiceExt<Set, Value> for Services {
     fn new_services() -> Self {
         Services::new()
-            .with(ValueService::<Value>::new())
+            .with(RawValService::<Value>::new())
             .with(DataService::new())
             .with(InvokeService::<Set, Value>::new())
             .with(CheckService::<Set, Value>::new())
@@ -209,12 +210,12 @@ impl<Set: 'static, Value: 'static> AServiceExt<Set, Value> for Services {
         self.get_mut::<DataService>().unwrap()
     }
 
-    fn val_ser(&self) -> &ValueService<Value> {
-        self.get::<ValueService<Value>>().unwrap()
+    fn val_ser(&self) -> &RawValService<Value> {
+        self.get::<RawValService<Value>>().unwrap()
     }
 
-    fn val_ser_mut(&mut self) -> &mut ValueService<Value> {
-        self.get_mut::<ValueService<Value>>().unwrap()
+    fn val_ser_mut(&mut self) -> &mut RawValService<Value> {
+        self.get_mut::<RawValService<Value>>().unwrap()
     }
 
     fn invoke_ser(&self) -> &InvokeService<Set, Value> {
@@ -262,20 +263,20 @@ impl<Set: 'static, Value: 'static> AServiceExt<Set, Value> for Services {
     }
 
     fn val(&self, uid: Uid) -> Option<&Value> {
-        self.get::<ValueService<Value>>().and_then(|v| v.get(uid))
+        self.get::<RawValService<Value>>().and_then(|v| v.get(uid))
     }
 
     fn vals(&self, uid: Uid) -> Option<&Vec<Value>> {
-        self.get::<ValueService<Value>>().and_then(|v| v.gets(uid))
+        self.get::<RawValService<Value>>().and_then(|v| v.gets(uid))
     }
 
     fn val_mut(&mut self, uid: Uid) -> Option<&mut Value> {
-        self.get_mut::<ValueService<Value>>()
+        self.get_mut::<RawValService<Value>>()
             .and_then(|v| v.get_mut(uid))
     }
 
     fn vals_mut(&mut self, uid: Uid) -> Option<&mut Vec<Value>> {
-        self.get_mut::<ValueService<Value>>()
+        self.get_mut::<RawValService<Value>>()
             .and_then(|v| v.gets_mut(uid))
     }
 

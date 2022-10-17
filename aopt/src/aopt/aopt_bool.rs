@@ -12,7 +12,7 @@ use crate::opt::OptStyle;
 use crate::ser::Services;
 use crate::simple_impl_opt;
 use crate::Arc;
-use crate::RawString;
+use crate::RawVal;
 use crate::Str;
 use crate::Uid;
 
@@ -91,7 +91,7 @@ impl BoolOpt {
 
     fn pri_check(
         &mut self,
-        _arg: Option<Arc<RawString>>,
+        _arg: Option<Arc<RawVal>>,
         disable: bool,
         _index: (usize, usize),
     ) -> Result<bool, Error> {

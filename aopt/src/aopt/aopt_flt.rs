@@ -12,7 +12,7 @@ use crate::opt::OptStyle;
 use crate::ser::Services;
 use crate::simple_impl_opt;
 use crate::Arc;
-use crate::RawString;
+use crate::RawVal;
 use crate::Str;
 use crate::Uid;
 
@@ -84,7 +84,7 @@ impl FltOpt {
 
     fn pri_check(
         &mut self,
-        arg: Option<Arc<RawString>>,
+        arg: Option<Arc<RawVal>>,
         _disable: bool,
         _index: (usize, usize),
     ) -> Result<bool, Error> {

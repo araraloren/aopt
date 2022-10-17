@@ -108,22 +108,17 @@ macro_rules! simple_impl_opt {
                 index.is_none()
             }
 
-            fn _check(&mut self, val: Option<crate::Arc<crate::RawString>>, disable: bool, index: (usize, usize)) -> Result<bool, Error> {
+            fn _check(&mut self, val: Option<crate::Arc<crate::RawVal>>, disable: bool, index: (usize, usize)) -> Result<bool, Error> {
                 $check(self, val, disable, index)
             }
 
-            fn _val_act(&mut self, val: Option<crate::RawString>, ser: &mut Services, ctx: &Ctx) -> Result<(), Error> {
-                let store_func = std::mem::replace(&mut self.callback, None);
-
-                if let Some(mut func) = store_func {
-                    let ret = func.invoke(self, ser, ctx);
-
-                    // store the callback back
-                    self.callback = Some(func);
-                    todo!()
-                } else {
-                    Ok(())
+            fn _val_act(&mut self, val: Option<crate::RawVal>, ser: &mut Services, ctx: &Ctx) -> Result<(), Error> {
+                // todo!() remove the old value setter
+                use crate::ser::ServicesExt;
+                if let Some(val) = val {
+                    ser.ser_mut::<crate::ser::RawValService<crate::RawVal>>()?.ins(self.uid, val);
                 }
+                Ok(())
             }
         }
     };
@@ -233,22 +228,17 @@ macro_rules! simple_impl_noa {
                 ($index_mat)(self, index)
             }
 
-            fn _check(&mut self, _val: Option<crate::Arc<crate::RawString>>, _disable: bool, _index: (usize, usize)) -> Result<bool, Error> {
+            fn _check(&mut self, _val: Option<crate::Arc<crate::RawVal>>, _disable: bool, _index: (usize, usize)) -> Result<bool, Error> {
                 Ok(true)
             }
 
-            fn _val_act(&mut self, val: Option<crate::RawString>, ser: &mut Services, ctx: &Ctx) -> Result<(), Error> {
-                let store_func = std::mem::replace(&mut self.callback, None);
-
-                if let Some(mut func) = store_func {
-                    let ret = func.invoke(self, ser, ctx);
-
-                    // store the callback back
-                    self.callback = Some(func);
-                    todo!()
-                } else {
-                    Ok(())
+            fn _val_act(&mut self, val: Option<crate::RawVal>, ser: &mut Services, ctx: &Ctx) -> Result<(), Error> {
+                // todo!() remove the old value setter
+                use crate::ser::ServicesExt;
+                if let Some(val) = val {
+                    ser.ser_mut::<crate::ser::RawValService<crate::RawVal>>()?.ins(self.uid, val);
                 }
+                Ok(())
             }
         }
     };
@@ -294,11 +284,11 @@ macro_rules! simple_impl_opt_for {
                 self._match_style(style)
             }
 
-            fn check(&mut self, val: Option<crate::Arc<crate::RawString>>, disable: bool, index: (usize, usize)) -> Result<bool, Error> {
+            fn check(&mut self, val: Option<crate::Arc<crate::RawVal>>, disable: bool, index: (usize, usize)) -> Result<bool, Error> {
                 self._check(val, disable, index)
             }
 
-            fn val_act(&mut self, val: Option<crate::RawString>, ser: &mut Services, ctx: &Ctx) -> Result<(), Error> {
+            fn val_act(&mut self, val: Option<crate::RawVal>, ser: &mut Services, ctx: &Ctx) -> Result<(), Error> {
                 self._val_act(val, ser, ctx)
             }
         }
@@ -437,13 +427,13 @@ macro_rules! simple_impl_opt_for {
                 self._has_callback()
             }
 
-            fn check(&mut self, val: Option<crate::Arc<crate::RawString>>>, ser: &mut Services, ctx: &Ctx) -> Result<bool, Error> {
+            fn check(&mut self, val: Option<crate::Arc<crate::RawVal>>>, ser: &mut Services, ctx: &Ctx) -> Result<bool, Error> {
                 self._check(val, ser, ctx)
             }
 
             fn val_act(
                 &mut self,
-                arg: Option<crate::RawString>,
+                arg: Option<crate::RawVal>,
                 disable: bool,
                 index: (usize, usize),
             ) -> Result<bool, Error> {

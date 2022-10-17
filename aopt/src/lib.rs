@@ -14,7 +14,7 @@ pub mod str;
 
 pub type Uid = u64;
 pub type HashMap<K, V> = ahash::HashMap<K, V>;
-pub type RawString = std::ffi::OsString;
+pub type RawVal = std::ffi::OsString;
 pub type Arc<T> = std::rc::Rc<T>;
 pub use self::err::Error;
 pub use self::err::Result;
@@ -97,10 +97,10 @@ pub mod prelude {
     pub use crate::ser::CheckService;
     pub use crate::ser::DataService;
     pub use crate::ser::InvokeService;
+    pub use crate::ser::RawValService;
     pub use crate::ser::Service;
     pub use crate::ser::Services;
     pub use crate::ser::ServicesExt;
-    pub use crate::ser::ValueService;
     pub use crate::set::Commit;
     pub use crate::set::OptSet;
     pub use crate::set::PreSet;

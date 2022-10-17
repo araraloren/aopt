@@ -40,11 +40,12 @@ use crate::opt::OptIndex;
 use crate::opt::OptStyle;
 use crate::opt::Optional;
 use crate::opt::Prefix;
+use crate::ser::RawValService;
 use crate::ser::Services;
 use crate::simple_impl_creator_for;
 use crate::simple_impl_opt_for;
 use crate::Arc;
-use crate::RawString;
+use crate::RawVal;
 use crate::Str;
 use crate::Uid;
 
@@ -119,17 +120,13 @@ pub trait AOpt: Debug {
 
     fn _check(
         &mut self,
-        val: Option<Arc<RawString>>,
+        val: Option<Arc<RawVal>>,
         disable: bool,
         index: (usize, usize),
     ) -> Result<bool, Error>;
 
-    fn _val_act(
-        &mut self,
-        val: Option<RawString>,
-        ser: &mut Services,
-        ctx: &Ctx,
-    ) -> Result<(), Error>;
+    fn _val_act(&mut self, val: Option<RawVal>, ser: &mut Services, ctx: &Ctx)
+        -> Result<(), Error>;
 }
 
 simple_impl_opt_for!(BoolOpt);

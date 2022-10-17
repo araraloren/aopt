@@ -28,7 +28,7 @@ use crate::set::PreSet;
 use crate::set::Set;
 use crate::Arc;
 use crate::Error;
-use crate::RawString;
+use crate::RawVal;
 use crate::Str;
 
 #[derive(Debug, Clone)]
@@ -47,7 +47,7 @@ impl<S> Default for ForwardPolicy<S> {
     }
 }
 
-impl<S: 'static> APolicyExt<S, RawString> for ForwardPolicy<S> {
+impl<S: 'static> APolicyExt<S, RawVal> for ForwardPolicy<S> {
     fn new_set<T>() -> T
     where
         T: ASetExt + Set + OptParser,
@@ -57,7 +57,7 @@ impl<S: 'static> APolicyExt<S, RawString> for ForwardPolicy<S> {
 
     fn new_services<T>() -> T
     where
-        T: AServiceExt<S, RawString>,
+        T: AServiceExt<S, RawVal>,
     {
         T::new_services()
     }
@@ -95,7 +95,7 @@ where
 {
     type Ret = bool;
 
-    type Value = RawString;
+    type Value = RawVal;
 
     type Set = S;
 
@@ -107,10 +107,10 @@ where
         ser: &mut Services,
         set: &mut Self::Set,
     ) -> Result<Option<Self::Ret>, Self::Error> {
-        ser.ser::<CheckService<S, RawString>>()?.pre_check(set)?;
+        ser.ser::<CheckService<S, RawVal>>()?.pre_check(set)?;
 
         // take the invoke service, avoid borrow the ser
-        let mut is = ser.take_ser::<InvokeService<S, RawString>>()?;
+        let mut is = ser.take_ser::<InvokeService<S, RawVal>>()?;
         let stys = [
             UserStyle::EqualWithValue,
             UserStyle::Argument,
@@ -166,7 +166,7 @@ where
             }
         }
 
-        ser.ser::<CheckService<S, RawString>>()?.opt_check(set)?;
+        ser.ser::<CheckService<S, RawVal>>()?.opt_check(set)?;
 
         let noa_args = Arc::new(noa_args);
         let noa_len = noa_args.len();
@@ -187,9 +187,9 @@ where
                 process_non_opt::<S>(&noa_ctx, set, ser, &mut proc, &mut is)?;
             }
 
-            ser.ser::<CheckService<S, RawString>>()?.cmd_check(set)?;
+            ser.ser::<CheckService<S, RawVal>>()?.cmd_check(set)?;
 
-            for (idx, arg) in noa_args.iter().enumerate() {
+            for idx in 0..noa_len {
                 if let Some(mut proc) = NOAGuess::new().guess(
                     &UserStyle::Pos,
                     GuessNOACfg::new(noa_args.clone(), idx + 1, noa_len),
@@ -199,9 +199,9 @@ where
                 }
             }
         } else {
-            ser.ser::<CheckService<S, RawString>>()?.cmd_check(set)?;
+            ser.ser::<CheckService<S, RawVal>>()?.cmd_check(set)?;
         }
-        ser.ser::<CheckService<S, RawString>>()?.pos_check(set)?;
+        ser.ser::<CheckService<S, RawVal>>()?.pos_check(set)?;
 
         let main_args = noa_args;
         let mut main_ctx = noa_ctx;
@@ -213,7 +213,7 @@ where
             process_non_opt::<S>(&main_ctx, set, ser, &mut proc, &mut is)?;
         }
 
-        ser.ser::<CheckService<S, RawString>>()?.post_check(set)?;
+        ser.ser::<CheckService<S, RawVal>>()?.post_check(set)?;
         ser.reg(is);
 
         Ok(Some(true))

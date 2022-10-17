@@ -4,7 +4,7 @@ use crate::opt::OptParser;
 use crate::ser::CheckService;
 use crate::ser::DataService;
 use crate::ser::InvokeService;
-use crate::ser::ValueService;
+use crate::ser::RawValService;
 use crate::Error;
 use crate::Uid;
 
@@ -35,9 +35,9 @@ pub trait AServiceExt<Set: 'static, Value: 'static> {
 
     fn data_ser_mut(&mut self) -> &mut DataService;
 
-    fn val_ser(&self) -> &ValueService<Value>;
+    fn val_ser(&self) -> &RawValService<Value>;
 
-    fn val_ser_mut(&mut self) -> &mut ValueService<Value>;
+    fn val_ser_mut(&mut self) -> &mut RawValService<Value>;
 
     fn invoke_ser(&self) -> &InvokeService<Set, Value>;
 

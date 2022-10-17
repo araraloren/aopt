@@ -5,10 +5,10 @@ use std::ops::DerefMut;
 
 use crate::ctx::Ctx;
 use crate::ctx::ExtractCtx;
-use crate::prelude::ValueService;
+use crate::prelude::RawValService;
+use crate::ser::RawValServiceExt;
 use crate::ser::Services;
 use crate::ser::ServicesExt;
-use crate::ser::ValueServiceExt;
 use crate::set::Set;
 use crate::Error;
 use crate::Uid;
@@ -38,7 +38,7 @@ impl<T: Clone + 'static, S: Set> ExtractCtx<S> for Value<T> {
     type Error = Error;
 
     fn extract(uid: Uid, _set: &S, ser: &Services, _ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(Self(ser.ser::<ValueService<T>>()?.val(uid)?.clone()))
+        Ok(Self(ser.ser::<RawValService<T>>()?.raw_val(uid)?.clone()))
     }
 }
 

@@ -143,7 +143,7 @@ where
                         OptMatch::default()
                             .with_idx(index)
                             .with_len(count)
-                            .with_arg(cfg.arg().cloned())
+                            .with_arg(clopt.value.clone())
                             .with_sty(OptStyle::Argument)
                             .with_dsb(clopt.disable)
                             .with_name(valueof("name", &clopt.name)?)

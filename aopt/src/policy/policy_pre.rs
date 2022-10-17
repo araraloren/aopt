@@ -29,7 +29,7 @@ use crate::set::PreSet;
 use crate::set::Set;
 use crate::Arc;
 use crate::Error;
-use crate::RawString;
+use crate::RawVal;
 use crate::Str;
 
 /// [`PrePolicy`] matching the command line arguments with [`Opt`] in the [`Set`].
@@ -49,7 +49,7 @@ impl<S> Default for PrePolicy<S> {
     }
 }
 
-impl<S: 'static> APolicyExt<S, RawString> for PrePolicy<S> {
+impl<S: 'static> APolicyExt<S, RawVal> for PrePolicy<S> {
     fn new_set<T>() -> T
     where
         T: ASetExt + Set + OptParser,
@@ -59,7 +59,7 @@ impl<S: 'static> APolicyExt<S, RawString> for PrePolicy<S> {
 
     fn new_services<T>() -> T
     where
-        T: AServiceExt<S, RawString>,
+        T: AServiceExt<S, RawVal>,
     {
         T::new_services()
     }
@@ -90,9 +90,9 @@ where
     S::Opt: Opt,
     S: Set + OptParser + PreSet + Debug + 'static,
 {
-    type Ret = Vec<RawString>;
+    type Ret = Vec<RawVal>;
 
-    type Value = RawString;
+    type Value = RawVal;
 
     type Set = S;
 
@@ -104,10 +104,10 @@ where
         ser: &mut Services,
         set: &mut Self::Set,
     ) -> Result<Option<Self::Ret>, Self::Error> {
-        Self::ig_failure(ser.ser::<CheckService<S, RawString>>()?.pre_check(set))?;
+        Self::ig_failure(ser.ser::<CheckService<S, RawVal>>()?.pre_check(set))?;
 
         // take the invoke service, avoid borrow the ser
-        let mut is = ser.take_ser::<InvokeService<S, RawString>>()?;
+        let mut is = ser.take_ser::<InvokeService<S, RawVal>>()?;
         let opt_styles = [
             UserStyle::EqualWithValue,
             UserStyle::Argument,
@@ -128,7 +128,9 @@ where
             let mut consume = false;
             let arg = arg.map(|v| Arc::new(v.clone()));
 
+            println!("parse before ==> {:?}", &opt);
             if let Ok(clopt) = opt.parse(set.pre()) {
+                println!("parsed ==> {:?}", &clopt);
                 for style in opt_styles.iter() {
                     let ret = Self::ig_failure(
                         OptGuess::new()
@@ -169,7 +171,7 @@ where
             }
         }
 
-        Self::ig_failure(ser.ser::<CheckService<S, RawString>>()?.opt_check(set))?;
+        Self::ig_failure(ser.ser::<CheckService<S, RawVal>>()?.opt_check(set))?;
 
         // save the return value
         let pre_ret = noa_args.deref().clone();
@@ -191,9 +193,9 @@ where
                 Self::ig_failure(process_non_opt::<S>(&noa_ctx, set, ser, &mut proc, &mut is))?;
             }
 
-            Self::ig_failure(ser.ser::<CheckService<S, RawString>>()?.cmd_check(set))?;
+            Self::ig_failure(ser.ser::<CheckService<S, RawVal>>()?.cmd_check(set))?;
 
-            for (idx, arg) in noa_args.iter().enumerate() {
+            for idx in 0..noa_len {
                 if let Some(Some(mut proc)) = Self::ig_failure(NOAGuess::new().guess(
                     &UserStyle::Pos,
                     GuessNOACfg::new(noa_args.clone(), idx + 1, noa_len),
@@ -203,10 +205,10 @@ where
                 }
             }
         } else {
-            Self::ig_failure(ser.ser::<CheckService<S, RawString>>()?.cmd_check(set))?;
+            Self::ig_failure(ser.ser::<CheckService<S, RawVal>>()?.cmd_check(set))?;
         }
 
-        Self::ig_failure(ser.ser::<CheckService<S, RawString>>()?.pos_check(set))?;
+        Self::ig_failure(ser.ser::<CheckService<S, RawVal>>()?.pos_check(set))?;
 
         let main_args = noa_args;
         let mut main_ctx = noa_ctx;
@@ -221,7 +223,7 @@ where
             ))?;
         }
 
-        ser.ser::<CheckService<S, RawString>>()?.post_check(set)?;
+        ser.ser::<CheckService<S, RawVal>>()?.post_check(set)?;
         ser.reg(is);
 
         Ok(Some(pre_ret))

@@ -4,13 +4,14 @@ use std::os::windows::ffi::{OsStrExt, OsStringExt};
 
 use super::ArgParser;
 use crate::astr;
+use crate::Arc;
 use crate::Error;
 use crate::Str;
 
 fn strip_pre(str: &OsStr, prefix: &str) -> Option<OsString> {
     let enc = str.encode_wide();
     let mut pre = prefix.encode_utf16();
-    let mut ret = Vec::with_capacity(str.len() - prefix.len());
+    let mut ret = Vec::with_capacity(str.len().saturating_sub(prefix.len()));
 
     for ori in enc {
         match pre.next() {
@@ -121,7 +122,7 @@ impl AOsStrExt for OsStr {
 pub struct CLOpt {
     pub name: Option<Str>,
 
-    pub value: Option<OsString>,
+    pub value: Option<Arc<OsString>>,
 
     pub prefix: Option<Str>,
 
@@ -133,8 +134,8 @@ impl CLOpt {
         self.name.as_ref()
     }
 
-    pub fn val(&self) -> Option<&OsStr> {
-        self.value.as_ref().map(|v| v.as_ref())
+    pub fn val(&self) -> Option<&Arc<OsString>> {
+        self.value.as_ref()
     }
 
     pub fn pre(&self) -> Option<&Str> {

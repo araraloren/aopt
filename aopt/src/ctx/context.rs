@@ -1,3 +1,6 @@
+use std::ops::Deref;
+use std::ops::DerefMut;
+
 use super::ExtractCtx;
 use crate::arg::Args;
 use crate::opt::OptStyle;
@@ -5,7 +8,7 @@ use crate::ser::Services;
 use crate::set::Set;
 use crate::Arc;
 use crate::Error;
-use crate::RawString;
+use crate::RawVal;
 use crate::Str;
 use crate::Uid;
 
@@ -58,6 +61,14 @@ impl NOACtx {
         &self.args
     }
 
+    pub fn pre(&self) -> Option<&Str> {
+        None
+    }
+
+    pub fn dsb(&self) -> bool {
+        false
+    }
+
     pub fn uid(&self) -> Uid {
         self.uid
     }
@@ -70,7 +81,7 @@ impl NOACtx {
         self.len
     }
 
-    pub fn arg(&self) -> Option<&RawString> {
+    pub fn arg(&self) -> Option<&RawVal> {
         self.args.get(self.idx().saturating_sub(1))
     }
 }
@@ -126,6 +137,86 @@ impl Ctx {
             _ => Err(Error::raise_error("NOACtx excepted")),
         }
     }
+
+    pub fn args(&self) -> &Arc<Args> {
+        match self {
+            Ctx::NOA(noa) => noa.args(),
+            Ctx::OPT(opt) => opt.args(),
+            Ctx::NULL => {
+                panic!("Can't not call args on NULL")
+            }
+        }
+    }
+
+    pub fn uid(&self) -> Uid {
+        match self {
+            Ctx::NOA(noa) => noa.uid(),
+            Ctx::OPT(opt) => opt.uid(),
+            Ctx::NULL => {
+                panic!("Can't not call uid on NULL")
+            }
+        }
+    }
+
+    pub fn pre(&self) -> Option<&Str> {
+        match self {
+            Ctx::NOA(noa) => None,
+            Ctx::OPT(opt) => opt.pre(),
+            Ctx::NULL => {
+                panic!("Can't not call pre on NULL")
+            }
+        }
+    }
+
+    pub fn sty(&self) -> OptStyle {
+        match self {
+            Ctx::NOA(noa) => noa.sty(),
+            Ctx::OPT(opt) => opt.sty(),
+            Ctx::NULL => {
+                panic!("Can't not call sty on NULL")
+            }
+        }
+    }
+
+    pub fn dsb(&self) -> bool {
+        match self {
+            Ctx::NOA(noa) => noa.dsb(),
+            Ctx::OPT(opt) => opt.dsb(),
+            Ctx::NULL => {
+                panic!("Can't not call dsb on NULL")
+            }
+        }
+    }
+
+    pub fn idx(&self) -> usize {
+        match self {
+            Ctx::NOA(noa) => noa.idx(),
+            Ctx::OPT(opt) => opt.idx(),
+            Ctx::NULL => {
+                panic!("Can't not call idx on NULL")
+            }
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        match self {
+            Ctx::NOA(noa) => noa.len(),
+            Ctx::OPT(opt) => opt.len(),
+            Ctx::NULL => {
+                panic!("Can't not call len on NULL")
+            }
+        }
+    }
+
+    pub fn arg(&self) -> Option<&RawVal> {
+        match self {
+            Ctx::NOA(noa) => noa.arg(),
+            Ctx::OPT(opt) => opt.arg().map(|v| v.deref()),
+            Ctx::NULL => {
+                panic!("Can't not call arg on NULL")
+            }
+        }
+    }
 }
 
 /// Invoke context using for [`InvokeService`](crate::ser::InvokeService).
@@ -141,7 +232,7 @@ pub struct OPTCtx {
 
     dsb: bool,
 
-    arg: Option<Arc<RawString>>,
+    arg: Option<Arc<RawVal>>,
 
     idx: usize,
 
@@ -176,7 +267,7 @@ impl OPTCtx {
         self
     }
 
-    pub fn set_arg(&mut self, argument: Option<Arc<RawString>>) -> &mut Self {
+    pub fn set_arg(&mut self, argument: Option<Arc<RawVal>>) -> &mut Self {
         self.arg = argument;
         self
     }
@@ -210,7 +301,7 @@ impl OPTCtx {
         &self.name
     }
 
-    pub fn args(&self) -> &Args {
+    pub fn args(&self) -> &Arc<Args> {
         &self.args
     }
 
@@ -227,7 +318,7 @@ impl OPTCtx {
     }
 
     /// Matching argument generate by [`guess_style`](crate::policy::Guess).
-    pub fn arg(&self) -> Option<&Arc<RawString>> {
+    pub fn arg(&self) -> Option<&Arc<RawVal>> {
         self.arg.as_ref()
     }
 
@@ -236,7 +327,7 @@ impl OPTCtx {
     }
 
     /// Get argument from [`Args`]
-    pub fn orig_arg(&self) -> Option<&RawString> {
+    pub fn orig_arg(&self) -> Option<&RawVal> {
         self.args.get(self.idx.saturating_sub(1))
     }
 }
@@ -249,210 +340,210 @@ impl<S: Set> ExtractCtx<S> for Ctx {
     }
 }
 
-// /// The uid of [`Match`](crate::proc::Match).
-// #[derive(Debug)]
-// pub struct CtxUid(Uid);
+/// The uid of [`Match`](crate::proc::Match).
+#[derive(Debug)]
+pub struct CtxUid(Uid);
 
-// impl Deref for CtxUid {
-//     type Target = Uid;
+impl Deref for CtxUid {
+    type Target = Uid;
 
-//     fn deref(&self) -> &Self::Target {
-//         &self.0
-//     }
-// }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
-// impl DerefMut for CtxUid {
-//     fn deref_mut(&mut self) -> &mut Self::Target {
-//         &mut self.0
-//     }
-// }
+impl DerefMut for CtxUid {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
-// impl<S: Set> ExtractCtx<S> for CtxUid {
-//     type Error = Error;
+impl<S: Set> ExtractCtx<S> for CtxUid {
+    type Error = Error;
 
-//     fn extract(_uid: Uid, _set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
-//         Ok(CtxUid(ctx.uid()))
-//     }
-// }
+    fn extract(_uid: Uid, _set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+        Ok(CtxUid(ctx.uid()))
+    }
+}
 
-// /// The name of [`Match`](crate::proc::Match).
-// #[derive(Debug)]
-// pub struct CtxName(Str);
+/// The name of [`Match`](crate::proc::Match).
+#[derive(Debug)]
+pub struct CtxOptName(Str);
 
-// impl Deref for CtxName {
-//     type Target = Str;
+impl Deref for CtxOptName {
+    type Target = Str;
 
-//     fn deref(&self) -> &Self::Target {
-//         &self.0
-//     }
-// }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
-// impl DerefMut for CtxName {
-//     fn deref_mut(&mut self) -> &mut Self::Target {
-//         &mut self.0
-//     }
-// }
+impl DerefMut for CtxOptName {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
-// impl<S: Set> ExtractCtx<S> for CtxName {
-//     type Error = Error;
+impl<S: Set> ExtractCtx<S> for CtxOptName {
+    type Error = Error;
 
-//     fn extract(_uid: Uid, _set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
-//         Ok(CtxName(ctx.name().clone()))
-//     }
-// }
+    fn extract(_uid: Uid, _set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+        Ok(CtxOptName(ctx.opt()?.name().clone()))
+    }
+}
 
-// /// The prefix of [`Match`](crate::proc::Match).
-// #[derive(Debug)]
-// pub struct CtxPrefix(Option<Str>);
+/// The prefix of [`Match`](crate::proc::Match).
+#[derive(Debug)]
+pub struct CtxPrefix(Option<Str>);
 
-// impl Deref for CtxPrefix {
-//     type Target = Option<Str>;
+impl Deref for CtxPrefix {
+    type Target = Option<Str>;
 
-//     fn deref(&self) -> &Self::Target {
-//         &self.0
-//     }
-// }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
-// impl DerefMut for CtxPrefix {
-//     fn deref_mut(&mut self) -> &mut Self::Target {
-//         &mut self.0
-//     }
-// }
+impl DerefMut for CtxPrefix {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
-// impl<S: Set> ExtractCtx<S> for CtxPrefix {
-//     type Error = Error;
+impl<S: Set> ExtractCtx<S> for CtxPrefix {
+    type Error = Error;
 
-//     fn extract(_uid: Uid, _set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
-//         Ok(CtxPrefix(ctx.pre().cloned()))
-//     }
-// }
+    fn extract(_uid: Uid, _set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+        Ok(CtxPrefix(ctx.pre().cloned()))
+    }
+}
 
-// /// The style of [`Match`](crate::proc::Match).
-// #[derive(Debug)]
-// pub struct CtxStyle(OptStyle);
+/// The style of [`Match`](crate::proc::Match).
+#[derive(Debug)]
+pub struct CtxStyle(OptStyle);
 
-// impl Deref for CtxStyle {
-//     type Target = OptStyle;
+impl Deref for CtxStyle {
+    type Target = OptStyle;
 
-//     fn deref(&self) -> &Self::Target {
-//         &self.0
-//     }
-// }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
-// impl DerefMut for CtxStyle {
-//     fn deref_mut(&mut self) -> &mut Self::Target {
-//         &mut self.0
-//     }
-// }
+impl DerefMut for CtxStyle {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
-// impl<S: Set> ExtractCtx<S> for CtxStyle {
-//     type Error = Error;
+impl<S: Set> ExtractCtx<S> for CtxStyle {
+    type Error = Error;
 
-//     fn extract(_uid: Uid, _set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
-//         Ok(CtxStyle(ctx.sty()))
-//     }
-// }
+    fn extract(_uid: Uid, _set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+        Ok(CtxStyle(ctx.sty()))
+    }
+}
 
-// /// The disable value of [`Match`](crate::proc::Match).
-// #[derive(Debug)]
-// pub struct CtxDisbale(bool);
+/// The disable value of [`Match`](crate::proc::Match).
+#[derive(Debug)]
+pub struct CtxDisbale(bool);
 
-// impl Deref for CtxDisbale {
-//     type Target = bool;
+impl Deref for CtxDisbale {
+    type Target = bool;
 
-//     fn deref(&self) -> &Self::Target {
-//         &self.0
-//     }
-// }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
-// impl DerefMut for CtxDisbale {
-//     fn deref_mut(&mut self) -> &mut Self::Target {
-//         &mut self.0
-//     }
-// }
+impl DerefMut for CtxDisbale {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
-// impl<S: Set> ExtractCtx<S> for CtxDisbale {
-//     type Error = Error;
+impl<S: Set> ExtractCtx<S> for CtxDisbale {
+    type Error = Error;
 
-//     fn extract(_uid: Uid, _set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
-//         Ok(CtxDisbale(ctx.dsb()))
-//     }
-// }
+    fn extract(_uid: Uid, _set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+        Ok(CtxDisbale(ctx.dsb()))
+    }
+}
 
-// /// The argument generated in [`Match`](crate::proc::Match).
-// #[derive(Debug)]
-// pub struct CtxMatArg(Option<Arc<OsStr>>);
+/// The argument generated in [`Match`](crate::proc::Match).
+#[derive(Debug)]
+pub struct CtxMatArg(Option<RawVal>);
 
-// impl Deref for CtxMatArg {
-//     type Target = Option<Arc<OsStr>>;
+impl Deref for CtxMatArg {
+    type Target = Option<RawVal>;
 
-//     fn deref(&self) -> &Self::Target {
-//         &self.0
-//     }
-// }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
-// impl DerefMut for CtxMatArg {
-//     fn deref_mut(&mut self) -> &mut Self::Target {
-//         &mut self.0
-//     }
-// }
+impl DerefMut for CtxMatArg {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
-// impl<S: Set> ExtractCtx<S> for CtxMatArg {
-//     type Error = Error;
+impl<S: Set> ExtractCtx<S> for CtxMatArg {
+    type Error = Error;
 
-//     fn extract(_uid: Uid, _set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
-//         Ok(CtxMatArg(ctx.arg().cloned()))
-//     }
-// }
+    fn extract(_uid: Uid, _set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+        Ok(CtxMatArg(ctx.arg().cloned()))
+    }
+}
 
-// /// The idx value set during parsing in [`Policy`](crate::policy::Policy).
-// #[derive(Debug)]
-// pub struct CtxIdx(usize);
+/// The idx value set during parsing in [`Policy`](crate::policy::Policy).
+#[derive(Debug)]
+pub struct CtxIdx(usize);
 
-// impl Deref for CtxIdx {
-//     type Target = usize;
+impl Deref for CtxIdx {
+    type Target = usize;
 
-//     fn deref(&self) -> &Self::Target {
-//         &self.0
-//     }
-// }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
-// impl DerefMut for CtxIdx {
-//     fn deref_mut(&mut self) -> &mut Self::Target {
-//         &mut self.0
-//     }
-// }
+impl DerefMut for CtxIdx {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
-// impl<S: Set> ExtractCtx<S> for CtxIdx {
-//     type Error = Error;
+impl<S: Set> ExtractCtx<S> for CtxIdx {
+    type Error = Error;
 
-//     fn extract(_uid: Uid, _set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
-//         Ok(CtxIdx(ctx.idx()))
-//     }
-// }
+    fn extract(_uid: Uid, _set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+        Ok(CtxIdx(ctx.idx()))
+    }
+}
 
-// /// The len value set during parsing in [`Policy`](crate::policy::Policy).
-// #[derive(Debug)]
-// pub struct CtxLen(usize);
+/// The len value set during parsing in [`Policy`](crate::policy::Policy).
+#[derive(Debug)]
+pub struct CtxLen(usize);
 
-// impl Deref for CtxLen {
-//     type Target = usize;
+impl Deref for CtxLen {
+    type Target = usize;
 
-//     fn deref(&self) -> &Self::Target {
-//         &self.0
-//     }
-// }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
-// impl DerefMut for CtxLen {
-//     fn deref_mut(&mut self) -> &mut Self::Target {
-//         &mut self.0
-//     }
-// }
+impl DerefMut for CtxLen {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
-// impl<S: Set> ExtractCtx<S> for CtxLen {
-//     type Error = Error;
+impl<S: Set> ExtractCtx<S> for CtxLen {
+    type Error = Error;
 
-//     fn extract(_uid: Uid, _set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
-//         Ok(CtxLen(ctx.idx()))
-//     }
-// }
+    fn extract(_uid: Uid, _set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+        Ok(CtxLen(ctx.len()))
+    }
+}

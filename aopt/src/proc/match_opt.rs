@@ -183,6 +183,7 @@ where
     fn process(&mut self, opt: &mut <Self::Set as Set>::Opt) -> Result<bool, Self::Error> {
         let mut matched = opt.mat_sty(self.style);
 
+        println!("matching self {:?}", self);
         if matched {
             matched = matched
                 && ((opt.mat_name(self.name()) && opt.mat_pre(self.pre()))

@@ -6,6 +6,7 @@ pub(crate) mod index;
 pub(crate) mod info;
 pub(crate) mod parser;
 pub(crate) mod style;
+pub(crate) mod value;
 
 pub use self::cb::OptCallback;
 pub use self::config::Config;
@@ -25,7 +26,7 @@ use crate::ctx::Ctx;
 use crate::prelude::Services;
 use crate::Arc;
 use crate::Error;
-use crate::RawString;
+use crate::RawVal;
 use crate::Str;
 use crate::Uid;
 
@@ -110,15 +111,10 @@ pub trait Opt: Name + Help + Alias + Index + Prefix + Optional + Debug {
 
     fn check(
         &mut self,
-        val: Option<Arc<RawString>>,
+        val: Option<Arc<RawVal>>,
         disable: bool,
         index: (usize, usize),
     ) -> Result<bool, Error>;
 
-    fn val_act(
-        &mut self,
-        val: Option<RawString>,
-        ser: &mut Services,
-        ctx: &Ctx,
-    ) -> Result<(), Error>;
+    fn val_act(&mut self, val: Option<RawVal>, ser: &mut Services, ctx: &Ctx) -> Result<(), Error>;
 }

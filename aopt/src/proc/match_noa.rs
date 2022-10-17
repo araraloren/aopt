@@ -86,7 +86,7 @@ where
 
     pub fn name(&self) -> &OsString {
         // noa index == index + 1
-        &self.args[self.noa_index - 1]
+        &self.args[self.noa_index.saturating_sub(1)]
     }
 
     pub fn pre(&self) -> Option<&Str> {
