@@ -1,6 +1,8 @@
 use std::any::Any;
 use std::any::TypeId;
+use std::collections::hash_map::Entry as MapEntry;
 use std::fmt::Debug;
+use std::marker::PhantomData;
 use std::rc::Rc;
 
 use crate::typeid;
@@ -33,7 +35,7 @@ impl Map {
         self.0.is_empty()
     }
 
-    pub fn clr(&mut self) {
+    pub fn clear(&mut self) {
         self.0.clear()
     }
 
@@ -80,6 +82,64 @@ impl Map {
         self.0
             .get_mut(&typeid::<T>())
             .and_then(|v| v.downcast_mut())
+    }
+    pub fn entry<T>(&mut self) -> Entry<'_, T>
+    where
+        T: 'static,
+    {
+        Entry::new(self.0.entry(typeid::<T>()))
+    }
+}
+
+pub struct Entry<'a, T> {
+    inner: MapEntry<'a, TypeId, Box<dyn Any>>,
+
+    marker: PhantomData<T>,
+}
+
+impl<'a, T> Entry<'a, T>
+where
+    T: 'static,
+{
+    pub fn new(entry: MapEntry<'a, TypeId, Box<dyn Any>>) -> Self {
+        Self {
+            inner: entry,
+            marker: PhantomData::default(),
+        }
+    }
+
+    pub fn key(&self) -> &TypeId {
+        self.inner.key()
+    }
+
+    pub fn or_insert(self, val: T) -> &'a mut T {
+        self.inner
+            .or_insert(Box::new(val))
+            .downcast_mut::<T>()
+            .unwrap()
+    }
+
+    pub fn or_insert_with<F>(self, f: F) -> &'a mut T
+    where
+        F: FnOnce() -> T,
+    {
+        self.or_insert(f())
+    }
+
+    pub fn or_insert_with_key<F>(self, f: F) -> &'a mut T
+    where
+        F: FnOnce(&TypeId) -> T,
+    {
+        let val = f(self.key());
+        self.or_insert(val)
+    }
+
+    pub fn and_modify<F>(mut self, f: F) -> Self
+    where
+        F: FnOnce(&mut T),
+    {
+        self.inner = self.inner.and_modify(|v| f(v.downcast_mut::<T>().unwrap()));
+        self
     }
 }
 
@@ -149,7 +209,7 @@ impl RcMap {
 
     pub fn clr(&mut self) {
         if let Some(v) = self.inner_mut() {
-            v.clr();
+            v.clear();
         }
     }
 
@@ -268,7 +328,7 @@ mod test {
         assert!(!map.contain::<Widget>());
 
         // clear the map
-        map.clr();
+        map.clear();
         assert!(map.is_empty());
         assert_eq!(map.len(), 0);
     }

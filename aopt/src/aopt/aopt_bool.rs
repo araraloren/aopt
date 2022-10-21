@@ -4,11 +4,11 @@ use crate::astr;
 use crate::ctx::Ctx;
 use crate::err::Error;
 use crate::opt::ConfigValue;
-use crate::opt::OptCallback;
 use crate::opt::OptConfig;
 use crate::opt::OptHelp;
 use crate::opt::OptIndex;
 use crate::opt::OptStyle;
+use crate::opt::OptValParser;
 use crate::ser::Services;
 use crate::simple_impl_opt;
 use crate::Arc;
@@ -36,7 +36,7 @@ pub struct BoolOpt {
     alias: Vec<(Str, Str)>,
 
     #[serde(skip)]
-    callback: Option<OptCallback<Self>>,
+    callback: Option<OptValParser<Self, bool>>,
 }
 
 impl BoolOpt {
@@ -84,7 +84,7 @@ impl BoolOpt {
         self
     }
 
-    pub fn with_callback(mut self, callback: Option<OptCallback<Self>>) -> Self {
+    pub fn with_callback(mut self, callback: Option<OptValParser<Self, bool>>) -> Self {
         self.callback = callback;
         self
     }
@@ -172,7 +172,7 @@ impl TryFrom<OptConfig> for BoolOpt {
             .with_help(cfg.gen_opt_help(deactivate_style)?)
             .with_alias(cfg.gen_alias()?)
             .with_optional(optional)
-            .with_callback(cfg.take_callback())
+            .with_callback(cfg.take_parser())
             .with_deactivate_style(deactivate_style))
     }
 }

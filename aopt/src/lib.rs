@@ -73,7 +73,6 @@ pub mod prelude {
     pub use crate::opt::Information;
     pub use crate::opt::Name;
     pub use crate::opt::Opt;
-    pub use crate::opt::OptCallback;
     pub use crate::opt::OptConfig;
     pub use crate::opt::OptConstrctInfo;
     pub use crate::opt::OptHelp;
@@ -81,6 +80,7 @@ pub mod prelude {
     pub use crate::opt::OptParser;
     pub use crate::opt::OptStringParser;
     pub use crate::opt::OptStyle;
+    pub use crate::opt::OptValParser;
     pub use crate::opt::Optional;
     pub use crate::opt::Prefix;
     pub use crate::policy::CtxSaver;

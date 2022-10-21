@@ -1,6 +1,4 @@
-pub(crate) mod cb;
 pub(crate) mod config;
-pub(crate) mod creator;
 pub(crate) mod help;
 pub(crate) mod index;
 pub(crate) mod info;
@@ -8,17 +6,17 @@ pub(crate) mod parser;
 pub(crate) mod style;
 pub(crate) mod value;
 
-pub use self::cb::OptCallback;
 pub use self::config::Config;
 pub use self::config::ConfigValue;
 pub use self::config::OptConfig;
-pub use self::creator::Creator;
 pub use self::help::Help as OptHelp;
 pub use self::index::Index as OptIndex;
 pub use self::info::Information;
 pub use self::info::OptConstrctInfo;
 pub use self::parser::OptStringParser;
 pub use self::style::Style as OptStyle;
+pub use self::value::OptValParser;
+pub use self::value::RawValParser;
 
 use std::fmt::Debug;
 
@@ -117,4 +115,16 @@ pub trait Opt: Name + Help + Alias + Index + Prefix + Optional + Debug {
     ) -> Result<bool, Error>;
 
     fn val_act(&mut self, val: Option<RawVal>, ser: &mut Services, ctx: &Ctx) -> Result<(), Error>;
+}
+
+pub trait Creator {
+    type Opt;
+    type Config;
+    type Error: Into<Error>;
+
+    fn ty(&self) -> Str;
+
+    fn sp_deact(&self) -> bool;
+
+    fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error>;
 }

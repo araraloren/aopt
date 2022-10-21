@@ -1,7 +1,7 @@
 use std::any::Any;
 
 use super::Information;
-use super::OptCallback;
+use super::OptValParser;
 use crate::astr;
 use crate::err::Error;
 use crate::opt::OptHelp;
@@ -47,9 +47,10 @@ pub trait ConfigValue {
     /// Prefix string using for parsing alias.
     fn sp_pre(&self) -> &Vec<Str>;
 
-    fn callback<T>(&self) -> Option<&OptCallback<T>>
+    fn parser<Opt, Val>(&self) -> Option<&OptValParser<Opt, Val>>
     where
-        T: 'static;
+        Opt: 'static,
+        Val: 'static;
 
     fn set_uid(&mut self, uid: Uid) -> &mut Self;
 
@@ -77,7 +78,10 @@ pub trait ConfigValue {
 
     fn set_sppre<S: Into<Str>>(&mut self, prefix: Vec<S>) -> &mut Self;
 
-    fn set_callback<T>(&mut self, callback: OptCallback<T>) -> &mut Self;
+    fn set_parser<Opt, Val>(&mut self, parser: OptValParser<Opt, Val>) -> &mut Self
+    where
+        Opt: 'static,
+        Val: 'static;
 
     fn has_name(&self) -> bool;
 
@@ -93,7 +97,7 @@ pub trait ConfigValue {
 
     fn has_deact(&self) -> bool;
 
-    fn has_callback(&self) -> bool;
+    fn has_parser(&self) -> bool;
 
     fn gen_uid(&self) -> Uid;
 
@@ -131,9 +135,10 @@ pub trait ConfigValue {
 
     fn take_deact(&mut self) -> Option<bool>;
 
-    fn take_callback<T>(&mut self) -> Option<OptCallback<T>>
+    fn take_parser<Opt, Val>(&mut self) -> Option<OptValParser<Opt, Val>>
     where
-        T: 'static;
+        Opt: 'static,
+        Val: 'static;
 }
 
 /// Contain the information used for create option instance.
@@ -160,7 +165,7 @@ pub struct OptConfig {
     deact: Option<bool>,
 
     #[serde(skip)]
-    callback: Option<Box<dyn Any>>,
+    parser: Option<Box<dyn Any>>,
 }
 
 impl OptConfig {
@@ -219,11 +224,12 @@ impl OptConfig {
         self
     }
 
-    pub fn with_callback<T>(mut self, mut callback: OptCallback<T>) -> Self
+    pub fn with_parser<Opt, Val>(mut self, parser: OptValParser<Opt, Val>) -> Self
     where
-        T: 'static,
+        Opt: 'static,
+        Val: 'static,
     {
-        self.callback = Some(callback.into_any());
+        self.parser = Some(parser.into_any());
         self
     }
 
@@ -320,13 +326,14 @@ impl ConfigValue for OptConfig {
         &self.sp_pre
     }
 
-    fn callback<T>(&self) -> Option<&OptCallback<T>>
+    fn parser<Opt, Val>(&self) -> Option<&OptValParser<Opt, Val>>
     where
-        T: 'static,
+        Opt: 'static,
+        Val: 'static,
     {
-        self.callback
+        self.parser
             .as_ref()
-            .and_then(|cb| cb.downcast_ref::<OptCallback<T>>())
+            .and_then(|cb| cb.downcast_ref::<OptValParser<Opt, Val>>())
     }
 
     fn set_uid(&mut self, uid: Uid) -> &mut Self {
@@ -401,11 +408,12 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn set_callback<T>(&mut self, mut callback: OptCallback<T>) -> &mut Self
+    fn set_parser<Opt, Val>(&mut self, callback: OptValParser<Opt, Val>) -> &mut Self
     where
-        T: 'static,
+        Opt: 'static,
+        Val: 'static,
     {
-        self.callback = Some(callback.into_any());
+        self.parser = Some(callback.into_any());
         self
     }
 
@@ -437,8 +445,8 @@ impl ConfigValue for OptConfig {
         self.deact.is_some()
     }
 
-    fn has_callback(&self) -> bool {
-        self.callback.is_some()
+    fn has_parser(&self) -> bool {
+        self.parser.is_some()
     }
 
     fn gen_uid(&self) -> Uid {
@@ -598,12 +606,13 @@ impl ConfigValue for OptConfig {
         self.deact.take()
     }
 
-    fn take_callback<T>(&mut self) -> Option<OptCallback<T>>
+    fn take_parser<Opt, Val>(&mut self) -> Option<OptValParser<Opt, Val>>
     where
-        T: 'static,
+        Opt: 'static,
+        Val: 'static,
     {
-        if let Some(callback) = self.callback.take() {
-            if let Ok(callback) = callback.downcast::<OptCallback<T>>() {
+        if let Some(callback) = self.parser.take() {
+            if let Ok(callback) = callback.downcast::<OptValParser<Opt, Val>>() {
                 return Some(*callback);
             }
         }

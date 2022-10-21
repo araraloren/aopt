@@ -7,6 +7,8 @@ pub use self::check::CheckService;
 pub use self::invoke::InvokeService;
 pub use self::rawval::RawValService;
 pub use self::rawval::RawValServiceExt;
+pub use self::value::ValService;
+pub use self::value::ValServiceExt;
 
 pub type DataService = RcMap;
 
@@ -198,6 +200,7 @@ impl<Set: 'static, Value: 'static> AServiceExt<Set, Value> for Services {
         Services::new()
             .with(RawValService::<Value>::new())
             .with(DataService::new())
+            .with(ValService::new())
             .with(InvokeService::<Set, Value>::new())
             .with(CheckService::<Set, Value>::new())
     }
@@ -210,11 +213,19 @@ impl<Set: 'static, Value: 'static> AServiceExt<Set, Value> for Services {
         self.get_mut::<DataService>().unwrap()
     }
 
-    fn val_ser(&self) -> &RawValService<Value> {
+    fn val_ser(&self) -> &ValService {
+        self.get::<ValService>().unwrap()
+    }
+
+    fn val_ser_mut(&mut self) -> &mut ValService {
+        self.get_mut::<ValService>().unwrap()
+    }
+
+    fn rawval_ser(&self) -> &RawValService<Value> {
         self.get::<RawValService<Value>>().unwrap()
     }
 
-    fn val_ser_mut(&mut self) -> &mut RawValService<Value> {
+    fn rawval_ser_mut(&mut self) -> &mut RawValService<Value> {
         self.get_mut::<RawValService<Value>>().unwrap()
     }
 

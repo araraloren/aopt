@@ -4,11 +4,11 @@ use crate::astr;
 use crate::ctx::Ctx;
 use crate::err::Error;
 use crate::opt::ConfigValue;
-use crate::opt::OptCallback;
 use crate::opt::OptConfig;
 use crate::opt::OptHelp;
 use crate::opt::OptIndex;
 use crate::opt::OptStyle;
+use crate::opt::OptValParser;
 use crate::ser::Services;
 use crate::simple_impl_opt;
 use crate::Arc;
@@ -34,7 +34,7 @@ pub struct StrOpt {
     alias: Vec<(Str, Str)>,
 
     #[serde(skip)]
-    callback: Option<OptCallback<Self>>,
+    callback: Option<OptValParser<Self, String>>,
 }
 
 impl StrOpt {
@@ -77,7 +77,7 @@ impl StrOpt {
         self
     }
 
-    pub fn with_callback(mut self, callback: Option<OptCallback<Self>>) -> Self {
+    pub fn with_callback(mut self, callback: Option<OptValParser<Self, String>>) -> Self {
         self.callback = callback;
         self
     }
@@ -165,6 +165,6 @@ impl TryFrom<OptConfig> for StrOpt {
             .with_help(cfg.gen_opt_help(false)?)
             .with_alias(cfg.gen_alias()?)
             .with_optional(optional)
-            .with_callback(cfg.take_callback()))
+            .with_callback(cfg.take_parser()))
     }
 }

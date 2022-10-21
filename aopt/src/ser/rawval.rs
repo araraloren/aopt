@@ -37,7 +37,7 @@ where
     V: Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ValueService")
+        f.debug_struct("RawValService")
             .field("rets", &self.rets)
             .finish()
     }
@@ -78,7 +78,7 @@ impl<V> RawValService<V> {
 
 impl<V> Service for RawValService<V> {
     fn service_name() -> crate::Str {
-        astr("ValueService")
+        astr("RawValService")
     }
 }
 
@@ -95,26 +95,22 @@ pub trait RawValServiceExt<V> {
 
 impl<V> RawValServiceExt<V> for RawValService<V> {
     fn raw_val(&self, uid: Uid) -> Result<&V, Error> {
-        debug_assert!(self.has(uid), "Invalid uid for ValueService");
         self.get(uid)
-            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for ValueService")))
+            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for RawValService")))
     }
 
     fn raw_vals(&self, uid: Uid) -> Result<&Vec<V>, Error> {
-        debug_assert!(self.has(uid), "Invalid uid for ValueService");
         self.gets(uid)
-            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for ValueService")))
+            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for RawValService")))
     }
 
     fn raw_val_mut(&mut self, uid: Uid) -> Result<&mut V, Error> {
-        debug_assert!(self.has(uid), "Invalid uid for ValueService");
         self.get_mut(uid)
-            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for ValueService")))
+            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for RawValService")))
     }
 
     fn raw_vals_mut(&mut self, uid: Uid) -> Result<&mut Vec<V>, Error> {
-        debug_assert!(self.has(uid), "Invalid uid for ValueService");
         self.gets_mut(uid)
-            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for ValueService")))
+            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for RawValService")))
     }
 }

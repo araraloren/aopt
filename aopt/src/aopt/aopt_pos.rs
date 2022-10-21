@@ -4,13 +4,14 @@ use crate::astr;
 use crate::ctx::Ctx;
 use crate::err::Error;
 use crate::opt::ConfigValue;
-use crate::opt::OptCallback;
 use crate::opt::OptConfig;
 use crate::opt::OptHelp;
 use crate::opt::OptIndex;
 use crate::opt::OptStyle;
+use crate::opt::OptValParser;
 use crate::ser::Services;
 use crate::simple_impl_noa;
+use crate::RawVal;
 use crate::Str;
 use crate::Uid;
 
@@ -30,7 +31,7 @@ pub struct PosOpt {
     optional: bool,
 
     #[serde(skip)]
-    callback: Option<OptCallback<Self>>,
+    callback: Option<OptValParser<Self, RawVal>>,
 }
 
 impl PosOpt {
@@ -68,7 +69,7 @@ impl PosOpt {
         self
     }
 
-    pub fn with_callback(mut self, callback: Option<OptCallback<Self>>) -> Self {
+    pub fn with_callback(mut self, callback: Option<OptValParser<Self, RawVal>>) -> Self {
         self.callback = callback;
         self
     }
@@ -168,7 +169,7 @@ impl TryFrom<OptConfig> for PosOpt {
             .with_name(cfg.gen_name()?)
             .with_help(cfg.gen_opt_help(false)?)
             .with_index(Some(cfg.gen_idx()?))
-            .with_callback(cfg.take_callback())
+            .with_callback(cfg.take_parser())
             .with_optional(cfg.opt().unwrap_or(true)))
     }
 }

@@ -4,11 +4,11 @@ use crate::astr;
 use crate::ctx::Ctx;
 use crate::err::Error;
 use crate::opt::ConfigValue;
-use crate::opt::OptCallback;
 use crate::opt::OptConfig;
 use crate::opt::OptHelp;
 use crate::opt::OptIndex;
 use crate::opt::OptStyle;
+use crate::opt::OptValParser;
 use crate::ser::Services;
 use crate::simple_impl_noa;
 use crate::Str;
@@ -28,7 +28,7 @@ pub struct CmdOpt {
     index: Option<OptIndex>,
 
     #[serde(skip)]
-    callback: Option<OptCallback<Self>>,
+    callback: Option<OptValParser<Self, bool>>,
 }
 
 impl CmdOpt {
@@ -61,7 +61,7 @@ impl CmdOpt {
         self
     }
 
-    pub fn with_callback(mut self, callback: Option<OptCallback<Self>>) -> Self {
+    pub fn with_callback(mut self, callback: Option<OptValParser<Self, bool>>) -> Self {
         self.callback = callback;
         self
     }
@@ -169,6 +169,6 @@ impl TryFrom<OptConfig> for CmdOpt {
             .with_name(cfg.gen_name()?)
             .with_help(cfg.gen_opt_help(false)?)
             .with_index(index)
-            .with_callback(cfg.take_callback()))
+            .with_callback(cfg.take_parser()))
     }
 }
