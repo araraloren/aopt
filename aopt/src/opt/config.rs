@@ -1,7 +1,7 @@
 use std::any::Any;
 
 use super::Information;
-use super::OptValParser;
+use super::ValParser;
 use crate::astr;
 use crate::err::Error;
 use crate::opt::OptHelp;
@@ -47,7 +47,7 @@ pub trait ConfigValue {
     /// Prefix string using for parsing alias.
     fn sp_pre(&self) -> &Vec<Str>;
 
-    fn parser<Opt, Val>(&self) -> Option<&OptValParser<Opt, Val>>
+    fn parser<Opt, Val>(&self) -> Option<&ValParser<Opt, Val>>
     where
         Opt: 'static,
         Val: 'static;
@@ -78,7 +78,7 @@ pub trait ConfigValue {
 
     fn set_sppre<S: Into<Str>>(&mut self, prefix: Vec<S>) -> &mut Self;
 
-    fn set_parser<Opt, Val>(&mut self, parser: OptValParser<Opt, Val>) -> &mut Self
+    fn set_parser<Opt, Val>(&mut self, parser: ValParser<Opt, Val>) -> &mut Self
     where
         Opt: 'static,
         Val: 'static;
@@ -135,7 +135,7 @@ pub trait ConfigValue {
 
     fn take_deact(&mut self) -> Option<bool>;
 
-    fn take_parser<Opt, Val>(&mut self) -> Option<OptValParser<Opt, Val>>
+    fn take_parser<Opt, Val>(&mut self) -> Option<ValParser<Opt, Val>>
     where
         Opt: 'static,
         Val: 'static;
@@ -224,7 +224,7 @@ impl OptConfig {
         self
     }
 
-    pub fn with_parser<Opt, Val>(mut self, parser: OptValParser<Opt, Val>) -> Self
+    pub fn with_parser<Opt, Val>(mut self, parser: ValParser<Opt, Val>) -> Self
     where
         Opt: 'static,
         Val: 'static,
@@ -326,14 +326,14 @@ impl ConfigValue for OptConfig {
         &self.sp_pre
     }
 
-    fn parser<Opt, Val>(&self) -> Option<&OptValParser<Opt, Val>>
+    fn parser<Opt, Val>(&self) -> Option<&ValParser<Opt, Val>>
     where
         Opt: 'static,
         Val: 'static,
     {
         self.parser
             .as_ref()
-            .and_then(|cb| cb.downcast_ref::<OptValParser<Opt, Val>>())
+            .and_then(|cb| cb.downcast_ref::<ValParser<Opt, Val>>())
     }
 
     fn set_uid(&mut self, uid: Uid) -> &mut Self {
@@ -408,7 +408,7 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn set_parser<Opt, Val>(&mut self, callback: OptValParser<Opt, Val>) -> &mut Self
+    fn set_parser<Opt, Val>(&mut self, callback: ValParser<Opt, Val>) -> &mut Self
     where
         Opt: 'static,
         Val: 'static,
@@ -606,13 +606,13 @@ impl ConfigValue for OptConfig {
         self.deact.take()
     }
 
-    fn take_parser<Opt, Val>(&mut self) -> Option<OptValParser<Opt, Val>>
+    fn take_parser<Opt, Val>(&mut self) -> Option<ValParser<Opt, Val>>
     where
         Opt: 'static,
         Val: 'static,
     {
         if let Some(callback) = self.parser.take() {
-            if let Ok(callback) = callback.downcast::<OptValParser<Opt, Val>>() {
+            if let Ok(callback) = callback.downcast::<ValParser<Opt, Val>>() {
                 return Some(*callback);
             }
         }

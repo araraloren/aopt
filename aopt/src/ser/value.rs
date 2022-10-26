@@ -21,6 +21,10 @@ impl ValService {
         Self::default()
     }
 
+    pub fn contain<T>(&self, uid: Uid) -> bool {
+        self.inner.contains_key(&uid)
+    }
+
     pub fn get<T>(&self, uid: Uid) -> Option<&T>
     where
         T: 'static,
@@ -39,7 +43,14 @@ impl ValService {
     where
         T: 'static,
     {
-        self.inner.get_mut(&uid).and_then(|map| map.insert(v))
+        self.inner.entry(uid).or_default().insert(v)
+    }
+
+    pub fn remove<T>(&mut self, uid: Uid) -> Option<T>
+    where
+        T: 'static,
+    {
+        self.inner.get_mut(&uid).and_then(|v| v.remove::<T>())
     }
 
     pub fn entry<T>(&mut self, uid: Uid) -> ValEntry<'_, T> {
@@ -74,7 +85,7 @@ where
     }
 
     pub fn or_insert(self, val: T) -> &'a mut T {
-        self.map.entry::<T>().or_insert(val)
+        self.map.entry().or_insert(val)
     }
 
     pub fn or_insert_with<F>(self, f: F) -> &'a mut T

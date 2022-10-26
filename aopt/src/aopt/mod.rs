@@ -7,6 +7,7 @@ pub(crate) mod aopt_pos;
 pub(crate) mod aopt_str;
 pub(crate) mod aopt_uint;
 pub(crate) mod simple_macro;
+pub(crate) mod aopt_all;
 
 pub use self::aopt_bool::BoolCreator;
 pub use self::aopt_bool::BoolOpt;

@@ -8,7 +8,7 @@ use crate::opt::OptConfig;
 use crate::opt::OptHelp;
 use crate::opt::OptIndex;
 use crate::opt::OptStyle;
-use crate::opt::OptValParser;
+use crate::opt::ValParser;
 use crate::ser::Services;
 use crate::simple_impl_noa;
 use crate::Str;
@@ -28,7 +28,7 @@ pub struct MainOpt {
     index: Option<OptIndex>,
 
     #[serde(skip)]
-    callback: Option<OptValParser<Self, ()>>,
+    callback: Option<ValParser<Self, ()>>,
 }
 
 impl MainOpt {
@@ -61,7 +61,7 @@ impl MainOpt {
         self
     }
 
-    pub fn with_callback(mut self, callback: Option<OptValParser<Self, ()>>) -> Self {
+    pub fn with_callback(mut self, callback: Option<ValParser<Self, ()>>) -> Self {
         self.callback = callback;
         self
     }

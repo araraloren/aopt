@@ -100,7 +100,7 @@ where
         &mut self,
         set: &mut S,
         ser: &mut Services,
-        inv_ser: &mut InvokeService<S, RawVal>,
+        inv_ser: &mut InvokeService<S, ()>,
     ) -> Result<(), Error> {
         for saver in std::mem::take(&mut self.contexts) {
             invoke_callback_opt(saver, set, ser, inv_ser)?;
@@ -128,10 +128,10 @@ where
         ser: &mut Services,
         set: &mut Self::Set,
     ) -> Result<Option<Self::Ret>, Self::Error> {
-        ser.ser::<CheckService<S, Self::Value>>()?.pre_check(set)?;
+        ser.ser::<CheckService<S>>()?.pre_check(set)?;
 
         // take the invoke service, avoid borrow the ser
-        let mut is = ser.take_ser::<InvokeService<S, Self::Value>>()?;
+        let mut is = ser.take_ser::<InvokeService<S>>()?;
         let opt_styles = [
             UserStyle::EqualWithValue,
             UserStyle::Argument,
@@ -206,7 +206,7 @@ where
                 process_non_opt::<S>(&noa_ctx, set, ser, &mut proc, &mut is)?;
             }
 
-            ser.ser::<CheckService<S, RawVal>>()?.cmd_check(set)?;
+            ser.ser::<CheckService<S>>()?.cmd_check(set)?;
 
             for idx in 0..noa_len {
                 if let Some(mut proc) = NOAGuess::new().guess(
@@ -218,15 +218,15 @@ where
                 }
             }
         } else {
-            ser.ser::<CheckService<S, RawVal>>()?.cmd_check(set)?;
+            ser.ser::<CheckService<S>>()?.cmd_check(set)?;
         }
 
         // after cmd and pos callback invoked, invoke the callback of option
         self.invoke_opt_callback(set, ser, &mut is)?;
 
-        ser.ser::<CheckService<S, RawVal>>()?.opt_check(set)?;
+        ser.ser::<CheckService<S>>()?.opt_check(set)?;
 
-        ser.ser::<CheckService<S, RawVal>>()?.pos_check(set)?;
+        ser.ser::<CheckService<S>>()?.pos_check(set)?;
 
         let main_args = noa_args;
         let mut main_ctx = noa_ctx;
@@ -239,7 +239,7 @@ where
             process_non_opt::<S>(&main_ctx, set, ser, &mut proc, &mut is)?;
         }
 
-        ser.ser::<CheckService<S, RawVal>>()?.post_check(set)?;
+        ser.ser::<CheckService<S>>()?.post_check(set)?;
         ser.reg(is);
 
         Ok(Some(true))

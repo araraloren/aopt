@@ -44,13 +44,13 @@ pub trait AServiceExt<Set: 'static, Value: 'static> {
 
     fn rawval_ser_mut(&mut self) -> &mut RawValService<Value>;
 
-    fn invoke_ser(&self) -> &InvokeService<Set, Value>;
+    fn invoke_ser(&self) -> &InvokeService<Set>;
 
-    fn invoke_ser_mut(&mut self) -> &mut InvokeService<Set, Value>;
+    fn invoke_ser_mut(&mut self) -> &mut InvokeService<Set>;
 
-    fn check_ser(&self) -> &CheckService<Set, Value>;
+    fn check_ser(&self) -> &CheckService<Set>;
 
-    fn check_ser_mut(&mut self) -> &mut CheckService<Set, Value>;
+    fn check_ser_mut(&mut self) -> &mut CheckService<Set>;
 
     fn data<T>(&self) -> Option<&T>
     where

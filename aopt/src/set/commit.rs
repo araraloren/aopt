@@ -8,7 +8,7 @@ use crate::opt::Information;
 use crate::opt::Opt;
 use crate::opt::OptIndex;
 use crate::opt::OptParser;
-use crate::opt::OptValParser;
+use crate::opt::ValParser;
 use crate::set::OptSet;
 use crate::set::Set;
 use crate::Error;
@@ -129,7 +129,7 @@ where
     }
 
     /// Set the option callback of commit configuration.
-    pub fn set_parser<Opt, Val>(&mut self, parser: OptValParser<Opt, Val>) -> &mut Self
+    pub fn set_parser<Opt, Val>(&mut self, parser: ValParser<Opt, Val>) -> &mut Self
     where
         Opt: 'static,
         Val: 'static,

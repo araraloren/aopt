@@ -107,10 +107,10 @@ where
         ser: &mut Services,
         set: &mut Self::Set,
     ) -> Result<Option<Self::Ret>, Self::Error> {
-        ser.ser::<CheckService<S, RawVal>>()?.pre_check(set)?;
+        ser.ser::<CheckService<S>>()?.pre_check(set)?;
 
         // take the invoke service, avoid borrow the ser
-        let mut is = ser.take_ser::<InvokeService<S, RawVal>>()?;
+        let mut is = ser.take_ser::<InvokeService<S>>()?;
         let stys = [
             UserStyle::EqualWithValue,
             UserStyle::Argument,
@@ -166,7 +166,7 @@ where
             }
         }
 
-        ser.ser::<CheckService<S, RawVal>>()?.opt_check(set)?;
+        ser.ser::<CheckService<S>>()?.opt_check(set)?;
 
         let noa_args = Arc::new(noa_args);
         let noa_len = noa_args.len();
@@ -187,7 +187,7 @@ where
                 process_non_opt::<S>(&noa_ctx, set, ser, &mut proc, &mut is)?;
             }
 
-            ser.ser::<CheckService<S, RawVal>>()?.cmd_check(set)?;
+            ser.ser::<CheckService<S>>()?.cmd_check(set)?;
 
             for idx in 0..noa_len {
                 if let Some(mut proc) = NOAGuess::new().guess(
@@ -199,9 +199,9 @@ where
                 }
             }
         } else {
-            ser.ser::<CheckService<S, RawVal>>()?.cmd_check(set)?;
+            ser.ser::<CheckService<S>>()?.cmd_check(set)?;
         }
-        ser.ser::<CheckService<S, RawVal>>()?.pos_check(set)?;
+        ser.ser::<CheckService<S>>()?.pos_check(set)?;
 
         let main_args = noa_args;
         let mut main_ctx = noa_ctx;
@@ -213,7 +213,7 @@ where
             process_non_opt::<S>(&main_ctx, set, ser, &mut proc, &mut is)?;
         }
 
-        ser.ser::<CheckService<S, RawVal>>()?.post_check(set)?;
+        ser.ser::<CheckService<S>>()?.post_check(set)?;
         ser.reg(is);
 
         Ok(Some(true))

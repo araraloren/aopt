@@ -201,8 +201,8 @@ impl<Set: 'static, Value: 'static> AServiceExt<Set, Value> for Services {
             .with(RawValService::<Value>::new())
             .with(DataService::new())
             .with(ValService::new())
-            .with(InvokeService::<Set, Value>::new())
-            .with(CheckService::<Set, Value>::new())
+            .with(InvokeService::<Set>::new())
+            .with(CheckService::<Set>::new())
     }
 
     fn data_ser(&self) -> &DataService {
@@ -229,20 +229,20 @@ impl<Set: 'static, Value: 'static> AServiceExt<Set, Value> for Services {
         self.get_mut::<RawValService<Value>>().unwrap()
     }
 
-    fn invoke_ser(&self) -> &InvokeService<Set, Value> {
-        self.get::<InvokeService<Set, Value>>().unwrap()
+    fn invoke_ser(&self) -> &InvokeService<Set> {
+        self.get::<InvokeService<Set>>().unwrap()
     }
 
-    fn invoke_ser_mut(&mut self) -> &mut InvokeService<Set, Value> {
-        self.get_mut::<InvokeService<Set, Value>>().unwrap()
+    fn invoke_ser_mut(&mut self) -> &mut InvokeService<Set> {
+        self.get_mut::<InvokeService<Set>>().unwrap()
     }
 
-    fn check_ser(&self) -> &CheckService<Set, Value> {
-        self.get::<CheckService<Set, Value>>().unwrap()
+    fn check_ser(&self) -> &CheckService<Set> {
+        self.get::<CheckService<Set>>().unwrap()
     }
 
-    fn check_ser_mut(&mut self) -> &mut CheckService<Set, Value> {
-        self.get_mut::<CheckService<Set, Value>>().unwrap()
+    fn check_ser_mut(&mut self) -> &mut CheckService<Set> {
+        self.get_mut::<CheckService<Set>>().unwrap()
     }
 
     fn data<T>(&self) -> Option<&T>

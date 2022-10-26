@@ -80,9 +80,10 @@ pub mod prelude {
     pub use crate::opt::OptParser;
     pub use crate::opt::OptStringParser;
     pub use crate::opt::OptStyle;
-    pub use crate::opt::OptValParser;
     pub use crate::opt::Optional;
     pub use crate::opt::Prefix;
+    pub use crate::opt::ValParser;
+    pub use crate::opt::ValValidator;
     pub use crate::policy::CtxSaver;
     pub use crate::policy::DelayPolicy;
     pub use crate::policy::ForwardPolicy;

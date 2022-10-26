@@ -15,8 +15,12 @@ pub use self::info::Information;
 pub use self::info::OptConstrctInfo;
 pub use self::parser::OptStringParser;
 pub use self::style::Style as OptStyle;
-pub use self::value::OptValParser;
 pub use self::value::RawValParser;
+pub use self::value::RawValValidator;
+pub use self::value::ValParser;
+pub use self::value::ValValidator;
+pub use self::value::ValPolicy;
+pub use self::value::ValType;
 
 use std::fmt::Debug;
 

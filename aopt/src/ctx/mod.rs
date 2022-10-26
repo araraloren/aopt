@@ -162,3 +162,33 @@ where
         },
     )
 }
+
+pub trait Store<Set, Value> {
+    type Ret;
+    type Error: Into<Error>;
+
+    fn process(
+        &mut self,
+        uid: Uid,
+        set: &mut Set,
+        ser: &mut Services,
+        val: Value,
+    ) -> Result<Option<Self::Ret>, Self::Error>;
+}
+
+pub fn wrap_handler2<Set, Args, Output, Ret, Error>(
+    mut handler: impl Handler<Set, Args, Output = Output, Error = Error> + 'static,
+    mut store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static,
+) -> Callbacks<Set, Ret, Error>
+where
+    Error: Into<crate::Error>,
+    Args: ExtractCtx<Set, Error = Error>,
+{
+    Box::new(
+        move |uid: Uid, set: &mut Set, ser: &mut Services, ctx: &Ctx| {
+            let val = handler.invoke(uid, set, Args::extract(uid, set, ser, ctx)?)?;
+
+            Ok(store.process(uid, set, ser, val)?)
+        },
+    )
+}

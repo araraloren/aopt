@@ -11,27 +11,27 @@ use crate::HashMap;
 use crate::StrJoin;
 use crate::Uid;
 
-pub struct CheckService<Set, Value>(PhantomData<(Set, Value)>);
+pub struct CheckService<Set>(PhantomData<Set>);
 
-impl<Set, Value> Debug for CheckService<Set, Value> {
+impl<Set> Debug for CheckService<Set> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CheckService").finish()
     }
 }
 
-impl<Set, Value> Default for CheckService<Set, Value> {
+impl<Set> Default for CheckService<Set> {
     fn default() -> Self {
         Self(PhantomData::default())
     }
 }
 
-impl<Set, Value> CheckService<Set, Value> {
+impl<Set> CheckService<Set> {
     pub fn new() -> Self {
         Self(PhantomData::default())
     }
 }
 
-impl<Set, Value> CheckService<Set, Value>
+impl<Set> CheckService<Set>
 where
     Set: crate::set::Set,
     Set::Opt: Opt,
@@ -182,7 +182,7 @@ where
     }
 }
 
-impl<Set, Value> Service for CheckService<Set, Value> {
+impl<Set> Service for CheckService<Set> {
     fn service_name() -> crate::Str {
         astr("CheckService")
     }

@@ -21,24 +21,21 @@ pub fn invoke_callback_opt<Set>(
     saver: CtxSaver,
     set: &mut Set,
     ser: &mut Services,
-    inv_ser: &mut InvokeService<Set, OsString>,
+    inv_ser: &mut InvokeService<Set>,
 ) -> Result<(), Error>
 where
     Set::Opt: Opt,
     Set: crate::set::Set + 'static,
 {
     let uid = saver.uid;
-    let ret;
     let has_callback = inv_ser.has(uid);
 
     if has_callback {
         // callback in InvokeService
-        ret = inv_ser.invoke(uid, set, ser, &saver.ctx)?;
+        inv_ser.invoke(uid, set, ser, &saver.ctx)?;
     } else {
-        ret = saver.ctx.opt()?.arg().map(|v| v.as_ref().clone());
+        inv_ser.invoke_default(uid, set, ser, &saver.ctx)?;
     }
-
-    set.get_mut(uid).unwrap().val_act(ret, ser, &saver.ctx)?;
 
     Ok(())
 }
@@ -48,7 +45,7 @@ pub fn process_opt<Set>(
     set: &mut Set,
     ser: &mut Services,
     proc: &mut OptProcess<Set>,
-    inv_ser: &mut InvokeService<Set, OsString>,
+    inv_ser: &mut InvokeService<Set>,
     invoke: bool,
 ) -> Result<Vec<CtxSaver>, Error>
 where
@@ -101,7 +98,7 @@ pub fn process_non_opt<Set>(
     set: &mut Set,
     ser: &mut Services,
     proc: &mut NOAProcess<Set>,
-    inv_ser: &mut InvokeService<Set, OsString>,
+    inv_ser: &mut InvokeService<Set>,
 ) -> Result<Vec<CtxSaver>, Error>
 where
     Set::Opt: Opt,
@@ -133,14 +130,14 @@ where
                 ret = inv_ser.invoke(uid, set, ser, &ctx)?;
                 matched = ret.is_some();
             } else {
-                ret = ctx.noa()?.arg().map(|v| v.clone());
+                ret = inv_ser.invoke_default(uid, set, ser, &ctx)?;
             }
 
             // rteurn None means NOA not match
             if !matched {
                 proc.undo(set)?;
             } else {
-                set.get_mut(uid).unwrap().val_act(ret, ser, &ctx)?;
+                //set.get_mut(uid).unwrap().val_act(ret, ser, &ctx)?;
             }
             proc.reset();
         }

@@ -104,10 +104,10 @@ where
         ser: &mut Services,
         set: &mut Self::Set,
     ) -> Result<Option<Self::Ret>, Self::Error> {
-        Self::ig_failure(ser.ser::<CheckService<S, RawVal>>()?.pre_check(set))?;
+        Self::ig_failure(ser.ser::<CheckService<S>>()?.pre_check(set))?;
 
         // take the invoke service, avoid borrow the ser
-        let mut is = ser.take_ser::<InvokeService<S, RawVal>>()?;
+        let mut is = ser.take_ser::<InvokeService<S>>()?;
         let opt_styles = [
             UserStyle::EqualWithValue,
             UserStyle::Argument,
@@ -171,7 +171,7 @@ where
             }
         }
 
-        Self::ig_failure(ser.ser::<CheckService<S, RawVal>>()?.opt_check(set))?;
+        Self::ig_failure(ser.ser::<CheckService<S>>()?.opt_check(set))?;
 
         // save the return value
         let pre_ret = noa_args.deref().clone();
@@ -193,7 +193,7 @@ where
                 Self::ig_failure(process_non_opt::<S>(&noa_ctx, set, ser, &mut proc, &mut is))?;
             }
 
-            Self::ig_failure(ser.ser::<CheckService<S, RawVal>>()?.cmd_check(set))?;
+            Self::ig_failure(ser.ser::<CheckService<S>>()?.cmd_check(set))?;
 
             for idx in 0..noa_len {
                 if let Some(Some(mut proc)) = Self::ig_failure(NOAGuess::new().guess(
@@ -205,10 +205,10 @@ where
                 }
             }
         } else {
-            Self::ig_failure(ser.ser::<CheckService<S, RawVal>>()?.cmd_check(set))?;
+            Self::ig_failure(ser.ser::<CheckService<S>>()?.cmd_check(set))?;
         }
 
-        Self::ig_failure(ser.ser::<CheckService<S, RawVal>>()?.pos_check(set))?;
+        Self::ig_failure(ser.ser::<CheckService<S>>()?.pos_check(set))?;
 
         let main_args = noa_args;
         let mut main_ctx = noa_ctx;
@@ -223,7 +223,7 @@ where
             ))?;
         }
 
-        ser.ser::<CheckService<S, RawVal>>()?.post_check(set)?;
+        ser.ser::<CheckService<S>>()?.post_check(set)?;
         ser.reg(is);
 
         Ok(Some(pre_ret))

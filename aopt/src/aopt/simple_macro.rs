@@ -116,7 +116,7 @@ macro_rules! simple_impl_opt {
                 // todo!() remove the old value setter
                 use crate::ser::ServicesExt;
                 if let Some(val) = val {
-                    ser.ser_mut::<crate::ser::RawValService<crate::RawVal>>()?.ins(self.uid, val);
+                    ser.ser_mut::<crate::ser::RawValService<crate::RawVal>>()?.insert(self.uid, val);
                 }
                 Ok(())
             }
@@ -236,7 +236,7 @@ macro_rules! simple_impl_noa {
                 // todo!() remove the old value setter
                 use crate::ser::ServicesExt;
                 if let Some(val) = val {
-                    ser.ser_mut::<crate::ser::RawValService<crate::RawVal>>()?.ins(self.uid, val);
+                    ser.ser_mut::<crate::ser::RawValService<crate::RawVal>>()?.insert(self.uid, val);
                 }
                 Ok(())
             }

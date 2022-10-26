@@ -2,6 +2,7 @@ use std::fmt::Debug;
 
 use super::Service;
 use crate::astr;
+use crate::map::Entry;
 use crate::Error;
 use crate::HashMap;
 use crate::Uid;
@@ -50,7 +51,7 @@ impl<V> RawValService<V> {
         }
     }
 
-    pub fn has(&self, uid: Uid) -> bool {
+    pub fn contain(&self, uid: Uid) -> bool {
         self.rets.contains_key(&uid)
     }
 
@@ -70,9 +71,17 @@ impl<V> RawValService<V> {
         self.rets.get_mut(&uid)
     }
 
-    pub fn ins(&mut self, uid: Uid, ret: V) -> &mut Self {
+    pub fn insert(&mut self, uid: Uid, ret: V) -> &mut Self {
         self.rets.entry(uid).or_insert(vec![]).push(ret);
         self
+    }
+
+    pub fn clear(&mut self) {
+        self.rets.clear();
+    }
+
+    pub fn entry(&mut self, uid: Uid) -> std::collections::hash_map::Entry<'_, Uid, Vec<V>> {
+        self.rets.entry(uid)
     }
 }
 
