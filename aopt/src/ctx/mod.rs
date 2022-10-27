@@ -16,7 +16,7 @@ pub use self::context::CtxUid;
 pub use self::data::Data;
 pub use self::extract::ExtractCtx;
 pub use self::handler::Handler;
-pub use self::value::Value;
+pub use self::value::RawVal;
 
 use std::fmt::Debug;
 

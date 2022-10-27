@@ -4,6 +4,7 @@ pub(crate) mod index;
 pub(crate) mod info;
 pub(crate) mod parser;
 pub(crate) mod style;
+pub(crate) mod uopt;
 pub(crate) mod value;
 
 pub use self::config::Config;
@@ -18,9 +19,9 @@ pub use self::style::Style as OptStyle;
 pub use self::value::RawValParser;
 pub use self::value::RawValValidator;
 pub use self::value::ValParser;
-pub use self::value::ValValidator;
 pub use self::value::ValPolicy;
 pub use self::value::ValType;
+pub use self::value::ValValidator;
 
 use std::fmt::Debug;
 
@@ -93,9 +94,15 @@ pub trait Help {
 }
 
 pub trait Opt: Name + Help + Alias + Index + Prefix + Optional + Debug {
+    fn ty(&self) -> Str;
+
     fn reset(&mut self);
 
     fn valid(&self) -> bool;
+
+    fn policy(&self) -> ValPolicy;
+
+    fn val_ty(&self) -> ValType;
 
     fn uid(&self) -> Uid;
 
@@ -103,13 +110,11 @@ pub trait Opt: Name + Help + Alias + Index + Prefix + Optional + Debug {
 
     fn setted(&self) -> bool;
 
-    fn ty(&self) -> Str;
+    fn set_setted(&mut self, setted: bool);
 
     fn is_deact(&self) -> bool;
 
     fn mat_sty(&self, style: OptStyle) -> bool;
-
-    fn set_setted(&mut self, setted: bool);
 
     fn check(
         &mut self,

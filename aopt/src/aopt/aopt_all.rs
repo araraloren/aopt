@@ -11,13 +11,13 @@ use crate::opt::OptStyle;
 use crate::opt::ValParser;
 use crate::opt::ValPolicy;
 use crate::opt::ValType;
+use crate::opt::ValValidator;
 use crate::ser::Services;
 use crate::simple_impl_opt;
 use crate::Arc;
 use crate::RawVal;
 use crate::Str;
 use crate::Uid;
-use crate::opt::ValValidator;
 
 pub struct UOpt {
     uid: Uid,

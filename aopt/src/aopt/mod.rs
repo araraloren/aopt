@@ -1,3 +1,4 @@
+pub(crate) mod aopt_all;
 pub(crate) mod aopt_bool;
 pub(crate) mod aopt_cmd;
 pub(crate) mod aopt_flt;
@@ -7,7 +8,6 @@ pub(crate) mod aopt_pos;
 pub(crate) mod aopt_str;
 pub(crate) mod aopt_uint;
 pub(crate) mod simple_macro;
-pub(crate) mod aopt_all;
 
 pub use self::aopt_bool::BoolCreator;
 pub use self::aopt_bool::BoolOpt;
@@ -49,6 +49,8 @@ use crate::Arc;
 use crate::RawVal;
 use crate::Str;
 use crate::Uid;
+use crate::opt::ValPolicy;
+use crate::opt::ValType;
 
 pub trait AOpt: Debug {
     fn _reset(&mut self) {

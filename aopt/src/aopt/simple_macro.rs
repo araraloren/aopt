@@ -284,6 +284,14 @@ macro_rules! simple_impl_opt_for {
                 self._match_style(style)
             }
 
+            fn policy(&self) -> ValPolicy {
+                ValPolicy::Null
+            }
+        
+            fn val_ty(&self) -> ValType {
+                ValType::Null
+            }
+
             fn check(&mut self, val: Option<crate::Arc<crate::RawVal>>, disable: bool, index: (usize, usize)) -> Result<bool, Error> {
                 self._check(val, disable, index)
             }

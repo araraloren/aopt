@@ -11,11 +11,14 @@ use crate::ctx::Callbacks;
 use crate::ctx::Ctx;
 use crate::ctx::Serializer;
 use crate::opt::Opt;
+use crate::opt::value::Value;
+use crate::prelude::ValType;
 use crate::ser::Service;
 use crate::Error;
 use crate::HashMap;
 use crate::Str;
 use crate::Uid;
+use crate::opt::RawValParser;
 
 /// Save the callback with key [`Uid`].
 ///
@@ -121,7 +124,7 @@ impl<Set, Ret> InvokeService<Set, Ret> {
         &mut self,
         uid: Uid,
         handler: impl Handler<Set, Args, Output = Output, Error = Error> + 'static,
-        store: impl crate::ctx::Store<Set, Output, Ret = Ret, Error = Error> + 'static
+        store: impl crate::ctx::Store<Set, Output, Ret = Ret, Error = Error> + 'static,
     ) -> &mut Self
     where
         Output: Into<Option<Ret>>,
@@ -163,7 +166,13 @@ where
         ser: &mut Services,
         ctx: &Ctx,
     ) -> Result<Option<()>, Error> {
+        let opt = set.get(uid).unwrap();
+        let val_ty = opt.val_ty();
         
+        if val_ty == ValType::Int {
+            let mut parser = Value(0);
+            let val: i32 = parser.parse(opt, ctx.arg().cloned(), ctx)?;
+        }
         Ok(Some(()))
     }
 }

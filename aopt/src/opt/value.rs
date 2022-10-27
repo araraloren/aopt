@@ -48,7 +48,7 @@ impl<Opt, Val> Debug for ValParser<Opt, Val> {
 }
 
 pub trait RawValValidator {
-    fn valid(
+    fn check(
         &mut self,
         val: Option<Arc<RawVal>>,
         dsb: bool,
@@ -60,7 +60,7 @@ impl<Func> RawValValidator for Func
 where
     Func: FnMut(Option<Arc<RawVal>>, bool, (usize, usize)) -> Result<bool, Error>,
 {
-    fn valid(
+    fn check(
         &mut self,
         val: Option<Arc<RawVal>>,
         dsb: bool,
@@ -77,13 +77,13 @@ impl ValValidator {
         Self(Box::new(inner))
     }
 
-    pub fn valid(
+    pub fn check(
         &mut self,
         value: Option<Arc<RawVal>>,
         disable: bool,
         index: (usize, usize),
     ) -> Result<bool, Error> {
-        self.0.valid(value, disable, index)
+        self.0.check(value, disable, index)
     }
 
     pub fn into_any(self) -> Box<dyn Any> {
@@ -97,7 +97,7 @@ impl Debug for ValValidator {
     }
 }
 
-
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ValPolicy {
     Set,
 
@@ -112,6 +112,7 @@ pub enum ValPolicy {
     Null,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ValType {
     Bool,
 
@@ -124,4 +125,13 @@ pub enum ValType {
     Str,
 
     Null,
+}
+
+pub struct Value<T: ?Sized>(pub T);
+
+impl<Opt> RawValParser<Opt, i32> for Value<i32> where Opt: crate::opt::Opt {
+    fn parse(&mut self, opt: &Opt, val: Option<RawVal>, ctx: &Ctx) -> Result<i32, Error> {
+        assert_eq!(opt.val_ty(), ValType::Int);
+        Ok(42)
+    }
 }

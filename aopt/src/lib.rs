@@ -83,6 +83,8 @@ pub mod prelude {
     pub use crate::opt::Optional;
     pub use crate::opt::Prefix;
     pub use crate::opt::ValParser;
+    pub use crate::opt::ValPolicy;
+    pub use crate::opt::ValType;
     pub use crate::opt::ValValidator;
     pub use crate::policy::CtxSaver;
     pub use crate::policy::DelayPolicy;
