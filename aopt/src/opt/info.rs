@@ -41,7 +41,7 @@ pub trait Information {
 
 /// Parsing result of option constructor string.
 #[derive(Debug, Default)]
-pub struct OptConstrctInfo {
+pub struct ConstrctInfo {
     pub pattern: Str,
 
     pub prefix: Option<Str>,
@@ -71,7 +71,7 @@ pub struct OptConstrctInfo {
     index: Option<OptIndex>,
 }
 
-impl OptConstrctInfo {
+impl ConstrctInfo {
     pub fn with_pat(mut self, pattern: Str) -> Self {
         self.pattern = pattern;
         self
@@ -162,7 +162,7 @@ impl OptConstrctInfo {
     }
 }
 
-impl Information for OptConstrctInfo {
+impl Information for ConstrctInfo {
     fn has_name(&self) -> bool {
         self.name.is_some()
     }

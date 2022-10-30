@@ -1,9 +1,6 @@
-use std::ffi::OsStr;
-use std::ffi::OsString;
-
-use super::CtxSaver;
 use crate::ctx::Ctx;
 use crate::opt::Opt;
+use crate::policy::CtxSaver;
 use crate::proc::Match;
 use crate::proc::NOAProcess;
 use crate::proc::OptProcess;
@@ -11,7 +8,6 @@ use crate::proc::Process;
 use crate::ser::InvokeService;
 use crate::ser::RawValService;
 use crate::ser::Services;
-use crate::ser::ServicesExt;
 use crate::Arc;
 use crate::Error;
 use crate::Str;
@@ -69,13 +65,12 @@ where
                     // .set_idx(idx) set when process option
                     // .set_len(len) set before process options
                     // .set_args(args) set before process options
-                    ctx.opt_mut()?
-                        .set_uid(uid) // current uid == uid in matcher
-                        .set_name(mat.name().clone())
-                        .set_pre(mat.pre().cloned())
-                        .set_sty(mat.sty())
-                        .set_arg(mat.arg().cloned())
-                        .set_dsb(mat.dsb());
+                    ctx.set_uid(uid) // current uid == uid in matcher
+                        .set_name(mat.name().cloned())
+                        .set_prefix(mat.prefix().cloned())
+                        .set_style(mat.style())
+                        .set_arg(mat.clone_arg())
+                        .set_disable(mat.disable());
                     ctx
                 },
             });
@@ -118,7 +113,9 @@ where
                 // .set_idx(idx) set when process option
                 // .set_len(len) set before process options
                 // .set_args(args) set before process options
-                ctx.noa_mut()?.set_sty(mat.sty()).set_uid(uid); // current uid == uid in matcher
+                ctx.set_style(mat.style())
+                    .set_name(mat.name().cloned())
+                    .set_uid(uid); // current uid == uid in matcher
                 ctx
             };
 

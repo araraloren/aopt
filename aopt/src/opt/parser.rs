@@ -1,7 +1,7 @@
 use regex::Regex;
 
-use super::{OptConstrctInfo, OptParser};
-use crate::set::PreSet;
+use super::{ConstrctInfo, OptParser};
+use crate::set::Pre;
 use crate::Error;
 use crate::Str;
 
@@ -88,31 +88,31 @@ use crate::Str;
 /// For more examples, please reference test case [`test_option_str_parser`](../../src/aopt/set/parser.rs.html#542).
 ///
 #[derive(Debug)]
-pub struct OptStringParser {
+pub struct StrParser {
     regex: Regex,
     prefix: Vec<Str>,
 }
 
-impl Default for OptStringParser {
+impl Default for StrParser {
     fn default() -> Self {
         let regex = Regex::new(r"^([^=]+)?(=([^=/!@]+))?([!/])?([!/])?(@(?:([+-><])?(\d+)|([+-])?(\[(?:\s*\d+,?\s*)+\])|(\*)))?$").unwrap();
         Self::new(regex)
     }
 }
 
-impl PreSet for OptStringParser {
-    fn pre(&self) -> &[Str] {
+impl Pre for StrParser {
+    fn prefix(&self) -> &[Str] {
         &self.prefix
     }
 
-    fn add_pre(&mut self, prefix: &str) -> &mut Self {
+    fn add_prefix<S: Into<Str>>(&mut self, prefix: S) -> &mut Self {
         self.prefix.push(prefix.into());
         self.prefix.sort_by_key(|b| std::cmp::Reverse(b.len()));
         self
     }
 }
 
-impl OptStringParser {
+impl StrParser {
     pub fn new(regex: Regex) -> Self {
         Self {
             regex,
@@ -121,7 +121,7 @@ impl OptStringParser {
     }
 
     pub fn with_pre(mut self, prefix: &str) -> Self {
-        self.add_pre(prefix);
+        self.add_prefix(prefix);
         self
     }
 
@@ -194,11 +194,7 @@ impl OptStringParser {
         Ok(ret)
     }
 
-    pub fn parse_creator_string(
-        &self,
-        pattern: Str,
-        prefix: Str,
-    ) -> Result<OptConstrctInfo, Error> {
+    pub fn parse_creator_string(&self, pattern: Str, prefix: Str) -> Result<ConstrctInfo, Error> {
         let (_, left_part) = pattern.split_at(prefix.len());
 
         if let Some(cap) = self.regex().captures(left_part) {
@@ -265,7 +261,7 @@ impl OptStringParser {
                     }
                 }
             }
-            Ok(OptConstrctInfo::default()
+            Ok(ConstrctInfo::default()
                 .with_pre(Some(prefix))
                 .with_deact(deactivate)
                 .with_opt(optional)
@@ -295,8 +291,8 @@ const IDX_SIGN2: usize = 9;
 const IDX_IDX2: usize = 10;
 const IDX_ANY: usize = 11;
 
-impl OptParser for OptStringParser {
-    type Output = OptConstrctInfo;
+impl OptParser for StrParser {
+    type Output = ConstrctInfo;
 
     type Error = Error;
 
@@ -327,7 +323,7 @@ impl OptParser for OptStringParser {
 
 #[cfg(test)]
 mod test {
-    use super::OptStringParser;
+    use super::StrParser;
     use crate::astr;
     use crate::opt::Information;
     use crate::opt::OptIndex;
@@ -3318,7 +3314,7 @@ mod test {
                     )),
                 ),
             ];
-            let parser = OptStringParser::default().with_pre("--").with_pre("-");
+            let parser = StrParser::default().with_pre("--").with_pre("-");
 
             for case in test_cases.iter() {
                 try_to_verify_one_task(astr(case.0), &parser, &case.1);
@@ -3328,7 +3324,7 @@ mod test {
 
     fn try_to_verify_one_task(
         pattern: Str,
-        parser: &OptStringParser,
+        parser: &StrParser,
         except: &Option<(
             Option<Str>,
             Option<Str>,

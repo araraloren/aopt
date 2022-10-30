@@ -1,26 +1,43 @@
-use std::ffi::OsString;
+#[cfg_attr(windows, path = "args/win.rs")]
+#[cfg_attr(unix, path = "args/unix.rs")]
+pub(crate) mod osstr_ext;
+
 use std::ops::Deref;
 use std::ops::DerefMut;
 
+use crate::Error;
+use crate::RawVal;
+use crate::Str;
+
+pub use self::osstr_ext::AOsStrExt;
+pub use self::osstr_ext::CLOpt;
+
+pub trait ArgParser {
+    type Output;
+    type Error: Into<Error>;
+
+    fn parse(&self, prefixs: &[Str]) -> Result<Self::Output, Self::Error>;
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct Args {
-    inner: Vec<OsString>,
+    inner: Vec<RawVal>,
 }
 
 impl Args {
-    pub fn new<S: Into<OsString>>(inner: impl Iterator<Item = S>) -> Self {
+    pub fn new<S: Into<RawVal>>(inner: impl Iterator<Item = S>) -> Self {
         Self {
             inner: inner.map(|v| v.into()).collect(),
         }
     }
 
     pub fn iter(&self) -> Iter<'_> {
-        Iter::new(&self.inner, self.len())
+        Iter::new(&self.inner)
     }
 }
 
 impl Deref for Args {
-    type Target = Vec<OsString>;
+    type Target = Vec<RawVal>;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
@@ -35,27 +52,29 @@ impl DerefMut for Args {
 
 #[derive(Debug, Clone)]
 pub struct Iter<'a> {
-    inner: &'a [OsString],
+    inner: &'a [RawVal],
     index: usize,
-    total: usize,
 }
 
 impl<'a> Iter<'a> {
-    pub fn new(iter: &'a [OsString], total: usize) -> Self {
+    pub fn new(iter: &'a [RawVal]) -> Self {
         Self {
             inner: iter,
             index: 0,
-            total,
         }
     }
 
     pub fn len(&self) -> usize {
-        self.total
+        self.inner.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
     }
 }
 
 impl<'a> Iterator for Iter<'a> {
-    type Item = (&'a OsString, Option<&'a OsString>);
+    type Item = (&'a RawVal, Option<&'a RawVal>);
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.len() {
@@ -71,7 +90,7 @@ impl<'a> Iterator for Iter<'a> {
 
 impl<'a> ExactSizeIterator for Iter<'a> {
     fn len(&self) -> usize {
-        self.total
+        self.inner.len()
     }
 }
 
@@ -79,34 +98,34 @@ impl<'a> ExactSizeIterator for Iter<'a> {
 mod test {
 
     use super::Args;
-    use std::ffi::OsString;
+    use crate::RawVal;
 
     #[test]
     fn test_args() {
-        let mut args = Args::new(["--opt", "value", "--bool", "pos"].into_iter());
+        let args = Args::new(["--opt", "value", "--bool", "pos"].into_iter());
         let mut iter = args.iter().enumerate();
 
         if let Some((idx, (opt, arg))) = iter.next() {
             assert_eq!(idx, 0);
-            assert_eq!(opt, &OsString::from("--opt"));
-            assert_eq!(arg, Some(&OsString::from("value")));
+            assert_eq!(opt, &RawVal::from("--opt"));
+            assert_eq!(arg, Some(&RawVal::from("value")));
         }
 
         if let Some((idx, (opt, arg))) = iter.next() {
             assert_eq!(idx, 1);
-            assert_eq!(opt, &OsString::from("value"));
-            assert_eq!(arg, Some(&OsString::from("--bool")));
+            assert_eq!(opt, &RawVal::from("value"));
+            assert_eq!(arg, Some(&RawVal::from("--bool")));
         }
 
         if let Some((idx, (opt, arg))) = iter.next() {
             assert_eq!(idx, 2);
-            assert_eq!(opt, &OsString::from("--bool"));
-            assert_eq!(arg, Some(&OsString::from("pos")));
+            assert_eq!(opt, &RawVal::from("--bool"));
+            assert_eq!(arg, Some(&RawVal::from("pos")));
         }
 
         if let Some((idx, (opt, arg))) = iter.next() {
             assert_eq!(idx, 3);
-            assert_eq!(opt, &OsString::from("pos"));
+            assert_eq!(opt, &RawVal::from("pos"));
             assert_eq!(arg, None);
         }
 

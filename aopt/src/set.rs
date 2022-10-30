@@ -16,19 +16,19 @@ use crate::Uid;
 pub trait Set {
     type Opt;
 
+    fn reset(&mut self);
+
+    fn len(&self) -> usize;
+
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
-    fn has(&self, uid: Uid) -> bool {
+    fn keys(&self) -> &[Uid];
+
+    fn contain(&self, uid: Uid) -> bool {
         self.keys().iter().any(|v| v == &uid)
     }
-
-    fn len(&self) -> usize;
-
-    fn reset(&mut self);
-
-    fn keys(&self) -> &[Uid];
 
     fn insert(&mut self, opt: Self::Opt) -> Uid;
 
@@ -43,26 +43,20 @@ pub trait SetExt<Opt> {
     fn opt_mut(&mut self, id: Uid) -> Result<&mut Opt, Error>;
 }
 
-impl<Opt, S> SetExt<Opt> for S
-where
-    S: Set<Opt = Opt>,
-{
-    fn opt(&self, id: Uid) -> Result<&Opt, Error> {
-        debug_assert!(self.has(id), "Invalid uid for Set");
+impl<S: Set> SetExt<S::Opt> for S {
+    fn opt(&self, id: Uid) -> Result<&S::Opt, Error> {
         self.get(id)
             .ok_or_else(|| Error::raise_error(format!("Invalid uid {id} for Set")))
     }
 
-    fn opt_mut(&mut self, id: Uid) -> Result<&mut Opt, Error> {
-        debug_assert!(self.has(id), "Invalid uid for Set");
+    fn opt_mut(&mut self, id: Uid) -> Result<&mut S::Opt, Error> {
         self.get_mut(id)
             .ok_or_else(|| Error::raise_error(format!("Invalid uid {id} for Set")))
     }
 }
 
-/// Prefix using for parsing option string.
-pub trait PreSet {
-    fn pre(&self) -> &[Str];
+pub trait Pre {
+    fn prefix(&self) -> &[Str];
 
-    fn add_pre(&mut self, prefix: &str) -> &mut Self;
+    fn add_prefix<S: Into<Str>>(&mut self, prefix: S) -> &mut Self;
 }

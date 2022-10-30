@@ -1,25 +1,24 @@
-pub(crate) mod common;
-pub(crate) mod guess_style;
-pub(crate) mod policy_delay;
-pub(crate) mod policy_forward;
-pub(crate) mod policy_pre;
+pub(crate) mod forward;
+pub(crate) mod process;
+pub(crate) mod style;
 
-pub use self::common::process_non_opt;
-pub use self::common::process_opt;
-pub use self::guess_style::Guess;
-pub use self::guess_style::GuessNOACfg;
-pub use self::guess_style::GuessOptCfg;
-pub use self::guess_style::NOAGuess;
-pub use self::guess_style::OptGuess;
-pub use self::guess_style::UserStyle;
-pub use self::policy_delay::DelayPolicy;
-pub use self::policy_forward::ForwardPolicy;
-pub use self::policy_pre::PrePolicy;
+pub use self::forward::Forward;
+pub use self::style::Guess;
+pub use self::style::GuessNOACfg;
+pub use self::style::GuessOptCfg;
+pub use self::style::NOAGuess;
+pub use self::style::OptGuess;
+pub use self::style::UserStyle;
 
-use crate::arg::Args;
+pub(crate) use self::process::invoke_callback_opt;
+pub(crate) use self::process::process_non_opt;
+pub(crate) use self::process::process_opt;
+
+use crate::args::Args;
 use crate::ctx::Ctx;
 use crate::ser::Services;
 use crate::set::Set;
+use crate::Arc;
 use crate::Error;
 use crate::Uid;
 use std::fmt::Debug;
@@ -35,13 +34,12 @@ pub struct CtxSaver {
 
 pub trait Policy {
     type Ret;
-    type Value;
     type Set: Set;
     type Error: Into<Error>;
 
     fn parse(
         &mut self,
-        args: Args,
+        args: Arc<Args>,
         ser: &mut Services,
         set: &mut Self::Set,
     ) -> Result<Option<Self::Ret>, Self::Error>;

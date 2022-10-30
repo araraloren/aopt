@@ -1,62 +1,42 @@
 use std::ffi::OsStr;
-use std::ffi::OsString;
-use std::os::windows::ffi::{OsStrExt, OsStringExt};
+use std::os::unix::ffi::OsStrExt;
 
-use super::ArgParser;
-use crate::astr;
-use crate::Arc;
-use crate::Error;
-use crate::Str;
+fn strip_prefix<'a>(str: &'a OsStr, prefix: &str) -> Option<&'a OsStr> {
+    let enc = str.as_bytes();
+    let pre = prefix.as_bytes();
 
-fn strip_pre(str: &OsStr, prefix: &str) -> Option<OsString> {
-    let enc = str.encode_wide();
-    let mut pre = prefix.encode_utf16();
-    let mut ret = Vec::with_capacity(str.len().saturating_sub(prefix.len()));
-
-    for ori in enc {
-        match pre.next() {
-            Some(ch) => {
-                if ch != ori {
-                    return None;
-                }
-            }
-            None => {
-                ret.push(ori);
-            }
-        }
-    }
-    Some(OsString::from_wide(&ret))
+    enc.strip_prefix(pre)
+        .and_then(|v| Some(OsStr::from_bytes(v)))
 }
 
-fn split_once(str: &OsStr, ch: char) -> Option<(OsString, OsString)> {
-    let enc = str.encode_wide();
+fn split_once(str: &OsStr, ch: char) -> Option<(&OsStr, &OsStr)> {
+    let enc = str.as_bytes();
     let mut buf = [0; 1];
-    let sep = ch.encode_utf16(&mut buf);
-    let enc = enc.collect::<Vec<u16>>();
+    let sep = ch.encode_utf8(&mut buf).as_bytes();
 
     enc.iter()
         .enumerate()
         .find(|(_, ch)| ch == &&sep[0])
         .and_then(|(idx, _)| {
             Some((
-                OsString::from_wide(&enc[0..idx]),
-                OsString::from_wide(&enc[idx + 1..]),
+                OsStr::from_bytes(&enc[0..idx]),
+                OsStr::from_bytes(&enc[idx + 1..]),
             ))
         })
 }
 
 pub trait AOsStrExt {
-    fn strip_pre(&self, prefix: &str) -> Option<OsString>;
+    fn strip_prefix(&self, prefix: &str) -> Option<&OsStr>;
 
-    fn split_once(&self, ch: char) -> Option<(OsString, OsString)>;
+    fn split_once(&self, ch: char) -> Option<(&OsStr, &OsStr)>;
 }
 
 impl AOsStrExt for OsStr {
-    fn strip_pre(&self, prefix: &str) -> Option<OsString> {
-        strip_pre(self, prefix)
+    fn strip_prefix(&self, prefix: &str) -> Option<&OsStr> {
+        strip_prefix(self, prefix)
     }
 
-    fn split_once(&self, ch: char) -> Option<(OsString, OsString)> {
+    fn split_once(&self, ch: char) -> Option<(&OsStr, &OsStr)> {
         split_once(self, ch)
     }
 }
@@ -122,7 +102,7 @@ impl AOsStrExt for OsStr {
 pub struct CLOpt {
     pub name: Option<Str>,
 
-    pub value: Option<Arc<OsString>>,
+    pub value: Option<OsString>,
 
     pub prefix: Option<Str>,
 
@@ -134,8 +114,8 @@ impl CLOpt {
         self.name.as_ref()
     }
 
-    pub fn val(&self) -> Option<&Arc<OsString>> {
-        self.value.as_ref()
+    pub fn value(&self) -> Option<&OsStr> {
+        self.value.map(|v| v.as_ref())
     }
 
     pub fn pre(&self) -> Option<&Str> {
@@ -159,12 +139,12 @@ impl ArgParser for OsStr {
     fn parse(&self, prefixs: &[Str]) -> Result<Self::Output, Self::Error> {
         for prefix in prefixs {
             if let Some(with_out_pre) = self.strip_pre(prefix.as_str()) {
-                let (dsb, left) = if let Some(left) = with_out_pre.strip_pre(DISBALE) {
+                let (dsb, left) = if let Some(left) = with_out_pre.strip_pre(Self::DISBALE) {
                     (true, left)
                 } else {
                     (false, with_out_pre)
                 };
-                let (name, value) = if let Some((name, value)) = left.split_once(EQUAL) {
+                let (name, value) = if let Some((name, value)) = left.split_once(Self::EQUAL) {
                     (name, Some(value))
                 } else {
                     (left, None)

@@ -1,18 +1,22 @@
-use std::fmt::Display;
-use std::ops::Deref;
-use std::ops::DerefMut;
-use std::rc::Rc;
-
 use serde::de::Visitor;
 use serde::Deserialize;
 use serde::Serialize;
+use std::fmt::Display;
+use std::ops::Deref;
+use std::ops::DerefMut;
+
+use crate::Arc;
 
 pub fn astr<T: Into<Str>>(value: T) -> Str {
     value.into()
 }
 
+pub trait StrJoin {
+    fn join(&self, sep: &str) -> String;
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Str(Rc<str>);
+pub struct Str(Arc<str>);
 
 impl Str {
     pub fn as_str(&self) -> &str {
@@ -34,13 +38,13 @@ impl Default for Str {
 
 impl<'a> From<&'a str> for Str {
     fn from(value: &'a str) -> Self {
-        Str(Rc::from(value))
+        Str(Arc::from(value))
     }
 }
 
 impl From<String> for Str {
     fn from(value: String) -> Self {
-        Str(Rc::from(value))
+        Str(Arc::from(value))
     }
 }
 
@@ -51,10 +55,16 @@ impl<'a> From<&'a Str> for Str {
 }
 
 impl Deref for Str {
-    type Target = Rc<str>;
+    type Target = Arc<str>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl AsRef<str> for Str {
+    fn as_ref(&self) -> &str {
+        self.as_str()
     }
 }
 
@@ -79,6 +89,12 @@ impl PartialEq<str> for Str {
 impl<'a> PartialEq<&'a str> for Str {
     fn eq(&self, other: &&'a str) -> bool {
         self.as_str() == *other
+    }
+}
+
+impl PartialEq<String> for Str {
+    fn eq(&self, other: &String) -> bool {
+        self.as_str() == other.as_str()
     }
 }
 
@@ -133,22 +149,20 @@ impl<'de> Deserialize<'de> for Str {
     }
 }
 
-pub trait StrJoin {
-    fn join(&self, sep: &str) -> String;
-}
-
 impl StrJoin for Vec<Str> {
     fn join(&self, sep: &str) -> String {
-        let mut ret = String::new();
+        match self.len() {
+            0 => String::new(),
+            _ => {
+                let mut iter = self.iter();
+                let mut ret = String::from(iter.next().unwrap().as_str());
 
-        for (idx, item) in self.iter().enumerate() {
-            if idx == self.len() - 1 {
-                ret += item.as_ref();
-            } else {
-                ret += item.as_ref();
-                ret += sep;
+                iter.for_each(|v| {
+                    ret.push_str(sep);
+                    ret.push_str(v.as_str());
+                });
+                ret
             }
         }
-        ret
     }
 }

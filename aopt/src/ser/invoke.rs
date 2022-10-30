@@ -1,24 +1,20 @@
 use std::fmt::Debug;
 
-use super::ExtractCtx;
-use super::Handler;
-use super::Services;
 use crate::astr;
 use crate::ctx::wrap_handler;
-use crate::ctx::wrap_handler2;
-use crate::ctx::wrap_handler_serde;
 use crate::ctx::Callbacks;
 use crate::ctx::Ctx;
-use crate::ctx::Serializer;
+use crate::ctx::ExtractCtx;
+use crate::ctx::Handler;
 use crate::opt::Opt;
-use crate::opt::value::Value;
-use crate::prelude::ValType;
+use crate::opt::RawValParser;
+use crate::opt::ValType;
 use crate::ser::Service;
+use crate::ser::Services;
 use crate::Error;
 use crate::HashMap;
 use crate::Str;
 use crate::Uid;
-use crate::opt::RawValParser;
 
 /// Save the callback with key [`Uid`].
 ///
@@ -94,43 +90,13 @@ impl<Set, Ret> InvokeService<Set, Ret> {
         &mut self,
         uid: Uid,
         handler: impl Handler<Set, Args, Output = Output, Error = Error> + 'static,
-    ) -> &mut Self
-    where
-        Output: Into<Option<Ret>>,
-        Args: ExtractCtx<Set, Error = Error> + 'static,
-    {
-        self.callbacks.insert(uid, wrap_handler(handler));
-        self
-    }
-
-    /// Register a callback that will called by [`Policy`](crate::policy::Policy) when option setted.
-    pub fn reg_serde<Args, Output>(
-        &mut self,
-        uid: Uid,
-        handler: impl Handler<Set, Args, Output = Output, Error = Error> + 'static,
-        serializer: impl Serializer<Output = Option<Ret>, Error = Error> + 'static,
-    ) -> &mut Self
-    where
-        Output: serde::Serialize,
-        Args: ExtractCtx<Set, Error = Error> + 'static,
-    {
-        self.callbacks
-            .insert(uid, wrap_handler_serde(handler, serializer));
-        self
-    }
-
-    /// Register a callback that will called by [`Policy`](crate::policy::Policy) when option setted.
-    pub fn reg2<Args, Output>(
-        &mut self,
-        uid: Uid,
-        handler: impl Handler<Set, Args, Output = Output, Error = Error> + 'static,
         store: impl crate::ctx::Store<Set, Output, Ret = Ret, Error = Error> + 'static,
     ) -> &mut Self
     where
         Output: Into<Option<Ret>>,
         Args: ExtractCtx<Set, Error = Error> + 'static,
     {
-        self.callbacks.insert(uid, wrap_handler2(handler, store));
+        self.callbacks.insert(uid, wrap_handler(handler, store));
         self
     }
 
@@ -167,12 +133,12 @@ where
         ctx: &Ctx,
     ) -> Result<Option<()>, Error> {
         let opt = set.get(uid).unwrap();
-        let val_ty = opt.val_ty();
-        
-        if val_ty == ValType::Int {
-            let mut parser = Value(0);
-            let val: i32 = parser.parse(opt, ctx.arg().cloned(), ctx)?;
-        }
+        // let val_ty = opt.val_ty();
+
+        // if val_ty == ValType::Int {
+        //     //let mut parser = Value(0);
+        //     //let val: i32 = parser.parse(opt, ctx.arg().cloned(), ctx)?;
+        // }
         Ok(Some(()))
     }
 }

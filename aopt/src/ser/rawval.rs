@@ -71,9 +71,13 @@ impl<V> RawValService<V> {
         self.rets.get_mut(&uid)
     }
 
-    pub fn insert(&mut self, uid: Uid, ret: V) -> &mut Self {
+    pub fn push(&mut self, uid: Uid, ret: V) -> &mut Self {
         self.rets.entry(uid).or_insert(vec![]).push(ret);
         self
+    }
+
+    pub fn set(&mut self, uid: Uid, vals: Vec<V>) -> Option<Vec<V>> {
+        self.rets.insert(uid, vals)
     }
 
     pub fn clear(&mut self) {
@@ -83,43 +87,30 @@ impl<V> RawValService<V> {
     pub fn entry(&mut self, uid: Uid) -> std::collections::hash_map::Entry<'_, Uid, Vec<V>> {
         self.rets.entry(uid)
     }
+
+    pub fn val(&self, uid: Uid) -> Result<&V, Error> {
+        self.get(uid)
+            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for RawValService")))
+    }
+
+    pub fn vals(&self, uid: Uid) -> Result<&Vec<V>, Error> {
+        self.gets(uid)
+            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for RawValService")))
+    }
+
+    pub fn val_mut(&mut self, uid: Uid) -> Result<&mut V, Error> {
+        self.get_mut(uid)
+            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for RawValService")))
+    }
+
+    pub fn vals_mut(&mut self, uid: Uid) -> Result<&mut Vec<V>, Error> {
+        self.gets_mut(uid)
+            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for RawValService")))
+    }
 }
 
 impl<V> Service for RawValService<V> {
     fn service_name() -> crate::Str {
         astr("RawValService")
-    }
-}
-
-/// Extension trait of [`ValueService`].
-pub trait RawValServiceExt<V> {
-    fn raw_val(&self, uid: Uid) -> Result<&V, Error>;
-
-    fn raw_vals(&self, uid: Uid) -> Result<&Vec<V>, Error>;
-
-    fn raw_val_mut(&mut self, uid: Uid) -> Result<&mut V, Error>;
-
-    fn raw_vals_mut(&mut self, uid: Uid) -> Result<&mut Vec<V>, Error>;
-}
-
-impl<V> RawValServiceExt<V> for RawValService<V> {
-    fn raw_val(&self, uid: Uid) -> Result<&V, Error> {
-        self.get(uid)
-            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for RawValService")))
-    }
-
-    fn raw_vals(&self, uid: Uid) -> Result<&Vec<V>, Error> {
-        self.gets(uid)
-            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for RawValService")))
-    }
-
-    fn raw_val_mut(&mut self, uid: Uid) -> Result<&mut V, Error> {
-        self.get_mut(uid)
-            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for RawValService")))
-    }
-
-    fn raw_vals_mut(&mut self, uid: Uid) -> Result<&mut Vec<V>, Error> {
-        self.gets_mut(uid)
-            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for RawValService")))
     }
 }

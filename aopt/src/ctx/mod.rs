@@ -1,22 +1,10 @@
-pub(crate) mod context;
-pub(crate) mod data;
+pub(crate) mod ctx;
 pub(crate) mod extract;
 pub(crate) mod handler;
-pub(crate) mod value;
 
-pub use self::context::Ctx;
-pub use self::context::CtxDisbale;
-pub use self::context::CtxIdx;
-pub use self::context::CtxLen;
-pub use self::context::CtxMatArg;
-pub use self::context::CtxOptName;
-pub use self::context::CtxPrefix;
-pub use self::context::CtxStyle;
-pub use self::context::CtxUid;
-pub use self::data::Data;
+pub use self::ctx::Ctx;
 pub use self::extract::ExtractCtx;
 pub use self::handler::Handler;
-pub use self::value::RawVal;
 
 use std::fmt::Debug;
 
@@ -68,101 +56,6 @@ impl<Set, Value, Error> Debug for Callbacks<Set, Value, Error> {
     }
 }
 
-/// Wrap a function and return [`Callbacks`].
-///
-/// # Note
-/// ```txt
-///  _______________________________________________________________________
-/// |   |Uid, &mut Set, &mut Services, { Other Args }| -> T: Into<Option<Value>>
-///         |
-///      wrapped
-///         |
-///         v
-///  ___________________________________________________________________
-/// |   |Uid, &mut Set, &mut Services, &Ctx| -> Option<Value>
-///         |
-///      invoked
-///         |
-///         v
-///  ______________________________________________________
-/// |   call Callbacks::invoke(&mut self, Uid, &mut Set, &mut Services, &Ctx)
-/// |       call Handler::invoke(&mut self, Uid, &mut Set, Args)
-/// |           call Args::extract(Uid, &Set, &Services, &Ctx) -> Args
-/// |           -> T: Into<Option<Value>>
-/// |       -> Option<Value>
-/// ```
-/// # Examples
-///
-/// [`InvokeService`](crate::ser::InvokeService`) will use [`wrap_handler`] wrap the handler pass to `register`.
-/// ```no_run
-/// todo!()
-/// ```
-pub fn wrap_handler<Set, Args, Output, Value, Error>(
-    mut handler: impl Handler<Set, Args, Output = Output, Error = Error> + 'static,
-) -> Callbacks<Set, Value, Error>
-where
-    Error: Into<crate::Error>,
-    Output: Into<Option<Value>>, // Callbacks' invoke returns Option<Value>
-    Args: ExtractCtx<Set, Error = Error>,
-{
-    Box::new(
-        move |uid: Uid, set: &mut Set, ser: &mut Services, ctx: &Ctx| {
-            Ok(handler
-                .invoke(uid, set, Args::extract(uid, set, ser, ctx)?)?
-                .into())
-        },
-    )
-}
-
-pub trait Serializer {
-    type Output;
-    type Error: Into<Error>;
-
-    fn serialize<S: serde::Serialize>(&mut self, value: S) -> Result<Self::Output, Self::Error>;
-}
-
-/// Wrap a function and return [`Callbacks`].
-///
-/// # Note
-/// ```txt
-///  _______________________________________________________________________
-/// |   |Uid, &mut Set, &mut Services, { Other Args }| -> T: Into<Option<Value>>
-///         |
-///      wrapped
-///         |
-///         v
-///  ___________________________________________________________________
-/// |   |Uid, &mut Set, &mut Services, &Ctx| -> Option<Value>
-///         |
-///      invoked
-///         |
-///         v
-///  ______________________________________________________
-/// |   call Callbacks::invoke(&mut self, Uid, &mut Set, &mut Services, &Ctx)
-/// |       call Handler::invoke(&mut self, Uid, &mut Set, Args)
-/// |           call Args::extract(Uid, &Set, &Services, &Ctx) -> Args
-/// |       --> T: serde::Serialize
-/// |       call Serializer::serialize<S: serde::Serialize>(&mut self, S)
-/// |       -> Option<Value>
-/// ```
-pub fn wrap_handler_serde<Set, Args, Output, Value, Error>(
-    mut handler: impl Handler<Set, Args, Output = Output, Error = Error> + 'static,
-    mut serializer: impl Serializer<Output = Option<Value>, Error = Error> + 'static,
-) -> Callbacks<Set, Value, Error>
-where
-    Error: Into<crate::Error>,
-    Output: serde::Serialize,
-    Args: ExtractCtx<Set, Error = Error>,
-{
-    Box::new(
-        move |uid: Uid, set: &mut Set, ser: &mut Services, ctx: &Ctx| {
-            let value: Output = handler.invoke(uid, set, Args::extract(uid, set, ser, ctx)?)?;
-
-            Ok(serializer.serialize(value)?)
-        },
-    )
-}
-
 pub trait Store<Set, Value> {
     type Ret;
     type Error: Into<Error>;
@@ -176,7 +69,7 @@ pub trait Store<Set, Value> {
     ) -> Result<Option<Self::Ret>, Self::Error>;
 }
 
-pub fn wrap_handler2<Set, Args, Output, Ret, Error>(
+pub fn wrap_handler<Set, Args, Output, Ret, Error>(
     mut handler: impl Handler<Set, Args, Output = Output, Error = Error> + 'static,
     mut store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static,
 ) -> Callbacks<Set, Ret, Error>

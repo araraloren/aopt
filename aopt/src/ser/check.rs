@@ -40,11 +40,13 @@ where
         set.get(*id).unwrap()
     }
 
+    /// Check if we have [`Cmd`](crate::opt::CmdCreator),
+    /// then no force required [`Pos`](crate::opt::PosCreator)@1 allowed.
     pub fn pre_check(&self, set: &mut Set) -> Result<bool, Error> {
         let has_cmd = set
             .keys()
             .iter()
-            .any(|key| Self::opt(set, key).mat_sty(OptStyle::Cmd));
+            .any(|key| Self::opt(set, key).mat_style(OptStyle::Cmd));
 
         const MAX_INDEX: usize = usize::MAX;
 
@@ -52,10 +54,10 @@ where
             for key in set.keys() {
                 let opt = Self::opt(set, key);
 
-                if opt.mat_sty(OptStyle::Pos) {
+                if opt.mat_style(OptStyle::Pos) {
                     if let Some(index) = opt.idx() {
                         let index = index.calc_index(MAX_INDEX, 1).unwrap_or(MAX_INDEX);
-                        if index == 1 && !opt.opt() {
+                        if index == 1 && !opt.optional() {
                             // if we have cmd, can not have force required POS @1
                             return Err(Error::con_can_not_insert_pos());
                         }
@@ -72,9 +74,9 @@ where
             .iter()
             .filter(|v| {
                 let opt = Self::opt(set, *v);
-                opt.mat_sty(OptStyle::Argument)
-                    || opt.mat_sty(OptStyle::Boolean)
-                    || opt.mat_sty(OptStyle::Combined)
+                opt.mat_style(OptStyle::Argument)
+                    || opt.mat_style(OptStyle::Boolean)
+                    || opt.mat_style(OptStyle::Combined)
             })
             .all(|v| Self::opt(set, v).valid()))
     }
@@ -91,7 +93,7 @@ where
         for key in set.keys() {
             let opt = Self::opt(set, key);
 
-            if opt.mat_sty(OptStyle::Pos) {
+            if opt.mat_style(OptStyle::Pos) {
                 if let Some(index) = opt.idx() {
                     match index {
                         OptIndex::Forward(_) | OptIndex::Backward(_) => {
@@ -158,7 +160,7 @@ where
         for key in set.keys() {
             let opt = Self::opt(set, key);
 
-            if opt.mat_sty(OptStyle::Cmd) {
+            if opt.mat_style(OptStyle::Cmd) {
                 valid = valid || opt.valid();
                 if valid {
                     break;
@@ -177,7 +179,7 @@ where
         Ok(set
             .keys()
             .iter()
-            .filter(|v| Self::opt(set, *v).mat_sty(OptStyle::Main))
+            .filter(|v| Self::opt(set, *v).mat_style(OptStyle::Main))
             .all(|v| Self::opt(set, v).valid()))
     }
 }

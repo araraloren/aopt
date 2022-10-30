@@ -1,13 +1,12 @@
-use std::any::Any;
-
-use super::Information;
-use super::ValParser;
 use crate::astr;
 use crate::err::Error;
+use crate::opt::Information;
 use crate::opt::OptHelp;
 use crate::opt::OptIndex;
 use crate::opt::OptParser;
-use crate::set::PreSet;
+use crate::opt::ValPolicy;
+use crate::opt::ValType;
+use crate::set::Pre;
 use crate::Str;
 use crate::Uid;
 
@@ -15,7 +14,7 @@ pub trait Config {
     fn new<Parser>(parser: &Parser, pattern: Str) -> Result<Self, Error>
     where
         Self: Sized,
-        Parser: OptParser + PreSet,
+        Parser: OptParser + Pre,
         Parser::Output: Information;
 }
 
@@ -25,40 +24,37 @@ pub trait ConfigValue {
     fn name(&self) -> Option<&Str>;
 
     /// Option's prefix string.
-    fn pre(&self) -> Option<&Str>;
+    fn prefix(&self) -> Option<&Str>;
 
     /// Option's type name.
-    fn ty(&self) -> Option<&Str>;
+    fn r#type(&self) -> Option<&Str>;
 
     /// Option's index configuration.
     fn idx(&self) -> Option<&OptIndex>;
 
     fn alias(&self) -> Option<&Vec<Str>>;
 
-    fn opt(&self) -> Option<bool>;
+    fn optional(&self) -> Option<bool>;
 
     fn hint(&self) -> &Str;
 
     fn help(&self) -> &Str;
 
     /// If option support deactivatet style.
-    fn deact(&self) -> Option<bool>;
+    fn deactivate(&self) -> Option<bool>;
 
     /// Prefix string using for parsing alias.
-    fn sp_pre(&self) -> &Vec<Str>;
+    fn sp_prefix(&self) -> &Vec<Str>;
 
-    fn parser<Opt, Val>(&self) -> Option<&ValParser<Opt, Val>>
-    where
-        Opt: 'static,
-        Val: 'static;
+    fn policy(&self) -> Option<&(ValPolicy, ValType)>;
 
     fn set_uid(&mut self, uid: Uid) -> &mut Self;
 
     fn set_name<S: Into<Str>>(&mut self, name: S) -> &mut Self;
 
-    fn set_pre<S: Into<Str>>(&mut self, prefix: S) -> &mut Self;
+    fn set_prefix<S: Into<Str>>(&mut self, prefix: S) -> &mut Self;
 
-    fn set_ty<S: Into<Str>>(&mut self, type_name: S) -> &mut Self;
+    fn set_type<S: Into<Str>>(&mut self, type_name: S) -> &mut Self;
 
     fn set_idx(&mut self, index: OptIndex) -> &mut Self;
 
@@ -74,71 +70,67 @@ pub trait ConfigValue {
 
     fn set_help<S: Into<Str>>(&mut self, help: S) -> &mut Self;
 
-    fn set_deact(&mut self, deactivate_style: bool) -> &mut Self;
+    fn set_deactivate(&mut self, deactivate_style: bool) -> &mut Self;
 
-    fn set_sppre<S: Into<Str>>(&mut self, prefix: Vec<S>) -> &mut Self;
+    fn set_spprefix<S: Into<Str>>(&mut self, prefix: Vec<S>) -> &mut Self;
 
-    fn set_parser<Opt, Val>(&mut self, parser: ValParser<Opt, Val>) -> &mut Self
-    where
-        Opt: 'static,
-        Val: 'static;
+    fn set_policy(&mut self, policy: Option<(ValPolicy, ValType)>) -> &mut Self;
 
     fn has_name(&self) -> bool;
 
-    fn has_pre(&self) -> bool;
+    fn has_prefix(&self) -> bool;
 
-    fn has_ty(&self) -> bool;
+    fn has_type(&self) -> bool;
 
     fn has_idx(&self) -> bool;
 
     fn has_alias(&self) -> bool;
 
-    fn has_opt(&self) -> bool;
+    fn has_optional(&self) -> bool;
 
-    fn has_deact(&self) -> bool;
+    fn has_deactivate(&self) -> bool;
 
-    fn has_parser(&self) -> bool;
+    fn has_policy(&self) -> bool;
 
     fn gen_uid(&self) -> Uid;
 
     fn gen_name(&self) -> Result<Str, Error>;
 
-    fn gen_pre(&self) -> Result<Str, Error>;
+    fn gen_prefix(&self) -> Result<Str, Error>;
 
-    fn gen_ty(&self) -> Result<Str, Error>;
+    fn gen_type(&self) -> Result<Str, Error>;
 
     fn gen_idx(&self) -> Result<OptIndex, Error>;
 
     fn gen_alias(&self) -> Result<Vec<(Str, Str)>, Error>;
 
-    fn gen_opt(&self) -> Result<bool, Error>;
+    fn gen_optional(&self) -> Result<bool, Error>;
 
     fn gen_opt_help(&self, deactivate_style: bool) -> Result<OptHelp, Error>;
 
-    fn gen_deact(&self) -> Result<bool, Error>;
+    fn gen_deactivate(&self) -> Result<bool, Error>;
+
+    fn gen_policy(&self) -> Option<(ValPolicy, ValType)>;
 
     fn take_uid(&mut self) -> Uid;
 
     fn take_name(&mut self) -> Option<Str>;
 
-    fn take_pre(&mut self) -> Option<Str>;
+    fn take_prefix(&mut self) -> Option<Str>;
 
-    fn take_ty(&mut self) -> Option<Str>;
+    fn take_type(&mut self) -> Option<Str>;
 
     fn take_idx(&mut self) -> Option<OptIndex>;
 
     fn take_alias(&mut self) -> Option<Vec<Str>>;
 
-    fn take_opt(&mut self) -> Option<bool>;
+    fn take_optional(&mut self) -> Option<bool>;
 
     fn take_opt_help(&mut self) -> OptHelp;
 
-    fn take_deact(&mut self) -> Option<bool>;
+    fn take_deactivate(&mut self) -> Option<bool>;
 
-    fn take_parser<Opt, Val>(&mut self) -> Option<ValParser<Opt, Val>>
-    where
-        Opt: 'static,
-        Val: 'static;
+    fn take_policy(&mut self) -> Option<(ValPolicy, ValType)>;
 }
 
 /// Contain the information used for create option instance.
@@ -164,8 +156,7 @@ pub struct OptConfig {
 
     deact: Option<bool>,
 
-    #[serde(skip)]
-    parser: Option<Box<dyn Any>>,
+    policy: Option<(ValPolicy, ValType)>,
 }
 
 impl OptConfig {
@@ -179,12 +170,12 @@ impl OptConfig {
         self
     }
 
-    pub fn with_opt(mut self, optional: bool) -> Self {
+    pub fn with_optional(mut self, optional: bool) -> Self {
         self.opt = Some(optional);
         self
     }
 
-    pub fn with_ty<S: Into<Str>>(mut self, type_name: S) -> Self {
+    pub fn with_type<S: Into<Str>>(mut self, type_name: S) -> Self {
         self.ty = Some(type_name.into());
         self
     }
@@ -194,7 +185,7 @@ impl OptConfig {
         self
     }
 
-    pub fn with_pre<S: Into<Str>>(mut self, prefix: Option<S>) -> Self {
+    pub fn with_prefix<S: Into<Str>>(mut self, prefix: Option<S>) -> Self {
         self.pre = prefix.map(|v| v.into());
         self
     }
@@ -219,17 +210,13 @@ impl OptConfig {
         self
     }
 
-    pub fn with_sppre<S: Into<Str>>(mut self, support_prefix: Vec<S>) -> Self {
+    pub fn with_spprefix<S: Into<Str>>(mut self, support_prefix: Vec<S>) -> Self {
         self.sp_pre = support_prefix.into_iter().map(|v| v.into()).collect();
         self
     }
 
-    pub fn with_parser<Opt, Val>(mut self, parser: ValParser<Opt, Val>) -> Self
-    where
-        Opt: 'static,
-        Val: 'static,
-    {
-        self.parser = Some(parser.into_any());
+    pub fn with_policy(mut self, policy: Option<(ValPolicy, ValType)>) -> Self {
+        self.policy = policy;
         self
     }
 
@@ -250,7 +237,7 @@ impl Config for OptConfig {
     fn new<Parser>(parser: &Parser, pattern: Str) -> Result<Self, Error>
     where
         Self: Sized,
-        Parser: OptParser + PreSet,
+        Parser: OptParser + Pre,
         Parser::Output: Information,
     {
         let mut output = parser.parse(pattern).map_err(|e| e.into())?;
@@ -260,10 +247,10 @@ impl Config for OptConfig {
             ret.set_name(v);
         }
         if let Some(v) = output.take_pre() {
-            ret.set_pre(v);
+            ret.set_prefix(v);
         }
         if let Some(v) = output.take_ty() {
-            ret.set_ty(v);
+            ret.set_type(v);
         }
         if let Some(v) = output.take_idx() {
             ret.set_idx(v);
@@ -272,10 +259,10 @@ impl Config for OptConfig {
             ret.set_opt(!v);
         }
         if let Some(v) = output.take_deact() {
-            ret.set_deact(v);
+            ret.set_deactivate(v);
         }
         // set the prefix, it will use later
-        ret.set_sppre(parser.pre().to_vec());
+        ret.set_spprefix(parser.prefix().to_vec());
 
         Ok(ret)
     }
@@ -290,11 +277,11 @@ impl ConfigValue for OptConfig {
         self.name.as_ref()
     }
 
-    fn pre(&self) -> Option<&Str> {
+    fn prefix(&self) -> Option<&Str> {
         self.pre.as_ref()
     }
 
-    fn ty(&self) -> Option<&Str> {
+    fn r#type(&self) -> Option<&Str> {
         self.ty.as_ref()
     }
 
@@ -306,7 +293,7 @@ impl ConfigValue for OptConfig {
         Some(self.alias.as_ref())
     }
 
-    fn opt(&self) -> Option<bool> {
+    fn optional(&self) -> Option<bool> {
         self.opt
     }
 
@@ -318,22 +305,16 @@ impl ConfigValue for OptConfig {
         self.help.help()
     }
 
-    fn deact(&self) -> Option<bool> {
+    fn deactivate(&self) -> Option<bool> {
         self.deact
     }
 
-    fn sp_pre(&self) -> &Vec<Str> {
+    fn sp_prefix(&self) -> &Vec<Str> {
         &self.sp_pre
     }
 
-    fn parser<Opt, Val>(&self) -> Option<&ValParser<Opt, Val>>
-    where
-        Opt: 'static,
-        Val: 'static,
-    {
-        self.parser
-            .as_ref()
-            .and_then(|cb| cb.downcast_ref::<ValParser<Opt, Val>>())
+    fn policy(&self) -> Option<&(ValPolicy, ValType)> {
+        self.policy.as_ref()
     }
 
     fn set_uid(&mut self, uid: Uid) -> &mut Self {
@@ -346,12 +327,12 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn set_pre<S: Into<Str>>(&mut self, prefix: S) -> &mut Self {
+    fn set_prefix<S: Into<Str>>(&mut self, prefix: S) -> &mut Self {
         self.pre = Some(prefix.into());
         self
     }
 
-    fn set_ty<S: Into<Str>>(&mut self, type_name: S) -> &mut Self {
+    fn set_type<S: Into<Str>>(&mut self, type_name: S) -> &mut Self {
         self.ty = Some(type_name.into());
         self
     }
@@ -398,22 +379,18 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn set_deact(&mut self, deactivate_style: bool) -> &mut Self {
+    fn set_deactivate(&mut self, deactivate_style: bool) -> &mut Self {
         self.deact = Some(deactivate_style);
         self
     }
 
-    fn set_sppre<S: Into<Str>>(&mut self, prefix: Vec<S>) -> &mut Self {
+    fn set_spprefix<S: Into<Str>>(&mut self, prefix: Vec<S>) -> &mut Self {
         self.sp_pre = prefix.into_iter().map(|v| v.into()).collect();
         self
     }
 
-    fn set_parser<Opt, Val>(&mut self, callback: ValParser<Opt, Val>) -> &mut Self
-    where
-        Opt: 'static,
-        Val: 'static,
-    {
-        self.parser = Some(callback.into_any());
+    fn set_policy(&mut self, policy: Option<(ValPolicy, ValType)>) -> &mut Self {
+        self.policy = policy;
         self
     }
 
@@ -421,11 +398,11 @@ impl ConfigValue for OptConfig {
         self.name.is_some()
     }
 
-    fn has_pre(&self) -> bool {
+    fn has_prefix(&self) -> bool {
         self.pre.is_some()
     }
 
-    fn has_ty(&self) -> bool {
+    fn has_type(&self) -> bool {
         self.ty.is_some()
     }
 
@@ -437,16 +414,16 @@ impl ConfigValue for OptConfig {
         !self.alias.is_empty()
     }
 
-    fn has_opt(&self) -> bool {
+    fn has_optional(&self) -> bool {
         self.opt.is_some()
     }
 
-    fn has_deact(&self) -> bool {
+    fn has_deactivate(&self) -> bool {
         self.deact.is_some()
     }
 
-    fn has_parser(&self) -> bool {
-        self.parser.is_some()
+    fn has_policy(&self) -> bool {
+        self.policy.is_some()
     }
 
     fn gen_uid(&self) -> Uid {
@@ -460,14 +437,14 @@ impl ConfigValue for OptConfig {
         Err(self.raise_missing_error("name")?)
     }
 
-    fn gen_pre(&self) -> Result<Str, Error> {
+    fn gen_prefix(&self) -> Result<Str, Error> {
         if let Some(prefix) = &self.pre {
             return Ok(prefix.clone());
         }
         Err(self.raise_missing_error("prefix")?)
     }
 
-    fn gen_ty(&self) -> Result<Str, Error> {
+    fn gen_type(&self) -> Result<Str, Error> {
         if let Some(type_name) = &self.ty {
             return Ok(type_name.clone());
         }
@@ -478,7 +455,7 @@ impl ConfigValue for OptConfig {
         if let Some(index) = self.idx.as_ref() {
             return Ok(index.clone());
         }
-        Err(Error::con_missing_index(self.gen_name()?, self.gen_ty()?))
+        Err(Error::con_missing_index(self.gen_name()?, self.gen_type()?))
     }
 
     fn gen_alias(&self) -> Result<Vec<(Str, Str)>, Error> {
@@ -503,7 +480,7 @@ impl ConfigValue for OptConfig {
         Ok(ret)
     }
 
-    fn gen_opt(&self) -> Result<bool, Error> {
+    fn gen_optional(&self) -> Result<bool, Error> {
         if let Some(optional) = self.opt {
             return Ok(optional);
         }
@@ -517,7 +494,7 @@ impl ConfigValue for OptConfig {
             let mut names = vec![String::default()];
 
             // add prefix
-            if let Some(prefix) = self.pre() {
+            if let Some(prefix) = self.prefix() {
                 names[0] += prefix.as_str();
             }
             // add deactivate style
@@ -531,7 +508,7 @@ impl ConfigValue for OptConfig {
             if let Some(alias_vec) = self.alias() {
                 for alias in alias_vec {
                     if deactivate_style {
-                        for prefix in self.sp_pre() {
+                        for prefix in self.sp_prefix() {
                             if alias.starts_with(prefix.as_str()) {
                                 if let Some(name) = alias.get(prefix.len()..alias.len()) {
                                     names.push(format!("{}/{}", prefix, name));
@@ -563,11 +540,15 @@ impl ConfigValue for OptConfig {
         Ok(ret)
     }
 
-    fn gen_deact(&self) -> Result<bool, Error> {
+    fn gen_deactivate(&self) -> Result<bool, Error> {
         if let Some(deactivate_style) = self.deact {
             return Ok(deactivate_style);
         }
         Err(self.raise_missing_error("deactivate_style")?)
+    }
+
+    fn gen_policy(&self) -> Option<(ValPolicy, ValType)> {
+        self.policy.clone()
     }
 
     fn take_uid(&mut self) -> Uid {
@@ -578,11 +559,11 @@ impl ConfigValue for OptConfig {
         self.name.take()
     }
 
-    fn take_pre(&mut self) -> Option<Str> {
+    fn take_prefix(&mut self) -> Option<Str> {
         self.pre.take()
     }
 
-    fn take_ty(&mut self) -> Option<Str> {
+    fn take_type(&mut self) -> Option<Str> {
         self.ty.take()
     }
 
@@ -594,7 +575,7 @@ impl ConfigValue for OptConfig {
         Some(std::mem::take(&mut self.alias))
     }
 
-    fn take_opt(&mut self) -> Option<bool> {
+    fn take_optional(&mut self) -> Option<bool> {
         self.opt.take()
     }
 
@@ -602,20 +583,11 @@ impl ConfigValue for OptConfig {
         std::mem::take(&mut self.help)
     }
 
-    fn take_deact(&mut self) -> Option<bool> {
+    fn take_deactivate(&mut self) -> Option<bool> {
         self.deact.take()
     }
 
-    fn take_parser<Opt, Val>(&mut self) -> Option<ValParser<Opt, Val>>
-    where
-        Opt: 'static,
-        Val: 'static,
-    {
-        if let Some(callback) = self.parser.take() {
-            if let Ok(callback) = callback.downcast::<ValParser<Opt, Val>>() {
-                return Some(*callback);
-            }
-        }
-        None
+    fn take_policy(&mut self) -> Option<(ValPolicy, ValType)> {
+        self.policy.take()
     }
 }

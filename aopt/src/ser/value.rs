@@ -1,13 +1,13 @@
 use std::marker::PhantomData;
 
 use super::Service;
-use crate::map::Map;
+use crate::map::AnyMap;
 use crate::Error;
 use crate::{astr, HashMap, Uid};
 
 #[derive(Default)]
 pub struct ValService {
-    inner: HashMap<Uid, Map>,
+    inner: HashMap<Uid, AnyMap>,
 }
 
 impl Service for ValService {
@@ -25,49 +25,84 @@ impl ValService {
         self.inner.contains_key(&uid)
     }
 
-    pub fn get<T>(&self, uid: Uid) -> Option<&T>
-    where
-        T: 'static,
-    {
-        self.inner.get(&uid).and_then(|map| map.get::<T>())
+    pub fn get<T: 'static>(&self, uid: Uid) -> Option<&T> {
+        self.gets::<T>(uid).and_then(|v| v.last())
     }
 
-    pub fn get_mut<T>(&mut self, uid: Uid) -> Option<&mut T>
-    where
-        T: 'static,
-    {
-        self.inner.get_mut(&uid).and_then(|map| map.get_mut::<T>())
+    pub fn get_mut<T: 'static>(&mut self, uid: Uid) -> Option<&mut T> {
+        self.gets_mut::<T>(uid).and_then(|v| v.last_mut())
     }
 
-    pub fn insert<T>(&mut self, uid: Uid, v: T) -> Option<T>
-    where
-        T: 'static,
-    {
-        self.inner.entry(uid).or_default().insert(v)
+    pub fn gets<T: 'static>(&self, uid: Uid) -> Option<&Vec<T>> {
+        self.inner.get(&uid).and_then(|map| map.get::<Vec<T>>())
     }
 
-    pub fn remove<T>(&mut self, uid: Uid) -> Option<T>
-    where
-        T: 'static,
-    {
-        self.inner.get_mut(&uid).and_then(|v| v.remove::<T>())
+    pub fn gets_mut<T: 'static>(&mut self, uid: Uid) -> Option<&mut Vec<T>> {
+        self.inner
+            .get_mut(&uid)
+            .and_then(|map| map.get_mut::<Vec<T>>())
     }
 
-    pub fn entry<T>(&mut self, uid: Uid) -> ValEntry<'_, T> {
-        ValEntry::new(uid, self.inner.entry(uid).or_insert(Map::default()))
+    pub fn push<T: 'static>(&mut self, uid: Uid, val: T) -> &mut Self {
+        self.inner
+            .entry(uid)
+            .or_default()
+            .entry::<Vec<T>>()
+            .or_insert(vec![])
+            .push(val);
+        self
+    }
+
+    pub fn pop<T: 'static>(&mut self, uid: Uid) -> Option<T> {
+        self.inner
+            .get_mut(&uid)
+            .and_then(|v| v.get_mut::<Vec<T>>())
+            .and_then(|v| v.pop())
+    }
+
+    pub fn set<T: 'static>(&mut self, uid: Uid, vals: Vec<T>) -> Option<Vec<T>> {
+        self.inner.entry(uid).or_default().insert(vals)
+    }
+
+    pub fn remove<T: 'static>(&mut self, uid: Uid) -> Option<Vec<T>> {
+        self.inner.get_mut(&uid).and_then(|v| v.remove::<Vec<T>>())
+    }
+
+    pub fn entry<T>(&mut self, uid: Uid) -> ValEntry<'_, Vec<T>> {
+        ValEntry::new(uid, self.inner.entry(uid).or_insert(AnyMap::default()))
+    }
+
+    pub fn val<T: 'static>(&self, uid: Uid) -> Result<&T, Error> {
+        self.get(uid)
+            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for ValueService")))
+    }
+
+    pub fn val_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut T, Error> {
+        self.get_mut(uid)
+            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for ValueService")))
+    }
+
+    pub fn vals<T: 'static>(&self, uid: Uid) -> Result<&Vec<T>, Error> {
+        self.gets(uid)
+            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for ValueService")))
+    }
+
+    pub fn vals_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error> {
+        self.get_mut(uid)
+            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for ValueService")))
     }
 }
 
 pub struct ValEntry<'a, T> {
     uid: Uid,
 
-    map: &'a mut Map,
+    map: &'a mut AnyMap,
 
     marker: PhantomData<T>,
 }
 
 impl<'a, T> ValEntry<'a, T> {
-    pub fn new(uid: Uid, map: &'a mut Map) -> Self {
+    pub fn new(uid: Uid, map: &'a mut AnyMap) -> Self {
         Self {
             uid,
             map,
@@ -109,24 +144,5 @@ where
     {
         self.map.entry::<T>().and_modify(|v| f(v));
         self
-    }
-}
-
-/// Extension trait of [`ValueService`].
-pub trait ValServiceExt {
-    fn val<V: 'static>(&self, uid: Uid) -> Result<&V, Error>;
-
-    fn val_mut<V: 'static>(&mut self, uid: Uid) -> Result<&mut V, Error>;
-}
-
-impl ValServiceExt for ValService {
-    fn val<V: 'static>(&self, uid: Uid) -> Result<&V, Error> {
-        self.get(uid)
-            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for ValueService")))
-    }
-
-    fn val_mut<V: 'static>(&mut self, uid: Uid) -> Result<&mut V, Error> {
-        self.get_mut(uid)
-            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for ValueService")))
     }
 }

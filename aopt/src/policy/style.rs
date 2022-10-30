@@ -2,8 +2,8 @@ use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::marker::PhantomData;
 
-use crate::arg::Args;
-use crate::arg::CLOpt;
+use crate::args::Args;
+use crate::args::CLOpt;
 use crate::opt::OptStyle;
 use crate::proc::NOAMatch;
 use crate::proc::NOAProcess;
@@ -108,14 +108,6 @@ impl<'a, S> OptGuess<'a, S> {
     pub fn new() -> Self {
         Self(PhantomData::default())
     }
-
-    fn bool2str(value: bool) -> Arc<OsStr> {
-        if value {
-            OsString::from("true").into()
-        } else {
-            OsString::from("false").into()
-        }
-    }
 }
 
 impl<'a, S> Guess for OptGuess<'a, S>
@@ -144,10 +136,10 @@ where
                             .with_idx(index)
                             .with_len(count)
                             .with_arg(clopt.value.clone())
-                            .with_sty(OptStyle::Argument)
-                            .with_dsb(clopt.disable)
+                            .with_style(OptStyle::Argument)
+                            .with_disable(clopt.disable)
                             .with_name(valueof("name", &clopt.name)?)
-                            .with_pre(valueof("prefix", &clopt.prefix)?),
+                            .with_prefix(valueof("prefix", &clopt.prefix)?),
                     );
                 }
             }
@@ -159,10 +151,10 @@ where
                             .with_len(count)
                             .with_consume(true)
                             .with_arg(cfg.arg().cloned())
-                            .with_sty(OptStyle::Argument)
-                            .with_dsb(clopt.disable)
+                            .with_style(OptStyle::Argument)
+                            .with_disable(clopt.disable)
                             .with_name(valueof("name", &clopt.name)?)
-                            .with_pre(valueof("prefix", &clopt.prefix)?),
+                            .with_prefix(valueof("prefix", &clopt.prefix)?),
                     );
                 }
             }
@@ -177,10 +169,10 @@ where
                                     .with_idx(index)
                                     .with_len(count)
                                     .with_arg(Some(OsString::from(name_value.1).into()))
-                                    .with_sty(OptStyle::Argument)
-                                    .with_dsb(clopt.disable)
+                                    .with_style(OptStyle::Argument)
+                                    .with_disable(clopt.disable)
                                     .with_name(name_value.0.into())
-                                    .with_pre(valueof("prefix", &clopt.prefix)?),
+                                    .with_prefix(valueof("prefix", &clopt.prefix)?),
                             );
                         }
                     }
@@ -196,10 +188,10 @@ where
                                         .with_idx(index)
                                         .with_len(count)
                                         .with_arg(None)
-                                        .with_sty(OptStyle::Combined)
-                                        .with_dsb(clopt.disable)
+                                        .with_style(OptStyle::Combined)
+                                        .with_disable(clopt.disable)
                                         .with_name(format!("{}", char).into())
-                                        .with_pre(valueof("prefix", &clopt.prefix)?),
+                                        .with_prefix(valueof("prefix", &clopt.prefix)?),
                                 );
                             }
                         }
@@ -213,10 +205,10 @@ where
                             .with_idx(index)
                             .with_len(count)
                             .with_arg(None)
-                            .with_sty(OptStyle::Boolean)
-                            .with_dsb(clopt.disable)
+                            .with_style(OptStyle::Boolean)
+                            .with_disable(clopt.disable)
                             .with_name(valueof("name", &clopt.name)?)
-                            .with_pre(valueof("prefix", &clopt.prefix)?),
+                            .with_prefix(valueof("prefix", &clopt.prefix)?),
                     );
                 }
             }
@@ -262,14 +254,6 @@ impl<'a, S> NOAGuess<'a, S> {
     pub fn new() -> Self {
         Self(PhantomData::default())
     }
-
-    fn bool2str(value: bool) -> Arc<OsStr> {
-        if value {
-            OsString::from("true").into()
-        } else {
-            OsString::from("false").into()
-        }
-    }
 }
 
 impl<'a, S> Guess for NOAGuess<'a, S>
@@ -289,33 +273,41 @@ where
         let args = cfg.args.clone();
         let pos = cfg.idx();
         let count = cfg.len();
+        let name = (pos > 0)
+            .then(|| args.get(pos.saturating_sub(1)))
+            .flatten()
+            .and_then(|v| v.to_str())
+            .map(|v| Str::from(v));
 
         match style {
             UserStyle::Main => {
                 mat = Some(
                     NOAMatch::default()
+                        .with_name(name)
                         .with_args(args)
                         .with_idx(pos)
                         .with_len(count)
-                        .with_sty(OptStyle::Main),
+                        .with_style(OptStyle::Main),
                 );
             }
             UserStyle::Pos => {
                 mat = Some(
                     NOAMatch::default()
+                        .with_name(name)
                         .with_args(args)
                         .with_idx(pos)
                         .with_len(count)
-                        .with_sty(OptStyle::Pos),
+                        .with_style(OptStyle::Pos),
                 );
             }
             UserStyle::Cmd => {
                 mat = Some(
                     NOAMatch::default()
+                        .with_name(name)
                         .with_args(args)
                         .with_idx(pos)
                         .with_len(count)
-                        .with_sty(OptStyle::Cmd),
+                        .with_style(OptStyle::Cmd),
                 );
             }
             _ => {

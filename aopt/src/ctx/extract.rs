@@ -83,3 +83,13 @@ impl_extracter_for!(A B C D E F G H I J);
 impl_extracter_for!(A B C D E F G H I J K);
 
 impl_extracter_for!(A B C D E F G H I J K L);
+
+impl_extracter_for!(A B C D E F G H I J K L M);
+
+impl_extracter_for!(A B C D E F G H I J K L M N);
+
+impl_extracter_for!(A B C D E F G H I J K L M N O);
+
+impl_extracter_for!(A B C D E F G H I J K L M N O P);
+
+impl_extracter_for!(A B C D E F G H I J K L M N O P Q);

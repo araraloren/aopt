@@ -52,3 +52,13 @@ impl_handler_for!(A B C D E F G H I J);
 impl_handler_for!(A B C D E F G H I J K);
 
 impl_handler_for!(A B C D E F G H I J K L);
+
+impl_handler_for!(A B C D E F G H I J K L M);
+
+impl_handler_for!(A B C D E F G H I J K L M N);
+
+impl_handler_for!(A B C D E F G H I J K L M N O);
+
+impl_handler_for!(A B C D E F G H I J K L M N O P);
+
+impl_handler_for!(A B C D E F G H I J K L M N O P Q);

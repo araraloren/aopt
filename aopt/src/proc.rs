@@ -1,19 +1,15 @@
-pub(crate) mod match_noa;
-pub(crate) mod match_opt;
-pub(crate) mod proc_noa;
-pub(crate) mod proc_opt;
+pub(crate) mod noa;
+pub(crate) mod opt;
 
-use std::ffi::OsString;
-
-pub use self::match_noa::NOAMatch;
-pub use self::match_opt::OptMatch;
-pub use self::proc_noa::NOAProcess;
-pub use self::proc_opt::OptProcess;
+pub use self::noa::NOAMatch;
+pub use self::noa::NOAProcess;
+pub use self::opt::OptMatch;
+pub use self::opt::OptProcess;
 
 use crate::opt::OptStyle;
 use crate::set::Set;
-use crate::Arc;
 use crate::Error;
+use crate::RawVal;
 use crate::Uid;
 
 /// [`Match`] match the configuration with [`Opt`](crate::opt::Opt).
@@ -29,9 +25,9 @@ pub trait Match {
 
     fn set_uid(&mut self, uid: Uid);
 
-    fn sty(&self) -> OptStyle;
+    fn style(&self) -> OptStyle;
 
-    fn arg(&self) -> Option<&Arc<OsString>>;
+    fn arg(&self) -> Option<&RawVal>;
 
     fn consume(&self) -> bool;
 

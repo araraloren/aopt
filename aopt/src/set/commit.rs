@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 
-use super::PreSet;
 use crate::opt::Config;
 use crate::opt::ConfigValue;
 use crate::opt::Creator;
@@ -8,8 +7,10 @@ use crate::opt::Information;
 use crate::opt::Opt;
 use crate::opt::OptIndex;
 use crate::opt::OptParser;
-use crate::opt::ValParser;
+use crate::opt::ValPolicy;
+use crate::opt::ValType;
 use crate::set::OptSet;
+use crate::set::Pre;
 use crate::set::Set;
 use crate::Error;
 use crate::Str;
@@ -46,7 +47,7 @@ impl<'a, T, Parser, Ctor> Commit<'a, T, Parser, Ctor>
 where
     T: Opt,
     Ctor: Creator<Opt = T>,
-    Parser: OptParser + PreSet,
+    Parser: OptParser + Pre,
     Parser::Output: Information,
     Ctor::Config: Config + ConfigValue + Default,
 {
@@ -70,13 +71,13 @@ where
 
     /// Set the option prefix of commit configuration.
     pub fn set_pre<S: Into<Str>>(&mut self, prefix: S) -> &mut Self {
-        self.info.set_pre(prefix);
+        self.info.set_prefix(prefix);
         self
     }
 
     /// Set the option type name of commit configuration.
     pub fn set_ty<S: Into<Str>>(&mut self, type_name: S) -> &mut Self {
-        self.info.set_ty(type_name);
+        self.info.set_type(type_name);
         self
     }
 
@@ -124,17 +125,13 @@ where
 
     /// Set the option deactivate style of commit configuration.
     pub fn set_deact(&mut self, deactivate_style: bool) -> &mut Self {
-        self.info.set_deact(deactivate_style);
+        self.info.set_deactivate(deactivate_style);
         self
     }
 
-    /// Set the option callback of commit configuration.
-    pub fn set_parser<Opt, Val>(&mut self, parser: ValParser<Opt, Val>) -> &mut Self
-    where
-        Opt: 'static,
-        Val: 'static,
-    {
-        self.info.set_parser(parser);
+    /// Set the option value policy and value type.
+    pub fn set_policy(&mut self, policy: Option<(ValPolicy, ValType)>) -> &mut Self {
+        self.info.set_policy(policy);
         self
     }
 
@@ -144,10 +141,10 @@ where
     /// And add it to referenced [`OptSet`], return the new option [`Uid`].
     pub fn run(&mut self) -> Result<Uid, Error> {
         let info = std::mem::take(&mut self.info);
-        let type_name = info.gen_ty()?;
+        let type_name = info.gen_type()?;
         let opt = self
             .set
-            .ctor(&type_name)
+            .creator(&type_name)
             .as_mut()
             .ok_or_else(|| Error::con_unsupport_option_type(type_name))?
             .new_with(info)

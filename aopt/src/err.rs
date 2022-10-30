@@ -57,7 +57,6 @@ impl Display for ErrorStr {
     }
 }
 
-#[derive(Debug)]
 pub enum Error {
     Null,
 
@@ -104,6 +103,22 @@ pub enum Error {
     SpNotSupportDeactivate(ErrorStr),
 
     InvokeError(ErrorStr),
+}
+
+impl std::fmt::Debug for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.display())
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
+
+    fn cause(&self) -> Option<&dyn std::error::Error> {
+        self.source()
+    }
 }
 
 impl Display for Error {
@@ -226,7 +241,7 @@ impl Error {
 
     pub fn display(&self) -> String {
         match self {
-            Error::Null => todo!(),
+            Error::Null => String::default(),
             Error::Failure(opt) => opt.to_string(),
             Error::CustomError(opt) => opt.to_string(),
             Error::ArgMissingName(opt) => {
@@ -257,9 +272,7 @@ impl Error {
                 format!("Syntax error! Missing index for option '{name}' with type '{type}'.")
             }
             Error::ConMissingField(field, name, r#type) => {
-                format!(
-                    "Syntax error! Missing field {field} for option '{name}' with type '{type}'."
-                )
+                format!("Syntax error! Missing `{field}` for option '{name}' with type '{type}'.")
             }
             Error::ConOptionAliasError(alias) => {
                 format!("Invalid alias '{alias}', check the option prefix or name.")
