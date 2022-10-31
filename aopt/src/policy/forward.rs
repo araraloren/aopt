@@ -42,23 +42,16 @@ impl<S> Default for Forward<S> {
     }
 }
 
-impl<S: Default + 'static> Forward<S> {
-    pub fn new_set() -> S {
-        S::default()
-    }
-
-    pub fn new_ser() -> Services {
-        services_with_default_service::<S>()
-    }
-}
-
 impl<S> Forward<S>
 where
     S::Opt: Opt,
     S: Set + OptParser + Debug + 'static,
 {
-    pub fn new() -> Self {
-        Self { ..Self::default() }
+    pub fn new(strict: bool) -> Self {
+        Self {
+            strict,
+            ..Default::default()
+        }
     }
 
     /// Enable strict mode, if argument is an option, it must be matched.

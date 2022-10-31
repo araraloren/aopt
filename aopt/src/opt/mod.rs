@@ -34,6 +34,10 @@ use crate::RawVal;
 use crate::Str;
 use crate::Uid;
 
+pub const BOOL_TRUE: &'static str = "true";
+
+pub const BOOL_FALSE: &'static str = "false";
+
 /// Option parser using for parsing option constructor string.
 pub trait OptParser {
     type Output;

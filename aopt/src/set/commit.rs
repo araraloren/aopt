@@ -17,21 +17,20 @@ use crate::Str;
 use crate::Uid;
 
 /// Create option using given configurations.
-pub struct Commit<'a, T, Parser, Ctor>
+pub struct Commit<'a, Parser, Ctor>
 where
-    T: Opt,
-    Ctor: Creator<Opt = T>,
+    Ctor: Creator,
     Parser: OptParser,
     Ctor::Config: Config + ConfigValue,
 {
     info: Ctor::Config,
-    set: &'a mut OptSet<T, Parser, Ctor>,
+    set: &'a mut OptSet<Parser, Ctor>,
 }
 
-impl<'a, T, Parser, Ctor> Debug for Commit<'a, T, Parser, Ctor>
+impl<'a, Parser, Ctor> Debug for Commit<'a, Parser, Ctor>
 where
-    T: Opt,
-    Ctor: Creator<Opt = T> + Debug,
+    Ctor::Opt: Debug,
+    Ctor: Creator + Debug,
     Parser: OptParser + Debug,
     Ctor::Config: Config + ConfigValue + Debug,
 {
@@ -43,15 +42,15 @@ where
     }
 }
 
-impl<'a, T, Parser, Ctor> Commit<'a, T, Parser, Ctor>
+impl<'a, Parser, Ctor> Commit<'a, Parser, Ctor>
 where
-    T: Opt,
-    Ctor: Creator<Opt = T>,
+    Ctor::Opt: Opt,
+    Ctor: Creator,
     Parser: OptParser + Pre,
     Parser::Output: Information,
     Ctor::Config: Config + ConfigValue + Default,
 {
-    pub fn new(set: &'a mut OptSet<T, Parser, Ctor>, info: Ctor::Config) -> Self {
+    pub fn new(set: &'a mut OptSet<Parser, Ctor>, info: Ctor::Config) -> Self {
         Self { set, info }
     }
 

@@ -81,21 +81,20 @@ where
 }
 
 /// Filter the option using given configurations.
-pub struct Filter<'a, T, Parser, Ctor>
+pub struct Filter<'a, Parser, Ctor>
 where
-    T: Opt,
-    Ctor: Creator<Opt = T>,
+    Ctor: Creator,
     Parser: OptParser,
     Ctor::Config: Config + ConfigValue,
 {
     info: Ctor::Config,
-    set: &'a OptSet<T, Parser, Ctor>,
+    set: &'a OptSet<Parser, Ctor>,
 }
 
-impl<'a, T, Parser, Ctor> Debug for Filter<'a, T, Parser, Ctor>
+impl<'a, Parser, Ctor> Debug for Filter<'a, Parser, Ctor>
 where
-    T: Opt,
-    Ctor: Creator<Opt = T> + Debug,
+    Ctor::Opt: Debug,
+    Ctor: Creator + Debug,
     Parser: OptParser + Debug,
     Ctor::Config: Config + ConfigValue + Debug,
 {
@@ -107,15 +106,15 @@ where
     }
 }
 
-impl<'a, T, Parser, Ctor> Filter<'a, T, Parser, Ctor>
+impl<'a, Parser, Ctor> Filter<'a, Parser, Ctor>
 where
-    T: Opt,
-    Ctor: Creator<Opt = T>,
+    Ctor::Opt: Opt,
+    Ctor: Creator,
     Parser: OptParser + Pre,
     Parser::Output: Information,
     Ctor::Config: Config + ConfigValue + Default,
 {
-    pub fn new(set: &'a OptSet<T, Parser, Ctor>, info: Ctor::Config) -> Self {
+    pub fn new(set: &'a OptSet<Parser, Ctor>, info: Ctor::Config) -> Self {
         Self { set, info }
     }
 
@@ -156,32 +155,31 @@ where
     }
 
     /// Find the option by configuration, return None if not found.
-    pub fn find(&self) -> Option<&'_ T> {
+    pub fn find(&self) -> Option<&'_ Ctor::Opt> {
         self.set.iter().find(|opt| self.info.mat_opt(*opt))
     }
 
     /// Find the option by configuration, return an iterator of `&T`.
-    pub fn find_all(&self) -> impl Iterator<Item = &T> {
+    pub fn find_all(&self) -> impl Iterator<Item = &Ctor::Opt> {
         self.set.iter().filter(|opt| self.info.mat_opt(*opt))
     }
 }
 
 /// Filter the option using given configurations.
-pub struct FilterMut<'a, T, Parser, Ctor>
+pub struct FilterMut<'a, Parser, Ctor>
 where
-    T: Opt,
-    Ctor: Creator<Opt = T>,
+    Ctor: Creator,
     Parser: OptParser,
     Ctor::Config: Config + ConfigValue,
 {
     info: Ctor::Config,
-    set: &'a mut OptSet<T, Parser, Ctor>,
+    set: &'a mut OptSet<Parser, Ctor>,
 }
 
-impl<'a, T, Parser, Ctor> Debug for FilterMut<'a, T, Parser, Ctor>
+impl<'a, Parser, Ctor> Debug for FilterMut<'a, Parser, Ctor>
 where
-    T: Opt,
-    Ctor: Creator<Opt = T> + Debug,
+    Ctor::Opt: Opt,
+    Ctor: Creator + Debug,
     Parser: OptParser + Debug,
     Ctor::Config: Config + ConfigValue + Debug,
 {
@@ -193,15 +191,15 @@ where
     }
 }
 
-impl<'a, T, Parser, Ctor> FilterMut<'a, T, Parser, Ctor>
+impl<'a, Parser, Ctor> FilterMut<'a, Parser, Ctor>
 where
-    T: Opt,
-    Ctor: Creator<Opt = T>,
+    Ctor::Opt: Opt,
+    Ctor: Creator,
     Parser: OptParser + Pre,
     Parser::Output: Information,
     Ctor::Config: Config + ConfigValue + Default,
 {
-    pub fn new(set: &'a mut OptSet<T, Parser, Ctor>, info: Ctor::Config) -> Self {
+    pub fn new(set: &'a mut OptSet<Parser, Ctor>, info: Ctor::Config) -> Self {
         Self { set, info }
     }
 
@@ -242,12 +240,12 @@ where
     }
 
     /// Find the option by configuration, return None if not found.
-    pub fn find(&mut self) -> Option<&mut T> {
+    pub fn find(&mut self) -> Option<&mut Ctor::Opt> {
         self.set.iter_mut().find(|opt| self.info.mat_opt(*opt))
     }
 
     /// Find the option by configuration, return an iterator of `&mut T`.
-    pub fn find_all(&mut self) -> impl Iterator<Item = &mut T> {
+    pub fn find_all(&mut self) -> impl Iterator<Item = &mut Ctor::Opt> {
         self.set.iter_mut().filter(|opt| self.info.mat_opt(*opt))
     }
 }

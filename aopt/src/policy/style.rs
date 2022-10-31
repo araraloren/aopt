@@ -1,9 +1,10 @@
-use std::ffi::OsStr;
-use std::ffi::OsString;
 use std::marker::PhantomData;
 
+use crate::RawVal;
 use crate::args::Args;
 use crate::args::CLOpt;
+use crate::opt::BOOL_FALSE;
+use crate::opt::BOOL_TRUE;
 use crate::opt::OptStyle;
 use crate::proc::NOAMatch;
 use crate::proc::NOAProcess;
@@ -67,13 +68,13 @@ pub struct GuessOptCfg<'a> {
 
     pub len: usize,
 
-    pub arg: Option<Arc<OsString>>,
+    pub arg: Option<Arc<RawVal>>,
 
     pub clopt: &'a CLOpt,
 }
 
 impl<'a> GuessOptCfg<'a> {
-    pub fn new(idx: usize, len: usize, arg: Option<Arc<OsString>>, clopt: &'a CLOpt) -> Self {
+    pub fn new(idx: usize, len: usize, arg: Option<Arc<RawVal>>, clopt: &'a CLOpt) -> Self {
         Self {
             idx,
             len,
@@ -90,7 +91,7 @@ impl<'a> GuessOptCfg<'a> {
         self.len
     }
 
-    pub fn arg(&self) -> Option<&Arc<OsString>> {
+    pub fn arg(&self) -> Option<&Arc<RawVal>> {
         self.arg.as_ref()
     }
 }
@@ -107,6 +108,14 @@ impl<'a, S> Default for OptGuess<'a, S> {
 impl<'a, S> OptGuess<'a, S> {
     pub fn new() -> Self {
         Self(PhantomData::default())
+    }
+
+    fn bool2str(value: bool) -> Arc<RawVal> {
+        if value {
+            RawVal::from(BOOL_TRUE).into()
+        } else {
+            RawVal::from(BOOL_FALSE).into()
+        }
     }
 }
 
@@ -168,7 +177,7 @@ where
                                 OptMatch::default()
                                     .with_idx(index)
                                     .with_len(count)
-                                    .with_arg(Some(OsString::from(name_value.1).into()))
+                                    .with_arg(Some(RawVal::from(name_value.1).into()))
                                     .with_style(OptStyle::Argument)
                                     .with_disable(clopt.disable)
                                     .with_name(name_value.0.into())
@@ -204,7 +213,7 @@ where
                         OptMatch::default()
                             .with_idx(index)
                             .with_len(count)
-                            .with_arg(None)
+                            .with_arg(Some(OptGuess::<S>::bool2str(!clopt.disable)))
                             .with_style(OptStyle::Boolean)
                             .with_disable(clopt.disable)
                             .with_name(valueof("name", &clopt.name)?)

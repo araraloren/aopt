@@ -38,23 +38,21 @@ use crate::Uid;
 ///     Ok(())
 /// # }
 /// ```
-pub struct OptSet<T, Parser, Ctor>
+pub struct OptSet<Parser, Ctor>
 where
-    T: Opt,
-    Ctor: Creator<Opt = T>,
+    Ctor: Creator,
     Ctor::Config: Config,
     Parser: OptParser,
 {
     parser: Parser,
-    opts: Vec<T>,
+    opts: Vec<Ctor::Opt>,
     keys: Vec<Uid>,
     creators: Vec<Ctor>,
 }
 
-impl<T, Parser, Ctor> OptSet<T, Parser, Ctor>
+impl<Parser, Ctor> OptSet<Parser, Ctor>
 where
-    T: Opt,
-    Ctor: Creator<Opt = T>,
+    Ctor: Creator,
     Ctor::Config: Config,
     Parser: OptParser,
 {
@@ -68,10 +66,10 @@ where
     }
 }
 
-impl<T, Parser, Ctor> Debug for OptSet<T, Parser, Ctor>
+impl<Parser, Ctor> Debug for OptSet<Parser, Ctor>
 where
-    T: Opt + Debug,
-    Ctor: Creator<Opt = T> + Debug,
+    Ctor::Opt: Debug,
+    Ctor: Creator + Debug,
     Ctor::Config: Config + Debug,
     Parser: OptParser + Debug,
 {
@@ -85,10 +83,9 @@ where
     }
 }
 
-impl<T, Parser, Ctor> Default for OptSet<T, Parser, Ctor>
+impl<Parser, Ctor> Default for OptSet<Parser, Ctor>
 where
-    T: Opt,
-    Ctor: Creator<Opt = T>,
+    Ctor: Creator,
     Ctor::Config: Config,
     Parser: OptParser + Default,
 {
@@ -102,10 +99,10 @@ where
     }
 }
 
-impl<T, Parser, Ctor> OptSet<T, Parser, Ctor>
+impl<Parser, Ctor> OptSet<Parser, Ctor>
 where
-    T: Opt,
-    Ctor: Creator<Opt = T>,
+    Ctor::Opt: Opt,
+    Ctor: Creator,
     Parser: OptParser + Pre,
     Parser::Output: Information,
     Ctor::Config: Config + ConfigValue + Default,
@@ -145,11 +142,11 @@ where
         &mut self.parser
     }
 
-    pub fn iter(&self) -> std::slice::Iter<'_, T> {
+    pub fn iter(&self) -> std::slice::Iter<'_, Ctor::Opt> {
         self.opts.iter()
     }
 
-    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, T> {
+    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, Ctor::Opt> {
         self.opts.iter_mut()
     }
 
@@ -157,10 +154,7 @@ where
     ///
     /// It parsing the given option string `S` using inner [`OptParser`], return an [`Commit`].
     /// For option string, reference [`OptStringParser`](crate::opt::OptStringParser).
-    pub fn add_opt<S: Into<Str>>(
-        &mut self,
-        opt_str: S,
-    ) -> Result<Commit<'_, T, Parser, Ctor>, Error> {
+    pub fn add_opt<S: Into<Str>>(&mut self, opt_str: S) -> Result<Commit<'_, Parser, Ctor>, Error> {
         Ok(Commit::new(
             self,
             <Ctor::Config as Config>::new(self.parser(), opt_str.into())?,
@@ -171,7 +165,7 @@ where
     ///
     /// It parsing the given option string `S` using inner [`OptParser`], return an [`Filter`].
     /// For option string, reference [`OptStringParser`](crate::opt::OptStringParser).
-    pub fn filter<S: Into<Str>>(&self, opt_str: S) -> Result<Filter<'_, T, Parser, Ctor>, Error> {
+    pub fn filter<S: Into<Str>>(&self, opt_str: S) -> Result<Filter<'_, Parser, Ctor>, Error> {
         Ok(Filter::new(
             self,
             <Ctor::Config as Config>::new(self.parser(), opt_str.into())?,
@@ -179,13 +173,16 @@ where
     }
 
     /// Filter the option, return the reference of first matched [`Opt`].
-    pub fn find<S: Into<Str>>(&self, opt_str: S) -> Result<Option<&T>, Error> {
+    pub fn find<S: Into<Str>>(&self, opt_str: S) -> Result<Option<&Ctor::Opt>, Error> {
         let info = <Ctor::Config as Config>::new(self.parser(), opt_str.into())?;
         Ok(self.iter().find(|opt| info.mat_opt(*opt)))
     }
 
     /// Filter the option, return an iterator of reference of [`Opt`]s.
-    pub fn find_all<S: Into<Str>>(&self, opt_str: S) -> Result<impl Iterator<Item = &T>, Error> {
+    pub fn find_all<S: Into<Str>>(
+        &self,
+        opt_str: S,
+    ) -> Result<impl Iterator<Item = &Ctor::Opt>, Error> {
         let info = <Ctor::Config as Config>::new(self.parser(), opt_str.into())?;
         Ok(self.iter().filter(move |opt| info.mat_opt(*opt)))
     }
@@ -197,7 +194,7 @@ where
     pub fn filter_mut<S: Into<Str>>(
         &mut self,
         opt_str: S,
-    ) -> Result<FilterMut<'_, T, Parser, Ctor>, Error> {
+    ) -> Result<FilterMut<'_, Parser, Ctor>, Error> {
         Ok(FilterMut::new(
             self,
             <Ctor::Config as Config>::new(self.parser(), opt_str.into())?,
@@ -205,7 +202,7 @@ where
     }
 
     /// Filter the option, return the mutable reference of first matched [`Opt`].
-    pub fn find_mut<S: Into<Str>>(&mut self, opt_str: S) -> Result<Option<&mut T>, Error> {
+    pub fn find_mut<S: Into<Str>>(&mut self, opt_str: S) -> Result<Option<&mut Ctor::Opt>, Error> {
         let info = <Ctor::Config as Config>::new(self.parser(), opt_str.into())?;
         Ok(self.iter_mut().find(|opt| info.mat_opt(*opt)))
     }
@@ -214,20 +211,20 @@ where
     pub fn find_all_mut<S: Into<Str>>(
         &mut self,
         opt_str: S,
-    ) -> Result<impl Iterator<Item = &mut T>, Error> {
+    ) -> Result<impl Iterator<Item = &mut Ctor::Opt>, Error> {
         let info = <Ctor::Config as Config>::new(self.parser(), opt_str.into())?;
         Ok(self.iter_mut().filter(move |opt| info.mat_opt(*opt)))
     }
 }
 
-impl<T, Parser, Ctor> Set for OptSet<T, Parser, Ctor>
+impl<Parser, Ctor> Set for OptSet<Parser, Ctor>
 where
-    T: Opt,
-    Ctor: Creator<Opt = T>,
+    Ctor::Opt: Opt,
+    Ctor: Creator,
     Ctor::Config: Config,
     Parser: OptParser,
 {
-    type Opt = T;
+    type Opt = Ctor::Opt;
 
     fn len(&self) -> usize {
         self.opts.len()
@@ -261,10 +258,10 @@ where
     }
 }
 
-impl<T, Parser, Ctor> OptParser for OptSet<T, Parser, Ctor>
+impl<Parser, Ctor> OptParser for OptSet<Parser, Ctor>
 where
-    T: Opt,
-    Ctor: Creator<Opt = T>,
+    Ctor::Opt: Opt,
+    Ctor: Creator,
     Parser: OptParser + Pre,
     Parser::Output: Information,
     Ctor::Config: Config + ConfigValue + Default,
@@ -278,10 +275,10 @@ where
     }
 }
 
-impl<T, Parser, Ctor> Pre for OptSet<T, Parser, Ctor>
+impl<Parser, Ctor> Pre for OptSet<Parser, Ctor>
 where
-    T: Opt,
-    Ctor: Creator<Opt = T>,
+    Ctor::Opt: Opt,
+    Ctor: Creator,
     Parser: OptParser + Pre,
     Parser::Output: Information,
     Ctor::Config: Config + ConfigValue + Default,
