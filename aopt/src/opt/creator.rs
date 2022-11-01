@@ -3,8 +3,8 @@ use crate::opt::ConfigValue;
 use crate::opt::Creator;
 use crate::opt::OptConfig;
 use crate::opt::OptStyle;
-use crate::opt::ValPolicy;
-use crate::opt::ValType;
+use crate::opt::ValAction;
+use crate::opt::ValAssoc;
 use crate::opt::ValValidator;
 use crate::Error;
 use crate::Str;
@@ -37,12 +37,12 @@ impl Creator for IntCreator {
         let deactivate_style = config.deactivate().unwrap_or(false);
         let prefix = Some(config.gen_prefix()?);
         let optional = config.take_optional().unwrap_or(true);
-        let policy = config.take_policy();
-        let policy = policy.unwrap_or((ValPolicy::Set, ValType::Int));
+        let assoc = config.take_assoc().unwrap_or(ValAssoc::Int);
+        let action = config.take_action().unwrap_or(ValAction::App);
 
         debug_assert_eq!(
-            policy.1,
-            ValType::Int,
+            assoc,
+            ValAssoc::Int,
             "The type must be ValType::Int for IntCreator"
         );
         debug_assert!(
@@ -61,10 +61,10 @@ impl Creator for IntCreator {
         }
         Ok(Self::Opt::default()
             .with_type(self.r#type())
-            .with_uid(config.gen_uid())
             .with_name(config.gen_name()?)
             .with_prefix(prefix)
-            .with_policy(policy)
+            .with_assoc(assoc)
+            .with_action(action)
             .with_style(vec![OptStyle::Argument])
             .with_opt_help(config.gen_opt_help(false)?)
             .with_alias(Some(config.gen_alias()?))

@@ -1,3 +1,4 @@
+pub(crate) mod action;
 pub(crate) mod aopt;
 pub(crate) mod config;
 pub(crate) mod creator;
@@ -5,11 +6,13 @@ pub(crate) mod help;
 pub(crate) mod index;
 pub(crate) mod info;
 pub(crate) mod parser;
-pub(crate) mod policy;
+pub(crate) mod store;
 pub(crate) mod style;
 pub(crate) mod valid;
 pub(crate) mod value;
 
+pub use self::action::ValAction;
+pub use self::action::ValAssoc;
 pub use self::aopt::AOpt;
 pub use self::config::Config;
 pub use self::config::ConfigValue;
@@ -20,8 +23,7 @@ pub use self::index::Index as OptIndex;
 pub use self::info::ConstrctInfo;
 pub use self::info::Information;
 pub use self::parser::StrParser;
-pub use self::policy::ValPolicy;
-pub use self::policy::ValType;
+pub use self::store::ValStore;
 pub use self::style::Style as OptStyle;
 pub use self::valid::RawValValidator;
 pub use self::valid::ValValidator;
@@ -49,31 +51,29 @@ pub trait OptParser {
 pub trait Opt: Debug {
     fn reset(&mut self);
 
-    fn valid(&self) -> bool;
-
-    fn is_deactivate(&self) -> bool;
-
-    fn policy(&self) -> &(ValPolicy, ValType);
-
-    fn hint(&self) -> &Str;
-
-    fn help(&self) -> &Str;
-
     fn uid(&self) -> Uid;
-
-    fn set_uid(&mut self, uid: Uid);
-
-    fn setted(&self) -> bool;
-
-    fn set_setted(&mut self, setted: bool);
 
     /// The name of option.
     fn name(&self) -> &Str;
 
     fn r#type(&self) -> Str;
 
+    fn hint(&self) -> &Str;
+
+    fn help(&self) -> &Str;
+
+    fn valid(&self) -> bool;
+
+    fn setted(&self) -> bool;
+
     /// If the option is optional.
     fn optional(&self) -> bool;
+
+    fn assoc(&self) -> &ValAssoc;
+
+    fn action(&self) -> &ValAction;
+
+    fn is_deactivate(&self) -> bool;
 
     /// The prefix of option.
     fn prefix(&self) -> Option<&Str>;
@@ -83,6 +83,10 @@ pub trait Opt: Debug {
 
     /// The alias the option.
     fn alias(&self) -> Option<&Vec<(Str, Str)>>;
+
+    fn set_uid(&mut self, uid: Uid);
+
+    fn set_setted(&mut self, setted: bool);
 
     fn mat_style(&self, style: OptStyle) -> bool;
 

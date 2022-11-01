@@ -13,7 +13,6 @@ use super::UserStyle;
 use crate::args::ArgParser;
 use crate::args::Args;
 use crate::ctx::Ctx;
-use crate::ext::services_with_default_service;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::proc::Process;

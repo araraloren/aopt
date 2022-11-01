@@ -28,6 +28,9 @@ pub struct CtxSaver {
     /// option uid
     pub uid: Uid,
 
+    /// Index of matcher
+    pub idx: usize,
+
     /// invoke context
     pub ctx: Ctx,
 }

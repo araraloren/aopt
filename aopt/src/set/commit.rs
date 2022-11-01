@@ -7,8 +7,8 @@ use crate::opt::Information;
 use crate::opt::Opt;
 use crate::opt::OptIndex;
 use crate::opt::OptParser;
-use crate::opt::ValPolicy;
-use crate::opt::ValType;
+use crate::opt::ValAction;
+use crate::opt::ValAssoc;
 use crate::set::OptSet;
 use crate::set::Pre;
 use crate::set::Set;
@@ -62,6 +62,24 @@ where
         &mut self.info
     }
 
+    /// Set the option index of commit configuration.
+    pub fn set_idx(&mut self, index: OptIndex) -> &mut Self {
+        self.info.set_idx(index);
+        self
+    }
+
+    /// Set the option value assoc type.
+    pub fn set_assoc(&mut self, assoc: ValAssoc) -> &mut Self {
+        self.info.set_assoc(assoc);
+        self
+    }
+
+    /// Set the option value action.
+    pub fn set_action(&mut self, action: ValAction) -> &mut Self {
+        self.info.set_action(action);
+        self
+    }
+
     /// Set the option name of commit configuration.
     pub fn set_name<S: Into<Str>>(&mut self, name: S) -> &mut Self {
         self.info.set_name(name);
@@ -69,20 +87,14 @@ where
     }
 
     /// Set the option prefix of commit configuration.
-    pub fn set_pre<S: Into<Str>>(&mut self, prefix: S) -> &mut Self {
+    pub fn set_prefix<S: Into<Str>>(&mut self, prefix: S) -> &mut Self {
         self.info.set_prefix(prefix);
         self
     }
 
     /// Set the option type name of commit configuration.
-    pub fn set_ty<S: Into<Str>>(&mut self, type_name: S) -> &mut Self {
+    pub fn set_type<S: Into<Str>>(&mut self, type_name: S) -> &mut Self {
         self.info.set_type(type_name);
-        self
-    }
-
-    /// Set the option index of commit configuration.
-    pub fn set_idx(&mut self, index: OptIndex) -> &mut Self {
-        self.info.set_idx(index);
         self
     }
 
@@ -105,8 +117,8 @@ where
     }
 
     /// Set the option optional of commit configuration.
-    pub fn set_opt(&mut self, optional: bool) -> &mut Self {
-        self.info.set_opt(optional);
+    pub fn set_optional(&mut self, optional: bool) -> &mut Self {
+        self.info.set_optional(optional);
         self
     }
 
@@ -123,14 +135,8 @@ where
     }
 
     /// Set the option deactivate style of commit configuration.
-    pub fn set_deact(&mut self, deactivate_style: bool) -> &mut Self {
+    pub fn set_deactivate(&mut self, deactivate_style: bool) -> &mut Self {
         self.info.set_deactivate(deactivate_style);
-        self
-    }
-
-    /// Set the option value policy and value type.
-    pub fn set_policy(&mut self, policy: Option<(ValPolicy, ValType)>) -> &mut Self {
-        self.info.set_policy(policy);
         self
     }
 

@@ -1,7 +1,7 @@
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
 )]
-pub enum ValPolicy {
+pub enum ValAction {
     Set,
 
     App,
@@ -10,21 +10,19 @@ pub enum ValPolicy {
 
     Cnt,
 
-    Bool,
-
     Null,
 }
 
-impl Default for ValPolicy {
+impl Default for ValAction {
     fn default() -> Self {
-        ValPolicy::Null
+        ValAction::Null
     }
 }
 
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
 )]
-pub enum ValType {
+pub enum ValAssoc {
     Bool,
 
     Int,
@@ -38,8 +36,8 @@ pub enum ValType {
     Null,
 }
 
-impl Default for ValType {
+impl Default for ValAssoc {
     fn default() -> Self {
-        ValType::Null
+        ValAssoc::Null
     }
 }

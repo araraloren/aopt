@@ -2,8 +2,8 @@ use crate::opt::Opt;
 use crate::opt::OptHelp;
 use crate::opt::OptIndex;
 use crate::opt::OptStyle;
-use crate::opt::ValPolicy;
-use crate::opt::ValType;
+use crate::opt::ValAction;
+use crate::opt::ValAssoc;
 use crate::opt::ValValidator;
 use crate::Error;
 use crate::RawVal;
@@ -26,7 +26,9 @@ pub struct AOpt {
 
     optional: bool,
 
-    policy: (ValPolicy, ValType),
+    assoc: ValAssoc,
+
+    action: ValAction,
 
     styles: Vec<OptStyle>,
 
@@ -65,6 +67,16 @@ impl AOpt {
         self
     }
 
+    pub fn with_assoc(mut self, assoc: ValAssoc) -> Self {
+        self.assoc = assoc;
+        self
+    }
+
+    pub fn with_action(mut self, action: ValAction) -> Self {
+        self.action = action;
+        self
+    }
+
     pub fn with_opt_help(mut self, help: OptHelp) -> Self {
         self.help = help;
         self
@@ -100,11 +112,6 @@ impl AOpt {
         self
     }
 
-    pub fn with_policy(mut self, policy: (ValPolicy, ValType)) -> Self {
-        self.policy = policy;
-        self
-    }
-
     pub fn with_deactivate_style(mut self, deactivate_style: bool) -> Self {
         self.deactivate_style = deactivate_style;
         self
@@ -129,6 +136,16 @@ impl AOpt {
 
     pub fn set_help(&mut self, help: Str) -> &mut Self {
         self.help.set_help(help);
+        self
+    }
+
+    pub fn set_assoc(&mut self, assoc: ValAssoc) -> &mut Self {
+        self.assoc = assoc;
+        self
+    }
+
+    pub fn set_action(&mut self, action: ValAction) -> &mut Self {
+        self.action = action;
         self
     }
 
@@ -177,11 +194,6 @@ impl AOpt {
         self
     }
 
-    pub fn set_policy(&mut self, policy: (ValPolicy, ValType)) -> &mut Self {
-        self.policy = policy;
-        self
-    }
-
     pub fn set_deactivate_style(&mut self, deactivate_style: bool) -> &mut Self {
         self.deactivate_style = deactivate_style;
         self
@@ -193,40 +205,8 @@ impl Opt for AOpt {
         self.set_setted(false);
     }
 
-    fn valid(&self) -> bool {
-        self.optional() || self.setted()
-    }
-
-    fn is_deactivate(&self) -> bool {
-        self.deactivate_style
-    }
-
-    fn policy(&self) -> &(ValPolicy, ValType) {
-        &self.policy
-    }
-
-    fn hint(&self) -> &Str {
-        self.help.hint()
-    }
-
-    fn help(&self) -> &Str {
-        self.help.help()
-    }
-
     fn uid(&self) -> Uid {
         self.uid
-    }
-
-    fn set_uid(&mut self, uid: Uid) {
-        self.uid = uid;
-    }
-
-    fn setted(&self) -> bool {
-        self.setted
-    }
-
-    fn set_setted(&mut self, setted: bool) {
-        self.setted = setted;
     }
 
     fn name(&self) -> &Str {
@@ -237,8 +217,36 @@ impl Opt for AOpt {
         self.r#type.clone()
     }
 
+    fn hint(&self) -> &Str {
+        self.help.hint()
+    }
+
+    fn help(&self) -> &Str {
+        self.help.help()
+    }
+
+    fn valid(&self) -> bool {
+        self.optional() || self.setted()
+    }
+
+    fn setted(&self) -> bool {
+        self.setted
+    }
+
     fn optional(&self) -> bool {
         self.optional
+    }
+
+    fn assoc(&self) -> &ValAssoc {
+        &self.assoc
+    }
+
+    fn action(&self) -> &ValAction {
+        &self.action
+    }
+
+    fn is_deactivate(&self) -> bool {
+        self.deactivate_style
     }
 
     fn prefix(&self) -> Option<&Str> {
@@ -251,6 +259,14 @@ impl Opt for AOpt {
 
     fn alias(&self) -> Option<&Vec<(Str, Str)>> {
         self.alias.as_ref()
+    }
+
+    fn set_uid(&mut self, uid: Uid) {
+        self.uid = uid;
+    }
+
+    fn set_setted(&mut self, setted: bool) {
+        self.setted = setted;
     }
 
     fn mat_style(&self, style: OptStyle) -> bool {

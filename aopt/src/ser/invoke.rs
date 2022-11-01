@@ -8,8 +8,10 @@ use crate::ctx::Ctx;
 use crate::ctx::ExtractCtx;
 use crate::ctx::Handler;
 use crate::ctx::Store;
-use crate::ctx::ValStore;
 use crate::opt::Opt;
+use crate::opt::RawValParser;
+use crate::opt::ValAssoc;
+use crate::opt::ValStore;
 use crate::ser::Service;
 use crate::ser::Services;
 use crate::Error;
@@ -145,10 +147,12 @@ where
         ctx: &Ctx,
     ) -> Result<Option<Ret>, Error> {
         if let Some(callback) = self.callbacks.get_mut(&uid) {
-            Ok(callback.invoke(uid, set, ser, ctx)?)
-        } else {
-            Ok(None)
+            return Ok(callback.invoke(uid, set, ser, ctx)?);
         }
+        unreachable!(
+            "There is no callback of {}, call `invoke_default` instead",
+            uid
+        )
     }
 
     pub fn invoke_default(
@@ -159,13 +163,41 @@ where
         ctx: &Ctx,
     ) -> Result<Option<()>, Error> {
         let opt = set.get(uid).unwrap();
-        // let val_ty = opt.val_ty();
+        let assoc = opt.assoc();
 
-        // if val_ty == ValType::Int {
-        //     //let mut parser = Value(0);
-        //     //let val: i32 = parser.parse(opt, ctx.arg().cloned(), ctx)?;
-        // }
-        Ok(Some(()))
+        match assoc {
+            ValAssoc::Bool => {
+                let mut store = ValStore::new();
+                let val = ctx.arg();
+
+                store.process(uid, set, ser, val, bool::parse(opt, val, ctx).ok())
+            }
+            ValAssoc::Int => {
+                let mut store = ValStore::new();
+                let val = ctx.arg();
+
+                store.process(uid, set, ser, val, i64::parse(opt, val, ctx).ok())
+            }
+            ValAssoc::Uint => {
+                let mut store = ValStore::new();
+                let val = ctx.arg();
+
+                store.process(uid, set, ser, val, u64::parse(opt, val, ctx).ok())
+            }
+            ValAssoc::Flt => {
+                let mut store = ValStore::new();
+                let val = ctx.arg();
+
+                store.process(uid, set, ser, val, f64::parse(opt, val, ctx).ok())
+            }
+            ValAssoc::Str => {
+                let mut store = ValStore::new();
+                let val = ctx.arg();
+
+                store.process(uid, set, ser, val, String::parse(opt, val, ctx).ok())
+            }
+            ValAssoc::Null => Ok(Some(())),
+        }
     }
 }
 

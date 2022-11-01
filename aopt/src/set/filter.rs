@@ -144,7 +144,7 @@ where
 
     /// Set the option optional of filter configuration.
     pub fn set_opt(&mut self, optional: bool) -> &mut Self {
-        self.info.set_opt(optional);
+        self.info.set_optional(optional);
         self
     }
 
@@ -229,7 +229,7 @@ where
 
     /// Set the option optional of filter configuration.
     pub fn set_opt(&mut self, optional: bool) -> &mut Self {
-        self.info.set_opt(optional);
+        self.info.set_optional(optional);
         self
     }
 

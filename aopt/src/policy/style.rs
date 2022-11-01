@@ -1,11 +1,10 @@
 use std::marker::PhantomData;
 
-use crate::RawVal;
 use crate::args::Args;
 use crate::args::CLOpt;
+use crate::opt::OptStyle;
 use crate::opt::BOOL_FALSE;
 use crate::opt::BOOL_TRUE;
-use crate::opt::OptStyle;
 use crate::proc::NOAMatch;
 use crate::proc::NOAProcess;
 use crate::proc::OptMatch;
@@ -13,6 +12,7 @@ use crate::proc::OptProcess;
 use crate::set::Set;
 use crate::Arc;
 use crate::Error;
+use crate::RawVal;
 use crate::Str;
 
 /// User set option style used for generate [`Process`](crate::proc::Process).
