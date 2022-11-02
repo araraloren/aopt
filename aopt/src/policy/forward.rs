@@ -12,6 +12,7 @@ use super::Policy;
 use super::UserStyle;
 use crate::args::ArgParser;
 use crate::args::Args;
+use crate::astr;
 use crate::ctx::Ctx;
 use crate::opt::Opt;
 use crate::opt::OptParser;
@@ -128,11 +129,13 @@ where
                     }
                 }
                 if !matched && self.get_strict() {
-                    let name = clopt.name();
+                    let default_str = astr("");
 
-                    return Err(Error::sp_invalid_option_name(
-                        name.cloned().unwrap_or_else(|| Str::default()),
-                    ));
+                    return Err(Error::sp_invalid_option_name(format!(
+                        "{}{}",
+                        clopt.prefix().unwrap_or(&default_str),
+                        clopt.name().unwrap_or(&default_str)
+                    )));
                 }
             }
 
