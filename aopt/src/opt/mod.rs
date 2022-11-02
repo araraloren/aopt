@@ -17,6 +17,7 @@ pub use self::aopt::AOpt;
 pub use self::config::Config;
 pub use self::config::ConfigValue;
 pub use self::config::OptConfig;
+pub use self::creator::BoolCreator;
 pub use self::creator::IntCreator;
 pub use self::help::Help as OptHelp;
 pub use self::index::Index as OptIndex;

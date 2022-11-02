@@ -71,20 +71,66 @@ impl Debug for ValValidator {
     }
 }
 
-impl ValValidator {
-    pub fn i64_validator() -> Self {
-        fn _validator(
-            _: &str,
-            val: Option<&RawVal>,
-            _: bool,
-            _: (usize, usize),
-        ) -> Result<bool, Error> {
-            Ok(val
-                .and_then(|v| v.to_str())
-                .and_then(|v| v.parse::<i64>().ok())
-                .is_some())
-        }
+macro_rules! num_validator {
+    ($num:ty, $name:ident) => {
+        pub fn $name() -> Self {
+            fn _validator(
+                _: &str,
+                val: Option<&RawVal>,
+                _: bool,
+                _: (usize, usize),
+            ) -> Result<bool, Error> {
+                Ok(val
+                    .and_then(|v| v.to_str())
+                    .and_then(|v| v.parse::<$num>().ok())
+                    .is_some())
+            }
 
-        Self::new(_validator)
+            Self::new(_validator)
+        }
+    };
+}
+
+impl ValValidator {
+    num_validator!(i8, i8_validator);
+
+    num_validator!(i32, i32_validator);
+
+    num_validator!(i64, i64_validator);
+
+    num_validator!(u8, u8_validator);
+
+    num_validator!(u32, u32_validator);
+
+    num_validator!(u64, u64_validator);
+
+    pub fn bool_validator(deactivate_style: bool) -> Self {
+        Self::new(
+            move |_: &str,
+                  val: Option<&RawVal>,
+                  disable: bool,
+                  _: (usize, usize)|
+                  -> Result<bool, Error> {
+                Ok(val
+                    .and_then(|v| v.to_str())
+                    .map(|v| {
+                        (deactivate_style && disable && v == crate::opt::BOOL_FALSE)
+                            || (!disable && v == crate::opt::BOOL_TRUE)
+                    })
+                    .unwrap_or_default())
+            },
+        )
+    }
+
+    pub fn str_validator() -> Self {
+        Self::new(
+            move |_: &str,
+                  val: Option<&RawVal>,
+                  _: bool,
+                  _: (usize, usize)|
+                  -> Result<bool, Error> {
+                Ok(val.map(|v| v.to_str().is_some()).unwrap_or_default())
+            },
+        )
     }
 }

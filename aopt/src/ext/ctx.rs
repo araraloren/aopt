@@ -44,6 +44,12 @@ impl<S: Set> ExtractCtx<S> for CtxUid {
 
 pub struct CtxValue<T>(T);
 
+impl<T: Debug> Debug for CtxValue<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("CtxValue").field(&self.0).finish()
+    }
+}
+
 impl<T> Deref for CtxValue<T> {
     type Target = T;
 

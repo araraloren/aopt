@@ -1,4 +1,5 @@
 use crate::opt::AOpt;
+use crate::opt::BoolCreator;
 use crate::opt::Creator;
 use crate::opt::IntCreator;
 use crate::opt::OptConfig;
@@ -28,6 +29,7 @@ pub(crate) fn aset_with_default_creators() -> ASet {
         .with_prefix("--")
         .with_prefix("-")
         .with_creator(IntCreator::boxed())
+        .with_creator(BoolCreator::boxed())
 }
 
 pub(crate) fn services_with_default_service<S: 'static>() -> Services {
