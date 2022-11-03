@@ -9,6 +9,8 @@ use crate::opt::ValAssoc;
 use crate::set::Pre;
 use crate::Str;
 
+use super::ValValidator;
+
 pub trait Config {
     fn new<Parser>(parser: &Parser, pattern: Str) -> Result<Self, Error>
     where
@@ -54,6 +56,9 @@ pub trait ConfigValue {
     /// Value action of option.
     fn action(&self) -> Option<&ValAction>;
 
+    /// Value validator for option.
+    fn validator(&self) -> Option<&ValValidator>;
+
     fn has_idx(&self) -> bool;
 
     fn has_name(&self) -> bool;
@@ -69,6 +74,8 @@ pub trait ConfigValue {
     fn has_prefix(&self) -> bool;
 
     fn has_optional(&self) -> bool;
+
+    fn has_validator(&self) -> bool;
 
     fn has_deactivate(&self) -> bool;
 
@@ -100,6 +107,8 @@ pub trait ConfigValue {
 
     fn set_spprefix<S: Into<Str>>(&mut self, prefix: Vec<S>) -> &mut Self;
 
+    fn set_validator(&mut self, validator: Option<ValValidator>) -> &mut Self;
+
     fn gen_name(&self) -> Result<Str, Error>;
 
     fn gen_type(&self) -> Result<Str, Error>;
@@ -117,6 +126,8 @@ pub trait ConfigValue {
     fn gen_deactivate(&self) -> Result<bool, Error>;
 
     fn gen_alias(&self) -> Result<Vec<(Str, Str)>, Error>;
+
+    fn gen_validator(&self) -> Result<ValValidator, Error>;
 
     fn gen_opt_help(&self, deactivate_style: bool) -> Result<OptHelp, Error>;
 
@@ -139,6 +150,8 @@ pub trait ConfigValue {
     fn take_deactivate(&mut self) -> Option<bool>;
 
     fn take_opt_help(&mut self) -> Option<OptHelp>;
+
+    fn take_validator(&mut self) -> Option<ValValidator>;
 }
 
 /// Contain the information used for create option instance.
@@ -165,6 +178,9 @@ pub struct OptConfig {
     action: Option<ValAction>,
 
     assoc: Option<ValAssoc>,
+
+    #[serde(skip)]
+    valid: Option<ValValidator>,
 }
 
 impl OptConfig {
@@ -220,6 +236,11 @@ impl OptConfig {
 
     pub fn with_action(mut self, action: Option<ValAction>) -> Self {
         self.action = action;
+        self
+    }
+
+    pub fn with_validator(mut self, validator: Option<ValValidator>) -> Self {
+        self.valid = validator;
         self
     }
 
@@ -325,6 +346,10 @@ impl ConfigValue for OptConfig {
         self.action.as_ref()
     }
 
+    fn validator(&self) -> Option<&ValValidator> {
+        self.valid.as_ref()
+    }
+
     fn has_idx(&self) -> bool {
         self.idx.is_some()
     }
@@ -355,6 +380,10 @@ impl ConfigValue for OptConfig {
 
     fn has_optional(&self) -> bool {
         self.opt.is_some()
+    }
+
+    fn has_validator(&self) -> bool {
+        self.valid.is_some()
     }
 
     fn has_deactivate(&self) -> bool {
@@ -438,6 +467,11 @@ impl ConfigValue for OptConfig {
         self
     }
 
+    fn set_validator(&mut self, validator: Option<ValValidator>) -> &mut Self {
+        self.valid = validator;
+        self
+    }
+
     fn gen_name(&self) -> Result<Str, Error> {
         if let Some(name) = &self.name {
             return Ok(name.clone());
@@ -514,6 +548,12 @@ impl ConfigValue for OptConfig {
             }
         }
         Ok(ret)
+    }
+
+    fn gen_validator(&self) -> Result<ValValidator, Error> {
+        Err(Error::raise_error(
+            "Can not generate ValValidator, please take it",
+        ))
     }
 
     fn gen_opt_help(&self, deactivate_style: bool) -> Result<OptHelp, Error> {
@@ -607,5 +647,9 @@ impl ConfigValue for OptConfig {
 
     fn take_opt_help(&mut self) -> Option<OptHelp> {
         Some(std::mem::take(&mut self.help))
+    }
+
+    fn take_validator(&mut self) -> Option<ValValidator> {
+        self.valid.take()
     }
 }

@@ -104,6 +104,10 @@ impl ValValidator {
 
     num_validator!(u64, u64_validator);
 
+    num_validator!(f32, f32_validator);
+
+    num_validator!(f64, f64_validator);
+
     pub fn bool_validator(deactivate_style: bool) -> Self {
         Self::new(
             move |_: &str,
@@ -130,6 +134,14 @@ impl ValValidator {
                   _: (usize, usize)|
                   -> Result<bool, Error> {
                 Ok(val.map(|v| v.to_str().is_some()).unwrap_or_default())
+            },
+        )
+    }
+
+    pub fn null_validator() -> Self {
+        Self::new(
+            |_: &str, _: Option<&RawVal>, _: bool, _: (usize, usize)| -> Result<bool, Error> {
+                Ok(true)
             },
         )
     }

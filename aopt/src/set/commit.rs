@@ -9,6 +9,7 @@ use crate::opt::OptIndex;
 use crate::opt::OptParser;
 use crate::opt::ValAction;
 use crate::opt::ValAssoc;
+use crate::opt::ValValidator;
 use crate::set::OptSet;
 use crate::set::Pre;
 use crate::set::Set;
@@ -131,6 +132,12 @@ where
     /// Set the option help message of commit configuration.
     pub fn set_help<S: Into<Str>>(&mut self, help: S) -> &mut Self {
         self.info.set_help(help);
+        self
+    }
+
+    /// Set the option value validator.
+    pub fn set_validator(&mut self, validator: ValValidator) -> &mut Self {
+        self.info.set_validator(Some(validator));
         self
     }
 

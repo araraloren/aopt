@@ -18,7 +18,13 @@ pub use self::config::Config;
 pub use self::config::ConfigValue;
 pub use self::config::OptConfig;
 pub use self::creator::BoolCreator;
+pub use self::creator::CmdCreator;
+pub use self::creator::FltCreator;
 pub use self::creator::IntCreator;
+pub use self::creator::MainCreator;
+pub use self::creator::PosCreator;
+pub use self::creator::StrCreator;
+pub use self::creator::UintCreator;
 pub use self::help::Help as OptHelp;
 pub use self::index::Index as OptIndex;
 pub use self::info::ConstrctInfo;
@@ -150,5 +156,11 @@ impl<Opt, Config, Err: Into<Error>> Debug
         f.debug_tuple("Creator")
             .field(&format!("{{{}}}", self.r#type()))
             .finish()
+    }
+}
+
+impl<T: Creator> From<T> for Str {
+    fn from(c: T) -> Self {
+        c.r#type()
     }
 }
