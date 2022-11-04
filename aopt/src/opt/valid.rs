@@ -115,13 +115,14 @@ impl ValValidator {
                   disable: bool,
                   _: (usize, usize)|
                   -> Result<bool, Error> {
-                Ok(val
-                    .and_then(|v| v.to_str())
-                    .map(|v| {
-                        (deactivate_style && disable && v == crate::opt::BOOL_FALSE)
-                            || (!disable && v == crate::opt::BOOL_TRUE)
-                    })
-                    .unwrap_or_default())
+                if let Some(val) = val.and_then(|v| v.to_str()) {
+                    if deactivate_style && disable && val == crate::opt::BOOL_FALSE
+                        || !deactivate_style && !disable && val == crate::opt::BOOL_TRUE
+                    {
+                        return Ok(true);
+                    }
+                }
+                Ok(false)
             },
         )
     }

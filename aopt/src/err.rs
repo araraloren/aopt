@@ -100,7 +100,7 @@ pub enum Error {
 
     SpInvalidOptionValue(ErrorStr, ErrorStr),
 
-    SpNotSupportDeactivate(ErrorStr),
+    SpDeactivateStyleError(ErrorStr, bool),
 
     InvokeError(ErrorStr),
 }
@@ -137,7 +137,7 @@ impl Error {
                 | Error::SpCMDForceRequired(_)
                 | Error::SpInvalidOptionName(_)
                 | Error::SpInvalidOptionValue(_, _)
-                | Error::SpNotSupportDeactivate(_)
+                | Error::SpDeactivateStyleError(_, _)
                 | Error::InvokeError(_)
         )
     }
@@ -231,8 +231,8 @@ impl Error {
         Self::SpInvalidOptionValue(n.into(), t.into())
     }
 
-    pub fn sp_not_support_deactivate<T: Into<ErrorStr>>(t: T) -> Self {
-        Self::SpNotSupportDeactivate(t.into())
+    pub fn sp_deactivate_style_error<T: Into<ErrorStr>>(t: T, support: bool) -> Self {
+        Self::SpDeactivateStyleError(t.into(), support)
     }
 
     pub fn invoke_error<T: Into<ErrorStr>>(t: T) -> Self {
@@ -298,8 +298,11 @@ impl Error {
             Error::SpInvalidOptionValue(name, error) => {
                 format!("Invalid option value for '{name}': {error}")
             }
-            Error::SpNotSupportDeactivate(msg) => {
-                format!("Syntax error, not support deactivate style for option '{msg}'")
+            Error::SpDeactivateStyleError(msg, support) => {
+                format!(
+                    "Syntax error, option '{msg}' {} support deactivate style",
+                    if *support { "only" } else { "not" }
+                )
             }
             Error::InvokeError(msg) => msg.to_string(),
         }
