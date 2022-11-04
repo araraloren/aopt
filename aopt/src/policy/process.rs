@@ -50,22 +50,31 @@ where
     let mut savers = vec![];
 
     for uid in keys {
-        if let Ok(Some(index)) = proc.process(uid, set) {
-            let mat = proc.mat(index).unwrap(); // always true
+        match proc.process(uid, set) {
+            Ok(index) => {
+                if let Some(index) = index {
+                    let mat = proc.mat(index).unwrap(); // always true
 
-            // save the context
-            savers.push(CtxSaver {
-                uid,
-                idx: index,
-                ctx: ctx
-                    .clone()
-                    .with_uid(uid) // current uid == uid in matcher
-                    .with_name(mat.name().cloned())
-                    .with_prefix(mat.prefix().cloned())
-                    .with_style(mat.style())
-                    .with_arg(mat.clone_arg())
-                    .with_disable(mat.disable()),
-            });
+                    // save the context
+                    savers.push(CtxSaver {
+                        uid,
+                        idx: index,
+                        ctx: ctx
+                            .clone()
+                            .with_uid(uid) // current uid == uid in matcher
+                            .with_name(mat.name().cloned())
+                            .with_prefix(mat.prefix().cloned())
+                            .with_style(mat.style())
+                            .with_arg(mat.clone_arg())
+                            .with_disable(mat.disable()),
+                    });
+                }
+            }
+            Err(e) => {
+                if !e.is_failure() {
+                    return Err(e);
+                }
+            }
         }
     }
     if proc.is_mat() && invoke {
@@ -99,31 +108,40 @@ where
     let keys: Vec<Uid> = set.keys().to_vec();
 
     for uid in keys {
-        if let Ok(Some(index)) = proc.process(uid, set) {
-            let mat = proc.mat(index).unwrap(); // always true
+        match proc.process(uid, set) {
+            Ok(index) => {
+                if let Some(index) = index {
+                    let mat = proc.mat(index).unwrap(); // always true
 
-            // save the context
-            let ctx = ctx
-                .clone()
-                .with_style(mat.style())
-                .with_name(mat.name().cloned())
-                .with_uid(uid); // current uid == uid in matcher
-            let ret = match inv_ser.has(uid) {
-                true => {
-                    // callback in InvokeService
-                    inv_ser.invoke(uid, set, ser, &ctx)?
-                }
-                false => {
-                    // call `invoke_default` if callback not exist
-                    inv_ser.invoke_default(uid, set, ser, &ctx)?
-                }
-            };
+                    // save the context
+                    let ctx = ctx
+                        .clone()
+                        .with_style(mat.style())
+                        .with_name(mat.name().cloned())
+                        .with_uid(uid); // current uid == uid in matcher
+                    let ret = match inv_ser.has(uid) {
+                        true => {
+                            // callback in InvokeService
+                            inv_ser.invoke(uid, set, ser, &ctx)?
+                        }
+                        false => {
+                            // call `invoke_default` if callback not exist
+                            inv_ser.invoke_default(uid, set, ser, &ctx)?
+                        }
+                    };
 
-            // rteurn None means NOA not match
-            if ret.is_none() {
-                proc.undo(set)?;
+                    // rteurn None means NOA not match
+                    if ret.is_none() {
+                        proc.undo(set)?;
+                    }
+                    proc.reset();
+                }
             }
-            proc.reset();
+            Err(e) => {
+                if !e.is_failure() {
+                    return Err(e);
+                }
+            }
         }
     }
     Ok(vec![])
