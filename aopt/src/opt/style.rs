@@ -2,7 +2,7 @@
 ///
 #[non_exhaustive]
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize, Hash,
 )]
 pub enum Style {
     Null,
@@ -32,5 +32,36 @@ pub enum Style {
 impl Default for Style {
     fn default() -> Self {
         Self::Null
+    }
+}
+
+impl std::fmt::Display for Style {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Style::Null => {
+                write!(f, "Style::Null")
+            }
+            Style::Pos => {
+                write!(f, "Style::Pos")
+            }
+            Style::Cmd => {
+                write!(f, "Style::Cmd")
+            }
+            Style::Main => {
+                write!(f, "Style::Main")
+            }
+            Style::Boolean => {
+                write!(f, "Style::Boolean")
+            }
+            Style::Argument => {
+                write!(f, "Style::Argument")
+            }
+            Style::Combined => {
+                write!(f, "Style::Combined")
+            }
+            Style::Reserve(val) => {
+                write!(f, "Style::Reserve({val})")
+            }
+        }
     }
 }

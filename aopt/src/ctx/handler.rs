@@ -13,7 +13,7 @@ macro_rules! impl_handler_for {
         impl<Set, Func, Out, Err, $($arg,)*> Handler<Set, ($($arg,)*)> for Func
         where
             Err: Into<Error>,
-            Func: FnMut(Uid, &mut Set, $($arg),*) -> Result<Out, Err> + 'static,
+            Func: FnMut(Uid, &mut Set, $($arg),*) -> Result<Out, Err>,
         {
             type Output = Out;
             type Error = Err;

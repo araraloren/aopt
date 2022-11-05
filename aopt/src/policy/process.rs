@@ -1,3 +1,5 @@
+use tracing::trace;
+
 use crate::ctx::Ctx;
 use crate::opt::Opt;
 use crate::policy::CtxSaver;
@@ -23,11 +25,11 @@ where
     let uid = saver.uid;
     Ok(match inv_ser.has(uid) {
         true => {
-            // callback in InvokeService
+            trace!("Invoke callback of Opt{{{uid}}} with {:?}", saver.ctx);
             inv_ser.invoke(uid, set, ser, &saver.ctx)?
         }
         false => {
-            // call `invoke_default` if callback not exist
+            trace!("Invoke default of Opt{{{uid}}} with {:?}", saver.ctx);
             inv_ser.invoke_default(uid, set, ser, &saver.ctx)?
         }
     })

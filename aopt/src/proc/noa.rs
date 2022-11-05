@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
+use tracing::trace;
 
 use crate::args::Args;
 use crate::opt::Opt;
@@ -176,6 +177,14 @@ where
                 matched = false;
             }
         }
+        trace!(
+            "Matching {{name: {:?}, index: {:?} style: {}}} with Opt{{{}}}: {}",
+            self.name(),
+            self.idx(),
+            self.style(),
+            opt.hint(),
+            matched,
+        );
         Ok(matched)
     }
 }
@@ -283,6 +292,7 @@ where
                 || opt.mat_style(OptStyle::Pos);
 
             if style_check {
+                trace!("Start process NOA{{{}}} eg. {}", opt.uid(), opt.hint());
                 if let Some(mat) = self.matches.as_mut() {
                     if !mat.is_mat() && mat.process(opt)? {
                         self.consume_arg = self.consume_arg || mat.consume();

@@ -19,40 +19,68 @@ use crate::HashMap;
 use crate::Str;
 use crate::Uid;
 
-/// Save the callback with key [`Uid`].
+/// Keep the variable length arguments handler in [`HashMap`] with key [`Uid`].
 ///
 /// # Example
 /// ```rust
 /// # use aopt::prelude::*;
 /// # use aopt::Error;
-/// # use aopt::Result;
-/// # use ctx::Data;
+/// # use aopt::Arc;
+/// # use aopt::RawVal;
+/// # use std::ops::Deref;
 /// #
-/// pub struct Arg(Str);
+/// # fn main() -> Result<(), Error> {
+///    pub struct Count(usize);
 ///
-/// // implement ExtractCtx for your type
-/// impl ExtractCtx<SimSet> for Arg {
-///     type Error = Error;
+///    // implement ExtractCtx for your type
+///    impl ExtractCtx<ASet> for Count {
+///        type Error = Error;
 ///
-///     fn extract(_uid: Uid, _set: &SimSet, _ser: &Services, ctx: &Ctx) -> Result<Self> {
-///         Ok(Arg(ctx.arg().cloned().unwrap_or_default()))
-///     }
-/// }
+///        fn extract(_uid: Uid, _set: &ASet, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+///            Ok(Self(ctx.args().len()))
+///        }
+///    }
+///    let mut ser = Services::default().with(DataService::default());
+///    let mut is = InvokeService::<ASet>::new();
+///    let mut set = ASet::default();
+///    let args = Arc::new(Args::new(["--foo", "bar", "doo"].into_iter()));
+///    let ctx = Ctx::default().with_args(args);
 ///
-/// fn main() -> Result<()> {
-///     let mut is = InvokeService::<SimSet, Str>::new();
+///    ser.ser_data_mut()?.insert(ser::Data::new(42i64));
+///    // you can register callback into InvokeService
+///    is.register(
+///        0,
+///        |uid: Uid, _set: &mut ASet| -> Result<Option<()>, Error> {
+///            println!("Calling the handler of {{{uid}}}");
+///            Ok(None)
+///        },
+///    )
+///    .or_default();
+///    is.register(
+///        1,
+///        |uid: Uid, _set: &mut ASet, cnt: Count| -> Result<Option<()>, Error> {
+///            println!("Calling the handler of {{{uid}}}");
+///            assert_eq!(cnt.0, 3);
+///            Ok(None)
+///        },
+///    )
+///    .or_default();
+///    is.register(
+///        2,
+///        |uid: Uid, _set: &mut ASet, data: ser::Data<i64>| -> Result<Option<()>, Error> {
+///            println!("Calling the handler of {{{uid}}}");
+///            assert_eq!(data.as_ref(), &42);
+///            Ok(None)
+///        },
+///    )
+///    .or_default();
 ///
-///     // you can register callback into InvokeService
-///     is.reg(0, |_uid: Uid, _set: &mut SimSet| Ok(None));
-///     is.reg(0, |_uid: Uid, _set: &mut SimSet, arg: Arg| {
-///         Ok(Some(arg.0.clone()))
-///     });
-///     is.reg(0, |_uid: Uid, _set: &mut SimSet, data: Data<i64>| {
-///         Ok(Some(Str::from(data.to_string())))
-///     });
-///
-///     Ok(())
-/// }
+///    is.invoke(0, &mut set, &mut ser, &ctx)?;
+///    is.invoke(1, &mut set, &mut ser, &ctx)?;
+///    is.invoke(2, &mut set, &mut ser, &ctx)?;
+/// #
+/// #   Ok(())
+/// # }
 /// ```
 pub struct InvokeService<Set, Ret = ()> {
     callbacks: HashMap<Uid, Callbacks<Set, Ret, Error>>,
@@ -155,6 +183,10 @@ where
         )
     }
 
+    /// Invoke the default option handler of [`InvokeService`].
+    ///
+    /// The default handler will parsing the argument into associated type value,
+    /// then save the value to [`ValService`] through default [`ValStore`].
     pub fn invoke_default(
         &mut self,
         uid: Uid,
@@ -164,38 +196,15 @@ where
     ) -> Result<Option<()>, Error> {
         let opt = set.get(uid).unwrap();
         let assoc = opt.assoc();
+        let val = ctx.arg();
+        let mut store = ValStore::default();
 
         match assoc {
-            ValAssoc::Bool => {
-                let mut store = ValStore::new();
-                let val = ctx.arg();
-
-                store.process(uid, set, ser, val, bool::parse(opt, val, ctx).ok())
-            }
-            ValAssoc::Int => {
-                let mut store = ValStore::new();
-                let val = ctx.arg();
-
-                store.process(uid, set, ser, val, i64::parse(opt, val, ctx).ok())
-            }
-            ValAssoc::Uint => {
-                let mut store = ValStore::new();
-                let val = ctx.arg();
-
-                store.process(uid, set, ser, val, u64::parse(opt, val, ctx).ok())
-            }
-            ValAssoc::Flt => {
-                let mut store = ValStore::new();
-                let val = ctx.arg();
-
-                store.process(uid, set, ser, val, f64::parse(opt, val, ctx).ok())
-            }
-            ValAssoc::Str => {
-                let mut store = ValStore::new();
-                let val = ctx.arg();
-
-                store.process(uid, set, ser, val, String::parse(opt, val, ctx).ok())
-            }
+            ValAssoc::Bool => store.process(uid, set, ser, val, bool::parse(opt, val, ctx).ok()),
+            ValAssoc::Int => store.process(uid, set, ser, val, i64::parse(opt, val, ctx).ok()),
+            ValAssoc::Uint => store.process(uid, set, ser, val, u64::parse(opt, val, ctx).ok()),
+            ValAssoc::Flt => store.process(uid, set, ser, val, f64::parse(opt, val, ctx).ok()),
+            ValAssoc::Str => store.process(uid, set, ser, val, String::parse(opt, val, ctx).ok()),
             ValAssoc::Null => Ok(Some(())),
         }
     }

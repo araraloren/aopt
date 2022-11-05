@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
+use tracing::trace;
 
 use super::Service;
 use crate::astr;
@@ -50,6 +51,7 @@ where
 
         const MAX_INDEX: usize = usize::MAX;
 
+        trace!("Pre Check {{has_cmd: {}}}", has_cmd);
         if has_cmd {
             for key in set.keys() {
                 let opt = Self::opt(set, key);
@@ -69,6 +71,7 @@ where
     }
 
     pub fn opt_check(&self, set: &mut Set) -> Result<bool, Error> {
+        trace!("Opt Check, call valid on all Opt ...");
         Ok(set
             .keys()
             .iter()
@@ -121,6 +124,11 @@ where
         }
         let mut names = vec![];
 
+        trace!(
+            "Pos Check, index: {{{:?}}}, float: {{{:?}}}",
+            index_map,
+            float_vec
+        );
         for (_, uids) in index_map.iter() {
             // if any of POS is force required, then it must set by user
             let mut pos_valid = true;
@@ -169,6 +177,11 @@ where
                 }
             }
         }
+        trace!(
+            "Cmd Check, any one of the cmd matched: {} on {} Cmds",
+            valid,
+            names.len()
+        );
         if !valid && !names.is_empty() {
             return Err(Error::sp_cmd_force_require(names.join(" | ")));
         }
@@ -176,6 +189,7 @@ where
     }
 
     pub fn post_check(&self, set: &mut Set) -> Result<bool, Error> {
+        trace!("Post Check, call valid on Main ...");
         Ok(set
             .keys()
             .iter()

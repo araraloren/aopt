@@ -37,7 +37,7 @@ impl Ctx {
         self
     }
 
-    pub fn with_len(mut self, total: usize) -> Self {
+    pub fn with_total(mut self, total: usize) -> Self {
         self.total = total;
         self
     }
@@ -82,8 +82,12 @@ impl Ctx {
         self.index
     }
 
-    pub fn len(&self) -> usize {
+    pub fn total(&self) -> usize {
         self.total
+    }
+
+    pub fn name(&self) -> Option<&Str> {
+        self.name.as_ref()
     }
 
     pub fn style(&self) -> OptStyle {
@@ -126,7 +130,7 @@ impl Ctx {
     }
 
     /// The total of matching context.
-    pub fn set_len(&mut self, total: usize) -> &mut Self {
+    pub fn set_total(&mut self, total: usize) -> &mut Self {
         self.total = total;
         self
     }

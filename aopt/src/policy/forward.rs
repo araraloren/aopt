@@ -24,7 +24,6 @@ use crate::set::Pre;
 use crate::set::Set;
 use crate::Arc;
 use crate::Error;
-use crate::Str;
 
 #[derive(Debug, Clone)]
 pub struct Forward<S> {
@@ -103,7 +102,7 @@ where
         let mut iter = args.iter().enumerate();
         let mut opt_ctx = Ctx::default();
 
-        opt_ctx.set_args(args.clone()).set_len(args_len);
+        opt_ctx.set_args(args.clone()).set_total(args_len);
 
         while let Some((idx, (opt, arg))) = iter.next() {
             let mut matched = false;
@@ -154,7 +153,7 @@ where
         let noa_len = noa_args.len();
         let mut noa_ctx = Ctx::default();
 
-        noa_ctx.set_args(noa_args.clone()).set_len(noa_args.len());
+        noa_ctx.set_args(noa_args.clone()).set_total(noa_args.len());
 
         // when style is pos, noa index is [1..=len]
         if noa_args.len() > 0 {

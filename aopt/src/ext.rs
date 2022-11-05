@@ -24,11 +24,39 @@ use crate::RawVal;
 pub mod ctx;
 pub mod ser;
 
+pub trait ServicesExt {
+    fn ser_val(&self) -> Result<&ValService, Error>;
+
+    fn ser_val_mut(&mut self) -> Result<&mut ValService, Error>;
+
+    fn ser_data(&self) -> Result<&DataService, Error>;
+
+    fn ser_data_mut(&mut self) -> Result<&mut DataService, Error>;
+
+    fn ser_invoke<S: 'static>(&self) -> Result<&InvokeService<S>, Error>;
+
+    fn ser_invoke_mut<S: 'static>(&mut self) -> Result<&mut InvokeService<S>, Error>;
+
+    fn ser_rawval<T: 'static>(&self) -> Result<&RawValService<T>, Error>;
+
+    fn ser_rawval_mut<T: 'static>(&mut self) -> Result<&mut RawValService<T>, Error>;
+}
+
 pub type ACreator = Box<dyn Creator<Opt = AOpt, Config = OptConfig, Error = Error>>;
 
 pub type ASet = OptSet<StrParser, ACreator>;
 
 pub type AForward = Forward<ASet>;
+
+impl AForward {
+    pub fn default_set(&self) -> ASet {
+        aset_with_default_creators()
+    }
+
+    pub fn default_ser(&self) -> Services {
+        services_with_default_service::<ASet>()
+    }
+}
 
 pub(crate) fn aset_with_default_creators() -> ASet {
     ASet::default()
@@ -51,14 +79,4 @@ pub(crate) fn services_with_default_service<S: 'static>() -> Services {
         .with(InvokeService::<S>::new())
         .with(RawValService::<RawVal>::new())
         .with(ValService::new())
-}
-
-impl AForward {
-    pub fn default_set(&self) -> ASet {
-        aset_with_default_creators()
-    }
-
-    pub fn default_ser(&self) -> Services {
-        services_with_default_service::<ASet>()
-    }
 }

@@ -2,7 +2,6 @@ use std::fmt::Debug;
 
 use super::Service;
 use crate::astr;
-use crate::map::Entry;
 use crate::Error;
 use crate::HashMap;
 use crate::Uid;

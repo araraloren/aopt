@@ -154,17 +154,19 @@ where
             }
             UserStyle::Argument => {
                 if clopt.value.is_none() {
-                    matches.push(
-                        OptMatch::default()
-                            .with_idx(index)
-                            .with_len(count)
-                            .with_consume(true)
-                            .with_arg(cfg.arg().cloned())
-                            .with_style(OptStyle::Argument)
-                            .with_disable(clopt.disable)
-                            .with_name(valueof("name", &clopt.name)?)
-                            .with_prefix(valueof("prefix", &clopt.prefix)?),
-                    );
+                    if cfg.arg().is_some() {
+                        matches.push(
+                            OptMatch::default()
+                                .with_idx(index)
+                                .with_len(count)
+                                .with_consume(true)
+                                .with_arg(cfg.arg().cloned())
+                                .with_style(OptStyle::Argument)
+                                .with_disable(clopt.disable)
+                                .with_name(valueof("name", &clopt.name)?)
+                                .with_prefix(valueof("prefix", &clopt.prefix)?),
+                        );
+                    }
                 }
             }
             UserStyle::EmbeddedValue => {

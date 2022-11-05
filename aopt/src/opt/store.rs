@@ -13,6 +13,12 @@ use crate::Uid;
 
 pub struct ValStore<Ret>(PhantomData<Ret>);
 
+impl<Ret> Default for ValStore<Ret> {
+    fn default() -> Self {
+        Self(Default::default())
+    }
+}
+
 impl<Ret: 'static> ValStore<Ret> {
     pub fn new() -> Self {
         Self(PhantomData::default())
