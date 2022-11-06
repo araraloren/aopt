@@ -139,6 +139,16 @@ impl ValValidator {
         )
     }
 
+    pub fn some_validator() -> Self {
+        Self::new(
+            move |_: &str,
+                  val: Option<&RawVal>,
+                  _: bool,
+                  _: (usize, usize)|
+                  -> Result<bool, Error> { Ok(val.is_some()) },
+        )
+    }
+
     pub fn null_validator() -> Self {
         Self::new(
             |_: &str, _: Option<&RawVal>, _: bool, _: (usize, usize)| -> Result<bool, Error> {

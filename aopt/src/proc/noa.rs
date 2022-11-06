@@ -19,6 +19,8 @@ pub struct NOAMatch<S> {
 
     args: Arc<Args>,
 
+    arg: Option<Arc<RawVal>>,
+
     style: OptStyle,
 
     noa_index: usize,
@@ -37,6 +39,7 @@ impl<S> Debug for NOAMatch<S> {
         f.debug_struct("NOAMatch")
             .field("name", &self.name)
             .field("args", &self.args)
+            .field("arg", &self.arg)
             .field("style", &self.style)
             .field("noa_index", &self.noa_index)
             .field("noa_total", &self.noa_total)
@@ -52,6 +55,7 @@ impl<S> Default for NOAMatch<S> {
         Self {
             name: None,
             args: Arc::new(Args::default()),
+            arg: None,
             style: OptStyle::default(),
             noa_index: 0,
             noa_total: 0,
@@ -59,6 +63,7 @@ impl<S> Default for NOAMatch<S> {
             matched_index: None,
             marker: Default::default(),
         }
+        .reset_arg()
     }
 }
 
@@ -87,6 +92,14 @@ impl<S> NOAMatch<S> {
         self.style = style;
         self
     }
+
+    pub fn reset_arg(mut self) -> Self {
+        self.arg = self
+            .args
+            .get(self.idx().saturating_sub(1))
+            .map(|v| v.clone().into());
+        self
+    }
 }
 
 impl<S> NOAMatch<S> {
@@ -108,6 +121,10 @@ impl<S> NOAMatch<S> {
 
     pub fn name(&self) -> Option<&Str> {
         self.name.as_ref()
+    }
+
+    pub fn clone_arg(&self) -> Option<Arc<RawVal>> {
+        self.arg.clone()
     }
 }
 
@@ -141,7 +158,7 @@ where
     }
 
     fn arg(&self) -> Option<&RawVal> {
-        self.args.get(self.idx().saturating_sub(1))
+        self.arg.as_ref().map(|v| v.as_ref())
     }
 
     fn consume(&self) -> bool {
@@ -178,12 +195,13 @@ where
             }
         }
         trace!(
-            "Matching {{name: {:?}, index: {:?} style: {}}} with Opt{{{}}}: {}",
+            "Matching {{name: {:?}, index: {:?} style: {}, arg: {:?}}} with NOA{{{}}}: {:?}",
             self.name(),
             self.idx(),
             self.style(),
+            self.arg(),
             opt.hint(),
-            matched,
+            self.matched_uid,
         );
         Ok(matched)
     }
@@ -292,7 +310,12 @@ where
                 || opt.mat_style(OptStyle::Pos);
 
             if style_check {
-                trace!("Start process NOA{{{}}} eg. {}", opt.uid(), opt.hint());
+                trace!(
+                    "Start process NOA{{{}}} eg. {}@{:?}",
+                    opt.uid(),
+                    opt.hint(),
+                    opt.idx()
+                );
                 if let Some(mat) = self.matches.as_mut() {
                     if !mat.is_mat() && mat.process(opt)? {
                         self.consume_arg = self.consume_arg || mat.consume();

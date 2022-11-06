@@ -2,7 +2,6 @@
 #[cfg_attr(unix, path = "args/unix.rs")]
 pub(crate) mod osstr_ext;
 
-use std::fmt::write;
 use std::ops::Deref;
 use std::ops::DerefMut;
 

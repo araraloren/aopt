@@ -45,7 +45,7 @@ pub(crate) fn typeid<T: 'static>() -> TypeId {
 
 pub mod prelude {
     pub use crate::args::Args;
-    pub use crate::ctx::wrap_handler;
+    pub use crate::ctx::wrap_storer;
     pub use crate::ctx::Callback;
     pub use crate::ctx::Callbacks;
     pub use crate::ctx::Ctx;

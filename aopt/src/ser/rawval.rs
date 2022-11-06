@@ -6,35 +6,39 @@ use crate::Error;
 use crate::HashMap;
 use crate::Uid;
 
-/// Save the value with the key [`Uid`].
+/// Keep the raw value in [`HashMap`] with key [`Uid`].
+///
+/// The service internal using [`Vec`].
 ///
 /// # Examples
 /// ```rust
-/// # extern crate aopt as test_crate;
+/// # use aopt::prelude::*;
+/// # use aopt::Error;
 /// #
-/// # use test_crate::ser::ValueService;
-/// # use test_crate::ser::ValueServiceExt;
+/// # fn main() -> Result<(), Error> {
+///  let mut rvs = RawValService::<i32>::new();
+///
+///  rvs.push(0, 42);
+///  rvs.push(0, 36);
+///
+///  assert_eq!(rvs.val(0)?, &36);
+///  assert_eq!(rvs.vals(0)?, &vec![42, 36]);
+///
+///  rvs.set(0, vec![12, 24]);
+///
+///  assert_eq!(rvs.vals(0)?, &vec![12, 24]);
 /// #
-/// # fn main() {
-///     let mut vs = ValueService::<i32>::new();
-///
-///     vs.ins(0, 42);
-///     vs.ins(0, 48);
-///
-///     assert!(vs.has(0));
-///     assert_eq!(vs.val(0).unwrap(), &48);
-///     assert_eq!(vs.vals(0).unwrap(), &vec![42, 48]);
+/// # Ok(())
 /// # }
-///
 /// ```
 #[derive(Default)]
-pub struct RawValService<V> {
-    rets: HashMap<Uid, Vec<V>>,
+pub struct RawValService<T> {
+    rets: HashMap<Uid, Vec<T>>,
 }
 
-impl<V> Debug for RawValService<V>
+impl<T> Debug for RawValService<T>
 where
-    V: Debug,
+    T: Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RawValService")
@@ -43,7 +47,7 @@ where
     }
 }
 
-impl<V> RawValService<V> {
+impl<T> RawValService<T> {
     pub fn new() -> Self {
         Self {
             rets: HashMap::default(),
@@ -54,28 +58,36 @@ impl<V> RawValService<V> {
         self.rets.contains_key(&uid)
     }
 
-    pub fn get(&self, uid: Uid) -> Option<&V> {
+    pub fn get(&self, uid: Uid) -> Option<&T> {
         self.rets.get(&uid).and_then(|v| v.last())
     }
 
-    pub fn gets(&self, uid: Uid) -> Option<&Vec<V>> {
+    pub fn gets(&self, uid: Uid) -> Option<&Vec<T>> {
         self.rets.get(&uid)
     }
 
-    pub fn get_mut(&mut self, uid: Uid) -> Option<&mut V> {
+    pub fn get_mut(&mut self, uid: Uid) -> Option<&mut T> {
         self.rets.get_mut(&uid).and_then(|v| v.last_mut())
     }
 
-    pub fn gets_mut(&mut self, uid: Uid) -> Option<&mut Vec<V>> {
+    pub fn gets_mut(&mut self, uid: Uid) -> Option<&mut Vec<T>> {
         self.rets.get_mut(&uid)
     }
 
-    pub fn push(&mut self, uid: Uid, ret: V) -> &mut Self {
+    pub fn push(&mut self, uid: Uid, ret: T) -> &mut Self {
         self.rets.entry(uid).or_insert(vec![]).push(ret);
         self
     }
 
-    pub fn set(&mut self, uid: Uid, vals: Vec<V>) -> Option<Vec<V>> {
+    pub fn pop(&mut self, uid: Uid) -> Option<T> {
+        self.rets.entry(uid).or_insert(vec![]).pop()
+    }
+
+    pub fn remove(&mut self, uid: Uid) -> Option<Vec<T>> {
+        self.rets.remove(&uid)
+    }
+
+    pub fn set(&mut self, uid: Uid, vals: Vec<T>) -> Option<Vec<T>> {
         self.rets.insert(uid, vals)
     }
 
@@ -83,32 +95,32 @@ impl<V> RawValService<V> {
         self.rets.clear();
     }
 
-    pub fn entry(&mut self, uid: Uid) -> std::collections::hash_map::Entry<'_, Uid, Vec<V>> {
+    pub fn entry(&mut self, uid: Uid) -> std::collections::hash_map::Entry<'_, Uid, Vec<T>> {
         self.rets.entry(uid)
     }
 
-    pub fn val(&self, uid: Uid) -> Result<&V, Error> {
+    pub fn val(&self, uid: Uid) -> Result<&T, Error> {
         self.get(uid)
             .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for RawValService")))
     }
 
-    pub fn vals(&self, uid: Uid) -> Result<&Vec<V>, Error> {
+    pub fn vals(&self, uid: Uid) -> Result<&Vec<T>, Error> {
         self.gets(uid)
             .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for RawValService")))
     }
 
-    pub fn val_mut(&mut self, uid: Uid) -> Result<&mut V, Error> {
+    pub fn val_mut(&mut self, uid: Uid) -> Result<&mut T, Error> {
         self.get_mut(uid)
             .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for RawValService")))
     }
 
-    pub fn vals_mut(&mut self, uid: Uid) -> Result<&mut Vec<V>, Error> {
+    pub fn vals_mut(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error> {
         self.gets_mut(uid)
             .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for RawValService")))
     }
 }
 
-impl<V> Service for RawValService<V> {
+impl<T> Service for RawValService<T> {
     fn service_name() -> crate::Str {
         astr("RawValService")
     }

@@ -177,11 +177,7 @@ where
                 }
             }
         }
-        trace!(
-            "Cmd Check, any one of the cmd matched: {} on {} Cmds",
-            valid,
-            names.len()
-        );
+        trace!("Cmd Check, any one of the cmd matched: {}", valid);
         if !valid && !names.is_empty() {
             return Err(Error::sp_cmd_force_require(names.join(" | ")));
         }

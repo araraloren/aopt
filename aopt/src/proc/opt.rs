@@ -204,10 +204,11 @@ where
             }
         }
         trace!(
-            "Matching {{name: {:?}, prefix: {:?}, style: {}}} with Opt{{{}}}: {}",
+            "Matching {{name: {:?}, prefix: {:?}, style: {}, arg: {:?}}} with Opt{{{}}}: {}",
             self.name(),
             self.prefix(),
             self.style(),
+            self.arg(),
             opt.hint(),
             matched,
         );
@@ -310,7 +311,13 @@ where
                 || opt.mat_style(OptStyle::Combined);
 
             if style_check {
-                trace!("Start process Opt{{{}}} eg. {}", opt.uid(), opt.hint());
+                trace!(
+                    "Start process OPT{{{}}} eg. {} with type: {}, action: {}",
+                    opt.uid(),
+                    opt.hint(),
+                    opt.assoc(),
+                    opt.action(),
+                );
                 for (index, mat) in self.matches.iter_mut().enumerate() {
                     if !mat.is_mat() && mat.process(opt)? {
                         self.consume_arg = self.consume_arg || mat.consume();

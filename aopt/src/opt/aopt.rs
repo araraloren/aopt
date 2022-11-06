@@ -32,6 +32,8 @@ pub struct AOpt {
 
     styles: Vec<OptStyle>,
 
+    ignore_name_mat: bool,
+
     deactivate_style: bool,
 
     index: Option<OptIndex>,
@@ -54,6 +56,11 @@ impl AOpt {
 
     pub fn with_type(mut self, r#type: Str) -> Self {
         self.r#type = r#type;
+        self
+    }
+
+    pub fn with_ignore_name(mut self) -> Self {
+        self.ignore_name_mat = true;
         self
     }
 
@@ -278,7 +285,11 @@ impl Opt for AOpt {
     }
 
     fn mat_name(&self, name: Option<&Str>) -> bool {
-        name.iter().all(|&v| v == self.name())
+        if self.ignore_name_mat {
+            true
+        } else {
+            name.iter().all(|&v| v == self.name())
+        }
     }
 
     fn mat_prefix(&self, prefix: Option<&Str>) -> bool {

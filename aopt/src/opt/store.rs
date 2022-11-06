@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use tracing::trace;
 
 use crate::ctx::Store;
 use crate::opt::Opt;
@@ -46,6 +47,7 @@ where
     ) -> Result<Option<Self::Ret>, Self::Error> {
         let has_value = val.is_some();
 
+        trace!("Store the value of {{{uid}}} ==> {:?}", raw);
         // Set the value if return Some(Value)
         if let Some(val) = val {
             let raw_ser = ser.service_mut::<RawValService<RawVal>>()?;

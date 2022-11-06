@@ -97,7 +97,24 @@ where
     }
 }
 
-pub fn wrap_handler<Set, Args, Output, Ret, Error>(
+/// Wrap only the handler, user can custom the value store logical.
+pub fn wrap_handler<Set, Args, Ret, Error>(
+    mut handler: impl Handler<Set, Args, Output = Option<Ret>, Error = Error> + 'static,
+) -> Callbacks<Set, Ret, Error>
+where
+    Error: Into<crate::Error>,
+    Args: ExtractCtx<Set, Error = Error>,
+{
+    Box::new(
+        move |uid: Uid, set: &mut Set, ser: &mut Services, ctx: &Ctx| {
+            let val = handler.invoke(uid, set, Args::extract(uid, set, ser, ctx)?)?;
+            Ok(val)
+        },
+    )
+}
+
+/// Wrap the handler and store.
+pub fn wrap_storer<Set, Args, Output, Ret, Error>(
     mut handler: impl Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
     mut store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static,
 ) -> Callbacks<Set, Ret, Error>

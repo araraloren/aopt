@@ -5,6 +5,44 @@ use crate::map::AnyMap;
 use crate::Error;
 use crate::{astr, HashMap, Uid};
 
+/// Keep any type value in [`HashMap`] with key [`Uid`].
+///
+/// # Example
+/// ```rust
+/// # use aopt::prelude::*;
+/// # use aopt::Error;
+/// #
+/// # fn main() -> Result<(), Error> {
+/// #[derive(Debug, PartialEq, Eq)]
+/// pub struct MyData;
+///
+/// let mut vs = ValService::default();
+///
+/// vs.push(0, 42i64);
+/// vs.push(0, 36i64);
+/// vs.push(1, 28u64);
+/// vs.push(1, 14u64);
+/// vs.push(2, MyData {});
+/// vs.push(2, 3.14f64);
+///
+/// assert_eq!(vs.val::<i64>(0)?, &36i64);
+/// assert_eq!(vs.vals::<i64>(0)?, &vec![42, 36]);
+/// assert_eq!(vs.contain_type::<i64>(0), true);
+/// assert_eq!(vs.contain_type::<i32>(0), false);
+///
+/// assert_eq!(vs.val::<u64>(1)?, &14u64);
+/// assert_eq!(vs.vals::<u64>(1)?, &vec![28, 14]);
+/// assert_eq!(vs.contain_type::<u64>(1), true);
+/// assert_eq!(vs.contain_type::<f64>(1), false);
+///
+/// assert_eq!(vs.val::<MyData>(2)?, &MyData {});
+/// assert_eq!(vs.val::<f64>(2)?, &3.14f64);
+/// assert_eq!(vs.contain_type::<MyData>(2), true);
+/// assert_eq!(vs.contain_type::<f64>(2), true);
+/// #
+/// #    Ok(())
+/// # }
+/// ```
 #[derive(Default)]
 pub struct ValService {
     inner: HashMap<Uid, AnyMap>,
@@ -21,8 +59,15 @@ impl ValService {
         Self::default()
     }
 
-    pub fn contain<T>(&self, uid: Uid) -> bool {
+    pub fn contain(&self, uid: Uid) -> bool {
         self.inner.contains_key(&uid)
+    }
+
+    pub fn contain_type<T: 'static>(&self, uid: Uid) -> bool {
+        self.inner
+            .get(&uid)
+            .map(|v| v.contain::<Vec<T>>())
+            .unwrap_or_default()
     }
 
     pub fn get<T: 'static>(&self, uid: Uid) -> Option<&T> {

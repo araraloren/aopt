@@ -120,6 +120,7 @@ where
                         .clone()
                         .with_style(mat.style())
                         .with_name(mat.name().cloned())
+                        .with_arg(mat.clone_arg())
                         .with_uid(uid); // current uid == uid in matcher
                     let ret = match inv_ser.has(uid) {
                         true => {

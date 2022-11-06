@@ -360,11 +360,11 @@ impl Creator for PosCreator {
     fn new_with(&mut self, mut config: Self::Config) -> Result<Self::Opt, Self::Error> {
         let deactivate_style = config.deactivate().unwrap_or(false);
         let optional = config.take_optional().unwrap_or(true);
-        let assoc = config.take_assoc().unwrap_or(ValAssoc::Bool);
+        let assoc = config.take_assoc().unwrap_or(ValAssoc::Noa);
         let action = config.take_action().unwrap_or(ValAction::App);
         let validator = config
             .take_validator()
-            .unwrap_or(ValValidator::bool_validator(false));
+            .unwrap_or(ValValidator::some_validator());
 
         if let Some(v) = config.alias() {
             debug_assert!(v.is_empty(), "Pos option not support alias configruation")
@@ -389,7 +389,8 @@ impl Creator for PosCreator {
             .with_style(vec![OptStyle::Pos])
             .with_opt_help(config.gen_opt_help(deactivate_style)?)
             .with_optional(optional)
-            .with_validator(validator))
+            .with_validator(validator)
+            .with_ignore_name())
     }
 }
 
@@ -419,11 +420,11 @@ impl Creator for CmdCreator {
 
     fn new_with(&mut self, mut config: Self::Config) -> Result<Self::Opt, Self::Error> {
         let deactivate_style = config.deactivate().unwrap_or(false);
-        let assoc = config.take_assoc().unwrap_or(ValAssoc::Bool);
-        let action = config.take_action().unwrap_or(ValAction::App);
+        let assoc = config.take_assoc().unwrap_or(ValAssoc::Noa);
+        let action = config.take_action().unwrap_or(ValAction::Set);
         let validator = config
             .take_validator()
-            .unwrap_or(ValValidator::bool_validator(false));
+            .unwrap_or(ValValidator::some_validator());
 
         if let Some(v) = config.alias() {
             debug_assert!(v.is_empty(), "Cmd option not support alias configruation")
@@ -523,6 +524,7 @@ impl Creator for MainCreator {
             .with_style(vec![OptStyle::Main])
             .with_opt_help(config.gen_opt_help(deactivate_style)?)
             .with_optional(true)
-            .with_validator(validator))
+            .with_validator(validator)
+            .with_ignore_name())
     }
 }

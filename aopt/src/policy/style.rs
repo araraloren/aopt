@@ -298,7 +298,8 @@ where
                         .with_args(args)
                         .with_idx(pos)
                         .with_len(count)
-                        .with_style(OptStyle::Main),
+                        .with_style(OptStyle::Main)
+                        .reset_arg(),
                 );
             }
             UserStyle::Pos => {
@@ -308,7 +309,8 @@ where
                         .with_args(args)
                         .with_idx(pos)
                         .with_len(count)
-                        .with_style(OptStyle::Pos),
+                        .with_style(OptStyle::Pos)
+                        .reset_arg(),
                 );
             }
             UserStyle::Cmd => {
@@ -318,7 +320,8 @@ where
                         .with_args(args)
                         .with_idx(pos)
                         .with_len(count)
-                        .with_style(OptStyle::Cmd),
+                        .with_style(OptStyle::Cmd)
+                        .reset_arg(),
                 );
             }
             _ => {
