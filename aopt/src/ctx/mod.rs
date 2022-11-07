@@ -5,6 +5,7 @@ pub(crate) mod handler;
 pub use self::ctx::Ctx;
 pub use self::extract::ExtractCtx;
 pub use self::handler::Handler;
+pub use self::handler::SerHandler;
 
 use std::fmt::Debug;
 
@@ -98,6 +99,22 @@ where
 }
 
 /// Wrap only the handler, user can custom the value store logical.
+pub fn wrap_ser_handler<Set, Args, Ret, Error>(
+    mut handler: impl SerHandler<Set, Args, Output = Option<Ret>, Error = Error> + 'static,
+) -> Callbacks<Set, Ret, Error>
+where
+    Error: Into<crate::Error>,
+    Args: ExtractCtx<Set, Error = Error>,
+{
+    Box::new(
+        move |uid: Uid, set: &mut Set, ser: &mut Services, ctx: &Ctx| {
+            let val = handler.invoke(uid, set, ser, Args::extract(uid, set, ser, ctx)?)?;
+            Ok(val)
+        },
+    )
+}
+
+/// Wrap only the handler, user can custom the value store logical.
 pub fn wrap_handler<Set, Args, Ret, Error>(
     mut handler: impl Handler<Set, Args, Output = Option<Ret>, Error = Error> + 'static,
 ) -> Callbacks<Set, Ret, Error>
@@ -114,7 +131,25 @@ where
 }
 
 /// Wrap the handler and store.
-pub fn wrap_storer<Set, Args, Output, Ret, Error>(
+pub fn wrap_ser_store<Set, Args, Output, Ret, Error>(
+    mut handler: impl SerHandler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
+    mut store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static,
+) -> Callbacks<Set, Ret, Error>
+where
+    Error: Into<crate::Error>,
+    Args: ExtractCtx<Set, Error = Error>,
+{
+    Box::new(
+        move |uid: Uid, set: &mut Set, ser: &mut Services, ctx: &Ctx| {
+            let val = handler.invoke(uid, set, ser, Args::extract(uid, set, ser, ctx)?)?;
+
+            Ok(store.process(uid, set, ser, ctx.arg(), val)?)
+        },
+    )
+}
+
+/// Wrap the handler and store.
+pub fn wrap_store<Set, Args, Output, Ret, Error>(
     mut handler: impl Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
     mut store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static,
 ) -> Callbacks<Set, Ret, Error>

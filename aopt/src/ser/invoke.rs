@@ -4,11 +4,14 @@ use tracing::trace;
 
 use crate::astr;
 use crate::ctx::wrap_handler;
-use crate::ctx::wrap_storer;
+use crate::ctx::wrap_ser_handler;
+use crate::ctx::wrap_ser_store;
+use crate::ctx::wrap_store;
 use crate::ctx::Callbacks;
 use crate::ctx::Ctx;
 use crate::ctx::ExtractCtx;
 use crate::ctx::Handler;
+use crate::ctx::SerHandler;
 use crate::ctx::Store;
 use crate::opt::Opt;
 use crate::opt::RawValParser;
@@ -134,6 +137,38 @@ impl<Set, Ret> InvokeService<Set, Ret> {
     ///         |
     ///         v
     /// |   call Callbacks::invoke(&mut self, Uid, &mut Set, &mut Services, &Ctx)
+    /// |       call Handler::invoke(&mut self, Uid, &mut Set, &mut Services, Args)
+    /// |           call Args::extract(Uid, &Set, &Services, &Ctx) -> Args
+    /// |           -> Result<Option<Ret>, Error>
+    /// ```
+    pub fn register_serhandler<Args>(
+        &mut self,
+        uid: Uid,
+        handler: impl SerHandler<Set, Args, Output = Option<Ret>, Error = Error> + 'static,
+    ) -> &mut Self
+    where
+        Args: ExtractCtx<Set, Error = Error> + 'static,
+    {
+        self.callbacks.insert(uid, wrap_ser_handler(handler));
+        self
+    }
+
+    /// Register a callback that will called by [`Policy`](crate::policy::Policy) when option setted.
+    ///
+    /// The [`InvokeService`]  will call the [`invoke`](crate::ctx::Handler::invoke).
+    /// # Note
+    /// ```txt
+    /// |   handler: |Uid, &mut Set, &mut Services, { Other Args }| -> Result<Option<Ret>, Error>
+    ///         |
+    ///      wrapped
+    ///         |
+    ///         v
+    /// |   |Uid, &mut Set, &mut Services, &Ctx| -> Option<Ret>
+    ///         |
+    ///      invoked
+    ///         |
+    ///         v
+    /// |   call Callbacks::invoke(&mut self, Uid, &mut Set, &mut Services, &Ctx)
     /// |       call Handler::invoke(&mut self, Uid, &mut Set, Args)
     /// |           call Args::extract(Uid, &Set, &Services, &Ctx) -> Args
     /// |           -> Result<Option<Ret>, Error>
@@ -147,6 +182,43 @@ impl<Set, Ret> InvokeService<Set, Ret> {
         Args: ExtractCtx<Set, Error = Error> + 'static,
     {
         self.callbacks.insert(uid, wrap_handler(handler));
+        self
+    }
+
+    /// Register a callback that will called by [`Policy`](crate::policy::Policy) when option setted.
+    ///
+    /// The [`InvokeService`] first call the [`invoke`](crate::ctx::Handler::invoke), then
+    /// call the [`process`](crate::ctx::Store::process) with the return value.
+    /// # Note
+    /// ```txt
+    /// |   handler: |Uid, &mut Set, &mut Services, { Other Args }| -> Result<Option<Value>, Error>
+    /// |   storer: |Uid, &mut Set, &mut Services, Option<&RawVal>, Option<Value>| -> Result<Option<Ret>, Error>
+    ///         |
+    ///      wrapped
+    ///         |
+    ///         v
+    /// |   |Uid, &mut Set, &mut Services, &Ctx| -> Option<Value>
+    ///         |
+    ///      invoked
+    ///         |
+    ///         v
+    /// |   call Callbacks::invoke(&mut self, Uid, &mut Set, &mut Services, &Ctx)
+    /// |       call Handler::invoke(&mut self, Uid, &mut Set, &mut Services, Args)
+    /// |           call Args::extract(Uid, &Set, &Services, &Ctx) -> Args
+    /// |           -> Result<Option<Value>, Error>
+    /// |       -> call Store::process(Uid, &Set, Option<&RawVal>, Option<Value>)
+    /// |           -> Result<Option<Ret>, Error>
+    /// ```
+    pub fn register_serstore<Args, Output>(
+        &mut self,
+        uid: Uid,
+        handler: impl SerHandler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
+        store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static,
+    ) -> &mut Self
+    where
+        Args: ExtractCtx<Set, Error = Error> + 'static,
+    {
+        self.callbacks.insert(uid, wrap_ser_store(handler, store));
         self
     }
 
@@ -183,7 +255,7 @@ impl<Set, Ret> InvokeService<Set, Ret> {
     where
         Args: ExtractCtx<Set, Error = Error> + 'static,
     {
-        self.callbacks.insert(uid, wrap_storer(handler, store));
+        self.callbacks.insert(uid, wrap_store(handler, store));
         self
     }
 
@@ -208,6 +280,24 @@ where
         Args: ExtractCtx<Set, Error = Error> + 'static,
     {
         Register {
+            ser: self,
+            handler: Some(handler),
+            register: false,
+            uid,
+            marker: PhantomData::default(),
+        }
+    }
+
+    pub fn register_ser<Args, Output, H>(
+        &mut self,
+        uid: Uid,
+        handler: H,
+    ) -> SerRegister<'_, Set, Ret, H, Args, Output>
+    where
+        H: SerHandler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
+        Args: ExtractCtx<Set, Error = Error> + 'static,
+    {
+        SerRegister {
             ser: self,
             handler: Some(handler),
             register: false,
@@ -274,6 +364,68 @@ impl<S, V> Service for InvokeService<S, V> {
     }
 }
 
+pub struct SerRegister<'a, Set, Ret, Handler, Args, Output> {
+    ser: &'a mut InvokeService<Set, Ret>,
+
+    handler: Option<Handler>,
+
+    register: bool,
+
+    uid: Uid,
+
+    marker: PhantomData<(Args, Output)>,
+}
+
+impl<'a, Args, Set, Ret, Output, H> SerRegister<'a, Set, Ret, H, Args, Output>
+where
+    Set: crate::set::Set,
+    Set::Opt: Opt,
+    Ret: Default + 'static,
+    H: SerHandler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
+    Args: ExtractCtx<Set, Error = Error> + 'static,
+{
+    /// Register the handler with given [`Store`] implementation.
+    pub fn with(&mut self, store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static) {
+        if !self.register {
+            let handler = self.handler.take().unwrap();
+
+            self.ser.register_serstore(self.uid, handler, store);
+            self.register = true;
+        }
+    }
+}
+
+impl<'a, Args, Set, Ret, Output, H> SerRegister<'a, Set, Ret, H, Args, Output>
+where
+    Output: 'static,
+    Set: crate::set::Set,
+    Set::Opt: Opt,
+    Ret: Default + 'static,
+    H: SerHandler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
+    Args: ExtractCtx<Set, Error = Error> + 'static,
+{
+    /// Register the handler with default [`ValStore`].
+    pub fn with_default(&mut self) {
+        if !self.register {
+            let handler = self.handler.take().unwrap();
+
+            self.ser
+                .register_serstore(self.uid, handler, ValStore::default());
+            self.register = true;
+        }
+    }
+}
+
+impl<'a, Set, Ret, Handler, Args, Output> Drop
+    for SerRegister<'a, Set, Ret, Handler, Args, Output>
+{
+    fn drop(&mut self) {
+        if !self.register {
+            panic!("Consider call or_default or and_then on Register")
+        }
+    }
+}
+
 pub struct Register<'a, Set, Ret, Handler, Args, Output> {
     ser: &'a mut InvokeService<Set, Ret>,
 
@@ -295,7 +447,7 @@ where
     Args: ExtractCtx<Set, Error = Error> + 'static,
 {
     /// Register the handler with given [`Store`] implementation.
-    pub fn and_then(&mut self, store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static) {
+    pub fn with(&mut self, store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static) {
         if !self.register {
             let handler = self.handler.take().unwrap();
 
@@ -315,7 +467,7 @@ where
     Args: ExtractCtx<Set, Error = Error> + 'static,
 {
     /// Register the handler with default [`ValStore`].
-    pub fn or_default(&mut self) {
+    pub fn with_default(&mut self) {
         if !self.register {
             let handler = self.handler.take().unwrap();
 

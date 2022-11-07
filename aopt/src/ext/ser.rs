@@ -1,3 +1,5 @@
+//! The structs hold the data collect from [`Services`](crate::ser::Services).
+//! They are all implemented [`ExtractCtx`].
 use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::Debug;
@@ -55,6 +57,74 @@ impl ServicesExt for Services {
 /// Simple data wrapper of user data stored in [`DataService`](crate::ser::DataService).
 ///
 /// UserData internally use [Arc](crate::Arc), it is cheap to clone.
+/// Before used it in `handler` which register in [`InvokeService`](crate::ser::InvokeService),
+/// you need add it to [`DataService`].
+///
+/// # Examples
+/// ```rust
+/// # use aopt::prelude::*;
+/// # use aopt::Arc;
+/// # use aopt::Error;
+/// # use aopt::RawVal;
+/// # use std::cell::RefCell;
+/// # use std::ops::Deref;
+/// # fn main() -> Result<(), Error> {
+/// #
+/// #[derive(Debug, Clone)]
+/// pub struct PosList(RefCell<Vec<RawVal>>);
+///
+/// impl PosList {
+///     pub fn add_pos(&self, val: RawVal) {
+///         self.0.borrow_mut().push(val);
+///     }
+///
+///     pub fn test_pos(&self, test: Vec<RawVal>) {
+///         assert_eq!(self.0.borrow().len(), test.len());
+///         for (vall, valr) in self.0.borrow().iter().zip(test.iter()) {
+///             assert_eq!(vall, valr);
+///         }
+///     }
+/// }
+///
+///
+/// let mut policy = AForward::default();
+/// let mut set = policy.default_set();
+/// let mut ser = policy.default_ser();
+///
+/// ser.ser_data_mut()?
+///     .insert(ser::Data::new(PosList(RefCell::new(vec![]))));
+/// set.add_opt("--bool=b/")?.run()?;
+/// set.add_opt("pos_v=p@*")?.run()?;
+/// ser.ser_invoke_mut::<ASet>()?
+///     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
+///         assert_eq!(&true, disable.deref());
+///         Ok(Some(false))
+///     })
+///     .with_default();
+/// ser.ser_invoke_mut::<ASet>()?
+///     .register(
+///         1,
+///         |_: Uid, _: &mut ASet, _: &mut ASer, mut raw_val: ctx::RawVal, data: ser::Data<PosList>| {
+///             data.add_pos(std::mem::take(&mut raw_val));
+///             Ok(Some(true))
+///         },
+///     )
+///     .with_default();
+///
+/// let args = Args::new(["--/bool", "set", "42", "foo", "bar"].into_iter());
+///
+/// policy.parse(Arc::new(args), &mut ser, &mut set)?;
+///
+/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
+/// ser.ser_data()?.data::<ser::Data<PosList>>()?.test_pos(
+///     ["set", "42", "foo", "bar"]
+///         .into_iter()
+///         .map(RawVal::from)
+///         .collect(),
+/// );
+/// # Ok(())
+/// # }
+/// ```
 pub struct Data<T: ?Sized>(Arc<T>);
 
 impl<T> Data<T> {
@@ -148,7 +218,53 @@ where
 }
 
 /// Simple wrapper of option value stored in [`ValueService`](crate::ser::ValueService).
-/// It will clone the value from [`ValueService`](crate::ser::ValueService)
+///
+/// It will clone the value from [`ValueService`](crate::ser::ValueService) which set by option.
+/// # Examples
+/// ```rust
+/// # use aopt::prelude::*;
+/// # use aopt::Arc;
+/// # use aopt::Error;
+/// # use std::ops::Deref;
+/// #
+/// # fn main() -> Result<(), Error> {
+/// let mut policy = AForward::default();
+/// let mut set = policy.default_set();
+/// let mut ser = policy.default_ser();
+///
+/// set.add_opt("--number=b")?.run()?;
+/// set.add_opt("pos_v=p@*")?.run()?;
+/// ser.ser_invoke_mut::<ASet>()?
+///     .register(0, |_: Uid, _: &mut ASet, disable: ctx::Disable| {
+///         assert_eq!(&false, disable.deref(),);
+///         Ok(Some(true))
+///     })
+///     .with_default();
+/// ser.ser_invoke_mut::<ASet>()?
+///     .register_ser(
+///         1,
+///         |_: Uid, set: &mut ASet, ser: &mut ASer, ctx: Ctx, val: ctx::Value<String>| {
+///             let number_flag = ser::Value::<bool>::extract(0, set, ser, &ctx)?;
+///
+///             if *number_flag.deref() {
+///                 if val.chars().all(|v| v.is_ascii_digit()) {
+///                     return Ok(None);
+///                 }
+///             }
+///             Ok(Some(true))
+///         },
+///     )
+///     .with_default();
+///
+/// let args = Args::new(["--number", "set", "42", "foo", "bar"].into_iter());
+///
+/// policy.parse(Arc::new(args), &mut ser, &mut set)?;
+///
+/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &true);
+/// assert_eq!(ser.ser_val()?.vals::<bool>(1)?.len(), 3);
+/// # Ok(())
+/// # }
+/// ```
 pub struct Value<T>(T);
 
 impl<T> Value<T> {

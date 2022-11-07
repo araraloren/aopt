@@ -1,4 +1,4 @@
-//! The structs hold the data copied from [`Cxt`](crate::ctx::Ctx).
+//! The structs hold the data from [`Cxt`](crate::ctx::Ctx).
 //! They are all implemented [`ExtractCtx`].
 //!
 //! # Examples
@@ -19,7 +19,7 @@
 //! set.add_opt("pos_2=p@2")?.run()?;
 //! set.add_opt("pos_v=p@>2")?.run()?;
 //! ser.ser_invoke_mut::<ASet>()?
-//!     .register(0, |_: Uid, _: &mut ASet, disable: ctx::Disable| {
+//!     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
 //!         assert_eq!(
 //!             &true,
 //!             disable.deref(),
@@ -29,7 +29,7 @@
 //!     })
 //!     .or_default();
 //! ser.ser_invoke_mut::<ASet>()?
-//!     .register(1, |_: Uid, _: &mut ASet, val: ctx::Value<String>| {
+//!     .register(1, |_: Uid, _: &mut ASet, _: &mut ASer, val: ctx::Value<String>| {
 //!         assert_eq!(
 //!             &String::from("set"),
 //!             val.deref(),
@@ -39,7 +39,7 @@
 //!     })
 //!     .or_default();
 //! ser.ser_invoke_mut::<ASet>()?
-//!     .register(2, |_: Uid, _: &mut ASet, val: ctx::Value<i64>| {
+//!     .register(2, |_: Uid, _: &mut ASet, _: &mut ASer, val: ctx::Value<i64>| {
 //!         assert_eq!(
 //!             &42,
 //!             val.deref(),
@@ -51,7 +51,7 @@
 //! ser.ser_invoke_mut::<ASet>()?
 //!     .register(
 //!         3,
-//!         |_: Uid, _: &mut ASet, index: ctx::Index, raw_val: ctx::RawVal| {
+//!         |_: Uid, _: &mut ASet, _: &mut ASer, index: ctx::Index, raw_val: ctx::RawVal| {
 //!             Ok(Some((*index.deref(), raw_val.deref().clone())))
 //!         },
 //!     )
@@ -97,6 +97,14 @@ use crate::Arc;
 use crate::Error;
 use crate::Str;
 
+impl<S: Set> ExtractCtx<S> for Ctx {
+    type Error = Error;
+
+    fn extract(_: crate::Uid, _: &S, _: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+        Ok(ctx.clone())
+    }
+}
+
 /// The uid copied from [`Ctx`] which set in [`Policy`](crate::policy::Policy).
 ///
 /// It is same as the uid of matched option in generally.
@@ -115,7 +123,7 @@ use crate::Str;
 ///
 ///   set.add_opt("--bool=b/")?.run()?;
 ///   ser.ser_invoke_mut::<ASet>()?
-///       .register(0, |uid: Uid, _: &mut ASet, ctx_uid: ctx::Uid| {
+///       .register(0, |uid: Uid, _: &mut ASet, _: &mut ASer, ctx_uid: ctx::Uid| {
 ///           assert_eq!(&uid, ctx_uid.deref(), "The uid in Ctx is same as the uid of matched option");
 ///           Ok(Some(false))
 ///       }).or_default();
@@ -195,7 +203,7 @@ impl Display for Uid {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, index: ctx::Index| {
+///     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, index: ctx::Index| {
 ///         assert_eq!(
 ///             &0,
 ///             index.deref(),
@@ -205,7 +213,7 @@ impl Display for Uid {
 ///     })
 ///     .or_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, index: ctx::Index| {
+///     .register(1, |_: Uid, _: &mut ASet, _: &mut ASer, index: ctx::Index| {
 ///         assert_eq!(
 ///             &1,
 ///             index.deref(),
@@ -215,7 +223,7 @@ impl Display for Uid {
 ///     })
 ///     .or_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, index: ctx::Index| {
+///     .register(2, |_: Uid, _: &mut ASet, _: &mut ASer, index: ctx::Index| {
 ///         assert_eq!(
 ///             &2,
 ///             index.deref(),
@@ -301,19 +309,19 @@ impl Display for Index {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, total: ctx::Total| {
+///     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, total: ctx::Total| {
 ///         assert_eq!( &4, total.deref(), "Total is the length of Args");
 ///         Ok(Some(false))
 ///     })
 ///     .or_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, total: ctx::Total| {
+///     .register(1, |_: Uid, _: &mut ASet, _: &mut ASer, total: ctx::Total| {
 ///         assert_eq!(&3, total.deref(), "Total is the length of Args");
 ///         Ok(Some(true))
 ///     })
 ///     .or_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, total: ctx::Total| {
+///     .register(2, |_: Uid, _: &mut ASet, _: &mut ASer, total: ctx::Total| {
 ///         assert_eq!(&3, total.deref(), "Total is the length of Args");
 ///         Ok(Some(2i64))
 ///     })
@@ -377,7 +385,7 @@ impl Display for Total {
     }
 }
 
-/// The arguments copied from [`Ctx`] which set in [`Policy`](crate::policy::Policy).
+/// The arguments cloned from [`Ctx`] which set in [`Policy`](crate::policy::Policy).
 ///
 /// # Examples
 /// ```rust
@@ -395,7 +403,7 @@ impl Display for Total {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, args: ctx::Args| {
+///     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, args: ctx::Args| {
 ///         let test = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///         for (idx, arg) in args.deref().deref().iter().enumerate() {
 ///             assert_eq!(arg, &test[idx], "Args is arguments used in Policy");
@@ -404,7 +412,7 @@ impl Display for Total {
 ///     })
 ///     .or_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, args: ctx::Args| {
+///     .register(1, |_: Uid, _: &mut ASet, _: &mut ASer, args: ctx::Args| {
 ///         let test = Args::new(["set", "value", "foo"].into_iter());
 ///         for (idx, arg) in args.deref().deref().iter().enumerate() {
 ///             assert_eq!(arg, &test[idx], "Args is arguments used in Policy");
@@ -413,7 +421,7 @@ impl Display for Total {
 ///     })
 ///     .or_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, args: ctx::Args| {
+///     .register(2, |_: Uid, _: &mut ASet, _: &mut ASer, args: ctx::Args| {
 ///         let test = Args::new(["set", "value", "foo"].into_iter());
 ///         for (idx, arg) in args.deref().deref().iter().enumerate() {
 ///             assert_eq!(arg, &test[idx], "Args is arguments used in Policy");
@@ -457,7 +465,7 @@ impl<S: Set> ExtractCtx<S> for Args {
     }
 }
 
-/// The name copied from [`Ctx`] which set in [`Policy`](crate::policy::Policy).
+/// The name cloned from [`Ctx`] which set in [`Policy`](crate::policy::Policy).
 ///
 /// # Examples
 /// ```rust
@@ -475,7 +483,7 @@ impl<S: Set> ExtractCtx<S> for Args {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, name: Option<ctx::Name>| {
+///     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, name: Option<ctx::Name>| {
 ///         assert_eq!(
 ///             "bool",
 ///             name.unwrap().deref().as_ref(),
@@ -485,7 +493,7 @@ impl<S: Set> ExtractCtx<S> for Args {
 ///     })
 ///     .or_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, name: Option<ctx::Name>| {
+///     .register(1, |_: Uid, _: &mut ASet, _: &mut ASer, name: Option<ctx::Name>| {
 ///         assert_eq!(
 ///             "set",
 ///             name.unwrap().deref().as_ref(),
@@ -495,7 +503,7 @@ impl<S: Set> ExtractCtx<S> for Args {
 ///     })
 ///     .or_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, name: Option<ctx::Name>| {
+///     .register(2, |_: Uid, _: &mut ASet, _: &mut ASer, name: Option<ctx::Name>| {
 ///         assert_eq!(
 ///             "value",
 ///             name.unwrap().deref().as_ref(),
@@ -571,7 +579,7 @@ impl Display for Name {
     }
 }
 
-/// The prefix copied from [`Ctx`] which set in [`Policy`](crate::policy::Policy).
+/// The prefix cloned from [`Ctx`] which set in [`Policy`](crate::policy::Policy).
 ///
 /// # Examples
 /// ```rust
@@ -589,7 +597,7 @@ impl Display for Name {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, prefix: Option<ctx::Prefix>| {
+///     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, prefix: Option<ctx::Prefix>| {
 ///         assert_eq!(
 ///             "--",
 ///             prefix.unwrap().deref().as_ref(),
@@ -599,13 +607,13 @@ impl Display for Name {
 ///     })
 ///     .or_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, prefix: Option<ctx::Prefix>| {
+///     .register(1, |_: Uid, _: &mut ASet, _: &mut ASer, prefix: Option<ctx::Prefix>| {
 ///         assert_eq!(None, prefix, "Prefix is the prefix from Ctx set in Policy");
 ///         Ok(Some(true))
 ///     })
 ///     .or_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, prefix: Option<ctx::Prefix>| {
+///     .register(2, |_: Uid, _: &mut ASet, _: &mut ASer, prefix: Option<ctx::Prefix>| {
 ///         assert_eq!(None, prefix, "Prefix is the prefix from Ctx set in Policy");
 ///         Ok(Some(2i64))
 ///     })
@@ -684,7 +692,7 @@ impl Display for Prefix {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, style: ctx::Style| {
+///     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, style: ctx::Style| {
 ///         assert_eq!(
 ///             &OptStyle::Boolean,
 ///             style.deref(),
@@ -694,7 +702,7 @@ impl Display for Prefix {
 ///     })
 ///     .or_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, style: ctx::Style| {
+///     .register(1, |_: Uid, _: &mut ASet, _: &mut ASer, style: ctx::Style| {
 ///         assert_eq!(
 ///             &OptStyle::Cmd,
 ///             style.deref(),
@@ -704,7 +712,7 @@ impl Display for Prefix {
 ///     })
 ///     .or_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, style: ctx::Style| {
+///     .register(2, |_: Uid, _: &mut ASet, _: &mut ASer, style: ctx::Style| {
 ///         assert_eq!(
 ///             &OptStyle::Pos,
 ///             style.deref(),
@@ -779,7 +787,7 @@ impl<S: Set> ExtractCtx<S> for Style {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, disable: ctx::Disable| {
+///     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
 ///         assert_eq!(
 ///             &true,
 ///             disable.deref(),
@@ -789,7 +797,7 @@ impl<S: Set> ExtractCtx<S> for Style {
 ///     })
 ///     .or_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, disable: ctx::Disable| {
+///     .register(1, |_: Uid, _: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
 ///         assert_eq!(
 ///             &false,
 ///             disable.deref(),
@@ -799,7 +807,7 @@ impl<S: Set> ExtractCtx<S> for Style {
 ///     })
 ///     .or_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, disable: ctx::Disable| {
+///     .register(2, |_: Uid, _: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
 ///         assert_eq!(
 ///             &false,
 ///             disable.deref(),
@@ -856,7 +864,7 @@ impl<S: Set> ExtractCtx<S> for Disable {
     }
 }
 
-/// The raw value copied from [`Ctx`] which set in [`Policy`](crate::policy::Policy).
+/// The raw value cloned from [`Ctx`] which set in [`Policy`](crate::policy::Policy).
 ///
 /// # Examples
 /// ```rust
@@ -875,7 +883,7 @@ impl<S: Set> ExtractCtx<S> for Disable {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, raw_val: ctx::RawVal| {
+///     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal| {
 ///         assert_eq!(
 ///             &RawVal::from("false"),
 ///             raw_val.deref(),
@@ -885,7 +893,7 @@ impl<S: Set> ExtractCtx<S> for Disable {
 ///     })
 ///     .or_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, raw_val: ctx::RawVal| {
+///     .register(1, |_: Uid, _: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal| {
 ///         assert_eq!(
 ///             &RawVal::from("set"),
 ///             raw_val.deref(),
@@ -895,7 +903,7 @@ impl<S: Set> ExtractCtx<S> for Disable {
 ///     })
 ///     .or_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, raw_val: ctx::RawVal| {
+///     .register(2, |_: Uid, _: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal| {
 ///         assert_eq!(
 ///             &RawVal::from("value"),
 ///             raw_val.deref(),
@@ -972,7 +980,7 @@ impl<S: Set> ExtractCtx<S> for RawVal {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, val: ctx::Value<bool>| {
+///     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, val: ctx::Value<bool>| {
 ///         assert_eq!(
 ///             &false,
 ///             val.deref(),
@@ -982,7 +990,7 @@ impl<S: Set> ExtractCtx<S> for RawVal {
 ///     })
 ///     .or_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, val: ctx::Value<String>| {
+///     .register(1, |_: Uid, _: &mut ASet, _: &mut ASer, val: ctx::Value<String>| {
 ///         assert_eq!(
 ///             &String::from("set"),
 ///             val.deref(),
@@ -992,7 +1000,7 @@ impl<S: Set> ExtractCtx<S> for RawVal {
 ///     })
 ///     .or_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, val: ctx::Value<i64>| {
+///     .register(2, |_: Uid, _: &mut ASet, _: &mut ASer, val: ctx::Value<i64>| {
 ///         assert_eq!(
 ///             &42,
 ///             val.deref(),

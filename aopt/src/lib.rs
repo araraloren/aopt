@@ -45,12 +45,12 @@ pub(crate) fn typeid<T: 'static>() -> TypeId {
 
 pub mod prelude {
     pub use crate::args::Args;
-    pub use crate::ctx::wrap_storer;
+    pub use crate::ctx::wrap_ser_store;
     pub use crate::ctx::Callback;
     pub use crate::ctx::Callbacks;
     pub use crate::ctx::Ctx;
     pub use crate::ctx::ExtractCtx;
-    pub use crate::ctx::Handler;
+    pub use crate::ctx::SerHandler;
     pub use crate::ctx::Store;
     pub use crate::ext::*;
     pub use crate::opt::AOpt;
@@ -91,7 +91,7 @@ pub mod prelude {
     pub use crate::ser::DataService;
     pub use crate::ser::InvokeService;
     pub use crate::ser::RawValService;
-    pub use crate::ser::Register;
+    pub use crate::ser::SerRegister;
     pub use crate::ser::Service;
     pub use crate::ser::Services;
     pub use crate::ser::ValEntry;

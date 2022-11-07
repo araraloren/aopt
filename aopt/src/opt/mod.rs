@@ -6,6 +6,7 @@ pub(crate) mod help;
 pub(crate) mod index;
 pub(crate) mod info;
 pub(crate) mod parser;
+pub(crate) mod serde;
 pub(crate) mod store;
 pub(crate) mod style;
 pub(crate) mod valid;

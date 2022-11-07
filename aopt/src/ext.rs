@@ -24,6 +24,7 @@ use crate::RawVal;
 pub mod ctx;
 pub mod ser;
 
+/// Some convenient function access the [`Service`](crate::ser::Service) in [`Services`].
 pub trait ServicesExt {
     fn ser_val(&self) -> Result<&ValService, Error>;
 
@@ -45,6 +46,8 @@ pub trait ServicesExt {
 pub type ACreator = Box<dyn Creator<Opt = AOpt, Config = OptConfig, Error = Error>>;
 
 pub type ASet = OptSet<StrParser, ACreator>;
+
+pub type ASer = Services;
 
 pub type AForward = Forward<ASet>;
 
