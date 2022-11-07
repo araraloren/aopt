@@ -60,7 +60,7 @@ use crate::Uid;
 ///            Ok(None)
 ///        },
 ///    )
-///    .or_default();
+///    .with_default();
 ///    is.register(
 ///        1,
 ///        |uid: Uid, _set: &mut ASet, cnt: Count| -> Result<Option<()>, Error> {
@@ -69,7 +69,7 @@ use crate::Uid;
 ///            Ok(None)
 ///        },
 ///    )
-///    .or_default();
+///    .with_default();
 ///    is.register(
 ///        2,
 ///        |uid: Uid, _set: &mut ASet, data: ser::Data<i64>| -> Result<Option<()>, Error> {
@@ -78,7 +78,7 @@ use crate::Uid;
 ///            Ok(None)
 ///        },
 ///    )
-///    .or_default();
+///    .with_default();
 ///
 ///    is.invoke(0, &mut set, &mut ser, &ctx)?;
 ///    is.invoke(1, &mut set, &mut ser, &ctx)?;

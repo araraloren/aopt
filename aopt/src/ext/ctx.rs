@@ -19,7 +19,7 @@
 //! set.add_opt("pos_2=p@2")?.run()?;
 //! set.add_opt("pos_v=p@>2")?.run()?;
 //! ser.ser_invoke_mut::<ASet>()?
-//!     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
+//!     .register(0, |_: Uid, _: &mut ASet, disable: ctx::Disable| {
 //!         assert_eq!(
 //!             &true,
 //!             disable.deref(),
@@ -27,9 +27,9 @@
 //!         );
 //!         Ok(Some(false))
 //!     })
-//!     .or_default();
+//!     .with_default();
 //! ser.ser_invoke_mut::<ASet>()?
-//!     .register(1, |_: Uid, _: &mut ASet, _: &mut ASer, val: ctx::Value<String>| {
+//!     .register(1, |_: Uid, _: &mut ASet, val: ctx::Value<String>| {
 //!         assert_eq!(
 //!             &String::from("set"),
 //!             val.deref(),
@@ -37,9 +37,9 @@
 //!         );
 //!         Ok(Some(true))
 //!     })
-//!     .or_default();
+//!     .with_default();
 //! ser.ser_invoke_mut::<ASet>()?
-//!     .register(2, |_: Uid, _: &mut ASet, _: &mut ASer, val: ctx::Value<i64>| {
+//!     .register(2, |_: Uid, _: &mut ASet, val: ctx::Value<i64>| {
 //!         assert_eq!(
 //!             &42,
 //!             val.deref(),
@@ -47,15 +47,15 @@
 //!         );
 //!         Ok(Some(*val.deref()))
 //!     })
-//!     .or_default();
+//!     .with_default();
 //! ser.ser_invoke_mut::<ASet>()?
 //!     .register(
 //!         3,
-//!         |_: Uid, _: &mut ASet, _: &mut ASer, index: ctx::Index, raw_val: ctx::RawVal| {
+//!         |_: Uid, _: &mut ASet, index: ctx::Index, raw_val: ctx::RawVal| {
 //!             Ok(Some((*index.deref(), raw_val.deref().clone())))
 //!         },
 //!     )
-//!     .or_default();
+//!     .with_default();
 //!
 //! let args = Args::new(["--/bool", "set", "42", "foo", "bar"].into_iter());
 //!
@@ -115,6 +115,7 @@ impl<S: Set> ExtractCtx<S> for Ctx {
 /// # use std::ops::Deref;
 /// # use aopt::prelude::*;
 /// # use aopt::Error;
+/// # use aopt::Arc;
 /// #
 /// # fn main() -> Result<(), Error> {
 ///   let mut policy = AForward::default();
@@ -123,10 +124,10 @@ impl<S: Set> ExtractCtx<S> for Ctx {
 ///
 ///   set.add_opt("--bool=b/")?.run()?;
 ///   ser.ser_invoke_mut::<ASet>()?
-///       .register(0, |uid: Uid, _: &mut ASet, _: &mut ASer, ctx_uid: ctx::Uid| {
+///       .register(0, |uid: Uid, _: &mut ASet, ctx_uid: ctx::Uid| {
 ///           assert_eq!(&uid, ctx_uid.deref(), "The uid in Ctx is same as the uid of matched option");
 ///           Ok(Some(false))
-///       }).or_default();
+///       }).with_default();
 ///
 ///   let args = Args::new(["--/bool", ].into_iter());
 ///
@@ -203,7 +204,7 @@ impl Display for Uid {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, index: ctx::Index| {
+///     .register(0, |_: Uid, _: &mut ASet, index: ctx::Index| {
 ///         assert_eq!(
 ///             &0,
 ///             index.deref(),
@@ -211,9 +212,9 @@ impl Display for Uid {
 ///         );
 ///         Ok(Some(false))
 ///     })
-///     .or_default();
+///     .with_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, _: &mut ASer, index: ctx::Index| {
+///     .register(1, |_: Uid, _: &mut ASet, index: ctx::Index| {
 ///         assert_eq!(
 ///             &1,
 ///             index.deref(),
@@ -221,9 +222,9 @@ impl Display for Uid {
 ///         );
 ///         Ok(Some(true))
 ///     })
-///     .or_default();
+///     .with_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, _: &mut ASer, index: ctx::Index| {
+///     .register(2, |_: Uid, _: &mut ASet, index: ctx::Index| {
 ///         assert_eq!(
 ///             &2,
 ///             index.deref(),
@@ -231,7 +232,7 @@ impl Display for Uid {
 ///         );
 ///         Ok(Some(2i64))
 ///     })
-///     .or_default();
+///     .with_default();
 ///
 /// let args = Args::new(["--/bool", "set", "value"].into_iter());
 ///
@@ -309,23 +310,23 @@ impl Display for Index {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, total: ctx::Total| {
+///     .register(0, |_: Uid, _: &mut ASet, total: ctx::Total| {
 ///         assert_eq!( &4, total.deref(), "Total is the length of Args");
 ///         Ok(Some(false))
 ///     })
-///     .or_default();
+///     .with_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, _: &mut ASer, total: ctx::Total| {
+///     .register(1, |_: Uid, _: &mut ASet, total: ctx::Total| {
 ///         assert_eq!(&3, total.deref(), "Total is the length of Args");
 ///         Ok(Some(true))
 ///     })
-///     .or_default();
+///     .with_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, _: &mut ASer, total: ctx::Total| {
+///     .register(2, |_: Uid, _: &mut ASet, total: ctx::Total| {
 ///         assert_eq!(&3, total.deref(), "Total is the length of Args");
 ///         Ok(Some(2i64))
 ///     })
-///     .or_default();
+///     .with_default();
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
@@ -403,32 +404,32 @@ impl Display for Total {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, args: ctx::Args| {
+///     .register(0, |_: Uid, _: &mut ASet, args: ctx::Args| {
 ///         let test = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///         for (idx, arg) in args.deref().deref().iter().enumerate() {
 ///             assert_eq!(arg, &test[idx], "Args is arguments used in Policy");
 ///         }
 ///         Ok(Some(false))
 ///     })
-///     .or_default();
+///     .with_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, _: &mut ASer, args: ctx::Args| {
+///     .register(1, |_: Uid, _: &mut ASet, args: ctx::Args| {
 ///         let test = Args::new(["set", "value", "foo"].into_iter());
 ///         for (idx, arg) in args.deref().deref().iter().enumerate() {
 ///             assert_eq!(arg, &test[idx], "Args is arguments used in Policy");
 ///         }
 ///         Ok(Some(true))
 ///     })
-///     .or_default();
+///     .with_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, _: &mut ASer, args: ctx::Args| {
+///     .register(2, |_: Uid, _: &mut ASet, args: ctx::Args| {
 ///         let test = Args::new(["set", "value", "foo"].into_iter());
 ///         for (idx, arg) in args.deref().deref().iter().enumerate() {
 ///             assert_eq!(arg, &test[idx], "Args is arguments used in Policy");
 ///         }
 ///         Ok(Some(2i64))
 ///     })
-///     .or_default();
+///     .with_default();
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
@@ -483,7 +484,7 @@ impl<S: Set> ExtractCtx<S> for Args {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, name: Option<ctx::Name>| {
+///     .register(0, |_: Uid, _: &mut ASet, name: Option<ctx::Name>| {
 ///         assert_eq!(
 ///             "bool",
 ///             name.unwrap().deref().as_ref(),
@@ -491,9 +492,9 @@ impl<S: Set> ExtractCtx<S> for Args {
 ///         );
 ///         Ok(Some(false))
 ///     })
-///     .or_default();
+///     .with_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, _: &mut ASer, name: Option<ctx::Name>| {
+///     .register(1, |_: Uid, _: &mut ASet, name: Option<ctx::Name>| {
 ///         assert_eq!(
 ///             "set",
 ///             name.unwrap().deref().as_ref(),
@@ -501,9 +502,9 @@ impl<S: Set> ExtractCtx<S> for Args {
 ///         );
 ///         Ok(Some(true))
 ///     })
-///     .or_default();
+///     .with_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, _: &mut ASer, name: Option<ctx::Name>| {
+///     .register(2, |_: Uid, _: &mut ASet, name: Option<ctx::Name>| {
 ///         assert_eq!(
 ///             "value",
 ///             name.unwrap().deref().as_ref(),
@@ -511,7 +512,7 @@ impl<S: Set> ExtractCtx<S> for Args {
 ///         );
 ///         Ok(Some(2i64))
 ///     })
-///     .or_default();
+///     .with_default();
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
@@ -597,7 +598,7 @@ impl Display for Name {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, prefix: Option<ctx::Prefix>| {
+///     .register(0, |_: Uid, _: &mut ASet, prefix: Option<ctx::Prefix>| {
 ///         assert_eq!(
 ///             "--",
 ///             prefix.unwrap().deref().as_ref(),
@@ -605,19 +606,19 @@ impl Display for Name {
 ///         );
 ///         Ok(Some(false))
 ///     })
-///     .or_default();
+///     .with_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, _: &mut ASer, prefix: Option<ctx::Prefix>| {
+///     .register(1, |_: Uid, _: &mut ASet, prefix: Option<ctx::Prefix>| {
 ///         assert_eq!(None, prefix, "Prefix is the prefix from Ctx set in Policy");
 ///         Ok(Some(true))
 ///     })
-///     .or_default();
+///     .with_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, _: &mut ASer, prefix: Option<ctx::Prefix>| {
+///     .register(2, |_: Uid, _: &mut ASet, prefix: Option<ctx::Prefix>| {
 ///         assert_eq!(None, prefix, "Prefix is the prefix from Ctx set in Policy");
 ///         Ok(Some(2i64))
 ///     })
-///     .or_default();
+///     .with_default();
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
@@ -627,7 +628,7 @@ impl Display for Name {
 /// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
 /// assert_eq!(ser.ser_val()?.val::<i64>(2)?, &2);
 /// #
-/// #Ok(())
+/// # Ok(())
 /// # }
 /// ```
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -692,7 +693,7 @@ impl Display for Prefix {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, style: ctx::Style| {
+///     .register(0, |_: Uid, _: &mut ASet, style: ctx::Style| {
 ///         assert_eq!(
 ///             &OptStyle::Boolean,
 ///             style.deref(),
@@ -700,9 +701,9 @@ impl Display for Prefix {
 ///         );
 ///         Ok(Some(false))
 ///     })
-///     .or_default();
+///     .with_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, _: &mut ASer, style: ctx::Style| {
+///     .register(1, |_: Uid, _: &mut ASet, style: ctx::Style| {
 ///         assert_eq!(
 ///             &OptStyle::Cmd,
 ///             style.deref(),
@@ -710,9 +711,9 @@ impl Display for Prefix {
 ///         );
 ///         Ok(Some(true))
 ///     })
-///     .or_default();
+///     .with_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, _: &mut ASer, style: ctx::Style| {
+///     .register(2, |_: Uid, _: &mut ASet, style: ctx::Style| {
 ///         assert_eq!(
 ///             &OptStyle::Pos,
 ///             style.deref(),
@@ -720,7 +721,7 @@ impl Display for Prefix {
 ///         );
 ///         Ok(Some(2i64))
 ///     })
-///     .or_default();
+///     .with_default();
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
@@ -787,7 +788,7 @@ impl<S: Set> ExtractCtx<S> for Style {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
+///     .register(0, |_: Uid, _: &mut ASet, disable: ctx::Disable| {
 ///         assert_eq!(
 ///             &true,
 ///             disable.deref(),
@@ -795,9 +796,9 @@ impl<S: Set> ExtractCtx<S> for Style {
 ///         );
 ///         Ok(Some(false))
 ///     })
-///     .or_default();
+///     .with_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
+///     .register(1, |_: Uid, _: &mut ASet, disable: ctx::Disable| {
 ///         assert_eq!(
 ///             &false,
 ///             disable.deref(),
@@ -805,9 +806,9 @@ impl<S: Set> ExtractCtx<S> for Style {
 ///         );
 ///         Ok(Some(true))
 ///     })
-///     .or_default();
+///     .with_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
+///     .register(2, |_: Uid, _: &mut ASet, disable: ctx::Disable| {
 ///         assert_eq!(
 ///             &false,
 ///             disable.deref(),
@@ -815,7 +816,7 @@ impl<S: Set> ExtractCtx<S> for Style {
 ///         );
 ///         Ok(Some(2i64))
 ///     })
-///     .or_default();
+///     .with_default();
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
@@ -883,7 +884,7 @@ impl<S: Set> ExtractCtx<S> for Disable {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal| {
+///     .register(0, |_: Uid, _: &mut ASet, raw_val: ctx::RawVal| {
 ///         assert_eq!(
 ///             &RawVal::from("false"),
 ///             raw_val.deref(),
@@ -891,9 +892,9 @@ impl<S: Set> ExtractCtx<S> for Disable {
 ///         );
 ///         Ok(Some(false))
 ///     })
-///     .or_default();
+///     .with_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal| {
+///     .register(1, |_: Uid, _: &mut ASet, raw_val: ctx::RawVal| {
 ///         assert_eq!(
 ///             &RawVal::from("set"),
 ///             raw_val.deref(),
@@ -901,9 +902,9 @@ impl<S: Set> ExtractCtx<S> for Disable {
 ///         );
 ///         Ok(Some(true))
 ///     })
-///     .or_default();
+///     .with_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal| {
+///     .register(2, |_: Uid, _: &mut ASet, raw_val: ctx::RawVal| {
 ///         assert_eq!(
 ///             &RawVal::from("value"),
 ///             raw_val.deref(),
@@ -911,7 +912,7 @@ impl<S: Set> ExtractCtx<S> for Disable {
 ///         );
 ///         Ok(Some(2i64))
 ///     })
-///     .or_default();
+///     .with_default();
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
@@ -980,7 +981,7 @@ impl<S: Set> ExtractCtx<S> for RawVal {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, val: ctx::Value<bool>| {
+///     .register(0, |_: Uid, _: &mut ASet, val: ctx::Value<bool>| {
 ///         assert_eq!(
 ///             &false,
 ///             val.deref(),
@@ -988,9 +989,9 @@ impl<S: Set> ExtractCtx<S> for RawVal {
 ///         );
 ///         Ok(Some(false))
 ///     })
-///     .or_default();
+///     .with_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, _: &mut ASer, val: ctx::Value<String>| {
+///     .register(1, |_: Uid, _: &mut ASet, val: ctx::Value<String>| {
 ///         assert_eq!(
 ///             &String::from("set"),
 ///             val.deref(),
@@ -998,9 +999,9 @@ impl<S: Set> ExtractCtx<S> for RawVal {
 ///         );
 ///         Ok(Some(true))
 ///     })
-///     .or_default();
+///     .with_default();
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, _: &mut ASer, val: ctx::Value<i64>| {
+///     .register(2, |_: Uid, _: &mut ASet, val: ctx::Value<i64>| {
 ///         assert_eq!(
 ///             &42,
 ///             val.deref(),
@@ -1008,7 +1009,7 @@ impl<S: Set> ExtractCtx<S> for RawVal {
 ///         );
 ///         Ok(Some(*val.deref()))
 ///     })
-///     .or_default();
+///     .with_default();
 ///
 /// let args = Args::new(["--/bool", "set", "42", "foo"].into_iter());
 ///

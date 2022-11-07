@@ -96,7 +96,7 @@ impl ServicesExt for Services {
 /// set.add_opt("--bool=b/")?.run()?;
 /// set.add_opt("pos_v=p@*")?.run()?;
 /// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
+///     .register(0, |_: Uid, _: &mut ASet, disable: ctx::Disable| {
 ///         assert_eq!(&true, disable.deref());
 ///         Ok(Some(false))
 ///     })
@@ -104,7 +104,7 @@ impl ServicesExt for Services {
 /// ser.ser_invoke_mut::<ASet>()?
 ///     .register(
 ///         1,
-///         |_: Uid, _: &mut ASet, _: &mut ASer, mut raw_val: ctx::RawVal, data: ser::Data<PosList>| {
+///         |_: Uid, _: &mut ASet, mut raw_val: ctx::RawVal, data: ser::Data<PosList>| {
 ///             data.add_pos(std::mem::take(&mut raw_val));
 ///             Ok(Some(true))
 ///         },
