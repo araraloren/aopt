@@ -4,12 +4,12 @@ use tracing::trace;
 
 use crate::astr;
 use crate::ctx::wrap_handler;
+use crate::ctx::wrap_handler_store;
 use crate::ctx::wrap_ser_handler;
-use crate::ctx::wrap_ser_store;
-use crate::ctx::wrap_store;
+use crate::ctx::wrap_ser_handler_store;
 use crate::ctx::Callbacks;
 use crate::ctx::Ctx;
-use crate::ctx::ExtractCtx;
+use crate::ctx::Extract;
 use crate::ctx::Handler;
 use crate::ctx::SerHandler;
 use crate::ctx::Store;
@@ -37,8 +37,8 @@ use crate::Uid;
 /// # fn main() -> Result<(), Error> {
 ///    pub struct Count(usize);
 ///
-///    // implement ExtractCtx for your type
-///    impl ExtractCtx<ASet> for Count {
+///    // implement Extract for your type
+///    impl Extract<ASet> for Count {
 ///        type Error = Error;
 ///
 ///        fn extract(_uid: Uid, _set: &ASet, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
@@ -147,7 +147,7 @@ impl<Set, Ret> InvokeService<Set, Ret> {
         handler: impl SerHandler<Set, Args, Output = Option<Ret>, Error = Error> + 'static,
     ) -> &mut Self
     where
-        Args: ExtractCtx<Set, Error = Error> + 'static,
+        Args: Extract<Set, Error = Error> + 'static,
     {
         self.callbacks.insert(uid, wrap_ser_handler(handler));
         self
@@ -179,7 +179,7 @@ impl<Set, Ret> InvokeService<Set, Ret> {
         handler: impl Handler<Set, Args, Output = Option<Ret>, Error = Error> + 'static,
     ) -> &mut Self
     where
-        Args: ExtractCtx<Set, Error = Error> + 'static,
+        Args: Extract<Set, Error = Error> + 'static,
     {
         self.callbacks.insert(uid, wrap_handler(handler));
         self
@@ -216,9 +216,10 @@ impl<Set, Ret> InvokeService<Set, Ret> {
         store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static,
     ) -> &mut Self
     where
-        Args: ExtractCtx<Set, Error = Error> + 'static,
+        Args: Extract<Set, Error = Error> + 'static,
     {
-        self.callbacks.insert(uid, wrap_ser_store(handler, store));
+        self.callbacks
+            .insert(uid, wrap_ser_handler_store(handler, store));
         self
     }
 
@@ -253,9 +254,10 @@ impl<Set, Ret> InvokeService<Set, Ret> {
         store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static,
     ) -> &mut Self
     where
-        Args: ExtractCtx<Set, Error = Error> + 'static,
+        Args: Extract<Set, Error = Error> + 'static,
     {
-        self.callbacks.insert(uid, wrap_store(handler, store));
+        self.callbacks
+            .insert(uid, wrap_handler_store(handler, store));
         self
     }
 
@@ -277,7 +279,7 @@ where
     ) -> Register<'_, Set, Ret, H, Args, Output>
     where
         H: Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
-        Args: ExtractCtx<Set, Error = Error> + 'static,
+        Args: Extract<Set, Error = Error> + 'static,
     {
         Register {
             ser: self,
@@ -295,7 +297,7 @@ where
     ) -> SerRegister<'_, Set, Ret, H, Args, Output>
     where
         H: SerHandler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
-        Args: ExtractCtx<Set, Error = Error> + 'static,
+        Args: Extract<Set, Error = Error> + 'static,
     {
         SerRegister {
             ser: self,
@@ -382,7 +384,7 @@ where
     Set::Opt: Opt,
     Ret: Default + 'static,
     H: SerHandler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
-    Args: ExtractCtx<Set, Error = Error> + 'static,
+    Args: Extract<Set, Error = Error> + 'static,
 {
     /// Register the handler with given [`Store`] implementation.
     pub fn with(&mut self, store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static) {
@@ -402,7 +404,7 @@ where
     Set::Opt: Opt,
     Ret: Default + 'static,
     H: SerHandler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
-    Args: ExtractCtx<Set, Error = Error> + 'static,
+    Args: Extract<Set, Error = Error> + 'static,
 {
     /// Register the handler with default [`ValStore`].
     pub fn with_default(&mut self) {
@@ -444,7 +446,7 @@ where
     Set::Opt: Opt,
     Ret: Default + 'static,
     H: Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
-    Args: ExtractCtx<Set, Error = Error> + 'static,
+    Args: Extract<Set, Error = Error> + 'static,
 {
     /// Register the handler with given [`Store`] implementation.
     pub fn with(&mut self, store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static) {
@@ -464,7 +466,7 @@ where
     Set::Opt: Opt,
     Ret: Default + 'static,
     H: Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
-    Args: ExtractCtx<Set, Error = Error> + 'static,
+    Args: Extract<Set, Error = Error> + 'static,
 {
     /// Register the handler with default [`ValStore`].
     pub fn with_default(&mut self) {

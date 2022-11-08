@@ -1,5 +1,5 @@
 //! The structs hold the data from [`Cxt`](crate::ctx::Ctx).
-//! They are all implemented [`ExtractCtx`].
+//! They are all implemented [`Extract`].
 //!
 //! # Examples
 //! ```rust
@@ -88,7 +88,7 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 
 use crate::ctx::Ctx;
-use crate::ctx::ExtractCtx;
+use crate::ctx::Extract;
 use crate::opt::RawValParser;
 use crate::ser::Services;
 use crate::set::Set;
@@ -97,7 +97,7 @@ use crate::Arc;
 use crate::Error;
 use crate::Str;
 
-impl<S: Set> ExtractCtx<S> for Ctx {
+impl<S: Set> Extract<S> for Ctx {
     type Error = Error;
 
     fn extract(_: crate::Uid, _: &S, _: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
@@ -153,7 +153,13 @@ impl<S: Set> ExtractCtx<S> for Ctx {
 )]
 pub struct Uid(crate::Uid);
 
-impl<S: Set> ExtractCtx<S> for Uid {
+impl Uid {
+    pub fn extract_ctx(ctx: &Ctx) -> Self {
+        Self(ctx.uid())
+    }
+}
+
+impl<S: Set> Extract<S> for Uid {
     type Error = Error;
 
     fn extract(
@@ -162,7 +168,7 @@ impl<S: Set> ExtractCtx<S> for Uid {
         _ser: &Services,
         ctx: &Ctx,
     ) -> Result<Self, Self::Error> {
-        Ok(Uid(ctx.uid()))
+        Ok(Self::extract_ctx(ctx))
     }
 }
 
@@ -259,7 +265,13 @@ impl Display for Uid {
 )]
 pub struct Index(usize);
 
-impl<S: Set> ExtractCtx<S> for Index {
+impl Index {
+    pub fn extract_ctx(ctx: &Ctx) -> Self {
+        Self(ctx.idx())
+    }
+}
+
+impl<S: Set> Extract<S> for Index {
     type Error = Error;
 
     fn extract(
@@ -268,7 +280,7 @@ impl<S: Set> ExtractCtx<S> for Index {
         _ser: &Services,
         ctx: &Ctx,
     ) -> Result<Self, Self::Error> {
-        Ok(Self(ctx.idx()))
+        Ok(Self::extract_ctx(ctx))
     }
 }
 
@@ -353,7 +365,13 @@ impl Display for Index {
 )]
 pub struct Total(usize);
 
-impl<S: Set> ExtractCtx<S> for Total {
+impl Total {
+    pub fn extract_ctx(ctx: &Ctx) -> Self {
+        Self(ctx.total())
+    }
+}
+
+impl<S: Set> Extract<S> for Total {
     type Error = Error;
 
     fn extract(
@@ -362,7 +380,7 @@ impl<S: Set> ExtractCtx<S> for Total {
         _ser: &Services,
         ctx: &Ctx,
     ) -> Result<Self, Self::Error> {
-        Ok(Self(ctx.total()))
+        Ok(Self::extract_ctx(ctx))
     }
 }
 
@@ -445,6 +463,12 @@ impl Display for Total {
 #[derive(Debug, Clone, Default)]
 pub struct Args(Arc<crate::args::Args>);
 
+impl Args {
+    pub fn extract_ctx(ctx: &Ctx) -> Self {
+        Self(ctx.args().clone())
+    }
+}
+
 impl Deref for Args {
     type Target = crate::args::Args;
 
@@ -453,7 +477,7 @@ impl Deref for Args {
     }
 }
 
-impl<S: Set> ExtractCtx<S> for Args {
+impl<S: Set> Extract<S> for Args {
     type Error = Error;
 
     fn extract(
@@ -462,7 +486,7 @@ impl<S: Set> ExtractCtx<S> for Args {
         _ser: &Services,
         ctx: &Ctx,
     ) -> Result<Self, Self::Error> {
-        Ok(Self(ctx.args().clone()))
+        Ok(Self::extract_ctx(ctx))
     }
 }
 
@@ -539,15 +563,8 @@ impl<S: Set> ExtractCtx<S> for Args {
 )]
 pub struct Name(Str);
 
-impl<S: Set> ExtractCtx<S> for Name {
-    type Error = Error;
-
-    fn extract(
-        _uid: crate::Uid,
-        _set: &S,
-        _ser: &Services,
-        ctx: &Ctx,
-    ) -> Result<Self, Self::Error> {
+impl Name {
+    pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
         Ok(Self(
             ctx.name()
                 .ok_or_else(|| {
@@ -557,6 +574,19 @@ impl<S: Set> ExtractCtx<S> for Name {
                 })?
                 .clone(),
         ))
+    }
+}
+
+impl<S: Set> Extract<S> for Name {
+    type Error = Error;
+
+    fn extract(
+        _uid: crate::Uid,
+        _set: &S,
+        _ser: &Services,
+        ctx: &Ctx,
+    ) -> Result<Self, Self::Error> {
+        Self::extract_ctx(ctx)
     }
 }
 
@@ -634,15 +664,8 @@ impl Display for Name {
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Prefix(Str);
 
-impl<S: Set> ExtractCtx<S> for Prefix {
-    type Error = Error;
-
-    fn extract(
-        _uid: crate::Uid,
-        _set: &S,
-        _ser: &Services,
-        ctx: &Ctx,
-    ) -> Result<Self, Self::Error> {
+impl Prefix {
+    pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
         Ok(Self(
             ctx.prefix()
                 .ok_or_else(|| {
@@ -652,6 +675,19 @@ impl<S: Set> ExtractCtx<S> for Prefix {
                 })?
                 .clone(),
         ))
+    }
+}
+
+impl<S: Set> Extract<S> for Prefix {
+    type Error = Error;
+
+    fn extract(
+        _uid: crate::Uid,
+        _set: &S,
+        _ser: &Services,
+        ctx: &Ctx,
+    ) -> Result<Self, Self::Error> {
+        Self::extract_ctx(ctx)
     }
 }
 
@@ -737,6 +773,12 @@ impl Display for Prefix {
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Style(crate::opt::OptStyle);
 
+impl Style {
+    pub fn extract_ctx(ctx: &Ctx) -> Self {
+        Self(ctx.style())
+    }
+}
+
 impl Deref for Style {
     type Target = crate::opt::OptStyle;
 
@@ -757,7 +799,7 @@ impl Display for Style {
     }
 }
 
-impl<S: Set> ExtractCtx<S> for Style {
+impl<S: Set> Extract<S> for Style {
     type Error = Error;
 
     fn extract(
@@ -766,7 +808,7 @@ impl<S: Set> ExtractCtx<S> for Style {
         _ser: &Services,
         ctx: &Ctx,
     ) -> Result<Self, Self::Error> {
-        Ok(Self(ctx.style()))
+        Ok(Self::extract_ctx(ctx))
     }
 }
 
@@ -832,6 +874,12 @@ impl<S: Set> ExtractCtx<S> for Style {
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Disable(bool);
 
+impl Disable {
+    pub fn extract_ctx(ctx: &Ctx) -> Self {
+        Self(ctx.disable())
+    }
+}
+
 impl Deref for Disable {
     type Target = bool;
 
@@ -852,7 +900,7 @@ impl Display for Disable {
     }
 }
 
-impl<S: Set> ExtractCtx<S> for Disable {
+impl<S: Set> Extract<S> for Disable {
     type Error = Error;
 
     fn extract(
@@ -861,7 +909,7 @@ impl<S: Set> ExtractCtx<S> for Disable {
         _ser: &Services,
         ctx: &Ctx,
     ) -> Result<Self, Self::Error> {
-        Ok(Self(ctx.disable()))
+        Ok(Self::extract_ctx(ctx))
     }
 }
 
@@ -928,6 +976,20 @@ impl<S: Set> ExtractCtx<S> for Disable {
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RawVal(crate::RawVal);
 
+impl RawVal {
+    pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
+        Ok(Self(
+            ctx.arg()
+                .ok_or_else(|| {
+                    Error::raise_error(
+                        "Consider using Option<RawVal> instead, cause the RawVal is an Option in Ctx",
+                    )
+                })?
+                .clone(),
+        ))
+    }
+}
+
 impl Deref for RawVal {
     type Target = crate::RawVal;
 
@@ -942,7 +1004,7 @@ impl DerefMut for RawVal {
     }
 }
 
-impl<S: Set> ExtractCtx<S> for RawVal {
+impl<S: Set> Extract<S> for RawVal {
     type Error = Error;
 
     fn extract(
@@ -951,15 +1013,7 @@ impl<S: Set> ExtractCtx<S> for RawVal {
         _ser: &Services,
         ctx: &Ctx,
     ) -> Result<Self, Self::Error> {
-        Ok(Self(
-            ctx.arg()
-                .ok_or_else(|| {
-                    Error::raise_error(
-                        "Consider using Option<RawVal> instead, cause the RawVal is an Option in Ctx",
-                    )
-                })?
-                .clone(),
-        ))
+        Self::extract_ctx(ctx)
     }
 }
 
@@ -1088,7 +1142,7 @@ impl<T> DerefMut for Value<T> {
     }
 }
 
-impl<S: Set, T: RawValParser<<S as Set>::Opt>> ExtractCtx<S> for Value<T> {
+impl<S: Set, T: RawValParser<<S as Set>::Opt>> Extract<S> for Value<T> {
     type Error = Error;
 
     fn extract(uid: crate::Uid, set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {

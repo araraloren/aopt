@@ -3,7 +3,7 @@ pub(crate) mod extract;
 pub(crate) mod handler;
 
 pub use self::ctx::Ctx;
-pub use self::extract::ExtractCtx;
+pub use self::extract::Extract;
 pub use self::handler::Handler;
 pub use self::handler::SerHandler;
 
@@ -104,7 +104,7 @@ pub fn wrap_ser_handler<Set, Args, Ret, Error>(
 ) -> Callbacks<Set, Ret, Error>
 where
     Error: Into<crate::Error>,
-    Args: ExtractCtx<Set, Error = Error>,
+    Args: Extract<Set, Error = Error>,
 {
     Box::new(
         move |uid: Uid, set: &mut Set, ser: &mut Services, ctx: &Ctx| {
@@ -120,7 +120,7 @@ pub fn wrap_handler<Set, Args, Ret, Error>(
 ) -> Callbacks<Set, Ret, Error>
 where
     Error: Into<crate::Error>,
-    Args: ExtractCtx<Set, Error = Error>,
+    Args: Extract<Set, Error = Error>,
 {
     Box::new(
         move |uid: Uid, set: &mut Set, ser: &mut Services, ctx: &Ctx| {
@@ -131,13 +131,13 @@ where
 }
 
 /// Wrap the handler and store.
-pub fn wrap_ser_store<Set, Args, Output, Ret, Error>(
+pub fn wrap_ser_handler_store<Set, Args, Output, Ret, Error>(
     mut handler: impl SerHandler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
     mut store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static,
 ) -> Callbacks<Set, Ret, Error>
 where
     Error: Into<crate::Error>,
-    Args: ExtractCtx<Set, Error = Error>,
+    Args: Extract<Set, Error = Error>,
 {
     Box::new(
         move |uid: Uid, set: &mut Set, ser: &mut Services, ctx: &Ctx| {
@@ -149,13 +149,13 @@ where
 }
 
 /// Wrap the handler and store.
-pub fn wrap_store<Set, Args, Output, Ret, Error>(
+pub fn wrap_handler_store<Set, Args, Output, Ret, Error>(
     mut handler: impl Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
     mut store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static,
 ) -> Callbacks<Set, Ret, Error>
 where
     Error: Into<crate::Error>,
-    Args: ExtractCtx<Set, Error = Error>,
+    Args: Extract<Set, Error = Error>,
 {
     Box::new(
         move |uid: Uid, set: &mut Set, ser: &mut Services, ctx: &Ctx| {

@@ -488,7 +488,7 @@ impl Creator for MainCreator {
     fn new_with(&mut self, mut config: Self::Config) -> Result<Self::Opt, Self::Error> {
         let deactivate_style = config.deactivate().unwrap_or(false);
         let assoc = config.take_assoc().unwrap_or(ValAssoc::Null);
-        let action = config.take_action().unwrap_or(ValAction::Null);
+        let action = config.take_action().unwrap_or(ValAction::Set);
         let validator = config
             .take_validator()
             .unwrap_or(ValValidator::null_validator());

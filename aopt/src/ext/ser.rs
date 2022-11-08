@@ -1,5 +1,5 @@
 //! The structs hold the data collect from [`Services`](crate::ser::Services).
-//! They are all implemented [`ExtractCtx`].
+//! They are all implemented [`Extract`].
 use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::Debug;
@@ -8,7 +8,7 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 
 use crate::ctx::Ctx;
-use crate::ctx::ExtractCtx;
+use crate::ctx::Extract;
 use crate::ext::ServicesExt;
 use crate::ser::DataService;
 use crate::ser::InvokeService;
@@ -133,6 +133,12 @@ impl<T> Data<T> {
     }
 }
 
+impl<T: 'static> Data<T> {
+    pub fn extract_ser(ser: &Services) -> Result<Self, Error> {
+        Ok(ser.ser_data()?.data::<Data<T>>()?.clone())
+    }
+}
+
 impl<T: ?Sized> Data<T> {
     pub fn get_ref(&self) -> &T {
         self.0.as_ref()
@@ -156,11 +162,11 @@ impl<T: ?Sized> From<Arc<T>> for Data<T> {
     }
 }
 
-impl<T: 'static, S: Set> ExtractCtx<S> for Data<T> {
+impl<T: 'static, S: Set> Extract<S> for Data<T> {
     type Error = Error;
 
     fn extract(_uid: Uid, _set: &S, ser: &Services, _ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(ser.service::<DataService>()?.data::<Data<T>>()?.clone())
+        Self::extract_ser(ser)
     }
 }
 
@@ -273,6 +279,12 @@ impl<T> Value<T> {
     }
 }
 
+impl<T: Clone + 'static> Value<T> {
+    pub fn extract_ser(uid: Uid, ser: &Services) -> Result<Self, Error> {
+        Ok(Self(ser.service::<ValService>()?.val::<T>(uid)?.clone()))
+    }
+}
+
 impl<T> Clone for Value<T>
 where
     T: Clone,
@@ -282,11 +294,11 @@ where
     }
 }
 
-impl<T: Clone + 'static, S: Set> ExtractCtx<S> for Value<T> {
+impl<T: Clone + 'static, S: Set> Extract<S> for Value<T> {
     type Error = Error;
 
     fn extract(uid: Uid, _set: &S, ser: &Services, _ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(Self(ser.service::<ValService>()?.val::<T>(uid)?.clone()))
+        Self::extract_ser(uid, ser)
     }
 }
 
@@ -345,11 +357,75 @@ where
 
 /// Simple wrapper of option value stored in [`ValueService`](crate::ser::ValueService).
 /// It will clone the value from [`ValueService`](crate::ser::ValueService)
+///
+/// # Examples
+/// ```rust
+/// # use aopt::prelude::*;
+/// # use aopt::Arc;
+/// # use aopt::Error;
+/// # use std::ops::Deref;
+/// #
+/// # fn main() -> Result<(), Error> {
+/// let mut policy = AForward::default();
+/// let mut set = policy.default_set();
+/// let mut ser = policy.default_ser();
+///
+/// set.add_opt("--number=b")?.run()?;
+/// set.add_opt("pos_v=p@*")?.run()?;
+/// set.add_opt("join=m")?.run()?;
+/// ser.ser_invoke_mut::<ASet>()?
+///     .register(0, |_: Uid, _: &mut ASet, disable: ctx::Disable| {
+///         assert_eq!(&false, disable.deref(),);
+///         Ok(Some(true))
+///     })
+///     .with_default();
+/// ser.ser_invoke_mut::<ASet>()?
+///     .register_ser(
+///         1,
+///         |_: Uid, _: &mut ASet, ser: &mut ASer, val: ctx::Value<String>| {
+///             let number_flag = ser::Value::<bool>::extract_ser(0, ser)?;
+///
+///             if *number_flag.deref() {
+///                 if val.chars().all(|v| v.is_ascii_digit()) {
+///                     return Ok(None);
+///                 }
+///             }
+///             Ok(Some(val.deref().clone()))
+///         },
+///     )
+///     .with_default();
+/// ser.ser_invoke_mut::<ASet>()?
+///     .register_ser(2, |_: Uid, _: &mut ASet, ser: &mut ASer| {
+///         let words = ser::Values::<String>::extract_ser(1, ser)?;
+///
+///         Ok(Some(words.deref().join("--")))
+///     })
+///     .with_default();
+///
+/// let args = Args::new(["--number", "set", "42", "foo", "bar"].into_iter());
+///
+/// policy.parse(Arc::new(args), &mut ser, &mut set)?;
+///
+/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &true);
+/// assert_eq!(ser.ser_val()?.vals::<String>(1)?.len(), 3);
+/// assert_eq!(
+///     ser.ser_val()?.val::<String>(2)?,
+///     &String::from("set--foo--bar")
+/// );
+/// # Ok(())
+/// # }
+/// ```
 pub struct Values<T>(Vec<T>);
 
 impl<T> Values<T> {
     pub fn new(values: Vec<T>) -> Self {
         Self(values)
+    }
+}
+
+impl<T: Clone + 'static> Values<T> {
+    pub fn extract_ser(uid: Uid, ser: &Services) -> Result<Self, Error> {
+        Ok(Self(ser.service::<ValService>()?.vals::<T>(uid)?.clone()))
     }
 }
 
@@ -362,7 +438,7 @@ where
     }
 }
 
-impl<T: Clone + 'static, S: Set> ExtractCtx<S> for Values<T> {
+impl<T: Clone + 'static, S: Set> Extract<S> for Values<T> {
     type Error = Error;
 
     fn extract(uid: Uid, _set: &S, ser: &Services, _ctx: &Ctx) -> Result<Self, Self::Error> {
@@ -431,6 +507,16 @@ where
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RawVal(crate::RawVal);
 
+impl RawVal {
+    pub fn extract_ser(uid: Uid, ser: &Services) -> Result<Self, Error> {
+        Ok(Self(
+            ser.service::<RawValService<crate::RawVal>>()?
+                .val(uid)?
+                .clone(),
+        ))
+    }
+}
+
 impl Deref for RawVal {
     type Target = crate::RawVal;
 
@@ -445,15 +531,11 @@ impl DerefMut for RawVal {
     }
 }
 
-impl<S: Set> ExtractCtx<S> for RawVal {
+impl<S: Set> Extract<S> for RawVal {
     type Error = Error;
 
     fn extract(uid: Uid, _set: &S, ser: &Services, _ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(Self(
-            ser.service::<RawValService<crate::RawVal>>()?
-                .val(uid)?
-                .clone(),
-        ))
+        Self::extract_ser(uid, ser)
     }
 }
 
@@ -461,6 +543,16 @@ impl<S: Set> ExtractCtx<S> for RawVal {
 /// It will clone the value from [`RawValService`](crate::ser::RawValService)
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RawVals(Vec<crate::RawVal>);
+
+impl RawVals {
+    pub fn extract_ser(uid: Uid, ser: &Services) -> Result<Self, Error> {
+        Ok(Self(
+            ser.service::<RawValService<crate::RawVal>>()?
+                .vals(uid)?
+                .clone(),
+        ))
+    }
+}
 
 impl Deref for RawVals {
     type Target = Vec<crate::RawVal>;
@@ -476,14 +568,10 @@ impl DerefMut for RawVals {
     }
 }
 
-impl<S: Set> ExtractCtx<S> for RawVals {
+impl<S: Set> Extract<S> for RawVals {
     type Error = Error;
 
     fn extract(uid: Uid, _set: &S, ser: &Services, _ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(Self(
-            ser.service::<RawValService<crate::RawVal>>()?
-                .vals(uid)?
-                .clone(),
-        ))
+        Self::extract_ser(uid, ser)
     }
 }

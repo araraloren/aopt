@@ -5,7 +5,7 @@ use crate::Uid;
 
 /// Implement the trait if your want use your type in the
 /// [`Callback`](super::Callback) of [`InvokeService`](crate::ser::InvokeService).
-pub trait ExtractCtx<Set>
+pub trait Extract<Set>
 where
     Self: Sized,
 {
@@ -14,7 +14,7 @@ where
     fn extract(uid: Uid, set: &Set, ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error>;
 }
 
-impl<Set> ExtractCtx<Set> for ()
+impl<Set> Extract<Set> for ()
 where
     Set: crate::set::Set,
 {
@@ -27,11 +27,11 @@ where
 
 /// Supress the error result.
 /// Return the `Ok(Some(T))` if successful, otherwise return `Ok(None)`.
-impl<T, Err, Set> ExtractCtx<Set> for Option<T>
+impl<T, Err, Set> Extract<Set> for Option<T>
 where
     Err: Into<Error>,
     Set: crate::set::Set,
-    T: ExtractCtx<Set, Error = Err>,
+    T: Extract<Set, Error = Err>,
 {
     type Error = Err;
 
@@ -45,10 +45,10 @@ where
 
 macro_rules! impl_extracter_for {
     ($($arg:ident)*) => {
-        impl<Set, $($arg,)*> ExtractCtx<Set> for ($($arg,)*)
+        impl<Set, $($arg,)*> Extract<Set> for ($($arg,)*)
         where
             $(
-                $arg: ExtractCtx<Set, Error = Error>,
+                $arg: Extract<Set, Error = Error>,
             )*
         {
             type Error = Error;

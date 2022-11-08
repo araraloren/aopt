@@ -15,6 +15,7 @@ pub use self::value::ValService;
 use crate::map::AnyMap;
 use crate::Error;
 use crate::Str;
+use crate::Uid;
 
 pub trait Service {
     fn service_name() -> Str;
