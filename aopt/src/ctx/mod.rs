@@ -142,8 +142,10 @@ where
     Box::new(
         move |uid: Uid, set: &mut Set, ser: &mut Services, ctx: &Ctx| {
             let val = handler.invoke(uid, set, ser, Args::extract(uid, set, ser, ctx)?)?;
+            let arg = ctx.arg();
+            let arg = arg.as_ref().map(|v| v.as_ref());
 
-            Ok(store.process(uid, set, ser, ctx.arg(), val)?)
+            Ok(store.process(uid, set, ser, arg, val)?)
         },
     )
 }
@@ -160,8 +162,10 @@ where
     Box::new(
         move |uid: Uid, set: &mut Set, ser: &mut Services, ctx: &Ctx| {
             let val = handler.invoke(uid, set, Args::extract(uid, set, ser, ctx)?)?;
+            let arg = ctx.arg();
+            let arg = arg.as_ref().map(|v| v.as_ref());
 
-            Ok(store.process(uid, set, ser, ctx.arg(), val)?)
+            Ok(store.process(uid, set, ser, arg, val)?)
         },
     )
 }

@@ -974,7 +974,7 @@ impl<S: Set> Extract<S> for Disable {
 /// # }
 /// ```
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct RawVal(crate::RawVal);
+pub struct RawVal(Arc<crate::RawVal>);
 
 impl RawVal {
     pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
@@ -995,12 +995,6 @@ impl Deref for RawVal {
 
     fn deref(&self) -> &Self::Target {
         &self.0
-    }
-}
-
-impl DerefMut for RawVal {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
     }
 }
 
@@ -1146,8 +1140,11 @@ impl<S: Set, T: RawValParser<<S as Set>::Opt>> Extract<S> for Value<T> {
     type Error = Error;
 
     fn extract(uid: crate::Uid, set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+        let arg = ctx.arg();
+        let arg = arg.as_ref().map(|v| v.as_ref());
+
         Ok(Value(
-            T::parse(set.opt(uid)?, ctx.arg(), ctx).map_err(|e| e.into())?,
+            T::parse(set.opt(uid)?, arg, ctx).map_err(|e| e.into())?,
         ))
     }
 }

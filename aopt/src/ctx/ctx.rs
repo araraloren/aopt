@@ -106,8 +106,8 @@ impl Ctx {
         self.disable
     }
 
-    pub fn arg(&self) -> Option<&RawVal> {
-        self.arg.as_ref().map(|v| v.as_ref())
+    pub fn arg(&self) -> Option<Arc<RawVal>> {
+        self.arg.clone()
     }
 
     pub fn orig_arg(&self) -> Option<&RawVal> {

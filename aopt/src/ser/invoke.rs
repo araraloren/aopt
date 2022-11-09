@@ -344,7 +344,8 @@ where
     ) -> Result<Option<()>, Error> {
         let opt = set.get(uid).unwrap();
         let assoc = opt.assoc();
-        let val = ctx.arg();
+        let arg = ctx.arg();
+        let val = arg.as_ref().map(|v| v.as_ref());
         let mut store = ValStore::default();
 
         trace!("Invoke default handler for {{{uid}}}, ctx{{{ctx:?}}}");
