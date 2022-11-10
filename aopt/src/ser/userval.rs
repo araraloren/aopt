@@ -5,15 +5,15 @@ use crate::ser::Service;
 use crate::Error;
 
 #[derive(Default)]
-pub struct DataService(AnyMap);
+pub struct UsrValService(AnyMap);
 
-impl Service for DataService {
+impl Service for UsrValService {
     fn service_name() -> crate::Str {
-        astr("DataService")
+        astr("UserValService")
     }
 }
 
-impl DataService {
+impl UsrValService {
     pub fn new() -> Self {
         Self(AnyMap::default())
     }
@@ -50,11 +50,11 @@ impl DataService {
         self.0.get_mut::<T>()
     }
 
-    pub fn data<T: 'static>(&self) -> Result<&T, Error> {
+    pub fn val<T: 'static>(&self) -> Result<&T, Error> {
         self.0.ty::<T>()
     }
 
-    pub fn data_mut<T: 'static>(&mut self) -> Result<&mut T, Error> {
+    pub fn val_mut<T: 'static>(&mut self) -> Result<&mut T, Error> {
         self.0.ty_mut::<T>()
     }
 

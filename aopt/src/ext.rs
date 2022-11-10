@@ -12,14 +12,15 @@ use crate::opt::StrParser;
 use crate::opt::UintCreator;
 use crate::policy::Forward;
 use crate::ser::CheckService;
-use crate::ser::DataService;
 use crate::ser::InvokeService;
 use crate::ser::RawValService;
 use crate::ser::Services;
+use crate::ser::UsrValService;
 use crate::ser::ValService;
 use crate::set::OptSet;
 use crate::Error;
 use crate::RawVal;
+use crate::Uid;
 
 pub mod ctx;
 pub mod ser;
@@ -30,9 +31,9 @@ pub trait ServicesExt {
 
     fn ser_val_mut(&mut self) -> Result<&mut ValService, Error>;
 
-    fn ser_data(&self) -> Result<&DataService, Error>;
+    fn ser_usrval(&self) -> Result<&UsrValService, Error>;
 
-    fn ser_data_mut(&mut self) -> Result<&mut DataService, Error>;
+    fn ser_usrval_mut(&mut self) -> Result<&mut UsrValService, Error>;
 
     fn ser_invoke<S: 'static>(&self) -> Result<&InvokeService<S>, Error>;
 
@@ -41,6 +42,32 @@ pub trait ServicesExt {
     fn ser_rawval<T: 'static>(&self) -> Result<&RawValService<T>, Error>;
 
     fn ser_rawval_mut<T: 'static>(&mut self) -> Result<&mut RawValService<T>, Error>;
+}
+
+pub trait ServicesValExt<T: 'static> {
+    fn val(uid: Uid, ser: &Services) -> Result<&T, Error>;
+
+    fn val_mut(uid: Uid, ser: &mut Services) -> Result<&mut T, Error>;
+
+    fn vals(uid: Uid, ser: &Services) -> Result<&Vec<T>, Error>;
+
+    fn vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<T>, Error>;
+}
+
+pub trait ServicesRawValExt<T: 'static> {
+    fn raw_val(uid: Uid, ser: &Services) -> Result<&T, Error>;
+
+    fn raw_val_mut(uid: Uid, ser: &mut Services) -> Result<&mut T, Error>;
+
+    fn raw_vals(uid: Uid, ser: &Services) -> Result<&Vec<T>, Error>;
+
+    fn raw_vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<T>, Error>;
+}
+
+pub trait ServicesUsrValExt<T: 'static> {
+    fn usr_val(ser: &Services) -> Result<&T, Error>;
+
+    fn usr_val_mut(ser: &mut Services) -> Result<&mut T, Error>;
 }
 
 pub type ACreator = Box<dyn Creator<Opt = AOpt, Config = OptConfig, Error = Error>>;
@@ -78,7 +105,7 @@ pub(crate) fn aset_with_default_creators() -> ASet {
 pub(crate) fn services_with_default_service<S: 'static>() -> Services {
     Services::default()
         .with(CheckService::<S>::new())
-        .with(DataService::new())
+        .with(UsrValService::new())
         .with(InvokeService::<S>::new())
         .with(RawValService::<RawVal>::new())
         .with(ValService::new())

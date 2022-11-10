@@ -10,10 +10,13 @@ use std::ops::DerefMut;
 use crate::ctx::Ctx;
 use crate::ctx::Extract;
 use crate::ext::ServicesExt;
-use crate::ser::DataService;
+use crate::ext::ServicesRawValExt;
+use crate::ext::ServicesUsrValExt;
+use crate::ext::ServicesValExt;
 use crate::ser::InvokeService;
 use crate::ser::RawValService;
 use crate::ser::Services;
+use crate::ser::UsrValService;
 use crate::ser::ValService;
 use crate::set::Set;
 use crate::Arc;
@@ -29,12 +32,12 @@ impl ServicesExt for Services {
         self.service_mut::<ValService>()
     }
 
-    fn ser_data(&self) -> Result<&DataService, Error> {
-        self.service::<DataService>()
+    fn ser_usrval(&self) -> Result<&UsrValService, Error> {
+        self.service::<UsrValService>()
     }
 
-    fn ser_data_mut(&mut self) -> Result<&mut DataService, Error> {
-        self.service_mut::<DataService>()
+    fn ser_usrval_mut(&mut self) -> Result<&mut UsrValService, Error> {
+        self.service_mut::<UsrValService>()
     }
 
     fn ser_invoke<S: 'static>(&self) -> Result<&InvokeService<S>, Error> {
@@ -54,11 +57,63 @@ impl ServicesExt for Services {
     }
 }
 
-/// Simple data wrapper of user data stored in [`DataService`](crate::ser::DataService).
+impl ServicesRawValExt<crate::RawVal> for crate::RawVal {
+    fn raw_val(uid: Uid, ser: &Services) -> Result<&crate::RawVal, Error> {
+        ser.ser_rawval()?.val(uid)
+    }
+
+    fn raw_val_mut(uid: Uid, ser: &mut Services) -> Result<&mut crate::RawVal, Error> {
+        ser.ser_rawval_mut()?.val_mut(uid)
+    }
+
+    fn raw_vals(uid: Uid, ser: &Services) -> Result<&Vec<crate::RawVal>, Error> {
+        ser.ser_rawval()?.vals(uid)
+    }
+
+    fn raw_vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<crate::RawVal>, Error> {
+        ser.ser_rawval_mut()?.vals_mut(uid)
+    }
+}
+
+impl<T> ServicesValExt<T> for T
+where
+    T: 'static,
+{
+    fn val(uid: Uid, ser: &Services) -> Result<&T, Error> {
+        ser.ser_val()?.val(uid)
+    }
+
+    fn val_mut(uid: Uid, ser: &mut Services) -> Result<&mut T, Error> {
+        ser.ser_val_mut()?.val_mut(uid)
+    }
+
+    fn vals(uid: Uid, ser: &Services) -> Result<&Vec<T>, Error> {
+        ser.ser_val()?.vals(uid)
+    }
+
+    fn vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<T>, Error> {
+        ser.ser_val_mut()?.vals_mut(uid)
+    }
+}
+
+impl<T> ServicesUsrValExt<T> for T
+where
+    T: 'static,
+{
+    fn usr_val(ser: &Services) -> Result<&T, Error> {
+        ser.ser_usrval()?.val::<T>()
+    }
+
+    fn usr_val_mut(ser: &mut Services) -> Result<&mut T, Error> {
+        ser.ser_usrval_mut()?.val_mut::<T>()
+    }
+}
+
+/// Simple wrapper of user value stored in [`UsrValService`](crate::ser::UsrValService).
 ///
-/// UserData internally use [Arc](crate::Arc), it is cheap to clone.
+/// Value internally use [Arc](crate::Arc), it is cheap to clone.
 /// Before used it in `handler` which register in [`InvokeService`](crate::ser::InvokeService),
-/// you need add it to [`DataService`].
+/// you need add it to [`UsrValService`].
 ///
 /// # Examples
 /// ```rust
@@ -91,8 +146,8 @@ impl ServicesExt for Services {
 /// let mut set = policy.default_set();
 /// let mut ser = policy.default_ser();
 ///
-/// ser.ser_data_mut()?
-///     .insert(ser::Data::new(PosList(RefCell::new(vec![]))));
+/// ser.ser_usrval_mut()?
+///     .insert(ser::Value::new(PosList(RefCell::new(vec![]))));
 /// set.add_opt("--bool=b/")?.run()?;
 /// set.add_opt("pos_v=p@*")?.run()?;
 /// ser.ser_invoke_mut::<ASet>()?
@@ -104,8 +159,8 @@ impl ServicesExt for Services {
 /// ser.ser_invoke_mut::<ASet>()?
 ///     .register(
 ///         1,
-///         |_: Uid, _: &mut ASet, mut raw_val: ctx::RawVal, data: ser::Data<PosList>| {
-///             data.add_pos(std::mem::take(&mut raw_val));
+///         |_: Uid, _: &mut ASet, raw_val: ctx::RawVal, data: ser::Value<PosList>| {
+///             data.add_pos(raw_val.clone_rawval());
 ///             Ok(Some(true))
 ///         },
 ///     )
@@ -116,7 +171,7 @@ impl ServicesExt for Services {
 /// policy.parse(Arc::new(args), &mut ser, &mut set)?;
 ///
 /// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
-/// ser.ser_data()?.data::<ser::Data<PosList>>()?.test_pos(
+/// ser::Value::<PosList>::usr_val(&ser)?.test_pos(
 ///     ["set", "42", "foo", "bar"]
 ///         .into_iter()
 ///         .map(RawVal::from)
@@ -125,21 +180,21 @@ impl ServicesExt for Services {
 /// # Ok(())
 /// # }
 /// ```
-pub struct Data<T: ?Sized>(Arc<T>);
+pub struct Value<T: ?Sized>(Arc<T>);
 
-impl<T> Data<T> {
+impl<T> Value<T> {
     pub fn new(value: T) -> Self {
         Self(Arc::new(value))
     }
 }
 
-impl<T: 'static> Data<T> {
+impl<T: 'static> Value<T> {
     pub fn extract_ser(ser: &Services) -> Result<Self, Error> {
-        Ok(ser.ser_data()?.data::<Data<T>>()?.clone())
+        Ok(ser.ser_usrval()?.val::<Value<T>>()?.clone())
     }
 }
 
-impl<T: ?Sized> Data<T> {
+impl<T: ?Sized> Value<T> {
     pub fn get_ref(&self) -> &T {
         self.0.as_ref()
     }
@@ -149,156 +204,24 @@ impl<T: ?Sized> Data<T> {
     }
 }
 
-/// UserData internally use Arc.
-impl<T: ?Sized> Clone for Data<T> {
-    fn clone(&self) -> Data<T> {
-        Data(Arc::clone(&self.0))
+/// Value internally use Arc.
+impl<T: ?Sized> Clone for Value<T> {
+    fn clone(&self) -> Value<T> {
+        Value(Arc::clone(&self.0))
     }
 }
 
-impl<T: ?Sized> From<Arc<T>> for Data<T> {
+impl<T: ?Sized> From<Arc<T>> for Value<T> {
     fn from(val: Arc<T>) -> Self {
-        Data(val)
+        Value(val)
     }
 }
 
-impl<T: 'static, S: Set> Extract<S> for Data<T> {
+impl<T: 'static, S: Set> Extract<S> for Value<T> {
     type Error = Error;
 
     fn extract(_uid: Uid, _set: &S, ser: &Services, _ctx: &Ctx) -> Result<Self, Self::Error> {
         Self::extract_ser(ser)
-    }
-}
-
-impl<T> Debug for Data<T>
-where
-    T: Debug + 'static,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Data").field(&self.0).finish()
-    }
-}
-
-impl<T: Display> Display for Data<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Data({})", self.0)
-    }
-}
-
-impl<T> Deref for Data<T> {
-    type Target = Arc<T>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<T> DerefMut for Data<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl<T> Serialize for Data<T>
-where
-    T: Serialize,
-{
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.0.serialize(serializer)
-    }
-}
-
-impl<'de, T> Deserialize<'de> for Data<T>
-where
-    Arc<T>: Deserialize<'de>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        Ok(Self(Arc::<T>::deserialize(deserializer)?))
-    }
-}
-
-/// Simple wrapper of option value stored in [`ValueService`](crate::ser::ValueService).
-///
-/// It will clone the value from [`ValueService`](crate::ser::ValueService) which set by option.
-/// # Examples
-/// ```rust
-/// # use aopt::prelude::*;
-/// # use aopt::Arc;
-/// # use aopt::Error;
-/// # use std::ops::Deref;
-/// #
-/// # fn main() -> Result<(), Error> {
-/// let mut policy = AForward::default();
-/// let mut set = policy.default_set();
-/// let mut ser = policy.default_ser();
-///
-/// set.add_opt("--number=b")?.run()?;
-/// set.add_opt("pos_v=p@*")?.run()?;
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, disable: ctx::Disable| {
-///         assert_eq!(&false, disable.deref(),);
-///         Ok(Some(true))
-///     })
-///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register_ser(
-///         1,
-///         |_: Uid, set: &mut ASet, ser: &mut ASer, ctx: Ctx, val: ctx::Value<String>| {
-///             let number_flag = ser::Value::<bool>::extract(0, set, ser, &ctx)?;
-///
-///             if *number_flag.deref() {
-///                 if val.chars().all(|v| v.is_ascii_digit()) {
-///                     return Ok(None);
-///                 }
-///             }
-///             Ok(Some(true))
-///         },
-///     )
-///     .with_default();
-///
-/// let args = Args::new(["--number", "set", "42", "foo", "bar"].into_iter());
-///
-/// policy.parse(Arc::new(args), &mut ser, &mut set)?;
-///
-/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &true);
-/// assert_eq!(ser.ser_val()?.vals::<bool>(1)?.len(), 3);
-/// # Ok(())
-/// # }
-/// ```
-pub struct Value<T>(T);
-
-impl<T> Value<T> {
-    pub fn new(value: T) -> Self {
-        Self(value)
-    }
-}
-
-impl<T: Clone + 'static> Value<T> {
-    pub fn extract_ser(uid: Uid, ser: &Services) -> Result<Self, Error> {
-        Ok(Self(ser.service::<ValService>()?.val::<T>(uid)?.clone()))
-    }
-}
-
-impl<T> Clone for Value<T>
-where
-    T: Clone,
-{
-    fn clone(&self) -> Value<T> {
-        Value(self.0.clone())
-    }
-}
-
-impl<T: Clone + 'static, S: Set> Extract<S> for Value<T> {
-    type Error = Error;
-
-    fn extract(uid: Uid, _set: &S, ser: &Services, _ctx: &Ctx) -> Result<Self, Self::Error> {
-        Self::extract_ser(uid, ser)
     }
 }
 
@@ -318,7 +241,7 @@ impl<T: Display> Display for Value<T> {
 }
 
 impl<T> Deref for Value<T> {
-    type Target = T;
+    type Target = Arc<T>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -345,233 +268,12 @@ where
 
 impl<'de, T> Deserialize<'de> for Value<T>
 where
-    T: Deserialize<'de>,
+    Arc<T>: Deserialize<'de>,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        Ok(Self(T::deserialize(deserializer)?))
-    }
-}
-
-/// Simple wrapper of option value stored in [`ValueService`](crate::ser::ValueService).
-/// It will clone the value from [`ValueService`](crate::ser::ValueService)
-///
-/// # Examples
-/// ```rust
-/// # use aopt::prelude::*;
-/// # use aopt::Arc;
-/// # use aopt::Error;
-/// # use std::ops::Deref;
-/// #
-/// # fn main() -> Result<(), Error> {
-/// let mut policy = AForward::default();
-/// let mut set = policy.default_set();
-/// let mut ser = policy.default_ser();
-///
-/// set.add_opt("--number=b")?.run()?;
-/// set.add_opt("pos_v=p@*")?.run()?;
-/// set.add_opt("join=m")?.run()?;
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, disable: ctx::Disable| {
-///         assert_eq!(&false, disable.deref(),);
-///         Ok(Some(true))
-///     })
-///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register_ser(
-///         1,
-///         |_: Uid, _: &mut ASet, ser: &mut ASer, val: ctx::Value<String>| {
-///             let number_flag = ser::Value::<bool>::extract_ser(0, ser)?;
-///
-///             if *number_flag.deref() {
-///                 if val.chars().all(|v| v.is_ascii_digit()) {
-///                     return Ok(None);
-///                 }
-///             }
-///             Ok(Some(val.deref().clone()))
-///         },
-///     )
-///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register_ser(2, |_: Uid, _: &mut ASet, ser: &mut ASer| {
-///         let words = ser::Values::<String>::extract_ser(1, ser)?;
-///
-///         Ok(Some(words.deref().join("--")))
-///     })
-///     .with_default();
-///
-/// let args = Args::new(["--number", "set", "42", "foo", "bar"].into_iter());
-///
-/// policy.parse(Arc::new(args), &mut ser, &mut set)?;
-///
-/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &true);
-/// assert_eq!(ser.ser_val()?.vals::<String>(1)?.len(), 3);
-/// assert_eq!(
-///     ser.ser_val()?.val::<String>(2)?,
-///     &String::from("set--foo--bar")
-/// );
-/// # Ok(())
-/// # }
-/// ```
-pub struct Values<T>(Vec<T>);
-
-impl<T> Values<T> {
-    pub fn new(values: Vec<T>) -> Self {
-        Self(values)
-    }
-}
-
-impl<T: Clone + 'static> Values<T> {
-    pub fn extract_ser(uid: Uid, ser: &Services) -> Result<Self, Error> {
-        Ok(Self(ser.service::<ValService>()?.vals::<T>(uid)?.clone()))
-    }
-}
-
-impl<T> Clone for Values<T>
-where
-    T: Clone,
-{
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
-    }
-}
-
-impl<T: Clone + 'static, S: Set> Extract<S> for Values<T> {
-    type Error = Error;
-
-    fn extract(uid: Uid, _set: &S, ser: &Services, _ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(Self(ser.service::<ValService>()?.vals::<T>(uid)?.clone()))
-    }
-}
-
-impl<T> Debug for Values<T>
-where
-    T: Debug + 'static,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Values").field(&self.0).finish()
-    }
-}
-
-impl<T> Display for Values<T>
-where
-    Vec<T>: Display,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Values({})", self.0)
-    }
-}
-
-impl<T> Deref for Values<T> {
-    type Target = Vec<T>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<T> DerefMut for Values<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl<T> Serialize for Values<T>
-where
-    Vec<T>: Serialize,
-{
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.0.serialize(serializer)
-    }
-}
-
-impl<'de, T> Deserialize<'de> for Values<T>
-where
-    Vec<T>: Deserialize<'de>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        Ok(Self(<Vec<T>>::deserialize(deserializer)?))
-    }
-}
-
-/// Simple wrapper of option value stored in [`RawValService`](crate::ser::RawValService).
-/// It will clone the value from [`RawValService`](crate::ser::RawValService)
-#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct RawVal(crate::RawVal);
-
-impl RawVal {
-    pub fn extract_ser(uid: Uid, ser: &Services) -> Result<Self, Error> {
-        Ok(Self(
-            ser.service::<RawValService<crate::RawVal>>()?
-                .val(uid)?
-                .clone(),
-        ))
-    }
-}
-
-impl Deref for RawVal {
-    type Target = crate::RawVal;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for RawVal {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl<S: Set> Extract<S> for RawVal {
-    type Error = Error;
-
-    fn extract(uid: Uid, _set: &S, ser: &Services, _ctx: &Ctx) -> Result<Self, Self::Error> {
-        Self::extract_ser(uid, ser)
-    }
-}
-
-/// Simple wrapper of option value stored in [`RawValService`](crate::ser::RawValService).
-/// It will clone the value from [`RawValService`](crate::ser::RawValService)
-#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct RawVals(Vec<crate::RawVal>);
-
-impl RawVals {
-    pub fn extract_ser(uid: Uid, ser: &Services) -> Result<Self, Error> {
-        Ok(Self(
-            ser.service::<RawValService<crate::RawVal>>()?
-                .vals(uid)?
-                .clone(),
-        ))
-    }
-}
-
-impl Deref for RawVals {
-    type Target = Vec<crate::RawVal>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for RawVals {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl<S: Set> Extract<S> for RawVals {
-    type Error = Error;
-
-    fn extract(uid: Uid, _set: &S, ser: &Services, _ctx: &Ctx) -> Result<Self, Self::Error> {
-        Self::extract_ser(uid, ser)
+        Ok(Self(Arc::<T>::deserialize(deserializer)?))
     }
 }

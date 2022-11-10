@@ -88,12 +88,12 @@ pub mod prelude {
     pub use crate::proc::OptProcess;
     pub use crate::proc::Process;
     pub use crate::ser::CheckService;
-    pub use crate::ser::DataService;
     pub use crate::ser::InvokeService;
     pub use crate::ser::RawValService;
     pub use crate::ser::SerRegister;
     pub use crate::ser::Service;
     pub use crate::ser::Services;
+    pub use crate::ser::UsrValService;
     pub use crate::ser::ValEntry;
     pub use crate::ser::ValService;
     pub use crate::set::Commit;

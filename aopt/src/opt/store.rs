@@ -2,11 +2,10 @@ use std::marker::PhantomData;
 use tracing::trace;
 
 use crate::ctx::Store;
+use crate::ext::ServicesExt;
 use crate::opt::Opt;
 use crate::opt::ValAction;
-use crate::ser::RawValService;
 use crate::ser::Services;
-use crate::ser::ValService;
 use crate::set::SetExt;
 use crate::Error;
 use crate::RawVal;
@@ -50,14 +49,14 @@ where
         trace!("Store the value of {{{uid}}} ==> {:?}", raw);
         // Set the value if return Some(Value)
         if let Some(val) = val {
-            let raw_ser = ser.service_mut::<RawValService<RawVal>>()?;
+            let raw_ser = ser.ser_rawval_mut()?;
 
             if let Some(raw) = raw {
                 raw_ser.push(uid, raw.clone());
             }
 
             let action = set.opt(uid)?.action();
-            let val_ser = ser.service_mut::<ValService>()?;
+            let val_ser = ser.ser_val_mut()?;
 
             match action {
                 ValAction::Set => {

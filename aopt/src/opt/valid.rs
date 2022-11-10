@@ -94,11 +94,15 @@ macro_rules! num_validator {
 impl ValValidator {
     num_validator!(i8, i8_validator);
 
+    num_validator!(i16, i16_validator);
+
     num_validator!(i32, i32_validator);
 
     num_validator!(i64, i64_validator);
 
     num_validator!(u8, u8_validator);
+
+    num_validator!(u16, u16_validator);
 
     num_validator!(u32, u32_validator);
 

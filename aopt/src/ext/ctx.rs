@@ -988,6 +988,10 @@ impl RawVal {
                 .clone(),
         ))
     }
+
+    pub fn clone_rawval(&self) -> crate::RawVal {
+        self.0.as_ref().clone()
+    }
 }
 
 impl Deref for RawVal {

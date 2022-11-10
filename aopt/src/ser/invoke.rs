@@ -45,13 +45,13 @@ use crate::Uid;
 ///            Ok(Self(ctx.args().len()))
 ///        }
 ///    }
-///    let mut ser = Services::default().with(DataService::default());
+///    let mut ser = Services::default().with(UsrValService::default());
 ///    let mut is = InvokeService::<ASet>::new();
 ///    let mut set = ASet::default();
 ///    let args = Arc::new(Args::new(["--foo", "bar", "doo"].into_iter()));
 ///    let ctx = Ctx::default().with_args(args);
 ///
-///    ser.ser_data_mut()?.insert(ser::Data::new(42i64));
+///    ser.ser_data_mut()?.insert(ser::Value::new(42i64));
 ///    // you can register callback into InvokeService
 ///    is.register(
 ///        0,
@@ -72,7 +72,7 @@ use crate::Uid;
 ///    .with_default();
 ///    is.register(
 ///        2,
-///        |uid: Uid, _set: &mut ASet, data: ser::Data<i64>| -> Result<Option<()>, Error> {
+///        |uid: Uid, _set: &mut ASet, data: ser::Value<i64>| -> Result<Option<()>, Error> {
 ///            println!("Calling the handler of {{{uid}}}");
 ///            assert_eq!(data.as_ref(), &42);
 ///            Ok(None)
