@@ -4,7 +4,9 @@ use crate::opt::OptIndex;
 use crate::opt::OptStyle;
 use crate::opt::ValAction;
 use crate::opt::ValAssoc;
+use crate::opt::ValInitiator;
 use crate::opt::ValValidator;
+use crate::ser::Services;
 use crate::Error;
 use crate::RawVal;
 use crate::Str;
@@ -39,6 +41,8 @@ pub struct AOpt {
     index: Option<OptIndex>,
 
     validator: ValValidator,
+
+    initiator: ValInitiator,
 
     alias: Option<Vec<(Str, Str)>>,
 }
@@ -111,6 +115,11 @@ impl AOpt {
 
     pub fn with_alias(mut self, alias: Option<Vec<(Str, Str)>>) -> Self {
         self.alias = alias;
+        self
+    }
+
+    pub fn with_initiator(mut self, initiator: ValInitiator) -> Self {
+        self.initiator = initiator;
         self
     }
 
@@ -193,6 +202,11 @@ impl AOpt {
                 alias.remove(i);
             }
         }
+        self
+    }
+
+    pub fn set_initiator(&mut self, initiator: ValInitiator) -> &mut Self {
+        self.initiator = initiator;
         self
     }
 
@@ -324,5 +338,9 @@ impl Opt for AOpt {
         let name = self.name().clone();
 
         self.validator.check(name.as_str(), value, disable, index)
+    }
+
+    fn init(&mut self, ser: &mut Services) -> Result<(), Error> {
+        self.initiator.do_initialize(self.uid, ser)
     }
 }

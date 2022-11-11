@@ -13,6 +13,7 @@ use crate::ext::ServicesExt;
 use crate::ext::ServicesRawValExt;
 use crate::ext::ServicesUsrValExt;
 use crate::ext::ServicesValExt;
+use crate::prelude::CheckService;
 use crate::ser::InvokeService;
 use crate::ser::RawValService;
 use crate::ser::Services;
@@ -54,6 +55,10 @@ impl ServicesExt for Services {
 
     fn ser_rawval_mut<T: 'static>(&mut self) -> Result<&mut RawValService<T>, Error> {
         self.service_mut::<RawValService<T>>()
+    }
+
+    fn ser_check<S: 'static>(&self) -> Result<&crate::prelude::CheckService<S>, Error> {
+        self.service::<CheckService<S>>()
     }
 }
 

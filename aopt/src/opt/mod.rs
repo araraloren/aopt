@@ -5,7 +5,7 @@ pub(crate) mod creator;
 pub(crate) mod help;
 pub(crate) mod index;
 pub(crate) mod info;
-pub(crate) mod init;
+pub(crate) mod initiator;
 pub(crate) mod parser;
 pub(crate) mod serde;
 pub(crate) mod store;
@@ -31,8 +31,8 @@ pub use self::help::Help as OptHelp;
 pub use self::index::Index as OptIndex;
 pub use self::info::ConstrctInfo;
 pub use self::info::Information;
-pub use self::init::ValInitialize;
-pub use self::init::ValInitiator;
+pub use self::initiator::ValInitialize;
+pub use self::initiator::ValInitiator;
 pub use self::parser::StrParser;
 pub use self::store::ValStore;
 pub use self::style::Style as OptStyle;
@@ -42,6 +42,7 @@ pub use self::value::RawValParser;
 
 use std::fmt::Debug;
 
+use crate::ser::Services;
 use crate::Error;
 use crate::RawVal;
 use crate::Str;
@@ -110,6 +111,8 @@ pub trait Opt: Debug {
     fn mat_alias(&self, prefix: &Str, name: &Str) -> bool;
 
     fn mat_idx(&self, index: Option<(usize, usize)>) -> bool;
+
+    fn init(&mut self, ser: &mut Services) -> Result<(), Error>;
 
     fn check_val(
         &mut self,

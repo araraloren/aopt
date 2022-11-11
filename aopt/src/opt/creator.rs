@@ -5,6 +5,7 @@ use crate::opt::OptConfig;
 use crate::opt::OptStyle;
 use crate::opt::ValAction;
 use crate::opt::ValAssoc;
+use crate::opt::ValInitiator;
 use crate::opt::ValValidator;
 use crate::Error;
 use crate::Str;
@@ -39,6 +40,7 @@ impl Creator for IntCreator {
         let optional = config.take_optional().unwrap_or(true);
         let assoc = config.take_assoc().unwrap_or(ValAssoc::Int);
         let action = config.take_action().unwrap_or(ValAction::App);
+        let initiator = config.take_initiator().unwrap_or_default();
 
         debug_assert_eq!(
             assoc,
@@ -70,6 +72,7 @@ impl Creator for IntCreator {
             .with_opt_help(config.gen_opt_help(false)?)
             .with_alias(Some(config.gen_alias()?))
             .with_optional(optional)
+            .with_initiator(initiator)
             .with_validator(ValValidator::i64_validator()))
     }
 }
@@ -104,6 +107,7 @@ impl Creator for UintCreator {
         let optional = config.take_optional().unwrap_or(true);
         let assoc = config.take_assoc().unwrap_or(ValAssoc::Uint);
         let action = config.take_action().unwrap_or(ValAction::App);
+        let initiator = config.take_initiator().unwrap_or_default();
 
         debug_assert_eq!(
             assoc,
@@ -135,6 +139,7 @@ impl Creator for UintCreator {
             .with_opt_help(config.gen_opt_help(false)?)
             .with_alias(Some(config.gen_alias()?))
             .with_optional(optional)
+            .with_initiator(initiator)
             .with_validator(ValValidator::u64_validator()))
     }
 }
@@ -169,6 +174,7 @@ impl Creator for FltCreator {
         let optional = config.take_optional().unwrap_or(true);
         let assoc = config.take_assoc().unwrap_or(ValAssoc::Flt);
         let action = config.take_action().unwrap_or(ValAction::App);
+        let initiator = config.take_initiator().unwrap_or_default();
 
         debug_assert_eq!(
             assoc,
@@ -200,6 +206,7 @@ impl Creator for FltCreator {
             .with_opt_help(config.gen_opt_help(false)?)
             .with_alias(Some(config.gen_alias()?))
             .with_optional(optional)
+            .with_initiator(initiator)
             .with_validator(ValValidator::f64_validator()))
     }
 }
@@ -234,6 +241,7 @@ impl Creator for StrCreator {
         let optional = config.take_optional().unwrap_or(true);
         let assoc = config.take_assoc().unwrap_or(ValAssoc::Str);
         let action = config.take_action().unwrap_or(ValAction::App);
+        let initiator = config.take_initiator().unwrap_or_default();
 
         debug_assert_eq!(
             assoc,
@@ -265,6 +273,7 @@ impl Creator for StrCreator {
             .with_opt_help(config.gen_opt_help(false)?)
             .with_alias(Some(config.gen_alias()?))
             .with_optional(optional)
+            .with_initiator(initiator)
             .with_validator(ValValidator::str_validator()))
     }
 }
@@ -299,6 +308,7 @@ impl Creator for BoolCreator {
         let optional = config.take_optional().unwrap_or(true);
         let assoc = config.take_assoc().unwrap_or(ValAssoc::Bool);
         let action = config.take_action().unwrap_or(ValAction::Set);
+        let value = if deactivate_style { true } else { false };
 
         debug_assert_eq!(
             assoc,
@@ -312,6 +322,10 @@ impl Creator for BoolCreator {
         debug_assert!(
             !config.has_validator(),
             "Boolean option only have default value validator"
+        );
+        debug_assert!(
+            !config.has_initiator(),
+            "Boolean option only have default value initiator"
         );
         if deactivate_style && !self.sp_deactivate() {
             return Err(Error::con_unsupport_deactivate_style(config.gen_name()?));
@@ -329,6 +343,7 @@ impl Creator for BoolCreator {
             .with_opt_help(config.gen_opt_help(deactivate_style)?)
             .with_alias(Some(config.gen_alias()?))
             .with_optional(optional)
+            .with_initiator(ValInitiator::bool_initiator(value))
             .with_validator(ValValidator::bool_validator(deactivate_style)))
     }
 }
@@ -362,6 +377,7 @@ impl Creator for PosCreator {
         let optional = config.take_optional().unwrap_or(true);
         let assoc = config.take_assoc().unwrap_or(ValAssoc::Noa);
         let action = config.take_action().unwrap_or(ValAction::App);
+        let initiator = config.take_initiator().unwrap_or_default();
         let validator = config
             .take_validator()
             .unwrap_or(ValValidator::some_validator());
@@ -389,6 +405,7 @@ impl Creator for PosCreator {
             .with_style(vec![OptStyle::Pos])
             .with_opt_help(config.gen_opt_help(deactivate_style)?)
             .with_optional(optional)
+            .with_initiator(initiator)
             .with_validator(validator)
             .with_ignore_name())
     }
@@ -422,6 +439,7 @@ impl Creator for CmdCreator {
         let deactivate_style = config.deactivate().unwrap_or(false);
         let assoc = config.take_assoc().unwrap_or(ValAssoc::Noa);
         let action = config.take_action().unwrap_or(ValAction::Set);
+        let initiator = config.take_initiator().unwrap_or_default();
         let validator = config
             .take_validator()
             .unwrap_or(ValValidator::some_validator());
@@ -433,6 +451,7 @@ impl Creator for CmdCreator {
             !config.optional().unwrap_or(false),
             "Cmd option only have default optional configuration"
         );
+
         debug_assert!(
             config.idx().is_none(),
             "Cmd option only have default index configuration"
@@ -457,6 +476,7 @@ impl Creator for CmdCreator {
             .with_style(vec![OptStyle::Cmd])
             .with_opt_help(config.gen_opt_help(deactivate_style)?)
             .with_optional(false)
+            .with_initiator(initiator)
             .with_validator(validator))
     }
 }
@@ -489,6 +509,7 @@ impl Creator for MainCreator {
         let deactivate_style = config.deactivate().unwrap_or(false);
         let assoc = config.take_assoc().unwrap_or(ValAssoc::Null);
         let action = config.take_action().unwrap_or(ValAction::Set);
+        let initiator = config.take_initiator().unwrap_or_default();
         let validator = config
             .take_validator()
             .unwrap_or(ValValidator::null_validator());
@@ -524,6 +545,7 @@ impl Creator for MainCreator {
             .with_style(vec![OptStyle::Main])
             .with_opt_help(config.gen_opt_help(deactivate_style)?)
             .with_optional(true)
+            .with_initiator(initiator)
             .with_validator(validator)
             .with_ignore_name())
     }

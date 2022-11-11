@@ -7,13 +7,13 @@
 pub enum Style {
     Null,
 
-    /// The style indicate the option are set base on position(base on 1).
+    /// The style indicate the `NOA` are set base on position(base on `1` !!!).
     Pos,
 
-    /// The style indicate the option are set in first position.
+    /// The style indicate the `NOA` are set in first position(`@1`).
     Cmd,
 
-    /// The Main style option no need set, its callback will always be called.
+    /// The Main style `NOA` no need set, its callback will always be called.
     Main,
 
     /// The style indicate option don't need argument, such as `--boolean`, `-b` or with no prefix `b`.

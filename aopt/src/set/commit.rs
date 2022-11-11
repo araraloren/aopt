@@ -9,6 +9,7 @@ use crate::opt::OptIndex;
 use crate::opt::OptParser;
 use crate::opt::ValAction;
 use crate::opt::ValAssoc;
+use crate::opt::ValInitiator;
 use crate::opt::ValValidator;
 use crate::set::OptSet;
 use crate::set::Pre;
@@ -135,6 +136,12 @@ where
         self
     }
 
+    /// Set the option value initiator.
+    pub fn set_initiator(&mut self, initiator: ValInitiator) -> &mut Self {
+        self.info.set_initiator(Some(initiator));
+        self
+    }
+
     /// Set the option value validator.
     pub fn set_validator(&mut self, validator: ValValidator) -> &mut Self {
         self.info.set_validator(Some(validator));
@@ -144,6 +151,13 @@ where
     /// Set the option deactivate style of commit configuration.
     pub fn set_deactivate(&mut self, deactivate_style: bool) -> &mut Self {
         self.info.set_deactivate(deactivate_style);
+        self
+    }
+
+    /// Set the option default value.
+    pub fn set_value<T: Clone + 'static>(&mut self, value: T) -> &mut Self {
+        self.info
+            .set_initiator(Some(ValInitiator::with(vec![value])));
         self
     }
 

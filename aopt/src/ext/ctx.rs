@@ -1076,6 +1076,18 @@ impl<S: Set> Extract<S> for RawVal {
 /// ```
 pub struct Value<T>(T);
 
+impl<T> Value<T> {
+    pub fn replace(&mut self, val: T) -> T {
+        std::mem::replace(&mut self.0, val)
+    }
+}
+
+impl<T: Default> Value<T> {
+    pub fn take(&mut self) -> T {
+        std::mem::take(&mut self.0)
+    }
+}
+
 impl<T: Debug> Debug for Value<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Value").field(&self.0).finish()

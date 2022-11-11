@@ -14,10 +14,11 @@ use crate::args::ArgParser;
 use crate::args::Args;
 use crate::astr;
 use crate::ctx::Ctx;
+use crate::ext::ServicesExt;
 use crate::opt::Opt;
 use crate::opt::OptParser;
+use crate::prelude::SetExt;
 use crate::proc::Process;
-use crate::ser::CheckService;
 use crate::ser::InvokeService;
 use crate::ser::Services;
 use crate::set::Pre;
@@ -25,6 +26,73 @@ use crate::set::Set;
 use crate::Arc;
 use crate::Error;
 
+/// Forward process the option before any
+/// NOA([`Cmd`](crate::opt::OptStyle::Cmd), [`Pos`](crate::opt::OptStyle::Pos) and [`Main`](crate::opt::OptStyle::Main)).
+///
+/// You can get the value of any option in the handler of NOA.
+///
+/// # Examples
+/// ```rust
+/// # use aopt::prelude::*;
+/// # use aopt::Arc;
+/// # use aopt::Error;
+/// #
+/// # fn main() -> Result<(), Error> {
+/// let mut policy = AForward::default();
+/// let mut set = policy.default_set();
+/// let mut ser = policy.default_ser();
+///
+/// ser.ser_usrval_mut()?
+///     .insert(ser::Value::new(vec!["foo", "bar"]));
+///
+/// let filter_id = set.add_opt("--filter=b/")?.run()?;
+/// let pos_id = set
+///     .add_opt("pos=p@*")?
+///     .set_initiator(ValInitiator::empty::<String>())
+///     .run()?;
+/// ser.ser_invoke_mut::<ASet>()?
+///     .register_ser(
+///         pos_id,
+///         move |_: Uid,
+///                 _: &mut ASet,
+///                 ser: &mut Services,
+///                 filter: ser::Value<Vec<&str>>,
+///                 mut value: ctx::Value<String>| {
+///             let do_filter = bool::val(filter_id, ser)?;
+///             let valid = if *do_filter {
+///                 !filter.iter().any(|&v| v == value.as_str())
+///             } else {
+///                 true
+///             };
+///
+///             Ok(valid.then(|| value.take()))
+///         },
+///     )
+///     .with_default();
+///
+/// let args = Args::new(["set", "42", "foo", "bar"].into_iter());
+///
+/// policy.parse(Arc::new(args), &mut ser, &mut set)?;
+///
+/// let values = String::vals(pos_id, &ser)?;
+///
+/// assert_eq!(values[0], "set");
+/// assert_eq!(values[1], "42");
+///
+/// let args = Args::new(["--/filter", "set", "42", "foo", "bar"].into_iter());
+///
+/// policy.parse(Arc::new(args), &mut ser, &mut set)?;
+///
+/// let values = String::vals(pos_id, &ser)?;
+///
+/// assert_eq!(values[0], "set");
+/// assert_eq!(values[1], "42");
+/// assert_eq!(values[2], "foo");
+/// assert_eq!(values[3], "bar");
+/// #
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Debug, Clone)]
 pub struct Forward<S> {
     strict: bool,
@@ -53,7 +121,8 @@ where
         }
     }
 
-    /// Enable strict mode, if argument is an option, it must be matched.
+    /// In strict mode, if an argument looks like an option (it matched any option prefix),
+    /// then it must matched.
     pub fn with_strict(mut self, strict: bool) -> Self {
         self.strict = strict;
         self
@@ -86,7 +155,12 @@ where
         ser: &mut Services,
         set: &mut Self::Set,
     ) -> Result<Option<Self::Ret>, Self::Error> {
-        ser.service::<CheckService<S>>()?.pre_check(set)?;
+        let keys = set.keys().to_vec();
+
+        for id in keys {
+            set.opt_mut(id)?.init(ser)?;
+        }
+        ser.ser_check()?.pre_check(set)?;
 
         // take the invoke service, avoid borrow the ser
         let mut is = ser.take::<InvokeService<S>>()?;
@@ -147,7 +221,7 @@ where
             }
         }
 
-        ser.service::<CheckService<S>>()?.opt_check(set)?;
+        ser.ser_check()?.opt_check(set)?;
 
         let noa_args = Arc::new(noa_args);
         let noa_len = noa_args.len();
@@ -165,7 +239,7 @@ where
                 process_non_opt::<S>(&noa_ctx, set, ser, &mut proc, &mut is)?;
             }
 
-            ser.service::<CheckService<S>>()?.cmd_check(set)?;
+            ser.ser_check()?.cmd_check(set)?;
 
             for idx in 0..noa_len {
                 if let Some(mut proc) = NOAGuess::new().guess(
@@ -177,9 +251,9 @@ where
                 }
             }
         } else {
-            ser.service::<CheckService<S>>()?.cmd_check(set)?;
+            ser.ser_check()?.cmd_check(set)?;
         }
-        ser.service::<CheckService<S>>()?.pos_check(set)?;
+        ser.ser_check()?.pos_check(set)?;
 
         let main_args = noa_args;
         let mut main_ctx = noa_ctx;
@@ -191,7 +265,7 @@ where
             process_non_opt::<S>(&main_ctx, set, ser, &mut proc, &mut is)?;
         }
 
-        ser.service::<CheckService<S>>()?.post_check(set)?;
+        ser.ser_check()?.post_check(set)?;
         ser.register(is);
 
         Ok(Some(true))

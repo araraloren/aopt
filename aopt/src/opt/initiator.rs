@@ -25,11 +25,31 @@ where
 
 pub struct ValInitiator(Box<dyn FnMut(Uid, &mut Services) -> Result<(), Error>>);
 
+impl Default for ValInitiator {
+    fn default() -> Self {
+        Self::null_initiator()
+    }
+}
+
 impl ValInitiator {
-    pub fn new<T: 'static>(mut init: impl ValInitialize<T> + 'static) -> Self {
+    pub fn new<T: 'static>(mut init: impl ValInitialize<Vec<T>> + 'static) -> Self {
         Self(Box::new(move |uid: Uid, ser: &mut Services| {
-            let val = init.prepare_initialize_val().map_err(|e| e.into())?;
-            ser.ser_val_mut()?.set(uid, vec![val]);
+            let vals = init.prepare_initialize_val().map_err(|e| e.into())?;
+            ser.ser_val_mut()?.set(uid, vals);
+            Ok(())
+        }))
+    }
+
+    pub fn empty<T: 'static>() -> Self {
+        Self(Box::new(move |uid: Uid, ser: &mut Services| {
+            ser.ser_val_mut()?.set(uid, Vec::<T>::new());
+            Ok(())
+        }))
+    }
+
+    pub fn with<T: Clone + 'static>(initialize_value: Vec<T>) -> Self {
+        Self(Box::new(move |uid: Uid, ser: &mut Services| {
+            ser.ser_val_mut()?.set(uid, vec![initialize_value.clone()]);
             Ok(())
         }))
     }
@@ -48,14 +68,18 @@ impl Debug for ValInitiator {
 macro_rules! num_initiator {
     ($num:ty, $name:ident) => {
         pub fn $name(val: $num) -> Self {
-            Self::new(move || -> Result<$num, Error> { Ok(val) })
+            Self::new(move || -> Result<Vec<$num>, Error> { Ok(vec![val]) })
         }
     };
 }
 
 impl ValInitiator {
+    pub fn null_initiator() -> Self {
+        Self(Box::new(|_: Uid, _: &mut Services| Ok(())))
+    }
+
     pub fn bool_initiator(val: bool) -> Self {
-        Self::new(move || -> Result<bool, Error> { Ok(val) })
+        Self::new(move || -> Result<Vec<bool>, Error> { Ok(vec![val]) })
     }
 
     num_initiator!(i8, i8_initiator);

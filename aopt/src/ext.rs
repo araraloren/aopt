@@ -42,6 +42,8 @@ pub trait ServicesExt {
     fn ser_rawval<T: 'static>(&self) -> Result<&RawValService<T>, Error>;
 
     fn ser_rawval_mut<T: 'static>(&mut self) -> Result<&mut RawValService<T>, Error>;
+
+    fn ser_check<S: 'static>(&self) -> Result<&CheckService<S>, Error>;
 }
 
 pub trait ServicesValExt<T: 'static> {
