@@ -27,7 +27,7 @@ use crate::Arc;
 use crate::Error;
 
 /// Forward process the option before any
-/// NOA([`Cmd`](crate::opt::OptStyle::Cmd), [`Pos`](crate::opt::OptStyle::Pos) and [`Main`](crate::opt::OptStyle::Main)).
+/// NOA([`Cmd`](crate::opt::Style::Cmd), [`Pos`](crate::opt::Style::Pos) and [`Main`](crate::opt::Style::Main)).
 ///
 /// You can get the value of any option in the handler of NOA.
 ///

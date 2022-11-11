@@ -4,9 +4,9 @@ use tracing::trace;
 
 use super::Service;
 use crate::astr;
+use crate::opt::Index;
 use crate::opt::Opt;
-use crate::opt::OptIndex;
-use crate::opt::OptStyle;
+use crate::opt::Style;
 use crate::Error;
 use crate::HashMap;
 use crate::StrJoin;
@@ -47,7 +47,7 @@ where
         let has_cmd = set
             .keys()
             .iter()
-            .any(|key| Self::opt(set, key).mat_style(OptStyle::Cmd));
+            .any(|key| Self::opt(set, key).mat_style(Style::Cmd));
 
         const MAX_INDEX: usize = usize::MAX;
 
@@ -56,7 +56,7 @@ where
             for key in set.keys() {
                 let opt = Self::opt(set, key);
 
-                if opt.mat_style(OptStyle::Pos) {
+                if opt.mat_style(Style::Pos) {
                     if let Some(index) = opt.idx() {
                         let index = index.calc_index(MAX_INDEX, 1).unwrap_or(MAX_INDEX);
                         if index == 1 && !opt.optional() {
@@ -77,9 +77,9 @@ where
             .iter()
             .filter(|v| {
                 let opt = Self::opt(set, *v);
-                opt.mat_style(OptStyle::Argument)
-                    || opt.mat_style(OptStyle::Boolean)
-                    || opt.mat_style(OptStyle::Combined)
+                opt.mat_style(Style::Argument)
+                    || opt.mat_style(Style::Boolean)
+                    || opt.mat_style(Style::Combined)
             })
             .all(|v| Self::opt(set, v).valid()))
     }
@@ -96,28 +96,25 @@ where
         for key in set.keys() {
             let opt = Self::opt(set, key);
 
-            if opt.mat_style(OptStyle::Pos) {
+            if opt.mat_style(Style::Pos) {
                 if let Some(index) = opt.idx() {
                     match index {
-                        OptIndex::Forward(_) | OptIndex::Backward(_) => {
+                        Index::Forward(_) | Index::Backward(_) => {
                             if let Some(index) = index.calc_index(usize::MAX, 1) {
                                 let entry = index_map.entry(index).or_insert(vec![]);
                                 entry.push(opt.uid());
                             }
                         }
-                        OptIndex::List(v) => {
+                        Index::List(v) => {
                             for index in v {
                                 let entry = index_map.entry(*index).or_insert(vec![]);
                                 entry.push(opt.uid());
                             }
                         }
-                        OptIndex::Except(_)
-                        | OptIndex::Greater(_)
-                        | OptIndex::Less(_)
-                        | OptIndex::AnyWhere => {
+                        Index::Except(_) | Index::Greater(_) | Index::Less(_) | Index::AnyWhere => {
                             float_vec.push(opt.uid());
                         }
-                        OptIndex::Null => {}
+                        Index::Null => {}
                     }
                 }
             }
@@ -168,7 +165,7 @@ where
         for key in set.keys() {
             let opt = Self::opt(set, key);
 
-            if opt.mat_style(OptStyle::Cmd) {
+            if opt.mat_style(Style::Cmd) {
                 valid = valid || opt.valid();
                 if valid {
                     break;
@@ -189,7 +186,7 @@ where
         Ok(set
             .keys()
             .iter()
-            .filter(|v| Self::opt(set, *v).mat_style(OptStyle::Main))
+            .filter(|v| Self::opt(set, *v).mat_style(Style::Main))
             .all(|v| Self::opt(set, v).valid()))
     }
 }

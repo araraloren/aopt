@@ -3,9 +3,9 @@ use std::fmt::Debug;
 use crate::opt::Config;
 use crate::opt::ConfigValue;
 use crate::opt::Creator;
+use crate::opt::Index;
 use crate::opt::Information;
 use crate::opt::Opt;
-use crate::opt::OptIndex;
 use crate::opt::OptParser;
 use crate::set::OptSet;
 use crate::set::Pre;
@@ -137,7 +137,7 @@ where
     }
 
     /// Set the option index of filter configuration.
-    pub fn set_idx(&mut self, index: OptIndex) -> &mut Self {
+    pub fn set_idx(&mut self, index: Index) -> &mut Self {
         self.info.set_idx(index);
         self
     }
@@ -222,7 +222,7 @@ where
     }
 
     /// Set the option index of filter configuration.
-    pub fn set_idx(&mut self, index: OptIndex) -> &mut Self {
+    pub fn set_idx(&mut self, index: Index) -> &mut Self {
         self.info.set_idx(index);
         self
     }

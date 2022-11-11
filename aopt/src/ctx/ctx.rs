@@ -1,5 +1,5 @@
 use crate::args::Args;
-use crate::opt::OptStyle;
+use crate::opt::Style;
 use crate::Arc;
 use crate::RawVal;
 use crate::Str;
@@ -13,7 +13,7 @@ pub struct Ctx {
 
     prefix: Option<Str>,
 
-    style: OptStyle,
+    style: Style,
 
     disable: bool,
 
@@ -57,7 +57,7 @@ impl Ctx {
         self
     }
 
-    pub fn with_style(mut self, style: OptStyle) -> Self {
+    pub fn with_style(mut self, style: Style) -> Self {
         self.style = style;
         self
     }
@@ -90,7 +90,7 @@ impl Ctx {
         self.name.as_ref()
     }
 
-    pub fn style(&self) -> OptStyle {
+    pub fn style(&self) -> Style {
         self.style
     }
 
@@ -150,7 +150,7 @@ impl Ctx {
         self
     }
 
-    pub fn set_style(&mut self, style: OptStyle) -> &mut Self {
+    pub fn set_style(&mut self, style: Style) -> &mut Self {
         self.style = style;
         self
     }

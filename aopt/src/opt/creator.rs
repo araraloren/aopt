@@ -2,7 +2,7 @@ use crate::opt::AOpt;
 use crate::opt::ConfigValue;
 use crate::opt::Creator;
 use crate::opt::OptConfig;
-use crate::opt::OptStyle;
+use crate::opt::Style;
 use crate::opt::ValAction;
 use crate::opt::ValAssoc;
 use crate::opt::ValInitiator;
@@ -68,7 +68,7 @@ impl Creator for IntCreator {
             .with_prefix(prefix)
             .with_assoc(assoc)
             .with_action(action)
-            .with_style(vec![OptStyle::Argument])
+            .with_style(vec![Style::Argument])
             .with_opt_help(config.gen_opt_help(false)?)
             .with_alias(Some(config.gen_alias()?))
             .with_optional(optional)
@@ -135,7 +135,7 @@ impl Creator for UintCreator {
             .with_prefix(prefix)
             .with_assoc(assoc)
             .with_action(action)
-            .with_style(vec![OptStyle::Argument])
+            .with_style(vec![Style::Argument])
             .with_opt_help(config.gen_opt_help(false)?)
             .with_alias(Some(config.gen_alias()?))
             .with_optional(optional)
@@ -202,7 +202,7 @@ impl Creator for FltCreator {
             .with_prefix(prefix)
             .with_assoc(assoc)
             .with_action(action)
-            .with_style(vec![OptStyle::Argument])
+            .with_style(vec![Style::Argument])
             .with_opt_help(config.gen_opt_help(false)?)
             .with_alias(Some(config.gen_alias()?))
             .with_optional(optional)
@@ -269,7 +269,7 @@ impl Creator for StrCreator {
             .with_prefix(prefix)
             .with_assoc(assoc)
             .with_action(action)
-            .with_style(vec![OptStyle::Argument])
+            .with_style(vec![Style::Argument])
             .with_opt_help(config.gen_opt_help(false)?)
             .with_alias(Some(config.gen_alias()?))
             .with_optional(optional)
@@ -339,7 +339,7 @@ impl Creator for BoolCreator {
             .with_prefix(prefix)
             .with_assoc(assoc)
             .with_action(action)
-            .with_style(vec![OptStyle::Boolean, OptStyle::Combined])
+            .with_style(vec![Style::Boolean, Style::Combined])
             .with_opt_help(config.gen_opt_help(deactivate_style)?)
             .with_alias(Some(config.gen_alias()?))
             .with_optional(optional)
@@ -402,7 +402,7 @@ impl Creator for PosCreator {
             .with_assoc(assoc)
             .with_action(action)
             .with_idx(Some(config.gen_idx()?))
-            .with_style(vec![OptStyle::Pos])
+            .with_style(vec![Style::Pos])
             .with_opt_help(config.gen_opt_help(deactivate_style)?)
             .with_optional(optional)
             .with_initiator(initiator)
@@ -472,8 +472,8 @@ impl Creator for CmdCreator {
             .with_name(config.gen_name()?)
             .with_assoc(assoc)
             .with_action(action)
-            .with_idx(Some(crate::opt::OptIndex::forward(1)))
-            .with_style(vec![OptStyle::Cmd])
+            .with_idx(Some(crate::opt::Index::forward(1)))
+            .with_style(vec![Style::Cmd])
             .with_opt_help(config.gen_opt_help(deactivate_style)?)
             .with_optional(false)
             .with_initiator(initiator)
@@ -541,8 +541,8 @@ impl Creator for MainCreator {
             .with_name(config.gen_name()?)
             .with_assoc(assoc)
             .with_action(action)
-            .with_idx(Some(crate::opt::OptIndex::anywhere()))
-            .with_style(vec![OptStyle::Main])
+            .with_idx(Some(crate::opt::Index::anywhere()))
+            .with_style(vec![Style::Main])
             .with_opt_help(config.gen_opt_help(deactivate_style)?)
             .with_optional(true)
             .with_initiator(initiator)

@@ -1,8 +1,8 @@
 use crate::astr;
 use crate::err::Error;
+use crate::opt::Help;
+use crate::opt::Index;
 use crate::opt::Information;
-use crate::opt::OptHelp;
-use crate::opt::OptIndex;
 use crate::opt::OptParser;
 use crate::opt::ValAction;
 use crate::opt::ValAssoc;
@@ -36,7 +36,7 @@ pub trait ConfigValue {
     fn r#type(&self) -> Option<&Str>;
 
     /// The index configuration of option.
-    fn idx(&self) -> Option<&OptIndex>;
+    fn idx(&self) -> Option<&Index>;
 
     /// The alias name and prefix of option.
     fn alias(&self) -> Option<&Vec<Str>>;
@@ -84,7 +84,7 @@ pub trait ConfigValue {
 
     fn has_deactivate(&self) -> bool;
 
-    fn set_idx(&mut self, index: OptIndex) -> &mut Self;
+    fn set_idx(&mut self, index: Index) -> &mut Self;
 
     fn set_optional(&mut self, optional: bool) -> &mut Self;
 
@@ -122,7 +122,7 @@ pub trait ConfigValue {
 
     fn gen_prefix(&self) -> Result<Str, Error>;
 
-    fn gen_idx(&self) -> Result<OptIndex, Error>;
+    fn gen_idx(&self) -> Result<Index, Error>;
 
     fn gen_optional(&self) -> Result<bool, Error>;
 
@@ -138,7 +138,7 @@ pub trait ConfigValue {
 
     fn gen_initiator(&self) -> Result<ValInitiator, Error>;
 
-    fn gen_opt_help(&self, deactivate_style: bool) -> Result<OptHelp, Error>;
+    fn gen_opt_help(&self, deactivate_style: bool) -> Result<Help, Error>;
 
     fn take_name(&mut self) -> Option<Str>;
 
@@ -150,7 +150,7 @@ pub trait ConfigValue {
 
     fn take_action(&mut self) -> Option<ValAction>;
 
-    fn take_idx(&mut self) -> Option<OptIndex>;
+    fn take_idx(&mut self) -> Option<Index>;
 
     fn take_optional(&mut self) -> Option<bool>;
 
@@ -158,7 +158,7 @@ pub trait ConfigValue {
 
     fn take_deactivate(&mut self) -> Option<bool>;
 
-    fn take_opt_help(&mut self) -> Option<OptHelp>;
+    fn take_opt_help(&mut self) -> Option<Help>;
 
     fn take_initiator(&mut self) -> Option<ValInitiator>;
 
@@ -176,11 +176,11 @@ pub struct OptConfig {
 
     opt: Option<bool>,
 
-    idx: Option<OptIndex>,
+    idx: Option<Index>,
 
     alias: Vec<Str>,
 
-    help: OptHelp,
+    help: Help,
 
     sp_pre: Vec<Str>,
 
@@ -196,7 +196,7 @@ pub struct OptConfig {
 }
 
 impl OptConfig {
-    pub fn with_idx(mut self, index: OptIndex) -> Self {
+    pub fn with_idx(mut self, index: Index) -> Self {
         self.idx = Some(index);
         self
     }
@@ -330,7 +330,7 @@ impl ConfigValue for OptConfig {
         self.ty.as_ref()
     }
 
-    fn idx(&self) -> Option<&OptIndex> {
+    fn idx(&self) -> Option<&Index> {
         self.idx.as_ref()
     }
 
@@ -410,7 +410,7 @@ impl ConfigValue for OptConfig {
         self.deact.is_some()
     }
 
-    fn set_idx(&mut self, index: OptIndex) -> &mut Self {
+    fn set_idx(&mut self, index: Index) -> &mut Self {
         self.idx = Some(index);
         self
     }
@@ -518,7 +518,7 @@ impl ConfigValue for OptConfig {
         Err(self.raise_missing_error("prefix")?)
     }
 
-    fn gen_idx(&self) -> Result<OptIndex, Error> {
+    fn gen_idx(&self) -> Result<Index, Error> {
         if let Some(index) = self.idx.as_ref() {
             return Ok(index.clone());
         }
@@ -587,7 +587,7 @@ impl ConfigValue for OptConfig {
         ))
     }
 
-    fn gen_opt_help(&self, deactivate_style: bool) -> Result<OptHelp, Error> {
+    fn gen_opt_help(&self, deactivate_style: bool) -> Result<Help, Error> {
         let mut ret = self.help.clone();
 
         if ret.hint().is_empty() {
@@ -660,7 +660,7 @@ impl ConfigValue for OptConfig {
         self.action.take()
     }
 
-    fn take_idx(&mut self) -> Option<OptIndex> {
+    fn take_idx(&mut self) -> Option<Index> {
         self.idx.take()
     }
 
@@ -676,7 +676,7 @@ impl ConfigValue for OptConfig {
         self.deact.take()
     }
 
-    fn take_opt_help(&mut self) -> Option<OptHelp> {
+    fn take_opt_help(&mut self) -> Option<Help> {
         Some(std::mem::take(&mut self.help))
     }
 

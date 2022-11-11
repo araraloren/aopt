@@ -6,7 +6,7 @@ pub use self::noa::NOAProcess;
 pub use self::opt::OptMatch;
 pub use self::opt::OptProcess;
 
-use crate::opt::OptStyle;
+use crate::opt::Style;
 use crate::set::Set;
 use crate::Error;
 use crate::RawVal;
@@ -25,7 +25,7 @@ pub trait Match {
 
     fn set_uid(&mut self, uid: Uid);
 
-    fn style(&self) -> OptStyle;
+    fn style(&self) -> Style;
 
     fn arg(&self) -> Option<&RawVal>;
 
@@ -48,7 +48,7 @@ pub trait Process<M: Match> {
 
     fn count(&self) -> usize;
 
-    fn sty(&self) -> OptStyle;
+    fn sty(&self) -> Style;
 
     fn is_mat(&self) -> bool;
 

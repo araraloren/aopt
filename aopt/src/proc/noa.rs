@@ -4,7 +4,7 @@ use tracing::trace;
 
 use crate::args::Args;
 use crate::opt::Opt;
-use crate::opt::OptStyle;
+use crate::opt::Style;
 use crate::proc::Match;
 use crate::proc::Process;
 use crate::set::Set;
@@ -21,7 +21,7 @@ pub struct NOAMatch<S> {
 
     arg: Option<Arc<RawVal>>,
 
-    style: OptStyle,
+    style: Style,
 
     noa_index: usize,
 
@@ -56,7 +56,7 @@ impl<S> Default for NOAMatch<S> {
             name: None,
             args: Arc::new(Args::default()),
             arg: None,
-            style: OptStyle::default(),
+            style: Style::default(),
             noa_index: 0,
             noa_total: 0,
             matched_uid: None,
@@ -88,7 +88,7 @@ impl<S> NOAMatch<S> {
         self
     }
 
-    pub fn with_style(mut self, style: OptStyle) -> Self {
+    pub fn with_style(mut self, style: Style) -> Self {
         self.style = style;
         self
     }
@@ -153,7 +153,7 @@ where
         self.matched_uid = Some(uid);
     }
 
-    fn style(&self) -> OptStyle {
+    fn style(&self) -> Style {
         self.style
     }
 
@@ -255,8 +255,8 @@ where
     }
 
     /// Return the style of inner [`NOAMatch`].
-    fn sty(&self) -> OptStyle {
-        self.matches.as_ref().map_or(OptStyle::Null, |v| v.style())
+    fn sty(&self) -> Style {
+        self.matches.as_ref().map_or(Style::Null, |v| v.style())
     }
 
     /// Return true if the process successful.
@@ -305,9 +305,9 @@ where
     /// Match the given [`Opt`] against inner [`NOAMatch`], return the index (always 0) if successful.
     fn process(&mut self, uid: Uid, set: &mut Self::Set) -> Result<Option<usize>, Self::Error> {
         if let Some(opt) = set.get_mut(uid) {
-            let style_check = opt.mat_style(OptStyle::Cmd)
-                || opt.mat_style(OptStyle::Main)
-                || opt.mat_style(OptStyle::Pos);
+            let style_check = opt.mat_style(Style::Cmd)
+                || opt.mat_style(Style::Main)
+                || opt.mat_style(Style::Pos);
 
             if style_check {
                 trace!(

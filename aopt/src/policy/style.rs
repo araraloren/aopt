@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use crate::args::Args;
 use crate::args::CLOpt;
-use crate::opt::OptStyle;
+use crate::opt::Style;
 use crate::opt::BOOL_FALSE;
 use crate::opt::BOOL_TRUE;
 use crate::proc::NOAMatch;
@@ -145,7 +145,7 @@ where
                             .with_idx(index)
                             .with_len(count)
                             .with_arg(clopt.value.clone())
-                            .with_style(OptStyle::Argument)
+                            .with_style(Style::Argument)
                             .with_disable(clopt.disable)
                             .with_name(valueof("name", &clopt.name)?)
                             .with_prefix(valueof("prefix", &clopt.prefix)?),
@@ -161,7 +161,7 @@ where
                                 .with_len(count)
                                 .with_consume(true)
                                 .with_arg(cfg.arg().cloned())
-                                .with_style(OptStyle::Argument)
+                                .with_style(Style::Argument)
                                 .with_disable(clopt.disable)
                                 .with_name(valueof("name", &clopt.name)?)
                                 .with_prefix(valueof("prefix", &clopt.prefix)?),
@@ -180,7 +180,7 @@ where
                                     .with_idx(index)
                                     .with_len(count)
                                     .with_arg(Some(RawVal::from(name_value.1).into()))
-                                    .with_style(OptStyle::Argument)
+                                    .with_style(Style::Argument)
                                     .with_disable(clopt.disable)
                                     .with_name(name_value.0.into())
                                     .with_prefix(valueof("prefix", &clopt.prefix)?),
@@ -199,7 +199,7 @@ where
                                         .with_idx(index)
                                         .with_len(count)
                                         .with_arg(None)
-                                        .with_style(OptStyle::Combined)
+                                        .with_style(Style::Combined)
                                         .with_disable(clopt.disable)
                                         .with_name(format!("{}", char).into())
                                         .with_prefix(valueof("prefix", &clopt.prefix)?),
@@ -216,7 +216,7 @@ where
                             .with_idx(index)
                             .with_len(count)
                             .with_arg(Some(OptGuess::<S>::bool2str(!clopt.disable)))
-                            .with_style(OptStyle::Boolean)
+                            .with_style(Style::Boolean)
                             .with_disable(clopt.disable)
                             .with_name(valueof("name", &clopt.name)?)
                             .with_prefix(valueof("prefix", &clopt.prefix)?),
@@ -298,7 +298,7 @@ where
                         .with_args(args)
                         .with_idx(pos)
                         .with_len(count)
-                        .with_style(OptStyle::Main)
+                        .with_style(Style::Main)
                         .reset_arg(),
                 );
             }
@@ -309,7 +309,7 @@ where
                         .with_args(args)
                         .with_idx(pos)
                         .with_len(count)
-                        .with_style(OptStyle::Pos)
+                        .with_style(Style::Pos)
                         .reset_arg(),
                 );
             }
@@ -320,7 +320,7 @@ where
                         .with_args(args)
                         .with_idx(pos)
                         .with_len(count)
-                        .with_style(OptStyle::Cmd)
+                        .with_style(Style::Cmd)
                         .reset_arg(),
                 );
             }

@@ -1,4 +1,4 @@
-use super::OptIndex;
+use super::Index;
 use crate::Str;
 
 pub trait Information {
@@ -22,7 +22,7 @@ pub trait Information {
 
     fn ty(&self) -> Option<&Str>;
 
-    fn idx(&self) -> Option<&OptIndex>;
+    fn idx(&self) -> Option<&Index>;
 
     fn deact(&self) -> Option<bool>;
 
@@ -34,7 +34,7 @@ pub trait Information {
 
     fn take_ty(&mut self) -> Option<Str>;
 
-    fn take_idx(&mut self) -> Option<OptIndex>;
+    fn take_idx(&mut self) -> Option<Index>;
 
     fn take_deact(&mut self) -> Option<bool>;
 }
@@ -68,7 +68,7 @@ pub struct ConstrctInfo {
 
     pub less: Option<usize>,
 
-    index: Option<OptIndex>,
+    index: Option<Index>,
 }
 
 impl ConstrctInfo {
@@ -140,19 +140,19 @@ impl ConstrctInfo {
     pub fn gen_idx(&mut self) {
         if self.has_idx() {
             self.index = if self.forward_index.is_some() {
-                Some(OptIndex::Forward(self.forward_index.unwrap()))
+                Some(Index::Forward(self.forward_index.unwrap()))
             } else if self.backward_index.is_some() {
-                Some(OptIndex::Backward(self.backward_index.unwrap()))
+                Some(Index::Backward(self.backward_index.unwrap()))
             } else if self.anywhere.unwrap_or(false) {
-                Some(OptIndex::AnyWhere)
+                Some(Index::AnyWhere)
             } else if !self.list.is_empty() {
-                Some(OptIndex::List(std::mem::take(&mut self.list)))
+                Some(Index::List(std::mem::take(&mut self.list)))
             } else if !self.except.is_empty() {
-                Some(OptIndex::Except(std::mem::take(&mut self.except)))
+                Some(Index::Except(std::mem::take(&mut self.except)))
             } else if self.greater.is_some() {
-                Some(OptIndex::Greater(self.greater.unwrap()))
+                Some(Index::Greater(self.greater.unwrap()))
             } else if self.less.is_some() {
-                Some(OptIndex::Less(self.less.unwrap()))
+                Some(Index::Less(self.less.unwrap()))
             } else {
                 None
             };
@@ -209,7 +209,7 @@ impl Information for ConstrctInfo {
         self.type_name.as_ref()
     }
 
-    fn idx(&self) -> Option<&OptIndex> {
+    fn idx(&self) -> Option<&Index> {
         self.index.as_ref()
     }
 
@@ -233,7 +233,7 @@ impl Information for ConstrctInfo {
         self.type_name.take()
     }
 
-    fn take_idx(&mut self) -> Option<OptIndex> {
+    fn take_idx(&mut self) -> Option<Index> {
         self.index.take()
     }
 

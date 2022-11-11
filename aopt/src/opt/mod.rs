@@ -27,15 +27,15 @@ pub use self::creator::MainCreator;
 pub use self::creator::PosCreator;
 pub use self::creator::StrCreator;
 pub use self::creator::UintCreator;
-pub use self::help::Help as OptHelp;
-pub use self::index::Index as OptIndex;
+pub use self::help::Help;
+pub use self::index::Index;
 pub use self::info::ConstrctInfo;
 pub use self::info::Information;
 pub use self::initiator::ValInitialize;
 pub use self::initiator::ValInitiator;
 pub use self::parser::StrParser;
 pub use self::store::ValStore;
-pub use self::style::Style as OptStyle;
+pub use self::style::Style;
 pub use self::valid::RawValValidator;
 pub use self::valid::ValValidator;
 pub use self::value::RawValParser;
@@ -91,7 +91,7 @@ pub trait Opt: Debug {
     fn prefix(&self) -> Option<&Str>;
 
     /// The index of option.
-    fn idx(&self) -> Option<&OptIndex>;
+    fn idx(&self) -> Option<&Index>;
 
     /// The alias the option.
     fn alias(&self) -> Option<&Vec<(Str, Str)>>;
@@ -100,7 +100,7 @@ pub trait Opt: Debug {
 
     fn set_setted(&mut self, setted: bool);
 
-    fn mat_style(&self, style: OptStyle) -> bool;
+    fn mat_style(&self, style: Style) -> bool;
 
     fn mat_optional(&self, optional: bool) -> bool;
 

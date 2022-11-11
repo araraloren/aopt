@@ -1,7 +1,7 @@
+use crate::opt::Help;
+use crate::opt::Index;
 use crate::opt::Opt;
-use crate::opt::OptHelp;
-use crate::opt::OptIndex;
-use crate::opt::OptStyle;
+use crate::opt::Style;
 use crate::opt::ValAction;
 use crate::opt::ValAssoc;
 use crate::opt::ValInitiator;
@@ -20,7 +20,7 @@ pub struct AOpt {
 
     r#type: Str,
 
-    help: OptHelp,
+    help: Help,
 
     prefix: Option<Str>,
 
@@ -32,13 +32,13 @@ pub struct AOpt {
 
     action: ValAction,
 
-    styles: Vec<OptStyle>,
+    styles: Vec<Style>,
 
     ignore_name_mat: bool,
 
     deactivate_style: bool,
 
-    index: Option<OptIndex>,
+    index: Option<Index>,
 
     validator: ValValidator,
 
@@ -88,17 +88,17 @@ impl AOpt {
         self
     }
 
-    pub fn with_opt_help(mut self, help: OptHelp) -> Self {
+    pub fn with_opt_help(mut self, help: Help) -> Self {
         self.help = help;
         self
     }
 
-    pub fn with_style(mut self, styles: Vec<OptStyle>) -> Self {
+    pub fn with_style(mut self, styles: Vec<Style>) -> Self {
         self.styles = styles;
         self
     }
 
-    pub fn with_idx(mut self, index: Option<OptIndex>) -> Self {
+    pub fn with_idx(mut self, index: Option<Index>) -> Self {
         self.index = index;
         self
     }
@@ -165,12 +165,12 @@ impl AOpt {
         self
     }
 
-    pub fn set_style(&mut self, styles: Vec<OptStyle>) -> &mut Self {
+    pub fn set_style(&mut self, styles: Vec<Style>) -> &mut Self {
         self.styles = styles;
         self
     }
 
-    pub fn set_idx(&mut self, index: Option<OptIndex>) -> &mut Self {
+    pub fn set_idx(&mut self, index: Option<Index>) -> &mut Self {
         self.index = index;
         self
     }
@@ -274,7 +274,7 @@ impl Opt for AOpt {
         self.prefix.as_ref()
     }
 
-    fn idx(&self) -> Option<&OptIndex> {
+    fn idx(&self) -> Option<&Index> {
         self.index.as_ref()
     }
 
@@ -290,7 +290,7 @@ impl Opt for AOpt {
         self.setted = setted;
     }
 
-    fn mat_style(&self, style: OptStyle) -> bool {
+    fn mat_style(&self, style: Style) -> bool {
         self.styles.iter().any(|v| v == &style)
     }
 

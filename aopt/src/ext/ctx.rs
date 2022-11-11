@@ -731,7 +731,7 @@ impl Display for Prefix {
 /// ser.ser_invoke_mut::<ASet>()?
 ///     .register(0, |_: Uid, _: &mut ASet, style: ctx::Style| {
 ///         assert_eq!(
-///             &OptStyle::Boolean,
+///             &Style::Boolean,
 ///             style.deref(),
 ///             "Style is the option style copied from Ctx set in Policy"
 ///         );
@@ -741,7 +741,7 @@ impl Display for Prefix {
 /// ser.ser_invoke_mut::<ASet>()?
 ///     .register(1, |_: Uid, _: &mut ASet, style: ctx::Style| {
 ///         assert_eq!(
-///             &OptStyle::Cmd,
+///             &Style::Cmd,
 ///             style.deref(),
 ///             "Style is the option style copied from Ctx set in Policy"
 ///         );
@@ -751,7 +751,7 @@ impl Display for Prefix {
 /// ser.ser_invoke_mut::<ASet>()?
 ///     .register(2, |_: Uid, _: &mut ASet, style: ctx::Style| {
 ///         assert_eq!(
-///             &OptStyle::Pos,
+///             &Style::Pos,
 ///             style.deref(),
 ///             "Style is the option style copied from Ctx set in Policy"
 ///         );
@@ -771,7 +771,7 @@ impl Display for Prefix {
 /// # }
 /// ```
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Style(crate::opt::OptStyle);
+pub struct Style(crate::opt::Style);
 
 impl Style {
     pub fn extract_ctx(ctx: &Ctx) -> Self {
@@ -780,7 +780,7 @@ impl Style {
 }
 
 impl Deref for Style {
-    type Target = crate::opt::OptStyle;
+    type Target = crate::opt::Style;
 
     fn deref(&self) -> &Self::Target {
         &self.0

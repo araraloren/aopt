@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use tracing::trace;
 
 use crate::opt::Opt;
-use crate::opt::OptStyle;
+use crate::opt::Style;
 use crate::proc::Match;
 use crate::proc::Process;
 use crate::set::Set;
@@ -18,7 +18,7 @@ pub struct OptMatch<S> {
 
     name: Str,
 
-    style: OptStyle,
+    style: Style,
 
     argument: Option<Arc<RawVal>>,
 
@@ -56,7 +56,7 @@ impl<S> Default for OptMatch<S> {
         Self {
             prefix: Str::default(),
             name: Str::default(),
-            style: OptStyle::default(),
+            style: Style::default(),
             argument: None,
             matched_uid: None,
             disbale: false,
@@ -82,7 +82,7 @@ where
         self
     }
 
-    pub fn with_style(mut self, style: OptStyle) -> Self {
+    pub fn with_style(mut self, style: Style) -> Self {
         self.style = style;
         self
     }
@@ -163,7 +163,7 @@ where
         self.matched_uid = Some(uid);
     }
 
-    fn style(&self) -> OptStyle {
+    fn style(&self) -> Style {
         self.style
     }
 
@@ -263,9 +263,9 @@ where
         self.matches.len()
     }
 
-    /// Return the [`OptStyle`] of OptProcess.
-    fn sty(&self) -> OptStyle {
-        self.matches.last().map_or(OptStyle::Null, |v| v.style())
+    /// Return the [`Style`] of OptProcess.
+    fn sty(&self) -> Style {
+        self.matches.last().map_or(Style::Null, |v| v.style())
     }
 
     /// Return true if the process successful.
@@ -306,9 +306,9 @@ where
     /// Match the given [`Opt`] against inner [`OptMatch`], return the index if successful.
     fn process(&mut self, uid: Uid, set: &mut Self::Set) -> Result<Option<usize>, Self::Error> {
         if let Some(opt) = set.get_mut(uid) {
-            let style_check = opt.mat_style(OptStyle::Argument)
-                || opt.mat_style(OptStyle::Boolean)
-                || opt.mat_style(OptStyle::Combined);
+            let style_check = opt.mat_style(Style::Argument)
+                || opt.mat_style(Style::Boolean)
+                || opt.mat_style(Style::Combined);
 
             if style_check {
                 trace!(
