@@ -1,3 +1,4 @@
+use std::any::type_name;
 use std::any::Any;
 use std::any::TypeId;
 use std::collections::hash_map::Entry as MapEntry;
@@ -72,13 +73,19 @@ impl AnyMap {
 
     pub fn ty<T: 'static>(&self) -> Result<&T, Error> {
         self.get::<T>().ok_or_else(|| {
-            Error::raise_error(format!("Unknown type for AnyMap: {:?}", typeid::<T>()))
+            Error::raise_error(format!(
+                "Can not find type {{{:?}}} in AnyMap",
+                type_name::<T>()
+            ))
         })
     }
 
     pub fn ty_mut<T: 'static>(&mut self) -> Result<&mut T, Error> {
         self.get_mut::<T>().ok_or_else(|| {
-            Error::raise_error(format!("Unknown type for AnyMap: {:?}", typeid::<T>()))
+            Error::raise_error(format!(
+                "Can not find type {{{:?}}} in AnyMap",
+                type_name::<T>()
+            ))
         })
     }
 

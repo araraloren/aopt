@@ -99,7 +99,7 @@ where
 }
 
 /// Wrap only the handler, user can custom the value store logical.
-pub fn wrap_ser_handler<Set, Args, Ret, Error>(
+pub fn wrap_serhandler<Set, Args, Ret, Error>(
     mut handler: impl SerHandler<Set, Args, Output = Option<Ret>, Error = Error> + 'static,
 ) -> Callbacks<Set, Ret, Error>
 where
@@ -131,7 +131,7 @@ where
 }
 
 /// Wrap the handler and store.
-pub fn wrap_ser_handler_store<Set, Args, Output, Ret, Error>(
+pub fn wrap_serhandler_store<Set, Args, Output, Ret, Error>(
     mut handler: impl SerHandler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
     mut store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static,
 ) -> Callbacks<Set, Ret, Error>

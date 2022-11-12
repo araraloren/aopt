@@ -12,6 +12,7 @@ use crate::set::FilterMatcher;
 use crate::set::FilterMut;
 use crate::set::Pre;
 use crate::set::Set;
+use crate::set::SetIndex;
 use crate::Error;
 use crate::Str;
 use crate::Uid;
@@ -214,6 +215,53 @@ where
     ) -> Result<impl Iterator<Item = &mut Ctor::Opt>, Error> {
         let info = <Ctor::Config as Config>::new(self.parser(), opt_str.into())?;
         Ok(self.iter_mut().filter(move |opt| info.mat_opt(*opt)))
+    }
+}
+
+impl<Parser, Ctor, I: SetIndex<OptSet<Parser, Ctor>>> std::ops::Index<I> for OptSet<Parser, Ctor>
+where
+    Ctor::Opt: Opt,
+    Ctor: Creator,
+    Parser: OptParser + Pre,
+    Parser::Output: Information,
+    Ctor::Config: Config + ConfigValue + Default,
+{
+    type Output = Ctor::Opt;
+
+    fn index(&self, index: I) -> &Self::Output {
+        index.ref_from(self).unwrap()
+    }
+}
+
+impl<Parser, Ctor, I: SetIndex<OptSet<Parser, Ctor>>> std::ops::IndexMut<I> for OptSet<Parser, Ctor>
+where
+    Ctor::Opt: Opt,
+    Ctor: Creator,
+    Parser: OptParser + Pre,
+    Parser::Output: Information,
+    Ctor::Config: Config + ConfigValue + Default,
+{
+    fn index_mut(&mut self, index: I) -> &mut Self::Output {
+        index.mut_from(self).unwrap()
+    }
+}
+
+impl<'b, Parser, Ctor> SetIndex<OptSet<Parser, Ctor>> for &'b str
+where
+    Ctor::Opt: Opt,
+    Ctor: Creator,
+    Parser: OptParser + Pre,
+    Parser::Output: Information,
+    Ctor::Config: Config + ConfigValue + Default,
+{
+    fn ref_from<'a>(&self, set: &'a OptSet<Parser, Ctor>) -> Result<&'a Ctor::Opt, Error> {
+        set.find(*self)?
+            .ok_or_else(|| Error::raise_error(format!("Can not find option {}", *self)))
+    }
+
+    fn mut_from<'a>(&self, set: &'a mut OptSet<Parser, Ctor>) -> Result<&'a mut Ctor::Opt, Error> {
+        set.find_mut(*self)?
+            .ok_or_else(|| Error::raise_error(format!("Can not find option {}", *self)))
     }
 }
 

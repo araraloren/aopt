@@ -5,8 +5,8 @@ use tracing::trace;
 use crate::astr;
 use crate::ctx::wrap_handler;
 use crate::ctx::wrap_handler_store;
-use crate::ctx::wrap_ser_handler;
-use crate::ctx::wrap_ser_handler_store;
+use crate::ctx::wrap_serhandler;
+use crate::ctx::wrap_serhandler_store;
 use crate::ctx::Callbacks;
 use crate::ctx::Ctx;
 use crate::ctx::Extract;
@@ -116,7 +116,7 @@ impl<Set, Ret> InvokeService<Set, Ret> {
 }
 
 impl<Set, Ret> InvokeService<Set, Ret> {
-    pub fn register_raw(&mut self, uid: Uid, handler: Callbacks<Set, Ret, Error>) -> &mut Self {
+    pub fn set_raw(&mut self, uid: Uid, handler: Callbacks<Set, Ret, Error>) -> &mut Self {
         self.callbacks.insert(uid, handler);
         self
     }
@@ -141,7 +141,7 @@ impl<Set, Ret> InvokeService<Set, Ret> {
     /// |           call Args::extract(Uid, &Set, &Services, &Ctx) -> Args
     /// |           -> Result<Option<Ret>, Error>
     /// ```
-    pub fn register_serhandler<Args>(
+    pub fn set_serhandler<Args>(
         &mut self,
         uid: Uid,
         handler: impl SerHandler<Set, Args, Output = Option<Ret>, Error = Error> + 'static,
@@ -149,7 +149,7 @@ impl<Set, Ret> InvokeService<Set, Ret> {
     where
         Args: Extract<Set, Error = Error> + 'static,
     {
-        self.callbacks.insert(uid, wrap_ser_handler(handler));
+        self.callbacks.insert(uid, wrap_serhandler(handler));
         self
     }
 
@@ -173,7 +173,7 @@ impl<Set, Ret> InvokeService<Set, Ret> {
     /// |           call Args::extract(Uid, &Set, &Services, &Ctx) -> Args
     /// |           -> Result<Option<Ret>, Error>
     /// ```
-    pub fn register_handler<Args>(
+    pub fn set_handler<Args>(
         &mut self,
         uid: Uid,
         handler: impl Handler<Set, Args, Output = Option<Ret>, Error = Error> + 'static,
@@ -209,7 +209,7 @@ impl<Set, Ret> InvokeService<Set, Ret> {
     /// |       -> call Store::process(Uid, &Set, Option<&RawVal>, Option<Value>)
     /// |           -> Result<Option<Ret>, Error>
     /// ```
-    pub fn register_serstore<Args, Output>(
+    pub fn set_serhandler_store<Args, Output>(
         &mut self,
         uid: Uid,
         handler: impl SerHandler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
@@ -219,7 +219,7 @@ impl<Set, Ret> InvokeService<Set, Ret> {
         Args: Extract<Set, Error = Error> + 'static,
     {
         self.callbacks
-            .insert(uid, wrap_ser_handler_store(handler, store));
+            .insert(uid, wrap_serhandler_store(handler, store));
         self
     }
 
@@ -247,7 +247,7 @@ impl<Set, Ret> InvokeService<Set, Ret> {
     /// |       -> call Store::process(Uid, &Set, Option<&RawVal>, Option<Value>)
     /// |           -> Result<Option<Ret>, Error>
     /// ```
-    pub fn register_store<Args, Output>(
+    pub fn set_handler_store<Args, Output>(
         &mut self,
         uid: Uid,
         handler: impl Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
@@ -392,7 +392,7 @@ where
         if !self.register {
             let handler = self.handler.take().unwrap();
 
-            self.ser.register_serstore(self.uid, handler, store);
+            self.ser.set_serhandler_store(self.uid, handler, store);
             self.register = true;
         }
     }
@@ -413,7 +413,7 @@ where
             let handler = self.handler.take().unwrap();
 
             self.ser
-                .register_serstore(self.uid, handler, ValStore::default());
+                .set_serhandler_store(self.uid, handler, ValStore::default());
             self.register = true;
         }
     }
@@ -454,7 +454,7 @@ where
         if !self.register {
             let handler = self.handler.take().unwrap();
 
-            self.ser.register_store(self.uid, handler, store);
+            self.ser.set_handler_store(self.uid, handler, store);
             self.register = true;
         }
     }
@@ -475,7 +475,7 @@ where
             let handler = self.handler.take().unwrap();
 
             self.ser
-                .register_store(self.uid, handler, ValStore::default());
+                .set_handler_store(self.uid, handler, ValStore::default());
             self.register = true;
         }
     }

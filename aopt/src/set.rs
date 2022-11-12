@@ -1,11 +1,13 @@
 pub(crate) mod commit;
 pub(crate) mod filter;
+pub(crate) mod index;
 pub(crate) mod optset;
 
 pub use self::commit::Commit;
 pub use self::filter::Filter;
 pub use self::filter::FilterMatcher;
 pub use self::filter::FilterMut;
+pub use self::index::SetIndex;
 pub use self::optset::OptSet;
 
 use crate::Error;
