@@ -86,7 +86,7 @@ impl AForward {
     }
 
     pub fn default_ser(&self) -> Services {
-        services_with_default_service::<ASet>()
+        aser_with_default_service::<ASet>()
     }
 }
 
@@ -104,7 +104,7 @@ pub(crate) fn aset_with_default_creators() -> ASet {
         .with_creator(MainCreator::boxed())
 }
 
-pub(crate) fn services_with_default_service<S: 'static>() -> Services {
+pub(crate) fn aser_with_default_service<S: 'static>() -> Services {
     Services::default()
         .with(CheckService::<S>::new())
         .with(UsrValService::new())

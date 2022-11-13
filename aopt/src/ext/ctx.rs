@@ -18,8 +18,8 @@
 //! set.add_opt("set=c")?.run()?;
 //! set.add_opt("pos_2=p@2")?.run()?;
 //! set.add_opt("pos_v=p@>2")?.run()?;
-//! ser.ser_invoke_mut::<ASet>()?
-//!     .register(0, |_: Uid, _: &mut ASet, disable: ctx::Disable| {
+//! ser.ser_invoke_mut()?
+//!     .register(0, |_: &mut ASet, disable: ctx::Disable| {
 //!         assert_eq!(
 //!             &true,
 //!             disable.deref(),
@@ -28,8 +28,8 @@
 //!         Ok(Some(false))
 //!     })
 //!     .with_default();
-//! ser.ser_invoke_mut::<ASet>()?
-//!     .register(1, |_: Uid, _: &mut ASet, val: ctx::Value<String>| {
+//! ser.ser_invoke_mut()?
+//!     .register(1, |_: &mut ASet, val: ctx::Value<String>| {
 //!         assert_eq!(
 //!             &String::from("set"),
 //!             val.deref(),
@@ -38,8 +38,8 @@
 //!         Ok(Some(true))
 //!     })
 //!     .with_default();
-//! ser.ser_invoke_mut::<ASet>()?
-//!     .register(2, |_: Uid, _: &mut ASet, val: ctx::Value<i64>| {
+//! ser.ser_invoke_mut()?
+//!     .register(2, |_: &mut ASet, val: ctx::Value<i64>| {
 //!         assert_eq!(
 //!             &42,
 //!             val.deref(),
@@ -48,10 +48,10 @@
 //!         Ok(Some(*val.deref()))
 //!     })
 //!     .with_default();
-//! ser.ser_invoke_mut::<ASet>()?
+//! ser.ser_invoke_mut()?
 //!     .register(
 //!         3,
-//!         |_: Uid, _: &mut ASet, index: ctx::Index, raw_val: ctx::RawVal| {
+//!         |_: &mut ASet, index: ctx::Index, raw_val: ctx::RawVal| {
 //!             Ok(Some((*index.deref(), raw_val.deref().clone())))
 //!         },
 //!     )
@@ -100,7 +100,7 @@ use crate::Str;
 impl<S: Set> Extract<S> for Ctx {
     type Error = Error;
 
-    fn extract(_: crate::Uid, _: &S, _: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn extract(_: &S, _: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(ctx.clone())
     }
 }
@@ -123,9 +123,9 @@ impl<S: Set> Extract<S> for Ctx {
 ///   let mut ser = policy.default_ser();
 ///
 ///   set.add_opt("--bool=b/")?.run()?;
-///   ser.ser_invoke_mut::<ASet>()?
-///       .register(0, |uid: Uid, _: &mut ASet, ctx_uid: ctx::Uid| {
-///           assert_eq!(&uid, ctx_uid.deref(), "The uid in Ctx is same as the uid of matched option");
+///   ser.ser_invoke_mut()?
+///       .register(0, |_: &mut ASet, ctx_uid: ctx::Uid| {
+///           assert_eq!(&0, ctx_uid.deref(), "The uid in Ctx is same as the uid of matched option");
 ///           Ok(Some(false))
 ///       }).with_default();
 ///
@@ -162,12 +162,7 @@ impl Uid {
 impl<S: Set> Extract<S> for Uid {
     type Error = Error;
 
-    fn extract(
-        _uid: crate::Uid,
-        _set: &S,
-        _ser: &Services,
-        ctx: &Ctx,
-    ) -> Result<Self, Self::Error> {
+    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(Self::extract_ctx(ctx))
     }
 }
@@ -209,8 +204,8 @@ impl Display for Uid {
 /// set.add_opt("--bool=b/")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, index: ctx::Index| {
+/// ser.ser_invoke_mut()?
+///     .register(0, |_: &mut ASet, index: ctx::Index| {
 ///         assert_eq!(
 ///             &0,
 ///             index.deref(),
@@ -219,8 +214,8 @@ impl Display for Uid {
 ///         Ok(Some(false))
 ///     })
 ///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, index: ctx::Index| {
+/// ser.ser_invoke_mut()?
+///     .register(1, |_: &mut ASet, index: ctx::Index| {
 ///         assert_eq!(
 ///             &1,
 ///             index.deref(),
@@ -229,8 +224,8 @@ impl Display for Uid {
 ///         Ok(Some(true))
 ///     })
 ///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, index: ctx::Index| {
+/// ser.ser_invoke_mut()?
+///     .register(2, |_: &mut ASet, index: ctx::Index| {
 ///         assert_eq!(
 ///             &2,
 ///             index.deref(),
@@ -274,12 +269,7 @@ impl Index {
 impl<S: Set> Extract<S> for Index {
     type Error = Error;
 
-    fn extract(
-        _uid: crate::Uid,
-        _set: &S,
-        _ser: &Services,
-        ctx: &Ctx,
-    ) -> Result<Self, Self::Error> {
+    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(Self::extract_ctx(ctx))
     }
 }
@@ -321,20 +311,20 @@ impl Display for Index {
 /// set.add_opt("--bool=b/")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, total: ctx::Total| {
+/// ser.ser_invoke_mut()?
+///     .register(0, |_: &mut ASet, total: ctx::Total| {
 ///         assert_eq!( &4, total.deref(), "Total is the length of Args");
 ///         Ok(Some(false))
 ///     })
 ///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, total: ctx::Total| {
+/// ser.ser_invoke_mut()?
+///     .register(1, |_: &mut ASet, total: ctx::Total| {
 ///         assert_eq!(&3, total.deref(), "Total is the length of Args");
 ///         Ok(Some(true))
 ///     })
 ///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, total: ctx::Total| {
+/// ser.ser_invoke_mut()?
+///     .register(2, |_: &mut ASet, total: ctx::Total| {
 ///         assert_eq!(&3, total.deref(), "Total is the length of Args");
 ///         Ok(Some(2i64))
 ///     })
@@ -374,12 +364,7 @@ impl Total {
 impl<S: Set> Extract<S> for Total {
     type Error = Error;
 
-    fn extract(
-        _uid: crate::Uid,
-        _set: &S,
-        _ser: &Services,
-        ctx: &Ctx,
-    ) -> Result<Self, Self::Error> {
+    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(Self::extract_ctx(ctx))
     }
 }
@@ -421,8 +406,8 @@ impl Display for Total {
 /// set.add_opt("--bool=b/")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, args: ctx::Args| {
+/// ser.ser_invoke_mut()?
+///     .register(0, |_: &mut ASet, args: ctx::Args| {
 ///         let test = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///         for (idx, arg) in args.deref().deref().iter().enumerate() {
 ///             assert_eq!(arg, &test[idx], "Args is arguments used in Policy");
@@ -430,8 +415,8 @@ impl Display for Total {
 ///         Ok(Some(false))
 ///     })
 ///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, args: ctx::Args| {
+/// ser.ser_invoke_mut()?
+///     .register(1, |_: &mut ASet, args: ctx::Args| {
 ///         let test = Args::new(["set", "value", "foo"].into_iter());
 ///         for (idx, arg) in args.deref().deref().iter().enumerate() {
 ///             assert_eq!(arg, &test[idx], "Args is arguments used in Policy");
@@ -439,8 +424,8 @@ impl Display for Total {
 ///         Ok(Some(true))
 ///     })
 ///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, args: ctx::Args| {
+/// ser.ser_invoke_mut()?
+///     .register(2, |_: &mut ASet, args: ctx::Args| {
 ///         let test = Args::new(["set", "value", "foo"].into_iter());
 ///         for (idx, arg) in args.deref().deref().iter().enumerate() {
 ///             assert_eq!(arg, &test[idx], "Args is arguments used in Policy");
@@ -480,12 +465,7 @@ impl Deref for Args {
 impl<S: Set> Extract<S> for Args {
     type Error = Error;
 
-    fn extract(
-        _uid: crate::Uid,
-        _set: &S,
-        _ser: &Services,
-        ctx: &Ctx,
-    ) -> Result<Self, Self::Error> {
+    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(Self::extract_ctx(ctx))
     }
 }
@@ -507,8 +487,8 @@ impl<S: Set> Extract<S> for Args {
 /// set.add_opt("--bool=b/")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, name: Option<ctx::Name>| {
+/// ser.ser_invoke_mut()?
+///     .register(0, |_: &mut ASet, name: Option<ctx::Name>| {
 ///         assert_eq!(
 ///             "bool",
 ///             name.unwrap().deref().as_ref(),
@@ -517,8 +497,8 @@ impl<S: Set> Extract<S> for Args {
 ///         Ok(Some(false))
 ///     })
 ///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, name: Option<ctx::Name>| {
+/// ser.ser_invoke_mut()?
+///     .register(1, |_: &mut ASet, name: Option<ctx::Name>| {
 ///         assert_eq!(
 ///             "set",
 ///             name.unwrap().deref().as_ref(),
@@ -527,8 +507,8 @@ impl<S: Set> Extract<S> for Args {
 ///         Ok(Some(true))
 ///     })
 ///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, name: Option<ctx::Name>| {
+/// ser.ser_invoke_mut()?
+///     .register(2, |_: &mut ASet, name: Option<ctx::Name>| {
 ///         assert_eq!(
 ///             "value",
 ///             name.unwrap().deref().as_ref(),
@@ -580,12 +560,7 @@ impl Name {
 impl<S: Set> Extract<S> for Name {
     type Error = Error;
 
-    fn extract(
-        _uid: crate::Uid,
-        _set: &S,
-        _ser: &Services,
-        ctx: &Ctx,
-    ) -> Result<Self, Self::Error> {
+    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
         Self::extract_ctx(ctx)
     }
 }
@@ -627,8 +602,8 @@ impl Display for Name {
 /// set.add_opt("--bool=b/")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, prefix: Option<ctx::Prefix>| {
+/// ser.ser_invoke_mut()?
+///     .register(0, |_: &mut ASet, prefix: Option<ctx::Prefix>| {
 ///         assert_eq!(
 ///             "--",
 ///             prefix.unwrap().deref().as_ref(),
@@ -637,14 +612,14 @@ impl Display for Name {
 ///         Ok(Some(false))
 ///     })
 ///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, prefix: Option<ctx::Prefix>| {
+/// ser.ser_invoke_mut()?
+///     .register(1, |_: &mut ASet, prefix: Option<ctx::Prefix>| {
 ///         assert_eq!(None, prefix, "Prefix is the prefix from Ctx set in Policy");
 ///         Ok(Some(true))
 ///     })
 ///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, prefix: Option<ctx::Prefix>| {
+/// ser.ser_invoke_mut()?
+///     .register(2, |_: &mut ASet, prefix: Option<ctx::Prefix>| {
 ///         assert_eq!(None, prefix, "Prefix is the prefix from Ctx set in Policy");
 ///         Ok(Some(2i64))
 ///     })
@@ -681,12 +656,7 @@ impl Prefix {
 impl<S: Set> Extract<S> for Prefix {
     type Error = Error;
 
-    fn extract(
-        _uid: crate::Uid,
-        _set: &S,
-        _ser: &Services,
-        ctx: &Ctx,
-    ) -> Result<Self, Self::Error> {
+    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
         Self::extract_ctx(ctx)
     }
 }
@@ -728,8 +698,8 @@ impl Display for Prefix {
 /// set.add_opt("--bool=b/")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, style: ctx::Style| {
+/// ser.ser_invoke_mut()?
+///     .register(0, |_: &mut ASet, style: ctx::Style| {
 ///         assert_eq!(
 ///             &Style::Boolean,
 ///             style.deref(),
@@ -738,8 +708,8 @@ impl Display for Prefix {
 ///         Ok(Some(false))
 ///     })
 ///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, style: ctx::Style| {
+/// ser.ser_invoke_mut()?
+///     .register(1, |_: &mut ASet, style: ctx::Style| {
 ///         assert_eq!(
 ///             &Style::Cmd,
 ///             style.deref(),
@@ -748,8 +718,8 @@ impl Display for Prefix {
 ///         Ok(Some(true))
 ///     })
 ///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, style: ctx::Style| {
+/// ser.ser_invoke_mut()?
+///     .register(2, |_: &mut ASet, style: ctx::Style| {
 ///         assert_eq!(
 ///             &Style::Pos,
 ///             style.deref(),
@@ -802,12 +772,7 @@ impl Display for Style {
 impl<S: Set> Extract<S> for Style {
     type Error = Error;
 
-    fn extract(
-        _uid: crate::Uid,
-        _set: &S,
-        _ser: &Services,
-        ctx: &Ctx,
-    ) -> Result<Self, Self::Error> {
+    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(Self::extract_ctx(ctx))
     }
 }
@@ -829,8 +794,8 @@ impl<S: Set> Extract<S> for Style {
 /// set.add_opt("--bool=b/")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, disable: ctx::Disable| {
+/// ser.ser_invoke_mut()?
+///     .register(0, |_: &mut ASet, disable: ctx::Disable| {
 ///         assert_eq!(
 ///             &true,
 ///             disable.deref(),
@@ -839,8 +804,8 @@ impl<S: Set> Extract<S> for Style {
 ///         Ok(Some(false))
 ///     })
 ///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, disable: ctx::Disable| {
+/// ser.ser_invoke_mut()?
+///     .register(1, |_: &mut ASet, disable: ctx::Disable| {
 ///         assert_eq!(
 ///             &false,
 ///             disable.deref(),
@@ -849,8 +814,8 @@ impl<S: Set> Extract<S> for Style {
 ///         Ok(Some(true))
 ///     })
 ///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, disable: ctx::Disable| {
+/// ser.ser_invoke_mut()?
+///     .register(2, |_: &mut ASet, disable: ctx::Disable| {
 ///         assert_eq!(
 ///             &false,
 ///             disable.deref(),
@@ -903,12 +868,7 @@ impl Display for Disable {
 impl<S: Set> Extract<S> for Disable {
     type Error = Error;
 
-    fn extract(
-        _uid: crate::Uid,
-        _set: &S,
-        _ser: &Services,
-        ctx: &Ctx,
-    ) -> Result<Self, Self::Error> {
+    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(Self::extract_ctx(ctx))
     }
 }
@@ -931,8 +891,8 @@ impl<S: Set> Extract<S> for Disable {
 /// set.add_opt("--bool=b/")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, raw_val: ctx::RawVal| {
+/// ser.ser_invoke_mut()?
+///     .register(0, |_: &mut ASet, raw_val: ctx::RawVal| {
 ///         assert_eq!(
 ///             &RawVal::from("false"),
 ///             raw_val.deref(),
@@ -941,8 +901,8 @@ impl<S: Set> Extract<S> for Disable {
 ///         Ok(Some(false))
 ///     })
 ///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, raw_val: ctx::RawVal| {
+/// ser.ser_invoke_mut()?
+///     .register(1, |_: &mut ASet, raw_val: ctx::RawVal| {
 ///         assert_eq!(
 ///             &RawVal::from("set"),
 ///             raw_val.deref(),
@@ -951,8 +911,8 @@ impl<S: Set> Extract<S> for Disable {
 ///         Ok(Some(true))
 ///     })
 ///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, raw_val: ctx::RawVal| {
+/// ser.ser_invoke_mut()?
+///     .register(2, |_: &mut ASet, raw_val: ctx::RawVal| {
 ///         assert_eq!(
 ///             &RawVal::from("value"),
 ///             raw_val.deref(),
@@ -1005,12 +965,7 @@ impl Deref for RawVal {
 impl<S: Set> Extract<S> for RawVal {
     type Error = Error;
 
-    fn extract(
-        _uid: crate::Uid,
-        _set: &S,
-        _ser: &Services,
-        ctx: &Ctx,
-    ) -> Result<Self, Self::Error> {
+    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
         Self::extract_ctx(ctx)
     }
 }
@@ -1032,8 +987,8 @@ impl<S: Set> Extract<S> for RawVal {
 /// set.add_opt("--bool=b/")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, val: ctx::Value<bool>| {
+/// ser.ser_invoke_mut()?
+///     .register(0, |_: &mut ASet, val: ctx::Value<bool>| {
 ///         assert_eq!(
 ///             &false,
 ///             val.deref(),
@@ -1042,8 +997,8 @@ impl<S: Set> Extract<S> for RawVal {
 ///         Ok(Some(false))
 ///     })
 ///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(1, |_: Uid, _: &mut ASet, val: ctx::Value<String>| {
+/// ser.ser_invoke_mut()?
+///     .register(1, |_: &mut ASet, val: ctx::Value<String>| {
 ///         assert_eq!(
 ///             &String::from("set"),
 ///             val.deref(),
@@ -1052,8 +1007,8 @@ impl<S: Set> Extract<S> for RawVal {
 ///         Ok(Some(true))
 ///     })
 ///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(2, |_: Uid, _: &mut ASet, val: ctx::Value<i64>| {
+/// ser.ser_invoke_mut()?
+///     .register(2, |_: &mut ASet, val: ctx::Value<i64>| {
 ///         assert_eq!(
 ///             &42,
 ///             val.deref(),
@@ -1155,9 +1110,10 @@ impl<T> DerefMut for Value<T> {
 impl<S: Set, T: RawValParser<<S as Set>::Opt>> Extract<S> for Value<T> {
     type Error = Error;
 
-    fn extract(uid: crate::Uid, set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn extract(set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
         let arg = ctx.arg();
         let arg = arg.as_ref().map(|v| v.as_ref());
+        let uid = ctx.uid();
 
         Ok(Value(
             T::parse(set.opt(uid)?, arg, ctx).map_err(|e| e.into())?,

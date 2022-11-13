@@ -72,16 +72,18 @@ where
 
     pub fn opt_check(&self, set: &mut Set) -> Result<bool, Error> {
         trace!("Opt Check, call valid on all Opt ...");
-        Ok(set
-            .keys()
-            .iter()
-            .filter(|v| {
-                let opt = Self::opt(set, *v);
-                opt.mat_style(Style::Argument)
-                    || opt.mat_style(Style::Boolean)
-                    || opt.mat_style(Style::Combined)
-            })
-            .all(|v| Self::opt(set, v).valid()))
+        for id in set.keys().iter().filter(|v| {
+            let opt = Self::opt(set, *v);
+            opt.mat_style(Style::Argument)
+                || opt.mat_style(Style::Boolean)
+                || opt.mat_style(Style::Combined)
+        }) {
+            let opt = Self::opt(set, id);
+            if !opt.valid() {
+                return Err(Error::sp_opt_force_require(opt.hint()));
+            }
+        }
+        Ok(true)
     }
 
     /// Check if the POS is valid.

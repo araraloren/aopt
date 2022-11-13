@@ -50,7 +50,7 @@ use crate::Error;
 ///     .add_opt("pos=p@*")?
 ///     .set_initiator(ValInitiator::empty::<String>())
 ///     .run()?;
-/// ser.ser_invoke_mut::<ASet>()?
+/// ser.ser_invoke_mut()?
 ///     .register_ser(
 ///         pos_id,
 ///         move |_: Uid,

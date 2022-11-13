@@ -344,7 +344,8 @@ impl Creator for BoolCreator {
             .with_alias(Some(config.gen_alias()?))
             .with_optional(optional)
             .with_initiator(ValInitiator::bool_initiator(value))
-            .with_validator(ValValidator::bool_validator(deactivate_style)))
+            .with_validator(ValValidator::bool_validator(deactivate_style))
+            .with_deactivate_style(deactivate_style))
     }
 }
 
@@ -527,7 +528,8 @@ impl Creator for MainCreator {
         );
         debug_assert!(
             config.prefix().is_none(),
-            "Main option not support prefix configruation"
+            "Main option not support prefix configruation: {:?}",
+            config.prefix()
         );
         debug_assert!(
             !deactivate_style,

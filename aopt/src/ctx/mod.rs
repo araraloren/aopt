@@ -21,7 +21,6 @@ pub trait Callback<Set> {
 
     fn invoke(
         &mut self,
-        uid: Uid,
         set: &mut Set,
         ser: &mut Services,
         ctx: &Ctx,
@@ -31,19 +30,18 @@ pub trait Callback<Set> {
 impl<Func, Set, Value, Err> Callback<Set> for Func
 where
     Err: Into<Error>,
-    Func: FnMut(Uid, &mut Set, &mut Services, &Ctx) -> Result<Option<Value>, Err>,
+    Func: FnMut(&mut Set, &mut Services, &Ctx) -> Result<Option<Value>, Err>,
 {
     type Value = Value;
     type Error = Err;
 
     fn invoke(
         &mut self,
-        uid: Uid,
         set: &mut Set,
         ser: &mut Services,
         ctx: &Ctx,
     ) -> Result<Option<Self::Value>, Self::Error> {
-        (self)(uid, set, ser, ctx)
+        (self)(set, ser, ctx)
     }
 }
 
@@ -106,12 +104,10 @@ where
     Error: Into<crate::Error>,
     Args: Extract<Set, Error = Error>,
 {
-    Box::new(
-        move |uid: Uid, set: &mut Set, ser: &mut Services, ctx: &Ctx| {
-            let val = handler.invoke(uid, set, ser, Args::extract(uid, set, ser, ctx)?)?;
-            Ok(val)
-        },
-    )
+    Box::new(move |set: &mut Set, ser: &mut Services, ctx: &Ctx| {
+        let val = handler.invoke(set, ser, Args::extract(set, ser, ctx)?)?;
+        Ok(val)
+    })
 }
 
 /// Wrap only the handler, user can custom the value store logical.
@@ -122,12 +118,10 @@ where
     Error: Into<crate::Error>,
     Args: Extract<Set, Error = Error>,
 {
-    Box::new(
-        move |uid: Uid, set: &mut Set, ser: &mut Services, ctx: &Ctx| {
-            let val = handler.invoke(uid, set, Args::extract(uid, set, ser, ctx)?)?;
-            Ok(val)
-        },
-    )
+    Box::new(move |set: &mut Set, ser: &mut Services, ctx: &Ctx| {
+        let val = handler.invoke(set, Args::extract(set, ser, ctx)?)?;
+        Ok(val)
+    })
 }
 
 /// Wrap the handler and store.
@@ -139,15 +133,14 @@ where
     Error: Into<crate::Error>,
     Args: Extract<Set, Error = Error>,
 {
-    Box::new(
-        move |uid: Uid, set: &mut Set, ser: &mut Services, ctx: &Ctx| {
-            let val = handler.invoke(uid, set, ser, Args::extract(uid, set, ser, ctx)?)?;
-            let arg = ctx.arg();
-            let arg = arg.as_ref().map(|v| v.as_ref());
+    Box::new(move |set: &mut Set, ser: &mut Services, ctx: &Ctx| {
+        let val = handler.invoke(set, ser, Args::extract(set, ser, ctx)?)?;
+        let arg = ctx.arg();
+        let arg = arg.as_ref().map(|v| v.as_ref());
+        let uid = ctx.uid();
 
-            Ok(store.process(uid, set, ser, arg, val)?)
-        },
-    )
+        Ok(store.process(uid, set, ser, arg, val)?)
+    })
 }
 
 /// Wrap the handler and store.
@@ -159,13 +152,12 @@ where
     Error: Into<crate::Error>,
     Args: Extract<Set, Error = Error>,
 {
-    Box::new(
-        move |uid: Uid, set: &mut Set, ser: &mut Services, ctx: &Ctx| {
-            let val = handler.invoke(uid, set, Args::extract(uid, set, ser, ctx)?)?;
-            let arg = ctx.arg();
-            let arg = arg.as_ref().map(|v| v.as_ref());
+    Box::new(move |set: &mut Set, ser: &mut Services, ctx: &Ctx| {
+        let val = handler.invoke(set, Args::extract(set, ser, ctx)?)?;
+        let arg = ctx.arg();
+        let arg = arg.as_ref().map(|v| v.as_ref());
+        let uid = ctx.uid();
 
-            Ok(store.process(uid, set, ser, arg, val)?)
-        },
-    )
+        Ok(store.process(uid, set, ser, arg, val)?)
+    })
 }

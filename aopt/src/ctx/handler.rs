@@ -1,6 +1,5 @@
 use crate::ser::Services;
 use crate::Error;
-use crate::Uid;
 
 pub trait SerHandler<Set, Args> {
     type Output;
@@ -8,7 +7,6 @@ pub trait SerHandler<Set, Args> {
 
     fn invoke(
         &mut self,
-        uid: Uid,
         set: &mut Set,
         ser: &mut Services,
         args: Args,
@@ -20,15 +18,15 @@ macro_rules! impl_ser_handler_for {
         impl<Set, Func, Out, Err, $($arg,)*> SerHandler<Set, ($($arg,)*)> for Func
         where
             Err: Into<Error>,
-            Func: FnMut(Uid, &mut Set, &mut Services, $($arg),*) -> Result<Out, Err>,
+            Func: FnMut(&mut Set, &mut Services, $($arg),*) -> Result<Out, Err>,
         {
             type Output = Out;
             type Error = Err;
 
             #[inline]
             #[allow(non_snake_case)]
-            fn invoke(&mut self, uid: Uid, set: &mut Set, ser: &mut Services, ($($arg,)*): ($($arg,)*)) -> Result<Self::Output, Self::Error> {
-                (self)(uid, set, ser, $($arg,)*)
+            fn invoke(&mut self, set: &mut Set, ser: &mut Services, ($($arg,)*): ($($arg,)*)) -> Result<Self::Output, Self::Error> {
+                (self)(set, ser, $($arg,)*)
             }
         }
     };
@@ -74,7 +72,7 @@ pub trait Handler<Set, Args> {
     type Output;
     type Error: Into<Error>;
 
-    fn invoke(&mut self, uid: Uid, set: &mut Set, args: Args) -> Result<Self::Output, Self::Error>;
+    fn invoke(&mut self, set: &mut Set, args: Args) -> Result<Self::Output, Self::Error>;
 }
 
 macro_rules! impl_handler_for {
@@ -82,15 +80,15 @@ macro_rules! impl_handler_for {
         impl<Set, Func, Out, Err, $($arg,)*> Handler<Set, ($($arg,)*)> for Func
         where
             Err: Into<Error>,
-            Func: FnMut(Uid, &mut Set, $($arg),*) -> Result<Out, Err>,
+            Func: FnMut(&mut Set, $($arg),*) -> Result<Out, Err>,
         {
             type Output = Out;
             type Error = Err;
 
             #[inline]
             #[allow(non_snake_case)]
-            fn invoke(&mut self, uid: Uid, set: &mut Set, ($($arg,)*): ($($arg,)*)) -> Result<Self::Output, Self::Error> {
-                (self)(uid, set, $($arg,)*)
+            fn invoke(&mut self, set: &mut Set, ($($arg,)*): ($($arg,)*)) -> Result<Self::Output, Self::Error> {
+                (self)(set, $($arg,)*)
             }
         }
     };

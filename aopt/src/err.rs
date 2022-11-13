@@ -92,6 +92,8 @@ pub enum Error {
 
     SpMissingArgument(ErrorStr),
 
+    SpOptForceRequired(ErrorStr),
+
     SpPOSForceRequired(ErrorStr),
 
     SpCMDForceRequired(ErrorStr),
@@ -217,6 +219,11 @@ impl Error {
         Self::SpPOSForceRequired(t.into())
     }
 
+    /// Create SpecialError::OptForceRequired error
+    pub fn sp_opt_force_require<T: Into<ErrorStr>>(t: T) -> Self {
+        Self::SpOptForceRequired(t.into())
+    }
+
     /// Create SpecialError::CMDForceRequired error
     pub fn sp_cmd_force_require<T: Into<ErrorStr>>(t: T) -> Self {
         Self::SpCMDForceRequired(t.into())
@@ -285,6 +292,9 @@ impl Error {
             }
             Error::SpMissingArgument(opt) => {
                 format!("Syntax error! Missing argument for option '{opt}'.")
+            }
+            Error::SpOptForceRequired(poss) => {
+                format!("Option '{poss}' are force required.")
             }
             Error::SpPOSForceRequired(poss) => {
                 format!("POS '{poss}' are force required.")

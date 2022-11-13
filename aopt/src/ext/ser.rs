@@ -155,16 +155,16 @@ where
 ///     .insert(ser::Value::new(PosList(RefCell::new(vec![]))));
 /// set.add_opt("--bool=b/")?.run()?;
 /// set.add_opt("pos_v=p@*")?.run()?;
-/// ser.ser_invoke_mut::<ASet>()?
-///     .register(0, |_: Uid, _: &mut ASet, disable: ctx::Disable| {
+/// ser.ser_invoke_mut()?
+///     .register(0, |_: &mut ASet, disable: ctx::Disable| {
 ///         assert_eq!(&true, disable.deref());
 ///         Ok(Some(false))
 ///     })
 ///     .with_default();
-/// ser.ser_invoke_mut::<ASet>()?
+/// ser.ser_invoke_mut()?
 ///     .register(
 ///         1,
-///         |_: Uid, _: &mut ASet, raw_val: ctx::RawVal, data: ser::Value<PosList>| {
+///         |_: &mut ASet, raw_val: ctx::RawVal, data: ser::Value<PosList>| {
 ///             data.add_pos(raw_val.clone_rawval());
 ///             Ok(Some(true))
 ///         },
@@ -225,7 +225,7 @@ impl<T: ?Sized> From<Arc<T>> for Value<T> {
 impl<T: 'static, S: Set> Extract<S> for Value<T> {
     type Error = Error;
 
-    fn extract(_uid: Uid, _set: &S, ser: &Services, _ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn extract(_set: &S, ser: &Services, _ctx: &Ctx) -> Result<Self, Self::Error> {
         Self::extract_ser(ser)
     }
 }

@@ -26,11 +26,11 @@ where
     Ok(match inv_ser.has(uid) {
         true => {
             trace!("Invoke callback of Opt{{{uid}}} with {:?}", saver.ctx);
-            inv_ser.invoke(uid, set, ser, &saver.ctx)?
+            inv_ser.invoke(set, ser, &saver.ctx)?
         }
         false => {
             trace!("Invoke default of Opt{{{uid}}} with {:?}", saver.ctx);
-            inv_ser.invoke_default(uid, set, ser, &saver.ctx)?
+            inv_ser.invoke_default(set, ser, &saver.ctx)?
         }
     })
 }
@@ -125,11 +125,11 @@ where
                     let ret = match inv_ser.has(uid) {
                         true => {
                             // callback in InvokeService
-                            inv_ser.invoke(uid, set, ser, &ctx)?
+                            inv_ser.invoke(set, ser, &ctx)?
                         }
                         false => {
                             // call `invoke_default` if callback not exist
-                            inv_ser.invoke_default(uid, set, ser, &ctx)?
+                            inv_ser.invoke_default(set, ser, &ctx)?
                         }
                     };
 

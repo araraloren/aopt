@@ -46,7 +46,7 @@ use crate::Uid;
 ///        }
 ///    }
 ///    let mut ser = Services::default().with(UsrValService::default());
-///    let mut is = InvokeService::<ASet>::new();
+///    let mut is = InvokeService::new();
 ///    let mut set = ASet::default();
 ///    let args = Arc::new(Args::new(["--foo", "bar", "doo"].into_iter()));
 ///    let ctx = Ctx::default().with_args(args);
@@ -317,13 +317,13 @@ where
     /// Invoke the handler saved in [`InvokeService`], it will panic if the handler not exist.
     pub fn invoke(
         &mut self,
-        uid: Uid,
         set: &mut Set,
         ser: &mut Services,
         ctx: &Ctx,
     ) -> Result<Option<Ret>, Error> {
+        let uid = ctx.uid();
         if let Some(callback) = self.callbacks.get_mut(&uid) {
-            return Ok(callback.invoke(uid, set, ser, ctx)?);
+            return Ok(callback.invoke(set, ser, ctx)?);
         }
         unreachable!(
             "There is no callback of {}, call `invoke_default` instead",
@@ -337,11 +337,11 @@ where
     /// then save the value to [`ValService`] through default [`ValStore`].
     pub fn invoke_default(
         &mut self,
-        uid: Uid,
         set: &mut Set,
         ser: &mut Services,
         ctx: &Ctx,
     ) -> Result<Option<()>, Error> {
+        let uid = ctx.uid();
         let opt = set.get(uid).unwrap();
         let assoc = opt.assoc();
         let arg = ctx.arg();

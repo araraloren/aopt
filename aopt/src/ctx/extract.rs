@@ -1,7 +1,6 @@
 use super::Ctx;
 use crate::ser::Services;
 use crate::Error;
-use crate::Uid;
 
 /// Implement the trait if your want use your type in the
 /// [`Callback`](super::Callback) of [`InvokeService`](crate::ser::InvokeService).
@@ -11,7 +10,7 @@ where
 {
     type Error: Into<Error>;
 
-    fn extract(uid: Uid, set: &Set, ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error>;
+    fn extract(set: &Set, ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error>;
 }
 
 impl<Set> Extract<Set> for ()
@@ -20,7 +19,7 @@ where
 {
     type Error = Error;
 
-    fn extract(_uid: Uid, _set: &Set, _ser: &Services, _ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn extract(_set: &Set, _ser: &Services, _ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(())
     }
 }
@@ -35,8 +34,8 @@ where
 {
     type Error = Err;
 
-    fn extract(uid: Uid, set: &Set, ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
-        match T::extract(uid, set, ser, ctx) {
+    fn extract(set: &Set, ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+        match T::extract(set, ser, ctx) {
             Ok(value) => Ok(Some(value)),
             Err(_) => Ok(None),
         }
@@ -53,8 +52,8 @@ macro_rules! impl_extracter_for {
         {
             type Error = Error;
 
-            fn extract(uid: Uid, set: &Set, ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
-                Ok(($($arg::extract(uid, set, ser, ctx)?,)*))
+            fn extract(set: &Set, ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+                Ok(($($arg::extract(set, ser, ctx)?,)*))
             }
         }
     };
