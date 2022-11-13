@@ -424,7 +424,7 @@ impl<'a, Set, Ret, Handler, Args, Output> Drop
 {
     fn drop(&mut self) {
         if !self.register {
-            panic!("Consider call or_default or and_then on Register")
+            panic!("Consider call with_default or with on Register")
         }
     }
 }
@@ -484,7 +484,7 @@ where
 impl<'a, Set, Ret, Handler, Args, Output> Drop for Register<'a, Set, Ret, Handler, Args, Output> {
     fn drop(&mut self) {
         if !self.register {
-            panic!("Consider call or_default or and_then on Register")
+            panic!("Consider call with_default or with on Register")
         }
     }
 }
