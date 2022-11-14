@@ -64,9 +64,7 @@ pub struct ConstrctInfo {
 
     pub except: Vec<usize>,
 
-    pub greater: Option<usize>,
-
-    pub less: Option<usize>,
+    pub range: Option<(Option<usize>, Option<usize>)>,
 
     index: Option<Index>,
 }
@@ -127,13 +125,8 @@ impl ConstrctInfo {
         self
     }
 
-    pub fn with_gt(mut self, greater: Option<usize>) -> Self {
-        self.greater = greater;
-        self
-    }
-
-    pub fn with_le(mut self, less: Option<usize>) -> Self {
-        self.less = less;
+    pub fn with_range(mut self, range: Option<(Option<usize>, Option<usize>)>) -> Self {
+        self.range = range;
         self
     }
 
@@ -149,10 +142,12 @@ impl ConstrctInfo {
                 Some(Index::List(std::mem::take(&mut self.list)))
             } else if !self.except.is_empty() {
                 Some(Index::Except(std::mem::take(&mut self.except)))
-            } else if self.greater.is_some() {
-                Some(Index::Greater(self.greater.unwrap()))
-            } else if self.less.is_some() {
-                Some(Index::Less(self.less.unwrap()))
+            } else if self.range.is_some() {
+                if let Some(range) = self.range {
+                    Some(Index::range(range.0, range.1))
+                } else {
+                    panic!("Can not unwrap data from Some ?!!")
+                }
             } else {
                 None
             };
@@ -185,8 +180,7 @@ impl Information for ConstrctInfo {
             || self.anywhere.is_some()
             || !self.list.is_empty()
             || !self.except.is_empty()
-            || self.greater.is_some()
-            || self.less.is_some()
+            || self.range.is_some()
     }
 
     fn has_deact(&self) -> bool {

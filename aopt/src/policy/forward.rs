@@ -280,6 +280,7 @@ mod test {
     use crate::prelude::*;
     use crate::Arc;
     use crate::Error;
+    use crate::RawVal;
 
     #[test]
     fn testing_1() {
@@ -287,7 +288,7 @@ mod test {
     }
 
     fn testing_1_main() -> Result<(), Error> {
-        fn check_opt_val<T: std::fmt::Debug + PartialEq + Eq + 'static>(
+        fn check_opt_val<T: std::fmt::Debug + PartialEq + 'static>(
             ser: &mut ASer,
             opt: &AOpt,
             uid: Uid,
@@ -323,19 +324,45 @@ mod test {
                     }
                 }
             } else {
-                assert!(vals.is_none(), "option value not equal: {:?}", vals);
+                assert!(
+                    vals.is_none(),
+                    "found none, option value not equal: {:?}",
+                    vals
+                );
             }
             if let Some(opt_alias) = opt.alias() {
                 if let Some(alias) = alias {
                     assert_eq!(opt_alias.len(), alias.len());
                     for (prefix, name) in alias {
-                        assert!(opt_alias.iter().any(|(p, n)| p == prefix && n == name));
+                        assert!(
+                            opt_alias.iter().any(|(p, n)| p == prefix && n == name),
+                            "alias => {:?} <--> {}, {}",
+                            &opt_alias,
+                            prefix,
+                            name,
+                        );
                     }
                 }
             } else {
                 assert!(alias.is_none());
             }
             Ok(())
+        }
+
+        fn string_collection_validator(vals: Vec<&'static str>) -> ValValidator {
+            ValValidator::new(
+                move |_: &str,
+                      val: Option<&RawVal>,
+                      _: bool,
+                      _: (usize, usize)|
+                      -> Result<bool, Error> {
+                    Ok(val
+                        .map(|v| v.to_str())
+                        .flatten()
+                        .map(|v| vals.contains(&v))
+                        .unwrap_or_default())
+                },
+            )
         }
 
         let mut policy = AForward::default();
@@ -346,21 +373,25 @@ mod test {
                 "--copt",
                 "--iopt=63",
                 "--/dopt",
-                "set",
+                "set", // 1
                 "--iopt",
                 "-42",
-                "-eopt",
+                "+eopt",
                 "-/fopt",
-                "8",
-                "16",
-                "bar",
+                "8",       // 2
+                "16",      // 3
+                "average", // 4
                 "--jopt",
                 "2",
                 "--iopt-alias1",
                 "0",
+                "--nopt=8.99",
                 "--hopt",
                 "48",
                 "--alias-k=4",
+                "-l2.79",
+                "--nopt",
+                "3.12",
             ]
             .into_iter(),
         );
@@ -372,7 +403,7 @@ mod test {
         set.add_opt("--bopt=b/")?.run()?;
         set.add_opt("--copt=b!")?.run()?;
         set.add_opt("--dopt=b!/")?.run()?;
-        set.add_opt("--eopt=b")?.add_alias("-eopt").run()?;
+        set.add_opt("--eopt=b")?.add_alias("+eopt").run()?;
         set.add_opt("--fopt=b/")?.add_alias("-fopt").run()?;
 
         // 8
@@ -399,6 +430,11 @@ mod test {
             .add_alias("--alias-k")
             .run()?;
 
+        // 13
+        set.add_opt("--lopt=f!")?.add_alias("-l").run()?;
+        set.add_opt("--mopt=f")?.set_value(1.02f64).run()?;
+        set.add_opt("--nopt=f")?.set_action(ValAction::Set).run()?;
+
         let apos_uid = set
             .add_opt("apos=p@1")?
             .set_initiator(ValInitiator::empty::<String>())
@@ -406,6 +442,10 @@ mod test {
         let bpos_uid = set
             .add_opt("bpos=p@[2,3]")?
             .set_assoc(ValAssoc::Uint)
+            .run()?;
+        let cpos_uid = set
+            .add_opt("cpos=p@4..5")?
+            .set_validator(string_collection_validator(vec!["average", "plus"]))
             .run()?;
 
         ser.ser_invoke_mut::<ASet>()?
@@ -415,8 +455,23 @@ mod test {
                     let copt = &set["--copt"];
                     let dopt = &set["dopt"];
                     let bpos = &set["bpos"];
+                    let cpos = &set[cpos_uid];
 
                     assert_eq!(idx.deref(), &0);
+                    check_opt_val(
+                        ser,
+                        cpos,
+                        cpos_uid,
+                        "cpos",
+                        None,
+                        Some(vec![2.31]),
+                        true,
+                        &ValAction::App,
+                        &ValAssoc::Noa,
+                        Some(&Index::Range(4, 5)),
+                        None,
+                        false,
+                    )?;
                     check_opt_val::<u64>(
                         ser,
                         bpos,
@@ -460,6 +515,72 @@ mod test {
                         true,
                     )?;
                     Ok(Some(true))
+                },
+            )
+            .with_default();
+        ser.ser_invoke_mut()?
+            .register_ser(
+                cpos_uid,
+                |set: &mut ASet, ser: &mut ASer, val: ctx::Value<String>, idx: ctx::Index| {
+                    let lopt = &set["--lopt"];
+                    let mopt = &set["--mopt"];
+                    let nopt = &set["--nopt"];
+
+                    check_opt_val(
+                        ser,
+                        nopt,
+                        13,
+                        "nopt",
+                        Some("--"),
+                        Some(vec![3.12]),
+                        true,
+                        &ValAction::Set,
+                        &ValAssoc::Flt,
+                        None,
+                        None,
+                        false,
+                    )?;
+                    check_opt_val::<f64>(
+                        ser,
+                        mopt,
+                        12,
+                        "mopt",
+                        Some("--"),
+                        Some(vec![1.02]),
+                        true,
+                        &ValAction::App,
+                        &ValAssoc::Flt,
+                        None,
+                        None,
+                        false,
+                    )?;
+                    check_opt_val::<f64>(
+                        ser,
+                        lopt,
+                        11,
+                        "lopt",
+                        Some("--"),
+                        Some(vec![2.79]),
+                        false,
+                        &ValAction::App,
+                        &ValAssoc::Flt,
+                        None,
+                        Some(vec![("-", "l")]),
+                        false,
+                    )?;
+                    assert!(idx.deref() == &4);
+
+                    let mut sum = 0.0;
+
+                    for uid in [lopt, mopt, nopt].iter().map(|v| v.uid()) {
+                        sum += f64::val(uid, ser)?;
+                    }
+
+                    match val.deref().as_str() {
+                        "average" => Ok(Some(sum / 3.0)),
+                        "plus" => Ok(Some(sum)),
+                        _ => Ok(None),
+                    }
                 },
             )
             .with_default();
@@ -514,7 +635,7 @@ mod test {
                     let aopt = &set[0];
                     let bopt = &set["--bopt"];
                     let apos = &set[*uid.deref()];
-                    let eopt = &set["-eopt"];
+                    let eopt = &set["+eopt"];
                     let fopt = &set["--fopt=b"];
                     let gopt = &set["--gopt"];
                     let hopt = &set["--hopt"];
@@ -589,7 +710,7 @@ mod test {
                         &ValAction::Set,
                         &ValAssoc::Bool,
                         None,
-                        Some(vec![("-", "eopt")]),
+                        Some(vec![("+", "eopt")]),
                         false,
                     )?;
                     check_opt_val(

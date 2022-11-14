@@ -71,29 +71,24 @@ pub enum Index {
     /// `@-[2]` will matching `"pos1"` or `"pos3"`.
     Except(Vec<usize>),
 
-    /// The NOA which index bigger than given position.
+    /// The NOA which index inside in given position range.
     ///
     /// # Example
     ///
     /// For `["--aopt", "--bopt=42", "pos1", "--copt", "pos2", "--dopt", "value", "pos3"]`:
     ///
-    /// `@>0` will matching `"pos1"`, `"pos2"` or `"pos3"`.
+    /// `@0..` will matching `"pos1"`, `"pos2"` or `"pos3"`.
     ///
-    /// `@>2` will matching `"pos3"`.
+    /// `@2..` will matching `"pos3"`.
     ///
-    /// `@>1` will matching `"pos2"` or `"pos3"`.
-    Greater(usize),
-
-    /// The NOA which index little than given position.
+    /// `@1..` will matching `"pos2"` or `"pos3"`.
     ///
-    /// # Example
+    /// `@..4` will matching `"pos1"`, `"pos2"` or `"pos3"`.
     ///
-    /// For `["--aopt", "--bopt=42", "pos1", "--copt", "pos2", "--dopt", "value", "pos3"]`:
+    /// `@..2` will matching `"pos1"`.
     ///
-    /// `@<4` will matching `"pos1"`, `"pos2"` or `"pos3"`.
-    ///
-    /// `@<2` will matching `"pos1"`.
-    Less(usize),
+    /// `@1..3` will matching `"pos1"`, `"pos2"`.
+    Range(usize, usize),
 
     /// The anywhere position of NOA.
     ///
@@ -128,12 +123,8 @@ impl Index {
         matches!(self, Self::Except(_))
     }
 
-    pub fn is_greater(&self) -> bool {
-        matches!(self, Self::Greater(_))
-    }
-
-    pub fn is_less(&self) -> bool {
-        matches!(self, Self::Less(_))
+    pub fn is_range(&self) -> bool {
+        matches!(self, Self::Range(_, _))
     }
 
     pub fn is_anywhere(&self) -> bool {
@@ -160,12 +151,15 @@ impl Index {
         Self::Except(list)
     }
 
-    pub fn greater(index: usize) -> Self {
-        Self::Greater(index)
-    }
-
-    pub fn less(index: usize) -> Self {
-        Self::Less(index)
+    pub fn range(start: Option<usize>, end: Option<usize>) -> Self {
+        match (start, end) {
+            (None, None) => {
+                panic!("start and end can't both None")
+            }
+            (None, Some(end)) => Self::Range(0, end),
+            (Some(start), None) => Self::Range(start, 0),
+            (Some(start), Some(end)) => Self::Range(start, end),
+        }
     }
 
     pub fn anywhere() -> Self {
@@ -206,20 +200,30 @@ impl Index {
                     return Some(noa_index);
                 }
             }
-            Self::Greater(offset) => {
-                let offset = *offset;
+            Self::Range(start, end) => match (start, end) {
+                (0, end) => {
+                    let end = *end;
 
-                if offset <= noa_count && offset < noa_index {
-                    return Some(noa_index);
+                    if noa_index < end {
+                        return Some(noa_index);
+                    }
                 }
-            }
-            Self::Less(offset) => {
-                let offset = *offset;
+                (start, 0) => {
+                    let start = *start;
 
-                if offset <= noa_count && offset > noa_index {
-                    return Some(noa_index);
+                    if noa_index >= start {
+                        return Some(noa_index);
+                    }
                 }
-            }
+                (start, end) => {
+                    let start = *start;
+                    let end = *end;
+
+                    if noa_index >= start && noa_index < end {
+                        return Some(noa_index);
+                    }
+                }
+            },
             Self::AnyWhere => {
                 return Some(noa_index);
             }
@@ -246,11 +250,14 @@ impl ToString for Index {
             Index::Backward(v) => {
                 format!("-{}", v)
             }
-            Index::Greater(v) => {
-                format!(">{}", v)
+            Index::Range(0, e) => {
+                format!("..{}", e)
             }
-            Index::Less(v) => {
-                format!("<{}", v)
+            Index::Range(s, 0) => {
+                format!("{}..", s,)
+            }
+            Index::Range(s, e) => {
+                format!("{}..{}", s, e)
             }
             Index::List(v) => {
                 let strs: Vec<String> = v.iter().map(|v| format!("{}", v)).collect();

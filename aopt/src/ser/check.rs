@@ -113,7 +113,7 @@ where
                                 entry.push(opt.uid());
                             }
                         }
-                        Index::Except(_) | Index::Greater(_) | Index::Less(_) | Index::AnyWhere => {
+                        Index::Except(_) | Index::Range(_, _) | Index::AnyWhere => {
                             float_vec.push(opt.uid());
                         }
                         Index::Null => {}

@@ -4,6 +4,7 @@ use crate::ext::ServicesExt;
 use crate::ser::Services;
 use crate::Error;
 use crate::Uid;
+use tracing::trace;
 
 pub trait ValInitialize<T: 'static> {
     type Error: Into<Error>;
@@ -49,12 +50,13 @@ impl ValInitiator {
 
     pub fn with<T: Clone + 'static>(initialize_value: Vec<T>) -> Self {
         Self(Box::new(move |uid: Uid, ser: &mut Services| {
-            ser.ser_val_mut()?.set(uid, vec![initialize_value.clone()]);
+            ser.ser_val_mut()?.set(uid, initialize_value.clone());
             Ok(())
         }))
     }
 
     pub fn do_initialize(&mut self, uid: Uid, ser: &mut Services) -> Result<(), Error> {
+        trace!("Try to initialize the value of {{{uid}}}");
         (self.0)(uid, ser)
     }
 }

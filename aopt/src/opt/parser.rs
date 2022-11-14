@@ -95,7 +95,7 @@ pub struct StrParser {
 
 impl Default for StrParser {
     fn default() -> Self {
-        let regex = Regex::new(r"^([^=]+)?(=([^=/!@]+))?([!/])?([!/])?(@(?:([+-><])?(\d+)|([+-])?(\[(?:\s*\d+,?\s*)+\])|(\*)))?$").unwrap();
+        let regex = Regex::new(r"^([^=]+)?(=([^=/!@]+))?([!/])?([!/])?(@(?:([+-])?(\d+)|(\d+)?(..)(\d+)?|([+-])?(\[(?:\s*\d+,?\s*)+\])|(\*)))?$").unwrap();
         Self::new(regex)
     }
 }
@@ -204,8 +204,7 @@ impl StrParser {
             let mut backward_index = None;
             let mut list = vec![];
             let mut except = vec![];
-            let mut greater = None;
-            let mut less = None;
+            let mut range = None;
             let anywhere = cap.get(IDX_ANY).map(|_| true);
 
             for index in [IDX_DEAC, IDX_OPTN] {
@@ -218,7 +217,10 @@ impl StrParser {
                             deactivate = Some(true);
                         }
                         _ => {
-                            panic!("Oops!? Where are you going!")
+                            return Err(Error::raise_error(format!(
+                                "Index syntax error, except ! or /, found {}",
+                                mat.as_str()
+                            )))
                         }
                     }
                 }
@@ -236,17 +238,45 @@ impl StrParser {
                         backward_index = forward_index;
                         forward_index = None;
                     }
-                    ">" => {
-                        greater = forward_index;
-                        forward_index = None;
-                    }
-                    "<" => {
-                        less = forward_index;
-                        forward_index = None;
-                    }
                     _ => {
-                        panic!("Oops!? Where are you going!")
+                        return Err(Error::raise_error(format!(
+                            "Index syntax error, except + or -, found {}",
+                            mat.as_str()
+                        )))
                     }
+                }
+            }
+            if let Some(mat) = cap.get(IDX_SIGN3) {
+                if mat.as_str() == ".." {
+                    let mat_beg = cap.get(IDX_START);
+                    let mat_end = cap.get(IDX_END);
+
+                    match (mat_beg, mat_end) {
+                        (None, None) => {
+                            return Err(Error::raise_error(format!(
+                                "Not support empty index range"
+                            )))
+                        }
+                        (None, Some(end)) => {
+                            range =
+                                Some((None, Some(Self::parse_as_usize(&pattern, end.as_str())?)));
+                        }
+                        (Some(start), None) => {
+                            range =
+                                Some((Some(Self::parse_as_usize(&pattern, start.as_str())?), None));
+                        }
+                        (Some(start), Some(end)) => {
+                            range = Some((
+                                Some(Self::parse_as_usize(&pattern, start.as_str())?),
+                                Some(Self::parse_as_usize(&pattern, end.as_str())?),
+                            ));
+                        }
+                    }
+                } else {
+                    return Err(Error::raise_error(format!(
+                        "Index syntax error, except .., found {}",
+                        mat.as_str()
+                    )));
                 }
             }
             if let Some(mat) = cap.get(IDX_SIGN2) {
@@ -257,7 +287,10 @@ impl StrParser {
                         list = vec![];
                     }
                     _ => {
-                        panic!("Oops!? Where are you going!")
+                        return Err(Error::raise_error(format!(
+                            "Index syntax error, except + or -, found {}",
+                            mat.as_str()
+                        )))
                     }
                 }
             }
@@ -270,8 +303,7 @@ impl StrParser {
                 .with_aw(anywhere)
                 .with_ls(list)
                 .with_exp(except)
-                .with_gt(greater)
-                .with_le(less)
+                .with_range(range)
                 .with_pat(pattern.clone())
                 .with_name(cap.get(IDX_NAME).map(|v| Str::from(v.as_str())))
                 .with_ty(cap.get(IDX_TYPE).map(|v| Str::from(v.as_str()))))
@@ -287,9 +319,12 @@ const IDX_DEAC: usize = 4;
 const IDX_OPTN: usize = 5;
 const IDX_SIGN1: usize = 7;
 const IDX_IDX1: usize = 8;
-const IDX_SIGN2: usize = 9;
-const IDX_IDX2: usize = 10;
-const IDX_ANY: usize = 11;
+const IDX_SIGN2: usize = 12;
+const IDX_IDX2: usize = 13;
+const IDX_SIGN3: usize = 10;
+const IDX_START: usize = 9;
+const IDX_END: usize = 11;
+const IDX_ANY: usize = 14;
 
 impl OptParser for StrParser {
     type Output = ConstrctInfo;
@@ -594,23 +629,23 @@ mod test {
                     )),
                 ),
                 (
-                    "o=b@>1",
+                    "o=b@1..",
                     Some((
                         None,
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::greater(1),
+                        Index::range(Some(1), None),
                         None,
                         None,
                     )),
                 ),
                 (
-                    "o=b@<8",
+                    "o=b@..8",
                     Some((
                         None,
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::less(8),
+                        Index::range(None, Some(8)),
                         None,
                         None,
                     )),
@@ -693,23 +728,23 @@ mod test {
                     )),
                 ),
                 (
-                    "-o=b@>1",
+                    "-o=b@1..3",
                     Some((
                         Some(astr("-")),
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::greater(1),
+                        Index::range(Some(1), Some(3)),
                         None,
                         None,
                     )),
                 ),
                 (
-                    "-o=b@<8",
+                    "-o=b@2..8",
                     Some((
                         Some(astr("-")),
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::less(8),
+                        Index::range(Some(2), Some(8)),
                         None,
                         None,
                     )),
@@ -792,23 +827,23 @@ mod test {
                     )),
                 ),
                 (
-                    "--o=b@>1",
+                    "--o=b@1..8",
                     Some((
                         Some(astr("--")),
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::greater(1),
+                        Index::range(Some(1), Some(8)),
                         None,
                         None,
                     )),
                 ),
                 (
-                    "--o=b@<42",
+                    "--o=b@..42",
                     Some((
                         Some(astr("--")),
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::less(42),
+                        Index::range(None, Some(42)),
                         None,
                         None,
                     )),
@@ -891,23 +926,23 @@ mod test {
                     )),
                 ),
                 (
-                    "o=b!@>12",
+                    "o=b!@..12",
                     Some((
                         None,
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::greater(12),
+                        Index::range(None, Some(12)),
                         None,
                         Some(true),
                     )),
                 ),
                 (
-                    "o=b!@<42",
+                    "o=b!@..42",
                     Some((
                         None,
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::less(42),
+                        Index::range(None, Some(42)),
                         None,
                         Some(true),
                     )),
@@ -990,23 +1025,23 @@ mod test {
                     )),
                 ),
                 (
-                    "-o=b!@>11",
+                    "-o=b!@11..",
                     Some((
                         Some(astr("-")),
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::greater(11),
+                        Index::range(Some(11), None),
                         None,
                         Some(true),
                     )),
                 ),
                 (
-                    "-o=b!@<4",
+                    "-o=b!@..4",
                     Some((
                         Some(astr("-")),
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::less(4),
+                        Index::range(None, Some(4)),
                         None,
                         Some(true),
                     )),
@@ -1089,23 +1124,23 @@ mod test {
                     )),
                 ),
                 (
-                    "--o=b!@<1",
+                    "--o=b!@..1",
                     Some((
                         Some(astr("--")),
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::less(1),
+                        Index::range(None, Some(1)),
                         None,
                         Some(true),
                     )),
                 ),
                 (
-                    "--o=b!@>42",
+                    "--o=b!@42..",
                     Some((
                         Some(astr("--")),
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::greater(42),
+                        Index::range(Some(42), None),
                         None,
                         Some(true),
                     )),
@@ -1188,23 +1223,23 @@ mod test {
                     )),
                 ),
                 (
-                    "o=b/@>1",
+                    "o=b/@1..",
                     Some((
                         None,
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::greater(1),
+                        Index::range(Some(1), None),
                         Some(true),
                         None,
                     )),
                 ),
                 (
-                    "o=b/@<2",
+                    "o=b/@..2",
                     Some((
                         None,
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::less(2),
+                        Index::range(None, Some(2)),
                         Some(true),
                         None,
                     )),
@@ -1287,23 +1322,23 @@ mod test {
                     )),
                 ),
                 (
-                    "-o=b/@>1",
+                    "-o=b/@1..",
                     Some((
                         Some(astr("-")),
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::greater(1),
+                        Index::range(Some(1), None),
                         Some(true),
                         None,
                     )),
                 ),
                 (
-                    "-o=b/@<42",
+                    "-o=b/@..42",
                     Some((
                         Some(astr("-")),
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::less(42),
+                        Index::range(None, Some(42)),
                         Some(true),
                         None,
                     )),
@@ -1386,23 +1421,23 @@ mod test {
                     )),
                 ),
                 (
-                    "--o=b/@<11",
+                    "--o=b/@..11",
                     Some((
                         Some(astr("--")),
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::less(11),
+                        Index::range(None, Some(11)),
                         Some(true),
                         None,
                     )),
                 ),
                 (
-                    "--o=b/@>42",
+                    "--o=b/@42..",
                     Some((
                         Some(astr("--")),
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::greater(42),
+                        Index::range(Some(42), None),
                         Some(true),
                         None,
                     )),
@@ -1485,23 +1520,23 @@ mod test {
                     )),
                 ),
                 (
-                    "o=b!/@>1",
+                    "o=b!/@1..12",
                     Some((
                         None,
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::greater(1),
+                        Index::range(Some(1), Some(12)),
                         Some(true),
                         Some(true),
                     )),
                 ),
                 (
-                    "o=b!/@<42",
+                    "o=b!/@..42",
                     Some((
                         None,
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::less(42),
+                        Index::range(None, Some(42)),
                         Some(true),
                         Some(true),
                     )),
@@ -1650,23 +1685,23 @@ mod test {
                     )),
                 ),
                 (
-                    "--o=b!/@>1",
+                    "--o=b!/@1..",
                     Some((
                         Some(astr("--")),
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::greater(1),
+                        Index::range(Some(1), None),
                         Some(true),
                         Some(true),
                     )),
                 ),
                 (
-                    "--o=b!/@<42",
+                    "--o=b!/@..42",
                     Some((
                         Some(astr("--")),
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::less(42),
+                        Index::range(None, Some(42)),
                         Some(true),
                         Some(true),
                     )),
@@ -1749,23 +1784,23 @@ mod test {
                     )),
                 ),
                 (
-                    "o=b/!@>11",
+                    "o=b/!@11..",
                     Some((
                         None,
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::greater(11),
+                        Index::range(Some(11), None),
                         Some(true),
                         Some(true),
                     )),
                 ),
                 (
-                    "o=b/!@<4",
+                    "o=b/!@..4",
                     Some((
                         None,
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::less(4),
+                        Index::range(None, Some(4)),
                         Some(true),
                         Some(true),
                     )),
@@ -1848,23 +1883,23 @@ mod test {
                     )),
                 ),
                 (
-                    "-o=b/!@>1",
+                    "-o=b/!@1..42",
                     Some((
                         Some(astr("-")),
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::greater(1),
+                        Index::range(Some(1), Some(42)),
                         Some(true),
                         Some(true),
                     )),
                 ),
                 (
-                    "-o=b/!@<42",
+                    "-o=b/!@6..42",
                     Some((
                         Some(astr("-")),
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::less(42),
+                        Index::range(Some(6), Some(42)),
                         Some(true),
                         Some(true),
                     )),
@@ -1947,23 +1982,23 @@ mod test {
                     )),
                 ),
                 (
-                    "--o=b/!@>1",
+                    "--o=b/!@1..12",
                     Some((
                         Some(astr("--")),
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::greater(1),
+                        Index::range(Some(1), Some(12)),
                         Some(true),
                         Some(true),
                     )),
                 ),
                 (
-                    "--o=b/!@<42",
+                    "--o=b/!@..42",
                     Some((
                         Some(astr("--")),
                         Some(astr("o")),
                         Some(astr("b")),
-                        Index::less(42),
+                        Index::range(None, Some(42)),
                         Some(true),
                         Some(true),
                     )),
@@ -2259,23 +2294,23 @@ mod test {
                     )),
                 ),
                 (
-                    "option=bar@>1",
+                    "option=bar@1..166",
                     Some((
                         None,
                         Some(astr("option")),
                         Some(astr("bar")),
-                        Index::greater(1),
+                        Index::range(Some(1), Some(166)),
                         None,
                         None,
                     )),
                 ),
                 (
-                    "option=bar@<42",
+                    "option=bar@8..42",
                     Some((
                         None,
                         Some(astr("option")),
                         Some(astr("bar")),
-                        Index::less(42),
+                        Index::range(Some(8), Some(42)),
                         None,
                         None,
                     )),
@@ -2358,23 +2393,23 @@ mod test {
                     )),
                 ),
                 (
-                    "-option=bar@>1",
+                    "-option=bar@1..",
                     Some((
                         Some(astr("-")),
                         Some(astr("option")),
                         Some(astr("bar")),
-                        Index::greater(1),
+                        Index::range(Some(1), None),
                         None,
                         None,
                     )),
                 ),
                 (
-                    "-option=bar@<42",
+                    "-option=bar@..42",
                     Some((
                         Some(astr("-")),
                         Some(astr("option")),
                         Some(astr("bar")),
-                        Index::less(42),
+                        Index::range(None, Some(42)),
                         None,
                         None,
                     )),
@@ -2457,23 +2492,23 @@ mod test {
                     )),
                 ),
                 (
-                    "--option=bar@>11",
+                    "--option=bar@11..",
                     Some((
                         Some(astr("--")),
                         Some(astr("option")),
                         Some(astr("bar")),
-                        Index::greater(11),
+                        Index::range(Some(11), None),
                         None,
                         None,
                     )),
                 ),
                 (
-                    "--option=bar@<42",
+                    "--option=bar@..82",
                     Some((
                         Some(astr("--")),
                         Some(astr("option")),
                         Some(astr("bar")),
-                        Index::less(42),
+                        Index::range(None, Some(82)),
                         None,
                         None,
                     )),
