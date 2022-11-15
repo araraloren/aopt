@@ -35,13 +35,17 @@ macro_rules! impl_raw_val_parser {
 }
 
 impl_raw_val_parser!(i8);
+impl_raw_val_parser!(i16);
 impl_raw_val_parser!(i32);
 impl_raw_val_parser!(i64);
 impl_raw_val_parser!(u8);
+impl_raw_val_parser!(u16);
 impl_raw_val_parser!(u32);
 impl_raw_val_parser!(u64);
 impl_raw_val_parser!(f32);
 impl_raw_val_parser!(f64);
+impl_raw_val_parser!(isize);
+impl_raw_val_parser!(usize);
 
 impl<Opt: crate::opt::Opt> RawValParser<Opt> for String {
     type Error = Error;

@@ -112,6 +112,10 @@ impl ValValidator {
 
     num_validator!(f64, f64_validator);
 
+    num_validator!(usize, usize_validator);
+
+    num_validator!(isize, isize_validator);
+
     pub fn bool_validator(deactivate_style: bool) -> Self {
         Self::new(
             move |_: &str,
@@ -159,5 +163,71 @@ impl ValValidator {
                 Ok(true)
             },
         )
+    }
+}
+
+pub trait ValValidatorExt {
+    type Valid;
+
+    fn val_validator() -> Self::Valid;
+}
+
+macro_rules! impl_validator_ext_for {
+    ($num:ty, $name:ident) => {
+        impl ValValidatorExt for $num {
+            type Valid = ValValidator;
+
+            fn val_validator() -> Self::Valid {
+                ValValidator::$name()
+            }
+        }
+    };
+}
+
+impl_validator_ext_for!(i8, i8_validator);
+
+impl_validator_ext_for!(i16, i16_validator);
+
+impl_validator_ext_for!(i32, i32_validator);
+
+impl_validator_ext_for!(i64, i64_validator);
+
+impl_validator_ext_for!(u8, u8_validator);
+
+impl_validator_ext_for!(u16, u16_validator);
+
+impl_validator_ext_for!(u32, u32_validator);
+
+impl_validator_ext_for!(u64, u64_validator);
+
+impl_validator_ext_for!(f32, f32_validator);
+
+impl_validator_ext_for!(f64, f64_validator);
+
+impl_validator_ext_for!(str, str_validator);
+
+impl_validator_ext_for!(usize, usize_validator);
+
+impl_validator_ext_for!(isize, isize_validator);
+
+impl ValValidatorExt for () {
+    type Valid = ValValidator;
+
+    fn val_validator() -> Self::Valid {
+        ValValidator::null_validator()
+    }
+}
+
+pub trait ValValidatorExt2 {
+    type Valid;
+
+    fn val_validator(deactivate_style: bool) -> Self::Valid;
+}
+
+impl ValValidatorExt2 for bool {
+    type Valid = ValValidator;
+
+    fn val_validator(deactivate_style: bool) -> Self::Valid {
+        ValValidator::bool_validator(deactivate_style)
     }
 }

@@ -416,9 +416,7 @@ where
     }
 }
 
-impl<'a, Set, Handler, Args, Output> Drop
-    for SerRegister<'a, Set, Handler, Args, Output>
-{
+impl<'a, Set, Handler, Args, Output> Drop for SerRegister<'a, Set, Handler, Args, Output> {
     fn drop(&mut self) {
         if !self.register {
             panic!("Consider call with_default or with on Register")

@@ -41,6 +41,8 @@ pub use self::store::ValStore;
 pub use self::style::Style;
 pub use self::valid::RawValValidator;
 pub use self::valid::ValValidator;
+pub use self::valid::ValValidatorExt;
+pub use self::valid::ValValidatorExt2;
 pub use self::value::RawValParser;
 
 use std::fmt::Debug;
