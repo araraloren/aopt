@@ -87,11 +87,11 @@ use crate::Uid;
 /// #   Ok(())
 /// # }
 /// ```
-pub struct InvokeService<Set, Ret = ()> {
-    callbacks: HashMap<Uid, Callbacks<Set, Ret, Error>>,
+pub struct InvokeService<Set> {
+    callbacks: HashMap<Uid, Callbacks<Set, (), Error>>,
 }
 
-impl<Set, Ret> Debug for InvokeService<Set, Ret> {
+impl<Set> Debug for InvokeService<Set> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("InvokeService")
             .field("callbacks", &self.callbacks)
@@ -99,7 +99,7 @@ impl<Set, Ret> Debug for InvokeService<Set, Ret> {
     }
 }
 
-impl<Set, Ret> Default for InvokeService<Set, Ret> {
+impl<Set> Default for InvokeService<Set> {
     fn default() -> Self {
         Self {
             callbacks: HashMap::default(),
@@ -107,7 +107,7 @@ impl<Set, Ret> Default for InvokeService<Set, Ret> {
     }
 }
 
-impl<Set, Ret> InvokeService<Set, Ret> {
+impl<Set> InvokeService<Set> {
     pub fn new() -> Self {
         Self {
             callbacks: HashMap::default(),
@@ -115,8 +115,8 @@ impl<Set, Ret> InvokeService<Set, Ret> {
     }
 }
 
-impl<Set, Ret> InvokeService<Set, Ret> {
-    pub fn set_raw(&mut self, uid: Uid, handler: Callbacks<Set, Ret, Error>) -> &mut Self {
+impl<Set> InvokeService<Set> {
+    pub fn set_raw(&mut self, uid: Uid, handler: Callbacks<Set, (), Error>) -> &mut Self {
         self.callbacks.insert(uid, handler);
         self
     }
@@ -126,12 +126,12 @@ impl<Set, Ret> InvokeService<Set, Ret> {
     /// The [`InvokeService`]  will call the [`invoke`](crate::ctx::Handler::invoke).
     /// # Note
     /// ```txt
-    /// |   handler: |Uid, &mut Set, &mut Services, { Other Args }| -> Result<Option<Ret>, Error>
+    /// |   handler: |Uid, &mut Set, &mut Services, { Other Args }| -> Result<Option<()>, Error>
     ///         |
     ///      wrapped
     ///         |
     ///         v
-    /// |   |Uid, &mut Set, &mut Services, &Ctx| -> Option<Ret>
+    /// |   |Uid, &mut Set, &mut Services, &Ctx| -> Option<()>
     ///         |
     ///      invoked
     ///         |
@@ -139,12 +139,12 @@ impl<Set, Ret> InvokeService<Set, Ret> {
     /// |   call Callbacks::invoke(&mut self, Uid, &mut Set, &mut Services, &Ctx)
     /// |       call Handler::invoke(&mut self, Uid, &mut Set, &mut Services, Args)
     /// |           call Args::extract(Uid, &Set, &Services, &Ctx) -> Args
-    /// |           -> Result<Option<Ret>, Error>
+    /// |           -> Result<Option<()>, Error>
     /// ```
     pub fn set_serhandler<Args>(
         &mut self,
         uid: Uid,
-        handler: impl SerHandler<Set, Args, Output = Option<Ret>, Error = Error> + 'static,
+        handler: impl SerHandler<Set, Args, Output = Option<()>, Error = Error> + 'static,
     ) -> &mut Self
     where
         Args: Extract<Set, Error = Error> + 'static,
@@ -158,12 +158,12 @@ impl<Set, Ret> InvokeService<Set, Ret> {
     /// The [`InvokeService`]  will call the [`invoke`](crate::ctx::Handler::invoke).
     /// # Note
     /// ```txt
-    /// |   handler: |Uid, &mut Set, &mut Services, { Other Args }| -> Result<Option<Ret>, Error>
+    /// |   handler: |Uid, &mut Set, &mut Services, { Other Args }| -> Result<Option<()>, Error>
     ///         |
     ///      wrapped
     ///         |
     ///         v
-    /// |   |Uid, &mut Set, &mut Services, &Ctx| -> Option<Ret>
+    /// |   |Uid, &mut Set, &mut Services, &Ctx| -> Option<()>
     ///         |
     ///      invoked
     ///         |
@@ -171,12 +171,12 @@ impl<Set, Ret> InvokeService<Set, Ret> {
     /// |   call Callbacks::invoke(&mut self, Uid, &mut Set, &mut Services, &Ctx)
     /// |       call Handler::invoke(&mut self, Uid, &mut Set, Args)
     /// |           call Args::extract(Uid, &Set, &Services, &Ctx) -> Args
-    /// |           -> Result<Option<Ret>, Error>
+    /// |           -> Result<Option<()>, Error>
     /// ```
     pub fn set_handler<Args>(
         &mut self,
         uid: Uid,
-        handler: impl Handler<Set, Args, Output = Option<Ret>, Error = Error> + 'static,
+        handler: impl Handler<Set, Args, Output = Option<()>, Error = Error> + 'static,
     ) -> &mut Self
     where
         Args: Extract<Set, Error = Error> + 'static,
@@ -192,7 +192,7 @@ impl<Set, Ret> InvokeService<Set, Ret> {
     /// # Note
     /// ```txt
     /// |   handler: |Uid, &mut Set, &mut Services, { Other Args }| -> Result<Option<Value>, Error>
-    /// |   storer: |Uid, &mut Set, &mut Services, Option<&RawVal>, Option<Value>| -> Result<Option<Ret>, Error>
+    /// |   storer: |Uid, &mut Set, &mut Services, Option<&RawVal>, Option<Value>| -> Result<Option<()>, Error>
     ///         |
     ///      wrapped
     ///         |
@@ -207,13 +207,13 @@ impl<Set, Ret> InvokeService<Set, Ret> {
     /// |           call Args::extract(Uid, &Set, &Services, &Ctx) -> Args
     /// |           -> Result<Option<Value>, Error>
     /// |       -> call Store::process(Uid, &Set, Option<&RawVal>, Option<Value>)
-    /// |           -> Result<Option<Ret>, Error>
+    /// |           -> Result<Option<()>, Error>
     /// ```
     pub fn set_serhandler_store<Args, Output>(
         &mut self,
         uid: Uid,
         handler: impl SerHandler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
-        store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static,
+        store: impl Store<Set, Output, Ret = (), Error = Error> + 'static,
     ) -> &mut Self
     where
         Args: Extract<Set, Error = Error> + 'static,
@@ -230,7 +230,7 @@ impl<Set, Ret> InvokeService<Set, Ret> {
     /// # Note
     /// ```txt
     /// |   handler: |Uid, &mut Set, &mut Services, { Other Args }| -> Result<Option<Value>, Error>
-    /// |   storer: |Uid, &mut Set, &mut Services, Option<&RawVal>, Option<Value>| -> Result<Option<Ret>, Error>
+    /// |   storer: |Uid, &mut Set, &mut Services, Option<&RawVal>, Option<Value>| -> Result<Option<()>, Error>
     ///         |
     ///      wrapped
     ///         |
@@ -245,13 +245,13 @@ impl<Set, Ret> InvokeService<Set, Ret> {
     /// |           call Args::extract(Uid, &Set, &Services, &Ctx) -> Args
     /// |           -> Result<Option<Value>, Error>
     /// |       -> call Store::process(Uid, &Set, Option<&RawVal>, Option<Value>)
-    /// |           -> Result<Option<Ret>, Error>
+    /// |           -> Result<Option<()>, Error>
     /// ```
     pub fn set_handler_store<Args, Output>(
         &mut self,
         uid: Uid,
         handler: impl Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
-        store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static,
+        store: impl Store<Set, Output, Ret = (), Error = Error> + 'static,
     ) -> &mut Self
     where
         Args: Extract<Set, Error = Error> + 'static,
@@ -266,17 +266,16 @@ impl<Set, Ret> InvokeService<Set, Ret> {
     }
 }
 
-impl<Set, Ret> InvokeService<Set, Ret>
+impl<Set> InvokeService<Set>
 where
     Set: crate::set::Set,
     Set::Opt: Opt,
-    Ret: Default + 'static,
 {
     pub fn register<Args, Output, H>(
         &mut self,
         uid: Uid,
         handler: H,
-    ) -> Register<'_, Set, Ret, H, Args, Output>
+    ) -> Register<'_, Set, H, Args, Output>
     where
         H: Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
         Args: Extract<Set, Error = Error> + 'static,
@@ -294,7 +293,7 @@ where
         &mut self,
         uid: Uid,
         handler: H,
-    ) -> SerRegister<'_, Set, Ret, H, Args, Output>
+    ) -> SerRegister<'_, Set, H, Args, Output>
     where
         H: SerHandler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
         Args: Extract<Set, Error = Error> + 'static,
@@ -309,7 +308,7 @@ where
     }
 }
 
-impl<Set, Ret> InvokeService<Set, Ret>
+impl<Set> InvokeService<Set>
 where
     Set: crate::set::Set,
     Set::Opt: Opt,
@@ -320,7 +319,7 @@ where
         set: &mut Set,
         ser: &mut Services,
         ctx: &Ctx,
-    ) -> Result<Option<Ret>, Error> {
+    ) -> Result<Option<()>, Error> {
         let uid = ctx.uid();
         if let Some(callback) = self.callbacks.get_mut(&uid) {
             return Ok(callback.invoke(set, ser, ctx)?);
@@ -361,14 +360,14 @@ where
     }
 }
 
-impl<S, V> Service for InvokeService<S, V> {
+impl<Set> Service for InvokeService<Set> {
     fn service_name() -> Str {
         astr("InvokeService")
     }
 }
 
-pub struct SerRegister<'a, Set, Ret, Handler, Args, Output> {
-    ser: &'a mut InvokeService<Set, Ret>,
+pub struct SerRegister<'a, Set, Handler, Args, Output> {
+    ser: &'a mut InvokeService<Set>,
 
     handler: Option<Handler>,
 
@@ -379,16 +378,15 @@ pub struct SerRegister<'a, Set, Ret, Handler, Args, Output> {
     marker: PhantomData<(Args, Output)>,
 }
 
-impl<'a, Args, Set, Ret, Output, H> SerRegister<'a, Set, Ret, H, Args, Output>
+impl<'a, Args, Set, Output, H> SerRegister<'a, Set, H, Args, Output>
 where
     Set: crate::set::Set,
     Set::Opt: Opt,
-    Ret: Default + 'static,
     H: SerHandler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
     Args: Extract<Set, Error = Error> + 'static,
 {
     /// Register the handler with given [`Store`] implementation.
-    pub fn with(&mut self, store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static) {
+    pub fn with(&mut self, store: impl Store<Set, Output, Ret = (), Error = Error> + 'static) {
         if !self.register {
             let handler = self.handler.take().unwrap();
 
@@ -398,12 +396,11 @@ where
     }
 }
 
-impl<'a, Args, Set, Ret, Output, H> SerRegister<'a, Set, Ret, H, Args, Output>
+impl<'a, Args, Set, Output, H> SerRegister<'a, Set, H, Args, Output>
 where
     Output: 'static,
     Set: crate::set::Set,
     Set::Opt: Opt,
-    Ret: Default + 'static,
     H: SerHandler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
     Args: Extract<Set, Error = Error> + 'static,
 {
@@ -419,8 +416,8 @@ where
     }
 }
 
-impl<'a, Set, Ret, Handler, Args, Output> Drop
-    for SerRegister<'a, Set, Ret, Handler, Args, Output>
+impl<'a, Set, Handler, Args, Output> Drop
+    for SerRegister<'a, Set, Handler, Args, Output>
 {
     fn drop(&mut self) {
         if !self.register {
@@ -429,8 +426,8 @@ impl<'a, Set, Ret, Handler, Args, Output> Drop
     }
 }
 
-pub struct Register<'a, Set, Ret, Handler, Args, Output> {
-    ser: &'a mut InvokeService<Set, Ret>,
+pub struct Register<'a, Set, Handler, Args, Output> {
+    ser: &'a mut InvokeService<Set>,
 
     handler: Option<Handler>,
 
@@ -441,16 +438,15 @@ pub struct Register<'a, Set, Ret, Handler, Args, Output> {
     marker: PhantomData<(Args, Output)>,
 }
 
-impl<'a, Args, Set, Ret, Output, H> Register<'a, Set, Ret, H, Args, Output>
+impl<'a, Args, Set, Output, H> Register<'a, Set, H, Args, Output>
 where
     Set: crate::set::Set,
     Set::Opt: Opt,
-    Ret: Default + 'static,
     H: Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
     Args: Extract<Set, Error = Error> + 'static,
 {
     /// Register the handler with given [`Store`] implementation.
-    pub fn with(&mut self, store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static) {
+    pub fn with(&mut self, store: impl Store<Set, Output, Ret = (), Error = Error> + 'static) {
         if !self.register {
             let handler = self.handler.take().unwrap();
 
@@ -460,12 +456,11 @@ where
     }
 }
 
-impl<'a, Args, Set, Ret, Output, H> Register<'a, Set, Ret, H, Args, Output>
+impl<'a, Args, Set, Output, H> Register<'a, Set, H, Args, Output>
 where
     Output: 'static,
     Set: crate::set::Set,
     Set::Opt: Opt,
-    Ret: Default + 'static,
     H: Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
     Args: Extract<Set, Error = Error> + 'static,
 {
@@ -481,7 +476,7 @@ where
     }
 }
 
-impl<'a, Set, Ret, Handler, Args, Output> Drop for Register<'a, Set, Ret, Handler, Args, Output> {
+impl<'a, Set, Handler, Args, Output> Drop for Register<'a, Set, Handler, Args, Output> {
     fn drop(&mut self) {
         if !self.register {
             panic!("Consider call with_default or with on Register")
