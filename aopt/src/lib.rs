@@ -45,15 +45,17 @@ pub(crate) fn typeid<T: 'static>() -> TypeId {
 
 pub mod prelude {
     pub use crate::args::Args;
-    pub use crate::ctx::wrap_serhandler_store;
+    pub use crate::ctx::wrap_handler;
     pub use crate::ctx::Callback;
     pub use crate::ctx::Callbacks;
     pub use crate::ctx::Ctx;
     pub use crate::ctx::Extract;
-    pub use crate::ctx::SerHandler;
+    pub use crate::ctx::Handler;
     pub use crate::ctx::Store;
     pub use crate::ext::*;
     pub use crate::opt::AOpt;
+    pub use crate::opt::Action;
+    pub use crate::opt::Assoc;
     pub use crate::opt::BoolCreator;
     pub use crate::opt::CmdCreator;
     pub use crate::opt::Config;
@@ -77,11 +79,8 @@ pub mod prelude {
     pub use crate::opt::StrParser;
     pub use crate::opt::Style;
     pub use crate::opt::UintCreator;
-    pub use crate::opt::ValAction;
-    pub use crate::opt::ValAssoc;
     pub use crate::opt::ValInitialize;
     pub use crate::opt::ValInitiator;
-    pub use crate::opt::ValStore;
     pub use crate::opt::ValValidator;
     pub use crate::policy::Forward;
     pub use crate::policy::Policy;
@@ -94,7 +93,6 @@ pub mod prelude {
     pub use crate::ser::CheckService;
     pub use crate::ser::InvokeService;
     pub use crate::ser::RawValService;
-    pub use crate::ser::SerRegister;
     pub use crate::ser::Service;
     pub use crate::ser::Services;
     pub use crate::ser::UsrValService;

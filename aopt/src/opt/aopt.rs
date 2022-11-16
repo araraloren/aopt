@@ -1,9 +1,9 @@
+use crate::opt::Action;
+use crate::opt::Assoc;
 use crate::opt::Help;
 use crate::opt::Index;
 use crate::opt::Opt;
 use crate::opt::Style;
-use crate::opt::ValAction;
-use crate::opt::ValAssoc;
 use crate::opt::ValInitiator;
 use crate::opt::ValValidator;
 use crate::ser::Services;
@@ -28,9 +28,9 @@ pub struct AOpt {
 
     optional: bool,
 
-    assoc: ValAssoc,
+    assoc: Assoc,
 
-    action: ValAction,
+    action: Action,
 
     styles: Vec<Style>,
 
@@ -78,12 +78,12 @@ impl AOpt {
         self
     }
 
-    pub fn with_assoc(mut self, assoc: ValAssoc) -> Self {
+    pub fn with_assoc(mut self, assoc: Assoc) -> Self {
         self.assoc = assoc;
         self
     }
 
-    pub fn with_action(mut self, action: ValAction) -> Self {
+    pub fn with_action(mut self, action: Action) -> Self {
         self.action = action;
         self
     }
@@ -155,12 +155,12 @@ impl AOpt {
         self
     }
 
-    pub fn set_assoc(&mut self, assoc: ValAssoc) -> &mut Self {
+    pub fn set_assoc(&mut self, assoc: Assoc) -> &mut Self {
         self.assoc = assoc;
         self
     }
 
-    pub fn set_action(&mut self, action: ValAction) -> &mut Self {
+    pub fn set_action(&mut self, action: Action) -> &mut Self {
         self.action = action;
         self
     }
@@ -258,11 +258,11 @@ impl Opt for AOpt {
         self.optional
     }
 
-    fn assoc(&self) -> &ValAssoc {
+    fn assoc(&self) -> &Assoc {
         &self.assoc
     }
 
-    fn action(&self) -> &ValAction {
+    fn action(&self) -> &Action {
         &self.action
     }
 

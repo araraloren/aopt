@@ -8,13 +8,12 @@ pub(crate) mod info;
 pub(crate) mod initiator;
 pub(crate) mod parser;
 pub(crate) mod serde;
-pub(crate) mod store;
 pub(crate) mod style;
 pub(crate) mod valid;
 pub(crate) mod value;
 
-pub use self::action::ValAction;
-pub use self::action::ValAssoc;
+pub use self::action::Action;
+pub use self::action::Assoc;
 pub use self::aopt::AOpt;
 pub use self::config::Config;
 pub use self::config::ConfigValue;
@@ -37,7 +36,6 @@ pub use self::parser::StrParser;
 pub use self::serde::Deserialize;
 pub use self::serde::Serde;
 pub use self::serde::Serialize;
-pub use self::store::ValStore;
 pub use self::style::Style;
 pub use self::valid::RawValValidator;
 pub use self::valid::ValValidator;
@@ -86,9 +84,9 @@ pub trait Opt: Debug {
     /// If the option is optional.
     fn optional(&self) -> bool;
 
-    fn assoc(&self) -> &ValAssoc;
+    fn assoc(&self) -> &Assoc;
 
-    fn action(&self) -> &ValAction;
+    fn action(&self) -> &Action;
 
     fn is_deactivate(&self) -> bool;
 

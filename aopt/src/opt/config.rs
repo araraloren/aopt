@@ -1,11 +1,11 @@
 use crate::astr;
 use crate::err::Error;
+use crate::opt::Action;
+use crate::opt::Assoc;
 use crate::opt::Help;
 use crate::opt::Index;
 use crate::opt::Information;
 use crate::opt::OptParser;
-use crate::opt::ValAction;
-use crate::opt::ValAssoc;
 use crate::opt::ValInitiator;
 use crate::opt::ValValidator;
 use crate::set::Pre;
@@ -51,10 +51,10 @@ pub trait ConfigValue {
     fn spprefix(&self) -> &Vec<Str>;
 
     /// Associated type of option.
-    fn assoc(&self) -> Option<&ValAssoc>;
+    fn assoc(&self) -> Option<&Assoc>;
 
     /// Value action of option.
-    fn action(&self) -> Option<&ValAction>;
+    fn action(&self) -> Option<&Action>;
 
     /// Value validator for option.
     fn validator(&self) -> Option<&ValValidator>;
@@ -104,9 +104,9 @@ pub trait ConfigValue {
 
     fn set_type<S: Into<Str>>(&mut self, type_name: S) -> &mut Self;
 
-    fn set_assoc(&mut self, assoc: ValAssoc) -> &mut Self;
+    fn set_assoc(&mut self, assoc: Assoc) -> &mut Self;
 
-    fn set_action(&mut self, action: ValAction) -> &mut Self;
+    fn set_action(&mut self, action: Action) -> &mut Self;
 
     fn set_deactivate(&mut self, deactivate_style: bool) -> &mut Self;
 
@@ -126,9 +126,9 @@ pub trait ConfigValue {
 
     fn gen_optional(&self) -> Result<bool, Error>;
 
-    fn gen_assoc(&self) -> Result<ValAssoc, Error>;
+    fn gen_assoc(&self) -> Result<Assoc, Error>;
 
-    fn gen_action(&self) -> Result<ValAction, Error>;
+    fn gen_action(&self) -> Result<Action, Error>;
 
     fn gen_deactivate(&self) -> Result<bool, Error>;
 
@@ -146,9 +146,9 @@ pub trait ConfigValue {
 
     fn take_prefix(&mut self) -> Option<Str>;
 
-    fn take_assoc(&mut self) -> Option<ValAssoc>;
+    fn take_assoc(&mut self) -> Option<Assoc>;
 
-    fn take_action(&mut self) -> Option<ValAction>;
+    fn take_action(&mut self) -> Option<Action>;
 
     fn take_idx(&mut self) -> Option<Index>;
 
@@ -186,9 +186,9 @@ pub struct OptConfig {
 
     deact: Option<bool>,
 
-    action: Option<ValAction>,
+    action: Option<Action>,
 
-    assoc: Option<ValAssoc>,
+    assoc: Option<Assoc>,
 
     initiator: Option<ValInitiator>,
 
@@ -241,12 +241,12 @@ impl OptConfig {
         self
     }
 
-    pub fn with_assoc(mut self, assoc: Option<ValAssoc>) -> Self {
+    pub fn with_assoc(mut self, assoc: Option<Assoc>) -> Self {
         self.assoc = assoc;
         self
     }
 
-    pub fn with_action(mut self, action: Option<ValAction>) -> Self {
+    pub fn with_action(mut self, action: Option<Action>) -> Self {
         self.action = action;
         self
     }
@@ -350,11 +350,11 @@ impl ConfigValue for OptConfig {
         &self.sp_pre
     }
 
-    fn assoc(&self) -> Option<&ValAssoc> {
+    fn assoc(&self) -> Option<&Assoc> {
         self.assoc.as_ref()
     }
 
-    fn action(&self) -> Option<&ValAction> {
+    fn action(&self) -> Option<&Action> {
         self.action.as_ref()
     }
 
@@ -467,12 +467,12 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn set_assoc(&mut self, assoc: ValAssoc) -> &mut Self {
+    fn set_assoc(&mut self, assoc: Assoc) -> &mut Self {
         self.assoc = Some(assoc);
         self
     }
 
-    fn set_action(&mut self, action: ValAction) -> &mut Self {
+    fn set_action(&mut self, action: Action) -> &mut Self {
         self.action = Some(action);
         self
     }
@@ -532,14 +532,14 @@ impl ConfigValue for OptConfig {
         Err(self.raise_missing_error("optional")?)
     }
 
-    fn gen_assoc(&self) -> Result<ValAssoc, Error> {
+    fn gen_assoc(&self) -> Result<Assoc, Error> {
         if let Some(assoc) = self.assoc {
             return Ok(assoc);
         }
         Err(self.raise_missing_error("assoc")?)
     }
 
-    fn gen_action(&self) -> Result<ValAction, Error> {
+    fn gen_action(&self) -> Result<Action, Error> {
         if let Some(action) = self.action {
             return Ok(action);
         }
@@ -652,11 +652,11 @@ impl ConfigValue for OptConfig {
         self.pre.take()
     }
 
-    fn take_assoc(&mut self) -> Option<ValAssoc> {
+    fn take_assoc(&mut self) -> Option<Assoc> {
         self.assoc.take()
     }
 
-    fn take_action(&mut self) -> Option<ValAction> {
+    fn take_action(&mut self) -> Option<Action> {
         self.action.take()
     }
 

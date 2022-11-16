@@ -1,5 +1,7 @@
 use std::fmt::Debug;
 
+use crate::opt::Action;
+use crate::opt::Assoc;
 use crate::opt::Config;
 use crate::opt::ConfigValue;
 use crate::opt::Creator;
@@ -7,8 +9,6 @@ use crate::opt::Index;
 use crate::opt::Information;
 use crate::opt::Opt;
 use crate::opt::OptParser;
-use crate::opt::ValAction;
-use crate::opt::ValAssoc;
 use crate::opt::ValInitiator;
 use crate::opt::ValValidator;
 use crate::set::OptSet;
@@ -71,13 +71,13 @@ where
     }
 
     /// Set the option value assoc type.
-    pub fn set_assoc(&mut self, assoc: ValAssoc) -> &mut Self {
+    pub fn set_assoc(&mut self, assoc: Assoc) -> &mut Self {
         self.info.set_assoc(assoc);
         self
     }
 
     /// Set the option value action.
-    pub fn set_action(&mut self, action: ValAction) -> &mut Self {
+    pub fn set_action(&mut self, action: Action) -> &mut Self {
         self.info.set_action(action);
         self
     }

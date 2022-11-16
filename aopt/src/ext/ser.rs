@@ -156,13 +156,13 @@ where
 /// set.add_opt("--bool=b/")?.run()?;
 /// set.add_opt("pos_v=p@*")?.run()?;
 /// ser.ser_invoke_mut()?
-///     .register(0, |_: &mut ASet, disable: ctx::Disable| {
+///     .on(0, |_: &mut ASet, disable: ctx::Disable| {
 ///         assert_eq!(&true, disable.deref());
 ///         Ok(Some(false))
 ///     })
 ///     .with_default();
 /// ser.ser_invoke_mut()?
-///     .register(
+///     .on(
 ///         1,
 ///         |_: &mut ASet, raw_val: ctx::RawVal, data: ser::Value<PosList>| {
 ///             data.add_pos(raw_val.clone_rawval());

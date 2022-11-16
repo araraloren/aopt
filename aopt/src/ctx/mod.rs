@@ -5,7 +5,6 @@ pub(crate) mod handler;
 pub use self::ctx::Ctx;
 pub use self::extract::Extract;
 pub use self::handler::Handler;
-pub use self::handler::SerHandler;
 
 use std::fmt::Debug;
 
@@ -96,55 +95,27 @@ where
     }
 }
 
-/// Wrap only the handler, user can custom the value store logical.
-pub fn wrap_serhandler<Set, Args, Ret, Error>(
-    mut handler: impl SerHandler<Set, Args, Output = Option<Ret>, Error = Error> + 'static,
-) -> Callbacks<Set, Ret, Error>
-where
-    Error: Into<crate::Error>,
-    Args: Extract<Set, Error = Error>,
-{
-    Box::new(move |set: &mut Set, ser: &mut Services, ctx: &Ctx| {
-        let val = handler.invoke(set, ser, Args::extract(set, ser, ctx)?)?;
-        Ok(val)
-    })
-}
+pub struct NullStore;
 
-/// Wrap only the handler, user can custom the value store logical.
-pub fn wrap_handler<Set, Args, Ret, Error>(
-    mut handler: impl Handler<Set, Args, Output = Option<Ret>, Error = Error> + 'static,
-) -> Callbacks<Set, Ret, Error>
-where
-    Error: Into<crate::Error>,
-    Args: Extract<Set, Error = Error>,
-{
-    Box::new(move |set: &mut Set, ser: &mut Services, ctx: &Ctx| {
-        let val = handler.invoke(set, Args::extract(set, ser, ctx)?)?;
+impl<Set, Value> Store<Set, Value> for NullStore {
+    type Ret = Value;
+
+    type Error = Error;
+
+    fn process(
+        &mut self,
+        _: Uid,
+        _: &mut Set,
+        _: &mut Services,
+        _: Option<&RawVal>,
+        val: Option<Value>,
+    ) -> Result<Option<Self::Ret>, Self::Error> {
         Ok(val)
-    })
+    }
 }
 
 /// Wrap the handler and store.
-pub fn wrap_serhandler_store<Set, Args, Output, Ret, Error>(
-    mut handler: impl SerHandler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
-    mut store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static,
-) -> Callbacks<Set, Ret, Error>
-where
-    Error: Into<crate::Error>,
-    Args: Extract<Set, Error = Error>,
-{
-    Box::new(move |set: &mut Set, ser: &mut Services, ctx: &Ctx| {
-        let val = handler.invoke(set, ser, Args::extract(set, ser, ctx)?)?;
-        let arg = ctx.arg();
-        let arg = arg.as_ref().map(|v| v.as_ref());
-        let uid = ctx.uid();
-
-        Ok(store.process(uid, set, ser, arg, val)?)
-    })
-}
-
-/// Wrap the handler and store.
-pub fn wrap_handler_store<Set, Args, Output, Ret, Error>(
+pub fn wrap_handler<Set, Args, Output, Ret, Error>(
     mut handler: impl Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
     mut store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static,
 ) -> Callbacks<Set, Ret, Error>
@@ -153,7 +124,7 @@ where
     Args: Extract<Set, Error = Error>,
 {
     Box::new(move |set: &mut Set, ser: &mut Services, ctx: &Ctx| {
-        let val = handler.invoke(set, Args::extract(set, ser, ctx)?)?;
+        let val = handler.invoke(set, ser, Args::extract(set, ser, ctx)?)?;
         let arg = ctx.arg();
         let arg = arg.as_ref().map(|v| v.as_ref());
         let uid = ctx.uid();

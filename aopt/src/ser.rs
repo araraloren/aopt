@@ -6,7 +6,6 @@ pub(crate) mod value;
 
 pub use self::check::CheckService;
 pub use self::invoke::InvokeService;
-pub use self::invoke::SerRegister;
 pub use self::rawval::RawValService;
 pub use self::userval::UsrValService;
 pub use self::value::ValEntry;

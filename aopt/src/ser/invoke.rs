@@ -4,19 +4,16 @@ use tracing::trace;
 
 use crate::astr;
 use crate::ctx::wrap_handler;
-use crate::ctx::wrap_handler_store;
-use crate::ctx::wrap_serhandler;
-use crate::ctx::wrap_serhandler_store;
 use crate::ctx::Callbacks;
 use crate::ctx::Ctx;
 use crate::ctx::Extract;
 use crate::ctx::Handler;
-use crate::ctx::SerHandler;
+use crate::ctx::NullStore;
 use crate::ctx::Store;
+use crate::opt::Action;
+use crate::opt::Assoc;
 use crate::opt::Opt;
 use crate::opt::RawValParser;
-use crate::opt::ValAssoc;
-use crate::opt::ValStore;
 use crate::ser::Service;
 use crate::ser::Services;
 use crate::Error;
@@ -31,6 +28,7 @@ use crate::Uid;
 /// # use aopt::prelude::*;
 /// # use aopt::Error;
 /// # use aopt::Arc;
+/// # use aopt::ext::ServicesExt;
 /// # use aopt::RawVal;
 /// # use std::ops::Deref;
 /// #
@@ -41,7 +39,7 @@ use crate::Uid;
 ///    impl Extract<ASet> for Count {
 ///        type Error = Error;
 ///
-///        fn extract(_uid: Uid, _set: &ASet, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+///        fn extract(_set: &ASet, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
 ///            Ok(Self(ctx.args().len()))
 ///        }
 ///    }
@@ -51,38 +49,32 @@ use crate::Uid;
 ///    let args = Arc::new(Args::new(["--foo", "bar", "doo"].into_iter()));
 ///    let ctx = Ctx::default().with_args(args);
 ///
-///    ser.ser_data_mut()?.insert(ser::Value::new(42i64));
+///    ser.ser_usrval_mut()?.insert(ser::Value::new(42i64));
 ///    // you can register callback into InvokeService
-///    is.register(
-///        0,
-///        |uid: Uid, _set: &mut ASet| -> Result<Option<()>, Error> {
-///            println!("Calling the handler of {{{uid}}}");
+///    is.entry(0)
+///      .on(|_set: &mut ASet, _: &mut ASer| -> Result<Option<()>, Error> {
+///            println!("Calling the handler of {{0}}");
 ///            Ok(None)
 ///        },
-///    )
-///    .with_default();
-///    is.register(
-///        1,
-///        |uid: Uid, _set: &mut ASet, cnt: Count| -> Result<Option<()>, Error> {
-///            println!("Calling the handler of {{{uid}}}");
+///    );
+///    is.entry(1)      
+///      .on(|_set: &mut ASet, _: &mut ASer, cnt: Count| -> Result<Option<()>, Error> {
+///            println!("Calling the handler of {{1}}");
 ///            assert_eq!(cnt.0, 3);
 ///            Ok(None)
 ///        },
-///    )
-///    .with_default();
-///    is.register(
-///        2,
-///        |uid: Uid, _set: &mut ASet, data: ser::Value<i64>| -> Result<Option<()>, Error> {
-///            println!("Calling the handler of {{{uid}}}");
+///    );
+///    is.entry(2)
+///      .on(|_set: &mut ASet, _: &mut ASer, data: ser::Value<i64>| -> Result<Option<()>, Error> {
+///            println!("Calling the handler of {{2}}");
 ///            assert_eq!(data.as_ref(), &42);
 ///            Ok(None)
 ///        },
-///    )
-///    .with_default();
+///    );
 ///
-///    is.invoke(0, &mut set, &mut ser, &ctx)?;
-///    is.invoke(1, &mut set, &mut ser, &ctx)?;
-///    is.invoke(2, &mut set, &mut ser, &ctx)?;
+///    is.invoke(&mut set, &mut ser, &ctx)?;
+///    is.invoke(&mut set, &mut ser, &ctx)?;
+///    is.invoke(&mut set, &mut ser, &ctx)?;
 /// #
 /// #   Ok(())
 /// # }
@@ -141,38 +133,6 @@ impl<Set> InvokeService<Set> {
     /// |           call Args::extract(Uid, &Set, &Services, &Ctx) -> Args
     /// |           -> Result<Option<()>, Error>
     /// ```
-    pub fn set_serhandler<Args>(
-        &mut self,
-        uid: Uid,
-        handler: impl SerHandler<Set, Args, Output = Option<()>, Error = Error> + 'static,
-    ) -> &mut Self
-    where
-        Args: Extract<Set, Error = Error> + 'static,
-    {
-        self.callbacks.insert(uid, wrap_serhandler(handler));
-        self
-    }
-
-    /// Register a callback that will called by [`Policy`](crate::policy::Policy) when option setted.
-    ///
-    /// The [`InvokeService`]  will call the [`invoke`](crate::ctx::Handler::invoke).
-    /// # Note
-    /// ```txt
-    /// |   handler: |Uid, &mut Set, &mut Services, { Other Args }| -> Result<Option<()>, Error>
-    ///         |
-    ///      wrapped
-    ///         |
-    ///         v
-    /// |   |Uid, &mut Set, &mut Services, &Ctx| -> Option<()>
-    ///         |
-    ///      invoked
-    ///         |
-    ///         v
-    /// |   call Callbacks::invoke(&mut self, Uid, &mut Set, &mut Services, &Ctx)
-    /// |       call Handler::invoke(&mut self, Uid, &mut Set, Args)
-    /// |           call Args::extract(Uid, &Set, &Services, &Ctx) -> Args
-    /// |           -> Result<Option<()>, Error>
-    /// ```
     pub fn set_handler<Args>(
         &mut self,
         uid: Uid,
@@ -181,7 +141,7 @@ impl<Set> InvokeService<Set> {
     where
         Args: Extract<Set, Error = Error> + 'static,
     {
-        self.callbacks.insert(uid, wrap_handler(handler));
+        self.callbacks.insert(uid, wrap_handler(handler, NullStore));
         self
     }
 
@@ -209,45 +169,7 @@ impl<Set> InvokeService<Set> {
     /// |       -> call Store::process(Uid, &Set, Option<&RawVal>, Option<Value>)
     /// |           -> Result<Option<()>, Error>
     /// ```
-    pub fn set_serhandler_store<Args, Output>(
-        &mut self,
-        uid: Uid,
-        handler: impl SerHandler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
-        store: impl Store<Set, Output, Ret = (), Error = Error> + 'static,
-    ) -> &mut Self
-    where
-        Args: Extract<Set, Error = Error> + 'static,
-    {
-        self.callbacks
-            .insert(uid, wrap_serhandler_store(handler, store));
-        self
-    }
-
-    /// Register a callback that will called by [`Policy`](crate::policy::Policy) when option setted.
-    ///
-    /// The [`InvokeService`] first call the [`invoke`](crate::ctx::Handler::invoke), then
-    /// call the [`process`](crate::ctx::Store::process) with the return value.
-    /// # Note
-    /// ```txt
-    /// |   handler: |Uid, &mut Set, &mut Services, { Other Args }| -> Result<Option<Value>, Error>
-    /// |   storer: |Uid, &mut Set, &mut Services, Option<&RawVal>, Option<Value>| -> Result<Option<()>, Error>
-    ///         |
-    ///      wrapped
-    ///         |
-    ///         v
-    /// |   |Uid, &mut Set, &mut Services, &Ctx| -> Option<Value>
-    ///         |
-    ///      invoked
-    ///         |
-    ///         v
-    /// |   call Callbacks::invoke(&mut self, Uid, &mut Set, &mut Services, &Ctx)
-    /// |       call Handler::invoke(&mut self, Uid, &mut Set, Args)
-    /// |           call Args::extract(Uid, &Set, &Services, &Ctx) -> Args
-    /// |           -> Result<Option<Value>, Error>
-    /// |       -> call Store::process(Uid, &Set, Option<&RawVal>, Option<Value>)
-    /// |           -> Result<Option<()>, Error>
-    /// ```
-    pub fn set_handler_store<Args, Output>(
+    pub fn set_handler_with<Args, Output>(
         &mut self,
         uid: Uid,
         handler: impl Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
@@ -256,8 +178,7 @@ impl<Set> InvokeService<Set> {
     where
         Args: Extract<Set, Error = Error> + 'static,
     {
-        self.callbacks
-            .insert(uid, wrap_handler_store(handler, store));
+        self.callbacks.insert(uid, wrap_handler(handler, store));
         self
     }
 
@@ -266,53 +187,22 @@ impl<Set> InvokeService<Set> {
     }
 }
 
-impl<Set> InvokeService<Set>
-where
-    Set: crate::set::Set,
-    Set::Opt: Opt,
-{
-    pub fn register<Args, Output, H>(
-        &mut self,
-        uid: Uid,
-        handler: H,
-    ) -> Register<'_, Set, H, Args, Output>
+impl<Set> InvokeService<Set> {
+    pub fn entry<Args, Output, H>(&mut self, uid: Uid) -> Entry<'_, Set, H, Args, Output>
     where
+        Output: 'static,
         H: Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
         Args: Extract<Set, Error = Error> + 'static,
     {
-        Register {
+        Entry {
             ser: self,
-            handler: Some(handler),
+            handler: None,
             register: false,
             uid,
             marker: PhantomData::default(),
         }
     }
 
-    pub fn register_ser<Args, Output, H>(
-        &mut self,
-        uid: Uid,
-        handler: H,
-    ) -> SerRegister<'_, Set, H, Args, Output>
-    where
-        H: SerHandler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
-        Args: Extract<Set, Error = Error> + 'static,
-    {
-        SerRegister {
-            ser: self,
-            handler: Some(handler),
-            register: false,
-            uid,
-            marker: PhantomData::default(),
-        }
-    }
-}
-
-impl<Set> InvokeService<Set>
-where
-    Set: crate::set::Set,
-    Set::Opt: Opt,
-{
     /// Invoke the handler saved in [`InvokeService`], it will panic if the handler not exist.
     pub fn invoke(
         &mut self,
@@ -329,7 +219,13 @@ where
             uid
         )
     }
+}
 
+impl<Set> InvokeService<Set>
+where
+    Set: crate::set::Set,
+    Set::Opt: Opt,
+{
     /// Invoke the default option handler of [`InvokeService`].
     ///
     /// The default handler will parsing the argument into associated type value,
@@ -345,17 +241,17 @@ where
         let assoc = opt.assoc();
         let arg = ctx.arg();
         let val = arg.as_ref().map(|v| v.as_ref());
-        let mut store = ValStore::default();
+        let mut action = opt.action().clone();
 
         trace!("Invoke default handler for {{{uid}}}, ctx{{{ctx:?}}}");
         match assoc {
-            ValAssoc::Bool => store.process(uid, set, ser, val, bool::parse(opt, val, ctx).ok()),
-            ValAssoc::Int => store.process(uid, set, ser, val, i64::parse(opt, val, ctx).ok()),
-            ValAssoc::Uint => store.process(uid, set, ser, val, u64::parse(opt, val, ctx).ok()),
-            ValAssoc::Flt => store.process(uid, set, ser, val, f64::parse(opt, val, ctx).ok()),
-            ValAssoc::Str => store.process(uid, set, ser, val, String::parse(opt, val, ctx).ok()),
-            ValAssoc::Noa => store.process(uid, set, ser, val, val.map(|_| true)),
-            ValAssoc::Null => Ok(Some(())),
+            Assoc::Bool => action.process(uid, set, ser, val, bool::parse(opt, val, ctx).ok()),
+            Assoc::Int => action.process(uid, set, ser, val, i64::parse(opt, val, ctx).ok()),
+            Assoc::Uint => action.process(uid, set, ser, val, u64::parse(opt, val, ctx).ok()),
+            Assoc::Flt => action.process(uid, set, ser, val, f64::parse(opt, val, ctx).ok()),
+            Assoc::Str => action.process(uid, set, ser, val, String::parse(opt, val, ctx).ok()),
+            Assoc::Noa => action.process(uid, set, ser, val, val.map(|_| true)),
+            Assoc::Null => Ok(Some(())),
         }
     }
 }
@@ -366,10 +262,15 @@ impl<Set> Service for InvokeService<Set> {
     }
 }
 
-pub struct SerRegister<'a, Set, Handler, Args, Output> {
+pub struct Entry<'a, Set, H, Args, Output>
+where
+    Output: 'static,
+    H: Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
+    Args: Extract<Set, Error = Error> + 'static,
+{
     ser: &'a mut InvokeService<Set>,
 
-    handler: Option<Handler>,
+    handler: Option<H>,
 
     register: bool,
 
@@ -378,106 +279,40 @@ pub struct SerRegister<'a, Set, Handler, Args, Output> {
     marker: PhantomData<(Args, Output)>,
 }
 
-impl<'a, Args, Set, Output, H> SerRegister<'a, Set, H, Args, Output>
-where
-    Set: crate::set::Set,
-    Set::Opt: Opt,
-    H: SerHandler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
-    Args: Extract<Set, Error = Error> + 'static,
-{
-    /// Register the handler with given [`Store`] implementation.
-    pub fn with(&mut self, store: impl Store<Set, Output, Ret = (), Error = Error> + 'static) {
-        if !self.register {
-            let handler = self.handler.take().unwrap();
-
-            self.ser.set_serhandler_store(self.uid, handler, store);
-            self.register = true;
-        }
-    }
-}
-
-impl<'a, Args, Set, Output, H> SerRegister<'a, Set, H, Args, Output>
+impl<'a, Args, Set, Output, H> Entry<'a, Set, H, Args, Output>
 where
     Output: 'static,
-    Set: crate::set::Set,
-    Set::Opt: Opt,
-    H: SerHandler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
-    Args: Extract<Set, Error = Error> + 'static,
-{
-    /// Register the handler with default [`ValStore`].
-    pub fn with_default(&mut self) {
-        if !self.register {
-            let handler = self.handler.take().unwrap();
-
-            self.ser
-                .set_serhandler_store(self.uid, handler, ValStore::default());
-            self.register = true;
-        }
-    }
-}
-
-impl<'a, Set, Handler, Args, Output> Drop for SerRegister<'a, Set, Handler, Args, Output> {
-    fn drop(&mut self) {
-        if !self.register {
-            panic!("Consider call with_default or with on Register")
-        }
-    }
-}
-
-pub struct Register<'a, Set, Handler, Args, Output> {
-    ser: &'a mut InvokeService<Set>,
-
-    handler: Option<Handler>,
-
-    register: bool,
-
-    uid: Uid,
-
-    marker: PhantomData<(Args, Output)>,
-}
-
-impl<'a, Args, Set, Output, H> Register<'a, Set, H, Args, Output>
-where
-    Set: crate::set::Set,
-    Set::Opt: Opt,
     H: Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
     Args: Extract<Set, Error = Error> + 'static,
 {
-    /// Register the handler with given [`Store`] implementation.
-    pub fn with(&mut self, store: impl Store<Set, Output, Ret = (), Error = Error> + 'static) {
-        if !self.register {
-            let handler = self.handler.take().unwrap();
+    pub fn on(&mut self, handler: H) -> &mut Self {
+        self.handler = Some(handler);
+        self
+    }
 
-            self.ser.set_handler_store(self.uid, handler, store);
+    /// Register the handler with default [`ValStore`].
+    pub fn then(&mut self, store: impl Store<Set, Output, Ret = (), Error = Error> + 'static) {
+        if !self.register {
+            if let Some(handler) = self.handler.take() {
+                self.ser.set_handler_with(self.uid, handler, store);
+            }
             self.register = true;
         }
     }
 }
 
-impl<'a, Args, Set, Output, H> Register<'a, Set, H, Args, Output>
+impl<'a, Set, H, Args, Output> Drop for Entry<'a, Set, H, Args, Output>
 where
     Output: 'static,
-    Set: crate::set::Set,
-    Set::Opt: Opt,
     H: Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
     Args: Extract<Set, Error = Error> + 'static,
 {
-    /// Register the handler with default [`ValStore`].
-    pub fn with_default(&mut self) {
-        if !self.register {
-            let handler = self.handler.take().unwrap();
-
-            self.ser
-                .set_handler_store(self.uid, handler, ValStore::default());
-            self.register = true;
-        }
-    }
-}
-
-impl<'a, Set, Handler, Args, Output> Drop for Register<'a, Set, Handler, Args, Output> {
     fn drop(&mut self) {
         if !self.register {
-            panic!("Consider call with_default or with on Register")
+            if let Some(handler) = self.handler.take() {
+                self.ser.set_handler_with(self.uid, handler, Action::Null);
+            }
+            self.register = true;
         }
     }
 }

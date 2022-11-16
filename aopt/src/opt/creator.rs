@@ -1,10 +1,10 @@
 use crate::opt::AOpt;
+use crate::opt::Action;
+use crate::opt::Assoc;
 use crate::opt::ConfigValue;
 use crate::opt::Creator;
 use crate::opt::OptConfig;
 use crate::opt::Style;
-use crate::opt::ValAction;
-use crate::opt::ValAssoc;
 use crate::opt::ValInitiator;
 use crate::opt::ValValidator;
 use crate::Error;
@@ -38,13 +38,13 @@ impl Creator for IntCreator {
         let deactivate_style = config.deactivate().unwrap_or(false);
         let prefix = Some(config.gen_prefix()?);
         let optional = config.take_optional().unwrap_or(true);
-        let assoc = config.take_assoc().unwrap_or(ValAssoc::Int);
-        let action = config.take_action().unwrap_or(ValAction::App);
+        let assoc = config.take_assoc().unwrap_or(Assoc::Int);
+        let action = config.take_action().unwrap_or(Action::App);
         let initiator = config.take_initiator().unwrap_or_default();
 
         debug_assert_eq!(
             assoc,
-            ValAssoc::Int,
+            Assoc::Int,
             "The type must be ValType::Int for Int option"
         );
         debug_assert!(
@@ -105,13 +105,13 @@ impl Creator for UintCreator {
         let deactivate_style = config.deactivate().unwrap_or(false);
         let prefix = Some(config.gen_prefix()?);
         let optional = config.take_optional().unwrap_or(true);
-        let assoc = config.take_assoc().unwrap_or(ValAssoc::Uint);
-        let action = config.take_action().unwrap_or(ValAction::App);
+        let assoc = config.take_assoc().unwrap_or(Assoc::Uint);
+        let action = config.take_action().unwrap_or(Action::App);
         let initiator = config.take_initiator().unwrap_or_default();
 
         debug_assert_eq!(
             assoc,
-            ValAssoc::Uint,
+            Assoc::Uint,
             "The type must be ValType::Uint for Uint option"
         );
         debug_assert!(
@@ -172,13 +172,13 @@ impl Creator for FltCreator {
         let deactivate_style = config.deactivate().unwrap_or(false);
         let prefix = Some(config.gen_prefix()?);
         let optional = config.take_optional().unwrap_or(true);
-        let assoc = config.take_assoc().unwrap_or(ValAssoc::Flt);
-        let action = config.take_action().unwrap_or(ValAction::App);
+        let assoc = config.take_assoc().unwrap_or(Assoc::Flt);
+        let action = config.take_action().unwrap_or(Action::App);
         let initiator = config.take_initiator().unwrap_or_default();
 
         debug_assert_eq!(
             assoc,
-            ValAssoc::Flt,
+            Assoc::Flt,
             "The type must be ValType::Flt for Flt option"
         );
         debug_assert!(
@@ -239,13 +239,13 @@ impl Creator for StrCreator {
         let deactivate_style = config.deactivate().unwrap_or(false);
         let prefix = Some(config.gen_prefix()?);
         let optional = config.take_optional().unwrap_or(true);
-        let assoc = config.take_assoc().unwrap_or(ValAssoc::Str);
-        let action = config.take_action().unwrap_or(ValAction::App);
+        let assoc = config.take_assoc().unwrap_or(Assoc::Str);
+        let action = config.take_action().unwrap_or(Action::App);
         let initiator = config.take_initiator().unwrap_or_default();
 
         debug_assert_eq!(
             assoc,
-            ValAssoc::Str,
+            Assoc::Str,
             "The type must be ValType::Str for Str option"
         );
         debug_assert!(
@@ -306,13 +306,13 @@ impl Creator for BoolCreator {
         let deactivate_style = config.deactivate().unwrap_or(false);
         let prefix = Some(config.gen_prefix()?);
         let optional = config.take_optional().unwrap_or(true);
-        let assoc = config.take_assoc().unwrap_or(ValAssoc::Bool);
-        let action = config.take_action().unwrap_or(ValAction::Set);
+        let assoc = config.take_assoc().unwrap_or(Assoc::Bool);
+        let action = config.take_action().unwrap_or(Action::Set);
         let value = if deactivate_style { true } else { false };
 
         debug_assert_eq!(
             assoc,
-            ValAssoc::Bool,
+            Assoc::Bool,
             "The type must be ValType::Bool for Boolean option"
         );
         debug_assert!(
@@ -376,8 +376,8 @@ impl Creator for PosCreator {
     fn new_with(&mut self, mut config: Self::Config) -> Result<Self::Opt, Self::Error> {
         let deactivate_style = config.deactivate().unwrap_or(false);
         let optional = config.take_optional().unwrap_or(true);
-        let assoc = config.take_assoc().unwrap_or(ValAssoc::Noa);
-        let action = config.take_action().unwrap_or(ValAction::App);
+        let assoc = config.take_assoc().unwrap_or(Assoc::Noa);
+        let action = config.take_action().unwrap_or(Action::App);
         let initiator = config.take_initiator().unwrap_or_default();
         let validator = config
             .take_validator()
@@ -438,8 +438,8 @@ impl Creator for CmdCreator {
 
     fn new_with(&mut self, mut config: Self::Config) -> Result<Self::Opt, Self::Error> {
         let deactivate_style = config.deactivate().unwrap_or(false);
-        let assoc = config.take_assoc().unwrap_or(ValAssoc::Noa);
-        let action = config.take_action().unwrap_or(ValAction::Set);
+        let assoc = config.take_assoc().unwrap_or(Assoc::Noa);
+        let action = config.take_action().unwrap_or(Action::Set);
         let initiator = config.take_initiator().unwrap_or_default();
         let validator = config
             .take_validator()
@@ -508,8 +508,8 @@ impl Creator for MainCreator {
 
     fn new_with(&mut self, mut config: Self::Config) -> Result<Self::Opt, Self::Error> {
         let deactivate_style = config.deactivate().unwrap_or(false);
-        let assoc = config.take_assoc().unwrap_or(ValAssoc::Null);
-        let action = config.take_action().unwrap_or(ValAction::Set);
+        let assoc = config.take_assoc().unwrap_or(Assoc::Null);
+        let action = config.take_action().unwrap_or(Action::Set);
         let initiator = config.take_initiator().unwrap_or_default();
         let validator = config
             .take_validator()
