@@ -302,9 +302,15 @@ mod test {
             let opt_uid = opt.uid();
 
             assert_eq!(opt_uid, uid);
-            assert_eq!(opt.name(), name);
+            assert_eq!(opt.name(), name, "name not equal -{}-", opt_uid);
             assert_eq!(opt.prefix().map(|v| v.as_str()), prefix);
-            assert_eq!(opt.optional(), optional, "optional not equal: {}", optional);
+            assert_eq!(
+                opt.optional(),
+                optional,
+                "optional not equal -{}-: {}",
+                opt_uid,
+                optional
+            );
             assert_eq!(opt.action(), action);
             assert_eq!(opt.assoc(), assoc);
             assert_eq!(opt.idx(), index, "option index not equal: {:?}", index);
@@ -317,7 +323,11 @@ mod test {
                 if let Some(vals) = vals {
                     assert_eq!(opt_vals.len(), vals.len());
                     for (l, r) in opt_vals.iter().zip(vals.iter()) {
-                        assert_eq!(l, r, "option value not equal: {:?} != {:?}", l, r);
+                        assert_eq!(
+                            l, r,
+                            "option value not equal -{}- : {:?} != {:?}",
+                            opt_uid, l, r
+                        );
                     }
                 }
             } else {
@@ -389,6 +399,7 @@ mod test {
                 "-l2.79",
                 "--nopt",
                 "3.12",
+                "-olily",
             ]
             .into_iter(),
         );
@@ -396,9 +407,9 @@ mod test {
         set.add_prefix("+");
 
         // 5
-        set.add_opt("--aopt=b")?.run()?;
+        set.add_opt("--aopt=b")?;
         set.add_opt("--bopt=b/")?.run()?;
-        set.add_opt("--copt=b!")?.run()?;
+        set.add_opt("--copt=b!")?.set_action(Action::Cnt);
         set.add_opt("--dopt=b!/")?.run()?;
         set.add_opt("--eopt=b")?.add_alias("+eopt").run()?;
         set.add_opt("--fopt=b/")?.add_alias("-fopt").run()?;
@@ -429,10 +440,32 @@ mod test {
         set.add_opt("--mopt=f")?.set_value(1.02f64).run()?;
         set.add_opt("--nopt=f")?.set_action(Action::Set).run()?;
 
-        let apos_uid = set
-            .add_opt("apos=p@1")?
-            .set_initiator(ValInitiator::empty::<String>())
-            .run()?;
+        // 16
+        set.add_opt("--oopt=s!")?.add_alias("-o");
+        set.add_opt("--popt=s")?.run()?;
+        ser.ser_invoke_mut()?
+            .entry(set.add_opt("--qopt=s")?.run()?)
+            .on(|_: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>| Ok(Some(val.take())))
+            .then(
+                |uid: Uid,
+                 set: &mut ASet,
+                 ser: &mut ASer,
+                 raw: Option<&RawVal>,
+                 val: Option<String>| {
+                    if let Some(val) = val {
+                        // let's put the value to `popt`
+                        ser.ser_val_mut()?.push(set["--popt"].uid(), val);
+                        if let Some(raw) = raw {
+                            ser.ser_rawval_mut()?.push(uid, raw.clone());
+                        }
+                        Ok(Some(()))
+                    } else {
+                        Ok(None)
+                    }
+                },
+            );
+
+        let set_uid = set.add_opt("set=c")?.run()?;
         let bpos_uid = set.add_opt("bpos=p@[2,3]")?.set_assoc(Assoc::Uint).run()?;
         let cpos_uid = set
             .add_opt("cpos=p@4..5")?
@@ -476,15 +509,15 @@ mod test {
                     None,
                     false,
                 )?;
-                check_opt_val(
+                check_opt_val::<u64>(
                     ser,
                     copt,
                     2,
                     "copt",
                     Some("--"),
-                    Some(vec![true]),
+                    Some(vec![1]),
                     false,
-                    &Action::Set,
+                    &Action::Cnt,
                     &Assoc::Bool,
                     None,
                     None,
@@ -606,7 +639,7 @@ mod test {
                 Ok(Some(val.deref() * u64::val(set["--alias-k"].uid(), ser)?))
             },
         );
-        ser.ser_invoke_mut()?.entry(apos_uid).on(
+        ser.ser_invoke_mut()?.entry(set_uid).on(
             move |set: &mut ASet,
                   ser: &mut ASer,
                   uid: ctx::Uid,
@@ -724,12 +757,12 @@ mod test {
                 check_opt_val::<String>(
                     ser,
                     apos,
-                    apos_uid,
-                    "apos",
+                    set_uid,
+                    "set",
                     None,
                     None,
-                    true,
-                    &Action::App,
+                    false,
+                    &Action::Set,
                     &Assoc::Noa,
                     Some(&Index::forward(1)),
                     None,

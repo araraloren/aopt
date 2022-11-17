@@ -9,7 +9,6 @@ use crate::ctx::Callbacks;
 use crate::ctx::Ctx;
 use crate::ctx::Extract;
 use crate::ctx::Handler;
-use crate::ctx::NullStore;
 use crate::ctx::Store;
 use crate::opt::Assoc;
 use crate::opt::Opt;
