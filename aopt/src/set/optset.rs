@@ -23,14 +23,15 @@ use crate::Uid;
 /// ```rust
 /// # use aopt::prelude::*;
 /// # use aopt::Result;
+/// # use aopt::Error;
 /// #
 /// # fn main() -> Result<()> {
-///     let mut set = OptSet::<Box<dyn AOpt>, OptStringParser, Box<dyn ACreator<Opt = Box<dyn AOpt>, Config = OptConfig>>>::default();
+///     let mut set = OptSet::<StrParser, Box<dyn Creator<Opt = AOpt, Config = OptConfig, Error = Error>>>::default();
 ///
 ///     // add prefix for option
-///     set.add_pre("/");
+///     set.add_prefix("/");
 ///     // add bool creator
-///     set.add_ctor(BoolCreator::boxed());
+///     set.register(BoolCreator::boxed());
 ///     // create a bool option
 ///     set.add_opt("/foo=b")?.run()?;
 ///     // filter the set option

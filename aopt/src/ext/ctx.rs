@@ -17,45 +17,42 @@
 //! set.add_opt("--bool=b/")?.run()?;
 //! set.add_opt("set=c")?.run()?;
 //! set.add_opt("pos_2=p@2")?.run()?;
-//! set.add_opt("pos_v=p@>2")?.run()?;
+//! set.add_opt("pos_v=p@3..")?.run()?;
 //! ser.ser_invoke_mut()?
-//!     .on(0, |_: &mut ASet, disable: ctx::Disable| {
+//!     .entry(0)
+//!     .on(|_: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
 //!         assert_eq!(
 //!             &true,
 //!             disable.deref(),
 //!             "Value is parsed from argument of Ctx which set in Policy"
 //!         );
 //!         Ok(Some(false))
-//!     })
-//!     .with_default();
+//!     });
 //! ser.ser_invoke_mut()?
-//!     .on(1, |_: &mut ASet, val: ctx::Value<String>| {
+//!     .entry(1)
+//!     .on(|_: &mut ASet, _: &mut ASer, val: ctx::Value<String>| {
 //!         assert_eq!(
 //!             &String::from("set"),
 //!             val.deref(),
 //!             "Value is parsed from argument of Ctx which set in Policy"
 //!         );
 //!         Ok(Some(true))
-//!     })
-//!     .with_default();
+//!     });
 //! ser.ser_invoke_mut()?
-//!     .on(2, |_: &mut ASet, val: ctx::Value<i64>| {
+//!     .entry(2)
+//!     .on(|_: &mut ASet, _: &mut ASer, val: ctx::Value<i64>| {
 //!         assert_eq!(
 //!             &42,
 //!             val.deref(),
 //!             "Value is parsed from argument of Ctx which set in Policy"
 //!         );
 //!         Ok(Some(*val.deref()))
-//!     })
-//!     .with_default();
-//! ser.ser_invoke_mut()?
-//!     .on(
-//!         3,
-//!         |_: &mut ASet, index: ctx::Index, raw_val: ctx::RawVal| {
-//!             Ok(Some((*index.deref(), raw_val.deref().clone())))
-//!         },
-//!     )
-//!     .with_default();
+//!     });
+//! ser.ser_invoke_mut()?.entry(3).on(
+//!     |_: &mut ASet, _: &mut ASer, index: ctx::Index, raw_val: ctx::RawVal| {
+//!         Ok(Some((*index.deref(), raw_val.deref().clone())))
+//!     },
+//! );
 //!
 //! let args = Args::new(["--/bool", "set", "42", "foo", "bar"].into_iter());
 //!
@@ -78,7 +75,7 @@
 //! }
 //! # Ok(())
 //! # }
-//! ```
+//!```
 use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::Debug;
@@ -124,10 +121,11 @@ impl<S> Extract<S> for Ctx {
 ///
 ///   set.add_opt("--bool=b/")?.run()?;
 ///   ser.ser_invoke_mut()?
-///       .on(0, |_: &mut ASet, ctx_uid: ctx::Uid| {
+///       .entry(0)
+///       .on(|_: &mut ASet, _: &mut ASer, ctx_uid: ctx::Uid| {
 ///           assert_eq!(&0, ctx_uid.deref(), "The uid in Ctx is same as the uid of matched option");
 ///           Ok(Some(false))
-///       }).with_default();
+///       });
 ///
 ///   let args = Args::new(["--/bool", ].into_iter());
 ///
@@ -205,35 +203,37 @@ impl Display for Uid {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut()?
-///     .on(0, |_: &mut ASet, index: ctx::Index| {
+///     .entry(0)
+///     .on(|_: &mut ASet, _: &mut ASer, index: ctx::Index| {
 ///         assert_eq!(
 ///             &0,
 ///             index.deref(),
 ///             "Index is the current index value of Args"
 ///         );
 ///         Ok(Some(false))
-///     })
-///     .with_default();
+///     });
+///
 /// ser.ser_invoke_mut()?
-///     .on(1, |_: &mut ASet, index: ctx::Index| {
+///     .entry(1)
+///     .on(|_: &mut ASet, _: &mut ASer, index: ctx::Index| {
 ///         assert_eq!(
 ///             &1,
 ///             index.deref(),
 ///             "Index is the current index value of Args"
 ///         );
 ///         Ok(Some(true))
-///     })
-///     .with_default();
+///     });
+///
 /// ser.ser_invoke_mut()?
-///     .on(2, |_: &mut ASet, index: ctx::Index| {
+///     .entry(2)
+///     .on(|_: &mut ASet, _: &mut ASer, index: ctx::Index| {
 ///         assert_eq!(
 ///             &2,
 ///             index.deref(),
 ///             "Index is the current index value of Args"
 ///         );
 ///         Ok(Some(2i64))
-///     })
-///     .with_default();
+///     });
 ///
 /// let args = Args::new(["--/bool", "set", "value"].into_iter());
 ///
@@ -312,23 +312,25 @@ impl Display for Index {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut()?
-///     .on(0, |_: &mut ASet, total: ctx::Total| {
+///     .entry(0)
+///     .on(|_: &mut ASet, _: &mut ASer, total: ctx::Total| {
 ///         assert_eq!( &4, total.deref(), "Total is the length of Args");
 ///         Ok(Some(false))
-///     })
-///     .with_default();
+///     });
+///
 /// ser.ser_invoke_mut()?
-///     .on(1, |_: &mut ASet, total: ctx::Total| {
+///     .entry(1)
+///     .on(|_: &mut ASet, _: &mut ASer, total: ctx::Total| {
 ///         assert_eq!(&3, total.deref(), "Total is the length of Args");
 ///         Ok(Some(true))
-///     })
-///     .with_default();
+///     });
+///
 /// ser.ser_invoke_mut()?
-///     .on(2, |_: &mut ASet, total: ctx::Total| {
+///     .entry(2)
+///     .on(|_: &mut ASet, _: &mut ASer, total: ctx::Total| {
 ///         assert_eq!(&3, total.deref(), "Total is the length of Args");
 ///         Ok(Some(2i64))
-///     })
-///     .with_default();
+///     });
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
@@ -407,32 +409,34 @@ impl Display for Total {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut()?
-///     .on(0, |_: &mut ASet, args: ctx::Args| {
+///     .entry(0)
+///     .on(|_: &mut ASet, _: &mut ASer, args: ctx::Args| {
 ///         let test = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///         for (idx, arg) in args.deref().deref().iter().enumerate() {
 ///             assert_eq!(arg, &test[idx], "Args is arguments used in Policy");
 ///         }
 ///         Ok(Some(false))
-///     })
-///     .with_default();
+///     });
+///
 /// ser.ser_invoke_mut()?
-///     .on(1, |_: &mut ASet, args: ctx::Args| {
+///     .entry(1)
+///     .on(|_: &mut ASet, _: &mut ASer, args: ctx::Args| {
 ///         let test = Args::new(["set", "value", "foo"].into_iter());
 ///         for (idx, arg) in args.deref().deref().iter().enumerate() {
 ///             assert_eq!(arg, &test[idx], "Args is arguments used in Policy");
 ///         }
 ///         Ok(Some(true))
-///     })
-///     .with_default();
+///     });
+///
 /// ser.ser_invoke_mut()?
-///     .on(2, |_: &mut ASet, args: ctx::Args| {
+///     .entry(2)
+///     .on(|_: &mut ASet, _: &mut ASer, args: ctx::Args| {
 ///         let test = Args::new(["set", "value", "foo"].into_iter());
 ///         for (idx, arg) in args.deref().deref().iter().enumerate() {
 ///             assert_eq!(arg, &test[idx], "Args is arguments used in Policy");
 ///         }
 ///         Ok(Some(2i64))
-///     })
-///     .with_default();
+///     });
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
@@ -488,35 +492,37 @@ impl<S: Set> Extract<S> for Args {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut()?
-///     .on(0, |_: &mut ASet, name: Option<ctx::Name>| {
+///     .entry(0)
+///     .on(|_: &mut ASet, _: &mut ASer, name: Option<ctx::Name>| {
 ///         assert_eq!(
 ///             "bool",
 ///             name.unwrap().deref().as_ref(),
 ///             "Name is the name from Ctx set in Policy"
 ///         );
 ///         Ok(Some(false))
-///     })
-///     .with_default();
+///     });
+///
 /// ser.ser_invoke_mut()?
-///     .on(1, |_: &mut ASet, name: Option<ctx::Name>| {
+///     .entry(1)
+///     .on(|_: &mut ASet, _: &mut ASer, name: Option<ctx::Name>| {
 ///         assert_eq!(
 ///             "set",
 ///             name.unwrap().deref().as_ref(),
 ///             "Name is the name from Ctx set in Policy"
 ///         );
 ///         Ok(Some(true))
-///     })
-///     .with_default();
+///     });
+///
 /// ser.ser_invoke_mut()?
-///     .on(2, |_: &mut ASet, name: Option<ctx::Name>| {
+///     .entry(2)
+///     .on(|_: &mut ASet, _: &mut ASer, name: Option<ctx::Name>| {
 ///         assert_eq!(
 ///             "value",
 ///             name.unwrap().deref().as_ref(),
 ///             "Name is the name from Ctx set in Policy"
 ///         );
 ///         Ok(Some(2i64))
-///     })
-///     .with_default();
+///     });
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
@@ -603,27 +609,29 @@ impl Display for Name {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut()?
-///     .on(0, |_: &mut ASet, prefix: Option<ctx::Prefix>| {
+///     .entry(0)
+///     .on(|_: &mut ASet, _: &mut ASer, prefix: Option<ctx::Prefix>| {
 ///         assert_eq!(
 ///             "--",
 ///             prefix.unwrap().deref().as_ref(),
 ///             "Prefix is the prefix from Ctx set in Policy"
 ///         );
 ///         Ok(Some(false))
-///     })
-///     .with_default();
+///     });
+///
 /// ser.ser_invoke_mut()?
-///     .on(1, |_: &mut ASet, prefix: Option<ctx::Prefix>| {
+///     .entry(1)
+///     .on(|_: &mut ASet, _: &mut ASer, prefix: Option<ctx::Prefix>| {
 ///         assert_eq!(None, prefix, "Prefix is the prefix from Ctx set in Policy");
 ///         Ok(Some(true))
-///     })
-///     .with_default();
+///     });
+///
 /// ser.ser_invoke_mut()?
-///     .on(2, |_: &mut ASet, prefix: Option<ctx::Prefix>| {
+///     .entry(2)
+///     .on(|_: &mut ASet, _: &mut ASer, prefix: Option<ctx::Prefix>| {
 ///         assert_eq!(None, prefix, "Prefix is the prefix from Ctx set in Policy");
 ///         Ok(Some(2i64))
-///     })
-///     .with_default();
+///     });
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
@@ -699,35 +707,37 @@ impl Display for Prefix {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut()?
-///     .on(0, |_: &mut ASet, style: ctx::Style| {
+///     .entry(0)
+///     .on(|_: &mut ASet, _: &mut ASer, style: ctx::Style| {
 ///         assert_eq!(
 ///             &Style::Boolean,
 ///             style.deref(),
 ///             "Style is the option style copied from Ctx set in Policy"
 ///         );
 ///         Ok(Some(false))
-///     })
-///     .with_default();
+///     });
+///
 /// ser.ser_invoke_mut()?
-///     .on(1, |_: &mut ASet, style: ctx::Style| {
+///     .entry(1)
+///     .on(|_: &mut ASet, _: &mut ASer, style: ctx::Style| {
 ///         assert_eq!(
 ///             &Style::Cmd,
 ///             style.deref(),
 ///             "Style is the option style copied from Ctx set in Policy"
 ///         );
 ///         Ok(Some(true))
-///     })
-///     .with_default();
+///     });
+///
 /// ser.ser_invoke_mut()?
-///     .on(2, |_: &mut ASet, style: ctx::Style| {
+///     .entry(2)
+///     .on(|_: &mut ASet, _: &mut ASer, style: ctx::Style| {
 ///         assert_eq!(
 ///             &Style::Pos,
 ///             style.deref(),
 ///             "Style is the option style copied from Ctx set in Policy"
 ///         );
 ///         Ok(Some(2i64))
-///     })
-///     .with_default();
+///     });
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
@@ -795,35 +805,37 @@ impl<S: Set> Extract<S> for Style {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut()?
-///     .on(0, |_: &mut ASet, disable: ctx::Disable| {
+///     .entry(0)
+///     .on(|_: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
 ///         assert_eq!(
 ///             &true,
 ///             disable.deref(),
 ///             "Disable is the disable value copied from Ctx set in Policy"
 ///         );
 ///         Ok(Some(false))
-///     })
-///     .with_default();
+///     });
+///
 /// ser.ser_invoke_mut()?
-///     .on(1, |_: &mut ASet, disable: ctx::Disable| {
+///     .entry(1)
+///     .on(|_: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
 ///         assert_eq!(
 ///             &false,
 ///             disable.deref(),
 ///             "Disable is the disable value copied from Ctx set in Policy"
 ///         );
 ///         Ok(Some(true))
-///     })
-///     .with_default();
+///     });
+///
 /// ser.ser_invoke_mut()?
-///     .on(2, |_: &mut ASet, disable: ctx::Disable| {
+///     .entry(2)
+///     .on(|_: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
 ///         assert_eq!(
 ///             &false,
 ///             disable.deref(),
 ///             "Disable is the disable value copied from Ctx set in Policy"
 ///         );
 ///         Ok(Some(2i64))
-///     })
-///     .with_default();
+///     });
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
@@ -892,35 +904,37 @@ impl<S: Set> Extract<S> for Disable {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut()?
-///     .on(0, |_: &mut ASet, raw_val: ctx::RawVal| {
+///     .entry(0)
+///     .on(|_: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal| {
 ///         assert_eq!(
 ///             &RawVal::from("false"),
 ///             raw_val.deref(),
 ///             "Disable is the disable value copied from Ctx set in Policy"
 ///         );
 ///         Ok(Some(false))
-///     })
-///     .with_default();
+///     });
+///
 /// ser.ser_invoke_mut()?
-///     .on(1, |_: &mut ASet, raw_val: ctx::RawVal| {
+///     .entry(1)
+///     .on(|_: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal| {
 ///         assert_eq!(
 ///             &RawVal::from("set"),
 ///             raw_val.deref(),
 ///             "Disable is the disable value copied from Ctx set in Policy"
 ///         );
 ///         Ok(Some(true))
-///     })
-///     .with_default();
+///     });
+///
 /// ser.ser_invoke_mut()?
-///     .on(2, |_: &mut ASet, raw_val: ctx::RawVal| {
+///     .entry(2)
+///     .on(|_: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal| {
 ///         assert_eq!(
 ///             &RawVal::from("value"),
 ///             raw_val.deref(),
 ///             "Disable is the disable value copied from Ctx set in Policy"
 ///         );
 ///         Ok(Some(2i64))
-///     })
-///     .with_default();
+///     });
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
@@ -988,35 +1002,37 @@ impl<S: Set> Extract<S> for RawVal {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut()?
-///     .on(0, |_: &mut ASet, val: ctx::Value<bool>| {
+///     .entry(0)
+///     .on(|_: &mut ASet,  _: &mut ASer,val: ctx::Value<bool>| {
 ///         assert_eq!(
 ///             &false,
 ///             val.deref(),
 ///             "Value is parsed from argument of Ctx which set in Policy"
 ///         );
 ///         Ok(Some(false))
-///     })
-///     .with_default();
+///     });
+///
 /// ser.ser_invoke_mut()?
-///     .on(1, |_: &mut ASet, val: ctx::Value<String>| {
+///     .entry(1)
+///     .on(|_: &mut ASet,  _: &mut ASer,val: ctx::Value<String>| {
 ///         assert_eq!(
 ///             &String::from("set"),
 ///             val.deref(),
 ///             "Value is parsed from argument of Ctx which set in Policy"
 ///         );
 ///         Ok(Some(true))
-///     })
-///     .with_default();
+///     });
+///
 /// ser.ser_invoke_mut()?
-///     .on(2, |_: &mut ASet, val: ctx::Value<i64>| {
+///     .entry(2)
+///     .on(|_: &mut ASet,  _: &mut ASer,val: ctx::Value<i64>| {
 ///         assert_eq!(
 ///             &42,
 ///             val.deref(),
 ///             "Value is parsed from argument of Ctx which set in Policy"
 ///         );
 ///         Ok(Some(*val.deref()))
-///     })
-///     .with_default();
+///     });
 ///
 /// let args = Args::new(["--/bool", "set", "42", "foo"].into_iter());
 ///

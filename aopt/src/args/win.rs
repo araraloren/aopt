@@ -83,27 +83,27 @@ impl AOsStrExt for OsStr {
 /// # Example
 ///
 /// ```rust
-/// extern crate aopt as test_crate;
-///
-/// use test_crate::arg::CLOptParser;
-/// use test_crate::arg::ArgParser;
-/// use test_crate::astr;
-/// use test_crate::err::Result;
-///
-/// fn main() -> Result<()> {
-///     let mut parser = CLOptParser::default();
+/// # use aopt::prelude::*;
+/// # use aopt::Error;
+/// # use aopt::astr;
+/// # use aopt::Arc;
+/// # use std::ffi::OsStr;
+/// # use std::ffi::OsString;
+/// # use aopt::args::ArgParser;
+/// #
+/// # fn main() -> Result<(), Error> {
 ///     let prefixs = vec![astr("--"), astr("-")];
 ///
 ///     {// parse option with value
-///         let output = parser.parse(astr("--foo=32"), &prefixs)?;
+///         let output = OsStr::new("--foo=32").parse(&prefixs)?;
 ///
 ///         assert_eq!(output.prefix, Some(astr("--")));
 ///         assert_eq!(output.name, Some(astr("foo")));
-///         assert_eq!(output.value, Some(astr("32")));
+///         assert_eq!(output.value, Some(Arc::new(OsString::from("32"))));
 ///         assert_eq!(output.disable, false);
 ///     }
 ///     {// parse boolean option
-///         let output = parser.parse(astr("--/bar"), &prefixs)?;
+///         let output = OsStr::new("--/bar").parse(&prefixs)?;
 ///
 ///         assert_eq!(output.prefix, Some(astr("--")));
 ///         assert_eq!(output.name, Some(astr("bar")));
@@ -111,12 +111,12 @@ impl AOsStrExt for OsStr {
 ///         assert_eq!(output.disable, true);
 ///     }
 ///     {// parse other string
-///         let output = parser.parse(astr("-=bar"), &prefixs);
+///         let output = OsStr::new("-=bar").parse(&prefixs);
 ///
 ///         assert!(output.is_err());
 ///     }
-///     Ok(())
-/// }
+/// # Ok(())
+/// # }
 /// ```
 #[derive(Debug, Clone, Default)]
 pub struct CLOpt {

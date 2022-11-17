@@ -8,7 +8,9 @@ pub use self::handler::Handler;
 
 use std::fmt::Debug;
 
+use crate::opt::Opt;
 use crate::ser::Services;
+use crate::set::SetExt;
 use crate::Error;
 use crate::RawVal;
 use crate::Uid;
@@ -114,7 +116,28 @@ impl<Set, Value> Store<Set, Value> for NullStore {
     }
 }
 
-/// Wrap the handler and store.
+/// Wrap the handler and call the default action of option.
+pub fn wrap_handler_default<Set, Args, Output>(
+    mut handler: impl Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
+) -> Callbacks<Set, (), Error>
+where
+    Set: crate::set::Set,
+    Set::Opt: Opt,
+    Output: 'static,
+    Args: Extract<Set, Error = Error>,
+{
+    Box::new(move |set: &mut Set, ser: &mut Services, ctx: &Ctx| {
+        let val = handler.invoke(set, ser, Args::extract(set, ser, ctx)?)?;
+        let arg = ctx.arg();
+        let arg = arg.as_ref().map(|v| v.as_ref());
+        let uid = ctx.uid();
+        let mut act = set.opt(uid)?.action().clone();
+
+        Ok(act.process(uid, set, ser, arg, val)?)
+    })
+}
+
+/// Wrap the handler and call the [`process`](crate::Store::process) of given `store`.
 pub fn wrap_handler<Set, Args, Output, Ret, Error>(
     mut handler: impl Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
     mut store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static,

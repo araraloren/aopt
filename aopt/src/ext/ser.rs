@@ -156,20 +156,20 @@ where
 /// set.add_opt("--bool=b/")?.run()?;
 /// set.add_opt("pos_v=p@*")?.run()?;
 /// ser.ser_invoke_mut()?
-///     .on(0, |_: &mut ASet, disable: ctx::Disable| {
+///     .entry(0)
+///     .on(|_: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
 ///         assert_eq!(&true, disable.deref());
 ///         Ok(Some(false))
-///     })
-///     .with_default();
+///     });
+///
 /// ser.ser_invoke_mut()?
+///     .entry(1)
 ///     .on(
-///         1,
-///         |_: &mut ASet, raw_val: ctx::RawVal, data: ser::Value<PosList>| {
+///         |_: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal, data: ser::Value<PosList>| {
 ///             data.add_pos(raw_val.clone_rawval());
 ///             Ok(Some(true))
 ///         },
-///     )
-///     .with_default();
+///     );
 ///
 /// let args = Args::new(["--/bool", "set", "42", "foo", "bar"].into_iter());
 ///

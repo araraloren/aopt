@@ -39,17 +39,12 @@ use crate::Str;
 /// # Example
 ///
 /// ```rust
-/// extern crate aopt as test_crate;
-///
-/// use test_crate::astr;
-/// use test_crate::err::Result;
-/// use test_crate::opt::OptStringParser;
-/// use test_crate::opt::OptParser;
-/// use test_crate::opt::Index;
-/// use test_crate::opt::Information;
-///
-/// fn main() -> Result<()> {
-///     let parser = OptStringParser::default().with_pre("--");
+/// # use aopt::prelude::*;
+/// # use aopt::astr;
+/// # use aopt::Error;
+/// #
+/// # fn main() -> Result<(), Error> {
+///     let parser = StrParser::default().with_pre("--");
 ///     let ret = parser.parse("--aopt=t!/".into())?;
 ///
 ///     assert_eq!(ret.prefix, Some(astr("--")));
@@ -62,8 +57,7 @@ use crate::Str;
 ///     assert_eq!(ret.anywhere, None);
 ///     assert_eq!(ret.list, []);
 ///     assert_eq!(ret.except, []);
-///     assert_eq!(ret.greater, None);
-///     assert_eq!(ret.less, None);
+///     assert_eq!(ret.range, None);
 ///
 ///     let ret = parser.parse("bopt=t@[1,2,3]".into())?;
 ///
@@ -77,12 +71,11 @@ use crate::Str;
 ///     assert_eq!(ret.anywhere, None);
 ///     assert_eq!(ret.list, []);
 ///     assert_eq!(ret.except, []);
-///     assert_eq!(ret.greater, None);
-///     assert_eq!(ret.less, None);
+///     assert_eq!(ret.range, None);
 ///     assert_eq!(ret.idx(), Some(&Index::list(vec![1, 2, 3])));
 ///
-///     Ok(())
-/// }
+/// #   Ok(())
+/// # }
 /// ```
 ///
 /// For more examples, please reference test case [`test_option_str_parser`](../../src/aopt/set/parser.rs.html#542).

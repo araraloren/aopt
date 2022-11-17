@@ -25,6 +25,9 @@ pub trait Service {
 /// ```rust
 /// # use aopt::Result;
 /// # use aopt::prelude::*;
+/// # use aopt::astr;
+/// # use aopt::Str;
+/// #
 /// # fn main() -> Result<()> {
 ///     #[derive(Debug, PartialEq)]
 ///     struct MyVec(pub Vec<i32>);
@@ -47,19 +50,19 @@ pub trait Service {
 ///     let mut services = Services::new().with(MyVec(vec![42i32]));
 ///
 ///     // get value from of service
-///     assert_eq!(services.ser::<MyVec>()?.0[0], 42);
+///     assert_eq!(services.service::<MyVec>()?.0[0], 42);
 ///     // modfify the service value
-///     services.ser_mut::<MyVec>()?.0.push(18);
+///     services.service_mut::<MyVec>()?.0.push(18);
 ///     // check the value of MyVec
-///     assert_eq!(services.ser::<MyVec>()?.0[1], 18);
+///     assert_eq!(services.service::<MyVec>()?.0[1], 18);
 ///
 ///     // register a new service
-///     services.reg(I32(42));
-///     assert!(services.has::<I32>());
+///     services.register(I32(42));
+///     assert!(services.contain::<I32>());
 ///
 ///     // unregister service from
-///     services.unreg::<MyVec>();
-///     assert!(!services.has::<MyVec>());
+///     services.remove::<MyVec>();
+///     assert!(!services.contain::<MyVec>());
 ///
 ///     Ok(())
 /// # }
