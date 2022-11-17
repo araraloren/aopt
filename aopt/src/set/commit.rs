@@ -7,13 +7,11 @@ use crate::opt::Config;
 use crate::opt::ConfigValue;
 use crate::opt::Creator;
 use crate::opt::Index;
-use crate::opt::Information;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::opt::ValInitiator;
 use crate::opt::ValValidator;
 use crate::set::OptSet;
-use crate::set::Pre;
 use crate::set::Set;
 use crate::Error;
 use crate::Str;
@@ -24,8 +22,7 @@ pub struct Commit<'a, Parser, Ctor>
 where
     Ctor::Opt: Opt,
     Ctor: Creator,
-    Parser: OptParser + Pre,
-    Parser::Output: Information,
+    Parser: OptParser,
     Ctor::Config: Config + ConfigValue + Default,
 {
     info: Ctor::Config,
@@ -37,8 +34,7 @@ impl<'a, Parser, Ctor> Debug for Commit<'a, Parser, Ctor>
 where
     Ctor::Opt: Opt + Debug,
     Ctor: Creator + Debug,
-    Parser: OptParser + Pre + Debug,
-    Parser::Output: Information,
+    Parser: OptParser + Debug,
     Ctor::Config: Config + ConfigValue + Default + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -53,8 +49,7 @@ impl<'a, Parser, Ctor> Commit<'a, Parser, Ctor>
 where
     Ctor::Opt: Opt,
     Ctor: Creator,
-    Parser: OptParser + Pre,
-    Parser::Output: Information,
+    Parser: OptParser,
     Ctor::Config: Config + ConfigValue + Default,
 {
     pub fn new(set: &'a mut OptSet<Parser, Ctor>, info: Ctor::Config) -> Self {
@@ -180,6 +175,7 @@ where
         } else {
             let info = std::mem::take(&mut self.info);
             let type_name = info.gen_type()?;
+            let name = info.name().cloned();
             let opt = self
                 .set
                 .creator(&type_name)
@@ -187,11 +183,9 @@ where
                 .ok_or_else(|| Error::con_unsupport_option_type(type_name))?
                 .new_with(info)
                 .map_err(|e| e.into())?;
-            let hint = opt.hint().clone();
-            let name = opt.name().clone();
             let uid = self.set.insert(opt);
 
-            trace!("Register a opt {}: {} --> {}", hint, name, uid);
+            trace!("Register a opt {:?} --> {}", name, uid);
             self.commited = Some(uid);
             Ok(uid)
         }
@@ -202,8 +196,7 @@ impl<'a, Parser, Ctor> Drop for Commit<'a, Parser, Ctor>
 where
     Ctor::Opt: Opt,
     Ctor: Creator,
-    Parser: OptParser + Pre,
-    Parser::Output: Information,
+    Parser: OptParser,
     Ctor::Config: Config + ConfigValue + Default,
 {
     fn drop(&mut self) {
@@ -211,6 +204,7 @@ where
             let error = "Error when commit the option in Drop, call `run` get the Result";
             let info = std::mem::take(&mut self.info);
             let type_name = info.gen_type().expect(error);
+            let name = info.name().cloned();
             let opt = self
                 .set
                 .creator(&type_name)
@@ -220,11 +214,9 @@ where
                 .new_with(info)
                 .map_err(|e| e.into())
                 .expect(error);
-            let hint = opt.hint().clone();
-            let name = opt.name().clone();
             let uid = self.set.insert(opt);
 
-            trace!("Register a opt {}: {} --> {}", hint, name, uid);
+            trace!("Register a opt {:?} --> {}", name, uid);
         }
     }
 }
