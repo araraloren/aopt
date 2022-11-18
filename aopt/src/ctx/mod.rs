@@ -1,8 +1,8 @@
-pub(crate) mod ctx;
+pub(crate) mod context;
 pub(crate) mod extract;
 pub(crate) mod handler;
 
-pub use self::ctx::Ctx;
+pub use self::context::Ctx;
 pub use self::extract::Extract;
 pub use self::handler::Handler;
 
@@ -131,9 +131,9 @@ where
         let arg = ctx.arg();
         let arg = arg.as_ref().map(|v| v.as_ref());
         let uid = ctx.uid();
-        let mut act = set.opt(uid)?.action().clone();
+        let mut act = *set.opt(uid)?.action();
 
-        Ok(act.process(uid, set, ser, arg, val)?)
+        act.process(uid, set, ser, arg, val)
     })
 }
 
@@ -152,6 +152,6 @@ where
         let arg = arg.as_ref().map(|v| v.as_ref());
         let uid = ctx.uid();
 
-        Ok(store.process(uid, set, ser, arg, val)?)
+        store.process(uid, set, ser, arg, val)
     })
 }

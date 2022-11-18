@@ -75,12 +75,12 @@ impl<T> RawValService<T> {
     }
 
     pub fn push(&mut self, uid: Uid, ret: T) -> &mut Self {
-        self.rets.entry(uid).or_insert(vec![]).push(ret);
+        self.rets.entry(uid).or_default().push(ret);
         self
     }
 
     pub fn pop(&mut self, uid: Uid) -> Option<T> {
-        self.rets.entry(uid).or_insert(vec![]).pop()
+        self.rets.entry(uid).or_default().pop()
     }
 
     pub fn remove(&mut self, uid: Uid) -> Option<Vec<T>> {

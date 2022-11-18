@@ -37,11 +37,11 @@ fn split_once(str: &OsStr, ch: char) -> Option<(OsString, OsString)> {
     enc.iter()
         .enumerate()
         .find(|(_, ch)| ch == &&sep[0])
-        .and_then(|(idx, _)| {
-            Some((
+        .map(|(idx, _)| {
+            (
                 OsString::from_wide(&enc[0..idx]),
                 OsString::from_wide(&enc[idx + 1..]),
-            ))
+            )
         })
 }
 
@@ -149,7 +149,7 @@ impl CLOpt {
 
 const EQUAL: char = '=';
 
-const DISBALE: &'static str = "/";
+const DISBALE: &str = "/";
 
 impl ArgParser for OsStr {
     type Output = CLOpt;

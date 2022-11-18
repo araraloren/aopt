@@ -952,15 +952,11 @@ pub struct RawVal(Arc<crate::RawVal>);
 
 impl RawVal {
     pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
-        Ok(Self(
-            ctx.arg()
-                .ok_or_else(|| {
-                    Error::raise_error(
-                        "Consider using Option<RawVal> instead, cause the RawVal is an Option in Ctx",
-                    )
-                })?
-                .clone(),
-        ))
+        Ok(Self(ctx.arg().ok_or_else(|| {
+            Error::raise_error(
+                "Consider using Option<RawVal> instead, cause the RawVal is an Option in Ctx",
+            )
+        })?))
     }
 
     pub fn clone_rawval(&self) -> crate::RawVal {

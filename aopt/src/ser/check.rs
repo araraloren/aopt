@@ -73,7 +73,7 @@ where
     pub fn opt_check(&self, set: &mut Set) -> Result<bool, Error> {
         trace!("Opt Check, call valid on all Opt ...");
         for id in set.keys().iter().filter(|v| {
-            let opt = Self::opt(set, *v);
+            let opt = Self::opt(set, v);
             opt.mat_style(Style::Argument)
                 || opt.mat_style(Style::Boolean)
                 || opt.mat_style(Style::Combined)
@@ -103,13 +103,13 @@ where
                     match index {
                         Index::Forward(_) | Index::Backward(_) => {
                             if let Some(index) = index.calc_index(usize::MAX, 1) {
-                                let entry = index_map.entry(index).or_insert(vec![]);
+                                let entry = index_map.entry(index).or_default();
                                 entry.push(opt.uid());
                             }
                         }
                         Index::List(v) => {
                             for index in v {
-                                let entry = index_map.entry(*index).or_insert(vec![]);
+                                let entry = index_map.entry(*index).or_default();
                                 entry.push(opt.uid());
                             }
                         }
@@ -188,7 +188,7 @@ where
         Ok(set
             .keys()
             .iter()
-            .filter(|v| Self::opt(set, *v).mat_style(Style::Main))
+            .filter(|v| Self::opt(set, v).mat_style(Style::Main))
             .all(|v| Self::opt(set, v).valid()))
     }
 }

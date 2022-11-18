@@ -162,7 +162,7 @@ impl<Set> InvokeService<Set> {
     ) -> Result<Option<()>, Error> {
         let uid = ctx.uid();
         if let Some(callback) = self.callbacks.get_mut(&uid) {
-            return Ok(callback.invoke(set, ser, ctx)?);
+            return callback.invoke(set, ser, ctx);
         }
         unreachable!(
             "There is no callback of {}, call `invoke_default` instead",
@@ -191,12 +191,20 @@ where
         }
     }
 
-    /// Invoke the default option handler of [`InvokeService`].
+    /// The default handler for all option.
     ///
-    /// The default handler will parsing the argument into associated type value,
-    /// then call the action of option save the value to [`ValService`].
-    pub fn invoke_default(
-        &mut self,
+    /// If there no handler for a option, then default handler will be called.
+    /// It will parsing [`RawVal`](crate::RawVal)(using [`RawValParser`]) into associated type, then call the action
+    /// of option save the value to [`ValService`](crate::ser::ValService).
+    ///
+    /// * [`Assoc::Bool`] : bool
+    /// * [`Assoc::Int`] : i64
+    /// * [`Assoc::Uint`] : u64
+    /// * [`Assoc::Flt`] : f64
+    /// * [`Assoc::Str`] : String
+    /// * [`Assoc::Noa`] : bool
+    /// * [`Assoc::Null`] : nothing stored
+    pub fn default_handler(
         set: &mut Set,
         ser: &mut Services,
         ctx: &Ctx,
@@ -206,7 +214,7 @@ where
         let assoc = opt.assoc();
         let arg = ctx.arg();
         let val = arg.as_ref().map(|v| v.as_ref());
-        let mut action = opt.action().clone();
+        let mut action = *opt.action();
 
         trace!("Invoke default handler for {{{uid}}}, ctx{{{ctx:?}}}");
         match assoc {
@@ -218,6 +226,15 @@ where
             Assoc::Noa => action.process(uid, set, ser, val, val.map(|_| true)),
             Assoc::Null => Ok(Some(())),
         }
+    }
+
+    pub fn invoke_default(
+        &mut self,
+        set: &mut Set,
+        ser: &mut Services,
+        ctx: &Ctx,
+    ) -> Result<Option<()>, Error> {
+        Self::default_handler(set, ser, ctx)
     }
 }
 

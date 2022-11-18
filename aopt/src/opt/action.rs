@@ -76,7 +76,7 @@ where
             }
         }
 
-        Ok(has_value.then(|| ()))
+        Ok(has_value.then_some(()))
     }
 }
 

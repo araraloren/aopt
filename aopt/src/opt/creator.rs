@@ -308,7 +308,7 @@ impl Creator for BoolCreator {
         let optional = config.take_optional().unwrap_or(true);
         let assoc = config.take_assoc().unwrap_or(Assoc::Bool);
         let action = config.take_action().unwrap_or(Action::Set);
-        let value = if deactivate_style { true } else { false };
+        let value = deactivate_style;
 
         debug_assert_eq!(
             assoc,
@@ -381,7 +381,7 @@ impl Creator for PosCreator {
         let initiator = config.take_initiator().unwrap_or_default();
         let validator = config
             .take_validator()
-            .unwrap_or(ValValidator::some_validator());
+            .unwrap_or_else(ValValidator::some_validator);
 
         if let Some(v) = config.alias() {
             debug_assert!(v.is_empty(), "Pos option not support alias configruation")
@@ -443,7 +443,7 @@ impl Creator for CmdCreator {
         let initiator = config.take_initiator().unwrap_or_default();
         let validator = config
             .take_validator()
-            .unwrap_or(ValValidator::some_validator());
+            .unwrap_or_else(ValValidator::some_validator);
 
         if let Some(v) = config.alias() {
             debug_assert!(v.is_empty(), "Cmd option not support alias configruation")
@@ -513,7 +513,7 @@ impl Creator for MainCreator {
         let initiator = config.take_initiator().unwrap_or_default();
         let validator = config
             .take_validator()
-            .unwrap_or(ValValidator::null_validator());
+            .unwrap_or_else(ValValidator::null_validator);
 
         if let Some(v) = config.alias() {
             debug_assert!(v.is_empty(), "Main option not support alias configruation")

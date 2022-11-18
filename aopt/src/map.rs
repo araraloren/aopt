@@ -117,7 +117,7 @@ where
 
     pub fn or_insert(self, val: T) -> &'a mut T {
         self.inner
-            .or_insert(Box::new(val))
+            .or_insert_with(|| Box::new(val))
             .downcast_mut::<T>()
             .unwrap()
     }

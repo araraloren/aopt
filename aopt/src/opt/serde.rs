@@ -121,7 +121,7 @@ where
             .ok_or_else(|| {
                 Error::sp_invalid_option_value(
                     name,
-                    &format!("Can't deserialize string to value: invalid utf8",),
+                    "Can't deserialize string to value: invalid utf8",
                 )
             })?;
 

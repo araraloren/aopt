@@ -246,9 +246,7 @@ impl StrParser {
 
                     match (mat_beg, mat_end) {
                         (None, None) => {
-                            return Err(Error::raise_error(format!(
-                                "Not support empty index range"
-                            )))
+                            return Err(Error::raise_error("Not support empty index range"))
                         }
                         (None, Some(end)) => {
                             range =

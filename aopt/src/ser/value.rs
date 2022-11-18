@@ -93,7 +93,7 @@ impl ValService {
             .entry(uid)
             .or_default()
             .entry::<Vec<T>>()
-            .or_insert(vec![])
+            .or_insert_with(Vec::new)
             .push(val);
         self
     }
@@ -114,7 +114,7 @@ impl ValService {
     }
 
     pub fn entry<T>(&mut self, uid: Uid) -> ValEntry<'_, Vec<T>> {
-        ValEntry::new(uid, self.inner.entry(uid).or_insert(AnyMap::default()))
+        ValEntry::new(uid, self.inner.entry(uid).or_default())
     }
 
     pub fn val<T: 'static>(&self, uid: Uid) -> Result<&T, Error> {

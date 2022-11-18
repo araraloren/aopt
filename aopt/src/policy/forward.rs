@@ -311,8 +311,8 @@ mod test {
                 opt_uid,
                 optional
             );
-            assert_eq!(opt.action(), action);
-            assert_eq!(opt.assoc(), assoc);
+            assert_eq!(opt.action(), action, "action not equal for {}", opt_uid);
+            assert_eq!(opt.assoc(), assoc, "assoc not equal for {}", opt_uid);
             assert_eq!(opt.idx(), index, "option index not equal: {:?}", index);
             assert_eq!(
                 opt.is_deactivate(),
@@ -321,7 +321,12 @@ mod test {
             );
             if let Some(opt_vals) = T::vals(opt_uid, ser).ok() {
                 if let Some(vals) = vals {
-                    assert_eq!(opt_vals.len(), vals.len());
+                    assert_eq!(
+                        opt_vals.len(),
+                        vals.len(),
+                        "value length not equal for {}",
+                        opt_uid
+                    );
                     for (l, r) in opt_vals.iter().zip(vals.iter()) {
                         assert_eq!(
                             l, r,
@@ -372,6 +377,16 @@ mod test {
             )
         }
 
+        fn index_validator(idxs: Vec<usize>) -> ValValidator {
+            ValValidator::new(
+                move |_: &str,
+                      _: Option<&RawVal>,
+                      _: bool,
+                      idx: (usize, usize)|
+                      -> Result<bool, Error> { Ok(idxs.contains(&idx.0)) },
+            )
+        }
+
         let mut policy = AForward::default();
         let mut set = policy.default_set();
         let mut ser = policy.default_ser();
@@ -388,6 +403,8 @@ mod test {
                 "8",       // 2
                 "16",      // 3
                 "average", // 4
+                "--りょう",
+                "88",
                 "--jopt",
                 "2",
                 "--iopt-alias1",
@@ -395,11 +412,20 @@ mod test {
                 "--nopt=8.99",
                 "--hopt",
                 "48",
+                "--qopt=cpp",
                 "--alias-k=4",
                 "-l2.79",
                 "--nopt",
                 "3.12",
+                "--开关",
                 "-olily",
+                "program",  // 5
+                "software", // 6
+                "反转",   //7
+                "--值=恍恍惚惚",
+                "--qopt",
+                "rust",
+                "翻转", // 8
             ]
             .into_iter(),
         );
@@ -465,12 +491,23 @@ mod test {
                 },
             );
 
+        // 19
+        set.add_opt("--开关=b")?;
+        set.add_opt("--值=s")?;
+        set.add_opt("--りょう=i")?;
+
         let set_uid = set.add_opt("set=c")?.run()?;
         let bpos_uid = set.add_opt("bpos=p@[2,3]")?.set_assoc(Assoc::Uint).run()?;
         let cpos_uid = set
             .add_opt("cpos=p@4..5")?
             .set_validator(string_collection_validator(vec!["average", "plus"]))
             .run()?;
+        let dpos_uid = set
+            .add_opt("dpos=p@..7")?
+            .set_validator(index_validator(vec![5, 6]))
+            .set_action(Action::Set)
+            .run()?;
+        let epos_uid = set.add_opt("epos=p@7..")?.run()?;
 
         ser.ser_invoke_mut::<ASet>()?
             .entry(set.add_opt("main=m")?.run()?)
@@ -479,8 +516,38 @@ mod test {
                 let dopt = &set["dopt"];
                 let bpos = &set["bpos"];
                 let cpos = &set[cpos_uid];
+                let dpos = &set[dpos_uid];
+                let epos = &set["epos"];
 
                 assert_eq!(idx.deref(), &0);
+                check_opt_val::<String>(
+                    ser,
+                    epos,
+                    epos_uid,
+                    "epos",
+                    None,
+                    Some(vec!["反转".to_owned(), "翻转".to_owned()]),
+                    true,
+                    &Action::App,
+                    &Assoc::Noa,
+                    Some(&Index::Range(7, 0)),
+                    None,
+                    false,
+                )?;
+                check_opt_val::<String>(
+                    ser,
+                    dpos,
+                    dpos_uid,
+                    "dpos",
+                    None,
+                    Some(vec!["program -- software".to_owned()]),
+                    true,
+                    &Action::Set,
+                    &Assoc::Noa,
+                    Some(&Index::Range(0, 7)),
+                    None,
+                    false,
+                )?;
                 check_opt_val(
                     ser,
                     cpos,
@@ -539,6 +606,113 @@ mod test {
                 )?;
                 Ok(Some(true))
             });
+        ser.ser_invoke_mut()?.entry(epos_uid).on(
+            |set: &mut ASet, ser: &mut ASer, mut val: ctx::Value<String>, idx: ctx::Index| {
+                let ropt = &set["--开关"];
+                let sopt = &set["--值"];
+                let topt = &set["りょう"];
+
+                check_opt_val::<i64>(
+                    ser,
+                    topt,
+                    19,
+                    "りょう",
+                    Some("--"),
+                    Some(vec![88]),
+                    true,
+                    &Action::App,
+                    &Assoc::Int,
+                    None,
+                    None,
+                    false,
+                )?;
+                check_opt_val::<String>(
+                    ser,
+                    sopt,
+                    18,
+                    "值",
+                    Some("--"),
+                    Some(vec![String::from("恍恍惚惚")]),
+                    true,
+                    &Action::App,
+                    &Assoc::Str,
+                    None,
+                    None,
+                    false,
+                )?;
+                check_opt_val(
+                    ser,
+                    ropt,
+                    17,
+                    "开关",
+                    Some("--"),
+                    Some(vec![true]),
+                    true,
+                    &Action::Set,
+                    &Assoc::Bool,
+                    None,
+                    None,
+                    false,
+                )?;
+                assert!(idx.deref() == &7 || idx.deref() == &8);
+                Ok(Some(val.take()))
+            },
+        );
+        ser.ser_invoke_mut()?.entry(dpos_uid).on(
+            |set: &mut ASet, ser: &mut ASer, mut val: ctx::Value<String>, idx: ctx::Index| {
+                let oopt = &set["--oopt"];
+                let popt = &set["--popt"];
+                let qopt = &set["--qopt"];
+
+                check_opt_val::<String>(
+                    ser,
+                    qopt,
+                    16,
+                    "qopt",
+                    Some("--"),
+                    None,
+                    true,
+                    &Action::App,
+                    &Assoc::Str,
+                    None,
+                    None,
+                    false,
+                )?;
+                check_opt_val(
+                    ser,
+                    popt,
+                    15,
+                    "popt",
+                    Some("--"),
+                    Some(vec![String::from("cpp"), String::from("rust")]),
+                    true,
+                    &Action::App,
+                    &Assoc::Str,
+                    None,
+                    None,
+                    false,
+                )?;
+                check_opt_val(
+                    ser,
+                    oopt,
+                    14,
+                    "oopt",
+                    Some("--"),
+                    Some(vec![String::from("lily")]),
+                    false,
+                    &Action::App,
+                    &Assoc::Str,
+                    None,
+                    Some(vec![("-", "o")]),
+                    false,
+                )?;
+                assert!(idx.deref() == &5 || idx.deref() == &6);
+                match String::val(set["dpos"].uid(), &ser) {
+                    Ok(last_val) => Ok(Some(format!("{} -- {}", last_val, val.take()))),
+                    Err(_) => Ok(Some(val.take())),
+                }
+            },
+        );
         ser.ser_invoke_mut()?.entry(cpos_uid).on(
             |set: &mut ASet, ser: &mut ASer, val: ctx::Value<String>, idx: ctx::Index| {
                 let lopt = &set["--lopt"];

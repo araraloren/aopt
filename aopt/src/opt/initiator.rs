@@ -24,7 +24,9 @@ where
     }
 }
 
-pub struct ValInitiator(Box<dyn FnMut(Uid, &mut Services) -> Result<(), Error>>);
+pub type InitiatorHandler = Box<dyn FnMut(Uid, &mut Services) -> Result<(), Error>>;
+
+pub struct ValInitiator(InitiatorHandler);
 
 impl Default for ValInitiator {
     fn default() -> Self {
