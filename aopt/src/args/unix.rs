@@ -1,6 +1,13 @@
 use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt;
 
+use crate::args::ArgParser;
+use crate::astr;
+use crate::Arc;
+use crate::Error;
+use crate::RawVal;
+use crate::Str;
+
 fn strip_prefix<'a>(str: &'a OsStr, prefix: &str) -> Option<&'a OsStr> {
     let enc = str.as_bytes();
     let pre = prefix.as_bytes();
@@ -63,27 +70,26 @@ impl AOsStrExt for OsStr {
 /// # Example
 ///
 /// ```rust
-/// extern crate aopt as test_crate;
-///
-/// use test_crate::arg::CLOptParser;
-/// use test_crate::arg::ArgParser;
-/// use test_crate::astr;
-/// use test_crate::err::Result;
-///
-/// fn main() -> Result<()> {
-///     let mut parser = CLOptParser::default();
+/// # use aopt::prelude::*;
+/// # use aopt::Error;
+/// # use aopt::astr;
+/// # use aopt::Arc;
+/// # use aopt::RawVal;
+/// # use aopt::args::ArgParser;
+/// #
+/// # fn main() -> Result<(), Error> {
 ///     let prefixs = vec![astr("--"), astr("-")];
 ///
 ///     {// parse option with value
-///         let output = parser.parse(astr("--foo=32"), &prefixs)?;
+///         let output = RawVal::from("--foo=32").parse_arg(&prefixs)?;
 ///
 ///         assert_eq!(output.prefix, Some(astr("--")));
 ///         assert_eq!(output.name, Some(astr("foo")));
-///         assert_eq!(output.value, Some(astr("32")));
+///         assert_eq!(output.value, Some(Arc::new(RawVal::from("32"))));
 ///         assert_eq!(output.disable, false);
 ///     }
 ///     {// parse boolean option
-///         let output = parser.parse(astr("--/bar"), &prefixs)?;
+///         let output = RawVal::from("--/bar").parse_arg(&prefixs)?;
 ///
 ///         assert_eq!(output.prefix, Some(astr("--")));
 ///         assert_eq!(output.name, Some(astr("bar")));
@@ -91,18 +97,18 @@ impl AOsStrExt for OsStr {
 ///         assert_eq!(output.disable, true);
 ///     }
 ///     {// parse other string
-///         let output = parser.parse(astr("-=bar"), &prefixs);
+///         let output = RawVal::from("-=bar").parse_arg(&prefixs);
 ///
 ///         assert!(output.is_err());
 ///     }
-///     Ok(())
-/// }
+/// # Ok(())
+/// # }
 /// ```
 #[derive(Debug, Clone, Default)]
 pub struct CLOpt {
     pub name: Option<Str>,
 
-    pub value: Option<OsString>,
+    pub value: Option<Arc<RawVal>>,
 
     pub prefix: Option<Str>,
 
@@ -114,15 +120,15 @@ impl CLOpt {
         self.name.as_ref()
     }
 
-    pub fn value(&self) -> Option<&OsStr> {
-        self.value.map(|v| v.as_ref())
+    pub fn value(&self) -> Option<&Arc<RawVal>> {
+        self.value.as_ref()
     }
 
-    pub fn pre(&self) -> Option<&Str> {
+    pub fn prefix(&self) -> Option<&Str> {
         self.prefix.as_ref()
     }
 
-    pub fn dsb(&self) -> bool {
+    pub fn disable(&self) -> bool {
         self.disable
     }
 }
@@ -131,20 +137,21 @@ const EQUAL: char = '=';
 
 const DISBALE: &'static str = "/";
 
-impl ArgParser for OsStr {
+#[cfg(not(feature = "utf8"))]
+impl ArgParser for RawVal {
     type Output = CLOpt;
 
     type Error = Error;
 
-    fn parse(&self, prefixs: &[Str]) -> Result<Self::Output, Self::Error> {
+    fn parse_arg(&self, prefixs: &[Str]) -> Result<Self::Output, Self::Error> {
         for prefix in prefixs {
-            if let Some(with_out_pre) = self.strip_pre(prefix.as_str()) {
-                let (dsb, left) = if let Some(left) = with_out_pre.strip_pre(Self::DISBALE) {
+            if let Some(with_out_pre) = self.strip_prefix(prefix.as_str()) {
+                let (dsb, left) = if let Some(left) = with_out_pre.strip_prefix(DISBALE) {
                     (true, left)
                 } else {
                     (false, with_out_pre)
                 };
-                let (name, value) = if let Some((name, value)) = left.split_once(Self::EQUAL) {
+                let (name, value) = if let Some((name, value)) = left.split_once(EQUAL) {
                     (name, Some(value))
                 } else {
                     (left, None)
@@ -160,11 +167,54 @@ impl ArgParser for OsStr {
                 return Ok(Self::Output {
                     disable: dsb,
                     name: Some(astr(name)),
-                    value: value.map(|v| v.into()),
+                    value: value.map(|v| Arc::new(v.to_os_string().into())),
                     prefix: Some(prefix.clone()),
                 });
             }
         }
-        Err(Error::arg_parsing_failed(""))
+        Err(Error::arg_parsing_failed(format!(
+            "Not a valid option setting string: {:?}",
+            self
+        )))
+    }
+}
+
+#[cfg(feature = "utf8")]
+impl ArgParser for RawVal {
+    type Output = CLOpt;
+
+    type Error = Error;
+
+    fn parse_arg(&self, prefixs: &[Str]) -> Result<Self::Output, Self::Error> {
+        for prefix in prefixs {
+            if let Some(with_out_pre) = self.strip_prefix(prefix.as_str()) {
+                let (dsb, left) = if let Some(left) = with_out_pre.strip_prefix(DISBALE) {
+                    (true, left)
+                } else {
+                    (false, with_out_pre)
+                };
+                let (name, value) = if let Some((name, value)) = left.split_once(EQUAL) {
+                    (name, Some(value))
+                } else {
+                    (left, None)
+                };
+                let name = name
+                    .trim();
+
+                if name.is_empty() {
+                    return Err(Error::arg_missing_name(format!("Name can not be empty")));
+                }
+                return Ok(Self::Output {
+                    disable: dsb,
+                    name: Some(astr(name)),
+                    value: value.map(|v| Arc::new(v.into())),
+                    prefix: Some(prefix.clone()),
+                });
+            }
+        }
+        Err(Error::arg_parsing_failed(format!(
+            "Not a valid option setting string: {:?}",
+            self
+        )))
     }
 }
