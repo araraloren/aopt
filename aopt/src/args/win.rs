@@ -6,6 +6,7 @@ use super::ArgParser;
 use crate::astr;
 use crate::Arc;
 use crate::Error;
+use crate::RawVal;
 use crate::Str;
 
 fn strip_prefix(str: &OsStr, prefix: &str) -> Option<OsString> {
@@ -87,23 +88,22 @@ impl AOsStrExt for OsStr {
 /// # use aopt::Error;
 /// # use aopt::astr;
 /// # use aopt::Arc;
-/// # use std::ffi::OsStr;
-/// # use std::ffi::OsString;
+/// # use aopt::RawVal;
 /// # use aopt::args::ArgParser;
 /// #
 /// # fn main() -> Result<(), Error> {
 ///     let prefixs = vec![astr("--"), astr("-")];
 ///
 ///     {// parse option with value
-///         let output = OsStr::new("--foo=32").parse(&prefixs)?;
+///         let output = RawVal::from("--foo=32").parse_arg(&prefixs)?;
 ///
 ///         assert_eq!(output.prefix, Some(astr("--")));
 ///         assert_eq!(output.name, Some(astr("foo")));
-///         assert_eq!(output.value, Some(Arc::new(OsString::from("32"))));
+///         assert_eq!(output.value, Some(Arc::new(RawVal::from("32"))));
 ///         assert_eq!(output.disable, false);
 ///     }
 ///     {// parse boolean option
-///         let output = OsStr::new("--/bar").parse(&prefixs)?;
+///         let output = RawVal::from("--/bar").parse_arg(&prefixs)?;
 ///
 ///         assert_eq!(output.prefix, Some(astr("--")));
 ///         assert_eq!(output.name, Some(astr("bar")));
@@ -111,7 +111,7 @@ impl AOsStrExt for OsStr {
 ///         assert_eq!(output.disable, true);
 ///     }
 ///     {// parse other string
-///         let output = OsStr::new("-=bar").parse(&prefixs);
+///         let output = RawVal::from("-=bar").parse_arg(&prefixs);
 ///
 ///         assert!(output.is_err());
 ///     }
@@ -122,7 +122,7 @@ impl AOsStrExt for OsStr {
 pub struct CLOpt {
     pub name: Option<Str>,
 
-    pub value: Option<Arc<OsString>>,
+    pub value: Option<Arc<RawVal>>,
 
     pub prefix: Option<Str>,
 
@@ -134,7 +134,7 @@ impl CLOpt {
         self.name.as_ref()
     }
 
-    pub fn value(&self) -> Option<&Arc<OsString>> {
+    pub fn value(&self) -> Option<&Arc<RawVal>> {
         self.value.as_ref()
     }
 
@@ -151,12 +151,13 @@ const EQUAL: char = '=';
 
 const DISBALE: &str = "/";
 
+#[cfg(not(feature = "utf8"))]
 impl ArgParser for OsStr {
     type Output = CLOpt;
 
     type Error = Error;
 
-    fn parse(&self, prefixs: &[Str]) -> Result<Self::Output, Self::Error> {
+    fn parse_arg(&self, prefixs: &[Str]) -> Result<Self::Output, Self::Error> {
         for prefix in prefixs {
             if let Some(with_out_pre) = self.strip_prefix(prefix.as_str()) {
                 let (dsb, left) = if let Some(left) = with_out_pre.strip_prefix(DISBALE) {
@@ -179,10 +180,55 @@ impl ArgParser for OsStr {
                 if name.is_empty() {
                     return Err(Error::arg_missing_name("Name can not be empty"));
                 }
+
                 return Ok(Self::Output {
                     disable: dsb,
                     name: Some(astr(name)),
-                    value: value.map(|v| v.into()),
+                    value: value.map(|v| Arc::new(v.into())),
+                    prefix: Some(prefix.clone()),
+                });
+            }
+        }
+        Err(Error::arg_parsing_failed(format!(
+            "Not a valid option setting string: {:?}",
+            self
+        )))
+    }
+}
+
+#[cfg(feature = "utf8")]
+impl ArgParser for RawVal {
+    type Output = CLOpt;
+
+    type Error = Error;
+
+    fn parse_arg(&self, prefixs: &[Str]) -> Result<Self::Output, Self::Error> {
+        use std::ops::Deref;
+
+        for prefix in prefixs {
+            let inner = self.deref();
+
+            if let Some(with_out_pre) = inner.strip_prefix(prefix.as_str()) {
+                let (dsb, left) = if let Some(left) = with_out_pre.strip_prefix(DISBALE) {
+                    (true, left)
+                } else {
+                    (false, with_out_pre)
+                };
+                let (name, value) = if let Some((name, value)) = left.split_once(EQUAL) {
+                    (name, Some(value))
+                } else {
+                    (left, None)
+                };
+                let name = name.trim();
+
+                if name.is_empty() {
+                    return Err(Error::arg_missing_name("Name can not be empty"));
+                }
+
+                return Ok(Self::Output {
+                    disable: dsb,
+                    name: Some(astr(name)),
+                    value: value.map(|v| Arc::new(v.into())),
                     prefix: Some(prefix.clone()),
                 });
             }

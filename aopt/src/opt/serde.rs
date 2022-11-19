@@ -117,7 +117,7 @@ where
         let name = opt.name().as_str();
         let string = val
             .ok_or_else(|| Error::sp_missing_argument(name))?
-            .to_str()
+            .get_str()
             .ok_or_else(|| {
                 Error::sp_invalid_option_value(
                     name,

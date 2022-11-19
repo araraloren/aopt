@@ -20,7 +20,7 @@ macro_rules! impl_raw_val_parser {
                 let name = opt.name().as_str();
 
                 val.ok_or_else(|| Error::sp_missing_argument(name))?
-                    .to_str()
+                    .get_str()
                     .ok_or_else(|| {
                         Error::sp_invalid_option_value(
                             name,
@@ -54,7 +54,7 @@ impl<Opt: crate::opt::Opt> RawValParser<Opt> for String {
         let name = opt.name().as_str();
 
         val.ok_or_else(|| Error::sp_missing_argument(name))?
-            .to_str()
+            .get_str()
             .map(|v| v.to_string())
             .ok_or_else(|| {
                 Error::sp_invalid_option_value(name, "Can't convert value to String: invalid utf8")
@@ -69,7 +69,7 @@ impl<Opt: crate::opt::Opt> RawValParser<Opt> for bool {
         let name = opt.name().as_str();
         let val = val
             .ok_or_else(|| Error::sp_missing_argument(name))?
-            .to_str()
+            .get_str()
             .ok_or_else(|| {
                 Error::sp_invalid_option_value(name, "Can't convert value to bool: invalid utf8")
             })?;

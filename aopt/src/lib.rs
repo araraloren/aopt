@@ -6,24 +6,16 @@ pub mod map;
 pub mod opt;
 pub mod policy;
 pub mod proc;
+pub mod raw;
 pub mod ser;
 pub mod set;
 pub mod str;
 
 pub type Uid = u64;
 pub type HashMap<K, V> = ahash::HashMap<K, V>;
+pub type RawVal = raw::RawVal;
 cfg_if::cfg_if! {
-    if #[cfg(feature = "utf8")] {
-        pub type RawVal = String;
-        pub type RawValRef = str;
-    }
-    else {
-        pub type RawVal = std::ffi::OsString;
-        pub type RawValRef = std::ffi::OsStr;
-    }
-}
-cfg_if::cfg_if! {
-    if #[cfg(feature = "async")] {
+    if #[cfg(feature = "sync")] {
         pub type Arc<T> = std::sync::Arc<T>;
     }
     else {

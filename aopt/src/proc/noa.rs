@@ -172,7 +172,7 @@ where
     }
 
     /// Match the [`Opt`]'s name, prefix and style, index.
-    /// Then call the [`val`](Opt::val) check the argument.
+    /// Then call the [`check_val`](Opt::check_val) check the argument.
     /// If matched, set the setted of [`Opt`] and return true.
     fn process(&mut self, opt: &mut <Self::Set as Set>::Opt) -> Result<bool, Self::Error> {
         let mut matched = opt.mat_style(self.style);

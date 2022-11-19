@@ -16,7 +16,7 @@ pub trait ArgParser {
     type Output;
     type Error: Into<Error>;
 
-    fn parse(&self, prefixs: &[Str]) -> Result<Self::Output, Self::Error>;
+    fn parse_arg(&self, prefixs: &[Str]) -> Result<Self::Output, Self::Error>;
 }
 
 #[derive(Debug, Clone, Default)]

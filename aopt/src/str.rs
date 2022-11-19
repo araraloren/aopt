@@ -15,6 +15,7 @@ pub trait StrJoin {
     fn join(&self, sep: &str) -> String;
 }
 
+///
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Str(Arc<str>);
 

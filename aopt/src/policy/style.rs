@@ -285,7 +285,7 @@ where
         let name = (pos > 0)
             .then(|| args.get(pos.saturating_sub(1)))
             .flatten()
-            .and_then(|v| v.to_str())
+            .and_then(|v| v.get_str())
             .map(Str::from);
 
         match style {

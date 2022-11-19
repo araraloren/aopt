@@ -81,7 +81,7 @@ macro_rules! num_validator {
                 _: (usize, usize),
             ) -> Result<bool, Error> {
                 Ok(val
-                    .and_then(|v| v.to_str())
+                    .and_then(|v| v.get_str())
                     .and_then(|v| v.parse::<$num>().ok())
                     .is_some())
             }
@@ -123,7 +123,7 @@ impl ValValidator {
                   disable: bool,
                   _: (usize, usize)|
                   -> Result<bool, Error> {
-                if let Some(val) = val.and_then(|v| v.to_str()) {
+                if let Some(val) = val.and_then(|v| v.get_str()) {
                     if deactivate_style && disable && val == crate::opt::BOOL_FALSE
                         || !deactivate_style && !disable && val == crate::opt::BOOL_TRUE
                     {
@@ -142,7 +142,7 @@ impl ValValidator {
                   _: bool,
                   _: (usize, usize)|
                   -> Result<bool, Error> {
-                Ok(val.map(|v| v.to_str().is_some()).unwrap_or_default())
+                Ok(val.map(|v| v.get_str().is_some()).unwrap_or_default())
             },
         )
     }

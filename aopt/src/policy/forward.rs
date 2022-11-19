@@ -180,7 +180,7 @@ where
             let mut consume = false;
             let arg = arg.map(|v| Arc::new(v.clone()));
 
-            if let Ok(clopt) = opt.parse(set.prefix()) {
+            if let Ok(clopt) = opt.parse_arg(set.prefix()) {
                 for style in stys.iter() {
                     if let Some(mut proc) = OptGuess::new()
                         .guess(style, GuessOptCfg::new(idx, args_len, arg.clone(), &clopt))?
@@ -369,7 +369,7 @@ mod test {
                       _: (usize, usize)|
                       -> Result<bool, Error> {
                     Ok(val
-                        .map(|v| v.to_str())
+                        .map(|v| v.get_str())
                         .flatten()
                         .map(|v| vals.contains(&v))
                         .unwrap_or_default())
