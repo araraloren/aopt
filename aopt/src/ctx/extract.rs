@@ -4,6 +4,7 @@ use crate::Error;
 
 /// Implement the trait if your want use your type in the
 /// [`Callback`](super::Callback) of [`InvokeService`](crate::ser::InvokeService).
+/// Return an [`Error::SpExtractError`] if any error occured.
 pub trait Extract<Set>
 where
     Self: Sized,

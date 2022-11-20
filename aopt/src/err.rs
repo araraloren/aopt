@@ -90,6 +90,8 @@ pub enum Error {
 
     ConParsingIndexFailed(ErrorStr, ErrorStr),
 
+    SpExtractError(ErrorStr),
+
     SpMissingArgument(ErrorStr),
 
     SpOptForceRequired(ErrorStr),
@@ -140,6 +142,7 @@ impl Error {
                 | Error::SpInvalidOptionName(_)
                 | Error::SpInvalidOptionValue(_, _)
                 | Error::SpDeactivateStyleError(_, _)
+                | Error::SpExtractError(_)
                 | Error::InvokeError(_)
         )
     }
@@ -242,6 +245,10 @@ impl Error {
         Self::SpDeactivateStyleError(t.into(), support)
     }
 
+    pub fn sp_extract_error<T: Into<ErrorStr>>(t: T) -> Self {
+        Self::SpExtractError(t.into())
+    }
+
     pub fn invoke_error<T: Into<ErrorStr>>(t: T) -> Self {
         Self::InvokeError(t.into())
     }
@@ -313,6 +320,9 @@ impl Error {
                     "Syntax error, option '{msg}' {} support deactivate style",
                     if *support { "only" } else { "not" }
                 )
+            }
+            Error::SpExtractError(msg) => {
+                format!("Extract error: {}", msg)
             }
             Error::InvokeError(msg) => msg.to_string(),
         }

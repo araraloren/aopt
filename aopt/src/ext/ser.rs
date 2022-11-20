@@ -195,7 +195,20 @@ impl<T> Value<T> {
 
 impl<T: 'static> Value<T> {
     pub fn extract_ser(ser: &Services) -> Result<Self, Error> {
-        Ok(ser.ser_usrval()?.val::<Value<T>>()?.clone())
+        Ok(ser
+            .ser_usrval()
+            .map_err(|e| {
+                Error::sp_extract_error(format!("can not access UsrValServices: {:?}", e))
+            })?
+            .val::<Value<T>>()
+            .map_err(|e| {
+                Error::sp_extract_error(format!(
+                    "can not get value of type {}: {:?}",
+                    std::any::type_name::<Value<T>>(),
+                    e
+                ))
+            })?
+            .clone())
     }
 }
 

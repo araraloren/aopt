@@ -554,8 +554,8 @@ impl Name {
         Ok(Self(
             ctx.name()
                 .ok_or_else(|| {
-                    Error::raise_error(
-                        "Consider using Option<Name> instead, cause the name is an Option in Ctx",
+                    Error::sp_extract_error(
+                        "consider using Option<Name> instead, Name maybe not exist",
                     )
                 })?
                 .clone(),
@@ -652,8 +652,8 @@ impl Prefix {
         Ok(Self(
             ctx.prefix()
                 .ok_or_else(|| {
-                    Error::raise_error(
-                        "Consider using Option<Prefix> instead, cause the Prefix is an Option in Ctx",
+                    Error::sp_extract_error(
+                        "consider using Option<Prefix> instead, Prefix may be not exist",
                     )
                 })?
                 .clone(),
@@ -953,9 +953,7 @@ pub struct RawVal(Arc<crate::RawVal>);
 impl RawVal {
     pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
         Ok(Self(ctx.arg().ok_or_else(|| {
-            Error::raise_error(
-                "Consider using Option<RawVal> instead, cause the RawVal is an Option in Ctx",
-            )
+            Error::sp_extract_error("consider using Option<RawVal> instead, RawVal maybe not exist")
         })?))
     }
 
@@ -1127,9 +1125,13 @@ impl<S: Set, T: RawValParser<<S as Set>::Opt>> Extract<S> for Value<T> {
         let arg = arg.as_ref().map(|v| v.as_ref());
         let uid = ctx.uid();
 
-        Ok(Value(
-            T::parse(set.opt(uid)?, arg, ctx).map_err(|e| e.into())?,
-        ))
+        Ok(Value(T::parse(set.opt(uid)?, arg, ctx).map_err(|e| {
+            Error::sp_extract_error(format!(
+                "failed parsing raw value of {{{}}}: {}",
+                uid,
+                e.into()
+            ))
+        })?))
     }
 }
 
