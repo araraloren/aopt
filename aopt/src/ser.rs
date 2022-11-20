@@ -70,6 +70,14 @@ pub trait Service {
 #[derive(Debug, Default)]
 pub struct Services(AnyMap);
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        unsafe impl Send for Services { }
+
+        unsafe impl Sync for Services { }
+    }
+}
+
 impl Services {
     pub fn new() -> Self {
         Self(AnyMap::new())
@@ -117,6 +125,7 @@ impl Services {
         })
     }
 
+    /// Take the [`Service`].
     pub fn take<T: Service + 'static>(&mut self) -> Result<T, Error> {
         self.remove::<T>().ok_or_else(|| {
             Error::raise_error(format!("Unknown type {} for Services", T::service_name(),))

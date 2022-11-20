@@ -26,18 +26,18 @@ use crate::Uid;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<()> {
-///     let mut set = OptSet::<StrParser, Box<dyn Creator<Opt = AOpt, Config = OptConfig, Error = Error>>>::default();
+///  let mut set = OptSet::<StrParser, Box<dyn Creator<Opt = AOpt, Config = OptConfig, Error = Error>>>::default();
 ///
-///     // add prefix for option
-///     set.add_prefix("/");
-///     // add bool creator
-///     set.register(BoolCreator::boxed());
-///     // create a bool option
-///     set.add_opt("/foo=b")?.run()?;
-///     // filter the set option
-///     assert_eq!(set.filter("foo")?.find_all().count(), 1);
+///  // add prefix for option
+///  set.add_prefix("/");
+///  // add bool creator
+///  set.register(BoolCreator::boxed());
+///  // create a bool option
+///  set.add_opt("/foo=b")?.run()?;
+///  // filter the set option
+///  assert_eq!(set.filter("foo")?.find_all().count(), 1);
 ///
-///     Ok(())
+///  Ok(())
 /// # }
 /// ```
 pub struct OptSet<Parser, Ctor>

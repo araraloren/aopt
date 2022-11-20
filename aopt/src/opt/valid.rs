@@ -30,6 +30,14 @@ where
 
 pub struct ValValidator(Box<dyn RawValValidator>);
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        unsafe impl Send for ValValidator { }
+
+        unsafe impl Sync for ValValidator { }
+    }
+}
+
 impl Default for ValValidator {
     fn default() -> Self {
         fn __default(

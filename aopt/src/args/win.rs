@@ -152,7 +152,7 @@ const EQUAL: char = '=';
 const DISBALE: &str = "/";
 
 #[cfg(not(feature = "utf8"))]
-impl ArgParser for OsStr {
+impl ArgParser for RawVal {
     type Output = CLOpt;
 
     type Error = Error;

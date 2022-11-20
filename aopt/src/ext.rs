@@ -81,15 +81,28 @@ pub type ASer = Services;
 pub type AForward = Forward<ASet>;
 
 impl AForward {
+    /// Get default [`ASet`] for forward policy.
     pub fn default_set(&self) -> ASet {
         aset_with_default_creators()
     }
 
-    pub fn default_ser(&self) -> Services {
+    /// Get default [`ASer`] for forward policy.
+    pub fn default_ser(&self) -> ASer {
         aser_with_default_service::<ASet>()
     }
 }
 
+/// Return an [`Set`](crate::set::Set) with default prefix `-` and `--`,
+/// and below [`Creator`]s:
+///
+/// * [`IntCreator`]
+/// * [`BoolCreator`]
+/// * [`UintCreator`]
+/// * [`StrCreator`]
+/// * [`FltCreator`]
+/// * [`CmdCreator`]
+/// * [`PosCreator`]
+/// * [`MainCreator`]
 pub fn aset_with_default_creators() -> ASet {
     ASet::default()
         .with_prefix("--")
@@ -104,6 +117,13 @@ pub fn aset_with_default_creators() -> ASet {
         .with_creator(MainCreator::boxed())
 }
 
+/// Return an [`Services`] with below [`Service`](crate::ser::Service)s:
+///
+/// * [`CheckService`]
+/// * [`UsrValService`]
+/// * [`InvokeService`]
+/// * [`RawValService`]
+/// * [`ValService`]
 pub fn aser_with_default_service<S: 'static>() -> Services {
     Services::default()
         .with(CheckService::<S>::new())

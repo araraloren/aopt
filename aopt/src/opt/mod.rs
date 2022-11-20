@@ -125,16 +125,33 @@ pub trait Opt: Debug {
     ) -> Result<bool, Error>;
 }
 
-pub trait Creator {
-    type Opt;
-    type Config;
-    type Error: Into<Error>;
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        pub trait Creator: Send + Sync {
+            type Opt;
+            type Config;
+            type Error: Into<Error>;
 
-    fn r#type(&self) -> Str;
+            fn r#type(&self) -> Str;
 
-    fn sp_deactivate(&self) -> bool;
+            fn sp_deactivate(&self) -> bool;
 
-    fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error>;
+            fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error>;
+        }
+    }
+    else {
+        pub trait Creator {
+            type Opt;
+            type Config;
+            type Error: Into<Error>;
+
+            fn r#type(&self) -> Str;
+
+            fn sp_deactivate(&self) -> bool;
+
+            fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error>;
+        }
+    }
 }
 
 impl<Opt, Config, Err: Into<Error>> Creator

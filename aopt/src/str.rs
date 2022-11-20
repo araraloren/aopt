@@ -15,7 +15,7 @@ pub trait StrJoin {
     fn join(&self, sep: &str) -> String;
 }
 
-///
+/// A simple wrapper of [`Arc`](crate::Arc)\<str\>.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Str(Arc<str>);
 

@@ -198,8 +198,7 @@ impl ArgParser for RawVal {
                 } else {
                     (left, None)
                 };
-                let name = name
-                    .trim();
+                let name = name.trim();
 
                 if name.is_empty() {
                     return Err(Error::arg_missing_name(format!("Name can not be empty")));

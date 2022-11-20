@@ -28,6 +28,14 @@ pub type InitiatorHandler = Box<dyn FnMut(Uid, &mut Services) -> Result<(), Erro
 
 pub struct ValInitiator(InitiatorHandler);
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        unsafe impl Send for ValInitiator { }
+
+        unsafe impl Sync for ValInitiator { }
+    }
+}
+
 impl Default for ValInitiator {
     fn default() -> Self {
         Self::null_initiator()
