@@ -10,7 +10,7 @@
 //! # use std::ops::Deref;
 //! #
 //! # fn main() -> Result<(), Error> {
-//! let mut policy = AForward::default();
+//! let mut policy = AFwdPolicy::default();
 //! let mut set = policy.default_set();
 //! let mut ser = policy.default_ser();
 //!
@@ -115,7 +115,7 @@ impl<S> Extract<S> for Ctx {
 /// # use aopt::Arc;
 /// #
 /// # fn main() -> Result<(), Error> {
-///   let mut policy = AForward::default();
+///   let mut policy = AFwdPolicy::default();
 ///   let mut set = policy.default_set();
 ///   let mut ser = policy.default_ser();
 ///
@@ -195,7 +195,7 @@ impl Display for Uid {
 /// # use std::ops::Deref;
 /// #
 /// # fn main() -> Result<(), Error> {
-/// let mut policy = AForward::default();
+/// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
 /// let mut ser = policy.default_ser();
 ///
@@ -304,7 +304,7 @@ impl Display for Index {
 /// # use std::ops::Deref;
 /// #
 /// # fn main() -> Result<(), Error> {
-/// let mut policy = AForward::default();
+/// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
 /// let mut ser = policy.default_ser();
 ///
@@ -401,7 +401,7 @@ impl Display for Total {
 /// # use std::ops::Deref;
 /// #
 /// # fn main() -> Result<(), Error> {
-/// let mut policy = AForward::default();
+/// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
 /// let mut ser = policy.default_ser();
 ///
@@ -484,7 +484,7 @@ impl<S: Set> Extract<S> for Args {
 /// # use std::ops::Deref;
 /// #
 /// # fn main() -> Result<(), Error> {
-/// let mut policy = AForward::default();
+/// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
 /// let mut ser = policy.default_ser();
 ///
@@ -601,7 +601,7 @@ impl Display for Name {
 /// # use std::ops::Deref;
 /// #
 /// # fn main() -> Result<(), Error> {
-/// let mut policy = AForward::default();
+/// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
 /// let mut ser = policy.default_ser();
 ///
@@ -699,7 +699,7 @@ impl Display for Prefix {
 /// # use std::ops::Deref;
 /// #
 /// # fn main() -> Result<(), Error> {
-/// let mut policy = AForward::default();
+/// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
 /// let mut ser = policy.default_ser();
 ///
@@ -797,7 +797,7 @@ impl<S: Set> Extract<S> for Style {
 /// # use std::ops::Deref;
 /// #
 /// # fn main() -> Result<(), Error> {
-/// let mut policy = AForward::default();
+/// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
 /// let mut ser = policy.default_ser();
 ///
@@ -896,7 +896,7 @@ impl<S: Set> Extract<S> for Disable {
 /// # use std::ops::Deref;
 /// #
 /// # fn main() -> Result<(), Error> {
-/// let mut policy = AForward::default();
+/// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
 /// let mut ser = policy.default_ser();
 ///
@@ -988,7 +988,7 @@ impl<S: Set> Extract<S> for RawVal {
 /// # use std::ops::Deref;
 /// #
 /// # fn main() -> Result<(), Error> {
-/// let mut policy = AForward::default();
+/// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
 /// let mut ser = policy.default_ser();
 ///

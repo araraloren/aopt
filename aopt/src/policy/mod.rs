@@ -1,8 +1,10 @@
 pub(crate) mod forward;
+pub(crate) mod pre;
 pub(crate) mod process;
 pub(crate) mod style;
 
-pub use self::forward::Forward;
+pub use self::forward::FwdPolicy;
+pub use self::pre::PrePolicy;
 pub use self::style::Guess;
 pub use self::style::GuessNOACfg;
 pub use self::style::GuessOptCfg;

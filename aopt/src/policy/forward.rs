@@ -26,7 +26,7 @@ use crate::set::Set;
 use crate::Arc;
 use crate::Error;
 
-/// Forward process the option before any
+/// FwdPolicy process the option before any
 /// NOA([`Cmd`](crate::opt::Style::Cmd), [`Pos`](crate::opt::Style::Pos) and [`Main`](crate::opt::Style::Main)).
 ///
 /// You can get the value of any option in the handler of NOA.
@@ -38,7 +38,7 @@ use crate::Error;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<(), Error> {
-/// let mut policy = AForward::default();
+/// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
 /// let mut ser = policy.default_ser();
 ///
@@ -91,13 +91,13 @@ use crate::Error;
 /// # }
 /// ```
 #[derive(Debug, Clone)]
-pub struct Forward<S> {
+pub struct FwdPolicy<S> {
     strict: bool,
 
     marker_s: PhantomData<S>,
 }
 
-impl<S> Default for Forward<S> {
+impl<S> Default for FwdPolicy<S> {
     fn default() -> Self {
         Self {
             strict: true,
@@ -106,7 +106,7 @@ impl<S> Default for Forward<S> {
     }
 }
 
-impl<S> Forward<S>
+impl<S> FwdPolicy<S>
 where
     S::Opt: Opt,
     S: Set + OptParser + Debug + 'static,
@@ -135,7 +135,7 @@ where
     }
 }
 
-impl<S> Policy for Forward<S>
+impl<S> Policy for FwdPolicy<S>
 where
     S::Opt: Opt,
     S: Set + OptParser + Pre + Debug + 'static,
@@ -387,7 +387,7 @@ mod test {
             )
         }
 
-        let mut policy = AForward::default();
+        let mut policy = AFwdPolicy::default();
         let mut set = policy.default_set();
         let mut ser = policy.default_ser();
         let args = Args::new(

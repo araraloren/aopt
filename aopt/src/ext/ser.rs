@@ -147,7 +147,7 @@ where
 /// }
 ///
 ///
-/// let mut policy = AForward::default();
+/// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
 /// let mut ser = policy.default_ser();
 ///

@@ -10,7 +10,8 @@ use crate::opt::PosCreator;
 use crate::opt::StrCreator;
 use crate::opt::StrParser;
 use crate::opt::UintCreator;
-use crate::policy::Forward;
+use crate::policy::FwdPolicy;
+use crate::policy::PrePolicy;
 use crate::ser::CheckService;
 use crate::ser::InvokeService;
 use crate::ser::RawValService;
@@ -78,9 +79,11 @@ pub type ASet = OptSet<StrParser, ACreator>;
 
 pub type ASer = Services;
 
-pub type AForward = Forward<ASet>;
+pub type AFwdPolicy = FwdPolicy<ASet>;
 
-impl AForward {
+pub type APrePolicy = PrePolicy<ASet>;
+
+impl AFwdPolicy {
     /// Get default [`ASet`] for forward policy.
     pub fn default_set(&self) -> ASet {
         aset_with_default_creators()

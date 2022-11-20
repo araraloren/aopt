@@ -74,8 +74,9 @@ pub mod prelude {
     pub use crate::opt::ValInitialize;
     pub use crate::opt::ValInitiator;
     pub use crate::opt::ValValidator;
-    pub use crate::policy::Forward;
+    pub use crate::policy::FwdPolicy;
     pub use crate::policy::Policy;
+    pub use crate::policy::PrePolicy;
     pub use crate::proc::Match;
     pub use crate::proc::NOAMatch;
     pub use crate::proc::NOAProcess;

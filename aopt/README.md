@@ -30,7 +30,7 @@ use aopt::SingleApp;
 use aopt::Result;
 
 fn main() -> Result<()> {
-    let mut single_app = SingleApp::<SimpleSet, DefaultService, ForwardPolicy>::default()
+    let mut single_app = SingleApp::<SimpleSet, DefaultService, FwdPolicyPolicy>::default()
         .with_name("example".into());
 
     // default prefix of SimpleSet is '-' and '--'
@@ -117,9 +117,9 @@ use aopt::err::Result;
 use aopt::prelude::*;
 
 fn main() -> Result<()> {
-    let mut list = Parser::<SimpleSet, DefaultService, ForwardPolicy>::default();
-    let mut update = Parser::<SimpleSet, DefaultService, ForwardPolicy>::default();
-    let mut install = Parser::<SimpleSet, DefaultService, ForwardPolicy>::default();
+    let mut list = Parser::<SimpleSet, DefaultService, FwdPolicyPolicy>::default();
+    let mut update = Parser::<SimpleSet, DefaultService, FwdPolicyPolicy>::default();
+    let mut install = Parser::<SimpleSet, DefaultService, FwdPolicyPolicy>::default();
 
     list.add_opt("list=c")?.commit()?;
     list.add_opt("ls=c")?.commit()?;
@@ -253,7 +253,7 @@ fn main() -> aopt::Result<()> {
     )?
     .commit()?;
 
-    let mut copy = DynParser::<SimpleSet, DefaultService>::new_policy(ForwardPolicy::default());
+    let mut copy = DynParser::<SimpleSet, DefaultService>::new_policy(FwdPolicyPolicy::default());
 
     copy.add_opt("copy=c")?.commit()?;
     copy.add_opt_cb(
