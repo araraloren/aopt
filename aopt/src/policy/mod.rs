@@ -1,10 +1,12 @@
-pub(crate) mod forward;
-pub(crate) mod pre;
+pub(crate) mod policy_delay;
+pub(crate) mod policy_fwd;
+pub(crate) mod policy_pre;
 pub(crate) mod process;
 pub(crate) mod style;
 
-pub use self::forward::FwdPolicy;
-pub use self::pre::PrePolicy;
+pub use self::policy_delay::DelayPolicy;
+pub use self::policy_fwd::FwdPolicy;
+pub use self::policy_pre::PrePolicy;
 pub use self::style::Guess;
 pub use self::style::GuessNOACfg;
 pub use self::style::GuessOptCfg;

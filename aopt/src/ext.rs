@@ -10,6 +10,7 @@ use crate::opt::PosCreator;
 use crate::opt::StrCreator;
 use crate::opt::StrParser;
 use crate::opt::UintCreator;
+use crate::policy::DelayPolicy;
 use crate::policy::FwdPolicy;
 use crate::policy::PrePolicy;
 use crate::ser::CheckService;
@@ -73,6 +74,12 @@ pub trait ServicesUsrValExt<T: 'static> {
     fn usr_val_mut(ser: &mut Services) -> Result<&mut T, Error>;
 }
 
+pub trait APolicyExt<I: crate::set::Set> {
+    fn default_ser(&self) -> ASer;
+
+    fn default_set(&self) -> I;
+}
+
 pub type ACreator = Box<dyn Creator<Opt = AOpt, Config = OptConfig, Error = Error>>;
 
 pub type ASet = OptSet<StrParser, ACreator>;
@@ -83,14 +90,40 @@ pub type AFwdPolicy = FwdPolicy<ASet>;
 
 pub type APrePolicy = PrePolicy<ASet>;
 
-impl AFwdPolicy {
+pub type ADelayPolicy = DelayPolicy<ASet>;
+
+impl APolicyExt<ASet> for AFwdPolicy {
     /// Get default [`ASet`] for forward policy.
-    pub fn default_set(&self) -> ASet {
+    fn default_set(&self) -> ASet {
         aset_with_default_creators()
     }
 
     /// Get default [`ASer`] for forward policy.
-    pub fn default_ser(&self) -> ASer {
+    fn default_ser(&self) -> ASer {
+        aser_with_default_service::<ASet>()
+    }
+}
+
+impl APolicyExt<ASet> for APrePolicy {
+    /// Get default [`ASet`] for forward policy.
+    fn default_set(&self) -> ASet {
+        aset_with_default_creators()
+    }
+
+    /// Get default [`ASer`] for forward policy.
+    fn default_ser(&self) -> ASer {
+        aser_with_default_service::<ASet>()
+    }
+}
+
+impl APolicyExt<ASet> for ADelayPolicy {
+    /// Get default [`ASet`] for forward policy.
+    fn default_set(&self) -> ASet {
+        aset_with_default_creators()
+    }
+
+    /// Get default [`ASer`] for forward policy.
+    fn default_ser(&self) -> ASer {
         aser_with_default_service::<ASet>()
     }
 }

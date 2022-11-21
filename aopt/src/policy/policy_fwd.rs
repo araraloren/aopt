@@ -133,6 +133,11 @@ where
     pub fn get_strict(&self) -> bool {
         self.strict
     }
+
+    /// Return the NOA index base on 1.
+    pub fn noa_idx(idx: usize) -> usize {
+        idx + 1
+    }
 }
 
 impl<S> Policy for FwdPolicy<S>
@@ -230,9 +235,9 @@ where
         if noa_args.len() > 0 {
             if let Some(mut proc) = NOAGuess::new().guess(
                 &UserStyle::Cmd,
-                GuessNOACfg::new(noa_args.clone(), 1, noa_len),
+                GuessNOACfg::new(noa_args.clone(), Self::noa_idx(0), noa_len),
             )? {
-                noa_ctx.set_idx(1);
+                noa_ctx.set_idx(Self::noa_idx(0));
                 process_non_opt::<S>(&noa_ctx, set, ser, &mut proc, &mut is)?;
             }
 
@@ -241,9 +246,9 @@ where
             for idx in 0..noa_len {
                 if let Some(mut proc) = NOAGuess::new().guess(
                     &UserStyle::Pos,
-                    GuessNOACfg::new(noa_args.clone(), idx + 1, noa_len),
+                    GuessNOACfg::new(noa_args.clone(), Self::noa_idx(idx), noa_len),
                 )? {
-                    noa_ctx.set_idx(idx + 1);
+                    noa_ctx.set_idx(Self::noa_idx(idx));
                     process_non_opt::<S>(&noa_ctx, set, ser, &mut proc, &mut is)?;
                 }
             }
