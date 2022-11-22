@@ -87,7 +87,7 @@ impl<'a> GuessOptCfg<'a> {
         self.idx
     }
 
-    pub fn len(&self) -> usize {
+    pub fn total(&self) -> usize {
         self.len
     }
 
@@ -134,7 +134,7 @@ where
     ) -> Result<Option<Self::Process>, Error> {
         let mut matches = vec![];
         let index = cfg.idx();
-        let count = cfg.len();
+        let count = cfg.total();
         let clopt = &cfg.clopt;
 
         match style {
@@ -143,7 +143,7 @@ where
                     matches.push(
                         OptMatch::default()
                             .with_idx(index)
-                            .with_len(count)
+                            .with_total(count)
                             .with_arg(clopt.value.clone())
                             .with_style(Style::Argument)
                             .with_disable(clopt.disable)
@@ -157,7 +157,7 @@ where
                     matches.push(
                         OptMatch::default()
                             .with_idx(index)
-                            .with_len(count)
+                            .with_total(count)
                             .with_consume(true)
                             .with_arg(cfg.arg().cloned())
                             .with_style(Style::Argument)
@@ -176,7 +176,7 @@ where
                             matches.push(
                                 OptMatch::default()
                                     .with_idx(index)
-                                    .with_len(count)
+                                    .with_total(count)
                                     .with_arg(Some(RawVal::from(name_value.1).into()))
                                     .with_style(Style::Argument)
                                     .with_disable(clopt.disable)
@@ -195,7 +195,7 @@ where
                                 matches.push(
                                     OptMatch::default()
                                         .with_idx(index)
-                                        .with_len(count)
+                                        .with_total(count)
                                         .with_arg(None)
                                         .with_style(Style::Combined)
                                         .with_disable(clopt.disable)
@@ -212,7 +212,7 @@ where
                     matches.push(
                         OptMatch::default()
                             .with_idx(index)
-                            .with_len(count)
+                            .with_total(count)
                             .with_arg(Some(OptGuess::<S>::bool2str(!clopt.disable)))
                             .with_style(Style::Boolean)
                             .with_disable(clopt.disable)
@@ -245,7 +245,7 @@ impl GuessNOACfg {
         self.index
     }
 
-    pub fn len(&self) -> usize {
+    pub fn total(&self) -> usize {
         self.total
     }
 }
@@ -281,7 +281,7 @@ where
         let mat;
         let args = cfg.args.clone();
         let pos = cfg.idx();
-        let count = cfg.len();
+        let count = cfg.total();
         let name = (pos > 0)
             .then(|| args.get(pos.saturating_sub(1)))
             .flatten()
@@ -295,7 +295,7 @@ where
                         .with_name(name)
                         .with_args(args)
                         .with_idx(pos)
-                        .with_len(count)
+                        .with_total(count)
                         .with_style(Style::Main)
                         .reset_arg(),
                 );
@@ -306,7 +306,7 @@ where
                         .with_name(name)
                         .with_args(args)
                         .with_idx(pos)
-                        .with_len(count)
+                        .with_total(count)
                         .with_style(Style::Pos)
                         .reset_arg(),
                 );
@@ -317,7 +317,7 @@ where
                         .with_name(name)
                         .with_args(args)
                         .with_idx(pos)
-                        .with_len(count)
+                        .with_total(count)
                         .with_style(Style::Cmd)
                         .reset_arg(),
                 );

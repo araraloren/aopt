@@ -176,7 +176,7 @@ where
     /// Add an option into current [`OptSet`].
     ///
     /// It parsing the given option string `S` using inner [`OptParser`], return an [`Commit`].
-    /// For option string, reference [`OptStringParser`](crate::opt::OptStringParser).
+    /// For option string, reference [`StrParser`](crate::opt::StrParser).
     pub fn add_opt<S: Into<Str>>(&mut self, opt_str: S) -> Result<Commit<'_, Parser, Ctor>, Error> {
         Ok(Commit::new(
             self,
@@ -187,7 +187,7 @@ where
     /// Filter the option by configuration.
     ///
     /// It parsing the given option string `S` using inner [`OptParser`], return an [`Filter`].
-    /// For option string, reference [`OptStringParser`](crate::opt::OptStringParser).
+    /// For option string, reference [`StrParser`](crate::opt::StrParser).
     pub fn filter<S: Into<Str>>(&self, opt_str: S) -> Result<Filter<'_, Parser, Ctor>, Error> {
         Ok(Filter::new(
             self,
@@ -213,7 +213,7 @@ where
     /// Filter the option by configuration.
     ///
     /// It parsing the given option string `S` using inner [`OptParser`], return an [`FilterMut`].
-    /// For option string, reference [`OptStringParser`](crate::opt::OptStringParser).
+    /// For option string, reference [`StrParser`](crate::opt::StrParser).
     pub fn filter_mut<S: Into<Str>>(
         &mut self,
         opt_str: S,

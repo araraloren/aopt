@@ -218,10 +218,9 @@ where
         let mut main_ctx = noa_ctx;
 
         main_ctx.set_idx(0);
-        if let Some(mut proc) = NOAGuess::new().guess(
-            &UserStyle::Main,
-            GuessNOACfg::new(main_args.clone(), 0, noa_len),
-        )? {
+        if let Some(mut proc) =
+            NOAGuess::new().guess(&UserStyle::Main, GuessNOACfg::new(main_args, 0, noa_len))?
+        {
             process_non_opt::<S>(&main_ctx, set, ser, &mut proc, &mut is)?;
         }
 

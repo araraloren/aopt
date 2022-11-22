@@ -73,7 +73,7 @@ impl<S> NOAMatch<S> {
         self
     }
 
-    pub fn with_len(mut self, total: usize) -> Self {
+    pub fn with_total(mut self, total: usize) -> Self {
         self.noa_total = total;
         self
     }
@@ -111,7 +111,7 @@ impl<S> NOAMatch<S> {
         self.noa_index
     }
 
-    pub fn len(&self) -> usize {
+    pub fn total(&self) -> usize {
         self.noa_total
     }
 

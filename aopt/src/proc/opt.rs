@@ -97,7 +97,7 @@ where
         self
     }
 
-    pub fn with_len(mut self, total: usize) -> Self {
+    pub fn with_total(mut self, total: usize) -> Self {
         self.total = total;
         self
     }
@@ -130,7 +130,7 @@ impl<S> OptMatch<S> {
         self.index
     }
 
-    pub fn len(&self) -> usize {
+    pub fn total(&self) -> usize {
         self.total
     }
 

@@ -5,7 +5,7 @@ use crate::set::Pre;
 use crate::Error;
 use crate::Str;
 
-/// Parse the option string with given prefixs, return an [`OptConstrctInfo`].
+/// Parse the option string with given prefixs, return an [`ConstrctInfo`].
 ///
 /// The struct of the option string are:
 ///

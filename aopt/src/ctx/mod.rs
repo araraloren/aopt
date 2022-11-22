@@ -137,7 +137,7 @@ where
     })
 }
 
-/// Wrap the handler and call the [`process`](crate::Store::process) of given `store`.
+/// Wrap the handler and call the [`process`](Store::process) of given `store` on return value of `handler`.
 pub fn wrap_handler<Set, Args, Output, Ret, Error>(
     mut handler: impl Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
     mut store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static,
