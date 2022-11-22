@@ -230,3 +230,165 @@ where
         Ok(Some(true))
     }
 }
+
+#[cfg(test)]
+mod test {
+
+    use std::ops::Deref;
+
+    use crate::prelude::*;
+    use crate::Arc;
+    use crate::Error;
+
+    #[test]
+    fn testing_1() {
+        assert!(testing_1_main().is_ok());
+    }
+
+    fn testing_1_main() -> Result<(), Error> {
+        fn check_opt_val<T: std::fmt::Debug + PartialEq + 'static>(
+            ser: &mut ASer,
+            opt: &AOpt,
+            uid: Uid,
+            name: &str,
+            prefix: Option<&str>,
+            vals: Option<Vec<T>>,
+            optional: bool,
+            action: &Action,
+            assoc: &Assoc,
+            index: Option<&Index>,
+            alias: Option<Vec<(&str, &str)>>,
+            deactivate: bool,
+        ) -> Result<(), Error> {
+            let opt_uid = opt.uid();
+
+            assert_eq!(opt_uid, uid);
+            assert_eq!(opt.name(), name, "name not equal -{}-", opt_uid);
+            assert_eq!(opt.prefix().map(|v| v.as_str()), prefix);
+            assert_eq!(
+                opt.optional(),
+                optional,
+                "optional not equal -{}-: {}",
+                opt_uid,
+                optional
+            );
+            assert_eq!(opt.action(), action, "action not equal for {}", opt_uid);
+            assert_eq!(opt.assoc(), assoc, "assoc not equal for {}", opt_uid);
+            assert_eq!(opt.idx(), index, "option index not equal: {:?}", index);
+            assert_eq!(
+                opt.is_deactivate(),
+                deactivate,
+                "deactivate style not matched!"
+            );
+            if let Ok(opt_vals) = T::vals(opt_uid, ser) {
+                if let Some(vals) = vals {
+                    assert_eq!(
+                        opt_vals.len(),
+                        vals.len(),
+                        "value length not equal for {}",
+                        opt_uid
+                    );
+                    for (l, r) in opt_vals.iter().zip(vals.iter()) {
+                        assert_eq!(
+                            l, r,
+                            "option value not equal -{}- : {:?} != {:?}",
+                            opt_uid, l, r
+                        );
+                    }
+                }
+            } else {
+                assert!(
+                    vals.is_none(),
+                    "found none, option value not equal: {:?}",
+                    vals
+                );
+            }
+            if let Some(opt_alias) = opt.alias() {
+                if let Some(alias) = alias {
+                    assert_eq!(opt_alias.len(), alias.len());
+                    for (prefix, name) in alias {
+                        assert!(
+                            opt_alias.iter().any(|(p, n)| p == prefix && n == name),
+                            "alias => {:?} <--> {}, {}",
+                            &opt_alias,
+                            prefix,
+                            name,
+                        );
+                    }
+                }
+            } else {
+                assert!(alias.is_none());
+            }
+            Ok(())
+        }
+
+        let mut policy = ADelayPolicy::default();
+        let mut ser = policy.default_ser();
+        let mut set = policy.default_set();
+
+        let args =
+            Args::new(["filter", "+>", "foo", "bar", "8", "42", "88", "-b", "12.5"].into_iter());
+
+        set.add_prefix("+");
+        set.add_opt("set=c")?;
+        set.add_opt("filter=c")?;
+        let args_uid = set.add_opt("args=p@2..")?.set_assoc(Assoc::Flt).run()?;
+
+        ser.ser_invoke_mut()?
+            .entry(set.add_opt("--positive=b")?.add_alias("+>").run()?)
+            .on(|set: &mut ASet, ser: &mut ASer| {
+                let value = f64::vals_mut(set["args=p"].uid(), ser)?;
+                let mut i = 0;
+
+                while i < value.len() {
+                    if value[i] < 0.0 {
+                        println!("Remove {} from args", value[i]);
+                        value.remove(i);
+                    } else {
+                        i += 1;
+                    }
+                }
+                Ok(Some(true))
+            });
+        ser.ser_invoke_mut()?
+            .entry(set.add_opt("--bigger-than=f")?.add_alias("-b").run()?)
+            .on(|set: &mut ASet, ser: &mut ASer, val: ctx::Value<f64>| {
+                let value = f64::vals_mut(set["args=p"].uid(), ser)?;
+                let mut i = 0;
+
+                while i < value.len() {
+                    if &value[i] <= val.deref() {
+                        println!("Remove {} from args", value[i]);
+                        value.remove(i);
+                    } else {
+                        i += 1;
+                    }
+                }
+                Ok(Some(true))
+            });
+        ser.ser_invoke_mut()?
+            .entry(set.add_opt("main=m")?.run()?)
+            .on(move |set: &mut ASet, ser: &mut ASer| {
+                let args = &set["args"];
+
+                check_opt_val::<f64>(
+                    ser,
+                    args,
+                    args_uid,
+                    "args",
+                    None,
+                    Some(vec![42.0, 88.0]),
+                    true,
+                    &Action::App,
+                    &Assoc::Flt,
+                    Some(&Index::Range(2, 0)),
+                    None,
+                    false,
+                )?;
+                Ok(Some(()))
+            });
+
+        policy.parse(Arc::new(args), &mut ser, &mut set)?;
+        Ok(())
+    }
+}

@@ -133,7 +133,7 @@ impl ValService {
     }
 
     pub fn vals_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error> {
-        self.get_mut(uid)
+        self.gets_mut(uid)
             .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for ValueService")))
     }
 }

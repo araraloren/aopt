@@ -324,7 +324,7 @@ mod test {
                 deactivate,
                 "deactivate style not matched!"
             );
-            if let Some(opt_vals) = T::vals(opt_uid, ser).ok() {
+            if let Ok(opt_vals) = T::vals(opt_uid, ser) {
                 if let Some(vals) = vals {
                     assert_eq!(
                         opt_vals.len(),
@@ -500,6 +500,7 @@ mod test {
         set.add_opt("--开关=b")?;
         set.add_opt("--值=s")?;
         set.add_opt("--りょう=i")?;
+        set.add_opt("test_cmd=c")?;
 
         let set_uid = set.add_opt("set=c")?.run()?;
         let bpos_uid = set.add_opt("bpos=p@[2,3]")?.set_assoc(Assoc::Uint).run()?;
