@@ -73,6 +73,12 @@ impl ValValidator {
     }
 }
 
+impl<T: RawValValidator + 'static> From<T> for ValValidator {
+    fn from(v: T) -> Self {
+        ValValidator::new(v)
+    }
+}
+
 impl Debug for ValValidator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("ValValidator").field(&"{...}").finish()
@@ -100,31 +106,31 @@ macro_rules! num_validator {
 }
 
 impl ValValidator {
-    num_validator!(i8, i8_validator);
+    num_validator!(i8, i8);
 
-    num_validator!(i16, i16_validator);
+    num_validator!(i16, i16);
 
-    num_validator!(i32, i32_validator);
+    num_validator!(i32, i32);
 
-    num_validator!(i64, i64_validator);
+    num_validator!(i64, i64);
 
-    num_validator!(u8, u8_validator);
+    num_validator!(u8, u8);
 
-    num_validator!(u16, u16_validator);
+    num_validator!(u16, u16);
 
-    num_validator!(u32, u32_validator);
+    num_validator!(u32, u32);
 
-    num_validator!(u64, u64_validator);
+    num_validator!(u64, u64);
 
-    num_validator!(f32, f32_validator);
+    num_validator!(f32, f32);
 
-    num_validator!(f64, f64_validator);
+    num_validator!(f64, f64);
 
-    num_validator!(usize, usize_validator);
+    num_validator!(usize, usize);
 
-    num_validator!(isize, isize_validator);
+    num_validator!(isize, isize);
 
-    pub fn bool_validator(deactivate_style: bool) -> Self {
+    pub fn bool(deactivate_style: bool) -> Self {
         Self::new(
             move |_: &str,
                   val: Option<&RawVal>,
@@ -143,7 +149,7 @@ impl ValValidator {
         )
     }
 
-    pub fn str_validator() -> Self {
+    pub fn str() -> Self {
         Self::new(
             move |_: &str,
                   val: Option<&RawVal>,
@@ -155,7 +161,7 @@ impl ValValidator {
         )
     }
 
-    pub fn some_validator() -> Self {
+    pub fn some() -> Self {
         Self::new(
             move |_: &str,
                   val: Option<&RawVal>,
@@ -165,11 +171,31 @@ impl ValValidator {
         )
     }
 
-    pub fn null_validator() -> Self {
+    pub fn null() -> Self {
         Self::new(
             |_: &str, _: Option<&RawVal>, _: bool, _: (usize, usize)| -> Result<bool, Error> {
                 Ok(true)
             },
+        )
+    }
+
+    pub fn val_fn<F: FnMut(Option<&RawVal>) -> Result<bool, Error> + 'static>(mut f: F) -> Self {
+        Self::new(
+            move |_: &str,
+                  val: Option<&RawVal>,
+                  _: bool,
+                  _: (usize, usize)|
+                  -> Result<bool, Error> { (f)(val) },
+        )
+    }
+
+    pub fn idx_fn<F: FnMut((usize, usize)) -> Result<bool, Error> + 'static>(mut f: F) -> Self {
+        Self::new(
+            move |_: &str,
+                  _: Option<&RawVal>,
+                  _: bool,
+                  idx: (usize, usize)|
+                  -> Result<bool, Error> { (f)(idx) },
         )
     }
 }
@@ -192,37 +218,37 @@ macro_rules! impl_validator_ext_for {
     };
 }
 
-impl_validator_ext_for!(i8, i8_validator);
+impl_validator_ext_for!(i8, i8);
 
-impl_validator_ext_for!(i16, i16_validator);
+impl_validator_ext_for!(i16, i16);
 
-impl_validator_ext_for!(i32, i32_validator);
+impl_validator_ext_for!(i32, i32);
 
-impl_validator_ext_for!(i64, i64_validator);
+impl_validator_ext_for!(i64, i64);
 
-impl_validator_ext_for!(u8, u8_validator);
+impl_validator_ext_for!(u8, u8);
 
-impl_validator_ext_for!(u16, u16_validator);
+impl_validator_ext_for!(u16, u16);
 
-impl_validator_ext_for!(u32, u32_validator);
+impl_validator_ext_for!(u32, u32);
 
-impl_validator_ext_for!(u64, u64_validator);
+impl_validator_ext_for!(u64, u64);
 
-impl_validator_ext_for!(f32, f32_validator);
+impl_validator_ext_for!(f32, f32);
 
-impl_validator_ext_for!(f64, f64_validator);
+impl_validator_ext_for!(f64, f64);
 
-impl_validator_ext_for!(str, str_validator);
+impl_validator_ext_for!(str, str);
 
-impl_validator_ext_for!(usize, usize_validator);
+impl_validator_ext_for!(usize, usize);
 
-impl_validator_ext_for!(isize, isize_validator);
+impl_validator_ext_for!(isize, isize);
 
 impl ValValidatorExt for () {
     type Valid = ValValidator;
 
     fn val_validator() -> Self::Valid {
-        ValValidator::null_validator()
+        ValValidator::null()
     }
 }
 
@@ -236,6 +262,6 @@ impl ValValidatorExt2 for bool {
     type Valid = ValValidator;
 
     fn val_validator(deactivate_style: bool) -> Self::Valid {
-        ValValidator::bool_validator(deactivate_style)
+        ValValidator::bool(deactivate_style)
     }
 }

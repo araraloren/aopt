@@ -38,7 +38,7 @@ cfg_if::cfg_if! {
 
 impl Default for ValInitiator {
     fn default() -> Self {
-        Self::null_initiator()
+        Self::null()
     }
 }
 
@@ -86,31 +86,31 @@ macro_rules! num_initiator {
 }
 
 impl ValInitiator {
-    pub fn null_initiator() -> Self {
+    pub fn null() -> Self {
         Self(Box::new(|_: Uid, _: &mut Services| Ok(())))
     }
 
-    pub fn bool_initiator(val: bool) -> Self {
+    pub fn bool(val: bool) -> Self {
         Self::new(move || -> Result<Vec<bool>, Error> { Ok(vec![val]) })
     }
 
-    num_initiator!(i8, i8_initiator);
+    num_initiator!(i8, i8);
 
-    num_initiator!(i16, i16_initiator);
+    num_initiator!(i16, i16);
 
-    num_initiator!(i32, i32_initiator);
+    num_initiator!(i32, i32);
 
-    num_initiator!(i64, i64_initiator);
+    num_initiator!(i64, i64);
 
-    num_initiator!(u8, u8_initiator);
+    num_initiator!(u8, u8);
 
-    num_initiator!(u16, u16_initiator);
+    num_initiator!(u16, u16);
 
-    num_initiator!(u32, u32_initiator);
+    num_initiator!(u32, u32);
 
-    num_initiator!(u64, u64_initiator);
+    num_initiator!(u64, u64);
 
-    num_initiator!(f32, f32_initiator);
+    num_initiator!(f32, f32);
 
-    num_initiator!(f64, f64_initiator);
+    num_initiator!(f64, f64);
 }

@@ -73,7 +73,7 @@ impl Creator for IntCreator {
             .with_alias(Some(config.gen_alias()?))
             .with_optional(optional)
             .with_initiator(initiator)
-            .with_validator(ValValidator::i64_validator()))
+            .with_validator(ValValidator::i64()))
     }
 }
 
@@ -140,7 +140,7 @@ impl Creator for UintCreator {
             .with_alias(Some(config.gen_alias()?))
             .with_optional(optional)
             .with_initiator(initiator)
-            .with_validator(ValValidator::u64_validator()))
+            .with_validator(ValValidator::u64()))
     }
 }
 
@@ -207,7 +207,7 @@ impl Creator for FltCreator {
             .with_alias(Some(config.gen_alias()?))
             .with_optional(optional)
             .with_initiator(initiator)
-            .with_validator(ValValidator::f64_validator()))
+            .with_validator(ValValidator::f64()))
     }
 }
 
@@ -274,7 +274,7 @@ impl Creator for StrCreator {
             .with_alias(Some(config.gen_alias()?))
             .with_optional(optional)
             .with_initiator(initiator)
-            .with_validator(ValValidator::str_validator()))
+            .with_validator(ValValidator::str()))
     }
 }
 
@@ -343,8 +343,8 @@ impl Creator for BoolCreator {
             .with_opt_help(config.gen_opt_help(deactivate_style)?)
             .with_alias(Some(config.gen_alias()?))
             .with_optional(optional)
-            .with_initiator(ValInitiator::bool_initiator(value))
-            .with_validator(ValValidator::bool_validator(deactivate_style))
+            .with_initiator(ValInitiator::bool(value))
+            .with_validator(ValValidator::bool(deactivate_style))
             .with_deactivate_style(deactivate_style))
     }
 }
@@ -379,9 +379,7 @@ impl Creator for PosCreator {
         let assoc = config.take_assoc().unwrap_or(Assoc::Noa);
         let action = config.take_action().unwrap_or(Action::App);
         let initiator = config.take_initiator().unwrap_or_default();
-        let validator = config
-            .take_validator()
-            .unwrap_or_else(ValValidator::some_validator);
+        let validator = config.take_validator().unwrap_or_else(ValValidator::some);
 
         if let Some(v) = config.alias() {
             debug_assert!(v.is_empty(), "Pos option not support alias configruation")
@@ -441,9 +439,7 @@ impl Creator for CmdCreator {
         let assoc = config.take_assoc().unwrap_or(Assoc::Noa);
         let action = config.take_action().unwrap_or(Action::Set);
         let initiator = config.take_initiator().unwrap_or_default();
-        let validator = config
-            .take_validator()
-            .unwrap_or_else(ValValidator::some_validator);
+        let validator = config.take_validator().unwrap_or_else(ValValidator::some);
 
         if let Some(v) = config.alias() {
             debug_assert!(v.is_empty(), "Cmd option not support alias configruation")
@@ -511,9 +507,7 @@ impl Creator for MainCreator {
         let assoc = config.take_assoc().unwrap_or(Assoc::Null);
         let action = config.take_action().unwrap_or(Action::Set);
         let initiator = config.take_initiator().unwrap_or_default();
-        let validator = config
-            .take_validator()
-            .unwrap_or_else(ValValidator::null_validator);
+        let validator = config.take_validator().unwrap_or_else(ValValidator::null);
 
         if let Some(v) = config.alias() {
             debug_assert!(v.is_empty(), "Main option not support alias configruation")
