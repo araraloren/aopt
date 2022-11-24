@@ -1,3 +1,5 @@
+use std::ffi::OsStr;
+
 cfg_if::cfg_if! {
     if #[cfg(feature = "utf8")] {
         use std::ffi::OsString;
@@ -75,6 +77,18 @@ cfg_if::cfg_if! {
                 write!(f, "{}", self.0)
             }
         }
+
+        impl AsRef<str> for RawVal {
+            fn as_ref(&self) -> &str {
+                self.0.as_str()
+            }
+        }
+
+        impl AsRef<OsStr> for RawVal {
+            fn as_ref(&self) -> &OsStr {
+                self.0.as_ref()
+            }
+        }
     }
     else {
         use std::ffi::OsString;
@@ -141,6 +155,12 @@ cfg_if::cfg_if! {
         impl std::fmt::Display for RawVal {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 write!(f, "{:?}", self.0)
+            }
+        }
+
+        impl AsRef<OsStr> for RawVal {
+            fn as_ref(&self) -> &OsStr {
+                self.as_os_str()
             }
         }
     }
