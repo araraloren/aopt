@@ -99,9 +99,9 @@ where
 
     fn parse(
         &mut self,
-        args: Arc<Args>,
-        ser: &mut Services,
         set: &mut Self::Set,
+        ser: &mut Services,
+        args: Arc<Args>,
     ) -> Result<Option<Self::Ret>, Self::Error> {
         let keys = set.keys().to_vec();
 
@@ -397,9 +397,9 @@ mod test {
 
         let args = Arc::new(args);
 
-        assert!(policy.parse(args.clone(), &mut ser, &mut set).is_err());
+        assert!(policy.parse(&mut set, &mut ser, args.clone()).is_err());
         policy.set_strict(false);
-        policy.parse(args, &mut ser, &mut set)?;
+        policy.parse(&mut set, &mut ser, args)?;
         Ok(())
     }
 }

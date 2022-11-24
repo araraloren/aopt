@@ -46,8 +46,8 @@ pub trait Policy {
 
     fn parse(
         &mut self,
-        args: Arc<Args>,
-        ser: &mut Services,
         set: &mut Self::Set,
+        ser: &mut Services,
+        args: Arc<Args>,
     ) -> Result<Option<Self::Ret>, Self::Error>;
 }
