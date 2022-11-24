@@ -31,12 +31,16 @@ use crate::Error;
 /// [`PrePolicy`] don't consume the `NOA` when process [`NOAMatch`](crate::proc::NOAMatch).
 #[derive(Debug, Clone)]
 pub struct PrePolicy<S> {
+    strict: bool,
+
     marker_s: PhantomData<S>,
 }
 
 impl<S> Default for PrePolicy<S> {
     fn default() -> Self {
         Self {
+            strict: false,
+
             marker_s: PhantomData::default(),
         }
     }
@@ -45,6 +49,22 @@ impl<S> Default for PrePolicy<S> {
 impl<S> PrePolicy<S> {
     pub fn new() -> Self {
         Self { ..Self::default() }
+    }
+
+    /// In strict mode, if an argument looks like an option (it matched any option prefix),
+    /// then it must matched, otherwise it will be discarded.
+    pub fn with_strict(mut self, strict: bool) -> Self {
+        self.strict = strict;
+        self
+    }
+
+    pub fn set_strict(&mut self, strict: bool) -> &mut Self {
+        self.strict = strict;
+        self
+    }
+
+    pub fn get_strict(&self) -> bool {
+        self.strict
     }
 
     /// Ignore failure when parsing.
@@ -110,9 +130,11 @@ where
         while let Some((idx, (opt, arg))) = iter.next() {
             let mut matched = false;
             let mut consume = false;
+            let mut like_opt = false;
             let arg = arg.map(|v| Arc::new(v.clone()));
 
             if let Ok(clopt) = opt.parse_arg(set.prefix()) {
+                like_opt = true;
                 for style in opt_styles.iter() {
                     let ret = Self::ig_failure(
                         OptGuess::new()
@@ -143,8 +165,9 @@ where
             // if consume the argument, skip it
             if matched && consume {
                 iter.next();
-            } else if !matched {
+            } else if !matched && !self.get_strict() || !like_opt {
                 // add it to NOA if current argument not matched
+                // and not in strict mode or the argument not like an option
                 noa_args.push(args[idx].clone());
             }
         }

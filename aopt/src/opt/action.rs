@@ -19,6 +19,8 @@ pub enum Action {
 
     Cnt,
 
+    Clr,
+
     Null,
 }
 
@@ -70,6 +72,9 @@ where
                 Action::Cnt => {
                     val_ser.entry::<u64>(uid).or_insert(vec![0])[0] += 1;
                 }
+                Action::Clr => {
+                    val_ser.remove::<Val>(uid);
+                }
                 Action::Null => {
                     //DO NOTHING
                 }
@@ -94,6 +99,9 @@ impl std::fmt::Display for Action {
             }
             Action::Cnt => {
                 write!(f, "Action::Cnt")
+            }
+            Action::Clr => {
+                write!(f, "Action::Clr")
             }
             Action::Null => {
                 write!(f, "Action::Null")
