@@ -20,7 +20,6 @@ use crate::ext::ServicesExt;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::proc::Process;
-use crate::ser::InvokeService;
 use crate::ser::Services;
 use crate::set::Pre;
 use crate::set::Set;
@@ -74,14 +73,9 @@ where
         self.strict
     }
 
-    pub fn invoke_opt_callback(
-        &mut self,
-        set: &mut S,
-        ser: &mut Services,
-        inv_ser: &mut InvokeService<S>,
-    ) -> Result<(), Error> {
+    pub fn invoke_opt_callback(&mut self, set: &mut S, ser: &mut Services) -> Result<(), Error> {
         for saver in std::mem::take(&mut self.contexts) {
-            invoke_callback_opt(saver, set, ser, inv_ser)?;
+            invoke_callback_opt(saver, set, ser)?;
         }
         Ok(())
     }
@@ -117,7 +111,6 @@ where
         ser.ser_check()?.pre_check(set)?;
 
         // take the invoke service, avoid borrow the ser
-        let mut is = ser.take::<InvokeService<S>>()?;
         let opt_styles = [
             UserStyle::EqualWithValue,
             UserStyle::Argument,
@@ -143,7 +136,7 @@ where
                         .guess(style, GuessOptCfg::new(idx, args_len, arg.clone(), &clopt))?
                     {
                         opt_ctx.set_idx(idx);
-                        let ret = process_opt::<S>(&opt_ctx, set, ser, &mut proc, &mut is, false)?;
+                        let ret = process_opt::<S>(&opt_ctx, set, ser, &mut proc, false)?;
 
                         if proc.is_mat() {
                             self.contexts.extend(ret);
@@ -189,7 +182,7 @@ where
                 GuessNOACfg::new(noa_args.clone(), Self::noa_idx(0), noa_len),
             )? {
                 noa_ctx.set_idx(Self::noa_idx(0));
-                process_non_opt::<S>(&noa_ctx, set, ser, &mut proc, &mut is)?;
+                process_non_opt::<S>(&noa_ctx, set, ser, &mut proc)?;
             }
 
             ser.ser_check()?.cmd_check(set)?;
@@ -200,7 +193,7 @@ where
                     GuessNOACfg::new(noa_args.clone(), Self::noa_idx(idx), noa_len),
                 )? {
                     noa_ctx.set_idx(Self::noa_idx(idx));
-                    process_non_opt::<S>(&noa_ctx, set, ser, &mut proc, &mut is)?;
+                    process_non_opt::<S>(&noa_ctx, set, ser, &mut proc)?;
                 }
             }
         } else {
@@ -208,7 +201,7 @@ where
         }
 
         // after cmd and pos callback invoked, invoke the callback of option
-        self.invoke_opt_callback(set, ser, &mut is)?;
+        self.invoke_opt_callback(set, ser)?;
 
         ser.ser_check()?.opt_check(set)?;
 
@@ -221,11 +214,10 @@ where
         if let Some(mut proc) =
             NOAGuess::new().guess(&UserStyle::Main, GuessNOACfg::new(main_args, 0, noa_len))?
         {
-            process_non_opt::<S>(&main_ctx, set, ser, &mut proc, &mut is)?;
+            process_non_opt::<S>(&main_ctx, set, ser, &mut proc)?;
         }
 
         ser.ser_check()?.post_check(set)?;
-        ser.register(is);
 
         Ok(Some(true))
     }

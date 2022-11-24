@@ -56,6 +56,14 @@ pub trait ServicesValExt<T: 'static> {
     fn vals(uid: Uid, ser: &Services) -> Result<&Vec<T>, Error>;
 
     fn vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<T>, Error>;
+
+    /// Apply filter on the values of option.
+    /// The `F` should return true if you want remove the element.
+    fn apply_filter<F: FnMut(&T) -> bool>(
+        uid: Uid,
+        ser: &mut Services,
+        f: F,
+    ) -> Result<Vec<T>, Error>;
 }
 
 pub trait ServicesRawValExt<T: 'static> {

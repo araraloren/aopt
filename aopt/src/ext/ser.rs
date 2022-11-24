@@ -99,6 +99,25 @@ where
     fn vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<T>, Error> {
         ser.ser_val_mut()?.vals_mut(uid)
     }
+
+    fn apply_filter<F: FnMut(&T) -> bool>(
+        uid: Uid,
+        ser: &mut Services,
+        mut f: F,
+    ) -> Result<Vec<T>, Error> {
+        let vals = T::vals_mut(uid, ser)?;
+        let mut i = 0;
+        let mut removed = vec![];
+
+        while i < vals.len() {
+            if (f)(&vals[i]) {
+                removed.push(vals.remove(i));
+            } else {
+                i = i + 1;
+            }
+        }
+        Ok(removed)
+    }
 }
 
 impl<T> ServicesUsrValExt<T> for T

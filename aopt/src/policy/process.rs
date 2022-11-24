@@ -16,23 +16,28 @@ pub fn invoke_callback_opt<Set>(
     saver: CtxSaver,
     set: &mut Set,
     ser: &mut Services,
-    inv_ser: &mut InvokeService<Set>,
 ) -> Result<Option<()>, Error>
 where
     Set::Opt: Opt,
     Set: crate::set::Set + 'static,
 {
     let uid = saver.uid;
-    Ok(match inv_ser.has(uid) {
+    // Take the service, invoke the handler of option.
+    // Catch the result of handler, so we can register it back to Services.
+    let mut inv_ser = ser.take::<InvokeService<Set>>()?;
+    let ret = match inv_ser.has(uid) {
         true => {
             trace!("Invoke callback of Opt{{{uid}}} with {:?}", saver.ctx);
-            inv_ser.invoke(set, ser, &saver.ctx)?
+            inv_ser.invoke(set, ser, &saver.ctx)
         }
         false => {
             trace!("Invoke default of Opt{{{uid}}} with {:?}", saver.ctx);
-            inv_ser.invoke_default(set, ser, &saver.ctx)?
+            inv_ser.invoke_default(set, ser, &saver.ctx)
         }
-    })
+    };
+
+    ser.register(inv_ser);
+    ret
 }
 
 pub fn process_opt<Set>(
@@ -40,7 +45,6 @@ pub fn process_opt<Set>(
     set: &mut Set,
     ser: &mut Services,
     proc: &mut OptProcess<Set>,
-    inv_ser: &mut InvokeService<Set>,
     invoke: bool,
 ) -> Result<Vec<CtxSaver>, Error>
 where
@@ -82,7 +86,7 @@ where
     if proc.is_mat() && invoke {
         for saver in savers {
             // undo the process if option callback return None
-            if invoke_callback_opt(saver, set, ser, inv_ser)?.is_none() {
+            if invoke_callback_opt(saver, set, ser)?.is_none() {
                 proc.undo(set)?;
                 break;
             }
@@ -100,7 +104,6 @@ pub fn process_non_opt<Set>(
     set: &mut Set,
     ser: &mut Services,
     proc: &mut NOAProcess<Set>,
-    inv_ser: &mut InvokeService<Set>,
 ) -> Result<Vec<CtxSaver>, Error>
 where
     Set::Opt: Opt,
@@ -122,16 +125,22 @@ where
                         .with_name(mat.name().cloned())
                         .with_arg(mat.clone_arg())
                         .with_uid(uid); // current uid == uid in matcher
+                    let mut inv_ser = ser.take::<InvokeService<Set>>()?;
                     let ret = match inv_ser.has(uid) {
                         true => {
                             // callback in InvokeService
-                            inv_ser.invoke(set, ser, &ctx)?
+                            trace!("Invoke callback of NOA{{{uid}}} with {:?}", &ctx);
+                            inv_ser.invoke(set, ser, &ctx)
                         }
                         false => {
                             // call `invoke_default` if callback not exist
-                            inv_ser.invoke_default(set, ser, &ctx)?
+                            trace!("Invoke default of NOA{{{uid}}} with {:?}", &ctx);
+                            inv_ser.invoke_default(set, ser, &ctx)
                         }
                     };
+
+                    ser.register(inv_ser);
+                    let ret = ret?;
 
                     // rteurn None means NOA not match
                     if ret.is_none() {

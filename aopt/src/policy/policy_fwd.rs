@@ -19,7 +19,6 @@ use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::prelude::SetExt;
 use crate::proc::Process;
-use crate::ser::InvokeService;
 use crate::ser::Services;
 use crate::set::Pre;
 use crate::set::Set;
@@ -164,8 +163,6 @@ where
         }
         ser.ser_check()?.pre_check(set)?;
 
-        // take the invoke service, avoid borrow the ser
-        let mut is = ser.take::<InvokeService<S>>()?;
         let stys = [
             UserStyle::EqualWithValue,
             UserStyle::Argument,
@@ -191,7 +188,7 @@ where
                         .guess(style, GuessOptCfg::new(idx, args_len, arg.clone(), &clopt))?
                     {
                         opt_ctx.set_idx(idx);
-                        process_opt::<S>(&opt_ctx, set, ser, &mut proc, &mut is, true)?;
+                        process_opt::<S>(&opt_ctx, set, ser, &mut proc, true)?;
                         if proc.is_mat() {
                             matched = true;
                         }
@@ -238,7 +235,7 @@ where
                 GuessNOACfg::new(noa_args.clone(), Self::noa_idx(0), noa_len),
             )? {
                 noa_ctx.set_idx(Self::noa_idx(0));
-                process_non_opt::<S>(&noa_ctx, set, ser, &mut proc, &mut is)?;
+                process_non_opt::<S>(&noa_ctx, set, ser, &mut proc)?;
             }
 
             ser.ser_check()?.cmd_check(set)?;
@@ -249,7 +246,7 @@ where
                     GuessNOACfg::new(noa_args.clone(), Self::noa_idx(idx), noa_len),
                 )? {
                     noa_ctx.set_idx(Self::noa_idx(idx));
-                    process_non_opt::<S>(&noa_ctx, set, ser, &mut proc, &mut is)?;
+                    process_non_opt::<S>(&noa_ctx, set, ser, &mut proc)?;
                 }
             }
         } else {
@@ -264,11 +261,10 @@ where
         if let Some(mut proc) =
             NOAGuess::new().guess(&UserStyle::Main, GuessNOACfg::new(main_args, 0, noa_len))?
         {
-            process_non_opt::<S>(&main_ctx, set, ser, &mut proc, &mut is)?;
+            process_non_opt::<S>(&main_ctx, set, ser, &mut proc)?;
         }
 
         ser.ser_check()?.post_check(set)?;
-        ser.register(is);
 
         Ok(Some(true))
     }

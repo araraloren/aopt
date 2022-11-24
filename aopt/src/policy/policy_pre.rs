@@ -17,7 +17,6 @@ use crate::ext::ServicesExt;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::proc::Process;
-use crate::ser::InvokeService;
 use crate::ser::Services;
 use crate::set::Pre;
 use crate::set::Set;
@@ -111,8 +110,6 @@ where
         }
         Self::ig_failure(ser.ser_check()?.pre_check(set))?;
 
-        // take the invoke service, avoid borrow the ser
-        let mut is = ser.take::<InvokeService<S>>()?;
         let opt_styles = [
             UserStyle::EqualWithValue,
             UserStyle::Argument,
@@ -143,10 +140,8 @@ where
 
                     if let Some(Some(mut proc)) = ret {
                         opt_ctx.set_idx(idx);
-                        if Self::ig_failure(process_opt::<S>(
-                            &opt_ctx, set, ser, &mut proc, &mut is, true,
-                        ))?
-                        .is_some()
+                        if Self::ig_failure(process_opt::<S>(&opt_ctx, set, ser, &mut proc, true))?
+                            .is_some()
                         {
                             if proc.is_mat() {
                                 matched = true;
@@ -187,7 +182,7 @@ where
                 GuessNOACfg::new(noa_args.clone(), Self::noa_idx(0), noa_len),
             ))? {
                 noa_ctx.set_idx(Self::noa_idx(0));
-                Self::ig_failure(process_non_opt::<S>(&noa_ctx, set, ser, &mut proc, &mut is))?;
+                Self::ig_failure(process_non_opt::<S>(&noa_ctx, set, ser, &mut proc))?;
             }
 
             Self::ig_failure(ser.ser_check()?.cmd_check(set))?;
@@ -198,7 +193,7 @@ where
                     GuessNOACfg::new(noa_args.clone(), Self::noa_idx(idx), noa_len),
                 ))? {
                     noa_ctx.set_idx(Self::noa_idx(idx));
-                    Self::ig_failure(process_non_opt::<S>(&noa_ctx, set, ser, &mut proc, &mut is))?;
+                    Self::ig_failure(process_non_opt::<S>(&noa_ctx, set, ser, &mut proc))?;
                 }
             }
         } else {
@@ -216,13 +211,10 @@ where
         if let Some(Some(mut proc)) = Self::ig_failure(
             NOAGuess::new().guess(&UserStyle::Main, GuessNOACfg::new(main_args, 0, noa_len)),
         )? {
-            Self::ig_failure(process_non_opt::<S>(
-                &main_ctx, set, ser, &mut proc, &mut is,
-            ))?;
+            Self::ig_failure(process_non_opt::<S>(&main_ctx, set, ser, &mut proc))?;
         }
 
         Self::ig_failure(ser.ser_check()?.post_check(set))?;
-        ser.register(is);
 
         Ok(Some(ret))
     }
