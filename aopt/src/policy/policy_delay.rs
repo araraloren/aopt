@@ -318,8 +318,24 @@ mod test {
         let mut ser = policy.default_ser();
         let mut set = policy.default_set();
 
-        let args =
-            Args::new(["filter", "+>", "foo", "bar", "8", "42", "88", "-b", "12.5"].into_iter());
+        let args = Args::new(
+            [
+                "filter",
+                "+>",
+                "foo",
+                "bar",
+                "8",
+                "42",
+                "--option-ignored",
+                "88",
+                "+>",
+                "12.5",
+                "lily",
+                "66",
+                "11",
+            ]
+            .into_iter(),
+        );
 
         set.add_prefix("+");
         set.add_opt("set=c")?;
@@ -329,39 +345,24 @@ mod test {
         ser.ser_invoke_mut()?
             .entry(set.add_opt("--positive=b")?.add_alias("+>").run()?)
             .on(|set: &mut ASet, ser: &mut ASer| {
-                let value = f64::vals_mut(set["args=p"].uid(), ser)?;
-                let mut i = 0;
-
-                while i < value.len() {
-                    if value[i] < 0.0 {
-                        println!("Remove {} from args", value[i]);
-                        value.remove(i);
-                    } else {
-                        i += 1;
-                    }
-                }
+                f64::apply_filter(set["args=p"].uid(), ser, |v: &f64| v <= &0.0)?;
                 Ok(Some(true))
             });
         ser.ser_invoke_mut()?
-            .entry(set.add_opt("--bigger-than=f")?.add_alias("-b").run()?)
+            .entry(set.add_opt("--bigger-than=f")?.add_alias("+>").run()?)
             .on(|set: &mut ASet, ser: &mut ASer, val: ctx::Value<f64>| {
-                let value = f64::vals_mut(set["args=p"].uid(), ser)?;
-                let mut i = 0;
-
-                while i < value.len() {
-                    if &value[i] <= val.deref() {
-                        println!("Remove {} from args", value[i]);
-                        value.remove(i);
-                    } else {
-                        i += 1;
-                    }
-                }
-                Ok(Some(true))
+                // this is a vec![vec![], ..]
+                Ok(Some(f64::apply_filter(
+                    set["args=p"].uid(),
+                    ser,
+                    |v: &f64| v <= val.deref(),
+                )?))
             });
         ser.ser_invoke_mut()?
             .entry(set.add_opt("main=m")?.run()?)
             .on(move |set: &mut ASet, ser: &mut ASer| {
                 let args = &set["args"];
+                let bopt = &set["--bigger-than"];
 
                 check_opt_val::<f64>(
                     ser,
@@ -369,7 +370,7 @@ mod test {
                     args_uid,
                     "args",
                     None,
-                    Some(vec![42.0, 88.0]),
+                    Some(vec![42.0, 88.0, 66.0]),
                     true,
                     &Action::App,
                     &Assoc::Flt,
@@ -377,10 +378,28 @@ mod test {
                     None,
                     false,
                 )?;
+                check_opt_val::<Vec<f64>>(
+                    ser,
+                    bopt,
+                    bopt.uid(),
+                    "bigger-than",
+                    Some("--"),
+                    Some(vec![vec![8.0, 11.0]]),
+                    true,
+                    &Action::App,
+                    &Assoc::Flt,
+                    None,
+                    None,
+                    false,
+                )?;
                 Ok(Some(()))
             });
 
-        policy.parse(Arc::new(args), &mut ser, &mut set)?;
+        let args = Arc::new(args);
+
+        assert!(policy.parse(args.clone(), &mut ser, &mut set).is_err());
+        policy.set_strict(false);
+        policy.parse(args, &mut ser, &mut set)?;
         Ok(())
     }
 }
