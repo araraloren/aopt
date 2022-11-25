@@ -43,7 +43,6 @@ use crate::Uid;
 pub struct OptSet<Parser, Ctor>
 where
     Ctor: Creator,
-    Ctor::Config: Config,
     Parser: OptParser,
 {
     parser: Parser,
@@ -55,7 +54,6 @@ where
 impl<Parser, Ctor> OptSet<Parser, Ctor>
 where
     Ctor: Creator,
-    Ctor::Config: Config,
     Parser: OptParser,
 {
     pub fn new(parser: Parser) -> Self {
@@ -72,7 +70,7 @@ impl<Parser, Ctor> Debug for OptSet<Parser, Ctor>
 where
     Ctor::Opt: Debug,
     Ctor: Creator + Debug,
-    Ctor::Config: Config + Debug,
+    Ctor::Config: Debug,
     Parser: OptParser + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -88,7 +86,6 @@ where
 impl<Parser, Ctor> Default for OptSet<Parser, Ctor>
 where
     Ctor: Creator,
-    Ctor::Config: Config,
     Parser: OptParser + Default,
 {
     fn default() -> Self {
@@ -103,6 +100,7 @@ where
 
 impl<Parser, Ctor> OptSet<Parser, Ctor>
 where
+    Ctor::Opt: Opt,
     Ctor: Creator,
     Parser: OptParser,
     Ctor::Config: Config,
@@ -110,17 +108,6 @@ where
     pub fn with_creator(mut self, creator: Ctor) -> Self {
         self.register(creator);
         self
-    }
-
-    pub fn register(&mut self, creator: Ctor) -> &mut Self {
-        self.creators.push(creator);
-        self
-    }
-
-    pub fn creator<S: Into<Str>>(&mut self, type_name: S) -> Option<&mut Ctor> {
-        let type_name = type_name.into();
-
-        self.creators.iter_mut().find(|v| v.r#type() == type_name)
     }
 }
 
@@ -149,12 +136,6 @@ where
         self.add_prefix(prefix);
         self
     }
-
-    pub fn contain_type<S: Into<Str>>(&self, type_name: S) -> bool {
-        let type_name = type_name.into();
-
-        self.creators.iter().any(|v| v.r#type() == type_name)
-    }
 }
 
 impl<Parser, Ctor> OptSet<Parser, Ctor>
@@ -177,7 +158,7 @@ where
     ///
     /// It parsing the given option string `S` using inner [`OptParser`], return an [`Commit`].
     /// For option string, reference [`StrParser`](crate::opt::StrParser).
-    pub fn add_opt<S: Into<Str>>(&mut self, opt_str: S) -> Result<Commit<'_, Parser, Ctor>, Error> {
+    pub fn add_opt<S: Into<Str>>(&mut self, opt_str: S) -> Result<Commit<'_, Self>, Error> {
         Ok(Commit::new(
             self,
             <Ctor::Config as Config>::new(self.parser(), opt_str.into())?,
@@ -291,10 +272,9 @@ impl<Parser, Ctor> Set for OptSet<Parser, Ctor>
 where
     Ctor::Opt: Opt,
     Ctor: Creator,
-    Ctor::Config: Config,
     Parser: OptParser,
 {
-    type Opt = Ctor::Opt;
+    type Ctor = Ctor;
 
     fn len(&self) -> usize {
         self.opts.len()
@@ -310,7 +290,7 @@ where
         &self.keys
     }
 
-    fn insert(&mut self, mut opt: Self::Opt) -> Uid {
+    fn insert(&mut self, mut opt: <Self::Ctor as Creator>::Opt) -> Uid {
         let uid = self.len() as Uid;
 
         opt.set_uid(uid);
@@ -319,12 +299,36 @@ where
         uid
     }
 
-    fn get(&self, id: Uid) -> Option<&Self::Opt> {
+    fn get(&self, id: Uid) -> Option<&<Self::Ctor as Creator>::Opt> {
         self.opts.get(id as usize)
     }
 
-    fn get_mut(&mut self, id: Uid) -> Option<&mut Self::Opt> {
+    fn get_mut(&mut self, id: Uid) -> Option<&mut <Self::Ctor as Creator>::Opt> {
         self.opts.get_mut(id as usize)
+    }
+
+    fn register(&mut self, ctor: Self::Ctor) -> Option<Self::Ctor> {
+        let at = self
+            .creators
+            .iter()
+            .enumerate()
+            .find(|(_, v)| v.r#type() == ctor.r#type())
+            .map(|v| v.0);
+
+        if let Some(at) = at {
+            Some(std::mem::replace(&mut self.creators[at], ctor))
+        } else {
+            self.creators.push(ctor);
+            None
+        }
+    }
+
+    fn get_ctors(&self) -> &[Self::Ctor] {
+        &self.creators
+    }
+
+    fn get_ctors_mut(&mut self) -> &mut [Self::Ctor] {
+        &mut self.creators
     }
 }
 

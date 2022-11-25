@@ -3,39 +3,31 @@ use tracing::trace;
 
 use crate::opt::Action;
 use crate::opt::Assoc;
-use crate::opt::Config;
 use crate::opt::ConfigValue;
 use crate::opt::Creator;
 use crate::opt::Index;
-use crate::opt::Opt;
-use crate::opt::OptParser;
 use crate::opt::ValInitiator;
 use crate::opt::ValValidator;
-use crate::set::OptSet;
-use crate::set::Set;
+use crate::set::SetExt;
 use crate::Error;
 use crate::Str;
 use crate::Uid;
 
 /// Create option using given configurations.
-pub struct Commit<'a, Parser, Ctor>
+pub struct Commit<'a, Set>
 where
-    Ctor::Opt: Opt,
-    Ctor: Creator,
-    Parser: OptParser,
-    Ctor::Config: Config + ConfigValue + Default,
+    Set: crate::set::Set,
+    <Set::Ctor as Creator>::Config: ConfigValue + Default,
 {
-    info: Ctor::Config,
-    set: &'a mut OptSet<Parser, Ctor>,
+    info: <Set::Ctor as Creator>::Config,
+    set: &'a mut Set,
     commited: Option<Uid>,
 }
 
-impl<'a, Parser, Ctor> Debug for Commit<'a, Parser, Ctor>
+impl<'a, Set> Debug for Commit<'a, Set>
 where
-    Ctor::Opt: Opt + Debug,
-    Ctor: Creator + Debug,
-    Parser: OptParser + Debug,
-    Ctor::Config: Config + ConfigValue + Default + Debug,
+    Set: crate::set::Set + Debug,
+    <Set::Ctor as Creator>::Config: ConfigValue + Default + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Commit")
@@ -45,14 +37,12 @@ where
     }
 }
 
-impl<'a, Parser, Ctor> Commit<'a, Parser, Ctor>
+impl<'a, Set> Commit<'a, Set>
 where
-    Ctor::Opt: Opt,
-    Ctor: Creator,
-    Parser: OptParser,
-    Ctor::Config: Config + ConfigValue + Default,
+    Set: crate::set::Set,
+    <Set::Ctor as Creator>::Config: ConfigValue + Default,
 {
-    pub fn new(set: &'a mut OptSet<Parser, Ctor>, info: Ctor::Config) -> Self {
+    pub fn new(set: &'a mut Set, info: <Set::Ctor as Creator>::Config) -> Self {
         Self {
             set,
             info,
@@ -60,11 +50,11 @@ where
         }
     }
 
-    pub fn cfg(&self) -> &Ctor::Config {
+    pub fn cfg(&self) -> &<Set::Ctor as Creator>::Config {
         &self.info
     }
 
-    pub fn cfg_mut(&mut self) -> &mut Ctor::Config {
+    pub fn cfg_mut(&mut self) -> &mut <Set::Ctor as Creator>::Config {
         &mut self.info
     }
 
@@ -178,9 +168,7 @@ where
             let name = info.name().cloned();
             let opt = self
                 .set
-                .creator(&type_name)
-                .as_mut()
-                .ok_or_else(|| Error::con_unsupport_option_type(type_name))?
+                .ctor_mut(&type_name)?
                 .new_with(info)
                 .map_err(|e| e.into())?;
             let uid = self.set.insert(opt);
@@ -192,12 +180,10 @@ where
     }
 }
 
-impl<'a, Parser, Ctor> Drop for Commit<'a, Parser, Ctor>
+impl<'a, Set> Drop for Commit<'a, Set>
 where
-    Ctor::Opt: Opt,
-    Ctor: Creator,
-    Parser: OptParser,
-    Ctor::Config: Config + ConfigValue + Default,
+    Set: crate::set::Set,
+    <Set::Ctor as Creator>::Config: ConfigValue + Default,
 {
     fn drop(&mut self) {
         if self.commited.is_none() {
@@ -207,9 +193,7 @@ where
             let name = info.name().cloned();
             let opt = self
                 .set
-                .creator(&type_name)
-                .as_mut()
-                .ok_or_else(|| Error::con_unsupport_option_type(type_name))
+                .ctor_mut(&type_name)
                 .expect(error)
                 .new_with(info)
                 .map_err(|e| e.into())

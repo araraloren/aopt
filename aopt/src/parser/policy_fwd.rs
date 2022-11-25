@@ -15,6 +15,7 @@ use crate::args::Args;
 use crate::astr;
 use crate::ctx::Ctx;
 use crate::ext::ServicesExt;
+use crate::opt::Creator;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::prelude::SetExt;
@@ -68,7 +69,7 @@ use crate::Error;
 ///
 /// let args = Args::new(["set", "42", "foo", "bar"].into_iter());
 ///
-/// policy.parse(Arc::new(args), &mut ser, &mut set)?;
+/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
 ///
 /// let values = String::vals(pos_id, &ser)?;
 ///
@@ -77,7 +78,7 @@ use crate::Error;
 ///
 /// let args = Args::new(["--/filter", "set", "42", "foo", "bar"].into_iter());
 ///
-/// policy.parse(Arc::new(args), &mut ser, &mut set)?;
+/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
 ///
 /// let values = String::vals(pos_id, &ser)?;
 ///
@@ -107,7 +108,7 @@ impl<S> Default for FwdPolicy<S> {
 
 impl<S> FwdPolicy<S>
 where
-    S::Opt: Opt,
+    <S::Ctor as Creator>::Opt: Opt,
     S: Set + OptParser + Debug + 'static,
 {
     pub fn new(strict: bool) -> Self {
@@ -141,7 +142,7 @@ where
 
 impl<S> Policy for FwdPolicy<S>
 where
-    S::Opt: Opt,
+    <S::Ctor as Creator>::Opt: Opt,
     S: Set + OptParser + Pre + Debug + 'static,
 {
     type Ret = bool;

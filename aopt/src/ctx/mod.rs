@@ -8,6 +8,7 @@ pub use self::handler::Handler;
 
 use std::fmt::Debug;
 
+use crate::opt::Creator;
 use crate::opt::Opt;
 use crate::ser::Services;
 use crate::set::SetExt;
@@ -122,7 +123,7 @@ pub fn wrap_handler_default<Set, Args, Output>(
 ) -> Callbacks<Set, (), Error>
 where
     Set: crate::set::Set,
-    Set::Opt: Opt,
+    <Set::Ctor as Creator>::Opt: Opt,
     Output: 'static,
     Args: Extract<Set, Error = Error>,
 {

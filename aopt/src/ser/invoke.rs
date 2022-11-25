@@ -11,6 +11,7 @@ use crate::ctx::Extract;
 use crate::ctx::Handler;
 use crate::ctx::Store;
 use crate::opt::Assoc;
+use crate::opt::Creator;
 use crate::opt::Opt;
 use crate::opt::RawValParser;
 use crate::ser::Service;
@@ -174,7 +175,7 @@ impl<Set> InvokeService<Set> {
 impl<Set> InvokeService<Set>
 where
     Set: crate::set::Set,
-    Set::Opt: crate::opt::Opt,
+    <Set::Ctor as Creator>::Opt: Opt,
 {
     pub fn entry<Args, Output, H>(&mut self, uid: Uid) -> Entry<'_, Set, H, Args, Output>
     where
@@ -252,7 +253,7 @@ pub struct Entry<'a, Set, H, Args, Output>
 where
     Output: 'static,
     Set: crate::set::Set,
-    Set::Opt: crate::opt::Opt,
+    <Set::Ctor as Creator>::Opt: Opt,
     H: Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
     Args: Extract<Set, Error = Error> + 'static,
 {
@@ -271,7 +272,7 @@ impl<'a, Args, Set, Output, H> Entry<'a, Set, H, Args, Output>
 where
     Output: 'static,
     Set: crate::set::Set,
-    Set::Opt: crate::opt::Opt,
+    <Set::Ctor as Creator>::Opt: Opt,
     H: Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
     Args: Extract<Set, Error = Error> + 'static,
 {
@@ -309,7 +310,7 @@ impl<'a, Set, H, Args, Output> Drop for Entry<'a, Set, H, Args, Output>
 where
     Output: 'static,
     Set: crate::set::Set,
-    Set::Opt: crate::opt::Opt,
+    <Set::Ctor as Creator>::Opt: Opt,
     H: Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
     Args: Extract<Set, Error = Error> + 'static,
 {

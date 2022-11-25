@@ -1,3 +1,4 @@
+pub(crate) mod commit;
 pub(crate) mod policy_delay;
 pub(crate) mod policy_fwd;
 pub(crate) mod policy_pre;
@@ -182,4 +183,6 @@ where
             services,
         }
     }
+
+    pub fn add_opt(&mut self, opt: &str) {}
 }

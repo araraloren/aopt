@@ -56,7 +56,7 @@
 //!
 //! let args = Args::new(["--/bool", "set", "42", "foo", "bar"].into_iter());
 //!
-//! policy.parse(Arc::new(args), &mut ser, &mut set)?;
+//! policy.parse(&mut set, &mut ser, Arc::new(args))?;
 //!
 //! assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
 //! assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
@@ -86,6 +86,7 @@ use std::ops::DerefMut;
 
 use crate::ctx::Ctx;
 use crate::ctx::Extract;
+use crate::opt::Creator;
 use crate::opt::RawValParser;
 use crate::ser::Services;
 use crate::set::Set;
@@ -129,7 +130,7 @@ impl<S> Extract<S> for Ctx {
 ///
 ///   let args = Args::new(["--/bool", ].into_iter());
 ///
-///   policy.parse(Arc::new(args), &mut ser, &mut set)?;
+///   policy.parse(&mut set, &mut ser, Arc::new(args))?;
 ///
 ///   assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
 ///
@@ -237,7 +238,7 @@ impl Display for Uid {
 ///
 /// let args = Args::new(["--/bool", "set", "value"].into_iter());
 ///
-/// policy.parse(Arc::new(args), &mut ser, &mut set)?;
+/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
 ///
 /// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
 /// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
@@ -334,7 +335,7 @@ impl Display for Index {
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
-/// policy.parse(Arc::new(args), &mut ser, &mut set)?;
+/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
 ///
 /// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
 /// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
@@ -440,7 +441,7 @@ impl Display for Total {
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
-/// policy.parse(Arc::new(args), &mut ser, &mut set)?;
+/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
 ///
 /// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
 /// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
@@ -526,7 +527,7 @@ impl<S: Set> Extract<S> for Args {
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
-/// policy.parse(Arc::new(args), &mut ser, &mut set)?;
+/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
 ///
 /// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
 /// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
@@ -635,7 +636,7 @@ impl Display for Name {
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
-/// policy.parse(Arc::new(args), &mut ser, &mut set)?;
+/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
 ///
 /// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
 /// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
@@ -741,7 +742,7 @@ impl Display for Prefix {
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
-/// policy.parse(Arc::new(args), &mut ser, &mut set)?;
+/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
 ///
 /// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
 /// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
@@ -839,7 +840,7 @@ impl<S: Set> Extract<S> for Style {
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
-/// policy.parse(Arc::new(args), &mut ser, &mut set)?;
+/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
 ///
 /// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
 /// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
@@ -938,7 +939,7 @@ impl<S: Set> Extract<S> for Disable {
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
-/// policy.parse(Arc::new(args), &mut ser, &mut set)?;
+/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
 ///
 /// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
 /// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
@@ -1030,7 +1031,7 @@ impl<S: Set> Extract<S> for RawVal {
 ///
 /// let args = Args::new(["--/bool", "set", "42", "foo"].into_iter());
 ///
-/// policy.parse(Arc::new(args), &mut ser, &mut set)?;
+/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
 ///
 /// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
 /// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
@@ -1117,7 +1118,7 @@ impl<T> DerefMut for Value<T> {
     }
 }
 
-impl<S: Set, T: RawValParser<<S as Set>::Opt>> Extract<S> for Value<T> {
+impl<S: Set, T: RawValParser<<<S as Set>::Ctor as Creator>::Opt>> Extract<S> for Value<T> {
     type Error = Error;
 
     fn extract(set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {

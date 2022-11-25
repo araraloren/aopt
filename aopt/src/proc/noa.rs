@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use tracing::trace;
 
 use crate::args::Args;
+use crate::opt::Creator;
 use crate::opt::Opt;
 use crate::opt::Style;
 use crate::proc::Match;
@@ -130,7 +131,7 @@ impl<S> NOAMatch<S> {
 
 impl<S: Set> Match for NOAMatch<S>
 where
-    S::Opt: Opt,
+    <S::Ctor as Creator>::Opt: Opt,
 {
     type Set = S;
 
@@ -165,7 +166,10 @@ where
         false
     }
 
-    fn undo(&mut self, opt: &mut <Self::Set as Set>::Opt) -> Result<(), Self::Error> {
+    fn undo(
+        &mut self,
+        opt: &mut <<Self::Set as Set>::Ctor as Creator>::Opt,
+    ) -> Result<(), Self::Error> {
         opt.set_setted(false);
         self.reset();
         Ok(())
@@ -174,7 +178,10 @@ where
     /// Match the [`Opt`]'s name, prefix and style, index.
     /// Then call the [`check_val`](Opt::check_val) check the argument.
     /// If matched, set the setted of [`Opt`] and return true.
-    fn process(&mut self, opt: &mut <Self::Set as Set>::Opt) -> Result<bool, Self::Error> {
+    fn process(
+        &mut self,
+        opt: &mut <<Self::Set as Set>::Ctor as Creator>::Opt,
+    ) -> Result<bool, Self::Error> {
         let mut matched = opt.mat_style(self.style);
 
         if matched {
@@ -234,7 +241,7 @@ impl<S> NOAProcess<S> {
 
 impl<S: Set> Process<NOAMatch<S>> for NOAProcess<S>
 where
-    S::Opt: Opt,
+    <S::Ctor as Creator>::Opt: Opt,
 {
     type Set = S;
 

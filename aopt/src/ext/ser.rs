@@ -192,7 +192,7 @@ where
 ///
 /// let args = Args::new(["--/bool", "set", "42", "foo", "bar"].into_iter());
 ///
-/// policy.parse(Arc::new(args), &mut ser, &mut set)?;
+/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
 ///
 /// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
 /// ser::Value::<PosList>::usr_val(&ser)?.test_pos(

@@ -14,6 +14,7 @@ use crate::args::ArgParser;
 use crate::args::Args;
 use crate::ctx::Ctx;
 use crate::ext::ServicesExt;
+use crate::opt::Creator;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::proc::Process;
@@ -88,7 +89,7 @@ impl<S> PrePolicy<S> {
 
 impl<S> Policy for PrePolicy<S>
 where
-    S::Opt: Opt,
+    <S::Ctor as Creator>::Opt: Opt,
     S: Set + OptParser + Pre + Debug + 'static,
 {
     type Ret = Args;

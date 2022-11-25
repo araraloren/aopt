@@ -17,6 +17,7 @@ use crate::args::Args;
 use crate::astr;
 use crate::ctx::Ctx;
 use crate::ext::ServicesExt;
+use crate::opt::Creator;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::proc::Process;
@@ -51,7 +52,7 @@ where
 
 impl<S> DelayPolicy<S>
 where
-    S::Opt: Opt,
+    <S::Ctor as Creator>::Opt: Opt,
     S: Set + OptParser + Debug + 'static,
 {
     pub fn new() -> Self {
@@ -88,7 +89,7 @@ where
 
 impl<S> Policy for DelayPolicy<S>
 where
-    S::Opt: Opt,
+    <S::Ctor as Creator>::Opt: Opt,
     S: Set + OptParser + Pre + Debug + 'static,
 {
     type Ret = bool;

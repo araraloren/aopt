@@ -4,6 +4,7 @@ use tracing::trace;
 
 use super::Service;
 use crate::astr;
+use crate::opt::Creator;
 use crate::opt::Index;
 use crate::opt::Opt;
 use crate::opt::Style;
@@ -35,7 +36,7 @@ impl<Set> CheckService<Set> {
 impl<Set> CheckService<Set>
 where
     Set: crate::set::Set,
-    Set::Opt: Opt,
+    <Set::Ctor as Creator>::Opt: Opt,
 {
     pub fn opt<'a>(set: &'a Set, id: &Uid) -> &'a dyn Opt {
         set.get(*id).unwrap()
