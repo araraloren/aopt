@@ -102,7 +102,7 @@ impl<S> Extract<S> for Ctx {
     }
 }
 
-/// The uid copied from [`Ctx`] which set in [`Policy`](crate::policy::Policy).
+/// The uid copied from [`Ctx`] which set in [`Policy`](crate::parser::Policy).
 ///
 /// It is same as the uid of matched option in generally.
 ///
@@ -185,7 +185,7 @@ impl Display for Uid {
     }
 }
 
-/// The index of option/NOA copied from [`Ctx`] which set in [`Policy`](crate::policy::Policy).
+/// The index of option/NOA copied from [`Ctx`] which set in [`Policy`](crate::parser::Policy).
 ///
 /// # Examples
 /// ```rust
@@ -294,7 +294,7 @@ impl Display for Index {
     }
 }
 
-/// The total argument number copied from [`Ctx`] which set in [`Policy`](crate::policy::Policy).
+/// The total argument number copied from [`Ctx`] which set in [`Policy`](crate::parser::Policy).
 ///
 /// # Example
 /// ```rust
@@ -391,7 +391,7 @@ impl Display for Total {
     }
 }
 
-/// The arguments cloned from [`Ctx`] which set in [`Policy`](crate::policy::Policy).
+/// The arguments cloned from [`Ctx`] which set in [`Policy`](crate::parser::Policy).
 ///
 /// # Examples
 /// ```rust
@@ -474,7 +474,7 @@ impl<S: Set> Extract<S> for Args {
     }
 }
 
-/// The name cloned from [`Ctx`] which set in [`Policy`](crate::policy::Policy).
+/// The name cloned from [`Ctx`] which set in [`Policy`](crate::parser::Policy).
 ///
 /// # Examples
 /// ```rust
@@ -591,7 +591,7 @@ impl Display for Name {
     }
 }
 
-/// The prefix cloned from [`Ctx`] which set in [`Policy`](crate::policy::Policy).
+/// The prefix cloned from [`Ctx`] which set in [`Policy`](crate::parser::Policy).
 ///
 /// # Examples
 /// ```rust
@@ -689,7 +689,7 @@ impl Display for Prefix {
     }
 }
 
-/// The style copied from [`Ctx`] which set in [`Policy`](crate::policy::Policy).
+/// The style copied from [`Ctx`] which set in [`Policy`](crate::parser::Policy).
 ///
 /// # Examples
 /// ```rust
@@ -787,7 +787,7 @@ impl<S: Set> Extract<S> for Style {
     }
 }
 
-/// The disable value copied from [`Ctx`] which set in [`Policy`](crate::policy::Policy).
+/// The disable value copied from [`Ctx`] which set in [`Policy`](crate::parser::Policy).
 ///
 /// # Examples
 /// ```rust
@@ -885,7 +885,7 @@ impl<S: Set> Extract<S> for Disable {
     }
 }
 
-/// The raw value cloned from [`Ctx`] which set in [`Policy`](crate::policy::Policy).
+/// The raw value cloned from [`Ctx`] which set in [`Policy`](crate::parser::Policy).
 ///
 /// # Examples
 /// ```rust

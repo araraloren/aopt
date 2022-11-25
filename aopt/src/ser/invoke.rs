@@ -112,7 +112,7 @@ impl<Set> InvokeService<Set> {
         self
     }
 
-    /// Register a callback that will called by [`Policy`](crate::policy::Policy) when option setted.
+    /// Register a callback that will called by [`Policy`](crate::parser::Policy) when option setted.
     ///
     /// The [`InvokeService`] first call the [`invoke`](crate::ctx::Handler::invoke), then
     /// call the [`process`](crate::ctx::Store::process) with the return value.

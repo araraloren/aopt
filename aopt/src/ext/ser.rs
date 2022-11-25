@@ -113,7 +113,7 @@ where
             if (f)(&vals[i]) {
                 removed.push(vals.remove(i));
             } else {
-                i = i + 1;
+                i += 1;
             }
         }
         Ok(removed)
