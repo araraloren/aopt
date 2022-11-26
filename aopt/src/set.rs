@@ -15,7 +15,7 @@ use crate::Error;
 use crate::Str;
 use crate::Uid;
 
-/// A collection store the [`Set::Opt`].
+/// A collection store the [`Ctor`](Set::Ctor) and [`Opt`](Creator::Opt).
 pub trait Set {
     type Ctor: Creator;
 

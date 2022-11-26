@@ -43,7 +43,7 @@ pub trait Match {
     ) -> Result<bool, Self::Error>;
 }
 
-/// [`Process`] matching the [`Opt`](crate::set::Set::Opt) with [`Match`], and return the first matched
+/// [`Process`] matching the [`Opt`](crate::opt::Creator::Opt) with [`Match`], and return the first matched
 /// [`Match`] if successful.
 pub trait Process<M: Match> {
     type Set: Set;
