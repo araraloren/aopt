@@ -76,6 +76,8 @@ pub mod prelude {
     pub use crate::opt::ValValidator;
     pub use crate::parser::DelayPolicy;
     pub use crate::parser::FwdPolicy;
+    pub use crate::parser::Parser;
+    pub use crate::parser::ParserCommit;
     pub use crate::parser::Policy;
     pub use crate::parser::PrePolicy;
     pub use crate::proc::Match;

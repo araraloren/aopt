@@ -5,6 +5,7 @@ pub(crate) mod policy_pre;
 pub(crate) mod process;
 pub(crate) mod style;
 
+pub use self::commit::ParserCommit;
 pub use self::policy_delay::DelayPolicy;
 pub use self::policy_fwd::FwdPolicy;
 pub use self::policy_pre::PrePolicy;
@@ -19,17 +20,30 @@ pub(crate) use self::process::invoke_callback_opt;
 pub(crate) use self::process::process_non_opt;
 pub(crate) use self::process::process_opt;
 
-use crate::args::Args;
-use crate::ctx::Ctx;
-use crate::ext::APolicyExt;
-use crate::ser::Services;
-use crate::set::Set;
-use crate::Arc;
-use crate::Error;
-use crate::Uid;
 use std::fmt::Debug;
 use std::ops::Deref;
 use std::ops::DerefMut;
+
+use crate::args::Args;
+use crate::ctx::Ctx;
+use crate::ctx::Extract;
+use crate::ctx::Handler;
+use crate::ext::APolicyExt;
+use crate::ext::ServicesExt;
+use crate::opt::Config;
+use crate::opt::ConfigValue;
+use crate::opt::Creator;
+use crate::opt::Information;
+use crate::opt::Opt;
+use crate::opt::OptParser;
+use crate::ser::Services;
+use crate::set::Commit;
+use crate::set::Pre;
+use crate::set::Set;
+use crate::Arc;
+use crate::Error;
+use crate::Str;
+use crate::Uid;
 
 #[derive(Debug, Clone)]
 pub struct CtxSaver {
@@ -113,10 +127,9 @@ impl<S, P> DerefMut for Parser<S, P> {
     }
 }
 
-impl<S, P> Parser<S, P>
+impl<P> Parser<P::Set, P>
 where
-    S: Set,
-    P: Policy + APolicyExt<S>,
+    P: Policy + APolicyExt<P::Set>,
 {
     pub fn new(policy: P) -> Self {
         let set = policy.default_set();
@@ -130,7 +143,18 @@ where
     }
 }
 
-impl<S, P> Parser<S, P> {
+impl<P> Parser<P::Set, P>
+where
+    P: Policy,
+{
+    pub fn new_with(policy: P, optset: P::Set, services: Services) -> Self {
+        Self {
+            optset,
+            policy,
+            services,
+        }
+    }
+
     pub fn policy(&self) -> &P {
         &self.policy
     }
@@ -157,32 +181,58 @@ impl<S, P> Parser<S, P> {
         self
     }
 
-    pub fn optset(&self) -> &S {
+    pub fn optset(&self) -> &P::Set {
         &self.optset
     }
 
-    pub fn optset_mut(&mut self) -> &mut S {
+    pub fn optset_mut(&mut self) -> &mut P::Set {
         &mut self.optset
     }
 
-    pub fn set_optset(&mut self, optset: S) -> &mut Self {
+    pub fn set_optset(&mut self, optset: P::Set) -> &mut Self {
         self.optset = optset;
         self
     }
 }
 
-impl<S, P> Parser<S, P>
+impl<P> Parser<P::Set, P>
 where
-    S: Set,
     P: Policy,
 {
-    pub fn new_with(policy: P, optset: S, services: Services) -> Self {
-        Self {
-            optset,
-            policy,
-            services,
-        }
-    }
+    pub fn parse(&mut self, args: Arc<Args>) -> Result<Option<P::Ret>, Error> {
+        let optset = &mut self.optset;
+        let services = &mut self.services;
 
-    pub fn add_opt(&mut self, opt: &str) {}
+        self.policy
+            .parse(optset, services, args)
+            .map_err(|v| v.into())
+    }
+}
+
+impl<P> Parser<P::Set, P>
+where
+    P::Set: 'static,
+    P: Policy,
+    P::Set: Pre + Set + OptParser,
+    <P::Set as OptParser>::Output: Information,
+    <<P::Set as Set>::Ctor as Creator>::Opt: Opt,
+    <<P::Set as Set>::Ctor as Creator>::Config: Config + ConfigValue + Default,
+{
+    pub fn add_opt<Args, Output, H, T: Into<Str>>(
+        &mut self,
+        opt: T,
+    ) -> Result<ParserCommit<'_, P::Set, H, Args, Output>, Error>
+    where
+        Output: 'static,
+        H: Handler<P::Set, Args, Output = Option<Output>, Error = Error> + 'static,
+        Args: Extract<P::Set, Error = Error> + 'static,
+    {
+        let info =
+            <<<P::Set as Set>::Ctor as Creator>::Config as Config>::new(&self.optset, opt.into())?;
+
+        Ok(ParserCommit::new(
+            Commit::new(&mut self.optset, info),
+            self.services.ser_invoke_mut()?,
+        ))
+    }
 }

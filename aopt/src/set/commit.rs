@@ -155,11 +155,7 @@ where
         self
     }
 
-    /// Run the commit.
-    ///
-    /// It create an option using given type [`Creator`].
-    /// And add it to referenced [`OptSet`], return the new option [`Uid`].
-    pub fn run(mut self) -> Result<Uid, Error> {
+    pub fn run_and_commit_the_change(&mut self) -> Result<Uid, Error> {
         if let Some(commited) = self.commited {
             Ok(commited)
         } else {
@@ -178,6 +174,14 @@ where
             Ok(uid)
         }
     }
+
+    /// Run the commit.
+    ///
+    /// It create an option using given type [`Creator`].
+    /// And add it to referenced [`OptSet`], return the new option [`Uid`].
+    pub fn run(mut self) -> Result<Uid, Error> {
+        self.run_and_commit_the_change()
+    }
 }
 
 impl<'a, Set> Drop for Commit<'a, Set>
@@ -186,21 +190,8 @@ where
     <Set::Ctor as Creator>::Config: ConfigValue + Default,
 {
     fn drop(&mut self) {
-        if self.commited.is_none() {
-            let error = "Error when commit the option in Drop, call `run` get the Result";
-            let info = std::mem::take(&mut self.info);
-            let type_name = info.gen_type().expect(error);
-            let name = info.name().cloned();
-            let opt = self
-                .set
-                .ctor_mut(&type_name)
-                .expect(error)
-                .new_with(info)
-                .map_err(|e| e.into())
-                .expect(error);
-            let uid = self.set.insert(opt);
+        let error = "Error when commit the option in Commit::Drop, call `run` get the Result";
 
-            trace!("Register a opt {:?} --> {}", name, uid);
-        }
+        self.run_and_commit_the_change().expect(error);
     }
 }
