@@ -39,6 +39,7 @@ use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::ser::Services;
 use crate::set::Commit;
+use crate::set::Filter;
 use crate::set::Pre;
 use crate::set::Set;
 use crate::set::SetCfg;
@@ -281,11 +282,36 @@ where
 impl<P> Parser<P::Set, P>
 where
     P: Policy,
-    P::Set: Set + OptParser,
+    P::Set: Pre + Set + OptParser,
+    <P::Set as OptParser>::Output: Information,
+    SetCfg<P::Set>: Config + ConfigValue + Default,
 {
+    fn filter_optstr(&self, opt: &str) -> Result<Uid, Error> {
+        let filter = Filter::new(
+            &self.optset,
+            SetCfg::<P::Set>::new(&self.optset, opt.into())?,
+        );
+        filter.find().map(|v| v.uid()).ok_or_else(|| {
+            Error::raise_error(format!(
+                "Can not find option: invalid option string {}",
+                opt
+            ))
+        })
+    }
+
     pub fn val_filter<T: 'static>(&self, opt: &str) -> Result<&T, Error> {
-        // let uid = self.optset.
-        // self.services.ser_val()?.val::<T>(uid)
-        todo!()
+        self.val(self.filter_optstr(opt)?)
+    }
+
+    pub fn val_filter_mut<T: 'static>(&mut self, opt: &str) -> Result<&mut T, Error> {
+        self.val_mut(self.filter_optstr(opt)?)
+    }
+
+    pub fn vals_filter<T: 'static>(&self, opt: &str) -> Result<&Vec<T>, Error> {
+        self.vals(self.filter_optstr(opt)?)
+    }
+
+    pub fn vals_filter_mut<T: 'static>(&mut self, opt: &str) -> Result<&mut Vec<T>, Error> {
+        self.vals_mut(self.filter_optstr(opt)?)
     }
 }
