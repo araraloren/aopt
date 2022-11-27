@@ -2,7 +2,7 @@ use crate::opt::AOpt;
 use crate::opt::Action;
 use crate::opt::Assoc;
 use crate::opt::ConfigValue;
-use crate::opt::Creator;
+use crate::opt::Ctor;
 use crate::opt::OptConfig;
 use crate::opt::Style;
 use crate::opt::ValInitiator;
@@ -19,7 +19,7 @@ impl IntCreator {
     }
 }
 
-impl Creator for IntCreator {
+impl Ctor for IntCreator {
     type Opt = AOpt;
 
     type Config = OptConfig;
@@ -86,7 +86,7 @@ impl UintCreator {
     }
 }
 
-impl Creator for UintCreator {
+impl Ctor for UintCreator {
     type Opt = AOpt;
 
     type Config = OptConfig;
@@ -153,7 +153,7 @@ impl FltCreator {
     }
 }
 
-impl Creator for FltCreator {
+impl Ctor for FltCreator {
     type Opt = AOpt;
 
     type Config = OptConfig;
@@ -220,7 +220,7 @@ impl StrCreator {
     }
 }
 
-impl Creator for StrCreator {
+impl Ctor for StrCreator {
     type Opt = AOpt;
 
     type Config = OptConfig;
@@ -287,7 +287,7 @@ impl BoolCreator {
     }
 }
 
-impl Creator for BoolCreator {
+impl Ctor for BoolCreator {
     type Opt = AOpt;
 
     type Config = OptConfig;
@@ -358,7 +358,7 @@ impl PosCreator {
     }
 }
 
-impl Creator for PosCreator {
+impl Ctor for PosCreator {
     type Opt = AOpt;
 
     type Config = OptConfig;
@@ -419,7 +419,7 @@ impl CmdCreator {
     }
 }
 
-impl Creator for CmdCreator {
+impl Ctor for CmdCreator {
     type Opt = AOpt;
 
     type Config = OptConfig;
@@ -487,7 +487,7 @@ impl MainCreator {
     }
 }
 
-impl Creator for MainCreator {
+impl Ctor for MainCreator {
     type Opt = AOpt;
 
     type Config = OptConfig;

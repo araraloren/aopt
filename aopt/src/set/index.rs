@@ -1,26 +1,26 @@
-use crate::opt::Creator;
+use crate::opt::Ctor;
 use crate::set::Set;
 use crate::set::SetExt;
 use crate::Error;
 use crate::Uid;
 
 pub trait SetIndex<S: Set> {
-    fn ref_from<'a>(&self, set: &'a S) -> Result<&'a <S::Ctor as Creator>::Opt, Error>;
+    fn ref_from<'a>(&self, set: &'a S) -> Result<&'a <S::Ctor as Ctor>::Opt, Error>;
 
-    fn mut_from<'a>(&self, set: &'a mut S) -> Result<&'a mut <S::Ctor as Creator>::Opt, Error>;
+    fn mut_from<'a>(&self, set: &'a mut S) -> Result<&'a mut <S::Ctor as Ctor>::Opt, Error>;
 }
 
 macro_rules! impl_num_index_for {
     ($num:ty) => {
         impl<S: Set> SetIndex<S> for $num {
-            fn ref_from<'a>(&self, set: &'a S) -> Result<&'a <S::Ctor as Creator>::Opt, Error> {
+            fn ref_from<'a>(&self, set: &'a S) -> Result<&'a <S::Ctor as Ctor>::Opt, Error> {
                 set.opt(*self as Uid)
             }
 
             fn mut_from<'a>(
                 &self,
                 set: &'a mut S,
-            ) -> Result<&'a mut <S::Ctor as Creator>::Opt, Error> {
+            ) -> Result<&'a mut <S::Ctor as Ctor>::Opt, Error> {
                 set.opt_mut(*self as Uid)
             }
         }

@@ -1,7 +1,7 @@
 use crate::opt::AOpt;
 use crate::opt::BoolCreator;
 use crate::opt::CmdCreator;
-use crate::opt::Creator;
+use crate::opt::Ctor;
 use crate::opt::FltCreator;
 use crate::opt::IntCreator;
 use crate::opt::MainCreator;
@@ -88,7 +88,7 @@ pub trait APolicyExt<I: crate::set::Set> {
     fn default_set(&self) -> I;
 }
 
-pub type ACreator = Box<dyn Creator<Opt = AOpt, Config = OptConfig, Error = Error>>;
+pub type ACreator = Box<dyn Ctor<Opt = AOpt, Config = OptConfig, Error = Error>>;
 
 pub type ASet = OptSet<StrParser, ACreator>;
 
@@ -137,7 +137,7 @@ impl APolicyExt<ASet> for ADelayPolicy {
 }
 
 /// Return an [`Set`](crate::set::Set) with default prefix `-` and `--`,
-/// and below [`Creator`]s:
+/// and below [`Ctor`]s:
 ///
 /// * [`IntCreator`]
 /// * [`BoolCreator`]

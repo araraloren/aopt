@@ -8,46 +8,48 @@ use crate::ctx::Store;
 use crate::opt::Action;
 use crate::opt::Assoc;
 use crate::opt::ConfigValue;
-use crate::opt::Creator;
 use crate::opt::Index;
 use crate::opt::Opt;
 use crate::opt::ValInitiator;
 use crate::opt::ValValidator;
 use crate::prelude::InvokeService;
 use crate::set::Commit;
+use crate::set::Set;
+use crate::set::SetCfg;
+use crate::set::SetOpt;
 use crate::Error;
 use crate::Str;
 use crate::Uid;
 
 /// Create option using given configurations.
-pub struct ParserCommit<'a, Set, H, Args, Output>
+pub struct ParserCommit<'a, S, H, A, O>
 where
-    Output: 'static,
-    Set: crate::set::Set,
-    <Set::Ctor as Creator>::Opt: Opt,
-    <Set::Ctor as Creator>::Config: ConfigValue + Default,
-    H: Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
-    Args: Extract<Set, Error = Error> + 'static,
+    O: 'static,
+    S: Set,
+    SetOpt<S>: Opt,
+    SetCfg<S>: ConfigValue + Default,
+    H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
+    A: Extract<S, Error = Error> + 'static,
 {
-    inner: Commit<'a, Set>,
+    inner: Commit<'a, S>,
 
-    inv_ser: &'a mut InvokeService<Set>,
+    inv_ser: &'a mut InvokeService<S>,
 
     handler: Option<H>,
 
     register: bool,
 
-    marker: PhantomData<(Args, Output)>,
+    marker: PhantomData<(A, O)>,
 }
 
-impl<'a, Set, H, Args, Output> Debug for ParserCommit<'a, Set, H, Args, Output>
+impl<'a, S, H, A, O> Debug for ParserCommit<'a, S, H, A, O>
 where
-    Output: 'static,
-    Set: crate::set::Set + Debug,
-    <Set::Ctor as Creator>::Opt: Opt + Debug,
-    <Set::Ctor as Creator>::Config: ConfigValue + Default + Debug,
-    H: Handler<Set, Args, Output = Option<Output>, Error = Error> + Debug + 'static,
-    Args: Extract<Set, Error = Error> + 'static,
+    O: 'static,
+    S: Set + Debug,
+    SetOpt<S>: Opt + Debug,
+    SetCfg<S>: ConfigValue + Default + Debug,
+    H: Handler<S, A, Output = Option<O>, Error = Error> + Debug + 'static,
+    A: Extract<S, Error = Error> + 'static,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ParserCommit")
@@ -60,16 +62,16 @@ where
     }
 }
 
-impl<'a, Set, H, Args, Output> ParserCommit<'a, Set, H, Args, Output>
+impl<'a, S, H, A, O> ParserCommit<'a, S, H, A, O>
 where
-    Output: 'static,
-    Set: crate::set::Set,
-    <Set::Ctor as Creator>::Opt: Opt,
-    <Set::Ctor as Creator>::Config: ConfigValue + Default,
-    H: Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
-    Args: Extract<Set, Error = Error> + 'static,
+    O: 'static,
+    S: Set,
+    SetOpt<S>: Opt,
+    SetCfg<S>: ConfigValue + Default,
+    H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
+    A: Extract<S, Error = Error> + 'static,
 {
-    pub fn new(inner: Commit<'a, Set>, inv_ser: &'a mut InvokeService<Set>) -> Self {
+    pub fn new(inner: Commit<'a, S>, inv_ser: &'a mut InvokeService<S>) -> Self {
         Self {
             inner,
             inv_ser,
@@ -79,11 +81,11 @@ where
         }
     }
 
-    pub fn cfg(&self) -> &<Set::Ctor as Creator>::Config {
+    pub fn cfg(&self) -> &SetCfg<S> {
         self.inner.cfg()
     }
 
-    pub fn cfg_mut(&mut self) -> &mut <Set::Ctor as Creator>::Config {
+    pub fn cfg_mut(&mut self) -> &mut SetCfg<S> {
         self.inner.cfg_mut()
     }
 
@@ -106,19 +108,19 @@ where
     }
 
     /// Set the option name of commit configuration.
-    pub fn set_name<S: Into<Str>>(mut self, name: S) -> Self {
+    pub fn set_name<T: Into<Str>>(mut self, name: T) -> Self {
         self.cfg_mut().set_name(name);
         self
     }
 
     /// Set the option prefix of commit configuration.
-    pub fn set_prefix<S: Into<Str>>(mut self, prefix: S) -> Self {
+    pub fn set_prefix<T: Into<Str>>(mut self, prefix: T) -> Self {
         self.cfg_mut().set_prefix(prefix);
         self
     }
 
     /// Set the option type name of commit configuration.
-    pub fn set_type<S: Into<Str>>(mut self, type_name: S) -> Self {
+    pub fn set_type<T: Into<Str>>(mut self, type_name: T) -> Self {
         self.cfg_mut().set_type(type_name);
         self
     }
@@ -130,13 +132,13 @@ where
     }
 
     /// Remove the given alias of commit configuration.
-    pub fn rem_alias<S: Into<Str>>(mut self, alias: S) -> Self {
+    pub fn rem_alias<T: Into<Str>>(mut self, alias: T) -> Self {
         self.cfg_mut().rem_alias(alias);
         self
     }
 
     /// Add given alias into the commit configuration.
-    pub fn add_alias<S: Into<Str>>(mut self, alias: S) -> Self {
+    pub fn add_alias<T: Into<Str>>(mut self, alias: T) -> Self {
         self.cfg_mut().add_alias(alias);
         self
     }
@@ -148,13 +150,13 @@ where
     }
 
     /// Set the option hint message of commit configuration.
-    pub fn set_hint<S: Into<Str>>(mut self, hint: S) -> Self {
+    pub fn set_hint<T: Into<Str>>(mut self, hint: T) -> Self {
         self.cfg_mut().set_hint(hint);
         self
     }
 
     /// Set the option help message of commit configuration.
-    pub fn set_help<S: Into<Str>>(mut self, help: S) -> Self {
+    pub fn set_help<T: Into<Str>>(mut self, help: T) -> Self {
         self.cfg_mut().set_help(help);
         self
     }
@@ -193,7 +195,7 @@ where
     /// Register the handler with given store.
     pub fn then(
         mut self,
-        store: impl Store<Set, Output, Ret = (), Error = Error> + 'static,
+        store: impl Store<S, O, Ret = (), Error = Error> + 'static,
     ) -> Result<Self, Error> {
         let uid = self.run_and_commit_the_change(false)?;
 
@@ -220,21 +222,21 @@ where
 
     /// Run the commit.
     ///
-    /// It create an option using given type [`Creator`].
+    /// It create an option using given type [`Ctor`].
     /// And add it to referenced [`Set`](crate::set::Set), return the new option [`Uid`].
     pub fn run(mut self) -> Result<Uid, Error> {
         self.run_and_commit_the_change(true)
     }
 }
 
-impl<'a, Set, H, Args, Output> Drop for ParserCommit<'a, Set, H, Args, Output>
+impl<'a, S, H, A, O> Drop for ParserCommit<'a, S, H, A, O>
 where
-    Output: 'static,
-    Set: crate::set::Set,
-    <Set::Ctor as Creator>::Opt: Opt,
-    <Set::Ctor as Creator>::Config: ConfigValue + Default,
-    H: Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
-    Args: Extract<Set, Error = Error> + 'static,
+    O: 'static,
+    S: crate::set::Set,
+    SetOpt<S>: Opt,
+    SetCfg<S>: ConfigValue + Default,
+    H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
+    A: Extract<S, Error = Error> + 'static,
 {
     fn drop(&mut self) {
         let error = "Error when commit the option in ParserCommit::Drop, call `run` get the Result";

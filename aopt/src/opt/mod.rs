@@ -127,8 +127,8 @@ pub trait Opt: Debug {
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "sync")] {
-        pub trait Creator: Send + Sync {
-            type Opt;
+        pub trait Ctor: Send + Sync {
+            type Opt: Opt;
             type Config;
             type Error: Into<Error>;
 
@@ -140,8 +140,8 @@ cfg_if::cfg_if! {
         }
     }
     else {
-        pub trait Creator {
-            type Opt;
+        pub trait Ctor {
+            type Opt: Opt;
             type Config;
             type Error: Into<Error>;
 
@@ -154,8 +154,8 @@ cfg_if::cfg_if! {
     }
 }
 
-impl<Opt, Config, Err: Into<Error>> Creator
-    for Box<dyn Creator<Opt = Opt, Config = Config, Error = Err>>
+impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Ctor
+    for Box<dyn Ctor<Opt = Opt, Config = Config, Error = Err>>
 {
     type Opt = Opt;
 
@@ -164,29 +164,29 @@ impl<Opt, Config, Err: Into<Error>> Creator
     type Error = Err;
 
     fn r#type(&self) -> Str {
-        Creator::r#type(self.as_ref())
+        Ctor::r#type(self.as_ref())
     }
 
     fn sp_deactivate(&self) -> bool {
-        Creator::sp_deactivate(self.as_ref())
+        Ctor::sp_deactivate(self.as_ref())
     }
 
     fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
-        Creator::new_with(self.as_mut(), config)
+        Ctor::new_with(self.as_mut(), config)
     }
 }
 
-impl<Opt, Config, Err: Into<Error>> Debug
-    for Box<dyn Creator<Opt = Opt, Config = Config, Error = Err>>
+impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Debug
+    for Box<dyn Ctor<Opt = Opt, Config = Config, Error = Err>>
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Creator")
+        f.debug_tuple("Ctor")
             .field(&format!("{{{}}}", self.r#type()))
             .finish()
     }
 }
 
-impl<T: Creator> From<T> for Str {
+impl<T: Ctor> From<T> for Str {
     fn from(c: T) -> Self {
         c.r#type()
     }

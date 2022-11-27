@@ -53,7 +53,7 @@ pub mod prelude {
     pub use crate::opt::Config;
     pub use crate::opt::ConfigValue;
     pub use crate::opt::ConstrctInfo;
-    pub use crate::opt::Creator;
+    pub use crate::opt::Ctor;
     pub use crate::opt::FltCreator;
     pub use crate::opt::Help;
     pub use crate::opt::Index;

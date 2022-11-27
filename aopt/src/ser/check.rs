@@ -4,59 +4,54 @@ use tracing::trace;
 
 use super::Service;
 use crate::astr;
-use crate::opt::Creator;
 use crate::opt::Index;
 use crate::opt::Opt;
 use crate::opt::Style;
+use crate::set::SetOpt;
 use crate::Error;
 use crate::HashMap;
 use crate::StrJoin;
 use crate::Uid;
 
-pub struct CheckService<Set>(PhantomData<Set>);
+pub struct CheckService<S>(PhantomData<S>);
 
-impl<Set> Debug for CheckService<Set> {
+impl<S> Debug for CheckService<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CheckService").finish()
     }
 }
 
-impl<Set> Default for CheckService<Set> {
+impl<S> Default for CheckService<S> {
     fn default() -> Self {
         Self(PhantomData::default())
     }
 }
 
-impl<Set> CheckService<Set> {
+impl<S> CheckService<S> {
     pub fn new() -> Self {
         Self(PhantomData::default())
     }
 }
 
-impl<Set> CheckService<Set>
+impl<S> CheckService<S>
 where
-    Set: crate::set::Set,
-    <Set::Ctor as Creator>::Opt: Opt,
+    S: crate::set::Set,
+    SetOpt<S>: Opt,
 {
-    pub fn opt<'a>(set: &'a Set, id: &Uid) -> &'a dyn Opt {
+    pub fn opt<'a>(set: &'a S, id: &Uid) -> &'a dyn Opt {
         set.get(*id).unwrap()
     }
 
     /// Check if we have [`Cmd`](crate::opt::CmdCreator),
     /// then no force required [`Pos`](crate::opt::PosCreator)@1 allowed.
-    pub fn pre_check(&self, set: &mut Set) -> Result<bool, Error> {
-        let has_cmd = set
-            .keys()
-            .iter()
-            .any(|key| Self::opt(set, key).mat_style(Style::Cmd));
+    pub fn pre_check(&self, set: &mut S) -> Result<bool, Error> {
+        let has_cmd = set.iter().any(|opt| opt.mat_style(Style::Cmd));
 
         const MAX_INDEX: usize = usize::MAX;
 
         trace!("Pre Check {{has_cmd: {}}}", has_cmd);
         if has_cmd {
-            for key in set.keys() {
-                let opt = Self::opt(set, key);
-
+            for opt in set.iter() {
                 if opt.mat_style(Style::Pos) {
                     if let Some(index) = opt.idx() {
                         let index = index.calc_index(MAX_INDEX, 1).unwrap_or(MAX_INDEX);
@@ -71,15 +66,13 @@ where
         Ok(true)
     }
 
-    pub fn opt_check(&self, set: &mut Set) -> Result<bool, Error> {
+    pub fn opt_check(&self, set: &mut S) -> Result<bool, Error> {
         trace!("Opt Check, call valid on all Opt ...");
-        for id in set.keys().iter().filter(|v| {
-            let opt = Self::opt(set, v);
+        for opt in set.iter().filter(|opt| {
             opt.mat_style(Style::Argument)
                 || opt.mat_style(Style::Boolean)
                 || opt.mat_style(Style::Combined)
         }) {
-            let opt = Self::opt(set, id);
             if !opt.valid() {
                 return Err(Error::sp_opt_force_require(opt.hint()));
             }
@@ -90,15 +83,13 @@ where
     /// Check if the POS is valid.
     /// For which POS is have certainty position, POS has same position are replaceble even it is force reuqired.
     /// For which POS is have uncertainty position, it must be set if it is force reuqired.
-    pub fn pos_check(&self, set: &mut Set) -> Result<bool, Error> {
+    pub fn pos_check(&self, set: &mut S) -> Result<bool, Error> {
         // for POS has certainty position, POS has same position are replaceble even it is force reuqired.
         let mut index_map = HashMap::<usize, Vec<Uid>>::default();
         // for POS has uncertainty position, it must be set if it is force reuqired
         let mut float_vec: Vec<Uid> = vec![];
 
-        for key in set.keys() {
-            let opt = Self::opt(set, key);
-
+        for opt in set.iter() {
             if opt.mat_style(Style::Pos) {
                 if let Some(index) = opt.idx() {
                     match index {
@@ -161,13 +152,11 @@ where
         Ok(true)
     }
 
-    pub fn cmd_check(&self, set: &mut Set) -> Result<bool, Error> {
+    pub fn cmd_check(&self, set: &mut S) -> Result<bool, Error> {
         let mut names = vec![];
         let mut valid = false;
 
-        for key in set.keys() {
-            let opt = Self::opt(set, key);
-
+        for opt in set.iter() {
             if opt.mat_style(Style::Cmd) {
                 valid = valid || opt.valid();
                 if valid {
@@ -184,17 +173,16 @@ where
         Ok(true)
     }
 
-    pub fn post_check(&self, set: &mut Set) -> Result<bool, Error> {
+    pub fn post_check(&self, set: &mut S) -> Result<bool, Error> {
         trace!("Post Check, call valid on Main ...");
         Ok(set
-            .keys()
             .iter()
-            .filter(|v| Self::opt(set, v).mat_style(Style::Main))
-            .all(|v| Self::opt(set, v).valid()))
+            .filter(|opt| opt.mat_style(Style::Main))
+            .all(|opt| opt.valid()))
     }
 }
 
-impl<Set> Service for CheckService<Set> {
+impl<S> Service for CheckService<S> {
     fn service_name() -> crate::Str {
         astr("CheckService")
     }

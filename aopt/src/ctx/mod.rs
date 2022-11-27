@@ -8,10 +8,11 @@ pub use self::handler::Handler;
 
 use std::fmt::Debug;
 
-use crate::opt::Creator;
 use crate::opt::Opt;
 use crate::ser::Services;
+use crate::set::Set;
 use crate::set::SetExt;
+use crate::set::SetOpt;
 use crate::Error;
 use crate::RawVal;
 use crate::Uid;
@@ -118,17 +119,17 @@ impl<Set, Value> Store<Set, Value> for NullStore {
 }
 
 /// Wrap the handler and call the default action of option.
-pub fn wrap_handler_default<Set, Args, Output>(
-    mut handler: impl Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
-) -> Callbacks<Set, (), Error>
+pub fn wrap_handler_default<S, A, O>(
+    mut handler: impl Handler<S, A, Output = Option<O>, Error = Error> + 'static,
+) -> Callbacks<S, (), Error>
 where
-    Set: crate::set::Set,
-    <Set::Ctor as Creator>::Opt: Opt,
-    Output: 'static,
-    Args: Extract<Set, Error = Error>,
+    O: 'static,
+    S: Set,
+    SetOpt<S>: Opt,
+    A: Extract<S, Error = Error>,
 {
-    Box::new(move |set: &mut Set, ser: &mut Services, ctx: &Ctx| {
-        let val = handler.invoke(set, ser, Args::extract(set, ser, ctx)?)?;
+    Box::new(move |set: &mut S, ser: &mut Services, ctx: &Ctx| {
+        let val = handler.invoke(set, ser, A::extract(set, ser, ctx)?)?;
         let arg = ctx.arg();
         let arg = arg.as_ref().map(|v| v.as_ref());
         let uid = ctx.uid();
@@ -139,16 +140,16 @@ where
 }
 
 /// Wrap the handler and call the [`process`](Store::process) of given `store` on return value of `handler`.
-pub fn wrap_handler<Set, Args, Output, Ret, Error>(
-    mut handler: impl Handler<Set, Args, Output = Option<Output>, Error = Error> + 'static,
-    mut store: impl Store<Set, Output, Ret = Ret, Error = Error> + 'static,
-) -> Callbacks<Set, Ret, Error>
+pub fn wrap_handler<S, A, O, R, E>(
+    mut handler: impl Handler<S, A, Output = Option<O>, Error = E> + 'static,
+    mut store: impl Store<S, O, Ret = R, Error = E> + 'static,
+) -> Callbacks<S, R, E>
 where
-    Error: Into<crate::Error>,
-    Args: Extract<Set, Error = Error>,
+    E: Into<crate::Error>,
+    A: Extract<S, Error = E>,
 {
-    Box::new(move |set: &mut Set, ser: &mut Services, ctx: &Ctx| {
-        let val = handler.invoke(set, ser, Args::extract(set, ser, ctx)?)?;
+    Box::new(move |set: &mut S, ser: &mut Services, ctx: &Ctx| {
+        let val = handler.invoke(set, ser, A::extract(set, ser, ctx)?)?;
         let arg = ctx.arg();
         let arg = arg.as_ref().map(|v| v.as_ref());
         let uid = ctx.uid();

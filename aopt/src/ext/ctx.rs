@@ -86,11 +86,11 @@ use std::ops::DerefMut;
 
 use crate::ctx::Ctx;
 use crate::ctx::Extract;
-use crate::opt::Creator;
 use crate::opt::RawValParser;
 use crate::ser::Services;
 use crate::set::Set;
 use crate::set::SetExt;
+use crate::set::SetOpt;
 use crate::Arc;
 use crate::Error;
 use crate::Str;
@@ -1118,7 +1118,7 @@ impl<T> DerefMut for Value<T> {
     }
 }
 
-impl<S: Set, T: RawValParser<<<S as Set>::Ctor as Creator>::Opt>> Extract<S> for Value<T> {
+impl<S: Set, T: RawValParser<SetOpt<S>>> Extract<S> for Value<T> {
     type Error = Error;
 
     fn extract(set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {

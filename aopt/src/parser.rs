@@ -28,11 +28,12 @@ use crate::args::Args;
 use crate::ctx::Ctx;
 use crate::ctx::Extract;
 use crate::ctx::Handler;
+use crate::ext::ser;
 use crate::ext::APolicyExt;
 use crate::ext::ServicesExt;
 use crate::opt::Config;
 use crate::opt::ConfigValue;
-use crate::opt::Creator;
+use crate::opt::Ctor;
 use crate::opt::Information;
 use crate::opt::Opt;
 use crate::opt::OptParser;
@@ -40,8 +41,11 @@ use crate::ser::Services;
 use crate::set::Commit;
 use crate::set::Pre;
 use crate::set::Set;
+use crate::set::SetCfg;
+use crate::set::SetOpt;
 use crate::Arc;
 use crate::Error;
+use crate::RawVal;
 use crate::Str;
 use crate::Uid;
 
@@ -193,19 +197,56 @@ where
         self.optset = optset;
         self
     }
+
+    pub fn set_usr_val<T: 'static>(
+        &mut self,
+        val: ser::Value<T>,
+    ) -> Result<Option<ser::Value<T>>, Error> {
+        Ok(self.services.ser_usrval_mut()?.insert(val))
+    }
+
+    pub fn val<T: 'static>(&self, uid: Uid) -> Result<&T, Error> {
+        self.services.ser_val()?.val::<T>(uid)
+    }
+
+    pub fn val_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut T, Error> {
+        self.services.ser_val_mut()?.val_mut::<T>(uid)
+    }
+
+    pub fn vals<T: 'static>(&self, uid: Uid) -> Result<&Vec<T>, Error> {
+        self.services.ser_val()?.vals::<T>(uid)
+    }
+
+    pub fn vals_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error> {
+        self.services.ser_val_mut()?.vals_mut::<T>(uid)
+    }
+
+    pub fn rawval(&self, uid: Uid) -> Result<&RawVal, Error> {
+        self.services.ser_rawval()?.val(uid)
+    }
+
+    pub fn rawval_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut RawVal, Error> {
+        self.services.ser_rawval_mut()?.val_mut(uid)
+    }
+
+    pub fn rawvals<T: 'static>(&self, uid: Uid) -> Result<&Vec<RawVal>, Error> {
+        self.services.ser_rawval()?.vals(uid)
+    }
+
+    pub fn rawvals_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut Vec<RawVal>, Error> {
+        self.services.ser_rawval_mut()?.vals_mut(uid)
+    }
 }
 
 impl<P> Parser<P::Set, P>
 where
-    P: Policy,
+    P: Policy<Error = Error>,
 {
     pub fn parse(&mut self, args: Arc<Args>) -> Result<Option<P::Ret>, Error> {
         let optset = &mut self.optset;
         let services = &mut self.services;
 
-        self.policy
-            .parse(optset, services, args)
-            .map_err(|v| v.into())
+        self.policy.parse(optset, services, args)
     }
 }
 
@@ -213,10 +254,10 @@ impl<P> Parser<P::Set, P>
 where
     P::Set: 'static,
     P: Policy,
+    SetOpt<P::Set>: Opt,
     P::Set: Pre + Set + OptParser,
     <P::Set as OptParser>::Output: Information,
-    <<P::Set as Set>::Ctor as Creator>::Opt: Opt,
-    <<P::Set as Set>::Ctor as Creator>::Config: Config + ConfigValue + Default,
+    SetCfg<P::Set>: Config + ConfigValue + Default,
 {
     pub fn add_opt<Args, Output, H, T: Into<Str>>(
         &mut self,
@@ -228,11 +269,23 @@ where
         Args: Extract<P::Set, Error = Error> + 'static,
     {
         let info =
-            <<<P::Set as Set>::Ctor as Creator>::Config as Config>::new(&self.optset, opt.into())?;
+            <<<P::Set as Set>::Ctor as Ctor>::Config as Config>::new(&self.optset, opt.into())?;
 
         Ok(ParserCommit::new(
             Commit::new(&mut self.optset, info),
             self.services.ser_invoke_mut()?,
         ))
+    }
+}
+
+impl<P> Parser<P::Set, P>
+where
+    P: Policy,
+    P::Set: Set + OptParser,
+{
+    pub fn val_filter<T: 'static>(&self, opt: &str) -> Result<&T, Error> {
+        // let uid = self.optset.
+        // self.services.ser_val()?.val::<T>(uid)
+        todo!()
     }
 }

@@ -1,7 +1,7 @@
 use tracing::trace;
 
 use crate::ctx::Ctx;
-use crate::opt::Creator;
+use crate::opt::Ctor;
 use crate::opt::Opt;
 use crate::parser::CtxSaver;
 use crate::proc::Match;
@@ -19,7 +19,7 @@ pub fn invoke_callback_opt<Set>(
     ser: &mut Services,
 ) -> Result<Option<()>, Error>
 where
-    <Set::Ctor as Creator>::Opt: Opt,
+    <Set::Ctor as Ctor>::Opt: Opt,
     Set: crate::set::Set + 'static,
 {
     let uid = saver.uid;
@@ -49,11 +49,11 @@ pub fn process_opt<Set>(
     invoke: bool,
 ) -> Result<Vec<CtxSaver>, Error>
 where
-    <Set::Ctor as Creator>::Opt: Opt,
+    <Set::Ctor as Ctor>::Opt: Opt,
     Set: crate::set::Set + 'static,
 {
     // copy the uid of option, avoid borrow the set
-    let keys: Vec<Uid> = set.keys().to_vec();
+    let keys: Vec<Uid> = set.keys();
     let mut savers = vec![];
 
     for uid in keys {
@@ -107,7 +107,7 @@ pub fn process_non_opt<Set>(
     proc: &mut NOAProcess<Set>,
 ) -> Result<Vec<CtxSaver>, Error>
 where
-    <Set::Ctor as Creator>::Opt: Opt,
+    <Set::Ctor as Ctor>::Opt: Opt,
     Set: crate::set::Set + 'static,
 {
     // copy the uid of option, avoid borrow the set

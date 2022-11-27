@@ -4,30 +4,32 @@ use tracing::trace;
 use crate::opt::Action;
 use crate::opt::Assoc;
 use crate::opt::ConfigValue;
-use crate::opt::Creator;
+use crate::opt::Ctor;
 use crate::opt::Index;
 use crate::opt::ValInitiator;
 use crate::opt::ValValidator;
+use crate::set::Set;
+use crate::set::SetCfg;
 use crate::set::SetExt;
 use crate::Error;
 use crate::Str;
 use crate::Uid;
 
 /// Create option using given configurations.
-pub struct Commit<'a, Set>
+pub struct Commit<'a, S>
 where
-    Set: crate::set::Set,
-    <Set::Ctor as Creator>::Config: ConfigValue + Default,
+    S: Set,
+    SetCfg<S>: ConfigValue + Default,
 {
-    info: <Set::Ctor as Creator>::Config,
-    set: &'a mut Set,
+    info: SetCfg<S>,
+    set: &'a mut S,
     commited: Option<Uid>,
 }
 
-impl<'a, Set> Debug for Commit<'a, Set>
+impl<'a, S> Debug for Commit<'a, S>
 where
-    Set: crate::set::Set + Debug,
-    <Set::Ctor as Creator>::Config: ConfigValue + Default + Debug,
+    S: Set + Debug,
+    SetCfg<S>: ConfigValue + Default + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Commit")
@@ -37,12 +39,12 @@ where
     }
 }
 
-impl<'a, Set> Commit<'a, Set>
+impl<'a, S> Commit<'a, S>
 where
-    Set: crate::set::Set,
-    <Set::Ctor as Creator>::Config: ConfigValue + Default,
+    S: Set,
+    SetCfg<S>: ConfigValue + Default,
 {
-    pub fn new(set: &'a mut Set, info: <Set::Ctor as Creator>::Config) -> Self {
+    pub fn new(set: &'a mut S, info: SetCfg<S>) -> Self {
         Self {
             set,
             info,
@@ -50,11 +52,11 @@ where
         }
     }
 
-    pub fn cfg(&self) -> &<Set::Ctor as Creator>::Config {
+    pub fn cfg(&self) -> &SetCfg<S> {
         &self.info
     }
 
-    pub fn cfg_mut(&mut self) -> &mut <Set::Ctor as Creator>::Config {
+    pub fn cfg_mut(&mut self) -> &mut SetCfg<S> {
         &mut self.info
     }
 
@@ -77,19 +79,19 @@ where
     }
 
     /// Set the option name of commit configuration.
-    pub fn set_name<S: Into<Str>>(mut self, name: S) -> Self {
+    pub fn set_name<T: Into<Str>>(mut self, name: T) -> Self {
         self.info.set_name(name);
         self
     }
 
     /// Set the option prefix of commit configuration.
-    pub fn set_prefix<S: Into<Str>>(mut self, prefix: S) -> Self {
+    pub fn set_prefix<T: Into<Str>>(mut self, prefix: T) -> Self {
         self.info.set_prefix(prefix);
         self
     }
 
     /// Set the option type name of commit configuration.
-    pub fn set_type<S: Into<Str>>(mut self, type_name: S) -> Self {
+    pub fn set_type<T: Into<Str>>(mut self, type_name: T) -> Self {
         self.info.set_type(type_name);
         self
     }
@@ -101,13 +103,13 @@ where
     }
 
     /// Remove the given alias of commit configuration.
-    pub fn rem_alias<S: Into<Str>>(mut self, alias: S) -> Self {
+    pub fn rem_alias<T: Into<Str>>(mut self, alias: T) -> Self {
         self.info.rem_alias(alias);
         self
     }
 
     /// Add given alias into the commit configuration.
-    pub fn add_alias<S: Into<Str>>(mut self, alias: S) -> Self {
+    pub fn add_alias<T: Into<Str>>(mut self, alias: T) -> Self {
         self.info.add_alias(alias);
         self
     }
@@ -119,13 +121,13 @@ where
     }
 
     /// Set the option hint message of commit configuration.
-    pub fn set_hint<S: Into<Str>>(mut self, hint: S) -> Self {
+    pub fn set_hint<T: Into<Str>>(mut self, hint: T) -> Self {
         self.info.set_hint(hint);
         self
     }
 
     /// Set the option help message of commit configuration.
-    pub fn set_help<S: Into<Str>>(mut self, help: S) -> Self {
+    pub fn set_help<T: Into<Str>>(mut self, help: T) -> Self {
         self.info.set_help(help);
         self
     }
@@ -177,17 +179,17 @@ where
 
     /// Run the commit.
     ///
-    /// It create an option using given type [`Creator`].
-    /// And add it to referenced [`Set`](crate::set::Set), return the new option [`Uid`].
+    /// It create an option using given type [`Ctor`].
+    /// And add it to referenced [`Set`](Set), return the new option [`Uid`].
     pub fn run(mut self) -> Result<Uid, Error> {
         self.run_and_commit_the_change()
     }
 }
 
-impl<'a, Set> Drop for Commit<'a, Set>
+impl<'a, S> Drop for Commit<'a, S>
 where
-    Set: crate::set::Set,
-    <Set::Ctor as Creator>::Config: ConfigValue + Default,
+    S: Set,
+    SetCfg<S>: ConfigValue + Default,
 {
     fn drop(&mut self) {
         let error = "Error when commit the option in Commit::Drop, call `run` get the Result";

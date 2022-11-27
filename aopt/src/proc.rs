@@ -6,7 +6,7 @@ pub use self::noa::NOAProcess;
 pub use self::opt::OptMatch;
 pub use self::opt::OptProcess;
 
-use crate::opt::Creator;
+use crate::opt::Ctor;
 use crate::opt::Style;
 use crate::set::Set;
 use crate::Error;
@@ -34,16 +34,16 @@ pub trait Match {
 
     fn undo(
         &mut self,
-        opt: &mut <<Self::Set as Set>::Ctor as Creator>::Opt,
+        opt: &mut <<Self::Set as Set>::Ctor as Ctor>::Opt,
     ) -> Result<(), Self::Error>;
 
     fn process(
         &mut self,
-        opt: &mut <<Self::Set as Set>::Ctor as Creator>::Opt,
+        opt: &mut <<Self::Set as Set>::Ctor as Ctor>::Opt,
     ) -> Result<bool, Self::Error>;
 }
 
-/// [`Process`] matching the [`Opt`](crate::opt::Creator::Opt) with [`Match`], and return the first matched
+/// [`Process`] matching the [`Opt`](crate::opt::Ctor::Opt) with [`Match`], and return the first matched
 /// [`Match`] if successful.
 pub trait Process<M: Match> {
     type Set: Set;

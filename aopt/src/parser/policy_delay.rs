@@ -17,14 +17,13 @@ use crate::args::Args;
 use crate::astr;
 use crate::ctx::Ctx;
 use crate::ext::ServicesExt;
-use crate::opt::Creator;
+use crate::opt::Ctor;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::proc::Process;
 use crate::ser::Services;
 use crate::set::Pre;
 use crate::set::Set;
-use crate::set::SetExt;
 use crate::Arc;
 use crate::Error;
 
@@ -52,7 +51,7 @@ where
 
 impl<S> DelayPolicy<S>
 where
-    <S::Ctor as Creator>::Opt: Opt,
+    <S::Ctor as Ctor>::Opt: Opt,
     S: Set + OptParser + Debug + 'static,
 {
     pub fn new() -> Self {
@@ -89,7 +88,7 @@ where
 
 impl<S> Policy for DelayPolicy<S>
 where
-    <S::Ctor as Creator>::Opt: Opt,
+    <S::Ctor as Ctor>::Opt: Opt,
     S: Set + OptParser + Pre + Debug + 'static,
 {
     type Ret = bool;
@@ -104,10 +103,8 @@ where
         ser: &mut Services,
         args: Arc<Args>,
     ) -> Result<Option<Self::Ret>, Self::Error> {
-        let keys = set.keys().to_vec();
-
-        for id in keys {
-            set.opt_mut(id)?.init(ser)?;
+        for opt in set.iter_mut() {
+            opt.init(ser)?;
         }
         ser.ser_check()?.pre_check(set)?;
 

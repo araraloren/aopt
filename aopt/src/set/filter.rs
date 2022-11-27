@@ -2,13 +2,12 @@ use std::fmt::Debug;
 
 use crate::opt::Config;
 use crate::opt::ConfigValue;
-use crate::opt::Creator;
+use crate::opt::Ctor;
 use crate::opt::Index;
-use crate::opt::Information;
 use crate::opt::Opt;
-use crate::opt::OptParser;
-use crate::set::OptSet;
-use crate::set::Pre;
+use crate::set::Set;
+use crate::set::SetCfg;
+use crate::set::SetOpt;
 use crate::Str;
 
 /// Matching implementation for option and [`ConfigValue`].
@@ -81,57 +80,55 @@ where
 }
 
 /// Filter the option using given configurations.
-pub struct Filter<'a, Parser, Ctor>
+pub struct Filter<'a, S>
 where
-    Ctor: Creator,
-    Parser: OptParser,
-    Ctor::Config: Config + ConfigValue,
+    S: Set,
+    S::Ctor: Ctor,
+    SetCfg<S>: Config + ConfigValue,
 {
-    info: Ctor::Config,
-    set: &'a OptSet<Parser, Ctor>,
+    set: &'a S,
+    info: SetCfg<S>,
 }
 
-impl<'a, Parser, Ctor> Debug for Filter<'a, Parser, Ctor>
+impl<'a, S> Debug for Filter<'a, S>
 where
-    Ctor::Opt: Debug,
-    Ctor: Creator + Debug,
-    Parser: OptParser + Debug,
-    Ctor::Config: Config + ConfigValue + Debug,
+    S: Set + Debug,
+    S::Ctor: Ctor,
+    SetCfg<S>: Config + ConfigValue + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Filter")
-            .field("info", &self.info)
             .field("set", &self.set)
+            .field("info", &self.info)
             .finish()
     }
 }
 
-impl<'a, Parser, Ctor> Filter<'a, Parser, Ctor>
+impl<'a, S> Filter<'a, S>
 where
-    Ctor::Opt: Opt,
-    Ctor: Creator,
-    Parser: OptParser + Pre,
-    Parser::Output: Information,
-    Ctor::Config: Config + ConfigValue + Default,
+    S: Set,
+    S::Ctor: Ctor,
+    SetOpt<S>: Opt,
+    SetCfg<S>: Config + ConfigValue,
 {
-    pub fn new(set: &'a OptSet<Parser, Ctor>, info: Ctor::Config) -> Self {
+    pub fn new(set: &'a S, info: SetCfg<S>) -> Self {
         Self { set, info }
     }
 
     /// Set the option name of filter configuration.
-    pub fn set_name<S: Into<Str>>(&mut self, name: S) -> &mut Self {
+    pub fn set_name<T: Into<Str>>(&mut self, name: T) -> &mut Self {
         self.info.set_name(name);
         self
     }
 
     /// Set the option prefix of filter configuration.
-    pub fn set_pre<S: Into<Str>>(&mut self, prefix: S) -> &mut Self {
+    pub fn set_pre<T: Into<Str>>(&mut self, prefix: T) -> &mut Self {
         self.info.set_prefix(prefix);
         self
     }
 
     /// Set the option type name of filter configuration.
-    pub fn set_ty<S: Into<Str>>(&mut self, type_name: S) -> &mut Self {
+    pub fn set_ty<T: Into<Str>>(&mut self, type_name: T) -> &mut Self {
         self.info.set_type(type_name);
         self
     }
@@ -155,33 +152,32 @@ where
     }
 
     /// Find the option by configuration, return None if not found.
-    pub fn find(&self) -> Option<&'_ Ctor::Opt> {
-        self.set.iter().find(|opt| self.info.mat_opt(*opt))
+    pub fn find(&self) -> Option<&'_ SetOpt<S>> {
+        self.set.iter().find(|v| self.info.mat_opt(*v))
     }
 
-    /// Find the option by configuration, return an iterator of `&T`.
-    pub fn find_all(&self) -> impl Iterator<Item = &Ctor::Opt> {
-        self.set.iter().filter(|opt| self.info.mat_opt(*opt))
+    /// Find the option by configuration, return a vector of `&T`.
+    pub fn find_all(&self) -> impl Iterator<Item = &SetOpt<S>> {
+        self.set.iter().filter(|v| self.info.mat_opt(*v))
     }
 }
 
 /// Filter the option using given configurations.
-pub struct FilterMut<'a, Parser, Ctor>
+pub struct FilterMut<'a, S>
 where
-    Ctor: Creator,
-    Parser: OptParser,
-    Ctor::Config: Config + ConfigValue,
+    S: Set,
+    S::Ctor: Ctor,
+    SetCfg<S>: Config + ConfigValue,
 {
-    info: Ctor::Config,
-    set: &'a mut OptSet<Parser, Ctor>,
+    set: &'a mut S,
+    info: SetCfg<S>,
 }
 
-impl<'a, Parser, Ctor> Debug for FilterMut<'a, Parser, Ctor>
+impl<'a, S> Debug for FilterMut<'a, S>
 where
-    Ctor::Opt: Opt,
-    Ctor: Creator + Debug,
-    Parser: OptParser + Debug,
-    Ctor::Config: Config + ConfigValue + Debug,
+    S: Set + Debug,
+    S::Ctor: Ctor,
+    SetCfg<S>: Config + ConfigValue + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("FilterMut")
@@ -191,32 +187,31 @@ where
     }
 }
 
-impl<'a, Parser, Ctor> FilterMut<'a, Parser, Ctor>
+impl<'a, S> FilterMut<'a, S>
 where
-    Ctor::Opt: Opt,
-    Ctor: Creator,
-    Parser: OptParser + Pre,
-    Parser::Output: Information,
-    Ctor::Config: Config + ConfigValue + Default,
+    S: Set,
+    S::Ctor: Ctor,
+    SetOpt<S>: Opt,
+    SetCfg<S>: Config + ConfigValue,
 {
-    pub fn new(set: &'a mut OptSet<Parser, Ctor>, info: Ctor::Config) -> Self {
+    pub fn new(set: &'a mut S, info: SetCfg<S>) -> Self {
         Self { set, info }
     }
 
     /// Set the option name of filter configuration.
-    pub fn set_name<S: Into<Str>>(&mut self, name: S) -> &mut Self {
+    pub fn set_name<T: Into<Str>>(&mut self, name: T) -> &mut Self {
         self.info.set_name(name);
         self
     }
 
     /// Set the option prefix of filter configuration.
-    pub fn set_pre<S: Into<Str>>(&mut self, prefix: S) -> &mut Self {
+    pub fn set_pre<T: Into<Str>>(&mut self, prefix: T) -> &mut Self {
         self.info.set_prefix(prefix);
         self
     }
 
     /// Set the option type name of filter configuration.
-    pub fn set_ty<S: Into<Str>>(&mut self, type_name: S) -> &mut Self {
+    pub fn set_ty<T: Into<Str>>(&mut self, type_name: T) -> &mut Self {
         self.info.set_type(type_name);
         self
     }
@@ -240,12 +235,12 @@ where
     }
 
     /// Find the option by configuration, return None if not found.
-    pub fn find(&mut self) -> Option<&mut Ctor::Opt> {
-        self.set.iter_mut().find(|opt| self.info.mat_opt(*opt))
+    pub fn find(&mut self) -> Option<&mut SetOpt<S>> {
+        self.set.iter_mut().find(|v| self.info.mat_opt(*v))
     }
 
     /// Find the option by configuration, return an iterator of `&mut T`.
-    pub fn find_all(&mut self) -> impl Iterator<Item = &mut Ctor::Opt> {
-        self.set.iter_mut().filter(|opt| self.info.mat_opt(*opt))
+    pub fn find_all(&mut self) -> impl Iterator<Item = &mut SetOpt<S>> {
+        self.set.iter_mut().filter(|v| self.info.mat_opt(*v))
     }
 }

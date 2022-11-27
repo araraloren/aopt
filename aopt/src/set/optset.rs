@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use crate::opt::Config;
 use crate::opt::ConfigValue;
-use crate::opt::Creator;
+use crate::opt::Ctor;
 use crate::opt::Information;
 use crate::opt::Opt;
 use crate::opt::OptParser;
@@ -17,7 +17,9 @@ use crate::Error;
 use crate::Str;
 use crate::Uid;
 
-/// Simple [`Set`] implementation hold [`Opt`] and [`Creator`].
+use super::SetOpt;
+
+/// Simple [`Set`] implementation hold [`Opt`] and [`Ctor`].
 ///
 /// # Example
 /// ```rust
@@ -26,7 +28,7 @@ use crate::Uid;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<()> {
-///  let mut set = OptSet::<StrParser, Box<dyn Creator<Opt = AOpt, Config = OptConfig, Error = Error>>>::default();
+///  let mut set = OptSet::<StrParser, Box<dyn Ctor<Opt = AOpt, Config = OptConfig, Error = Error>>>::default();
 ///
 ///  // add prefix for option
 ///  set.add_prefix("/");
@@ -40,97 +42,93 @@ use crate::Uid;
 ///  Ok(())
 /// # }
 /// ```
-pub struct OptSet<Parser, Ctor>
+pub struct OptSet<P, C>
 where
-    Ctor: Creator,
-    Parser: OptParser,
+    C: Ctor,
+    P: OptParser,
 {
-    parser: Parser,
-    opts: Vec<Ctor::Opt>,
-    keys: Vec<Uid>,
-    creators: Vec<Ctor>,
+    parser: P,
+    opts: Vec<C::Opt>,
+    creators: Vec<C>,
 }
 
-impl<Parser, Ctor> OptSet<Parser, Ctor>
+impl<P, C> OptSet<P, C>
 where
-    Ctor: Creator,
-    Parser: OptParser,
+    C: Ctor,
+    P: OptParser,
 {
-    pub fn new(parser: Parser) -> Self {
+    pub fn new(parser: P) -> Self {
         Self {
             parser,
             opts: vec![],
-            keys: vec![],
             creators: vec![],
         }
     }
 }
 
-impl<Parser, Ctor> Debug for OptSet<Parser, Ctor>
+impl<P, C> Debug for OptSet<P, C>
 where
-    Ctor::Opt: Debug,
-    Ctor: Creator + Debug,
-    Ctor::Config: Debug,
-    Parser: OptParser + Debug,
+    C::Opt: Debug,
+    C: Ctor + Debug,
+    C::Config: Debug,
+    P: OptParser + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("OptSet")
             .field("parser", &self.parser)
             .field("opts", &self.opts)
-            .field("keys", &self.keys)
             .field("creators", &self.creators)
             .finish()
     }
 }
 
-impl<Parser, Ctor> Default for OptSet<Parser, Ctor>
+impl<P, C> Default for OptSet<P, C>
 where
-    Ctor: Creator,
-    Parser: OptParser + Default,
+    C: Ctor,
+    P: OptParser + Default,
 {
     fn default() -> Self {
         Self {
-            parser: Parser::default(),
+            parser: P::default(),
             opts: vec![],
-            keys: vec![],
             creators: vec![],
         }
     }
 }
 
-impl<Parser, Ctor> OptSet<Parser, Ctor>
+impl<P, C> OptSet<P, C>
 where
-    Ctor::Opt: Opt,
-    Ctor: Creator,
-    Parser: OptParser,
-    Ctor::Config: Config,
+    C::Opt: Opt,
+    C: Ctor,
+    P: OptParser,
+    C::Config: Config,
 {
-    pub fn with_creator(mut self, creator: Ctor) -> Self {
+    pub fn with_creator(mut self, creator: C) -> Self {
         self.register(creator);
         self
     }
 }
 
-impl<Parser, Ctor> OptSet<Parser, Ctor>
+impl<P, C> OptSet<P, C>
 where
-    Ctor: Creator,
-    Parser: OptParser,
-    Ctor::Config: Config,
+    C: Ctor,
+    P: OptParser,
+    C::Config: Config,
 {
-    pub fn parser(&self) -> &Parser {
+    pub fn parser(&self) -> &P {
         &self.parser
     }
 
-    pub fn parser_mut(&mut self) -> &mut Parser {
+    pub fn parser_mut(&mut self) -> &mut P {
         &mut self.parser
     }
 }
 
-impl<Parser, Ctor> OptSet<Parser, Ctor>
+impl<P, C> OptSet<P, C>
 where
-    Ctor: Creator,
-    Ctor::Config: Config,
-    Parser: OptParser + Pre,
+    C: Ctor,
+    C::Config: Config,
+    P: OptParser + Pre,
 {
     pub fn with_prefix(mut self, prefix: &str) -> Self {
         self.add_prefix(prefix);
@@ -138,19 +136,19 @@ where
     }
 }
 
-impl<Parser, Ctor> OptSet<Parser, Ctor>
+impl<P, C> OptSet<P, C>
 where
-    Ctor::Opt: Opt,
-    Ctor: Creator,
-    Parser: OptParser + Pre,
-    Parser::Output: Information,
-    Ctor::Config: Config + ConfigValue + Default,
+    C::Opt: Opt,
+    C: Ctor,
+    P: OptParser + Pre,
+    P::Output: Information,
+    C::Config: Config + ConfigValue + Default,
 {
-    pub fn iter(&self) -> std::slice::Iter<'_, Ctor::Opt> {
+    pub fn iter(&self) -> std::slice::Iter<'_, C::Opt> {
         self.opts.iter()
     }
 
-    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, Ctor::Opt> {
+    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, C::Opt> {
         self.opts.iter_mut()
     }
 
@@ -161,7 +159,7 @@ where
     pub fn add_opt<S: Into<Str>>(&mut self, opt_str: S) -> Result<Commit<'_, Self>, Error> {
         Ok(Commit::new(
             self,
-            <Ctor::Config as Config>::new(self.parser(), opt_str.into())?,
+            <C::Config as Config>::new(self.parser(), opt_str.into())?,
         ))
     }
 
@@ -169,16 +167,16 @@ where
     ///
     /// It parsing the given option string `S` using inner [`OptParser`], return an [`Filter`].
     /// For option string, reference [`StrParser`](crate::opt::StrParser).
-    pub fn filter<S: Into<Str>>(&self, opt_str: S) -> Result<Filter<'_, Parser, Ctor>, Error> {
+    pub fn filter<S: Into<Str>>(&self, opt_str: S) -> Result<Filter<'_, Self>, Error> {
         Ok(Filter::new(
             self,
-            <Ctor::Config as Config>::new(self.parser(), opt_str.into())?,
+            <C::Config as Config>::new(self.parser(), opt_str.into())?,
         ))
     }
 
     /// Filter the option, return the reference of first matched [`Opt`].
-    pub fn find<S: Into<Str>>(&self, opt_str: S) -> Result<Option<&Ctor::Opt>, Error> {
-        let info = <Ctor::Config as Config>::new(self.parser(), opt_str.into())?;
+    pub fn find<S: Into<Str>>(&self, opt_str: S) -> Result<Option<&C::Opt>, Error> {
+        let info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
         Ok(self.iter().find(|opt| info.mat_opt(*opt)))
     }
 
@@ -186,8 +184,8 @@ where
     pub fn find_all<S: Into<Str>>(
         &self,
         opt_str: S,
-    ) -> Result<impl Iterator<Item = &Ctor::Opt>, Error> {
-        let info = <Ctor::Config as Config>::new(self.parser(), opt_str.into())?;
+    ) -> Result<impl Iterator<Item = &C::Opt>, Error> {
+        let info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
         Ok(self.iter().filter(move |opt| info.mat_opt(*opt)))
     }
 
@@ -195,19 +193,16 @@ where
     ///
     /// It parsing the given option string `S` using inner [`OptParser`], return an [`FilterMut`].
     /// For option string, reference [`StrParser`](crate::opt::StrParser).
-    pub fn filter_mut<S: Into<Str>>(
-        &mut self,
-        opt_str: S,
-    ) -> Result<FilterMut<'_, Parser, Ctor>, Error> {
+    pub fn filter_mut<S: Into<Str>>(&mut self, opt_str: S) -> Result<FilterMut<'_, Self>, Error> {
         Ok(FilterMut::new(
             self,
-            <Ctor::Config as Config>::new(self.parser(), opt_str.into())?,
+            <C::Config as Config>::new(self.parser(), opt_str.into())?,
         ))
     }
 
     /// Filter the option, return the mutable reference of first matched [`Opt`].
-    pub fn find_mut<S: Into<Str>>(&mut self, opt_str: S) -> Result<Option<&mut Ctor::Opt>, Error> {
-        let info = <Ctor::Config as Config>::new(self.parser(), opt_str.into())?;
+    pub fn find_mut<S: Into<Str>>(&mut self, opt_str: S) -> Result<Option<&mut C::Opt>, Error> {
+        let info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
         Ok(self.iter_mut().find(|opt| info.mat_opt(*opt)))
     }
 
@@ -215,97 +210,66 @@ where
     pub fn find_all_mut<S: Into<Str>>(
         &mut self,
         opt_str: S,
-    ) -> Result<impl Iterator<Item = &mut Ctor::Opt>, Error> {
-        let info = <Ctor::Config as Config>::new(self.parser(), opt_str.into())?;
+    ) -> Result<impl Iterator<Item = &mut C::Opt>, Error> {
+        let info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
         Ok(self.iter_mut().filter(move |opt| info.mat_opt(*opt)))
     }
 }
 
-impl<Parser, Ctor, I: SetIndex<OptSet<Parser, Ctor>>> std::ops::Index<I> for OptSet<Parser, Ctor>
+impl<P, C, I: SetIndex<OptSet<P, C>>> std::ops::Index<I> for OptSet<P, C>
 where
-    Ctor::Opt: Opt,
-    Ctor: Creator,
-    Parser: OptParser,
-    Parser::Output: Information,
-    Ctor::Config: Config + ConfigValue + Default,
+    C::Opt: Opt,
+    C: Ctor,
+    P: OptParser,
+    P::Output: Information,
+    C::Config: Config + ConfigValue + Default,
 {
-    type Output = Ctor::Opt;
+    type Output = C::Opt;
 
     fn index(&self, index: I) -> &Self::Output {
         index.ref_from(self).unwrap()
     }
 }
 
-impl<Parser, Ctor, I: SetIndex<OptSet<Parser, Ctor>>> std::ops::IndexMut<I> for OptSet<Parser, Ctor>
+impl<P, C, I: SetIndex<OptSet<P, C>>> std::ops::IndexMut<I> for OptSet<P, C>
 where
-    Ctor::Opt: Opt,
-    Ctor: Creator,
-    Parser: OptParser,
-    Parser::Output: Information,
-    Ctor::Config: Config + ConfigValue + Default,
+    C::Opt: Opt,
+    C: Ctor,
+    P: OptParser,
+    P::Output: Information,
+    C::Config: Config + ConfigValue + Default,
 {
     fn index_mut(&mut self, index: I) -> &mut Self::Output {
         index.mut_from(self).unwrap()
     }
 }
 
-impl<'b, Parser, Ctor> SetIndex<OptSet<Parser, Ctor>> for &'b str
+impl<'b, P, C> SetIndex<OptSet<P, C>> for &'b str
 where
-    Ctor::Opt: Opt,
-    Ctor: Creator,
-    Parser: OptParser + Pre,
-    Parser::Output: Information,
-    Ctor::Config: Config + ConfigValue + Default,
+    C::Opt: Opt,
+    C: Ctor,
+    P: OptParser + Pre,
+    P::Output: Information,
+    C::Config: Config + ConfigValue + Default,
 {
-    fn ref_from<'a>(&self, set: &'a OptSet<Parser, Ctor>) -> Result<&'a Ctor::Opt, Error> {
+    fn ref_from<'a>(&self, set: &'a OptSet<P, C>) -> Result<&'a C::Opt, Error> {
         set.find(*self)?
             .ok_or_else(|| Error::raise_error(format!("Can not find option {}", *self)))
     }
 
-    fn mut_from<'a>(&self, set: &'a mut OptSet<Parser, Ctor>) -> Result<&'a mut Ctor::Opt, Error> {
+    fn mut_from<'a>(&self, set: &'a mut OptSet<P, C>) -> Result<&'a mut C::Opt, Error> {
         set.find_mut(*self)?
             .ok_or_else(|| Error::raise_error(format!("Can not find option {}", *self)))
     }
 }
 
-impl<Parser, Ctor> Set for OptSet<Parser, Ctor>
+impl<P, C> Set for OptSet<P, C>
 where
-    Ctor::Opt: Opt,
-    Ctor: Creator,
-    Parser: OptParser,
+    C::Opt: Opt,
+    C: Ctor,
+    P: OptParser,
 {
-    type Ctor = Ctor;
-
-    fn len(&self) -> usize {
-        self.opts.len()
-    }
-
-    fn reset(&mut self) {
-        for opt in self.opts.iter_mut() {
-            opt.reset();
-        }
-    }
-
-    fn keys(&self) -> &[Uid] {
-        &self.keys
-    }
-
-    fn insert(&mut self, mut opt: <Self::Ctor as Creator>::Opt) -> Uid {
-        let uid = self.len() as Uid;
-
-        opt.set_uid(uid);
-        self.opts.push(opt);
-        self.keys.push(uid);
-        uid
-    }
-
-    fn get(&self, id: Uid) -> Option<&<Self::Ctor as Creator>::Opt> {
-        self.opts.get(id as usize)
-    }
-
-    fn get_mut(&mut self, id: Uid) -> Option<&mut <Self::Ctor as Creator>::Opt> {
-        self.opts.get_mut(id as usize)
-    }
+    type Ctor = C;
 
     fn register(&mut self, ctor: Self::Ctor) -> Option<Self::Ctor> {
         let at = self
@@ -323,37 +287,75 @@ where
         }
     }
 
-    fn get_ctors(&self) -> &[Self::Ctor] {
-        &self.creators
+    fn ctor_iter(&self) -> std::slice::Iter<'_, Self::Ctor> {
+        self.creators.iter()
     }
 
-    fn get_ctors_mut(&mut self) -> &mut [Self::Ctor] {
-        &mut self.creators
+    fn ctor_iter_mut(&mut self) -> std::slice::IterMut<'_, Self::Ctor> {
+        self.creators.iter_mut()
+    }
+
+    fn reset(&mut self) {
+        for opt in self.opts.iter_mut() {
+            opt.reset();
+        }
+    }
+
+    fn len(&self) -> usize {
+        self.opts.len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    fn iter(&self) -> std::slice::Iter<'_, SetOpt<Self>> {
+        self.opts.iter()
+    }
+
+    fn iter_mut(&mut self) -> std::slice::IterMut<'_, SetOpt<Self>> {
+        self.opts.iter_mut()
+    }
+
+    fn insert(&mut self, mut opt: SetOpt<Self>) -> Uid {
+        let uid = self.len() as Uid;
+
+        opt.set_uid(uid);
+        self.opts.push(opt);
+        uid
+    }
+
+    fn get(&self, id: Uid) -> Option<&SetOpt<Self>> {
+        self.opts.get(id as usize)
+    }
+
+    fn get_mut(&mut self, id: Uid) -> Option<&mut SetOpt<Self>> {
+        self.opts.get_mut(id as usize)
     }
 }
 
-impl<Parser, Ctor> OptParser for OptSet<Parser, Ctor>
+impl<P, C> OptParser for OptSet<P, C>
 where
-    Ctor::Opt: Opt,
-    Ctor: Creator,
-    Parser: OptParser + Pre,
-    Parser::Output: Information,
-    Ctor::Config: Config + ConfigValue + Default,
+    C::Opt: Opt,
+    C: Ctor,
+    P: OptParser + Pre,
+    P::Output: Information,
+    C::Config: Config + ConfigValue + Default,
 {
-    type Output = Parser::Output;
+    type Output = P::Output;
 
-    type Error = Parser::Error;
+    type Error = P::Error;
 
     fn parse(&self, pattern: Str) -> Result<Self::Output, Self::Error> {
         self.parser().parse(pattern)
     }
 }
 
-impl<Parser, Ctor> Pre for OptSet<Parser, Ctor>
+impl<P, C> Pre for OptSet<P, C>
 where
-    Ctor: Creator,
-    Ctor::Config: Config,
-    Parser: OptParser + Pre,
+    C: Ctor,
+    C::Config: Config,
+    P: OptParser + Pre,
 {
     fn add_prefix<S: Into<Str>>(&mut self, prefix: S) -> &mut Self {
         self.parser_mut().add_prefix(prefix);
