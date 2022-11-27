@@ -184,13 +184,7 @@ where
         H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
         A: Extract<S, Error = Error> + 'static,
     {
-        Entry {
-            ser: self,
-            handler: None,
-            register: false,
-            uid,
-            marker: PhantomData::default(),
-        }
+        Entry::new(self, uid)
     }
 
     /// The default handler for all option.
@@ -277,6 +271,16 @@ where
     H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
     A: Extract<S, Error = Error> + 'static,
 {
+    pub fn new(inv_ser: &'a mut InvokeService<S>, uid: Uid) -> Self {
+        Self {
+            ser: inv_ser,
+            handler: None,
+            register: false,
+            uid,
+            marker: PhantomData::default(),
+        }
+    }
+
     /// Register the handler which will be called when option is set.
     pub fn on(mut self, handler: H) -> Self {
         self.handler = Some(handler);

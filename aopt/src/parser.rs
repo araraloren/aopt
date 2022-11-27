@@ -37,6 +37,7 @@ use crate::opt::Ctor;
 use crate::opt::Information;
 use crate::opt::Opt;
 use crate::opt::OptParser;
+use crate::ser::invoke::Entry;
 use crate::ser::Services;
 use crate::set::Commit;
 use crate::set::Filter;
@@ -95,6 +96,27 @@ pub trait Policy {
         ser: &mut Services,
         args: Arc<Args>,
     ) -> Result<Option<Self::Ret>, Self::Error>;
+}
+
+impl<S, R, E> Policy for Box<dyn Policy<Ret = R, Set = S, Error = E>>
+where
+    S: Set,
+    E: Into<Error>,
+{
+    type Ret = R;
+
+    type Set = S;
+
+    type Error = E;
+
+    fn parse(
+        &mut self,
+        set: &mut Self::Set,
+        ser: &mut Services,
+        args: Arc<Args>,
+    ) -> Result<Option<Self::Ret>, Self::Error> {
+        Policy::parse(self.as_mut(), set, ser, args)
+    }
 }
 
 #[derive(Debug)]
@@ -199,6 +221,14 @@ where
         self
     }
 
+    pub fn usr_val<T: 'static>(&self) -> Result<&ser::Value<T>, Error> {
+        self.services.ser_usrval()?.val::<ser::Value<T>>()
+    }
+
+    pub fn usr_val_mut<T: 'static>(&mut self) -> Result<&mut ser::Value<T>, Error> {
+        self.services.ser_usrval_mut()?.val_mut::<ser::Value<T>>()
+    }
+
     pub fn set_usr_val<T: 'static>(
         &mut self,
         val: ser::Value<T>,
@@ -260,14 +290,14 @@ where
     <P::Set as OptParser>::Output: Information,
     SetCfg<P::Set>: Config + ConfigValue + Default,
 {
-    pub fn add_opt<Args, Output, H, T: Into<Str>>(
+    pub fn add_opt<A, O, H, T: Into<Str>>(
         &mut self,
         opt: T,
-    ) -> Result<ParserCommit<'_, P::Set, H, Args, Output>, Error>
+    ) -> Result<ParserCommit<'_, P::Set, H, A, O>, Error>
     where
-        Output: 'static,
-        H: Handler<P::Set, Args, Output = Option<Output>, Error = Error> + 'static,
-        Args: Extract<P::Set, Error = Error> + 'static,
+        O: 'static,
+        H: Handler<P::Set, A, Output = Option<O>, Error = Error> + 'static,
+        A: Extract<P::Set, Error = Error> + 'static,
     {
         let info =
             <<<P::Set as Set>::Ctor as Ctor>::Config as Config>::new(&self.optset, opt.into())?;
@@ -276,6 +306,15 @@ where
             Commit::new(&mut self.optset, info),
             self.services.ser_invoke_mut()?,
         ))
+    }
+
+    pub fn entry<A, O, H>(&mut self, uid: Uid) -> Result<Entry<'_, P::Set, H, A, O>, Error>
+    where
+        O: 'static,
+        H: Handler<P::Set, A, Output = Option<O>, Error = Error> + 'static,
+        A: Extract<P::Set, Error = Error> + 'static,
+    {
+        Ok(Entry::new(self.services.ser_invoke_mut()?, uid))
     }
 }
 
@@ -299,19 +338,19 @@ where
         })
     }
 
-    pub fn val_filter<T: 'static>(&self, opt: &str) -> Result<&T, Error> {
+    pub fn find_val<T: 'static>(&self, opt: &str) -> Result<&T, Error> {
         self.val(self.filter_optstr(opt)?)
     }
 
-    pub fn val_filter_mut<T: 'static>(&mut self, opt: &str) -> Result<&mut T, Error> {
+    pub fn find_val_mut<T: 'static>(&mut self, opt: &str) -> Result<&mut T, Error> {
         self.val_mut(self.filter_optstr(opt)?)
     }
 
-    pub fn vals_filter<T: 'static>(&self, opt: &str) -> Result<&Vec<T>, Error> {
+    pub fn find_vals<T: 'static>(&self, opt: &str) -> Result<&Vec<T>, Error> {
         self.vals(self.filter_optstr(opt)?)
     }
 
-    pub fn vals_filter_mut<T: 'static>(&mut self, opt: &str) -> Result<&mut Vec<T>, Error> {
+    pub fn find_vals_mut<T: 'static>(&mut self, opt: &str) -> Result<&mut Vec<T>, Error> {
         self.vals_mut(self.filter_optstr(opt)?)
     }
 }
