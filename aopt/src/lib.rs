@@ -35,6 +35,42 @@ pub(crate) fn typeid<T: 'static>() -> TypeId {
     TypeId::of::<T>()
 }
 
+#[macro_export]
+macro_rules! getoptw {
+    ($args:expr, $($parser_left:expr),+) => {
+        {
+            use aopt::{Arc, args::Args, Error, parser::Policy};
+
+            fn __check_a(a: Arc<Args>) -> Arc<Args> { a }
+            fn __check_p<P: Policy<Error = Error>>(p: &mut Parser<P::Set, P>) -> &mut Parser<P::Set, P> { p }
+
+            let mut error = Error::Null;
+            let args = __check_a( $args );
+
+            loop {
+                $(
+                    let parser = __check_p($parser_left);
+
+                    match parser.parse(args.clone()) {
+                        Ok(ret) => {
+                            if let Some(_) = ret {
+                                break Ok(Some(parser));
+                            }
+                        }
+                        Err(e) => {
+                            error = e;
+                            if ! error.is_failure() {
+                                break Err(error);
+                            }
+                        }
+                    }
+                )+
+                break Err(error);
+            }
+        }
+    };
+}
+
 pub mod prelude {
     pub use crate::args::Args;
     pub use crate::ctx::wrap_handler;
@@ -45,6 +81,7 @@ pub mod prelude {
     pub use crate::ctx::Handler;
     pub use crate::ctx::Store;
     pub use crate::ext::*;
+    pub use crate::getoptw;
     pub use crate::opt::AOpt;
     pub use crate::opt::Action;
     pub use crate::opt::Assoc;

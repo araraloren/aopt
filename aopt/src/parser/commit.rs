@@ -39,6 +39,8 @@ where
 
     register: bool,
 
+    drop_commit: bool,
+
     marker: PhantomData<(A, O)>,
 }
 
@@ -57,6 +59,7 @@ where
             .field("inv_ser", &self.inv_ser)
             .field("handler", &self.handler)
             .field("register", &self.register)
+            .field("drop_commit", &self.drop_commit)
             .field("marker", &self.marker)
             .finish()
     }
@@ -77,6 +80,7 @@ where
             inv_ser,
             handler: None,
             register: false,
+            drop_commit: false,
             marker: PhantomData::default(),
         }
     }
@@ -208,7 +212,7 @@ where
         Ok(self)
     }
 
-    pub fn run_and_commit_the_change(&mut self, check: bool) -> Result<Uid, Error> {
+    pub(crate) fn run_and_commit_the_change(&mut self, check: bool) -> Result<Uid, Error> {
         let uid = self.inner.run_and_commit_the_change()?;
 
         if check && !self.register {
@@ -225,6 +229,7 @@ where
     /// It create an option using given type [`Ctor`](crate::opt::Ctor).
     /// And add it to referenced [`Set`](crate::set::Set), return the new option [`Uid`].
     pub fn run(mut self) -> Result<Uid, Error> {
+        self.drop_commit = false;
         self.run_and_commit_the_change(true)
     }
 }
@@ -239,8 +244,11 @@ where
     A: Extract<S, Error = Error> + 'static,
 {
     fn drop(&mut self) {
-        let error = "Error when commit the option in ParserCommit::Drop, call `run` get the Result";
+        if self.drop_commit && !self.register {
+            let error =
+                "Error when commit the option in ParserCommit::Drop, call `run` get the Result";
 
-        self.run_and_commit_the_change(true).expect(error);
+            self.run_and_commit_the_change(true).expect(error);
+        }
     }
 }

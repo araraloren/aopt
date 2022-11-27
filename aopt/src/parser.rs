@@ -119,6 +119,44 @@ where
     }
 }
 
+/// Parser manage the [`Set`], [`Services`] and [`Policy`].
+///
+/// # Example
+///
+/// ```rust
+/// use aopt::Result;
+/// use aopt::prelude::*;
+///
+/// fn main() -> Result<()> {
+///     #[derive(Debug, Default)]
+///     pub struct EmptyPolicy(i64);
+///
+///     impl<S: Set, SS: Service<S>> Policy<S, SS> for EmptyPolicy {
+///         fn parse(
+///             &mut self,
+///             set: &mut S,
+///             service: &mut SS,
+///             iter: &mut dyn Iterator<Item = aopt::arg::Argument>,
+///         ) -> Result<bool> {
+///             println!("In parser policy {} with argument length = {}", self.0, iter.count());
+///             Ok(false)
+///         }
+///     }
+///
+///     let mut parser1 = Parser::<SimpleSet, DefaultService, EmptyPolicy>::default();
+///     let mut parser2 = Parser::<SimpleSet, DefaultService, EmptyPolicy>::new_policy(EmptyPolicy(42));
+///
+///     getopt!(
+///         ["Happy", "Chinese", "new", "year", "!"].into_iter(),
+///         parser1,
+///         parser2
+///     )?;
+///     Ok(())
+/// }
+/// ```
+///
+/// Using it with macro [`getopt`](crate::getopt),
+/// which can process multiple [`Parser`] with same type [`Policy`].
 #[derive(Debug)]
 pub struct Parser<S, P> {
     optset: S,
@@ -172,7 +210,7 @@ where
 
 impl<P> Parser<P::Set, P>
 where
-    P: Policy,
+    P: Policy<Error = Error>,
 {
     pub fn new_with(policy: P, optset: P::Set, services: Services) -> Self {
         Self {
@@ -273,7 +311,7 @@ impl<P> Parser<P::Set, P>
 where
     P: Policy<Error = Error>,
 {
-    pub fn parse(&mut self, args: Arc<Args>) -> Result<Option<P::Ret>, Error> {
+    pub fn parse(&mut self, args: Arc<Args>) -> Result<Option<P::Ret>, P::Error> {
         let optset = &mut self.optset;
         let services = &mut self.services;
 
@@ -284,7 +322,7 @@ where
 impl<P> Parser<P::Set, P>
 where
     P::Set: 'static,
-    P: Policy,
+    P: Policy<Error = Error>,
     SetOpt<P::Set>: Opt,
     P::Set: Pre + Set + OptParser,
     <P::Set as OptParser>::Output: Information,
@@ -320,15 +358,15 @@ where
 
 impl<P> Parser<P::Set, P>
 where
-    P: Policy,
+    P: Policy<Error = Error>,
     P::Set: Pre + Set + OptParser,
     <P::Set as OptParser>::Output: Information,
     SetCfg<P::Set>: Config + ConfigValue + Default,
 {
-    fn filter_optstr(&self, opt: &str) -> Result<Uid, Error> {
+    pub(crate) fn filter_optstr(&self, opt: Str) -> Result<Uid, Error> {
         let filter = Filter::new(
             &self.optset,
-            SetCfg::<P::Set>::new(&self.optset, opt.into())?,
+            SetCfg::<P::Set>::new(&self.optset, opt.clone())?,
         );
         filter.find().map(|v| v.uid()).ok_or_else(|| {
             Error::raise_error(format!(
@@ -339,18 +377,26 @@ where
     }
 
     pub fn find_val<T: 'static>(&self, opt: &str) -> Result<&T, Error> {
-        self.val(self.filter_optstr(opt)?)
+        self.val(self.filter_optstr(opt.into())?)
     }
 
     pub fn find_val_mut<T: 'static>(&mut self, opt: &str) -> Result<&mut T, Error> {
-        self.val_mut(self.filter_optstr(opt)?)
+        self.val_mut(self.filter_optstr(opt.into())?)
     }
 
     pub fn find_vals<T: 'static>(&self, opt: &str) -> Result<&Vec<T>, Error> {
-        self.vals(self.filter_optstr(opt)?)
+        self.vals(self.filter_optstr(opt.into())?)
     }
 
     pub fn find_vals_mut<T: 'static>(&mut self, opt: &str) -> Result<&mut Vec<T>, Error> {
-        self.vals_mut(self.filter_optstr(opt)?)
+        self.vals_mut(self.filter_optstr(opt.into())?)
+    }
+}
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        unsafe impl<S, P> Send for Parser<S, P> { }
+
+        unsafe impl<S, P> Sync for Parser<S, P> { }
     }
 }

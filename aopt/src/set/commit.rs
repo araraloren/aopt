@@ -24,6 +24,7 @@ where
     info: SetCfg<S>,
     set: &'a mut S,
     commited: Option<Uid>,
+    drop_commit: bool,
 }
 
 impl<'a, S> Debug for Commit<'a, S>
@@ -35,6 +36,8 @@ where
         f.debug_struct("Commit")
             .field("info", &self.info)
             .field("set", &self.set)
+            .field("commited", &self.commited)
+            .field("drop_commit", &self.drop_commit)
             .finish()
     }
 }
@@ -49,6 +52,7 @@ where
             set,
             info,
             commited: None,
+            drop_commit: true,
         }
     }
 
@@ -157,7 +161,7 @@ where
         self
     }
 
-    pub fn run_and_commit_the_change(&mut self) -> Result<Uid, Error> {
+    pub(crate) fn run_and_commit_the_change(&mut self) -> Result<Uid, Error> {
         if let Some(commited) = self.commited {
             Ok(commited)
         } else {
@@ -182,6 +186,7 @@ where
     /// It create an option using given type [`Ctor`].
     /// And add it to referenced [`Set`](Set), return the new option [`Uid`].
     pub fn run(mut self) -> Result<Uid, Error> {
+        self.drop_commit = false;
         self.run_and_commit_the_change()
     }
 }
@@ -192,8 +197,10 @@ where
     SetCfg<S>: ConfigValue + Default,
 {
     fn drop(&mut self) {
-        let error = "Error when commit the option in Commit::Drop, call `run` get the Result";
+        if self.drop_commit && self.commited.is_none() {
+            let error = "Error when commit the option in Commit::Drop, call `run` get the Result";
 
-        self.run_and_commit_the_change().expect(error);
+            self.run_and_commit_the_change().expect(error);
+        }
     }
 }
