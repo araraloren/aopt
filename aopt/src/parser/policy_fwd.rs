@@ -170,7 +170,7 @@ where
         ];
         let args_len = args.len();
         let mut noa_args = Args::default();
-        let mut iter = args.iter().enumerate();
+        let mut iter = args.guess_iter().enumerate();
         let mut opt_ctx = Ctx::default();
 
         opt_ctx.set_args(args.clone()).set_total(args_len);

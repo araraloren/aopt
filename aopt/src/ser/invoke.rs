@@ -178,13 +178,13 @@ where
     S: crate::set::Set,
     <S::Ctor as Ctor>::Opt: Opt,
 {
-    pub fn entry<A, O, H>(&mut self, uid: Uid) -> Entry<'_, S, H, A, O>
+    pub fn entry<A, O, H>(&mut self, uid: Uid) -> HandlerEntry<'_, S, H, A, O>
     where
         O: 'static,
         H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
         A: Extract<S, Error = Error> + 'static,
     {
-        Entry::new(self, uid)
+        HandlerEntry::new(self, uid)
     }
 
     /// The default handler for all option.
@@ -244,7 +244,7 @@ impl<Set> Service for InvokeService<Set> {
     }
 }
 
-pub struct Entry<'a, S, H, A, O>
+pub struct HandlerEntry<'a, S, H, A, O>
 where
     O: 'static,
     S: crate::set::Set,
@@ -263,7 +263,7 @@ where
     marker: PhantomData<(A, O)>,
 }
 
-impl<'a, A, S, O, H> Entry<'a, S, H, A, O>
+impl<'a, A, S, O, H> HandlerEntry<'a, S, H, A, O>
 where
     O: 'static,
     S: crate::set::Set,
@@ -298,17 +298,18 @@ where
         self
     }
 
-    pub fn submit(mut self) {
+    pub fn submit(mut self) -> Uid {
         if !self.register {
             if let Some(handler) = self.handler.take() {
                 self.ser.set_raw(self.uid, wrap_handler_default(handler));
             }
             self.register = true;
         }
+        self.uid
     }
 }
 
-impl<'a, S, H, A, O> Drop for Entry<'a, S, H, A, O>
+impl<'a, S, H, A, O> Drop for HandlerEntry<'a, S, H, A, O>
 where
     O: 'static,
     S: crate::set::Set,

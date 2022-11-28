@@ -1,10 +1,7 @@
 use std::fmt::Debug;
-use std::marker::PhantomData;
 
-use crate::ctx::wrap_handler_default;
 use crate::ctx::Extract;
 use crate::ctx::Handler;
-use crate::ctx::Store;
 use crate::opt::Action;
 use crate::opt::Assoc;
 use crate::opt::ConfigValue;
@@ -13,6 +10,7 @@ use crate::opt::Opt;
 use crate::opt::ValInitiator;
 use crate::opt::ValValidator;
 use crate::prelude::InvokeService;
+use crate::ser::invoke::HandlerEntry;
 use crate::set::Commit;
 use crate::set::Set;
 use crate::set::SetCfg;
@@ -21,67 +19,47 @@ use crate::Error;
 use crate::Str;
 use crate::Uid;
 
-/// Create option using given configurations.
-pub struct ParserCommit<'a, S, H, A, O>
+/// Simple wrapped the option create interface of [`Commit`],
+/// and the handler register interface of [`HandlerEntry`].
+pub struct ParserCommit<'a, S>
 where
-    O: 'static,
     S: Set,
     SetOpt<S>: Opt,
     SetCfg<S>: ConfigValue + Default,
-    H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
-    A: Extract<S, Error = Error> + 'static,
 {
     inner: Commit<'a, S>,
 
-    inv_ser: &'a mut InvokeService<S>,
-
-    handler: Option<H>,
-
-    register: bool,
+    inv_ser: Option<&'a mut InvokeService<S>>,
 
     drop_commit: bool,
-
-    marker: PhantomData<(A, O)>,
 }
 
-impl<'a, S, H, A, O> Debug for ParserCommit<'a, S, H, A, O>
+impl<'a, S> Debug for ParserCommit<'a, S>
 where
-    O: 'static,
     S: Set + Debug,
     SetOpt<S>: Opt + Debug,
     SetCfg<S>: ConfigValue + Default + Debug,
-    H: Handler<S, A, Output = Option<O>, Error = Error> + Debug + 'static,
-    A: Extract<S, Error = Error> + 'static,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ParserCommit")
             .field("inner", &self.inner)
             .field("inv_ser", &self.inv_ser)
-            .field("handler", &self.handler)
-            .field("register", &self.register)
             .field("drop_commit", &self.drop_commit)
-            .field("marker", &self.marker)
             .finish()
     }
 }
 
-impl<'a, S, H, A, O> ParserCommit<'a, S, H, A, O>
+impl<'a, S> ParserCommit<'a, S>
 where
-    O: 'static,
     S: Set,
     SetOpt<S>: Opt,
     SetCfg<S>: ConfigValue + Default,
-    H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
-    A: Extract<S, Error = Error> + 'static,
 {
     pub fn new(inner: Commit<'a, S>, inv_ser: &'a mut InvokeService<S>) -> Self {
         Self {
             inner,
-            inv_ser,
-            handler: None,
-            register: false,
+            inv_ser: Some(inv_ser),
             drop_commit: false,
-            marker: PhantomData::default(),
         }
     }
 
@@ -191,37 +169,25 @@ where
     }
 
     /// Register the handler which will be called when option is set.
-    pub fn on(mut self, handler: H) -> Self {
-        self.handler = Some(handler);
-        self
+    /// The function will register the option to [`Set`] first,
+    /// then pass the unqiue id to [`HandlerEntry`].
+    pub fn on<H, O, A>(mut self, handler: H) -> Result<HandlerEntry<'a, S, H, A, O>, Error>
+    where
+        O: 'static,
+        H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
+        A: Extract<S, Error = Error> + 'static,
+    {
+        let uid = self.run_and_commit_the_change()?;
+        // we don't need &'a mut InvokeServices, so just take it.
+        let ser = std::mem::take(&mut self.inv_ser);
+
+        self.drop_commit = false;
+        Ok(HandlerEntry::new(ser.unwrap(), uid).on(handler))
     }
 
-    /// Register the handler with given store.
-    pub fn then(
-        mut self,
-        store: impl Store<S, O, Ret = (), Error = Error> + 'static,
-    ) -> Result<Self, Error> {
-        let uid = self.run_and_commit_the_change(false)?;
-
-        if !self.register {
-            if let Some(handler) = self.handler.take() {
-                self.inv_ser.set_handler(uid, handler, store);
-            }
-            self.register = true;
-        }
-        Ok(self)
-    }
-
-    pub(crate) fn run_and_commit_the_change(&mut self, check: bool) -> Result<Uid, Error> {
-        let uid = self.inner.run_and_commit_the_change()?;
-
-        if check && !self.register {
-            if let Some(handler) = self.handler.take() {
-                self.inv_ser.set_raw(uid, wrap_handler_default(handler));
-            }
-            self.register = true;
-        }
-        Ok(uid)
+    pub(crate) fn run_and_commit_the_change(&mut self) -> Result<Uid, Error> {
+        self.drop_commit = false;
+        self.inner.run_and_commit_the_change()
     }
 
     /// Run the commit.
@@ -229,26 +195,22 @@ where
     /// It create an option using given type [`Ctor`](crate::opt::Ctor).
     /// And add it to referenced [`Set`](crate::set::Set), return the new option [`Uid`].
     pub fn run(mut self) -> Result<Uid, Error> {
-        self.drop_commit = false;
-        self.run_and_commit_the_change(true)
+        self.run_and_commit_the_change()
     }
 }
 
-impl<'a, S, H, A, O> Drop for ParserCommit<'a, S, H, A, O>
+impl<'a, S> Drop for ParserCommit<'a, S>
 where
-    O: 'static,
     S: crate::set::Set,
     SetOpt<S>: Opt,
     SetCfg<S>: ConfigValue + Default,
-    H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
-    A: Extract<S, Error = Error> + 'static,
 {
     fn drop(&mut self) {
-        if self.drop_commit && !self.register {
+        if self.drop_commit {
             let error =
                 "Error when commit the option in ParserCommit::Drop, call `run` get the Result";
 
-            self.run_and_commit_the_change(true).expect(error);
+            self.run_and_commit_the_change().expect(error);
         }
     }
 }

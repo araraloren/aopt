@@ -31,7 +31,7 @@ impl Args {
         }
     }
 
-    pub fn iter(&self) -> Iter<'_> {
+    pub fn guess_iter(&self) -> Iter<'_> {
         Iter::new(&self.inner)
     }
 }
@@ -103,7 +103,7 @@ mod test {
     #[test]
     fn test_args() {
         let args = Args::new(["--opt", "value", "--bool", "pos"].into_iter());
-        let mut iter = args.iter().enumerate();
+        let mut iter = args.guess_iter().enumerate();
 
         if let Some((idx, (opt, arg))) = iter.next() {
             assert_eq!(idx, 0);

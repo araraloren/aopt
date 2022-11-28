@@ -36,15 +36,13 @@ pub(crate) fn typeid<T: 'static>() -> TypeId {
 }
 
 #[macro_export]
-macro_rules! getoptw {
+macro_rules! getopt {
     ($args:expr, $($parser_left:expr),+) => {
         {
-            use aopt::{Arc, args::Args, Error, parser::Policy};
-
             fn __check_a(a: Arc<Args>) -> Arc<Args> { a }
             fn __check_p<P: Policy<Error = Error>>(p: &mut Parser<P::Set, P>) -> &mut Parser<P::Set, P> { p }
 
-            let mut error = Error::Null;
+            let mut ret = Ok(None);
             let args = __check_a( $args );
 
             loop {
@@ -52,20 +50,21 @@ macro_rules! getoptw {
                     let parser = __check_p($parser_left);
 
                     match parser.parse(args.clone()) {
-                        Ok(ret) => {
-                            if let Some(_) = ret {
+                        Ok(parse_ret) => {
+                            if let Some(_) = parse_ret {
                                 break Ok(Some(parser));
                             }
+                            else { ret = Ok(None); }
                         }
                         Err(e) => {
-                            error = e;
-                            if ! error.is_failure() {
-                                break Err(error);
+                            if ! e.is_failure() {
+                                break Err(e);
                             }
+                            else { ret = Err(e); }
                         }
                     }
                 )+
-                break Err(error);
+                break ret;
             }
         }
     };
@@ -81,7 +80,7 @@ pub mod prelude {
     pub use crate::ctx::Handler;
     pub use crate::ctx::Store;
     pub use crate::ext::*;
-    pub use crate::getoptw;
+    pub use crate::getopt;
     pub use crate::opt::AOpt;
     pub use crate::opt::Action;
     pub use crate::opt::Assoc;

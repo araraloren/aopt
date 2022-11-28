@@ -37,7 +37,7 @@ use crate::opt::Ctor;
 use crate::opt::Information;
 use crate::opt::Opt;
 use crate::opt::OptParser;
-use crate::ser::invoke::Entry;
+use crate::ser::invoke::HandlerEntry;
 use crate::ser::Services;
 use crate::set::Commit;
 use crate::set::Filter;
@@ -124,35 +124,49 @@ where
 /// # Example
 ///
 /// ```rust
-/// use aopt::Result;
-/// use aopt::prelude::*;
+/// # use aopt::getopt;
+/// # use aopt::prelude::*;
+/// # use aopt::Arc;
+/// # use aopt::Error;
+/// #
+/// # fn main() -> Result<(), Error> {
+/// let mut parser1 = Parser::new(AFwdPolicy::default());
 ///
-/// fn main() -> Result<()> {
-///     #[derive(Debug, Default)]
-///     pub struct EmptyPolicy(i64);
+/// parser1.add_opt("Where=c")?;
+/// parser1.add_opt("question=m")?.on(question)?;
 ///
-///     impl<S: Set, SS: Service<S>> Policy<S, SS> for EmptyPolicy {
-///         fn parse(
-///             &mut self,
-///             set: &mut S,
-///             service: &mut SS,
-///             iter: &mut dyn Iterator<Item = aopt::arg::Argument>,
-///         ) -> Result<bool> {
-///             println!("In parser policy {} with argument length = {}", self.0, iter.count());
-///             Ok(false)
-///         }
-///     }
+/// let mut parser2 = Parser::new(AFwdPolicy::default());
 ///
-///     let mut parser1 = Parser::<SimpleSet, DefaultService, EmptyPolicy>::default();
-///     let mut parser2 = Parser::<SimpleSet, DefaultService, EmptyPolicy>::new_policy(EmptyPolicy(42));
+/// parser2.add_opt("Who=c")?;
+/// parser2.add_opt("question=m")?.on(question)?;
 ///
-///     getopt!(
-///         ["Happy", "Chinese", "new", "year", "!"].into_iter(),
-///         parser1,
-///         parser2
-///     )?;
-///     Ok(())
+/// fn question(_: &mut ASet, _: &mut ASer, args: ctx::Args) -> Result<Option<()>, Error> {
+///     // Output: The question is: Where are you from ?
+///     println!(
+///         "The question is: {}",
+///         args.iter()
+///             .map(|v| v.get_str().unwrap().to_owned())
+///             .collect::<Vec<String>>()
+///             .join(" ")
+///     );
+///     Ok(Some(()))
 /// }
+///
+/// let ret = getopt!(
+///     Arc::new(Args::new(["Where", "are", "you", "from", "?"].into_iter())),
+///     &mut parser1,
+///     &mut parser2
+/// )?;
+///
+/// assert!(ret.is_some());
+/// assert_eq!(
+///     ret.unwrap()[0].name(),
+///     "Where",
+///     "Parser with `Where` cmd matched"
+/// );
+/// #
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// Using it with macro [`getopt`](crate::getopt),
@@ -328,15 +342,83 @@ where
     <P::Set as OptParser>::Output: Information,
     SetCfg<P::Set>: Config + ConfigValue + Default,
 {
-    pub fn add_opt<A, O, H, T: Into<Str>>(
-        &mut self,
-        opt: T,
-    ) -> Result<ParserCommit<'_, P::Set, H, A, O>, Error>
-    where
-        O: 'static,
-        H: Handler<P::Set, A, Output = Option<O>, Error = Error> + 'static,
-        A: Extract<P::Set, Error = Error> + 'static,
-    {
+    /// Add an option to the [`Set`](Policy::Set), return a [`ParserCommit`].
+    ///
+    /// Then you can modify the option configurations through the api of [`ParserCommit`].
+    /// Also you can call the function [`on`](crate::parser::ParserCommit::on),
+    /// register option handler which will called when option set by user.
+    /// # Example
+    ///
+    ///```rust
+    /// # use aopt::getopt;
+    /// # use aopt::prelude::*;
+    /// # use aopt::Arc;
+    /// # use aopt::Error;
+    /// # use aopt::RawVal;
+    /// # use std::ops::Deref;
+    /// #
+    /// # fn main() -> Result<(), Error> {
+    /// let mut parser1 = Parser::new(AFwdPolicy::default());
+    ///
+    /// // Add an option `--count` with type `i`.
+    /// parser1.add_opt("--count=i")?;
+    /// // Add an option `--len` with type `u`, and get its unique id.
+    /// let _len_id = parser1.add_opt("--len=u")?.run()?;
+    ///
+    /// // Add an option `--size` with type `u`, it has an alias `-s`.
+    /// parser1.add_opt("--size=u")?.add_alias("-s");
+    ///
+    /// // Add an option `--path` with type `s`.
+    /// // Set its value action to `Action::Set`.
+    /// // The handler which add by `on` will called when option set.
+    /// parser1
+    ///     .add_opt("--path=s")?
+    ///     .set_action(Action::Set)
+    ///     .on(|_: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>| Ok(Some(val.take())))?;
+    ///
+    /// fn file_count_storer(
+    ///     uid: Uid,
+    ///     _: &mut ASet,
+    ///     ser: &mut ASer,
+    ///     _: Option<&RawVal>,
+    ///     val: Option<bool>,
+    /// ) -> Result<Option<()>, Error> {
+    ///     let values = ser.ser_val_mut()?.entry::<u64>(uid).or_insert(vec![0]);
+    ///
+    ///     if let Some(is_file) = val {
+    ///         if is_file {
+    ///             values[0] += 1;
+    ///             return Ok(Some(()));
+    ///         }
+    ///     }
+    ///     Ok(None)
+    /// }
+    /// // Add an NOA `file` with type `p`.
+    /// // The handler which add by `on` will called when option set.
+    /// // The store will called by `InvokeService` when storing option value.
+    /// parser1
+    ///     .add_opt("file=p@2..")?
+    ///     .on(|_: &mut ASet, _: &mut ASer, val: ctx::Value<String>| {
+    ///         let path = val.deref();
+    ///
+    ///         if let Ok(meta) = std::fs::metadata(path) {
+    ///             if meta.is_file() {
+    ///                 println!("Got a file {:?}", path);
+    ///                 return Ok(Some(true));
+    ///             }
+    ///         }
+    ///         Ok(Some(false))
+    ///     })?
+    ///     .then(file_count_storer);
+    ///
+    /// getopt!(Arc::new(Args::new(std::env::args().skip(1))), &mut parser1)?;
+    ///
+    /// dbg!(parser1.find_val::<u64>("file=p")?);
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn add_opt<T: Into<Str>>(&mut self, opt: T) -> Result<ParserCommit<'_, P::Set>, Error> {
         let info =
             <<<P::Set as Set>::Ctor as Ctor>::Config as Config>::new(&self.optset, opt.into())?;
 
@@ -346,13 +428,13 @@ where
         ))
     }
 
-    pub fn entry<A, O, H>(&mut self, uid: Uid) -> Result<Entry<'_, P::Set, H, A, O>, Error>
+    pub fn entry<A, O, H>(&mut self, uid: Uid) -> Result<HandlerEntry<'_, P::Set, H, A, O>, Error>
     where
         O: 'static,
         H: Handler<P::Set, A, Output = Option<O>, Error = Error> + 'static,
         A: Extract<P::Set, Error = Error> + 'static,
     {
-        Ok(Entry::new(self.services.ser_invoke_mut()?, uid))
+        Ok(HandlerEntry::new(self.services.ser_invoke_mut()?, uid))
     }
 }
 
