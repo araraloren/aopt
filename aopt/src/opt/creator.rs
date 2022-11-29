@@ -2,7 +2,7 @@ use crate::opt::AOpt;
 use crate::opt::Action;
 use crate::opt::Assoc;
 use crate::opt::ConfigValue;
-use crate::opt::Ctor;
+use crate::set::Ctor;
 use crate::opt::OptConfig;
 use crate::opt::Style;
 use crate::opt::ValInitiator;

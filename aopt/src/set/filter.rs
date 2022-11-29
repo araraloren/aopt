@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use crate::opt::Config;
 use crate::opt::ConfigValue;
-use crate::opt::Ctor;
+use crate::set::Ctor;
 use crate::opt::Index;
 use crate::opt::Opt;
 use crate::set::Set;

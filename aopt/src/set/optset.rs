@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use crate::opt::Config;
 use crate::opt::ConfigValue;
-use crate::opt::Ctor;
+use crate::set::Ctor;
 use crate::opt::Information;
 use crate::opt::Opt;
 use crate::opt::OptParser;
@@ -144,14 +144,6 @@ where
     P::Output: Information,
     C::Config: Config + ConfigValue + Default,
 {
-    pub fn iter(&self) -> std::slice::Iter<'_, C::Opt> {
-        self.opts.iter()
-    }
-
-    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, C::Opt> {
-        self.opts.iter_mut()
-    }
-
     /// Add an option into current [`OptSet`].
     ///
     /// It parsing the given option string `S` using inner [`OptParser`], return an [`Commit`].

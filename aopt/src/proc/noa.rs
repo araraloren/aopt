@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use tracing::trace;
 
 use crate::args::Args;
-use crate::opt::Ctor;
+use crate::set::Ctor;
 use crate::opt::Opt;
 use crate::opt::Style;
 use crate::proc::Match;

@@ -6,7 +6,7 @@ pub use self::noa::NOAProcess;
 pub use self::opt::OptMatch;
 pub use self::opt::OptProcess;
 
-use crate::opt::Ctor;
+use crate::set::Ctor;
 use crate::opt::Style;
 use crate::set::Set;
 use crate::Error;

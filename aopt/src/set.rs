@@ -12,8 +12,8 @@ pub use self::optset::OptSet;
 
 use std::slice::Iter;
 use std::slice::IterMut;
+use std::fmt::Debug;
 
-use crate::opt::Ctor;
 use crate::opt::Opt;
 use crate::Error;
 use crate::Str;
@@ -24,9 +24,77 @@ pub type SetOpt<I> = <<I as Set>::Ctor as Ctor>::Opt;
 /// An type alias for `<<I as Set>::Ctor as Ctor>::Config`
 pub type SetCfg<I> = <<I as Set>::Ctor as Ctor>::Config;
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        pub trait Ctor: Send + Sync {
+            type Opt: Opt;
+            type Config;
+            type Error: Into<Error>;
+
+            fn r#type(&self) -> Str;
+
+            fn sp_deactivate(&self) -> bool;
+
+            fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error>;
+        }
+    }
+    else {
+        pub trait Ctor {
+            type Opt: Opt;
+            type Config;
+            type Error: Into<Error>;
+
+            fn r#type(&self) -> Str;
+
+            fn sp_deactivate(&self) -> bool;
+
+            fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error>;
+        }
+    }
+}
+
+impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Ctor
+    for Box<dyn Ctor<Opt = Opt, Config = Config, Error = Err>>
+{
+    type Opt = Opt;
+
+    type Config = Config;
+
+    type Error = Err;
+
+    fn r#type(&self) -> Str {
+        Ctor::r#type(self.as_ref())
+    }
+
+    fn sp_deactivate(&self) -> bool {
+        Ctor::sp_deactivate(self.as_ref())
+    }
+
+    fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
+        Ctor::new_with(self.as_mut(), config)
+    }
+}
+
+impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Debug
+    for Box<dyn Ctor<Opt = Opt, Config = Config, Error = Err>>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Ctor")
+            .field(&format!("{{{}}}", self.r#type()))
+            .finish()
+    }
+}
+
+impl<T: Ctor> From<T> for Str {
+    fn from(c: T) -> Self {
+        c.r#type()
+    }
+}
+
+
 /// A collection store the [`Ctor`](Set::Ctor) and [`Opt`](Ctor::Opt).
 pub trait Set {
-    type Ctor: crate::opt::Ctor;
+    type Ctor: Ctor;
 
     fn register(&mut self, ctor: Self::Ctor) -> Option<Self::Ctor>;
 

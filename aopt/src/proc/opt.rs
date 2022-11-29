@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 use tracing::trace;
 
-use crate::opt::Ctor;
+use crate::set::Ctor;
 use crate::opt::Opt;
 use crate::opt::Style;
 use crate::proc::Match;
