@@ -89,7 +89,6 @@ pub mod prelude {
     pub use crate::opt::Config;
     pub use crate::opt::ConfigValue;
     pub use crate::opt::ConstrctInfo;
-    pub use crate::set::Ctor;
     pub use crate::opt::FltCreator;
     pub use crate::opt::Help;
     pub use crate::opt::Index;
@@ -131,6 +130,7 @@ pub mod prelude {
     pub use crate::ser::ValEntry;
     pub use crate::ser::ValService;
     pub use crate::set::Commit;
+    pub use crate::set::Ctor;
     pub use crate::set::Filter;
     pub use crate::set::FilterMatcher;
     pub use crate::set::FilterMut;

@@ -2,11 +2,11 @@ use crate::opt::AOpt;
 use crate::opt::Action;
 use crate::opt::Assoc;
 use crate::opt::ConfigValue;
-use crate::set::Ctor;
 use crate::opt::OptConfig;
 use crate::opt::Style;
 use crate::opt::ValInitiator;
 use crate::opt::ValValidator;
+use crate::set::Ctor;
 use crate::Error;
 use crate::Str;
 

@@ -110,6 +110,7 @@ impl Services {
         self.0.remove::<T>()
     }
 
+    /// Register a [`Service`] T into the [`Services`].
     pub fn register<T: Service + 'static>(&mut self, value: T) -> Option<T> {
         self.0.insert(value)
     }

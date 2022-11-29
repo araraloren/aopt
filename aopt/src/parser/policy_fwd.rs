@@ -15,17 +15,20 @@ use crate::args::Args;
 use crate::astr;
 use crate::ctx::Ctx;
 use crate::ext::ServicesExt;
-use crate::set::Ctor;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::proc::Process;
 use crate::ser::Services;
+use crate::set::Ctor;
 use crate::set::Pre;
 use crate::set::Set;
 use crate::Arc;
 use crate::Error;
 
-/// FwdPolicy process the option before any
+/// [`FwdPolicy`] matching the command line arguments with [`Opt`] in the [`Set`].
+/// The option will match failed if any special [`Error`] raised during option processing.
+/// [`FwdPolicy`] will return `Some(true)` if match successful.
+/// [`FwdPolicy`] process the option before any
 /// NOA([`Cmd`](crate::opt::Style::Cmd), [`Pos`](crate::opt::Style::Pos) and [`Main`](crate::opt::Style::Main)).
 ///
 /// You can get the value of any option in the handler of NOA.

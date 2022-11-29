@@ -5,6 +5,8 @@ cfg_if::cfg_if! {
         use std::ffi::OsString;
         use std::ops::{Deref, DerefMut};
 
+        /// Raw value used when parsing command line argument,
+        /// it is wrapper of [`String`] if feature `utf8` enabled.
         #[derive(
             Debug,
             Clone,
@@ -94,6 +96,8 @@ cfg_if::cfg_if! {
         use std::ffi::OsString;
         use std::ops::{Deref, DerefMut};
 
+        /// Raw value used when parsing command line argument,
+        /// it is wrapper of [`OsString`] in default.
         #[derive(
             Debug,
             Clone,

@@ -1,7 +1,6 @@
 use crate::opt::AOpt;
 use crate::opt::BoolCreator;
 use crate::opt::CmdCreator;
-use crate::set::Ctor;
 use crate::opt::FltCreator;
 use crate::opt::IntCreator;
 use crate::opt::MainCreator;
@@ -19,6 +18,7 @@ use crate::ser::RawValService;
 use crate::ser::Services;
 use crate::ser::UsrValService;
 use crate::ser::ValService;
+use crate::set::Ctor;
 use crate::set::OptSet;
 use crate::Error;
 use crate::RawVal;

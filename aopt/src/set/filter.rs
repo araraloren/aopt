@@ -2,9 +2,9 @@ use std::fmt::Debug;
 
 use crate::opt::Config;
 use crate::opt::ConfigValue;
-use crate::set::Ctor;
 use crate::opt::Index;
 use crate::opt::Opt;
+use crate::set::Ctor;
 use crate::set::Set;
 use crate::set::SetCfg;
 use crate::set::SetOpt;

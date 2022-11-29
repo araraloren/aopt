@@ -10,9 +10,9 @@ pub use self::filter::FilterMut;
 pub use self::index::SetIndex;
 pub use self::optset::OptSet;
 
+use std::fmt::Debug;
 use std::slice::Iter;
 use std::slice::IterMut;
-use std::fmt::Debug;
 
 use crate::opt::Opt;
 use crate::Error;
@@ -26,6 +26,7 @@ pub type SetCfg<I> = <<I as Set>::Ctor as Ctor>::Config;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "sync")] {
+        /// Create [`Opt`](crate::set::Ctor::Opt) with given [`Config`](crate::set::Ctor::Config).
         pub trait Ctor: Send + Sync {
             type Opt: Opt;
             type Config;
@@ -33,12 +34,14 @@ cfg_if::cfg_if! {
 
             fn r#type(&self) -> Str;
 
+            /// Return true if the option type support deactivate style such as `--/bool`.
             fn sp_deactivate(&self) -> bool;
 
             fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error>;
         }
     }
     else {
+        /// Create [`Opt`](crate::set::Ctor::Opt) with given [`Config`](crate::set::Ctor::Config).
         pub trait Ctor {
             type Opt: Opt;
             type Config;
@@ -46,6 +49,7 @@ cfg_if::cfg_if! {
 
             fn r#type(&self) -> Str;
 
+            /// Return true if the option type support deactivate style such as `--/bool`.
             fn sp_deactivate(&self) -> bool;
 
             fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error>;
@@ -53,6 +57,7 @@ cfg_if::cfg_if! {
     }
 }
 
+/// Implement [`Ctor`] for `Box<dyn Ctor>`.
 impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Ctor
     for Box<dyn Ctor<Opt = Opt, Config = Config, Error = Err>>
 {
@@ -91,11 +96,11 @@ impl<T: Ctor> From<T> for Str {
     }
 }
 
-
 /// A collection store the [`Ctor`](Set::Ctor) and [`Opt`](Ctor::Opt).
 pub trait Set {
     type Ctor: Ctor;
 
+    /// Register a option creator type into option set.
     fn register(&mut self, ctor: Self::Ctor) -> Option<Self::Ctor>;
 
     fn ctor_iter(&self) -> Iter<'_, Self::Ctor>;
@@ -121,12 +126,14 @@ pub trait Set {
 
     fn reset(&mut self);
 
+    /// Return the number of options.
     fn len(&self) -> usize;
 
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    /// Return all the unique id of option set.
     fn keys(&self) -> Vec<Uid> {
         self.iter().map(|v| v.uid()).collect()
     }
@@ -184,6 +191,7 @@ impl<S: Set> SetExt<S::Ctor> for S {
     }
 }
 
+/// Prefix set for option set.
 pub trait Pre {
     fn prefix(&self) -> &[Str];
 

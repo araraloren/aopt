@@ -28,18 +28,17 @@ use crate::args::Args;
 use crate::ctx::Ctx;
 use crate::ctx::Extract;
 use crate::ctx::Handler;
-use crate::ext::ser;
 use crate::ext::APolicyExt;
 use crate::ext::ServicesExt;
 use crate::opt::Config;
 use crate::opt::ConfigValue;
-use crate::set::Ctor;
 use crate::opt::Information;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::ser::invoke::HandlerEntry;
 use crate::ser::Services;
 use crate::set::Commit;
+use crate::set::Ctor;
 use crate::set::Filter;
 use crate::set::Pre;
 use crate::set::Set;
@@ -273,18 +272,86 @@ where
         self
     }
 
-    pub fn usr_val<T: 'static>(&self) -> Result<&ser::Value<T>, Error> {
-        self.services.ser_usrval()?.val::<ser::Value<T>>()
+    pub fn usr_val<T: 'static>(&self) -> Result<&T, Error> {
+        self.services.ser_usrval()?.val::<T>()
     }
 
-    pub fn usr_val_mut<T: 'static>(&mut self) -> Result<&mut ser::Value<T>, Error> {
-        self.services.ser_usrval_mut()?.val_mut::<ser::Value<T>>()
+    pub fn usr_val_mut<T: 'static>(&mut self) -> Result<&mut T, Error> {
+        self.services.ser_usrval_mut()?.val_mut::<T>()
     }
 
-    pub fn set_usr_val<T: 'static>(
-        &mut self,
-        val: ser::Value<T>,
-    ) -> Result<Option<ser::Value<T>>, Error> {
+    /// Set the user value that can access in option handler.
+    ///
+    /// # Example 1
+    /// ```rust
+    /// # use aopt::getopt;
+    /// # use aopt::prelude::*;
+    /// # use aopt::Arc;
+    /// # use aopt::Error;
+    /// # use std::ops::Deref;
+    /// #
+    /// # fn main() -> Result<(), Error> {
+    /// struct Int(i64);
+    ///
+    /// let mut parser = Parser::new(AFwdPolicy::default());
+    ///
+    /// // Register a value can access in handler parameter.
+    /// parser.set_usr_val(ser::Value::new(Int(42)))?;
+    /// parser.add_opt("--guess=i!")?.on(
+    ///   |_: &mut ASet, _: &mut ASer, mut val: ctx::Value<i64>, answer: ser::Value<Int>| {
+    ///       if &answer.0 == val.deref() {
+    ///           println!("Congratulation, you win!");
+    ///       } else if &answer.0 > val.deref() {
+    ///           println!("Oops, too bigger!")
+    ///       } else {
+    ///           println!("Oops, too little!")
+    ///       }
+    ///       Ok(Some(val.take()))
+    ///   },
+    /// )?;
+    ///
+    /// getopt!(Arc::new(Args::new(["--guess", "42"].into_iter())), &mut parser)?;
+    /// #
+    /// # Ok(())
+    /// # }
+    ///```
+    ///
+    /// # Example 2
+    /// ```rust
+    /// # use aopt::getopt;
+    /// # use aopt::prelude::*;
+    /// # use aopt::Arc;
+    /// # use aopt::Error;
+    /// # use std::ops::Deref;
+    /// #
+    /// # fn main() -> Result<(), Error> {
+    /// struct Int(i64);
+    ///
+    /// let mut parser = Parser::new(AFwdPolicy::default());
+    ///
+    /// // Register a value can access in handler parameter.
+    /// parser.set_usr_val(Int(42))?;
+    /// parser.add_opt("--guess=i!")?.on(
+    ///   |_: &mut ASet, ser: &mut ASer, mut val: ctx::Value<i64>| {
+    ///       let answer = Int::usr_val(ser)?;
+    ///
+    ///       if &answer.0 == val.deref() {
+    ///           println!("Congratulation, you win!");
+    ///       } else if &answer.0 > val.deref() {
+    ///           println!("Oops, too bigger!")
+    ///       } else {
+    ///           println!("Oops, too little!")
+    ///       }
+    ///       Ok(Some(val.take()))
+    ///   },
+    /// )?;
+    ///
+    /// getopt!(Arc::new(Args::new(["--guess", "42"].into_iter())), &mut parser)?;
+    /// #
+    /// # Ok(())
+    /// # }
+    ///```
+    pub fn set_usr_val<T: 'static>(&mut self, val: T) -> Result<Option<T>, Error> {
         Ok(self.services.ser_usrval_mut()?.insert(val))
     }
 
@@ -411,7 +478,7 @@ where
     ///     })?
     ///     .then(file_count_storer);
     ///
-    /// getopt!(Arc::new(Args::new(std::env::args().skip(1))), &mut parser1)?;
+    /// getopt!(Arc::new(Args::new(["foo", "bar"].into_iter())), &mut parser1)?;
     ///
     /// dbg!(parser1.find_val::<u64>("file=p")?);
     /// #

@@ -13,6 +13,7 @@ use crate::HashMap;
 use crate::StrJoin;
 use crate::Uid;
 
+/// Service which do option check in [`Policy`](crate::parser::Policy).
 pub struct CheckService<S>(PhantomData<S>);
 
 impl<S> Debug for CheckService<S> {

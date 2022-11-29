@@ -192,7 +192,7 @@ where
 
     /// Run the commit.
     ///
-    /// It create an option using given type [`Ctor`](crate::opt::Ctor).
+    /// It create an option using given type [`Ctor`](crate::set::Ctor).
     /// And add it to referenced [`Set`](crate::set::Set), return the new option [`Uid`].
     pub fn run(mut self) -> Result<Uid, Error> {
         self.run_and_commit_the_change()

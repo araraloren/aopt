@@ -14,11 +14,11 @@ use crate::args::ArgParser;
 use crate::args::Args;
 use crate::ctx::Ctx;
 use crate::ext::ServicesExt;
-use crate::set::Ctor;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::proc::Process;
 use crate::ser::Services;
+use crate::set::Ctor;
 use crate::set::Pre;
 use crate::set::Set;
 use crate::Arc;
@@ -28,6 +28,10 @@ use crate::Error;
 /// [`PrePolicy`] will skip any special [`Error`] during [`parse`](Policy::parse) process.
 /// [`PrePolicy`] will return the left `NOA`s after parsing.
 /// [`PrePolicy`] don't consume the `NOA` when process [`NOAMatch`](crate::proc::NOAMatch).
+///
+/// # Example
+/// ```rust
+/// ```
 #[derive(Debug, Clone)]
 pub struct PrePolicy<S> {
     strict: bool,

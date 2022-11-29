@@ -6,8 +6,8 @@ pub use self::noa::NOAProcess;
 pub use self::opt::OptMatch;
 pub use self::opt::OptProcess;
 
-use crate::set::Ctor;
 use crate::opt::Style;
+use crate::set::Ctor;
 use crate::set::Set;
 use crate::Error;
 use crate::RawVal;
@@ -20,16 +20,21 @@ pub trait Match {
 
     fn reset(&mut self);
 
+    /// Return true if the [`Match`] matched.
     fn is_mat(&self) -> bool;
 
+    /// Return the matched option `Uid`.
     fn mat_uid(&self) -> Option<Uid>;
 
     fn set_uid(&mut self, uid: Uid);
 
+    /// Return the [`Style`] of option.
     fn style(&self) -> Style;
 
+    /// Return the raw value.
     fn arg(&self) -> Option<&RawVal>;
 
+    /// Return true if the option need cosume a argument.
     fn consume(&self) -> bool;
 
     fn undo(
@@ -43,7 +48,7 @@ pub trait Match {
     ) -> Result<bool, Self::Error>;
 }
 
-/// [`Process`] matching the [`Opt`](crate::opt::Ctor::Opt) with [`Match`], and return the first matched
+/// [`Process`] matching the [`Opt`](crate::set::Ctor::Opt) with [`Match`], and return the first matched
 /// [`Match`] if successful.
 pub trait Process<M: Match> {
     type Set: Set;

@@ -2,11 +2,11 @@ use std::fmt::Debug;
 
 use crate::opt::Config;
 use crate::opt::ConfigValue;
-use crate::set::Ctor;
 use crate::opt::Information;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::set::Commit;
+use crate::set::Ctor;
 use crate::set::Filter;
 use crate::set::FilterMatcher;
 use crate::set::FilterMut;
