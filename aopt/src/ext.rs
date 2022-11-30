@@ -50,37 +50,35 @@ pub trait ServicesExt {
 }
 
 pub trait ServicesValExt<T: 'static> {
-    fn val(uid: Uid, ser: &Services) -> Result<&T, Error>;
+    fn sve_val(uid: Uid, ser: &Services) -> Result<&T, Error>;
 
-    fn val_mut(uid: Uid, ser: &mut Services) -> Result<&mut T, Error>;
+    fn sve_val_mut(uid: Uid, ser: &mut Services) -> Result<&mut T, Error>;
 
-    fn vals(uid: Uid, ser: &Services) -> Result<&Vec<T>, Error>;
+    fn sve_vals(uid: Uid, ser: &Services) -> Result<&Vec<T>, Error>;
 
-    fn vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<T>, Error>;
+    fn sve_vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<T>, Error>;
 
     /// Apply filter on the values of option.
     /// The `F` should return true if you want remove the element.
-    fn apply_filter<F: FnMut(&T) -> bool>(
+    fn sve_filter<F: FnMut(&T) -> bool>(
         uid: Uid,
         ser: &mut Services,
         f: F,
     ) -> Result<Vec<T>, Error>;
+
+    fn sve_usrval(ser: &Services) -> Result<&T, Error>;
+
+    fn sve_usrval_mut(ser: &mut Services) -> Result<&mut T, Error>;
 }
 
 pub trait ServicesRawValExt<T: 'static> {
-    fn raw_val(uid: Uid, ser: &Services) -> Result<&T, Error>;
+    fn srve_val(uid: Uid, ser: &Services) -> Result<&T, Error>;
 
-    fn raw_val_mut(uid: Uid, ser: &mut Services) -> Result<&mut T, Error>;
+    fn srve_val_mut(uid: Uid, ser: &mut Services) -> Result<&mut T, Error>;
 
-    fn raw_vals(uid: Uid, ser: &Services) -> Result<&Vec<T>, Error>;
+    fn srve_vals(uid: Uid, ser: &Services) -> Result<&Vec<T>, Error>;
 
-    fn raw_vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<T>, Error>;
-}
-
-pub trait ServicesUsrValExt<T: 'static> {
-    fn usr_val(ser: &Services) -> Result<&T, Error>;
-
-    fn usr_val_mut(ser: &mut Services) -> Result<&mut T, Error>;
+    fn srve_vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<T>, Error>;
 }
 
 pub trait APolicyExt<I: crate::set::Set> {
@@ -101,11 +99,11 @@ pub type APrePolicy = PrePolicy<ASet>;
 
 pub type ADelayPolicy = DelayPolicy<ASet>;
 
-pub type AFwdParser = Parser<AFwdPolicy>;
+pub type AFwdParser = Parser<AFwdPolicy, ASet>;
 
-pub type APreParser = Parser<APrePolicy>;
+pub type APreParser = Parser<APrePolicy, ASet>;
 
-pub type ADelayParser = Parser<ADelayPolicy>;
+pub type ADelayParser = Parser<ADelayPolicy, ASet>;
 
 impl APolicyExt<ASet> for AFwdPolicy {
     /// Get default [`ASet`] for forward policy.

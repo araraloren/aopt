@@ -277,7 +277,7 @@ mod test {
                 deactivate,
                 "deactivate style not matched!"
             );
-            if let Ok(opt_vals) = T::vals(opt_uid, ser) {
+            if let Ok(opt_vals) = T::sve_vals(opt_uid, ser) {
                 if let Some(vals) = vals {
                     assert_eq!(
                         opt_vals.len(),
@@ -350,14 +350,14 @@ mod test {
         ser.ser_invoke_mut()?
             .entry(set.add_opt("--positive=b")?.add_alias("+>").run()?)
             .on(|set: &mut ASet, ser: &mut ASer| {
-                f64::apply_filter(set["args=p"].uid(), ser, |v: &f64| v <= &0.0)?;
+                f64::sve_filter(set["args=p"].uid(), ser, |v: &f64| v <= &0.0)?;
                 Ok(Some(true))
             });
         ser.ser_invoke_mut()?
             .entry(set.add_opt("--bigger-than=f")?.add_alias("+>").run()?)
             .on(|set: &mut ASet, ser: &mut ASer, val: ctx::Value<f64>| {
                 // this is a vec![vec![], ..]
-                Ok(Some(f64::apply_filter(
+                Ok(Some(f64::sve_filter(
                     set["args=p"].uid(),
                     ser,
                     |v: &f64| v <= val.deref(),

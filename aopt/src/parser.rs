@@ -171,50 +171,43 @@ where
 /// Using it with macro [`getopt`](crate::getopt),
 /// which can process multiple [`Parser`] with same type [`Policy`].
 #[derive(Debug)]
-pub struct Parser<P, S = <P as Policy>::Set>
-where
-    P: Policy,
-{
+pub struct Parser<P, S> {
     optset: S,
     policy: P,
     services: Services,
 }
 
-impl<P> Default for Parser<P>
+impl<P, S> Default for Parser<P, S>
 where
-    P::Set: Default,
-    P: Default + Policy,
+    S: Default + Set,
+    P: Default + Policy + APolicyExt<S>,
 {
     fn default() -> Self {
+        let policy = P::default();
+
         Self {
-            optset: Default::default(),
-            policy: Default::default(),
-            services: Default::default(),
+            optset: policy.default_set(),
+            services: policy.default_ser(),
+            policy,
         }
     }
 }
 
-impl<P> Deref for Parser<P>
-where
-    P: Policy,
-{
-    type Target = P::Set;
+impl<P, S> Deref for Parser<P, S> {
+    type Target = S;
 
     fn deref(&self) -> &Self::Target {
         &self.optset
     }
 }
 
-impl<P> DerefMut for Parser<P>
-where
-    P: Policy,
-{
+impl<P, S> DerefMut for Parser<P, S> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.optset
     }
 }
 
-impl<P> Parser<P>
+impl<P> Parser<P, P::Set>
 where
     P: Policy + APolicyExt<P::Set>,
 {
@@ -230,7 +223,7 @@ where
     }
 }
 
-impl<P> Parser<P>
+impl<P> Parser<P, P::Set>
 where
     P: Policy<Error = Error>,
 {
@@ -281,11 +274,11 @@ where
         self
     }
 
-    pub fn usr_val<T: 'static>(&self) -> Result<&T, Error> {
+    pub fn usrval<T: 'static>(&self) -> Result<&T, Error> {
         self.services.ser_usrval()?.val::<T>()
     }
 
-    pub fn usr_val_mut<T: 'static>(&mut self) -> Result<&mut T, Error> {
+    pub fn usrval_mut<T: 'static>(&mut self) -> Result<&mut T, Error> {
         self.services.ser_usrval_mut()?.val_mut::<T>()
     }
 
@@ -305,7 +298,7 @@ where
     /// let mut parser = Parser::new(AFwdPolicy::default());
     ///
     /// // Register a value can access in handler parameter.
-    /// parser.set_usr_val(ser::Value::new(Int(42)))?;
+    /// parser.set_usrval(ser::Value::new(Int(42)))?;
     /// parser.add_opt("--guess=i!")?.on(
     ///   |_: &mut ASet, _: &mut ASer, mut val: ctx::Value<i64>, answer: ser::Value<Int>| {
     ///       if &answer.0 == val.deref() {
@@ -339,10 +332,10 @@ where
     /// let mut parser = Parser::new(AFwdPolicy::default());
     ///
     /// // Register a value can access in handler parameter.
-    /// parser.set_usr_val(Int(42))?;
+    /// parser.set_usrval(Int(42))?;
     /// parser.add_opt("--guess=i!")?.on(
     ///   |_: &mut ASet, ser: &mut ASer, mut val: ctx::Value<i64>| {
-    ///       let answer = Int::usr_val(ser)?;
+    ///       let answer = Int::sve_usrval(ser)?;
     ///
     ///       if &answer.0 == val.deref() {
     ///           println!("Congratulation, you win!");
@@ -360,7 +353,7 @@ where
     /// # Ok(())
     /// # }
     ///```
-    pub fn set_usr_val<T: 'static>(&mut self, val: T) -> Result<Option<T>, Error> {
+    pub fn set_usrval<T: 'static>(&mut self, val: T) -> Result<Option<T>, Error> {
         Ok(self.services.ser_usrval_mut()?.insert(val))
     }
 
@@ -397,7 +390,7 @@ where
     }
 }
 
-impl<P> Parser<P>
+impl<P> Parser<P, P::Set>
 where
     P: Policy<Error = Error>,
 {
@@ -409,7 +402,7 @@ where
     }
 }
 
-impl<P> Parser<P>
+impl<P> Parser<P, P::Set>
 where
     P::Set: 'static,
     P: Policy<Error = Error>,
@@ -514,7 +507,7 @@ where
     }
 }
 
-impl<P> Parser<P>
+impl<P> Parser<P, P::Set>
 where
     P: Policy<Error = Error>,
     P::Set: Pre + Set + OptParser,
@@ -553,8 +546,8 @@ where
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "sync")] {
-        unsafe impl<P> Send for Parser<P> where P: Policy { }
+        unsafe impl<P, S> Send for Parser<P, S> { }
 
-        unsafe impl<P> Sync for Parser<P> where P: Policy { }
+        unsafe impl<P, S> Sync for Parser<P, S> { }
     }
 }

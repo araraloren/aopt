@@ -9,7 +9,7 @@ pub struct UsrValService(AnyMap);
 
 impl Service for UsrValService {
     fn service_name() -> crate::Str {
-        astr("UserValService")
+        astr("UsrValService")
     }
 }
 

@@ -11,7 +11,6 @@ use crate::ctx::Ctx;
 use crate::ctx::Extract;
 use crate::ext::ServicesExt;
 use crate::ext::ServicesRawValExt;
-use crate::ext::ServicesUsrValExt;
 use crate::ext::ServicesValExt;
 use crate::prelude::CheckService;
 use crate::ser::InvokeService;
@@ -63,19 +62,19 @@ impl ServicesExt for Services {
 }
 
 impl ServicesRawValExt<crate::RawVal> for crate::RawVal {
-    fn raw_val(uid: Uid, ser: &Services) -> Result<&crate::RawVal, Error> {
+    fn srve_val(uid: Uid, ser: &Services) -> Result<&crate::RawVal, Error> {
         ser.ser_rawval()?.val(uid)
     }
 
-    fn raw_val_mut(uid: Uid, ser: &mut Services) -> Result<&mut crate::RawVal, Error> {
+    fn srve_val_mut(uid: Uid, ser: &mut Services) -> Result<&mut crate::RawVal, Error> {
         ser.ser_rawval_mut()?.val_mut(uid)
     }
 
-    fn raw_vals(uid: Uid, ser: &Services) -> Result<&Vec<crate::RawVal>, Error> {
+    fn srve_vals(uid: Uid, ser: &Services) -> Result<&Vec<crate::RawVal>, Error> {
         ser.ser_rawval()?.vals(uid)
     }
 
-    fn raw_vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<crate::RawVal>, Error> {
+    fn srve_vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<crate::RawVal>, Error> {
         ser.ser_rawval_mut()?.vals_mut(uid)
     }
 }
@@ -84,28 +83,28 @@ impl<T> ServicesValExt<T> for T
 where
     T: 'static,
 {
-    fn val(uid: Uid, ser: &Services) -> Result<&T, Error> {
+    fn sve_val(uid: Uid, ser: &Services) -> Result<&T, Error> {
         ser.ser_val()?.val(uid)
     }
 
-    fn val_mut(uid: Uid, ser: &mut Services) -> Result<&mut T, Error> {
+    fn sve_val_mut(uid: Uid, ser: &mut Services) -> Result<&mut T, Error> {
         ser.ser_val_mut()?.val_mut(uid)
     }
 
-    fn vals(uid: Uid, ser: &Services) -> Result<&Vec<T>, Error> {
+    fn sve_vals(uid: Uid, ser: &Services) -> Result<&Vec<T>, Error> {
         ser.ser_val()?.vals(uid)
     }
 
-    fn vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<T>, Error> {
+    fn sve_vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<T>, Error> {
         ser.ser_val_mut()?.vals_mut(uid)
     }
 
-    fn apply_filter<F: FnMut(&T) -> bool>(
+    fn sve_filter<F: FnMut(&T) -> bool>(
         uid: Uid,
         ser: &mut Services,
         mut f: F,
     ) -> Result<Vec<T>, Error> {
-        let vals = T::vals_mut(uid, ser)?;
+        let vals = T::sve_vals_mut(uid, ser)?;
         let mut i = 0;
         let mut removed = vec![];
 
@@ -118,17 +117,12 @@ where
         }
         Ok(removed)
     }
-}
 
-impl<T> ServicesUsrValExt<T> for T
-where
-    T: 'static,
-{
-    fn usr_val(ser: &Services) -> Result<&T, Error> {
+    fn sve_usrval(ser: &Services) -> Result<&T, Error> {
         ser.ser_usrval()?.val::<T>()
     }
 
-    fn usr_val_mut(ser: &mut Services) -> Result<&mut T, Error> {
+    fn sve_usrval_mut(ser: &mut Services) -> Result<&mut T, Error> {
         ser.ser_usrval_mut()?.val_mut::<T>()
     }
 }
@@ -195,7 +189,7 @@ where
 /// policy.parse(&mut set, &mut ser, Arc::new(args))?;
 ///
 /// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
-/// ser::Value::<PosList>::usr_val(&ser)?.test_pos(
+/// ser::Value::<PosList>::sve_usrval(&ser)?.test_pos(
 ///     ["set", "42", "foo", "bar"]
 ///         .into_iter()
 ///         .map(RawVal::from)
