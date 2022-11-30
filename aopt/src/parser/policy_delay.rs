@@ -27,6 +27,13 @@ use crate::set::Set;
 use crate::Arc;
 use crate::Error;
 
+/// [`DelayPolicy`] matching the command line arguments with [`Opt`] in the [`Set`].
+/// The option will match failed if any special [`Error`] raised during option processing.
+/// [`DelayPolicy`] will return `Some(true)` if match successful.
+/// [`DelayPolicy`] process the option first, but not invoke the handler of option.
+/// The handler will be called after [`Cmd`](crate::opt::Style::Cmd) NOA and [`Pos`](crate::opt::Style::Pos) NOA processed.
+/// In last, [`DelayPolicy`] will process [`Main`](crate::opt::Style::Main) NOA.
+///
 #[derive(Debug, Clone)]
 pub struct DelayPolicy<S> {
     strict: bool,

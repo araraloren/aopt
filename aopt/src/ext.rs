@@ -11,6 +11,7 @@ use crate::opt::StrParser;
 use crate::opt::UintCreator;
 use crate::parser::DelayPolicy;
 use crate::parser::FwdPolicy;
+use crate::parser::Parser;
 use crate::parser::PrePolicy;
 use crate::ser::CheckService;
 use crate::ser::InvokeService;
@@ -99,6 +100,12 @@ pub type AFwdPolicy = FwdPolicy<ASet>;
 pub type APrePolicy = PrePolicy<ASet>;
 
 pub type ADelayPolicy = DelayPolicy<ASet>;
+
+pub type AFwdParser = Parser<AFwdPolicy>;
+
+pub type APreParser = Parser<APrePolicy>;
+
+pub type ADelayParser = Parser<ADelayPolicy>;
 
 impl APolicyExt<ASet> for AFwdPolicy {
     /// Get default [`ASet`] for forward policy.

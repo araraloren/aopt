@@ -171,16 +171,19 @@ where
 /// Using it with macro [`getopt`](crate::getopt),
 /// which can process multiple [`Parser`] with same type [`Policy`].
 #[derive(Debug)]
-pub struct Parser<S, P> {
+pub struct Parser<P, S = <P as Policy>::Set>
+where
+    P: Policy,
+{
     optset: S,
     policy: P,
     services: Services,
 }
 
-impl<S, P> Default for Parser<S, P>
+impl<P> Default for Parser<P>
 where
-    S: Default,
-    P: Default,
+    P::Set: Default,
+    P: Default + Policy,
 {
     fn default() -> Self {
         Self {
@@ -191,21 +194,27 @@ where
     }
 }
 
-impl<S, P> Deref for Parser<S, P> {
-    type Target = S;
+impl<P> Deref for Parser<P>
+where
+    P: Policy,
+{
+    type Target = P::Set;
 
     fn deref(&self) -> &Self::Target {
         &self.optset
     }
 }
 
-impl<S, P> DerefMut for Parser<S, P> {
+impl<P> DerefMut for Parser<P>
+where
+    P: Policy,
+{
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.optset
     }
 }
 
-impl<P> Parser<P::Set, P>
+impl<P> Parser<P>
 where
     P: Policy + APolicyExt<P::Set>,
 {
@@ -221,7 +230,7 @@ where
     }
 }
 
-impl<P> Parser<P::Set, P>
+impl<P> Parser<P>
 where
     P: Policy<Error = Error>,
 {
@@ -388,7 +397,7 @@ where
     }
 }
 
-impl<P> Parser<P::Set, P>
+impl<P> Parser<P>
 where
     P: Policy<Error = Error>,
 {
@@ -400,7 +409,7 @@ where
     }
 }
 
-impl<P> Parser<P::Set, P>
+impl<P> Parser<P>
 where
     P::Set: 'static,
     P: Policy<Error = Error>,
@@ -505,7 +514,7 @@ where
     }
 }
 
-impl<P> Parser<P::Set, P>
+impl<P> Parser<P>
 where
     P: Policy<Error = Error>,
     P::Set: Pre + Set + OptParser,
@@ -544,8 +553,8 @@ where
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "sync")] {
-        unsafe impl<S, P> Send for Parser<S, P> { }
+        unsafe impl<P> Send for Parser<P> where P: Policy { }
 
-        unsafe impl<S, P> Sync for Parser<S, P> { }
+        unsafe impl<P> Sync for Parser<P> where P: Policy { }
     }
 }

@@ -40,7 +40,7 @@ macro_rules! getopt {
     ($args:expr, $($parser_left:expr),+) => {
         {
             fn __check_a(a: Arc<Args>) -> Arc<Args> { a }
-            fn __check_p<P: Policy<Error = Error>>(p: &mut Parser<P::Set, P>) -> &mut Parser<P::Set, P> { p }
+            fn __check_p<P: Policy<Error = Error>>(p: &mut Parser<P>) -> &mut Parser<P> { p }
 
             let mut ret = Ok(None);
             let args = __check_a( $args );
