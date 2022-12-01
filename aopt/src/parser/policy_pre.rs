@@ -10,7 +10,6 @@ use super::NOAGuess;
 use super::OptGuess;
 use super::Policy;
 use super::UserStyle;
-use crate::RawVal;
 use crate::args::ArgParser;
 use crate::args::Args;
 use crate::ctx::Ctx;
@@ -24,6 +23,7 @@ use crate::set::Pre;
 use crate::set::Set;
 use crate::Arc;
 use crate::Error;
+use crate::RawVal;
 
 /// [`PrePolicy`] matching the command line arguments with [`Opt`] in the [`Set`].
 /// [`PrePolicy`] will skip any special [`Error`] during [`parse`](Policy::parse) process.
