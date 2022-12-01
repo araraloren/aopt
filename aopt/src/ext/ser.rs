@@ -21,6 +21,7 @@ use crate::ser::ValService;
 use crate::set::Set;
 use crate::Arc;
 use crate::Error;
+use crate::RawVal;
 use crate::Uid;
 
 impl ServicesExt for Services {
@@ -56,25 +57,29 @@ impl ServicesExt for Services {
         self.service_mut::<RawValService<T>>()
     }
 
-    fn ser_check<S: 'static>(&self) -> Result<&crate::prelude::CheckService<S>, Error> {
+    fn ser_check<S: 'static>(&self) -> Result<&CheckService<S>, Error> {
         self.service::<CheckService<S>>()
     }
 }
 
-impl ServicesRawValExt<crate::RawVal> for crate::RawVal {
-    fn srve_val(uid: Uid, ser: &Services) -> Result<&crate::RawVal, Error> {
+impl ServicesRawValExt<RawVal> for RawVal {
+    /// Get the raw value reference of option `uid` from [`RawValService`].
+    fn srve_val(uid: Uid, ser: &Services) -> Result<&RawVal, Error> {
         ser.ser_rawval()?.val(uid)
     }
 
-    fn srve_val_mut(uid: Uid, ser: &mut Services) -> Result<&mut crate::RawVal, Error> {
+    /// Get the raw value mutable reference of option `uid` from [`RawValService`].
+    fn srve_val_mut(uid: Uid, ser: &mut Services) -> Result<&mut RawVal, Error> {
         ser.ser_rawval_mut()?.val_mut(uid)
     }
 
-    fn srve_vals(uid: Uid, ser: &Services) -> Result<&Vec<crate::RawVal>, Error> {
+    /// Get the raw values reference of option `uid` from [`RawValService`].
+    fn srve_vals(uid: Uid, ser: &Services) -> Result<&Vec<RawVal>, Error> {
         ser.ser_rawval()?.vals(uid)
     }
 
-    fn srve_vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<crate::RawVal>, Error> {
+    /// Get the raw values mutable reference of option `uid` from [`RawValService`].
+    fn srve_vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<RawVal>, Error> {
         ser.ser_rawval_mut()?.vals_mut(uid)
     }
 }
@@ -91,12 +96,24 @@ where
         ser.ser_val_mut()?.val_mut(uid)
     }
 
+    fn sve_take_val(uid: Uid, ser: &mut Services) -> Result<T, Error> {
+        ser.ser_val_mut()?
+            .pop(uid)
+            .ok_or_else(|| Error::raise_error("Can not take value from ValService"))
+    }
+
     fn sve_vals(uid: Uid, ser: &Services) -> Result<&Vec<T>, Error> {
         ser.ser_val()?.vals(uid)
     }
 
     fn sve_vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<T>, Error> {
         ser.ser_val_mut()?.vals_mut(uid)
+    }
+
+    fn sve_take_vals(uid: Uid, ser: &mut Services) -> Result<Vec<T>, Error> {
+        ser.ser_val_mut()?
+            .remove(uid)
+            .ok_or_else(|| Error::raise_error("Can not take values from ValService"))
     }
 
     fn sve_filter<F: FnMut(&T) -> bool>(
@@ -124,6 +141,12 @@ where
 
     fn sve_usrval_mut(ser: &mut Services) -> Result<&mut T, Error> {
         ser.ser_usrval_mut()?.val_mut::<T>()
+    }
+
+    fn sve_take_usrval(ser: &mut Services) -> Result<T, Error> {
+        ser.ser_usrval_mut()?
+            .remove::<T>()
+            .ok_or_else(|| Error::raise_error("Can not take value from UsrValService"))
     }
 }
 

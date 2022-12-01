@@ -30,35 +30,54 @@ pub mod ser;
 
 /// Some convenient function access the [`Service`](crate::ser::Service) in [`Services`].
 pub trait ServicesExt {
+    /// Get [`ValService`] reference.
     fn ser_val(&self) -> Result<&ValService, Error>;
 
+    /// Get [`ValService`] mutable reference.
     fn ser_val_mut(&mut self) -> Result<&mut ValService, Error>;
 
+    /// Get [`UsrValService`] reference.
     fn ser_usrval(&self) -> Result<&UsrValService, Error>;
 
+    /// Get [`UsrValService`] mutable reference.
     fn ser_usrval_mut(&mut self) -> Result<&mut UsrValService, Error>;
 
+    /// Get [`InvokeService`] reference.
     fn ser_invoke<S: 'static>(&self) -> Result<&InvokeService<S>, Error>;
 
+    /// Get [`InvokeService`] mutable reference.
     fn ser_invoke_mut<S: 'static>(&mut self) -> Result<&mut InvokeService<S>, Error>;
 
+    /// Get [`RawValService`] reference.
     fn ser_rawval<T: 'static>(&self) -> Result<&RawValService<T>, Error>;
 
+    /// Get [`RawValService`] mutable reference.
     fn ser_rawval_mut<T: 'static>(&mut self) -> Result<&mut RawValService<T>, Error>;
 
+    /// Get [`CheckService`] reference.
     fn ser_check<S: 'static>(&self) -> Result<&CheckService<S>, Error>;
 }
 
 pub trait ServicesValExt<T: 'static> {
+    /// Get the last value reference of option `uid` from [`ValService`].
     fn sve_val(uid: Uid, ser: &Services) -> Result<&T, Error>;
 
+    /// Get the last value mutable reference of option `uid` from [`ValService`].
     fn sve_val_mut(uid: Uid, ser: &mut Services) -> Result<&mut T, Error>;
 
+    /// Take last value of option `uid` from [`ValService`].
+    fn sve_take_val(uid: Uid, ser: &mut Services) -> Result<T, Error>;
+
+    /// Get the values reference of option `uid` from [`ValService`].
     fn sve_vals(uid: Uid, ser: &Services) -> Result<&Vec<T>, Error>;
 
+    /// Get the values mutable reference of option `uid` from [`ValService`].
     fn sve_vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<T>, Error>;
 
-    /// Apply filter on the values of option.
+    /// Take the values of option `uid` from [`ValService`].
+    fn sve_take_vals(uid: Uid, ser: &mut Services) -> Result<Vec<T>, Error>;
+
+    /// Apply filter on the values of option from [`ValService`].
     /// The `F` should return true if you want remove the element.
     fn sve_filter<F: FnMut(&T) -> bool>(
         uid: Uid,
@@ -66,9 +85,14 @@ pub trait ServicesValExt<T: 'static> {
         f: F,
     ) -> Result<Vec<T>, Error>;
 
+    /// Get the user value reference of option `uid` from [`UsrValService`].
     fn sve_usrval(ser: &Services) -> Result<&T, Error>;
 
+    /// Get the user value mutable reference of option `uid` from [`UsrValService`].
     fn sve_usrval_mut(ser: &mut Services) -> Result<&mut T, Error>;
+
+    /// Take the user value of option `uid` from [`UsrValService`].
+    fn sve_take_usrval(ser: &mut Services) -> Result<T, Error>;
 }
 
 pub trait ServicesRawValExt<T: 'static> {
