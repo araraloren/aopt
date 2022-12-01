@@ -168,6 +168,13 @@ where
         self
     }
 
+    /// Set the option default value.
+    pub fn set_values<T: Clone + 'static>(mut self, value: Vec<T>) -> Self {
+        self.cfg_mut()
+            .set_initiator(Some(ValInitiator::with(value)));
+        self
+    }
+
     /// Register the handler which will be called when option is set.
     /// The function will register the option to [`Set`] first,
     /// then pass the unqiue id to [`HandlerEntry`].

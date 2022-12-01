@@ -161,6 +161,12 @@ where
         self
     }
 
+    /// Set the option default value.
+    pub fn set_values<T: Clone + 'static>(mut self, value: Vec<T>) -> Self {
+        self.info.set_initiator(Some(ValInitiator::with(value)));
+        self
+    }
+
     pub(crate) fn run_and_commit_the_change(&mut self) -> Result<Uid, Error> {
         if let Some(commited) = self.commited {
             Ok(commited)
