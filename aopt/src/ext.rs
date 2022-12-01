@@ -123,11 +123,11 @@ pub type APrePolicy = PrePolicy<ASet>;
 
 pub type ADelayPolicy = DelayPolicy<ASet>;
 
-pub type AFwdParser = Parser<AFwdPolicy, ASet>;
+pub type AFwdParser = Parser<AFwdPolicy, ASet, bool>;
 
-pub type APreParser = Parser<APrePolicy, ASet>;
+pub type APreParser = Parser<APrePolicy, ASet, Vec<RawVal>>;
 
-pub type ADelayParser = Parser<ADelayPolicy, ASet>;
+pub type ADelayParser = Parser<ADelayPolicy, ASet, bool>;
 
 impl APolicyExt<ASet> for AFwdPolicy {
     /// Get default [`ASet`] for forward policy.

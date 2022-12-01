@@ -152,7 +152,7 @@ where
 /// }
 ///
 /// let ret = getopt!(
-///     Arc::new(Args::new(["Where", "are", "you", "from", "?"].into_iter())),
+///     ["Where", "are", "you", "from", "?"].into_iter(),
 ///     &mut parser1,
 ///     &mut parser2
 /// )?;
@@ -171,13 +171,14 @@ where
 /// Using it with macro [`getopt`](crate::getopt),
 /// which can process multiple [`Parser`] with same type [`Policy`].
 #[derive(Debug)]
-pub struct Parser<P, S> {
+pub struct Parser<P, S, R> {
     optset: S,
     policy: P,
     services: Services,
+    return_value: Option<R>,
 }
 
-impl<P, S> Default for Parser<P, S>
+impl<P, S, R> Default for Parser<P, S, R>
 where
     S: Default + Set,
     P: Default + Policy + APolicyExt<S>,
@@ -189,11 +190,12 @@ where
             optset: policy.default_set(),
             services: policy.default_ser(),
             policy,
+            return_value: None,
         }
     }
 }
 
-impl<P, S> Deref for Parser<P, S> {
+impl<P, S, R> Deref for Parser<P, S, R> {
     type Target = S;
 
     fn deref(&self) -> &Self::Target {
@@ -201,13 +203,13 @@ impl<P, S> Deref for Parser<P, S> {
     }
 }
 
-impl<P, S> DerefMut for Parser<P, S> {
+impl<P, S, R> DerefMut for Parser<P, S, R> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.optset
     }
 }
 
-impl<P> Parser<P, P::Set>
+impl<P> Parser<P, P::Set, P::Ret>
 where
     P: Policy + APolicyExt<P::Set>,
 {
@@ -219,11 +221,12 @@ where
             optset: set,
             policy,
             services,
+            return_value: None,
         }
     }
 }
 
-impl<P> Parser<P, P::Set>
+impl<P> Parser<P, P::Set, P::Ret>
 where
     P: Policy<Error = Error>,
 {
@@ -232,6 +235,7 @@ where
             optset,
             policy,
             services,
+            return_value: None,
         }
     }
 
@@ -274,6 +278,19 @@ where
         self
     }
 
+    pub fn retval(&self) -> Option<&P::Ret> {
+        self.return_value.as_ref()
+    }
+
+    pub fn take_retval(&mut self) -> Option<P::Ret> {
+        self.return_value.take()
+    }
+
+    pub fn set_retval(&mut self, val: Option<P::Ret>) -> &mut Self {
+        self.return_value = val;
+        self
+    }
+
     pub fn usrval<T: 'static>(&self) -> Result<&T, Error> {
         self.services.ser_usrval()?.val::<T>()
     }
@@ -312,7 +329,7 @@ where
     ///   },
     /// )?;
     ///
-    /// getopt!(Arc::new(Args::new(["--guess", "42"].into_iter())), &mut parser)?;
+    /// getopt!(["--guess", "42"].into_iter(), &mut parser)?;
     /// #
     /// # Ok(())
     /// # }
@@ -348,7 +365,7 @@ where
     ///   },
     /// )?;
     ///
-    /// getopt!(Arc::new(Args::new(["--guess", "42"].into_iter())), &mut parser)?;
+    /// getopt!(["--guess", "42"].into_iter(), &mut parser)?;
     /// #
     /// # Ok(())
     /// # }
@@ -390,19 +407,22 @@ where
     }
 }
 
-impl<P> Parser<P, P::Set>
+impl<P> Parser<P, P::Set, P::Ret>
 where
     P: Policy<Error = Error>,
 {
-    pub fn parse(&mut self, args: Arc<Args>) -> Result<Option<P::Ret>, P::Error> {
+    pub fn parse(&mut self, args: Arc<Args>) -> Result<Option<()>, P::Error> {
         let optset = &mut self.optset;
         let services = &mut self.services;
+        let ret = self.policy.parse(optset, services, args)?;
+        let parser_ret = ret.as_ref().map(|_| ());
 
-        self.policy.parse(optset, services, args)
+        self.return_value = ret;
+        Ok(parser_ret)
     }
 }
 
-impl<P> Parser<P, P::Set>
+impl<P> Parser<P, P::Set, P::Ret>
 where
     P::Set: 'static,
     P: Policy<Error = Error>,
@@ -480,7 +500,7 @@ where
     ///     })?
     ///     .then(file_count_storer);
     ///
-    /// getopt!(Arc::new(Args::new(["foo", "bar"].into_iter())), &mut parser1)?;
+    /// getopt!(["foo", "bar"].into_iter(), &mut parser1)?;
     ///
     /// dbg!(parser1.find_val::<u64>("file=p")?);
     /// #
@@ -507,7 +527,7 @@ where
     }
 }
 
-impl<P> Parser<P, P::Set>
+impl<P> Parser<P, P::Set, P::Ret>
 where
     P: Policy<Error = Error>,
     P::Set: Pre + Set + OptParser,
@@ -546,8 +566,8 @@ where
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "sync")] {
-        unsafe impl<P, S> Send for Parser<P, S> { }
+        unsafe impl<P, S, R> Send for Parser<P, S, R> { }
 
-        unsafe impl<P, S> Sync for Parser<P, S> { }
+        unsafe impl<P, S, R> Sync for Parser<P, S, R> { }
     }
 }

@@ -39,7 +39,7 @@ pub(crate) fn typeid<T: 'static>() -> TypeId {
 macro_rules! getopt {
     ($args:expr, $($parser_left:expr),+) => {
         {
-            fn __check_p<P: Policy<Error = Error>, S> (p: &mut Parser<P, S>) -> &mut Parser<P, S> { p }
+            fn __check_p<P: Policy<Error = Error>, S, R> (p: &mut Parser<P, S, R>) -> &mut Parser<P, S, R> { p }
 
             let mut ret = Ok(None);
             let args = Arc::new(Args::new($args));
