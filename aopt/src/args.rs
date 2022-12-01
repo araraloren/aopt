@@ -34,6 +34,10 @@ impl Args {
     pub fn guess_iter(&self) -> Iter<'_> {
         Iter::new(&self.inner)
     }
+
+    pub fn take_inner(self) -> Vec<RawVal> {
+        self.inner
+    }
 }
 
 impl Deref for Args {

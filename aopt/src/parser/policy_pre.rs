@@ -10,6 +10,7 @@ use super::NOAGuess;
 use super::OptGuess;
 use super::Policy;
 use super::UserStyle;
+use crate::RawVal;
 use crate::args::ArgParser;
 use crate::args::Args;
 use crate::ctx::Ctx;
@@ -31,6 +32,70 @@ use crate::Error;
 ///
 /// # Example
 /// ```rust
+/// # use aopt::getopt;
+/// # use aopt::prelude::*;
+/// # use aopt::Arc;
+/// # use aopt::Error;
+/// # use std::ops::Deref;
+/// #
+/// # fn main() -> Result<(), Error> {
+/// let parser = AFwdParser::default();
+/// let mut cfg_loader = APreParser::default();
+///
+/// cfg_loader.set_usrval(parser)?;
+/// cfg_loader.add_opt("--load=s")?.on(
+///     |_: &mut ASet, ser: &mut ASer, mut cfg: ctx::Value<String>| {
+///         let parser = AFwdParser::sve_usrval_mut(ser)?;
+///
+///         match cfg.as_str() {
+///             "cxx" => {
+///                 parser.add_opt("-cxx=s")?.set_values(
+///                     ["cxx", "cpp", "c++", "cc", "hpp", "hxx", "h"]
+///                         .map(|v| v.to_owned())
+///                         .to_vec(),
+///                 );
+///             }
+///             "c" => {
+///                 parser
+///                     .add_opt("-c=s")?
+///                     .set_values(["c", "h"].map(|v| v.to_owned()).to_vec());
+///             }
+///             _ => {
+///                 panic!("Unknow configuration name")
+///             }
+///         }
+///
+///         Ok(Some(cfg.take()))
+///     },
+/// )?;
+///
+/// getopt!(["--load", "cxx", "-check", "cc"].into_iter(), &mut cfg_loader)?;
+///
+/// let mut parser = AFwdParser::sve_take_usrval(cfg_loader.service_mut())?;
+///
+/// parser
+///     .add_opt("-check=s")?
+///     .on(|set: &mut ASet, ser: &mut ASer, ext: ctx::Value<String>| {
+///         let mut found = false;
+///
+///         for name in ["c", "cxx"] {
+///             if let Some(opt) = set.find(name)? {
+///                 if let Ok(file) = String::sve_vals(opt.uid(), ser) {
+///                     if file.contains(ext.deref()) {
+///                         found = true;
+///                     }
+///                 }
+///             }
+///         }
+///         Ok(Some(found))
+///     })?;
+///
+/// getopt!(cfg_loader.take_retval().unwrap().into_iter(), &mut parser)?;
+///
+/// assert!(*parser.find_val::<bool>("-check")?);
+/// #
+/// # Ok(())
+/// # }
 /// ```
 #[derive(Debug, Clone)]
 pub struct PrePolicy<S> {
@@ -95,7 +160,7 @@ where
     <S::Ctor as Ctor>::Opt: Opt,
     S: Set + OptParser + Pre + Debug + 'static,
 {
-    type Ret = Args;
+    type Ret = Vec<RawVal>;
 
     type Set = S;
 
@@ -218,6 +283,6 @@ where
 
         Self::ig_failure(ser.ser_check()?.post_check(set))?;
 
-        Ok(Some(ret))
+        Ok(Some(ret.take_inner()))
     }
 }
