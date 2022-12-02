@@ -171,17 +171,17 @@ where
 /// Using it with macro [`getopt`](crate::getopt),
 /// which can process multiple [`Parser`] with same type [`Policy`].
 #[derive(Debug)]
-pub struct Parser<P, S, R> {
-    optset: S,
+pub struct Parser<P: Policy> {
     policy: P,
+    optset: P::Set,
     services: Services,
-    return_value: Option<R>,
+    return_value: Option<P::Ret>,
 }
 
-impl<P, S, R> Default for Parser<P, S, R>
+impl<P: Policy> Default for Parser<P>
 where
-    S: Default + Set,
-    P: Default + Policy + APolicyExt<S>,
+    P::Set: Default + Set,
+    P: Default + Policy + APolicyExt<P::Set>,
 {
     fn default() -> Self {
         let policy = P::default();
@@ -195,21 +195,21 @@ where
     }
 }
 
-impl<P, S, R> Deref for Parser<P, S, R> {
-    type Target = S;
+impl<P: Policy> Deref for Parser<P> {
+    type Target = P::Set;
 
     fn deref(&self) -> &Self::Target {
         &self.optset
     }
 }
 
-impl<P, S, R> DerefMut for Parser<P, S, R> {
+impl<P: Policy> DerefMut for Parser<P> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.optset
     }
 }
 
-impl<P> Parser<P, P::Set, P::Ret>
+impl<P> Parser<P>
 where
     P: Policy + APolicyExt<P::Set>,
 {
@@ -226,7 +226,7 @@ where
     }
 }
 
-impl<P> Parser<P, P::Set, P::Ret>
+impl<P> Parser<P>
 where
     P: Policy<Error = Error>,
 {
@@ -407,7 +407,7 @@ where
     }
 }
 
-impl<P> Parser<P, P::Set, P::Ret>
+impl<P> Parser<P>
 where
     P: Policy<Error = Error>,
 {
@@ -422,7 +422,7 @@ where
     }
 }
 
-impl<P> Parser<P, P::Set, P::Ret>
+impl<P> Parser<P>
 where
     P::Set: 'static,
     P: Policy<Error = Error>,
@@ -527,7 +527,7 @@ where
     }
 }
 
-impl<P> Parser<P, P::Set, P::Ret>
+impl<P> Parser<P>
 where
     P: Policy<Error = Error>,
     P::Set: Pre + Set + OptParser,
@@ -566,8 +566,8 @@ where
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "sync")] {
-        unsafe impl<P, S, R> Send for Parser<P, S, R> { }
+        unsafe impl<P: Policy> Send for Parser<P> { }
 
-        unsafe impl<P, S, R> Sync for Parser<P, S, R> { }
+        unsafe impl<P: Policy> Sync for Parser<P> { }
     }
 }

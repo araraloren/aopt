@@ -1,5 +1,7 @@
 use std::ffi::OsStr;
 
+use crate::Str;
+
 cfg_if::cfg_if! {
     if #[cfg(feature = "utf8")] {
         use std::ffi::OsString;
@@ -71,6 +73,12 @@ cfg_if::cfg_if! {
         impl<'a> From<&'a str> for RawVal {
             fn from(v: &'a str) -> Self {
                 Self(v.to_owned())
+            }
+        }
+
+        impl From<Str> for RawVal {
+            fn from(v: Str) -> Self {
+                Self(String::from(v.as_str()))
             }
         }
 
@@ -153,6 +161,12 @@ cfg_if::cfg_if! {
         impl<'a> From<&'a str> for RawVal {
             fn from(v: &'a str) -> Self {
                 Self(OsString::from(v))
+            }
+        }
+
+        impl From<Str> for RawVal {
+            fn from(v: Str) -> Self {
+                Self(OsString::from(v.as_str()))
             }
         }
 

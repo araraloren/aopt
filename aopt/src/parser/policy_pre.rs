@@ -283,6 +283,6 @@ where
 
         Self::ig_failure(ser.ser_check()?.post_check(set))?;
 
-        Ok(Some(ret.take_inner()))
+        Ok(Some(ret.into_inner()))
     }
 }

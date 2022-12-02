@@ -35,8 +35,14 @@ impl Args {
         Iter::new(&self.inner)
     }
 
-    pub fn take_inner(self) -> Vec<RawVal> {
+    pub fn into_inner(self) -> Vec<RawVal> {
         self.inner
+    }
+}
+
+impl<S: Into<RawVal>, I: Iterator<Item = S>> From<I> for Args {
+    fn from(iter: I) -> Self {
+        Self::new(iter)
     }
 }
 

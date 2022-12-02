@@ -39,10 +39,11 @@ pub(crate) fn typeid<T: 'static>() -> TypeId {
 macro_rules! getopt {
     ($args:expr, $($parser_left:expr),+) => {
         {
-            fn __check_p<P: Policy<Error = Error>, S, R> (p: &mut Parser<P, S, R>) -> &mut Parser<P, S, R> { p }
+            fn __check_p<P: $crate::prelude::Policy<Error = $crate::Error>>
+                (p: &mut $crate::prelude::Parser<P>) -> &mut $crate::prelude::Parser<P> { p }
 
             let mut ret = Ok(None);
-            let args = Arc::new(Args::new($args));
+            let args = $crate::Arc::new($crate::prelude::Args::new($args));
 
             loop {
                 $(
