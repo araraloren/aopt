@@ -170,8 +170,10 @@ where
             UserStyle::EmbeddedValue => {
                 if clopt.value.is_none() {
                     if let Some(name) = &clopt.name {
-                        if name.len() >= 2 {
-                            let name_value = name.split_at(1);
+                        // make sure we using `chars.count`, not len()
+                        if name.chars().count() >= 2 {
+                            let i = (1 .. name.len()).find(|v|name.is_char_boundary(*v)).unwrap();
+                            let name_value = name.split_at(i);
 
                             matches.push(
                                 OptMatch::default()
