@@ -34,6 +34,92 @@ use crate::Error;
 /// The handler will be called after [`Cmd`](crate::opt::Style::Cmd) NOA and [`Pos`](crate::opt::Style::Pos) NOA processed.
 /// In last, [`DelayPolicy`] will process [`Main`](crate::opt::Style::Main) NOA.
 ///
+/// # Example
+/// ```rust
+/// # use aopt::getopt;
+/// # use aopt::prelude::*;
+/// # use aopt::Error;
+/// # use aopt::RawVal;
+/// # use std::path::PathBuf;
+/// #
+/// # fn main() -> Result<(), Error> {
+/// fn path_storer(
+///     uid: Uid,
+///     set: &mut ASet,
+///     ser: &mut ASer,
+///     raw: Option<&RawVal>,
+///     vals: Option<Vec<PathBuf>>,
+/// ) -> Result<Option<()>, Error> {
+///     if let Some(vals) = vals {
+///         let mut action = set[uid].action().clone();
+///
+///         for val in vals {
+///             action.process(uid, set, ser, raw, Some(val))?;
+///         }
+///         Ok(Some(()))
+///     } else {
+///         Ok(None)
+///     }
+/// }
+///
+/// let filter = |f: fn(&PathBuf) -> bool| {
+///     move |set: &mut ASet, ser: &mut ASer| {
+///         let uid = set["directory"].uid();
+///
+///         PathBuf::sve_filter(uid, ser, f)?;
+///         Ok(Some(true))
+///     }
+/// };
+///
+/// let mut parser = ADelayParser::default();
+///
+/// // POS will be process first, get the items under given directory
+/// parser
+///     .add_opt("directory=p@1")?
+///     .set_values(Vec::<PathBuf>::new())
+///     .on(|_: &mut ASet, _: &mut ASer, path: ctx::Value<PathBuf>| {
+///         Ok(Some(
+///             path.read_dir()
+///                 .map_err(|e| {
+///                     Error::raise_failure(format!("Can not read directory {:?}: {:?}", path, e))
+///                 })?
+///                 .map(|v| v.unwrap().path())
+///                 .collect::<Vec<PathBuf>>(),
+///         ))
+///     })?
+///     .then(path_storer);
+///
+/// // filter the item if any option set
+/// parser
+///     .add_opt("--file=b")?
+///     .add_alias("-f")
+///     .on(filter(|path: &PathBuf| !path.is_file()))?;
+/// parser
+///     .add_opt("--dir=b")?
+///     .add_alias("-d")
+///     .on(filter(|path: &PathBuf| !path.is_dir()))?;
+/// parser
+///     .add_opt("--sym-link=b")?
+///     .add_alias("-s")
+///     .on(filter(|path: &PathBuf| !path.is_symlink()))?;
+/// 
+/// // Main will be process latest, display the items
+/// parser
+///     .add_opt("main=m")?
+///     .on(move |set: &mut ASet, ser: &mut ASer| {
+///         if let Ok(vals) = PathBuf::sve_vals(set["directory"].uid(), ser) {
+///             for val in vals {
+///                 println!("{:?}", val);
+///             }
+///         }
+///         Ok(Some(true))
+///     })?;
+///
+/// getopt!(std::env::args().skip(1), &mut parser)?;
+/// #
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Debug, Clone)]
 pub struct DelayPolicy<S> {
     strict: bool,
