@@ -102,7 +102,7 @@ use crate::Error;
 ///     .add_opt("--sym-link=b")?
 ///     .add_alias("-s")
 ///     .on(filter(|path: &PathBuf| !path.is_symlink()))?;
-/// 
+///
 /// // Main will be process latest, display the items
 /// parser
 ///     .add_opt("main=m")?

@@ -172,7 +172,7 @@ where
                     if let Some(name) = &clopt.name {
                         // make sure we using `chars.count`, not len()
                         if name.chars().count() >= 2 {
-                            let i = (1 .. name.len()).find(|v|name.is_char_boundary(*v)).unwrap();
+                            let i = (1..name.len()).find(|v| name.is_char_boundary(*v)).unwrap();
                             let name_value = name.split_at(i);
 
                             matches.push(
