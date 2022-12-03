@@ -6,7 +6,7 @@ use crate::RawVal;
 use crate::Uid;
 use tracing::trace;
 
-///
+#[non_exhaustive]
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
 )]
@@ -110,21 +110,31 @@ impl std::fmt::Display for Action {
     }
 }
 
+#[non_exhaustive]
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
 )]
 pub enum Assoc {
+    /// Raw value will parsed as [`bool`] when using default [`handler`](crate::ser::InvokeService::default_handler).
     Bool,
 
+    /// Raw value will parsed as [`i64`] when using default [`handler`](crate::ser::InvokeService::default_handler).
     Int,
 
+    /// Raw value will parsed as [`u64`] when using default [`handler`](crate::ser::InvokeService::default_handler).
     Uint,
 
+    /// Raw value will parsed as [`f64`] when using default [`handler`](crate::ser::InvokeService::default_handler).
     Flt,
 
+    /// Raw value will parsed as [`String`] when using default [`handler`](crate::ser::InvokeService::default_handler).
     Str,
 
+    /// The value of option will set to true when using default [`handler`](crate::ser::InvokeService::default_handler).
     Noa,
+
+    /// Raw value will parsed as [`PathBuf`](std::path::PathBuf) when using default [`handler`](crate::ser::InvokeService::default_handler).
+    Path,
 
     Null,
 }
@@ -155,6 +165,9 @@ impl std::fmt::Display for Assoc {
             }
             Assoc::Noa => {
                 write!(f, "Assoc::Noa")
+            }
+            Assoc::Path => {
+                write!(f, "Assoc::Path")
             }
             Assoc::Null => {
                 write!(f, "Assoc::Null")

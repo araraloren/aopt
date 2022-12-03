@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
+use std::path::PathBuf;
 use tracing::trace;
 
 use crate::astr;
@@ -199,6 +200,7 @@ where
     /// * [`Assoc::Flt`] : f64
     /// * [`Assoc::Str`] : String
     /// * [`Assoc::Noa`] : bool
+    /// * [`Assoc::Path`] : PathBuf
     /// * [`Assoc::Null`] : nothing stored
     pub fn default_handler(
         set: &mut S,
@@ -224,6 +226,7 @@ where
             Assoc::Flt => action.process(uid, set, ser, val, f64::parse(opt, val, ctx).ok()),
             Assoc::Str => action.process(uid, set, ser, val, String::parse(opt, val, ctx).ok()),
             Assoc::Noa => action.process(uid, set, ser, val, val.map(|_| true)),
+            Assoc::Path => action.process(uid, set, ser, val, PathBuf::parse(opt, val, ctx).ok()),
             Assoc::Null => Ok(Some(())),
         }
     }
