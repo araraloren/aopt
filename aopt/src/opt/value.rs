@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::ctx::Ctx;
 use crate::Error;
 use crate::RawVal;
@@ -82,5 +84,25 @@ impl<Opt: crate::opt::Opt> RawValParser<Opt> for bool {
                 &format!("Except true or false, found value: {}", val),
             )),
         }
+    }
+}
+
+impl<Opt: crate::opt::Opt> RawValParser<Opt> for PathBuf {
+    type Error = Error;
+
+    fn parse(opt: &Opt, val: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
+        let name = opt.name().as_str();
+
+        Ok(PathBuf::from(
+            val.ok_or_else(|| Error::sp_missing_argument(name))?
+                .get_str()
+                .map(|v| v.to_string())
+                .ok_or_else(|| {
+                    Error::sp_invalid_option_value(
+                        name,
+                        "Can't convert value to String: invalid utf8",
+                    )
+                })?,
+        ))
     }
 }
