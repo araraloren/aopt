@@ -48,6 +48,7 @@ mod style;
 mod wrapper;
 
 use std::io::{Stdout, Write};
+use std::ops::{Deref, DerefMut};
 
 pub use crate::err::Error;
 pub use crate::err::Result;
@@ -132,6 +133,20 @@ impl<W: Write, F: Format> AppHelp<W, F> {
 
     pub fn set_writer(&mut self, writer: W) {
         self.writer = writer;
+    }
+}
+
+impl<W: Write, F: Format> Deref for AppHelp<W, F> {
+    type Target = Store;
+
+    fn deref(&self) -> &Self::Target {
+        &self.store
+    }
+}
+
+impl<W: Write, F: Format> DerefMut for AppHelp<W, F> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.store
     }
 }
 
