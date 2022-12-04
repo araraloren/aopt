@@ -128,31 +128,31 @@ impl std::fmt::Display for Action {
 }
 
 /// The default associated value type will be parsed and save into [`Service`](crate::ser::Service),
-/// see [`default_handler`](crate::ser::InvokeService::default_handler).
+/// see [`fallback`](crate::ser::InvokeService::fallback).
 #[non_exhaustive]
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
 )]
 pub enum Assoc {
-    /// Raw value will parsed as [`bool`] when using default [`handler`](crate::ser::InvokeService::default_handler).
+    /// Raw value will parsed as [`bool`] when using default [`handler`](crate::ser::InvokeService::fallback).
     Bool,
 
-    /// Raw value will parsed as [`i64`] when using default [`handler`](crate::ser::InvokeService::default_handler).
+    /// Raw value will parsed as [`i64`] when using default [`handler`](crate::ser::InvokeService::fallback).
     Int,
 
-    /// Raw value will parsed as [`u64`] when using default [`handler`](crate::ser::InvokeService::default_handler).
+    /// Raw value will parsed as [`u64`] when using default [`handler`](crate::ser::InvokeService::fallback).
     Uint,
 
-    /// Raw value will parsed as [`f64`] when using default [`handler`](crate::ser::InvokeService::default_handler).
+    /// Raw value will parsed as [`f64`] when using default [`handler`](crate::ser::InvokeService::fallback).
     Flt,
 
-    /// Raw value will parsed as [`String`] when using default [`handler`](crate::ser::InvokeService::default_handler).
+    /// Raw value will parsed as [`String`] when using default [`handler`](crate::ser::InvokeService::fallback).
     Str,
 
-    /// The value of option will set to true when using default [`handler`](crate::ser::InvokeService::default_handler).
+    /// The value of option will set to true when using default [`handler`](crate::ser::InvokeService::fallback).
     Noa,
 
-    /// Raw value will parsed as [`PathBuf`](std::path::PathBuf) when using default [`handler`](crate::ser::InvokeService::default_handler).
+    /// Raw value will parsed as [`PathBuf`](std::path::PathBuf) when using default [`handler`](crate::ser::InvokeService::fallback).
     Path,
 
     Null,

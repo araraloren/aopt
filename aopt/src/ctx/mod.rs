@@ -9,6 +9,7 @@ pub use self::handler::Handler;
 use std::fmt::Debug;
 
 use crate::opt::Opt;
+use crate::ser::InvokeService;
 use crate::ser::Services;
 use crate::set::Set;
 use crate::set::SetExt;
@@ -121,8 +122,35 @@ impl<Set, Value> Store<Set, Value> for NullStore {
     }
 }
 
+/// Wrap the handler and call the default action of option if return value is `Some()`,
+/// otherwise call the [`fallback`](crate::ser::InvokeService::fallback).
+pub fn wrap_handler_fallback<S, A, O>(
+    mut handler: impl Handler<S, A, Output = Option<O>, Error = Error> + 'static,
+) -> Callbacks<S, (), Error>
+where
+    O: 'static,
+    S: Set,
+    SetOpt<S>: Opt,
+    A: Extract<S, Error = Error>,
+{
+    Box::new(move |set: &mut S, ser: &mut Services, ctx: &Ctx| {
+        let val = handler.invoke(set, ser, A::extract(set, ser, ctx)?)?;
+
+        if val.is_some() {
+            let arg = ctx.arg();
+            let arg = arg.as_ref().map(|v| v.as_ref());
+            let uid = ctx.uid();
+            let mut act = *set.opt(uid)?.action();
+
+            act.process(uid, set, ser, arg, val)
+        } else {
+            InvokeService::fallback(set, ser, ctx)
+        }
+    })
+}
+
 /// Wrap the handler and call the default action of option.
-pub fn wrap_handler_default<S, A, O>(
+pub fn wrap_handler_action<S, A, O>(
     mut handler: impl Handler<S, A, Output = Option<O>, Error = Error> + 'static,
 ) -> Callbacks<S, (), Error>
 where

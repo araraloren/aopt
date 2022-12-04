@@ -5,7 +5,8 @@ use tracing::trace;
 
 use crate::astr;
 use crate::ctx::wrap_handler;
-use crate::ctx::wrap_handler_default;
+use crate::ctx::wrap_handler_action;
+use crate::ctx::wrap_handler_fallback;
 use crate::ctx::Callbacks;
 use crate::ctx::Ctx;
 use crate::ctx::Extract;
@@ -202,11 +203,7 @@ where
     /// * [`Assoc::Noa`] : bool
     /// * [`Assoc::Path`] : PathBuf
     /// * [`Assoc::Null`] : nothing stored
-    pub fn default_handler(
-        set: &mut S,
-        ser: &mut Services,
-        ctx: &Ctx,
-    ) -> Result<Option<()>, Error> {
+    pub fn fallback(set: &mut S, ser: &mut Services, ctx: &Ctx) -> Result<Option<()>, Error> {
         let uid = ctx.uid();
         let opt = set.get(uid).unwrap();
         let assoc = opt.assoc();
@@ -237,7 +234,7 @@ where
         ser: &mut Services,
         ctx: &Ctx,
     ) -> Result<Option<()>, Error> {
-        Self::default_handler(set, ser, ctx)
+        Self::fallback(set, ser, ctx)
     }
 }
 
@@ -290,11 +287,23 @@ where
         self
     }
 
+    /// Register the handler which will be called when option is set.
+    /// And the [`fallback`](crate::ser::InvokeService::fallback) will be called if
+    /// the handler return None.
+    pub fn fallback(mut self, handler: H) -> Self {
+        if !self.register {
+            self.ser.set_raw(self.uid, wrap_handler_fallback(handler));
+            self.register = true;
+        }
+        self
+    }
+
     /// Register the handler with given store.
+    /// The store will be used save the return value of option handler.
     pub fn then(mut self, store: impl Store<S, O, Ret = (), Error = Error> + 'static) -> Self {
         if !self.register {
             if let Some(handler) = self.handler.take() {
-                self.ser.set_handler(self.uid, handler, store);
+                self.ser.set_raw(self.uid, wrap_handler(handler, store));
             }
             self.register = true;
         }
@@ -304,7 +313,7 @@ where
     pub fn submit(mut self) -> Uid {
         if !self.register {
             if let Some(handler) = self.handler.take() {
-                self.ser.set_raw(self.uid, wrap_handler_default(handler));
+                self.ser.set_raw(self.uid, wrap_handler_action(handler));
             }
             self.register = true;
         }
@@ -323,7 +332,7 @@ where
     fn drop(&mut self) {
         if !self.register {
             if let Some(handler) = self.handler.take() {
-                self.ser.set_raw(self.uid, wrap_handler_default(handler));
+                self.ser.set_raw(self.uid, wrap_handler_action(handler));
             }
             self.register = true;
         }

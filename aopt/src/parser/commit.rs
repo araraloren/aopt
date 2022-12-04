@@ -192,6 +192,25 @@ where
         Ok(HandlerEntry::new(ser.unwrap(), uid).on(handler))
     }
 
+    /// Register the handler which will be called when option is set.
+    /// And the [`fallback`](crate::ser::InvokeService::fallback) will be called if
+    /// the handler return None.
+    /// The function will register the option to [`Set`] first,
+    /// then pass the unqiue id to [`HandlerEntry`].
+    pub fn fallback<H, O, A>(mut self, handler: H) -> Result<HandlerEntry<'a, S, H, A, O>, Error>
+    where
+        O: 'static,
+        H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
+        A: Extract<S, Error = Error> + 'static,
+    {
+        let uid = self.run_and_commit_the_change()?;
+        // we don't need &'a mut InvokeServices, so just take it.
+        let ser = std::mem::take(&mut self.inv_ser);
+
+        self.drop_commit = false;
+        Ok(HandlerEntry::new(ser.unwrap(), uid).fallback(handler))
+    }
+
     pub(crate) fn run_and_commit_the_change(&mut self) -> Result<Uid, Error> {
         self.drop_commit = false;
         self.inner.run_and_commit_the_change()
