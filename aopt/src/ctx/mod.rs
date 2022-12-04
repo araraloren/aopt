@@ -59,6 +59,8 @@ impl<Set, Value, Error> Debug for Callbacks<Set, Value, Error> {
     }
 }
 
+/// The [`Store`] processer save the value of given option into
+/// [`ValServices`](crate::ser::ValService) and [`RawValServices`](crate::ser::RawValService).
 pub trait Store<Set, Value> {
     type Ret;
     type Error: Into<Error>;
@@ -99,6 +101,7 @@ where
     }
 }
 
+/// Null store, do nothing. See [`Action`](crate::opt::Action) for default store.
 pub struct NullStore;
 
 impl<Set, Value> Store<Set, Value> for NullStore {

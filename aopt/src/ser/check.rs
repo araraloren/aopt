@@ -94,7 +94,7 @@ where
             if opt.mat_style(Style::Pos) {
                 if let Some(index) = opt.idx() {
                     match index {
-                        Index::FwdPolicy(_) | Index::Backward(_) => {
+                        Index::Forward(_) | Index::Backward(_) => {
                             if let Some(index) = index.calc_index(usize::MAX, 1) {
                                 let entry = index_map.entry(index).or_default();
                                 entry.push(opt.uid());

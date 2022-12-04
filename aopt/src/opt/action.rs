@@ -6,6 +6,7 @@ use crate::RawVal;
 use crate::Uid;
 use tracing::trace;
 
+/// The default action type for option value saving, see [`Action::process`].
 #[non_exhaustive]
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
@@ -30,6 +31,22 @@ impl Default for Action {
     }
 }
 
+/// Default store using for store value to [`Service`](crate::ser::Service).
+/// It will store `RawVal` and `Val` if `val` is `Some(Val)`, otherwise do nothing.
+///
+/// Note: The [`ValService`](crate::ser::ValService) internal using an [`vec`] saving the option value.
+///
+/// * [`Action::Set`] : Set the option value to `vec![ val ]`.
+///
+/// * [`Action::App`] : Append the value to value vector.
+///
+/// * [`Action::Pop`] : Pop last value from value vector.
+///
+/// * [`Action::Cnt`] : Count the value and save the count as `vec![cnt]`.
+///
+/// * [`Action::Clr`] : Clear all the value from value vector.
+///
+/// * [`Action::Null`] : Do nothing.
 impl<Set, Val> Store<Set, Val> for Action
 where
     Val: 'static,
@@ -110,6 +127,8 @@ impl std::fmt::Display for Action {
     }
 }
 
+/// The default associated value type will be parsed and save into [`Service`](crate::ser::Service),
+/// see [`default_handler`](crate::ser::InvokeService::default_handler).
 #[non_exhaustive]
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,

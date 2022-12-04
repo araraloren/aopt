@@ -26,6 +26,7 @@ where
 
 pub type InitiatorHandler = Box<dyn FnMut(Uid, &mut Services) -> Result<(), Error>>;
 
+/// Initialize the value of option.
 pub struct ValInitiator(InitiatorHandler);
 
 cfg_if::cfg_if! {

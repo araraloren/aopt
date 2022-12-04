@@ -12,6 +12,31 @@ use crate::RawVal;
 use crate::Str;
 use crate::Uid;
 
+/// A multiple features option type.
+///
+/// The type support by default:
+///
+/// |  creator   | assoc  | default action |string | ignore name | styles | deactivate style |
+/// |  ----  | ----  | -- | -- | -- | -- | -- |
+/// | [`BoolCreator`](crate::opt::BoolCreator)  | [`Assoc::Bool`] | [`Action::App`] | `b` | false | [`Style::Boolean`],[`Style::Combined`] | yes |
+/// | [`StrCreator`](crate::opt::StrCreator)  | [`Assoc::Str`] | [`Action::App`] | `s` | false | [`Style::Argument`] | no |
+/// | [`FltCreator`](crate::opt::FltCreator)  | [`Assoc::Flt`] | [`Action::App`] | `f` | false | [`Style::Argument`] | no |
+/// | [`IntCreator`](crate::opt::IntCreator)  | [`Assoc::Int`] | [`Action::App`] | `i` | false | [`Style::Argument`] | no |
+/// | [`UintCreator`](crate::opt::UintCreator)  | [`Assoc::Uint`] | [`Action::App`] | `u` | false | [`Style::Argument`] | no |
+/// | [`CmdCreator`](crate::opt::CmdCreator)  | [`Assoc::Noa`] | [`Action::Set`] | `c` | false | [`Style::Cmd`] | no |
+/// | [`PosCreator`](crate::opt::PosCreator)  | [`Assoc::Noa`] | [`Action::App`] | `p` | true | [`Style::Pos`] | no |
+/// | [`MainCreator`](crate::opt::MainCreator)  | [`Assoc::Null`] | [`Action::Set`] | `m` | true | [`Style::Main`] | no |
+///
+/// |  creator   | index support  | optional support | prefix support | alias support | validator |
+/// |  ----  | ----  | -- | -- | -- | -- |
+/// | [`BoolCreator`](crate::opt::BoolCreator)  | no | yes | yes | yes | [`bool`](ValValidator::bool) |
+/// | [`StrCreator`](crate::opt::StrCreator)  | no | yes | yes | yes | [`str`](ValValidator::str) |
+/// | [`FltCreator`](crate::opt::FltCreator)  | no | yes | yes | yes |  [`f64`](ValValidator::f64) |
+/// | [`IntCreator`](crate::opt::IntCreator)  | no | yes | yes | yes |  [`i64`](ValValidator::i64) |
+/// | [`UintCreator`](crate::opt::UintCreator)  | no | yes | yes | yes |  [`u64`](ValValidator::u64) |
+/// | [`CmdCreator`](crate::opt::CmdCreator)  | [`Forward(1)`](crate::opt::Index::Forward) | `false` | no | no | [`some`](ValValidator::some) |
+/// | [`PosCreator`](crate::opt::PosCreator)  | yes | yes | no | no |  [`some`](ValValidator::some) |
+/// | [`MainCreator`](crate::opt::MainCreator)  | [`AnyWhere`](crate::opt::Index::AnyWhere) | no | no | no | [`null`](ValValidator::null) |
 #[derive(Debug, Default)]
 pub struct AOpt {
     uid: Uid,
@@ -48,86 +73,104 @@ pub struct AOpt {
 }
 
 impl AOpt {
+    /// Set the unique identifier of option.
     pub fn with_uid(mut self, uid: Uid) -> Self {
         self.uid = uid;
         self
     }
 
+    /// Set the name of option.
     pub fn with_name(mut self, name: Str) -> Self {
         self.name = name;
         self
     }
 
+    /// Set the type of option, see [`Ctor`](crate::set::Ctor).
     pub fn with_type(mut self, r#type: Str) -> Self {
         self.r#type = r#type;
         self
     }
 
+    /// If the option will matching the name.
     pub fn with_ignore_name(mut self) -> Self {
         self.ignore_name_mat = true;
         self
     }
 
+    /// Set the hint of option, such as `--option`.
     pub fn with_hint(mut self, hint: Str) -> Self {
         self.help.set_hint(hint);
         self
     }
 
+    /// Set the help message of option.
     pub fn with_help(mut self, help: Str) -> Self {
         self.help.set_help(help);
         self
     }
 
+    /// Set the associated type of option.
     pub fn with_assoc(mut self, assoc: Assoc) -> Self {
         self.assoc = assoc;
         self
     }
 
+    /// Set the value action of option.
     pub fn with_action(mut self, action: Action) -> Self {
         self.action = action;
         self
     }
 
+    /// Set the help of option.
     pub fn with_opt_help(mut self, help: Help) -> Self {
         self.help = help;
         self
     }
 
+    /// Set the [`Style`] of option.
     pub fn with_style(mut self, styles: Vec<Style>) -> Self {
         self.styles = styles;
         self
     }
 
+    /// Set the NOA index of option.
     pub fn with_idx(mut self, index: Option<Index>) -> Self {
         self.index = index;
         self
     }
 
+    /// If the option is force required.
     pub fn with_optional(mut self, optional: bool) -> Self {
         self.optional = optional;
         self
     }
 
+    /// Set the prefix of option.
     pub fn with_prefix(mut self, prefix: Option<Str>) -> Self {
         self.prefix = prefix;
         self
     }
 
+    /// Set the alias of option.
     pub fn with_alias(mut self, alias: Option<Vec<(Str, Str)>>) -> Self {
         self.alias = alias;
         self
     }
 
+    /// Set the value initiator of option, it will called by [`Policy`](crate::parser::Policy)
+    /// initialize the option value.
     pub fn with_initiator(mut self, initiator: ValInitiator) -> Self {
         self.initiator = initiator;
         self
     }
 
+    /// Set the value validator of option.
     pub fn with_validator(mut self, validator: ValValidator) -> Self {
         self.validator = validator;
         self
     }
 
+    /// If the option support deactivate style such as `--/bool`.
     pub fn with_deactivate_style(mut self, deactivate_style: bool) -> Self {
         self.deactivate_style = deactivate_style;
         self

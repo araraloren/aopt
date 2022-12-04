@@ -133,7 +133,7 @@ impl ConstrctInfo {
     pub fn gen_idx(&mut self) {
         if self.has_idx() {
             self.index = if self.forward_index.is_some() {
-                Some(Index::FwdPolicy(self.forward_index.unwrap()))
+                Some(Index::Forward(self.forward_index.unwrap()))
             } else if self.backward_index.is_some() {
                 Some(Index::Backward(self.backward_index.unwrap()))
             } else if self.anywhere.unwrap_or(false) {

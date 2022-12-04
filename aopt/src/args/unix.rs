@@ -145,7 +145,10 @@ impl ArgParser for RawVal {
 
     fn parse_arg(&self, prefixs: &[Str]) -> Result<Self::Output, Self::Error> {
         for prefix in prefixs {
+            // - remove the prefix from the string
             if let Some(with_out_pre) = self.strip_prefix(prefix.as_str()) {
+                // - split the string once by delimiter `DISABLE`
+                // - split the string once by delimiter `EQUAL`
                 let (dsb, left) = if let Some(left) = with_out_pre.strip_prefix(DISBALE) {
                     (true, left)
                 } else {
@@ -156,6 +159,7 @@ impl ArgParser for RawVal {
                 } else {
                     (left, None)
                 };
+                // - convert the name to &str, the name must be valid utf8
                 let name = name
                     .to_str()
                     .ok_or_else(|| Error::arg_missing_name(format!("Name must be valid utf8")))?

@@ -30,7 +30,7 @@ pub enum Index {
     /// `@2` will matching `"pos2"`.
     ///
     /// `@3` will matching `"pos3"`.
-    FwdPolicy(usize),
+    Forward(usize),
 
     /// The backward index of NOA.
     ///
@@ -108,7 +108,7 @@ impl Index {
     }
 
     pub fn is_forward(&self) -> bool {
-        matches!(self, Self::FwdPolicy(_))
+        matches!(self, Self::Forward(_))
     }
 
     pub fn is_backward(&self) -> bool {
@@ -136,7 +136,7 @@ impl Index {
     }
 
     pub fn forward(index: usize) -> Self {
-        Self::FwdPolicy(index)
+        Self::Forward(index)
     }
 
     pub fn backward(index: usize) -> Self {
@@ -172,7 +172,7 @@ impl Index {
 
     pub fn calc_index(&self, noa_index: usize, noa_count: usize) -> Option<usize> {
         match self {
-            Self::FwdPolicy(offset) => {
+            Self::Forward(offset) => {
                 let offset = *offset;
 
                 if offset <= noa_count {
@@ -244,7 +244,7 @@ impl ToString for Index {
         match self {
             Index::AnyWhere => "*".to_string(),
             Index::Null => String::default(),
-            Index::FwdPolicy(v) => {
+            Index::Forward(v) => {
                 format!("{}", v)
             }
             Index::Backward(v) => {
