@@ -17,6 +17,5 @@ name="temp"
 path="src/temp.rs"
 
 [dependencies]
-textwrap = "0.14.2"
+textwrap = "0.16.0"
 thiserror = "1.0.30"
-ustr = "0.8.1"

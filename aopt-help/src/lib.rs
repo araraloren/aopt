@@ -48,7 +48,6 @@ mod style;
 mod wrapper;
 
 use std::io::{Stdout, Write};
-use ustr::Ustr;
 
 pub use crate::err::Error;
 pub use crate::err::Result;
@@ -88,12 +87,11 @@ pub mod prelude {
     pub use crate::DefaultFormat;
     pub use std::io::Stdout;
     pub use std::io::Write;
-    pub use ustr::Ustr;
 }
 
 #[derive(Debug)]
 pub struct AppHelp<W: Write, F: Format> {
-    name: Ustr,
+    name: String,
 
     pub store: Store,
 
@@ -105,9 +103,9 @@ pub struct AppHelp<W: Write, F: Format> {
 }
 
 impl<W: Write, F: Format> AppHelp<W, F> {
-    pub fn new(name: Ustr, style: Style, writer: W) -> Self {
+    pub fn new<S: Into<String>>(name: S, style: Style, writer: W) -> Self {
         Self {
-            name,
+            name: name.into(),
             store: Store::default(),
             style: style.clone(),
             writer,
@@ -115,12 +113,12 @@ impl<W: Write, F: Format> AppHelp<W, F> {
         }
     }
 
-    pub fn get_name(&self) -> Ustr {
-        self.name
+    pub fn get_name(&self) -> &str {
+        &self.name
     }
 
-    pub fn set_name(&mut self, name: Ustr) {
-        self.name = name;
+    pub fn set_name<S: Into<String>>(&mut self, name: S) {
+        self.name = name.into();
     }
 
     pub fn get_style(&self) -> &Style {
@@ -140,7 +138,7 @@ impl<W: Write, F: Format> AppHelp<W, F> {
 impl<F: Format> Default for AppHelp<Stdout, F> {
     fn default() -> Self {
         Self {
-            name: Ustr::default(),
+            name: String::default(),
             store: Store::default(),
             style: Style::default(),
             writer: std::io::stdout(),
@@ -165,7 +163,7 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
         self.print_cmd_footer(None)
     }
 
-    fn print_cmd_help(&mut self, cmd: Option<Ustr>) -> Result<usize> {
+    fn print_cmd_help(&mut self, cmd: Option<&str>) -> Result<usize> {
         self.print_cmd_usage(cmd)?;
         self.print_cmd_header(cmd)?;
         self.print_cmd_pos(cmd)?;
@@ -179,7 +177,7 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
             let mut cmd_info = vec![];
 
             for cmd_name in sec_store.cmd_iter() {
-                if let Some(cmd_store) = self.store.get_cmd(*cmd_name) {
+                if let Some(cmd_store) = self.store.get_cmd(cmd_name) {
                     cmd_info.push(vec![
                         cmd_store.get_hint().as_ref(),
                         cmd_store.get_help().as_ref(),
@@ -223,7 +221,7 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
         Ok(out)
     }
 
-    fn print_section(&mut self, section: Ustr) -> Result<usize> {
+    fn print_section(&mut self, section: &str) -> Result<usize> {
         let mut cmd_info = vec![];
         let sec_store = self
             .store
@@ -231,7 +229,7 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
             .ok_or_else(|| Error::InvalidSecName(section.to_string()))?;
 
         for cmd_name in sec_store.cmd_iter() {
-            if let Some(cmd_store) = self.store.get_cmd(*cmd_name) {
+            if let Some(cmd_store) = self.store.get_cmd(cmd_name) {
                 cmd_info.push(vec![
                     cmd_store.get_hint().as_ref(),
                     cmd_store.get_help().as_ref(),
@@ -272,7 +270,7 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
         Ok(self.writer.write(buffer.as_bytes())?)
     }
 
-    fn print_cmd_usage(&mut self, cmd: Option<Ustr>) -> Result<usize> {
+    fn print_cmd_usage(&mut self, cmd: Option<&str>) -> Result<usize> {
         let mut buffer = String::new();
         let cmd_store = if let Some(cmd_name) = cmd {
             self.store
@@ -321,7 +319,7 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
         Ok(self.writer.write(buffer.as_bytes())?)
     }
 
-    fn print_cmd_header(&mut self, cmd: Option<Ustr>) -> Result<usize> {
+    fn print_cmd_header(&mut self, cmd: Option<&str>) -> Result<usize> {
         let cmd_store = if let Some(cmd_name) = cmd {
             self.store
                 .get_cmd(cmd_name)
@@ -339,7 +337,7 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
         }
     }
 
-    fn print_cmd_footer(&mut self, cmd: Option<Ustr>) -> Result<usize> {
+    fn print_cmd_footer(&mut self, cmd: Option<&str>) -> Result<usize> {
         let cmd_store = if let Some(cmd_name) = cmd {
             self.store
                 .get_cmd(cmd_name)
@@ -357,7 +355,7 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
         }
     }
 
-    fn print_cmd_pos(&mut self, cmd: Option<Ustr>) -> Result<usize> {
+    fn print_cmd_pos(&mut self, cmd: Option<&str>) -> Result<usize> {
         let mut pos_info = vec![];
         let cmd_store = if let Some(cmd_name) = cmd {
             self.store
@@ -404,7 +402,7 @@ impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
         Ok(self.writer.write(buffer.as_bytes())?)
     }
 
-    fn print_cmd_opt(&mut self, cmd: Option<Ustr>) -> Result<usize> {
+    fn print_cmd_opt(&mut self, cmd: Option<&str>) -> Result<usize> {
         let mut opt_info = vec![];
         let cmd_store = if let Some(cmd_name) = cmd {
             self.store

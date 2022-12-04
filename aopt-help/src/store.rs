@@ -1,5 +1,4 @@
 use std::fmt::Debug;
-use ustr::Ustr;
 
 #[derive(Debug, Default)]
 pub struct Store {
@@ -11,23 +10,23 @@ pub struct Store {
 }
 
 impl Store {
-    pub fn new_sec(&mut self, sec: Ustr) -> SectionMut {
+    pub fn new_sec<S: Into<String>>(&mut self, sec: S) -> SectionMut {
         SectionMut::new(self, sec)
     }
 
-    pub fn new_cmd(&mut self, cmd: Ustr) -> CmdMut {
+    pub fn new_cmd(&mut self, cmd: &str) -> CmdMut {
         CmdMut::new(self, cmd)
     }
 
-    pub fn new_pos(&mut self, cmd: Ustr, pos: Ustr) -> Option<CmdPosMut> {
+    pub fn new_pos(&mut self, cmd: &str, pos: &str) -> Option<CmdPosMut> {
         self.get_cmd_mut(cmd).map(|v| CmdPosMut::new(v, pos))
     }
 
-    pub fn new_opt(&mut self, cmd: Ustr, opt: Ustr) -> Option<CmdOptMut> {
+    pub fn new_opt(&mut self, cmd: &str, opt: &str) -> Option<CmdOptMut> {
         self.get_cmd_mut(cmd).map(|v| CmdOptMut::new(v, opt))
     }
 
-    pub fn attach_cmd(&mut self, sec: Ustr, cmd: Ustr) -> bool {
+    pub fn attach_cmd(&mut self, sec: &str, cmd: &str) -> bool {
         if self.get_cmd(cmd).is_some() {
             if let Some(sec_store) = self.get_sec_mut(sec) {
                 sec_store.attach_cmd(cmd);
@@ -45,7 +44,7 @@ impl Store {
         self.cmds.push(cmd)
     }
 
-    pub fn add_pos(&mut self, cmd: Ustr, pos: PosStore) -> bool {
+    pub fn add_pos(&mut self, cmd: &str, pos: PosStore) -> bool {
         if let Some(cmd_store) = self.get_cmd_mut(cmd) {
             cmd_store.add_pos(pos);
             return true;
@@ -53,7 +52,7 @@ impl Store {
         false
     }
 
-    pub fn add_opt(&mut self, cmd: Ustr, opt: OptStore) -> bool {
+    pub fn add_opt(&mut self, cmd: &str, opt: OptStore) -> bool {
         if let Some(cmd_store) = self.get_cmd_mut(cmd) {
             cmd_store.add_opt(opt);
             return true;
@@ -77,35 +76,35 @@ impl Store {
         &self.cmds
     }
 
-    pub fn get_sec(&self, sec: Ustr) -> Option<&SecStore> {
+    pub fn get_sec(&self, sec: &str) -> Option<&SecStore> {
         self.sections.iter().find(|&v| v.get_name() == sec)
     }
 
-    pub fn get_cmd(&self, cmd: Ustr) -> Option<&CmdStore> {
-        self.cmds.iter().find(|&v| v.get_name() == &cmd)
+    pub fn get_cmd(&self, cmd: &str) -> Option<&CmdStore> {
+        self.cmds.iter().find(|&v| v.get_name() == cmd)
     }
 
-    pub fn get_pos(&self, cmd: Ustr, pos: Ustr) -> Option<&PosStore> {
+    pub fn get_pos(&self, cmd: &str, pos: &str) -> Option<&PosStore> {
         self.get_cmd(cmd).and_then(|v| v.get_pos(pos))
     }
 
-    pub fn get_opt(&self, cmd: Ustr, opt: Ustr) -> Option<&OptStore> {
+    pub fn get_opt(&self, cmd: &str, opt: &str) -> Option<&OptStore> {
         self.get_cmd(cmd).and_then(|v| v.get_opt(opt))
     }
 
-    pub fn get_sec_mut(&mut self, sec: Ustr) -> Option<&mut SecStore> {
+    pub fn get_sec_mut(&mut self, sec: &str) -> Option<&mut SecStore> {
         self.sections.iter_mut().find(|v| v.get_name() == sec)
     }
 
-    pub fn get_cmd_mut(&mut self, cmd: Ustr) -> Option<&mut CmdStore> {
-        self.cmds.iter_mut().find(|v| v.get_name() == &cmd)
+    pub fn get_cmd_mut(&mut self, cmd: &str) -> Option<&mut CmdStore> {
+        self.cmds.iter_mut().find(|v| v.get_name() == cmd)
     }
 
-    pub fn get_pos_mut(&mut self, cmd: Ustr, pos: Ustr) -> Option<&mut PosStore> {
+    pub fn get_pos_mut(&mut self, cmd: &str, pos: &str) -> Option<&mut PosStore> {
         self.get_cmd_mut(cmd).and_then(|v| v.get_pos_mut(pos))
     }
 
-    pub fn get_opt_mut(&mut self, cmd: Ustr, opt: Ustr) -> Option<&mut OptStore> {
+    pub fn get_opt_mut(&mut self, cmd: &str, opt: &str) -> Option<&mut OptStore> {
         self.get_cmd_mut(cmd).and_then(|v| v.get_opt_mut(opt))
     }
 
@@ -141,23 +140,23 @@ pub struct SectionMut<'a> {
 }
 
 impl<'a> SectionMut<'a> {
-    pub fn new(g: &'a mut Store, s: Ustr) -> Self {
+    pub fn new<S: Into<String>>(g: &'a mut Store, s: S) -> Self {
         let mut ss = SecStore::default();
         ss.set_name(s);
         Self { g, s: ss }
     }
 
-    pub fn set_name(&mut self, name: Ustr) -> &mut Self {
+    pub fn set_name<S: Into<String>>(&mut self, name: S) -> &mut Self {
         self.s.set_name(name);
         self
     }
 
-    pub fn set_help(&mut self, help: Ustr) -> &mut Self {
+    pub fn set_help<S: Into<String>>(&mut self, help: S) -> &mut Self {
         self.s.set_help(help);
         self
     }
 
-    pub fn attach_cmd(&mut self, cmd: Ustr) -> &mut Self {
+    pub fn attach_cmd(&mut self, cmd: &str) -> &mut Self {
         self.s.attach_cmd(cmd);
         self
     }
@@ -174,33 +173,33 @@ pub struct CmdMut<'a> {
 }
 
 impl<'a> CmdMut<'a> {
-    pub fn new(g: &'a mut Store, c: Ustr) -> Self {
+    pub fn new<S: Into<String>>(g: &'a mut Store, c: S) -> Self {
         let mut cs = CmdStore::default();
         cs.set_name(c);
         Self { g, c: cs }
     }
 
-    pub fn set_name(&mut self, name: Ustr) -> &mut Self {
+    pub fn set_name<S: Into<String>>(&mut self, name: S) -> &mut Self {
         self.c.set_name(name);
         self
     }
 
-    pub fn set_footer(&mut self, help: Ustr) -> &mut Self {
+    pub fn set_footer<S: Into<String>>(&mut self, help: S) -> &mut Self {
         self.c.set_footer(help);
         self
     }
 
-    pub fn set_header(&mut self, help: Ustr) -> &mut Self {
+    pub fn set_header<S: Into<String>>(&mut self, help: S) -> &mut Self {
         self.c.set_header(help);
         self
     }
 
-    pub fn set_hint(&mut self, hint: Ustr) -> &mut Self {
+    pub fn set_hint<S: Into<String>>(&mut self, hint: S) -> &mut Self {
         self.c.set_hint(hint);
         self
     }
 
-    pub fn set_help(&mut self, help: Ustr) -> &mut Self {
+    pub fn set_help<S: Into<String>>(&mut self, help: S) -> &mut Self {
         self.c.set_help(help);
         self
     }
@@ -215,11 +214,11 @@ impl<'a> CmdMut<'a> {
         self
     }
 
-    pub fn new_pos(&mut self, pos: Ustr) -> CmdPosMut {
+    pub fn new_pos<S: Into<String>>(&mut self, pos: S) -> CmdPosMut {
         CmdPosMut::new(&mut self.c, pos)
     }
 
-    pub fn new_opt(&mut self, opt: Ustr) -> CmdOptMut {
+    pub fn new_opt<S: Into<String>>(&mut self, opt: S) -> CmdOptMut {
         CmdOptMut::new(&mut self.c, opt)
     }
 
@@ -235,23 +234,23 @@ pub struct CmdPosMut<'a> {
 }
 
 impl<'a> CmdPosMut<'a> {
-    pub fn new(c: &'a mut CmdStore, p: Ustr) -> Self {
+    pub fn new<S: Into<String>>(c: &'a mut CmdStore, p: S) -> Self {
         let mut ps = PosStore::default();
         ps.set_name(p);
         Self { c, p: ps }
     }
 
-    pub fn set_name(&mut self, name: Ustr) -> &mut Self {
+    pub fn set_name<S: Into<String>>(&mut self, name: S) -> &mut Self {
         self.p.set_name(name);
         self
     }
 
-    pub fn set_hint(&mut self, hint: Ustr) -> &mut Self {
+    pub fn set_hint<S: Into<String>>(&mut self, hint: S) -> &mut Self {
         self.p.set_hint(hint);
         self
     }
 
-    pub fn set_help(&mut self, help: Ustr) -> &mut Self {
+    pub fn set_help<S: Into<String>>(&mut self, help: S) -> &mut Self {
         self.p.set_help(help);
         self
     }
@@ -261,7 +260,7 @@ impl<'a> CmdPosMut<'a> {
         self
     }
 
-    pub fn set_index(&mut self, index: Ustr) -> &mut Self {
+    pub fn set_index<S: Into<String>>(&mut self, index: S) -> &mut Self {
         self.p.set_index(index);
         self
     }
@@ -278,23 +277,23 @@ pub struct CmdOptMut<'a> {
 }
 
 impl<'a> CmdOptMut<'a> {
-    pub fn new(c: &'a mut CmdStore, o: Ustr) -> Self {
+    pub fn new<S: Into<String>>(c: &'a mut CmdStore, o: S) -> Self {
         let mut os = OptStore::default();
         os.set_name(o);
         Self { c, o: os }
     }
 
-    pub fn set_name(&mut self, name: Ustr) -> &mut Self {
+    pub fn set_name<S: Into<String>>(&mut self, name: S) -> &mut Self {
         self.o.set_name(name);
         self
     }
 
-    pub fn set_hint(&mut self, hint: Ustr) -> &mut Self {
+    pub fn set_hint<S: Into<String>>(&mut self, hint: S) -> &mut Self {
         self.o.set_hint(hint);
         self
     }
 
-    pub fn set_help(&mut self, help: Ustr) -> &mut Self {
+    pub fn set_help<S: Into<String>>(&mut self, help: S) -> &mut Self {
         self.o.set_help(help);
         self
     }
@@ -311,45 +310,45 @@ impl<'a> CmdOptMut<'a> {
 
 #[derive(Debug, Default, Clone)]
 pub struct OptStore {
-    name: Ustr,
+    name: String,
 
-    hint: Ustr,
+    hint: String,
 
-    help: Ustr,
+    help: String,
 
-    type_name: Ustr,
+    type_name: String,
 
     optional: bool,
 }
 
 impl OptStore {
-    pub fn new(name: Ustr, hint: Ustr, help: Ustr, type_name: Ustr, optional: bool) -> Self {
+    pub fn new<S: Into<String>>(name: S, hint: S, help: S, type_name: S, optional: bool) -> Self {
         Self {
-            name,
-            hint,
-            help,
-            type_name,
+            name: name.into(),
+            hint: hint.into(),
+            help: help.into(),
+            type_name: type_name.into(),
             optional,
         }
     }
 
-    pub fn set_name(&mut self, name: Ustr) -> &mut Self {
-        self.name = name;
+    pub fn set_name<S: Into<String>>(&mut self, name: S) -> &mut Self {
+        self.name = name.into();
         self
     }
 
-    pub fn set_hint(&mut self, hint: Ustr) -> &mut Self {
-        self.hint = hint;
+    pub fn set_hint<S: Into<String>>(&mut self, hint: S) -> &mut Self {
+        self.hint = hint.into();
         self
     }
 
-    pub fn set_help(&mut self, help: Ustr) -> &mut Self {
-        self.help = help;
+    pub fn set_help<S: Into<String>>(&mut self, help: S) -> &mut Self {
+        self.help = help.into();
         self
     }
 
-    pub fn set_type_name(&mut self, type_name: Ustr) -> &mut Self {
-        self.type_name = type_name;
+    pub fn set_type_name<S: Into<String>>(&mut self, type_name: S) -> &mut Self {
+        self.type_name = type_name.into();
         self
     }
 
@@ -358,19 +357,19 @@ impl OptStore {
         self
     }
 
-    pub fn get_name(&self) -> &Ustr {
+    pub fn get_name(&self) -> &str {
         &self.name
     }
 
-    pub fn get_hint(&self) -> &Ustr {
+    pub fn get_hint(&self) -> &str {
         &self.hint
     }
 
-    pub fn get_help(&self) -> &Ustr {
+    pub fn get_help(&self) -> &str {
         &self.help
     }
 
-    pub fn get_type_name(&self) -> &Ustr {
+    pub fn get_type_name(&self) -> &str {
         &self.type_name
     }
 
@@ -381,40 +380,40 @@ impl OptStore {
 
 #[derive(Debug, Default, Clone)]
 pub struct PosStore {
-    name: Ustr,
+    name: String,
 
-    hint: Ustr,
+    hint: String,
 
-    help: Ustr,
+    help: String,
 
-    index: Ustr,
+    index: String,
 
     optional: bool,
 }
 
 impl PosStore {
-    pub fn new(name: Ustr, hint: Ustr, help: Ustr, index: Ustr, optional: bool) -> Self {
+    pub fn new<S: Into<String>>(name: S, hint: S, help: S, index: S, optional: bool) -> Self {
         Self {
-            name,
-            hint,
-            help,
-            index,
+            name: name.into(),
+            hint: hint.into(),
+            help: help.into(),
+            index: index.into(),
             optional,
         }
     }
 
-    pub fn set_name(&mut self, name: Ustr) -> &mut Self {
-        self.name = name;
+    pub fn set_name<S: Into<String>>(&mut self, name: S) -> &mut Self {
+        self.name = name.into();
         self
     }
 
-    pub fn set_hint(&mut self, hint: Ustr) -> &mut Self {
-        self.hint = hint;
+    pub fn set_hint<S: Into<String>>(&mut self, hint: S) -> &mut Self {
+        self.hint = hint.into();
         self
     }
 
-    pub fn set_help(&mut self, help: Ustr) -> &mut Self {
-        self.help = help;
+    pub fn set_help<S: Into<String>>(&mut self, help: S) -> &mut Self {
+        self.help = help.into();
         self
     }
 
@@ -423,20 +422,20 @@ impl PosStore {
         self
     }
 
-    pub fn set_index(&mut self, index: Ustr) -> &mut Self {
-        self.index = index;
+    pub fn set_index<S: Into<String>>(&mut self, index: S) -> &mut Self {
+        self.index = index.into();
         self
     }
 
-    pub fn get_name(&self) -> &Ustr {
+    pub fn get_name(&self) -> &str {
         &self.name
     }
 
-    pub fn get_hint(&self) -> &Ustr {
+    pub fn get_hint(&self) -> &str {
         &self.hint
     }
 
-    pub fn get_help(&self) -> &Ustr {
+    pub fn get_help(&self) -> &str {
         &self.help
     }
 
@@ -444,22 +443,22 @@ impl PosStore {
         self.optional
     }
 
-    pub fn get_index(&self) -> &Ustr {
+    pub fn get_index(&self) -> &str {
         &self.index
     }
 }
 
 #[derive(Debug, Default, Clone)]
 pub struct CmdStore {
-    name: Ustr,
+    name: String,
 
-    footer: Ustr,
+    footer: String,
 
-    header: Ustr,
+    header: String,
 
-    hint: Ustr,
+    hint: String,
 
-    help: Ustr,
+    help: String,
 
     pos_store: Vec<PosStore>,
 
@@ -467,40 +466,40 @@ pub struct CmdStore {
 }
 
 impl CmdStore {
-    pub fn new(name: Ustr, footer: Ustr, header: Ustr, hint: Ustr, help: Ustr) -> Self {
+    pub fn new<S: Into<String>>(name: S, footer: S, header: S, hint: S, help: S) -> Self {
         Self {
-            name,
-            footer,
-            header,
-            hint,
-            help,
+            name: name.into(),
+            footer: footer.into(),
+            header: header.into(),
+            hint: hint.into(),
+            help: help.into(),
             pos_store: vec![],
             opt_store: vec![],
         }
     }
 
-    pub fn set_name(&mut self, name: Ustr) -> &mut Self {
-        self.name = name;
+    pub fn set_name<S: Into<String>>(&mut self, name: S) -> &mut Self {
+        self.name = name.into();
         self
     }
 
-    pub fn set_footer(&mut self, help: Ustr) -> &mut Self {
-        self.footer = help;
+    pub fn set_footer<S: Into<String>>(&mut self, help: S) -> &mut Self {
+        self.footer = help.into();
         self
     }
 
-    pub fn set_header(&mut self, help: Ustr) -> &mut Self {
-        self.header = help;
+    pub fn set_header<S: Into<String>>(&mut self, help: S) -> &mut Self {
+        self.header = help.into();
         self
     }
 
-    pub fn set_hint(&mut self, hint: Ustr) -> &mut Self {
-        self.hint = hint;
+    pub fn set_hint<S: Into<String>>(&mut self, hint: S) -> &mut Self {
+        self.hint = hint.into();
         self
     }
 
-    pub fn set_help(&mut self, help: Ustr) -> &mut Self {
-        self.help = help;
+    pub fn set_help<S: Into<String>>(&mut self, help: S) -> &mut Self {
+        self.help = help.into();
         self
     }
 
@@ -514,39 +513,39 @@ impl CmdStore {
         self
     }
 
-    pub fn get_name(&self) -> &Ustr {
-        &self.name
+    pub fn get_name(&self) -> &str {
+        self.name.as_str()
     }
 
-    pub fn get_header(&self) -> &Ustr {
-        &self.header
+    pub fn get_header(&self) -> &str {
+        self.header.as_str()
     }
 
-    pub fn get_footer(&self) -> &Ustr {
-        &self.footer
+    pub fn get_footer(&self) -> &str {
+        self.footer.as_str()
     }
 
-    pub fn get_hint(&self) -> &Ustr {
-        &self.hint
+    pub fn get_hint(&self) -> &str {
+        self.hint.as_str()
     }
 
-    pub fn get_help(&self) -> &Ustr {
-        &self.help
+    pub fn get_help(&self) -> &str {
+        self.help.as_str()
     }
 
-    pub fn get_pos(&self, pos: Ustr) -> Option<&PosStore> {
+    pub fn get_pos(&self, pos: &str) -> Option<&PosStore> {
         self.pos_store.iter().find(|&v| v.name == pos)
     }
 
-    pub fn get_opt(&self, opt: Ustr) -> Option<&OptStore> {
+    pub fn get_opt(&self, opt: &str) -> Option<&OptStore> {
         self.opt_store.iter().find(|&v| v.name == opt)
     }
 
-    pub fn get_pos_mut(&mut self, pos: Ustr) -> Option<&mut PosStore> {
+    pub fn get_pos_mut(&mut self, pos: &str) -> Option<&mut PosStore> {
         self.pos_store.iter_mut().find(|v| v.name == pos)
     }
 
-    pub fn get_opt_mut(&mut self, opt: Ustr) -> Option<&mut OptStore> {
+    pub fn get_opt_mut(&mut self, opt: &str) -> Option<&mut OptStore> {
         self.opt_store.iter_mut().find(|v| v.name == opt)
     }
 
@@ -577,50 +576,50 @@ impl CmdStore {
 
 #[derive(Debug, Default, Clone)]
 pub struct SecStore {
-    name: Ustr,
+    name: String,
 
-    help: Ustr,
+    help: String,
 
-    cmd_attach: Vec<Ustr>,
+    cmd_attach: Vec<String>,
 }
 
 impl SecStore {
-    pub fn set_name(&mut self, name: Ustr) -> &mut Self {
-        self.name = name;
+    pub fn set_name<S: Into<String>>(&mut self, name: S) -> &mut Self {
+        self.name = name.into();
         self
     }
 
-    pub fn set_help(&mut self, help: Ustr) -> &mut Self {
-        self.help = help;
+    pub fn set_help<S: Into<String>>(&mut self, help: S) -> &mut Self {
+        self.help = help.into();
         self
     }
 
-    pub fn attach_cmd(&mut self, cmd: Ustr) -> &mut Self {
-        self.cmd_attach.push(cmd);
+    pub fn attach_cmd<S: Into<String>>(&mut self, cmd: S) -> &mut Self {
+        self.cmd_attach.push(cmd.into());
         self
     }
 
-    pub fn has_cmd(&self, cmd: Ustr) -> bool {
+    pub fn has_cmd(&self, cmd: &str) -> bool {
         self.cmd_attach.iter().any(|v| v == &cmd)
     }
 
-    pub fn get_name(&self) -> Ustr {
-        self.name
+    pub fn get_name(&self) -> &str {
+        self.name.as_str()
     }
 
-    pub fn get_help(&self) -> Ustr {
-        self.help
+    pub fn get_help(&self) -> &str {
+        self.help.as_str()
     }
 
     pub fn cmd_len(&self) -> usize {
         self.cmd_attach.len()
     }
 
-    pub fn get_cmd(&self) -> &[Ustr] {
+    pub fn get_cmd(&self) -> &[String] {
         &self.cmd_attach
     }
 
-    pub fn cmd_iter(&self) -> std::slice::Iter<'_, Ustr> {
+    pub fn cmd_iter(&self) -> std::slice::Iter<'_, String> {
         self.cmd_attach.iter()
     }
 }
