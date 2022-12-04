@@ -136,6 +136,10 @@ impl ValService {
         self.gets_mut(uid)
             .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for ValueService")))
     }
+
+    pub fn clear(&mut self) {
+        self.inner.clear()
+    }
 }
 
 pub struct ValEntry<'a, T> {

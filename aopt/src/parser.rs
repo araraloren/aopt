@@ -3,12 +3,14 @@ pub(crate) mod policy_delay;
 pub(crate) mod policy_fwd;
 pub(crate) mod policy_pre;
 pub(crate) mod process;
+pub(crate) mod returnval;
 pub(crate) mod style;
 
 pub use self::commit::ParserCommit;
 pub use self::policy_delay::DelayPolicy;
 pub use self::policy_fwd::FwdPolicy;
 pub use self::policy_pre::PrePolicy;
+pub use self::returnval::ReturnVal;
 pub use self::style::Guess;
 pub use self::style::GuessNOACfg;
 pub use self::style::GuessOptCfg;
@@ -228,6 +230,25 @@ where
 
 impl<P> Parser<P>
 where
+    P: Policy + 'static,
+{
+    pub fn into_boxed(
+        self,
+    ) -> Parser<Box<dyn Policy<Ret = P::Ret, Set = P::Set, Error = P::Error>>> {
+        let policy: Box<dyn Policy<Ret = P::Ret, Set = P::Set, Error = P::Error>> =
+            Box::new(self.policy);
+
+        Parser {
+            optset: self.optset,
+            policy,
+            services: self.services,
+            return_value: self.return_value,
+        }
+    }
+}
+
+impl<P> Parser<P>
+where
     P: Policy<Error = Error>,
 {
     pub fn new_with(policy: P, optset: P::Set, services: Services) -> Self {
@@ -276,6 +297,16 @@ where
     pub fn set_optset(&mut self, optset: P::Set) -> &mut Self {
         self.optset = optset;
         self
+    }
+
+    /// Reset the option set, and clear the [`ValService`](crate::ser::ValService`),
+    /// [`UsrValService`](crate::ser::UsrValService`), [`RawValService`](crate::ser::RawValService`).
+    pub fn clear_all(&mut self) -> Result<&mut Self, Error> {
+        self.optset.reset();
+        self.services.ser_val_mut()?.clear();
+        self.services.ser_usrval_mut()?.clear();
+        self.services.ser_rawval_mut::<RawVal>()?.clear();
+        Ok(self)
     }
 
     pub fn retval(&self) -> Option<&P::Ret> {

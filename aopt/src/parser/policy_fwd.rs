@@ -9,6 +9,7 @@ use super::GuessOptCfg;
 use super::NOAGuess;
 use super::OptGuess;
 use super::Policy;
+use super::ReturnVal;
 use super::UserStyle;
 use crate::args::ArgParser;
 use crate::args::Args;
@@ -147,7 +148,7 @@ where
     <S::Ctor as Ctor>::Opt: Opt,
     S: Set + OptParser + Pre + Debug + 'static,
 {
-    type Ret = bool;
+    type Ret = ReturnVal;
 
     type Set = S;
 
@@ -223,6 +224,7 @@ where
 
         ser.ser_check()?.opt_check(set)?;
 
+        let ret = noa_args.clone();
         let noa_args = Arc::new(noa_args);
         let noa_len = noa_args.len();
         let mut noa_ctx = Ctx::default();
@@ -267,7 +269,7 @@ where
 
         ser.ser_check()?.post_check(set)?;
 
-        Ok(Some(true))
+        Ok(Some(ReturnVal::new(ret.into_inner(), true)))
     }
 }
 

@@ -9,6 +9,7 @@ use super::GuessOptCfg;
 use super::NOAGuess;
 use super::OptGuess;
 use super::Policy;
+use super::ReturnVal;
 use super::UserStyle;
 use crate::args::ArgParser;
 use crate::args::Args;
@@ -23,7 +24,6 @@ use crate::set::Pre;
 use crate::set::Set;
 use crate::Arc;
 use crate::Error;
-use crate::RawVal;
 
 /// [`PrePolicy`] matching the command line arguments with [`Opt`] in the [`Set`].
 /// [`PrePolicy`] will skip any special [`Error`] during [`parse`](Policy::parse) process.
@@ -90,7 +90,9 @@ use crate::RawVal;
 ///         Ok(Some(found))
 ///     })?;
 ///
-/// getopt!(cfg_loader.take_retval().unwrap().into_iter(), &mut parser)?;
+///
+///
+/// getopt!(cfg_loader.take_retval().unwrap().take_args().into_iter(), &mut parser)?;
 ///
 /// assert!(*parser.find_val::<bool>("-check")?);
 /// #
@@ -160,7 +162,7 @@ where
     <S::Ctor as Ctor>::Opt: Opt,
     S: Set + OptParser + Pre + Debug + 'static,
 {
-    type Ret = Vec<RawVal>;
+    type Ret = ReturnVal;
 
     type Set = S;
 
@@ -283,7 +285,7 @@ where
 
         Self::ig_failure(ser.ser_check()?.post_check(set))?;
 
-        Ok(Some(ret.into_inner()))
+        Ok(Some(ReturnVal::new(ret.into_inner(), true)))
     }
 }
 

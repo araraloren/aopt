@@ -32,6 +32,8 @@ impl<S> CheckService<S> {
     pub fn new() -> Self {
         Self(PhantomData::default())
     }
+
+    pub fn clear(&mut self) {}
 }
 
 impl<S> CheckService<S>

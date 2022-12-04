@@ -1,3 +1,4 @@
+#![doc = include_str!("../README.md")]
 pub mod args;
 pub mod ctx;
 pub mod err;
@@ -35,6 +36,106 @@ pub(crate) fn typeid<T: 'static>() -> TypeId {
     TypeId::of::<T>()
 }
 
+/// Parse the given string sequence, return the first matched [`Parser`](crate::parser::Parser): `getopt!($args, $($parser),+)`.
+///
+/// # Returns
+///
+/// Will return an Ok(Some([`Parser`](crate::parser::Parser))) if any [`Parser`](crate::parser::Parser) parsing successed, otherwise return `Ok(None)`.
+///
+/// # Example
+///
+/// ```rust
+/// # use aopt::err::Result;
+/// # use aopt::{prelude::*, RawVal};
+/// #
+/// # fn main() -> Result<()> {
+/// let mut parser = AFwdParser::default();
+/// let mut pre_parser = APreParser::default();
+///
+/// {
+///     parser.add_opt("-a=b!")?;
+///     parser.add_opt("--bopt=i")?;
+///     parser.add_opt("c=p@-1")?.on(
+///         |_: &mut ASet, _: &mut ASer, args: ctx::Args, mut val: ctx::Value<String>| {
+///             assert_eq!(args[0], RawVal::from("foo"));
+///             Ok(Some(val.take()))
+///         },
+///     )?;
+///
+///     let ret = getopt!(["-a", "--bopt=42", "foo"].into_iter(), &mut parser)?;
+///
+///     assert!(ret.is_some());
+///     let ret = ret.unwrap();
+///
+///     assert_eq!(ret.find_val::<bool>("-a")?, &true);
+///     assert_eq!(ret.find_val::<i64>("--bopt")?, &42i64);
+/// }
+/// {
+///     pre_parser.add_opt("-d=s")?;
+///     pre_parser.add_opt("--eopt=s")?;
+///
+///     let ret = getopt!(
+///         ["-dbar", "-d", "foo", "--eopt=pre", "foo"].into_iter(),
+///         &mut pre_parser
+///     )?;
+///
+///     assert!(ret.is_some());
+///     let ret = ret.unwrap();
+///
+///     assert_eq!(
+///         ret.find_vals::<String>("-d")?,
+///         &vec!["bar".to_owned(), "foo".to_owned()],
+///     );
+///     assert_eq!(ret.find_val::<String>("--eopt")?, &String::from("pre"));
+///     assert_eq!(
+///         ret.take_retval().unwrap().take_args(),
+///         vec![RawVal::from("foo")]
+///     );
+/// }
+///
+/// parser.clear_all()?;
+/// pre_parser.clear_all()?;
+///
+/// // boxed it
+/// let mut parser = parser.into_boxed();
+/// let mut pre_parser = pre_parser.into_boxed();
+///
+/// {
+///     let ret = getopt!(
+///         ["-a", "--bopt=42", "foo"].into_iter(),
+///         &mut parser,
+///         &mut pre_parser
+///     )?;
+///
+///     assert!(ret.is_some());
+///     let ret = ret.unwrap();
+///
+///     assert_eq!(ret.find_val::<bool>("-a")?, &true);
+///     assert_eq!(ret.find_val::<i64>("--bopt")?, &42i64);
+/// }
+/// {
+///     let ret = getopt!(
+///         ["-dbar", "-d", "foo", "--eopt=pre", "foo"].into_iter(),
+///         &mut parser,
+///         &mut pre_parser
+///     )?;
+///
+///     assert!(ret.is_some());
+///     let ret = ret.unwrap();
+///
+///     assert_eq!(
+///         ret.find_vals::<String>("-d")?,
+///         &vec!["bar".to_owned(), "foo".to_owned()],
+///     );
+///     assert_eq!(ret.find_val::<String>("--eopt")?, &String::from("pre"));
+///     assert_eq!(
+///         ret.take_retval().unwrap().take_args(),
+///         vec![RawVal::from("foo")]
+///     );
+/// }
+/// # Ok(())
+/// # }
+///```
 #[macro_export]
 macro_rules! getopt {
     ($args:expr, $($parser_left:expr),+) => {
