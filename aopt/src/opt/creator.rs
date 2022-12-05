@@ -40,7 +40,9 @@ impl Ctor for IntCreator {
         let optional = config.take_optional().unwrap_or(true);
         let assoc = config.take_assoc().unwrap_or(Assoc::Int);
         let action = config.take_action().unwrap_or(Action::App);
-        let initiator = config.take_initiator().unwrap_or_default();
+        let initiator = config
+            .take_initiator()
+            .unwrap_or_else(ValInitiator::empty::<i64>);
 
         debug_assert_eq!(
             assoc,
@@ -107,7 +109,9 @@ impl Ctor for UintCreator {
         let optional = config.take_optional().unwrap_or(true);
         let assoc = config.take_assoc().unwrap_or(Assoc::Uint);
         let action = config.take_action().unwrap_or(Action::App);
-        let initiator = config.take_initiator().unwrap_or_default();
+        let initiator = config
+            .take_initiator()
+            .unwrap_or_else(ValInitiator::empty::<u64>);
 
         debug_assert_eq!(
             assoc,
@@ -174,7 +178,9 @@ impl Ctor for FltCreator {
         let optional = config.take_optional().unwrap_or(true);
         let assoc = config.take_assoc().unwrap_or(Assoc::Flt);
         let action = config.take_action().unwrap_or(Action::App);
-        let initiator = config.take_initiator().unwrap_or_default();
+        let initiator = config
+            .take_initiator()
+            .unwrap_or_else(ValInitiator::empty::<f64>);
 
         debug_assert_eq!(
             assoc,
@@ -241,7 +247,9 @@ impl Ctor for StrCreator {
         let optional = config.take_optional().unwrap_or(true);
         let assoc = config.take_assoc().unwrap_or(Assoc::Str);
         let action = config.take_action().unwrap_or(Action::App);
-        let initiator = config.take_initiator().unwrap_or_default();
+        let initiator = config
+            .take_initiator()
+            .unwrap_or_else(ValInitiator::empty::<String>);
 
         debug_assert_eq!(
             assoc,
@@ -378,7 +386,9 @@ impl Ctor for PosCreator {
         let optional = config.take_optional().unwrap_or(true);
         let assoc = config.take_assoc().unwrap_or(Assoc::Noa);
         let action = config.take_action().unwrap_or(Action::App);
-        let initiator = config.take_initiator().unwrap_or_default();
+        let initiator = config
+            .take_initiator()
+            .unwrap_or_else(ValInitiator::empty::<bool>);
         let validator = config.take_validator().unwrap_or_else(ValValidator::some);
 
         if let Some(v) = config.alias() {
@@ -438,7 +448,9 @@ impl Ctor for CmdCreator {
         let deactivate_style = config.deactivate().unwrap_or(false);
         let assoc = config.take_assoc().unwrap_or(Assoc::Noa);
         let action = config.take_action().unwrap_or(Action::Set);
-        let initiator = config.take_initiator().unwrap_or_default();
+        let initiator = config
+            .take_initiator()
+            .unwrap_or_else(|| ValInitiator::bool(false));
         let validator = config.take_validator().unwrap_or_else(ValValidator::some);
 
         if let Some(v) = config.alias() {
