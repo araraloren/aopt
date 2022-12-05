@@ -52,7 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_alias("-s")
         .set_value(String::from("lib.rs"));
     list.add_opt("main=m")?
-        .on(|set: &mut ASet, ser: &mut ASer| {
+        .fallback(|set: &mut ASet, ser: &mut ASer| {
             println!(
                 "invoke list command: debug={:?}, force={:?}, local-only={:?}, source={:?}",
                 bool::sve_val(set["debug"].uid(), ser)?,
@@ -60,7 +60,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 bool::sve_val(set["local-only"].uid(), ser)?,
                 String::sve_val(set["source"].uid(), ser)?,
             );
-            Ok(Some(true))
+            Ok(None::<()>)
         })?;
 
     update.add_opt("update=c")?;
