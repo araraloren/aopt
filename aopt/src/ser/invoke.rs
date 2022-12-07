@@ -7,7 +7,6 @@ use crate::astr;
 use crate::ctx::wrap_handler;
 use crate::ctx::wrap_handler_action;
 use crate::ctx::wrap_handler_fallback;
-use crate::ctx::Callbacks;
 use crate::ctx::Ctx;
 use crate::ctx::Extract;
 use crate::ctx::Handler;
@@ -18,6 +17,7 @@ use crate::opt::RawValParser;
 use crate::ser::Service;
 use crate::ser::Services;
 use crate::set::Ctor;
+use crate::set::Set;
 use crate::set::SetOpt;
 use crate::Error;
 use crate::HashMap;
@@ -83,13 +83,15 @@ use crate::Uid;
 /// # }
 /// ```
 pub struct InvokeService<S> {
-    callbacks: HashMap<Uid, Callbacks<S, (), Error>>,
+    callbacks: HashMap<Uid, InvokeHandler<S, Error>>,
 }
+
+pub type InvokeHandler<S, E> = Box<dyn FnMut(&mut S, &mut Services, &Ctx) -> Result<Option<()>, E>>;
 
 impl<S> Debug for InvokeService<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("InvokeService")
-            .field("callbacks", &self.callbacks)
+            .field("callbacks", &"{ ... }")
             .finish()
     }
 }
@@ -110,9 +112,13 @@ impl<S> InvokeService<S> {
     }
 }
 
-impl<S> InvokeService<S> {
-    pub fn set_raw(&mut self, uid: Uid, handler: Callbacks<S, (), Error>) -> &mut Self {
-        self.callbacks.insert(uid, handler);
+impl<S: 'static> InvokeService<S> {
+    pub fn set_raw<H: FnMut(&mut S, &mut Services, &Ctx) -> Result<Option<()>, Error> + 'static>(
+        &mut self,
+        uid: Uid,
+        handler: H,
+    ) -> &mut Self {
+        self.callbacks.insert(uid, Box::new(handler));
         self
     }
 
@@ -140,16 +146,14 @@ impl<S> InvokeService<S> {
     /// |       -> call Store::process(&Set, Option<&RawVal>, Option<Value>)
     /// |           -> Result<Option<()>, Error>
     /// ```
-    pub fn set_handler<Args, Output>(
-        &mut self,
-        uid: Uid,
-        handler: impl Handler<S, Args, Output = Option<Output>, Error = Error> + 'static,
-        store: impl Store<S, Output, Ret = (), Error = Error> + 'static,
-    ) -> &mut Self
+    pub fn set_handler<A, O, H, T>(&mut self, uid: Uid, handler: H, store: T) -> &mut Self
     where
-        Args: Extract<S, Error = Error> + 'static,
+        O: 'static,
+        A: Extract<S, Error = Error> + 'static,
+        T: Store<S, O, Ret = (), Error = Error> + 'static,
+        H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
     {
-        self.callbacks.insert(uid, wrap_handler(handler, store));
+        self.set_raw(uid, wrap_handler(handler, store));
         self
     }
 
@@ -166,7 +170,7 @@ impl<S> InvokeService<S> {
     ) -> Result<Option<()>, Error> {
         let uid = ctx.uid();
         if let Some(callback) = self.callbacks.get_mut(&uid) {
-            return callback.invoke(set, ser, ctx);
+            return (callback)(set, ser, ctx);
         }
         unreachable!(
             "There is no callback of {}, call `invoke_default` instead",
@@ -247,7 +251,7 @@ impl<Set> Service for InvokeService<Set> {
 pub struct HandlerEntry<'a, S, H, A, O>
 where
     O: 'static,
-    S: crate::set::Set,
+    S: Set + 'static,
     SetOpt<S>: Opt,
     H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
     A: Extract<S, Error = Error> + 'static,
@@ -266,7 +270,7 @@ where
 impl<'a, A, S, O, H> HandlerEntry<'a, S, H, A, O>
 where
     O: 'static,
-    S: crate::set::Set,
+    S: Set + 'static,
     SetOpt<S>: Opt,
     H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
     A: Extract<S, Error = Error> + 'static,
@@ -324,7 +328,7 @@ where
 impl<'a, S, H, A, O> Drop for HandlerEntry<'a, S, H, A, O>
 where
     O: 'static,
-    S: crate::set::Set,
+    S: Set + 'static,
     SetOpt<S>: Opt,
     H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
     A: Extract<S, Error = Error> + 'static,

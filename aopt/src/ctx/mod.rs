@@ -6,8 +6,6 @@ pub use self::context::Ctx;
 pub use self::extract::Extract;
 pub use self::handler::Handler;
 
-use std::fmt::Debug;
-
 use crate::opt::Opt;
 use crate::ser::InvokeService;
 use crate::ser::Services;
@@ -17,48 +15,6 @@ use crate::set::SetOpt;
 use crate::Error;
 use crate::RawVal;
 use crate::Uid;
-
-/// The callback used in [`InvokeService`](crate::ser::InvokeService`).
-pub trait Callback<Set> {
-    type Value;
-    type Error: Into<Error>;
-
-    fn invoke(
-        &mut self,
-        set: &mut Set,
-        ser: &mut Services,
-        ctx: &Ctx,
-    ) -> Result<Option<Self::Value>, Self::Error>;
-}
-
-impl<Func, Set, Value, Err> Callback<Set> for Func
-where
-    Err: Into<Error>,
-    Func: FnMut(&mut Set, &mut Services, &Ctx) -> Result<Option<Value>, Err>,
-{
-    type Value = Value;
-    type Error = Err;
-
-    fn invoke(
-        &mut self,
-        set: &mut Set,
-        ser: &mut Services,
-        ctx: &Ctx,
-    ) -> Result<Option<Self::Value>, Self::Error> {
-        (self)(set, ser, ctx)
-    }
-}
-
-/// The callback create by user should return `Option<Ret>`.
-pub type Callbacks<Set, Value, Error> = Box<dyn Callback<Set, Value = Value, Error = Error>>;
-
-impl<Set, Value, Error> Debug for Callbacks<Set, Value, Error> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Box")
-            .field(&"dyn Callback".to_string())
-            .finish()
-    }
-}
 
 /// The [`Store`] processer save the value of given option into
 /// [`ValServices`](crate::ser::ValService) and [`RawValServices`](crate::ser::RawValService).
@@ -124,17 +80,21 @@ impl<Set, Value> Store<Set, Value> for NullStore {
 
 /// Wrap the handler and call the default action of option if return value is `Some()`,
 /// otherwise call the [`fallback`](crate::ser::InvokeService::fallback).
-pub fn wrap_handler_fallback<S, A, O>(
-    mut handler: impl Handler<S, A, Output = Option<O>, Error = Error> + 'static,
-) -> Callbacks<S, (), Error>
+pub fn wrap_handler_fallback<S, A, O, H, E>(
+    mut handler: H,
+) -> impl FnMut(&mut S, &mut Services, &Ctx) -> Result<Option<()>, Error>
 where
     O: 'static,
     S: Set,
     SetOpt<S>: Opt,
-    A: Extract<S, Error = Error>,
+    E: Into<Error>,
+    A: Extract<S, Error = E>,
+    H: Handler<S, A, Output = Option<O>, Error = E> + 'static,
 {
-    Box::new(move |set: &mut S, ser: &mut Services, ctx: &Ctx| {
-        let val = handler.invoke(set, ser, A::extract(set, ser, ctx)?)?;
+    move |set: &mut S, ser: &mut Services, ctx: &Ctx| {
+        let val = handler
+            .invoke(set, ser, A::extract(set, ser, ctx).map_err(Into::into)?)
+            .map_err(Into::into)?;
 
         if val.is_some() {
             let arg = ctx.arg();
@@ -146,38 +106,44 @@ where
         } else {
             InvokeService::fallback(set, ser, ctx)
         }
-    })
+    }
 }
 
 /// Wrap the handler and call the default action of option.
-pub fn wrap_handler_action<S, A, O>(
-    mut handler: impl Handler<S, A, Output = Option<O>, Error = Error> + 'static,
-) -> Callbacks<S, (), Error>
+pub fn wrap_handler_action<S, A, O, H, E>(
+    mut handler: H,
+) -> impl FnMut(&mut S, &mut Services, &Ctx) -> Result<Option<()>, Error>
 where
     O: 'static,
     S: Set,
     SetOpt<S>: Opt,
-    A: Extract<S, Error = Error>,
+    E: Into<Error>,
+    A: Extract<S, Error = E>,
+    H: Handler<S, A, Output = Option<O>, Error = E> + 'static,
 {
-    Box::new(move |set: &mut S, ser: &mut Services, ctx: &Ctx| {
-        let val = handler.invoke(set, ser, A::extract(set, ser, ctx)?)?;
+    move |set: &mut S, ser: &mut Services, ctx: &Ctx| {
+        let val = handler
+            .invoke(set, ser, A::extract(set, ser, ctx).map_err(Into::into)?)
+            .map_err(Into::into)?;
         let arg = ctx.arg();
         let arg = arg.as_ref().map(|v| v.as_ref());
         let uid = ctx.uid();
         let mut act = *set.opt(uid)?.action();
 
         act.process(uid, set, ser, arg, val)
-    })
+    }
 }
 
 /// Wrap the handler and call the [`process`](Store::process) of given `store` on return value of `handler`.
-pub fn wrap_handler<S, A, O, R, E>(
-    mut handler: impl Handler<S, A, Output = Option<O>, Error = E> + 'static,
-    mut store: impl Store<S, O, Ret = R, Error = E> + 'static,
-) -> Callbacks<S, R, E>
+pub fn wrap_handler<S, A, O, R, H, T, E>(
+    mut handler: H,
+    mut store: T,
+) -> impl FnMut(&mut S, &mut Services, &Ctx) -> Result<Option<R>, E>
 where
-    E: Into<crate::Error>,
+    E: Into<Error>,
     A: Extract<S, Error = E>,
+    T: Store<S, O, Ret = R, Error = E> + 'static,
+    H: Handler<S, A, Output = Option<O>, Error = E> + 'static,
 {
     Box::new(move |set: &mut S, ser: &mut Services, ctx: &Ctx| {
         let val = handler.invoke(set, ser, A::extract(set, ser, ctx)?)?;
