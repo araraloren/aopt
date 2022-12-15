@@ -9,7 +9,7 @@ pub mod wrapper;
 pub use error::Error;
 pub use error::Result;
 
-pub mod predule {
+pub mod prelude {
     pub use crate::block::Block;
     pub use crate::cmd::AddStore2Block;
     pub use crate::cmd::BlockMut;

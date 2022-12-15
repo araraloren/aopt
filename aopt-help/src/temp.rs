@@ -1,4 +1,4 @@
-use aopt_help::predule::*;
+use aopt_help::prelude::*;
 use aopt_help::Error;
 
 fn main() -> Result<(), Error> {
