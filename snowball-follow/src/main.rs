@@ -2,6 +2,7 @@ use std::env::Args;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::ops::Deref;
 use std::path::Path;
 use std::time::Duration;
 
@@ -163,10 +164,10 @@ impl SnowBall {
     }
 }
 
-fn parser_command_line(args: Args) -> Result<Parser<SimpleSet, DefaultService, ForwardPolicy>> {
-    let mut parser = Parser::<SimpleSet, DefaultService, ForwardPolicy>::default();
+fn parser_command_line(args: Args) -> Result<AFwdParser> {
+    let mut parser = AFwdParser::default();
 
-    parser.get_policy_mut().set_strict(true);
+    parser.policy_mut().set_strict(true);
 
     for (optstr, alias, help, value) in [
         ("-d=b", "--debug", "Print debug message", None),
@@ -175,40 +176,29 @@ fn parser_command_line(args: Args) -> Result<Parser<SimpleSet, DefaultService, F
             "-i=u",
             "--interval",
             "Set access interval",
-            Some(OptValue::from(1000u64)),
+            1000u64,
         ),
         (
             "-s=i",
             "--start",
             "Set start parameter of request",
-            Some(OptValue::from(0i64)),
+            0i64,
         ),
         (
             "-c=i",
             "--count",
             "Set count parameter of request",
-            Some(OptValue::from(14i64)),
+            14i64,
         ),
     ] {
-        if let Ok(mut commit) = parser.add_opt(optstr) {
-            if let Some(value) = value {
-                commit.set_default_value(value);
-            }
-            commit.add_alias(alias)?;
-            commit.set_help(help);
-            commit.commit()?;
-        }
+        parser.add_opt(optstr)?.set_value(value).add_alias(alias).set_help(help);
     }
     // process single stock id
-    if let Ok(mut commit) = parser.add_opt("stock_id=p@0") {
-        commit.set_help("Get follow from single stock id");
-        let id = commit.commit()?;
-        parser.add_callback(
-            id,
-            simple_pos_mut_cb!(|_, set: &mut SimpleSet, id, _, _| {
+    
+    parser.add_opt("stock_id=p@0")?.set_help("Get follow from single stock id").on(|set: &mut ASet, ser: &mut ASer, id: ctx::Value<String>| {
                 let mut ret = Ok(None);
 
-                if let Some(stock_number) = convert_line_to_stock_number(id) {
+                if let Some(stock_number) = convert_line_to_stock_number(id.deref()) {
                     if let Ok(Some(opt)) = set.find_mut("stock_id") {
                         let value_mut = opt.get_value_mut();
 
