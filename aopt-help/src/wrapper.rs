@@ -1,4 +1,4 @@
-use crate::style::{Alignment, Style};
+use crate::style::{Align, Style};
 use std::borrow::Cow;
 use textwrap::{core::display_width, wrap};
 
@@ -36,10 +36,10 @@ impl<'a> Wrapped<'a> {
 
             ret += self.cows[line].as_ref();
             match self.style.align {
-                Alignment::Left => {
+                Align::Left => {
                     ret += &padding_str.repeat(padding_width);
                 }
-                Alignment::Right => {
+                Align::Right => {
                     ret = padding_str.repeat(padding_width) + &ret;
                 }
             }
@@ -64,13 +64,16 @@ impl<'a> Wrapped<'a> {
 
 #[derive(Debug)]
 pub struct Wrapper<'a, 'b> {
-    data: &'a [Vec<&'b str>],
+    data: &'a [Vec<Cow<'b, str>>],
 
     output: Vec<Vec<Wrapped<'b>>>,
 }
 
-impl<'a, 'b> Wrapper<'a, 'b> {
-    pub fn new(data: &'a [Vec<&'b str>]) -> Self {
+impl<'a, 'b> Wrapper<'a, 'b>
+where
+    'a: 'b,
+{
+    pub fn new(data: &'a [Vec<Cow<'b, str>>]) -> Self {
         Self {
             data,
             output: vec![],
@@ -101,7 +104,22 @@ impl<'a, 'b> Wrapper<'a, 'b> {
         }
     }
 
-    pub fn wrap_with(&mut self, styles: Vec<Style>) {
+    /// Modify wrap_width if wrap_width is 0
+    pub fn wrap_with(&mut self, styles: &Vec<Style>) {
+        let mut styles = styles.clone();
+        let status: Vec<bool> = styles.iter().map(|v| v.wrap_width == 0).collect();
+
+        for (line, status) in self.data.iter().zip(status.iter()) {
+            if *status {
+                for (style_mut, col) in styles.iter_mut().zip(line.iter()) {
+                    let width = display_width(col);
+                    if style_mut.wrap_width < width {
+                        style_mut.wrap_width = width;
+                    }
+                }
+            }
+        }
+
         for line in self.data.iter() {
             let mut wrapped = vec![];
 

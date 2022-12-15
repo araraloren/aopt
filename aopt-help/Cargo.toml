@@ -1,10 +1,10 @@
 [package]
 name = "aopt-help"
-version = "0.2.8"
+version = "0.3.0"
 authors = ["araraloren <araraloren@gmail.com>"]
 edition = "2021"
 license = "MPL-2.0"
-description = "Generate help message for aopt"
+description = "Generate help message for command line program"
 repository = "https://github.com/araraloren/aopt/"
 keywords = ["getopt", "cli", "help", "usage"]
 categories = ["command-line-interface"]

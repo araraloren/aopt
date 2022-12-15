@@ -1,315 +1,420 @@
-use aopt_help::{AppHelp, DefaultFormat, OptStore, PosStore, Printer};
+use aopt_help::predule::*;
+use aopt_help::Error;
 
-fn main() {
-    let mut app = AppHelp::<std::io::Stdout, DefaultFormat>::default();
+fn main() -> Result<(), Error> {
+    let mut app_help = AppHelp::<std::io::Stdout>::default();
 
-    app.set_name("snippet");
+    app_help.set_name("snippet");
 
     {
-        let store = &mut app.store;
+        let global = app_help.store_mut();
 
-        let global = store.get_global_mut();
-
-        global.add_opt(OptStore::new(
+        global.push(Store::new(
             "tempfile",
             "-t|--temp",
-            "str",
             "Set tempoary file name",
-            true,
-        ));
-        global.add_opt(OptStore::new(
-            "tool",
-            "--tool",
             "str",
-            "Set fetch tool name",
             true,
-        ));
-        global.add_opt(OptStore::new(
-            "encoding",
-            "-e|--encoding",
-            "str",
-            "Set webpage encoding",
-            true,
-        ));
-        global.add_opt(OptStore::new(
-            "beg",
-            "-b|--beg-index",
-            "int",
-            "Set begin index",
-            true,
-        ));
-        global.add_opt(OptStore::new(
-            "end",
-            "-e|--end-index",
-            "int",
-            "Set end index",
-            true,
-        ));
-        global.add_opt(OptStore::new(
-            "type",
-            "--type",
-            "str",
-            "Set webpage type",
-            true,
-        ));
-        global.add_opt(OptStore::new(
-            "output",
-            "-o|--output",
-            "str",
-            "Set output directory",
-            true,
-        ));
-        global.add_opt(OptStore::new(
-            "extension",
-            "-e|--extension",
-            "str",
-            "Set output file extension",
-            true,
-        ));
-        global.add_pos(PosStore::new(
-            "url",
-            "<url>",
-            "Set webpage url",
-            "@0",
             false,
         ));
-        global.set_footer("Here is the footer of global help!");
-        global.set_header("Here is the header of global help!");
+        global.push(Store::new(
+            "tool",
+            "--tool",
+            "Set fetch tool name",
+            "str",
+            true,
+            false,
+        ));
+        global.push(Store::new(
+            "encoding",
+            "-e|--encoding",
+            "Set webpage encoding",
+            "str",
+            true,
+            false,
+        ));
+        global.push(Store::new(
+            "beg",
+            "-b|--beg-index",
+            "Set begin index",
+            "int",
+            true,
+            false,
+        ));
+        global.push(Store::new(
+            "end",
+            "-e|--end-index",
+            "Set end index",
+            "int",
+            true,
+            false,
+        ));
+        global.push(Store::new(
+            "type",
+            "--type",
+            "Set webpage type",
+            "str",
+            true,
+            false,
+        ));
+        global.push(Store::new(
+            "output",
+            "-o|--output",
+            "Set output directory",
+            "str",
+            true,
+            false,
+        ));
+        global.push(Store::new(
+            "extension",
+            "-e|--extension",
+            "Set output file extension",
+            "str",
+            true,
+            false,
+        ));
+        global.push(Store::new(
+            "url",
+            "url",
+            "Set webpage url",
+            "NOA",
+            false,
+            true,
+        ));
+        global.set_foot("Here is the footer of global help!");
+        global.set_head("Here is the header of global help!");
     }
 
     {
-        let mut store = app.store.new_cmd("c");
+        app_help
+            .new_block("compile")?
+            .set_hint("compile")
+            .set_head("The language will compile and run:");
+        app_help
+            .new_block("interpret")?
+            .set_hint("interpret")
+            .set_head("The language will run with interpreter:");
+    }
+
+    {
+        let mut store = app_help.new_cmd("compile", "c")?;
 
         store.set_hint("c");
         store.set_help("Compile and run c code");
-        store.set_header("Here is cmd header for c");
-        store.set_footer("Here is cmd footer for c");
+        store.set_head("Here is cmd header for c");
+        store.set_foot("Here is cmd footer for c");
 
-        store.add_pos(PosStore::new(
-            "file",
-            "<file>",
-            "the c source file path",
-            "@0",
-            false,
-        ));
-        store.add_opt(OptStore::new(
-            "O",
-            "-O|--optimize",
-            "int",
-            "Set optimization level",
-            true,
-        ));
-        store.add_opt(OptStore::new(
-            "L",
-            "-L|--link",
-            "str",
-            "Add link library",
-            true,
-        ));
-        store.add_opt(OptStore::new(
-            "S",
-            "-S",
-            "bool",
-            "Show assembly output",
-            true,
-        ));
-        store.commit();
+        let inner = store.inner();
+        let mut block = inner.new_block("command")?;
+
+        block
+            .set_head("Commands:")
+            .set_hint("[Commands]")
+            .set_help("Commands block ");
+
+        block
+            .new_store("file")
+            .set_hint("<file>")
+            .set_help("the c source file path")
+            .set_optional(false)
+            .set_position(true)
+            .set_type("NOA");
+        block.submit();
+
+        let mut block = inner.new_block("option")?;
+
+        block
+            .set_head("Options:")
+            .set_hint("[Options]")
+            .set_help("Option block ");
+
+        block
+            .new_store("O")
+            .set_hint("-O|--optimize")
+            .set_help("Set optimization level")
+            .set_optional(true)
+            .set_position(false)
+            .set_type("int");
+
+        block
+            .new_store("L")
+            .set_hint("-L|--link")
+            .set_help("Add link library")
+            .set_optional(true)
+            .set_position(false)
+            .set_type("str");
+
+        block
+            .new_store("S")
+            .set_hint("-S")
+            .set_help("Show assembly output")
+            .set_optional(true)
+            .set_position(false)
+            .set_type("bool");
+        block.submit();
+        store.submit();
     }
 
     {
-        let mut store = app.store.new_cmd("cpp");
+        let mut store = app_help.new_cmd("compile", "cpp")?;
 
         store.set_hint("cpp");
         store.set_help("Compile and run cpp code");
-        store.set_header("Here is cmd header for cpp");
-        store.set_footer("Here is cmd footer for cpp");
+        store.set_head("Here is cmd header for cpp");
+        store.set_foot("Here is cmd footer for cpp");
 
-        store.add_pos(PosStore::new(
-            "file",
-            "<file>",
-            "the cpp source file path",
-            "@0",
-            false,
-        ));
-        store.add_opt(OptStore::new(
-            "O",
-            "-O|--optimize",
-            "int",
-            "Set optimization level",
-            true,
-        ));
-        store.add_opt(OptStore::new(
-            "L",
-            "-L|--link",
-            "str",
-            "Add link library",
-            true,
-        ));
-        store.add_opt(OptStore::new(
-            "S",
-            "-S",
-            "bool",
-            "Show assembly output",
-            true,
-        ));
-        store.commit();
+        let inner = store.inner();
+        let mut block = inner.new_block("command")?;
+
+        block
+            .set_head("Commands:")
+            .set_hint("[Commands]")
+            .set_help("Command block ");
+
+        block
+            .new_store("file")
+            .set_hint("<file>")
+            .set_help("the cpp source file path")
+            .set_optional(false)
+            .set_position(true)
+            .set_type("NOA");
+        block.submit();
+
+        let mut block = inner.new_block("option")?;
+
+        block
+            .set_head("Options:")
+            .set_hint("[Options]")
+            .set_help("Option block ");
+
+        block
+            .new_store("O")
+            .set_hint("-O|--optimize")
+            .set_help("Set optimization level")
+            .set_optional(true)
+            .set_position(false)
+            .set_type("int");
+
+        block
+            .new_store("L")
+            .set_hint("-L|--link")
+            .set_help("Add link library")
+            .set_optional(true)
+            .set_position(false)
+            .set_type("str");
+
+        block
+            .new_store("S")
+            .set_hint("-S")
+            .set_help("Show assembly output")
+            .set_optional(true)
+            .set_position(false)
+            .set_type("bool");
+        block.submit();
+        store.submit();
     }
 
     {
-        let mut store = app.store.new_cmd("java");
+        let mut store = app_help.new_cmd("compile", "java")?;
 
         store.set_hint("java");
         store.set_help("Compile and run java code");
-        store.set_header("Here is cmd header for java");
-        store.set_footer("Here is cmd footer for java");
+        store.set_head("Here is cmd header for java");
+        store.set_foot("Here is cmd footer for java");
 
-        store.add_pos(PosStore::new(
-            "file",
-            "<file>",
-            "the java source file path",
-            "@0",
-            false,
-        ));
-        store.add_opt(OptStore::new(
-            "O",
-            "-O|--optimize",
-            "int",
-            "Set optimization level",
-            true,
-        ));
-        store.add_opt(OptStore::new(
-            "L",
-            "-L|--link",
-            "str",
-            "Add link library",
-            true,
-        ));
-        store.add_opt(OptStore::new(
-            "S",
-            "-S",
-            "bool",
-            "Show assembly output",
-            true,
-        ));
-        store.commit();
+        let inner = store.inner();
+
+        let mut block = inner.new_block("command")?;
+
+        block
+            .set_head("Commands:")
+            .set_hint("[Commands]")
+            .set_help("Command block ");
+
+        block
+            .new_store("file")
+            .set_hint("<file>")
+            .set_help("the java source file path")
+            .set_optional(false)
+            .set_position(true)
+            .set_type("NOA");
+        block.submit();
+
+        let mut block = inner.new_block("option")?;
+
+        block
+            .set_head("Options:")
+            .set_hint("[Options]")
+            .set_help("Option block ");
+
+        block
+            .new_store("O")
+            .set_hint("-O|--optimize")
+            .set_help("Set optimization level")
+            .set_optional(true)
+            .set_position(false)
+            .set_type("int");
+
+        block
+            .new_store("L")
+            .set_hint("-L|--link")
+            .set_help("Add link library")
+            .set_optional(true)
+            .set_position(false)
+            .set_type("str");
+
+        block
+            .new_store("S")
+            .set_hint("-S")
+            .set_help("Show assembly output")
+            .set_optional(true)
+            .set_position(false)
+            .set_type("bool");
+        block.submit();
+        store.submit();
     }
 
     {
-        let mut store = app.store.new_cmd("py");
+        let mut store = app_help.new_cmd("interpret", "py")?;
 
         store.set_hint("py");
         store.set_help("Run python code");
-        store.set_header("Here is cmd header for python");
-        store.set_footer("Here is cmd footer for python");
+        store.set_head("Here is cmd header for python");
+        store.set_foot("Here is cmd footer for python");
 
-        store.add_pos(PosStore::new(
-            "file",
-            "<file>",
-            "the python source file path",
-            "@0",
-            false,
-        ));
-        store.add_opt(OptStore::new(
-            "O",
-            "-O|--optimize",
-            "int",
-            "Set optimization level",
-            true,
-        ));
-        store.add_opt(OptStore::new(
-            "L",
-            "-L|--link",
-            "str",
-            "Add link library",
-            true,
-        ));
-        store.add_opt(OptStore::new(
-            "S",
-            "-S",
-            "bool",
-            "Show assembly output",
-            true,
-        ));
-        store.commit();
+        let inner = store.inner();
+
+        let mut block = inner.new_block("command")?;
+
+        block
+            .set_head("Commands:")
+            .set_hint("[Commands]")
+            .set_help("Command block ");
+
+        block
+            .new_store("file")
+            .set_hint("<file>")
+            .set_help("the python source file path")
+            .set_optional(false)
+            .set_position(true)
+            .set_type("NOA");
+        block.submit();
+
+        let mut block = inner.new_block("option")?;
+
+        block
+            .set_head("Options:")
+            .set_hint("[Options]")
+            .set_help("Option block ");
+
+        block
+            .new_store("O")
+            .set_hint("-O|--optimize")
+            .set_help("Set optimization level")
+            .set_optional(true)
+            .set_position(false)
+            .set_type("int");
+
+        block
+            .new_store("L")
+            .set_hint("-L|--link")
+            .set_help("Add link library")
+            .set_optional(true)
+            .set_position(false)
+            .set_type("str");
+
+        block
+            .new_store("S")
+            .set_hint("-S")
+            .set_help("Show assembly output")
+            .set_optional(true)
+            .set_position(false)
+            .set_type("bool");
+        block.submit();
+        store.submit();
     }
 
     {
-        let mut store = app.store.new_cmd("perl");
+        let mut store = app_help.new_cmd("interpret", "perl")?;
 
         store.set_hint("perl");
         store.set_help("Run perl code");
-        store.set_header("Here is cmd header for perl");
-        store.set_footer("Here is cmd footer for perl");
+        store.set_head("Here is cmd header for perl");
+        store.set_foot("Here is cmd footer for perl");
 
-        store.add_pos(PosStore::new(
-            "file",
-            "<file>",
-            "the perl source file path",
-            "@0",
-            false,
-        ));
-        store.add_opt(OptStore::new(
-            "O",
-            "-O|--optimize",
-            "int",
-            "Set optimization level",
-            true,
-        ));
-        store.add_opt(OptStore::new(
-            "L",
-            "-L|--link",
-            "str",
-            "Add link library",
-            true,
-        ));
-        store.add_opt(OptStore::new(
-            "S",
-            "-S",
-            "bool",
-            "Show assembly output",
-            true,
-        ));
-        store.commit();
+        let inner = store.inner();
+
+        let mut block = inner.new_block("command")?;
+
+        block
+            .set_head("Commands:")
+            .set_hint("[Commands]")
+            .set_help("Command block ");
+
+        block
+            .new_store("file")
+            .set_hint("<file>")
+            .set_help("the perl source file path")
+            .set_optional(false)
+            .set_position(true)
+            .set_type("NOA");
+        block.submit();
+
+        let mut block = inner.new_block("option")?;
+
+        block
+            .set_head("Options:")
+            .set_hint("[Options]")
+            .set_help("Option block ");
+
+        block
+            .new_store("O")
+            .set_hint("-O|--optimize")
+            .set_help("Set optimization level")
+            .set_optional(true)
+            .set_position(false)
+            .set_type("int");
+
+        block
+            .new_store("L")
+            .set_hint("-L|--link")
+            .set_help("Add link library")
+            .set_optional(true)
+            .set_position(false)
+            .set_type("str");
+
+        block
+            .new_store("S")
+            .set_hint("-S")
+            .set_help("Show assembly output")
+            .set_optional(true)
+            .set_position(false)
+            .set_type("bool");
+        block.submit();
+        store.submit();
     }
 
-    {
-        let mut store = app.store.new_sec("compile");
-
-        store.set_help("The language will compile and run:");
-        store.attach_cmd("c");
-        store.attach_cmd("cpp");
-        store.attach_cmd("java");
-        store.commit();
-    }
-
-    {
-        let mut store = app.store.new_sec("interpret");
-
-        store.set_help("The language will run with interpreter:");
-        store.attach_cmd("perl");
-        store.attach_cmd("py");
-        store.commit();
-    }
-
-    dbg!(&app);
+    dbg!(&app_help);
 
     println!("help ---------------> ");
-    app.print_help().unwrap();
+    app_help.display().unwrap();
     println!("help ---------------> ");
 
-    println!("help of golbal ---------------> ");
-    app.print_cmd_help(None).unwrap();
-    println!("help of golbal ---------------> ");
+    println!("help of cmd cpp ---------------> ");
+    app_help.display_cmd("cpp").unwrap();
+    println!("help of cmd cpp ---------------> ");
 
     println!("help of cmd perl ---------------> ");
-    app.print_cmd_help(Some("perl")).unwrap();
+    app_help.display_cmd("perl").unwrap();
     println!("help of cmd perl ---------------> ");
 
     println!("help of cmd py ---------------> ");
-    app.print_cmd_help(Some("py")).unwrap();
+    app_help.display_cmd("py").unwrap();
     println!("help of cmd py ---------------> ");
 
     println!("help of cmd java ---------------> ");
-    app.print_cmd_help(Some("java")).unwrap();
+    app_help.display_cmd("java").unwrap();
     println!("help of cmd java ---------------> ");
+
+    Ok(())
 }
