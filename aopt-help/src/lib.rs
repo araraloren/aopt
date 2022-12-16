@@ -37,34 +37,25 @@ use std::{borrow::Cow, io::Write};
 
 #[derive(Debug, Clone)]
 pub struct AppHelp<'a, W> {
-    name: Cow<'a, str>,
-
-    head: Cow<'a, str>,
-
-    foot: Cow<'a, str>,
-
     style: Style,
 
     writer: W,
 
-    global: Block<'a, Store<'a>>,
-
     blocks: Vec<Block<'a, Cow<'a, str>>>, // store command sections
 
-    command: Vec<Command<'a>>,
+    cmds: Vec<Command<'a>>,
+
+    global: usize,
 }
 
 impl<'a> Default for AppHelp<'a, Stdout> {
     fn default() -> Self {
         Self {
-            name: Default::default(),
-            global: Default::default(),
             style: Default::default(),
-            head: Default::default(),
-            foot: Default::default(),
             writer: std::io::stdout(),
             blocks: Default::default(),
-            command: Default::default(),
+            cmds: Default::default(),
+            global: 0,
         }
     }
 }
@@ -72,39 +63,50 @@ impl<'a> Default for AppHelp<'a, Stdout> {
 impl<'a, W: Write> AppHelp<'a, W> {
     pub fn new<S: Into<Cow<'a, str>>>(name: S, head: S, foot: S, style: Style, writer: W) -> Self {
         Self {
-            name: name.into(),
-            head: head.into(),
-            foot: foot.into(),
             writer,
             style,
             blocks: vec![],
-            command: vec![],
-            global: Block::new("__global_block", "", "", "Options:", ""),
+            cmds: vec![],
+            global: 0,
         }
+        .with_global(name, head, foot)
+    }
+
+    pub fn with_global<S: Into<Cow<'a, str>>>(mut self, name: S, head: S, foot: S) -> Self {
+        let name = name.into();
+        let hint = Cow::from("");
+        let help = Cow::from("");
+        let head = head.into();
+        let foot = foot.into();
+        let global = Command::new(name, hint, help, head, foot);
+
+        self.cmds.push(global);
+        self.global = self.cmds.len() - 1;
+        self
     }
 
     pub fn foot(&self) -> Cow<'a, str> {
-        self.foot.clone()
+        self.global().foot()
     }
 
     pub fn head(&self) -> Cow<'a, str> {
-        self.head.clone()
+        self.global().head()
     }
 
     pub fn name(&self) -> Cow<'a, str> {
-        self.name.clone()
+        self.global().name()
     }
 
     pub fn style(&self) -> &Style {
         &self.style
     }
 
-    pub fn global(&self) -> &Block<'a, Store<'a>> {
-        &self.global
+    pub fn global(&self) -> &Command<'a> {
+        &self.cmds[self.global]
     }
 
-    pub fn global_mut(&mut self) -> &mut Block<'a, Store<'a>> {
-        &mut self.global
+    pub fn global_mut(&mut self) -> &mut Command<'a> {
+        &mut self.cmds[self.global]
     }
 
     pub fn block(&self) -> &[Block<'a, Cow<'a, str>>] {
@@ -116,23 +118,23 @@ impl<'a, W: Write> AppHelp<'a, W> {
     }
 
     pub fn has_cmd(&self) -> bool {
-        !self.command.is_empty()
+        !self.cmds.is_empty()
     }
 
     pub fn has_pos(&self) -> bool {
-        self.command.iter().any(|cmd| cmd.has_position())
+        self.cmds.iter().any(|cmd| cmd.has_position())
     }
 
     pub fn find_cmd<S: Into<Cow<'a, str>>>(&self, cmd: S) -> Option<&Command<'a>> {
         let name = cmd.into();
 
-        self.command.iter().find(|v| v.name() == name)
+        self.cmds.iter().find(|v| v.name() == name)
     }
 
     pub fn find_cmd_mut<S: Into<Cow<'a, str>>>(&mut self, cmd: S) -> Option<&mut Command<'a>> {
         let name = cmd.into();
 
-        self.command.iter_mut().find(|v| v.name() == name)
+        self.cmds.iter_mut().find(|v| v.name() == name)
     }
 
     pub fn find_block<S: Into<Cow<'a, str>>>(&self, block: S) -> Option<&Block<'a, Cow<'a, str>>> {
@@ -150,40 +152,18 @@ impl<'a, W: Write> AppHelp<'a, W> {
         self.blocks.iter_mut().find(|v| v.name() == name)
     }
 
-    pub fn find_store<S: Into<Cow<'a, str>>>(&self, name: S) -> Option<&Store<'a>> {
-        let name = name.into();
-
-        self.global.iter().find(|v| v.name() == name)
-    }
-
-    pub fn find_store_mut<S: Into<Cow<'a, str>>>(&mut self, name: S) -> Option<&mut Store<'a>> {
-        let name = name.into();
-
-        self.global.iter_mut().find(|v| v.name() == name)
-    }
-
     pub fn with_name<S: Into<Cow<'a, str>>>(mut self, name: S) -> Self {
-        self.global.set_name(name);
+        self.global_mut().set_name(name);
         self
     }
 
     pub fn with_head<S: Into<Cow<'a, str>>>(mut self, head: S) -> Self {
-        self.global.set_head(head);
+        self.global_mut().set_head(head);
         self
     }
 
     pub fn with_foot<S: Into<Cow<'a, str>>>(mut self, foot: S) -> Self {
-        self.global.set_foot(foot);
-        self
-    }
-
-    pub fn with_hint<S: Into<Cow<'a, str>>>(mut self, hint: S) -> Self {
-        self.global.set_hint(hint);
-        self
-    }
-
-    pub fn with_help<S: Into<Cow<'a, str>>>(mut self, help: S) -> Self {
-        self.global.set_help(help);
+        self.global_mut().set_foot(foot);
         self
     }
 
@@ -198,17 +178,17 @@ impl<'a, W: Write> AppHelp<'a, W> {
     }
 
     pub fn set_name<S: Into<Cow<'a, str>>>(&mut self, name: S) -> &mut Self {
-        self.name = name.into();
+        self.global_mut().set_name(name);
         self
     }
 
     pub fn set_head<S: Into<Cow<'a, str>>>(&mut self, head: S) -> &mut Self {
-        self.head = head.into();
+        self.global_mut().set_head(head);
         self
     }
 
     pub fn set_foot<S: Into<Cow<'a, str>>>(&mut self, foot: S) -> &mut Self {
-        self.foot = foot.into();
+        self.global_mut().set_foot(foot);
         self
     }
 
@@ -220,15 +200,6 @@ impl<'a, W: Write> AppHelp<'a, W> {
     pub fn set_write(&mut self, writer: W) -> &mut Self {
         self.writer = writer;
         self
-    }
-
-    pub fn add_store(&mut self, store: Store<'a>) -> Result<&mut Self> {
-        if self.find_store(store.name()).is_some() {
-            Err(Error::DuplicatedStoreName(store.name().to_string()))
-        } else {
-            self.global.push(store);
-            Ok(self)
-        }
     }
 
     pub fn add_block(&mut self, block: Block<'a, Cow<'a, str>>) -> Result<&mut Self> {
@@ -253,18 +224,8 @@ impl<'a, W: Write> AppHelp<'a, W> {
         if self.find_cmd(cmd.name()).is_some() {
             Err(Error::DuplicatedCommandName(cmd.name().to_string()))
         } else {
-            self.command.push(cmd);
+            self.cmds.push(cmd);
             Ok(self)
-        }
-    }
-
-    pub fn new_store<S: Into<Cow<'a, str>>>(&mut self, name: S) -> Result<AddStore2App<'a, '_>> {
-        let name = name.into();
-
-        if self.find_store(name.clone()).is_some() {
-            Err(Error::DuplicatedStoreName(name.to_string()))
-        } else {
-            Ok(AddStore2App::new(&mut self.global, name))
         }
     }
 
@@ -322,13 +283,9 @@ impl<'a, W: Write> AppHelp<'a, W> {
         S: Into<Cow<'a, str>>,
     {
         let name = cmd.into();
-        let cmd = self
-            .command
-            .iter()
-            .find(|v| v.name() == name)
-            .ok_or_else(|| {
-                Error::raise(format!("Can not format help of {name} with DefaultPolicy"))
-            })?;
+        let cmd = self.cmds.iter().find(|v| v.name() == name).ok_or_else(|| {
+            Error::raise(format!("Can not format help of {name} with DefaultPolicy"))
+        })?;
         let policy = DefaultPolicy::new(self.name(), self.style.clone(), vec![], true);
         let help = policy.format(cmd).ok_or_else(|| todo!())?;
 
@@ -342,13 +299,9 @@ impl<'a, W: Write> AppHelp<'a, W> {
         S: Into<Cow<'a, str>>,
     {
         let name = cmd.into();
-        let cmd = self
-            .command
-            .iter()
-            .find(|v| v.name() == name)
-            .ok_or_else(|| {
-                Error::raise(format!("Can not format help of {name} with given policy"))
-            })?;
+        let cmd = self.cmds.iter().find(|v| v.name() == name).ok_or_else(|| {
+            Error::raise(format!("Can not format help of {name} with given policy"))
+        })?;
         let help = policy.format(cmd).ok_or_else(|| todo!())?;
 
         write!(&mut self.writer, "{}", help)

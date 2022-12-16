@@ -17,7 +17,7 @@ pub struct DefaultPolicy<'a, I> {
 
     styles: Vec<Style>,
 
-    omit_args: bool,
+    hiding_pos: bool,
 
     marker: PhantomData<&'a I>,
 }
@@ -28,7 +28,7 @@ impl<'a, I> Default for DefaultPolicy<'a, I> {
             name: Default::default(),
             style: Default::default(),
             styles: Default::default(),
-            omit_args: true,
+            hiding_pos: true,
             marker: Default::default(),
         }
     }
@@ -39,13 +39,13 @@ impl<'a, I> DefaultPolicy<'a, I> {
         name: S,
         style: Style,
         block: Vec<Style>,
-        omit_args: bool,
+        hiding_pos: bool,
     ) -> Self {
         Self {
             name: name.into(),
             style,
             styles: block,
-            omit_args,
+            hiding_pos,
             marker: PhantomData::default(),
         }
     }
@@ -96,26 +96,28 @@ impl<'a> DefaultPolicy<'a, Command<'a>> {
                 usages.append(&mut block_usages);
             }
             // if not omit args, using the args, otherwise using hint of block
-            if !self.omit_args && !block_args.is_empty() {
+            if !block_args.is_empty() {
                 args.append(&mut block_args);
             }
         }
         for block in item.block() {
-            if self.omit_args {
-                let arg = block.hint();
+            let arg = block.hint();
 
-                if !arg.is_empty() {
-                    block_hint.push(arg);
-                }
+            if !arg.is_empty() {
+                block_hint.push(arg);
             }
         }
 
         let usage = usages.join(" ");
-        let args = args.join(" ");
+        let args = if self.hiding_pos {
+            "".to_owned()
+        } else {
+            args.join(" ")
+        };
         let block_hint = block_hint.join(" ");
         let ret;
 
-        if self.omit_args {
+        if self.hiding_pos {
             ret = format!(
                 "Usage: {} {} {} {}",
                 self.name,
@@ -144,7 +146,11 @@ impl<'a> DefaultPolicy<'a, Command<'a>> {
         let mut data: Vec<Vec<Cow<'a, str>>> = vec![vec![]; count];
         let blocks = item.as_slice();
         let styles = &self.styles;
+        let mut any_filled = false;
 
+        if item.is_empty() {
+            return "".into();
+        }
         for idx in 0..count {
             for store in stores {
                 if store.name() == blocks[idx] {
@@ -153,12 +159,17 @@ impl<'a> DefaultPolicy<'a, Command<'a>> {
 
                     if !hint.is_empty() {
                         data[idx].push(hint);
+                        any_filled = true;
                     }
                     if !help.is_empty() {
                         data[idx].push(help);
+                        any_filled = true;
                     }
                 }
             }
+        }
+        if !any_filled {
+            return "".into();
         }
         let mut wrapper = Wrapper::new(&data);
 
@@ -232,6 +243,8 @@ pub struct DefaultAppPolicy<'a, I> {
 
     show_global: bool,
 
+    hiding_pos: bool,
+
     marker: PhantomData<&'a I>,
 }
 
@@ -240,6 +253,7 @@ impl<'a, I> Default for DefaultAppPolicy<'a, I> {
         Self {
             styles: Default::default(),
             show_global: true,
+            hiding_pos: true,
             marker: Default::default(),
         }
     }
@@ -250,38 +264,100 @@ impl<'a, I> DefaultAppPolicy<'a, I> {
         Self {
             styles,
             show_global,
+            hiding_pos: true,
             marker: PhantomData::default(),
         }
     }
 }
 
 impl<'a, W: Write> DefaultAppPolicy<'a, AppHelp<'a, W>> {
-    pub fn get_block_usage(&self, item: &Block<'a, Store<'a>>) -> Cow<'a, str> {
+    pub fn get_block_usage(
+        &self,
+        item: &Block<'a, Cow<'a, str>>,
+        stores: &Vec<Store<'a>>,
+    ) -> (Vec<String>, Vec<String>) {
         let mut usages = vec![];
+        let mut args = vec![];
 
         for store in item.iter() {
-            let hint = store.hint();
+            if let Some(store) = stores.iter().find(|v| &v.name() == store) {
+                let hint = store.hint();
 
-            if !hint.is_empty() {
-                if store.optional() {
-                    usages.push(format!("[{}]", hint));
-                } else {
-                    usages.push(format!("<{}>", hint));
+                if !hint.is_empty() {
+                    if store.position() {
+                        if store.optional() {
+                            args.push(format!("[{}]", hint));
+                        } else {
+                            args.push(format!("<{}>", hint));
+                        }
+                    } else {
+                        if store.optional() {
+                            usages.push(format!("[{}]", hint));
+                        } else {
+                            usages.push(format!("<{}>", hint));
+                        }
+                    }
                 }
             }
         }
-        usages.join(" ").into()
+        (usages, args)
     }
 
-    pub fn get_app_usage(&self, item: &AppHelp<'a, W>) -> Cow<'a, str> {
-        let usage = self.get_block_usage(item.global());
-        let command = if item.has_cmd() { " <COMMAND>" } else { "" };
-        let usage_space = if usage.is_empty() { "" } else { " " };
-        let args = if item.has_pos() { "[ARGS]" } else { "" };
-        let ret = format!(
-            "Usage: {}{usage_space}{}{} {}",
-            item.name, usage, command, args
-        );
+    pub fn get_app_usage(&self, app: &AppHelp<'a, W>) -> Cow<'a, str> {
+        let global = app.global();
+        let mut usages = vec![];
+        let mut args = vec![];
+        let mut block_hint = vec![];
+
+        for block in global.block() {
+            let (mut block_usages, mut block_args) = self.get_block_usage(block, &global);
+
+            if !block_usages.is_empty() {
+                usages.append(&mut block_usages);
+            }
+            // if not omit args, using the args, otherwise using hint of block
+            if !block_args.is_empty() {
+                args.append(&mut block_args);
+            }
+        }
+        for block in global.block() {
+            let arg = block.hint();
+
+            if !arg.is_empty() {
+                block_hint.push(arg);
+            }
+        }
+
+        // all the option usage
+        let global_usage = usages.join(" ");
+        // all the args usage, hiding in default
+        let args = if self.hiding_pos {
+            "".to_owned()
+        } else {
+            args.join(" ")
+        };
+        let usage_space = if global_usage.is_empty() { "" } else { " " };
+        let block_hint = block_hint.join(" ");
+        let command_usage = if app.cmds.is_empty() { "" } else { "<COMMAND>" };
+        let ret;
+
+        if self.hiding_pos {
+            ret = format!(
+                "Usage: {}{usage_space}{} {} {}",
+                global.name(),
+                global_usage,
+                command_usage,
+                block_hint
+            );
+        } else {
+            ret = format!(
+                "Usage: {}{usage_space}{} {} {}",
+                global.name(),
+                global_usage,
+                command_usage,
+                args
+            );
+        }
 
         ret.into()
     }
@@ -297,6 +373,7 @@ impl<'a, W: Write> DefaultAppPolicy<'a, AppHelp<'a, W>> {
         let mut data = vec![vec![]; count];
         let styles = &self.styles;
         let line_spacing = &"\n".repeat(1 + app.style().line_spacing);
+        let mut any_filled = false;
 
         if block.is_empty() {
             return "".into();
@@ -308,13 +385,18 @@ impl<'a, W: Write> DefaultAppPolicy<'a, AppHelp<'a, W>> {
 
                 if !hint.is_empty() {
                     data_mut.push(hint);
+                    any_filled = true;
                 }
                 if !help.is_empty() {
                     data_mut.push(help);
+                    any_filled = true;
                 }
             } else {
                 panic!("Unknow command {} in block {}", name, block.name());
             }
+        }
+        if !any_filled {
+            return "".into();
         }
         let mut wrapper = Wrapper::new(&data);
 
@@ -367,7 +449,8 @@ impl<'a, W: Write> DefaultAppPolicy<'a, AppHelp<'a, W>> {
 
     pub fn get_global_help(
         &self,
-        item: &Block<'a, Store<'a>>,
+        item: &Block<'a, Cow<'a, str>>,
+        stores: &Vec<Store<'a>>,
         app: &AppHelp<'a, W>,
     ) -> Cow<'a, str> {
         let style = &app.style;
@@ -381,16 +464,18 @@ impl<'a, W: Write> DefaultAppPolicy<'a, AppHelp<'a, W>> {
         let styles = &self.styles;
 
         for idx in 0..count {
-            let store = &blocks[idx];
+            for store in stores {
+                if store.name() == blocks[idx] {
+                    let hint = store.hint();
+                    let help = store.help();
 
-            let hint = store.hint();
-            let help = store.help();
-
-            if !hint.is_empty() {
-                data[idx].push(hint);
-            }
-            if !help.is_empty() {
-                data[idx].push(help);
+                    if !hint.is_empty() {
+                        data[idx].push(hint);
+                    }
+                    if !help.is_empty() {
+                        data[idx].push(help);
+                    }
+                }
             }
         }
         let mut wrapper = Wrapper::new(&data);
@@ -458,10 +543,12 @@ impl<'a, W: Write> HelpPolicy<'a, AppHelp<'a, W>> for DefaultAppPolicy<'a, AppHe
             }
         }
         if self.show_global {
-            let global_help = self.get_global_help(&app.global, app);
+            for block in app.global().block() {
+                let global_help = self.get_global_help(block, app.global(), app);
 
-            if !global_help.is_empty() {
-                usages.push(global_help);
+                if !global_help.is_empty() {
+                    usages.push(global_help);
+                }
             }
         }
         if !foot.is_empty() {

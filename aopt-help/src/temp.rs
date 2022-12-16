@@ -85,6 +85,25 @@ fn main() -> Result<(), Error> {
             false,
             true,
         ));
+
+        global
+            .new_block("args")?
+            .set_hint("[ARGS]")
+            .set_head("ARGS:")
+            .attach("url")?;
+
+        global
+            .new_block("options")?
+            .set_hint("[OPTION]")
+            .set_head("OPTION:")
+            .attach("tempfile")?
+            .attach("tool")?
+            .attach("encoding")?
+            .attach("beg")?
+            .attach("end")?
+            .attach("type")?
+            .attach("output")?
+            .attach("extension")?;
     }
 
     {

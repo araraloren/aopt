@@ -307,6 +307,19 @@ impl<'a, 'b> BlockMut<'a, 'b> {
         }
     }
 
+    pub fn attach<S: Into<Cow<'a, str>>>(&mut self, name: S) -> Result<&mut Self, Error> {
+        let name = name.into();
+
+        if self.cmd.find_store(name.clone()).is_none() {
+            return Err(Error::InvalidStoreName(name.to_string()));
+        } else if self.block.iter().any(|v| v == &name) {
+            return Err(Error::DuplicatedStoreName(name.to_string()));
+        } else {
+            self.block.attach(name);
+            Ok(self)
+        }
+    }
+
     pub fn set_hint<S: Into<Cow<'a, str>>>(&mut self, hint: S) -> &mut Self {
         self.block.set_hint(hint);
         self

@@ -10,6 +10,8 @@ pub enum Error {
 
     DuplicatedBlockName(String),
 
+    InvalidStoreName(String),
+
     DuplicatedStoreName(String),
 
     DuplicatedCommandName(String),
@@ -60,6 +62,9 @@ impl Error {
             }
             Error::DuplicatedBlockName(name) => {
                 format!("Duplicated block name {}", name)
+            }
+            Error::InvalidStoreName(name) => {
+                format!("Invalid store name {}", name)
             }
             Error::DuplicatedStoreName(name) => {
                 format!("Duplicated store name {}", name)
