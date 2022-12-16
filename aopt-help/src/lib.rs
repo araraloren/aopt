@@ -117,10 +117,12 @@ impl<'a, W: Write> AppHelp<'a, W> {
         &mut self.blocks
     }
 
+    /// If the app has command except global one.
     pub fn has_cmd(&self) -> bool {
-        !self.cmds.is_empty()
+        self.cmds.len() >= 2
     }
 
+    /// If the app has position args in any command.
     pub fn has_pos(&self) -> bool {
         self.cmds.iter().any(|cmd| cmd.has_position())
     }

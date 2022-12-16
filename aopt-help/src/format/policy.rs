@@ -338,7 +338,7 @@ impl<'a, W: Write> DefaultAppPolicy<'a, AppHelp<'a, W>> {
         };
         let usage_space = if global_usage.is_empty() { "" } else { " " };
         let block_hint = block_hint.join(" ");
-        let command_usage = if app.cmds.is_empty() { "" } else { "<COMMAND>" };
+        let command_usage = if app.has_cmd() {  "<COMMAND>" } else { "" };
         let ret;
 
         if self.hiding_pos {
