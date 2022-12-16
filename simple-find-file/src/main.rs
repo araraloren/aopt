@@ -1,9 +1,11 @@
+use std::borrow::Cow;
 use std::path::Path;
 use std::{ops::Deref, os::windows::prelude::MetadataExt};
 
 use aopt::Error;
 use aopt::{getopt, prelude::*};
-use aopt_help::prelude::*;
+use aopt_help::prelude::Block;
+use aopt_help::store::Store;
 use regex::Regex;
 
 fn main() -> color_eyre::Result<()> {
@@ -34,7 +36,7 @@ fn main() -> color_eyre::Result<()> {
             }
         })?;
 
-    for (opt, help, alias_prefix, alias_name, mut filter_type) in [
+    for (opt, help, alias_prefix, alias_name, filter_type) in [
         (
             "--dir=b",
             "Show the files type are directory",
@@ -76,12 +78,15 @@ fn main() -> color_eyre::Result<()> {
             .set_help(help)
             .add_alias(format!("{}{}", alias_prefix, alias_name))
             .fallback(
-                move |set: &mut ASet, ser: &mut ASer, val: ctx::Value<String>| {
+                move |set: &mut ASet, ser: &mut ASer, mut val: ctx::Value<String>| {
+                    let mut filter_type = filter_type.clone();
+
                     String::sve_filter(set["directory"].uid(), ser, move |path: &String| {
                         let filter_type = filter_type.copy_value_from(val.take());
+
                         filter_type.filter(path)
                     })?;
-                    Ok(None)
+                    Ok(None::<String>)
                 },
             )?;
     }
@@ -95,9 +100,7 @@ fn main() -> color_eyre::Result<()> {
         .set_help("Main function")
         .fallback(|set: &mut ASet, ser: &mut ASer| {
             if *bool::sve_val(set["--help"].uid(), ser)? {
-                let mut app_help = getopt_help!(set);
-
-                app_help.print_cmd_help(None).map_err(|e| {
+                display_help(set).map_err(|e| {
                     Error::raise_error(format!("can not write help to stdout: {:?}", e))
                 })?;
             } else {
@@ -105,7 +108,7 @@ fn main() -> color_eyre::Result<()> {
                     println!("{}", file);
                 }
             }
-            Ok(None)
+            Ok(None::<()>)
         })?;
 
     getopt!(std::env::args().skip(1), &mut parser)?;
@@ -175,4 +178,57 @@ impl FilterType {
             false
         }
     }
+}
+
+fn display_help<S: Set>(set: &S) -> Result<(), aopt_help::Error> {
+    let foot = format!(
+        "Create by {} v{}",
+        env!("CARGO_PKG_AUTHORS"),
+        env!("CARGO_PKG_VERSION")
+    );
+    let mut app_help = aopt_help::AppHelp::new(
+        env!("CARGO_PKG_NAME"),
+        env!("CARGO_PKG_DESCRIPTION"),
+        &foot,
+        aopt_help::prelude::Style::default(),
+        std::io::stdout(),
+    );
+    let global = app_help.global_mut();
+
+    global.add_block(Block::new("option", "[OPTION]", "", "OPTION:", ""))?;
+    global.add_block(Block::new("args", "[ARGS]", "", "ARGS:", ""))?;
+    for opt in set.iter() {
+        if opt.mat_style(Style::Pos) {
+            global.add_store(
+                "args",
+                Store::new(
+                    Cow::from(opt.name().as_str()),
+                    Cow::from(opt.hint().as_str()),
+                    Cow::from(opt.help().as_str()),
+                    Cow::from(opt.r#type().to_string()),
+                    opt.optional(),
+                    true,
+                ),
+            )?;
+        } else if opt.mat_style(Style::Argument)
+            || opt.mat_style(Style::Boolean)
+            || opt.mat_style(Style::Combined)
+        {
+            global.add_store(
+                "option",
+                Store::new(
+                    Cow::from(opt.name().as_str()),
+                    Cow::from(opt.hint().as_str()),
+                    Cow::from(opt.help().as_str()),
+                    Cow::from(opt.r#type().to_string()),
+                    opt.optional(),
+                    false,
+                ),
+            )?;
+        }
+    }
+
+    app_help.display(true)?;
+
+    Ok(())
 }
