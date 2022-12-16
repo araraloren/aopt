@@ -2,12 +2,16 @@ use aopt_help::prelude::*;
 use aopt_help::Error;
 
 fn main() -> Result<(), Error> {
-    let mut app_help = AppHelp::<std::io::Stdout>::default();
-
-    app_help.set_name("snippet");
+    let mut app_help = AppHelp::<std::io::Stdout>::new(
+        "snippet",
+        "Here is the header of global help!",
+        "Here is the footer of global help!",
+        Style::default(),
+        std::io::stdout(),
+    );
 
     {
-        let global = app_help.store_mut();
+        let global = app_help.global_mut();
 
         global.push(Store::new(
             "tempfile",
@@ -81,8 +85,6 @@ fn main() -> Result<(), Error> {
             false,
             true,
         ));
-        global.set_foot("Here is the footer of global help!");
-        global.set_head("Here is the header of global help!");
     }
 
     {
@@ -397,7 +399,7 @@ fn main() -> Result<(), Error> {
     dbg!(&app_help);
 
     println!("help ---------------> ");
-    app_help.display().unwrap();
+    app_help.display(true).unwrap();
     println!("help ---------------> ");
 
     println!("help of cmd cpp ---------------> ");

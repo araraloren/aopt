@@ -37,11 +37,17 @@ use std::{borrow::Cow, io::Write};
 
 #[derive(Debug, Clone)]
 pub struct AppHelp<'a, W> {
-    global_store: Block<'a, Store<'a>>,
+    name: Cow<'a, str>,
+
+    head: Cow<'a, str>,
+
+    foot: Cow<'a, str>,
 
     style: Style,
 
     writer: W,
+
+    global: Block<'a, Store<'a>>,
 
     blocks: Vec<Block<'a, Cow<'a, str>>>, // store command sections
 
@@ -51,74 +57,54 @@ pub struct AppHelp<'a, W> {
 impl<'a> Default for AppHelp<'a, Stdout> {
     fn default() -> Self {
         Self {
-            global_store: Default::default(),
+            name: Default::default(),
+            global: Default::default(),
             style: Default::default(),
+            head: Default::default(),
+            foot: Default::default(),
             writer: std::io::stdout(),
-            blocks: vec![Block::new(
-                Self::default_block_name(),
-                "",
-                "",
-                "COMMAND:",
-                "",
-            )],
+            blocks: Default::default(),
             command: Default::default(),
         }
     }
 }
 
 impl<'a, W: Write> AppHelp<'a, W> {
-    pub fn new<S: Into<Cow<'a, str>>>(
-        name: S,
-        hint: S,
-        help: S,
-        foot: S,
-        head: S,
-        style: Style,
-        writer: W,
-    ) -> Self {
+    pub fn new<S: Into<Cow<'a, str>>>(name: S, head: S, foot: S, style: Style, writer: W) -> Self {
         Self {
-            global_store: Block::new(name, hint, help, foot, head),
+            name: name.into(),
+            head: head.into(),
+            foot: foot.into(),
             writer,
             style,
             blocks: vec![],
             command: vec![],
+            global: Block::new("__global_block", "", "", "Options:", ""),
         }
     }
 
-    pub fn default_block_name() -> &'static str {
-        "Default"
-    }
-
     pub fn foot(&self) -> Cow<'a, str> {
-        self.global_store.foot()
+        self.foot.clone()
     }
 
     pub fn head(&self) -> Cow<'a, str> {
-        self.global_store.head()
-    }
-
-    pub fn hint(&self) -> Cow<'a, str> {
-        self.global_store.hint()
-    }
-
-    pub fn help(&self) -> Cow<'a, str> {
-        self.global_store.help()
+        self.head.clone()
     }
 
     pub fn name(&self) -> Cow<'a, str> {
-        self.global_store.name()
+        self.name.clone()
     }
 
     pub fn style(&self) -> &Style {
         &self.style
     }
 
-    pub fn store(&self) -> &Block<'a, Store<'a>> {
-        &self.global_store
+    pub fn global(&self) -> &Block<'a, Store<'a>> {
+        &self.global
     }
 
-    pub fn store_mut(&mut self) -> &mut Block<'a, Store<'a>> {
-        &mut self.global_store
+    pub fn global_mut(&mut self) -> &mut Block<'a, Store<'a>> {
+        &mut self.global
     }
 
     pub fn block(&self) -> &[Block<'a, Cow<'a, str>>] {
@@ -167,37 +153,37 @@ impl<'a, W: Write> AppHelp<'a, W> {
     pub fn find_store<S: Into<Cow<'a, str>>>(&self, name: S) -> Option<&Store<'a>> {
         let name = name.into();
 
-        self.global_store.iter().find(|v| v.name() == name)
+        self.global.iter().find(|v| v.name() == name)
     }
 
     pub fn find_store_mut<S: Into<Cow<'a, str>>>(&mut self, name: S) -> Option<&mut Store<'a>> {
         let name = name.into();
 
-        self.global_store.iter_mut().find(|v| v.name() == name)
+        self.global.iter_mut().find(|v| v.name() == name)
     }
 
     pub fn with_name<S: Into<Cow<'a, str>>>(mut self, name: S) -> Self {
-        self.global_store.set_name(name);
+        self.global.set_name(name);
         self
     }
 
     pub fn with_head<S: Into<Cow<'a, str>>>(mut self, head: S) -> Self {
-        self.global_store.set_head(head);
+        self.global.set_head(head);
         self
     }
 
     pub fn with_foot<S: Into<Cow<'a, str>>>(mut self, foot: S) -> Self {
-        self.global_store.set_foot(foot);
+        self.global.set_foot(foot);
         self
     }
 
     pub fn with_hint<S: Into<Cow<'a, str>>>(mut self, hint: S) -> Self {
-        self.global_store.set_hint(hint);
+        self.global.set_hint(hint);
         self
     }
 
     pub fn with_help<S: Into<Cow<'a, str>>>(mut self, help: S) -> Self {
-        self.global_store.set_help(help);
+        self.global.set_help(help);
         self
     }
 
@@ -212,27 +198,17 @@ impl<'a, W: Write> AppHelp<'a, W> {
     }
 
     pub fn set_name<S: Into<Cow<'a, str>>>(&mut self, name: S) -> &mut Self {
-        self.global_store.set_name(name);
+        self.name = name.into();
         self
     }
 
     pub fn set_head<S: Into<Cow<'a, str>>>(&mut self, head: S) -> &mut Self {
-        self.global_store.set_head(head);
+        self.head = head.into();
         self
     }
 
     pub fn set_foot<S: Into<Cow<'a, str>>>(&mut self, foot: S) -> &mut Self {
-        self.global_store.set_foot(foot);
-        self
-    }
-
-    pub fn set_hint<S: Into<Cow<'a, str>>>(&mut self, hint: S) -> &mut Self {
-        self.global_store.set_hint(hint);
-        self
-    }
-
-    pub fn set_help<S: Into<Cow<'a, str>>>(&mut self, help: S) -> &mut Self {
-        self.global_store.set_help(help);
+        self.foot = foot.into();
         self
     }
 
@@ -250,7 +226,7 @@ impl<'a, W: Write> AppHelp<'a, W> {
         if self.find_store(store.name()).is_some() {
             Err(Error::DuplicatedStoreName(store.name().to_string()))
         } else {
-            self.global_store.push(store);
+            self.global.push(store);
             Ok(self)
         }
     }
@@ -282,27 +258,13 @@ impl<'a, W: Write> AppHelp<'a, W> {
         }
     }
 
-    pub fn add_cmd_default(&mut self, cmd: Command<'a>) -> Result<&mut Self> {
-        let block = Self::default_block_name();
-
-        self.find_block_mut(block)
-            .ok_or_else(|| Error::InvalidBlockName(block.to_string()))?
-            .push(cmd.name());
-        if self.find_cmd(cmd.name()).is_some() {
-            Err(Error::DuplicatedCommandName(cmd.name().to_string()))
-        } else {
-            self.command.push(cmd);
-            Ok(self)
-        }
-    }
-
     pub fn new_store<S: Into<Cow<'a, str>>>(&mut self, name: S) -> Result<AddStore2App<'a, '_>> {
         let name = name.into();
 
         if self.find_store(name.clone()).is_some() {
             Err(Error::DuplicatedStoreName(name.to_string()))
         } else {
-            Ok(AddStore2App::new(&mut self.global_store, name))
+            Ok(AddStore2App::new(&mut self.global, name))
         }
     }
 
@@ -333,24 +295,8 @@ impl<'a, W: Write> AppHelp<'a, W> {
         }
     }
 
-    pub fn new_cmd_default<S: Into<Cow<'a, str>>>(
-        &mut self,
-        name: S,
-    ) -> Result<AddCmd2App<'a, '_, W>> {
-        let name = name.into();
-
-        if self.find_cmd(name.clone()).is_some() {
-            Err(Error::DuplicatedCommandName(name.to_string()))
-        } else {
-            let block = Self::default_block_name().to_string();
-            let name = name.to_string();
-
-            Ok(AddCmd2App::new(self, block, name))
-        }
-    }
-
-    pub fn display(&mut self) -> Result<()> {
-        let policy = DefaultAppPolicy::new(vec![]);
+    pub fn display(&mut self, show_global: bool) -> Result<()> {
+        let policy = DefaultAppPolicy::new(vec![], show_global);
         let help = policy.format(self).ok_or_else(|| {
             Error::raise("Can not format app help with DefaultAppPolicy".to_string())
         })?;
@@ -422,6 +368,7 @@ impl<'a, 'b> AddStore2App<'a, 'b> {
     pub fn new<S: Into<Cow<'a, str>>>(block: &'b mut Block<'a, Store<'a>>, name: S) -> Self {
         let mut store = Store::default();
 
+        store.set_optional(true);
         store.set_name(name);
         Self {
             block,

@@ -22,6 +22,18 @@ pub struct DefaultPolicy<'a, I> {
     marker: PhantomData<&'a I>,
 }
 
+impl<'a, I> Default for DefaultPolicy<'a, I> {
+    fn default() -> Self {
+        Self {
+            name: Default::default(),
+            style: Default::default(),
+            styles: Default::default(),
+            omit_args: true,
+            marker: Default::default(),
+        }
+    }
+}
+
 impl<'a, I> DefaultPolicy<'a, I> {
     pub fn new<S: Into<Cow<'a, str>>>(
         name: S,
@@ -218,13 +230,26 @@ impl<'a> HelpPolicy<'a, Command<'a>> for DefaultPolicy<'a, Command<'a>> {
 pub struct DefaultAppPolicy<'a, I> {
     styles: Vec<Style>, // style for every block
 
+    show_global: bool,
+
     marker: PhantomData<&'a I>,
 }
 
-impl<'a, I> DefaultAppPolicy<'a, I> {
-    pub fn new(block: Vec<Style>) -> Self {
+impl<'a, I> Default for DefaultAppPolicy<'a, I> {
+    fn default() -> Self {
         Self {
-            styles: block,
+            styles: Default::default(),
+            show_global: true,
+            marker: Default::default(),
+        }
+    }
+}
+
+impl<'a, I> DefaultAppPolicy<'a, I> {
+    pub fn new(styles: Vec<Style>, show_global: bool) -> Self {
+        Self {
+            styles,
+            show_global,
             marker: PhantomData::default(),
         }
     }
@@ -249,16 +274,13 @@ impl<'a, W: Write> DefaultAppPolicy<'a, AppHelp<'a, W>> {
     }
 
     pub fn get_app_usage(&self, item: &AppHelp<'a, W>) -> Cow<'a, str> {
-        let usage = self.get_block_usage(item.store());
+        let usage = self.get_block_usage(item.global());
         let command = if item.has_cmd() { " <COMMAND>" } else { "" };
         let usage_space = if usage.is_empty() { "" } else { " " };
         let args = if item.has_pos() { "[ARGS]" } else { "" };
         let ret = format!(
             "Usage: {}{usage_space}{}{} {}",
-            item.hint(),
-            usage,
-            command,
-            args
+            item.name, usage, command, args
         );
 
         ret.into()
@@ -342,6 +364,75 @@ impl<'a, W: Write> DefaultAppPolicy<'a, AppHelp<'a, W>> {
 
         usages.join(&line_spacing).into()
     }
+
+    pub fn get_global_help(
+        &self,
+        item: &Block<'a, Store<'a>>,
+        app: &AppHelp<'a, W>,
+    ) -> Cow<'a, str> {
+        let style = &app.style;
+        let count = item.len();
+        let head = item.head();
+        let foot = item.foot();
+        let line_spacing = &"\n".repeat(1 + style.line_spacing);
+        let mut output = if head.is_empty() { vec![] } else { vec![head] };
+        let mut data: Vec<Vec<Cow<'a, str>>> = vec![vec![]; count];
+        let blocks = item.as_slice();
+        let styles = &self.styles;
+
+        for idx in 0..count {
+            let store = &blocks[idx];
+
+            let hint = store.hint();
+            let help = store.help();
+
+            if !hint.is_empty() {
+                data[idx].push(hint);
+            }
+            if !help.is_empty() {
+                data[idx].push(help);
+            }
+        }
+        let mut wrapper = Wrapper::new(&data);
+
+        if !styles.is_empty() {
+            wrapper.wrap_with(styles);
+        } else {
+            wrapper.wrap();
+        }
+        let wrapped = wrapper.get_output();
+        let mut wrapped_lines = vec![];
+
+        for wrapped_line in wrapped {
+            let max_len = wrapped_line.iter().map(|v| v.len()).max().unwrap_or(1);
+            let first_style = wrapped_line[0].get_style();
+            let first_row_spacing = &" ".repeat(first_style.row_spacing);
+            let first_line_spacing = &"\n".repeat(1 + first_style.line_spacing);
+
+            for i in 0..max_len {
+                let rows = &wrapped_line
+                    .iter()
+                    .map(|v| v.get_line(i))
+                    .collect::<Vec<String>>();
+                let mut line = rows.join(first_row_spacing);
+
+                line.push_str(first_line_spacing);
+                wrapped_lines.push(line);
+            }
+        }
+        let wrapped_output = wrapped_lines.join("");
+
+        if !wrapped_output.is_empty() {
+            output.push(wrapped_output.into());
+        }
+        if !foot.is_empty() {
+            output.push(foot);
+        }
+        let output = output.join(line_spacing);
+        let output = output.trim_end().to_owned();
+
+        output.into()
+    }
 }
 
 impl<'a, W: Write> HelpPolicy<'a, AppHelp<'a, W>> for DefaultAppPolicy<'a, AppHelp<'a, W>> {
@@ -364,6 +455,13 @@ impl<'a, W: Write> HelpPolicy<'a, AppHelp<'a, W>> for DefaultAppPolicy<'a, AppHe
 
             if !block_help.is_empty() {
                 usages.push(block_help);
+            }
+        }
+        if self.show_global {
+            let global_help = self.get_global_help(&app.global, app);
+
+            if !global_help.is_empty() {
+                usages.push(global_help);
             }
         }
         if !foot.is_empty() {

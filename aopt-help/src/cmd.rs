@@ -224,6 +224,7 @@ impl<'a, 'b> AddStore2Block<'a, 'b> {
     ) -> Self {
         let mut store = Store::default();
 
+        store.set_optional(true);
         store.set_name(name);
         Self {
             block,
