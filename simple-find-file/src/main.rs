@@ -18,7 +18,7 @@ fn main() -> color_eyre::Result<()> {
 
     parser
         .add_opt("directory=p@1")?
-        .set_help("Set the target directory")
+        .set_help("The target directory will be search")
         .on(|_: &mut ASet, _: &mut ASer, dir: ctx::Value<String>| {
             if !dir.is_empty() {
                 if let Ok(files) = find_file_in_directory(dir.deref()) {
@@ -81,7 +81,7 @@ fn main() -> color_eyre::Result<()> {
                 move |set: &mut ASet, ser: &mut ASer, mut val: ctx::Value<String>| {
                     let mut filter_type = filter_type.clone();
 
-                    String::sve_filter(set["directory"].uid(), ser, move |path: &String| {
+                    ser.sve_filter(set["directory"].uid(), move |path: &String| {
                         let filter_type = filter_type.copy_value_from(val.take());
 
                         filter_type.filter(path)
@@ -99,12 +99,12 @@ fn main() -> color_eyre::Result<()> {
         .add_opt("main=m")?
         .set_help("Main function")
         .fallback(|set: &mut ASet, ser: &mut ASer| {
-            if *bool::sve_val(set["--help"].uid(), ser)? {
+            if *ser.sve_val::<bool>(set["--help"].uid())? {
                 display_help(set).map_err(|e| {
                     Error::raise_error(format!("can not write help to stdout: {:?}", e))
                 })?;
             } else {
-                for file in String::sve_vals(set["directory"].uid(), ser)? {
+                for file in ser.sve_vals::<String>(set["directory"].uid())? {
                     println!("{}", file);
                 }
             }
