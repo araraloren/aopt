@@ -264,7 +264,7 @@ impl<'a, W: Write> AppHelp<'a, W> {
             Error::raise("Can not format app help with DefaultAppPolicy".to_string())
         })?;
 
-        write!(&mut self.writer, "{}", help)
+        writeln!(&mut self.writer, "{}", help)
             .map_err(|e| Error::raise(format!("Can not write to handler: {:?}", e)))
     }
 
@@ -276,7 +276,7 @@ impl<'a, W: Write> AppHelp<'a, W> {
             .format(self)
             .ok_or_else(|| Error::raise("Can not format app help with given policy".to_string()))?;
 
-        write!(&mut self.writer, "{}", help)
+        writeln!(&mut self.writer, "{}", help)
             .map_err(|e| Error::raise(format!("Can not write to handler: {:?}", e)))
     }
 
@@ -306,7 +306,7 @@ impl<'a, W: Write> AppHelp<'a, W> {
         })?;
         let help = policy.format(cmd).ok_or_else(|| todo!())?;
 
-        write!(&mut self.writer, "{}", help)
+        writeln!(&mut self.writer, "{}", help)
             .map_err(|e| Error::raise(format!("Can not write to handler: {:?}", e)))
     }
 }
