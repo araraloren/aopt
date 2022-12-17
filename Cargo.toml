@@ -2,12 +2,8 @@
 
 members = [
     "aopt",
-    "aopt-macro",
     "snowball-follow",
     "aopt-help",
     "simple-find-file",
     "index-constituent"
 ]
-
-[patch.crates-io]
-aopt-macro = { path = "aopt-macro/"}
