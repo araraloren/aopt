@@ -1,306 +1,270 @@
-mod commit;
-mod delay_policy;
-mod forward_policy;
-mod pre_policy;
-mod service;
-mod state;
-#[allow(clippy::all)]
-pub(crate) mod testutil;
+pub(crate) mod commit;
+pub(crate) mod policy_delay;
+pub(crate) mod policy_fwd;
+pub(crate) mod policy_pre;
+pub(crate) mod process;
+pub(crate) mod returnval;
+pub(crate) mod style;
+
+pub use self::commit::ParserCommit;
+pub use self::policy_delay::DelayPolicy;
+pub use self::policy_fwd::FwdPolicy;
+pub use self::policy_pre::PrePolicy;
+pub use self::returnval::ReturnVal;
+pub use self::style::Guess;
+pub use self::style::GuessNOACfg;
+pub use self::style::GuessOptCfg;
+pub use self::style::NOAGuess;
+pub use self::style::OptGuess;
+pub use self::style::UserStyle;
+
+pub(crate) use self::process::invoke_callback_opt;
+pub(crate) use self::process::process_non_opt;
+pub(crate) use self::process::process_opt;
 
 use std::fmt::Debug;
-use std::ops::{Deref, DerefMut};
-use ustr::Ustr;
+use std::ops::Deref;
+use std::ops::DerefMut;
 
-use crate::arg::Argument;
-use crate::err::Result;
-use crate::gstr;
-use crate::opt::{OptCallback, OptValue};
-use crate::proc::{Info, Matcher};
-use crate::set::SimpleSet;
-use crate::set::{CreateInfo, Set};
-use crate::uid::Uid;
-
-pub use commit::CallbackCommit;
-pub use delay_policy::DelayPolicy;
-pub use forward_policy::ForwardPolicy;
-pub use pre_policy::PrePolicy;
-pub use service::CallbackStore;
-pub use service::SimpleService;
-pub use state::ParserState;
-
-pub type DefaultService = SimpleService<SimpleSet>;
-
-/// Default [`Parser`] that using [`ForwardPolicy`].
-pub type ForwardParser = Parser<SimpleSet, DefaultService, ForwardPolicy>;
-
-/// Default [`Parser`] that using [`PrePolicy`].
-pub type PreParser = Parser<SimpleSet, DefaultService, PrePolicy>;
-
-/// Default [`Parser`] that using [`DelayPolicy`].
-pub type DelayParser = Parser<SimpleSet, DefaultService, DelayPolicy>;
+use crate::args::Args;
+use crate::ctx::Ctx;
+use crate::ctx::Extract;
+use crate::ctx::Handler;
+use crate::ext::APolicyExt;
+use crate::ext::ServicesExt;
+use crate::opt::Config;
+use crate::opt::ConfigValue;
+use crate::opt::Information;
+use crate::opt::Opt;
+use crate::opt::OptParser;
+use crate::ser::invoke::HandlerEntry;
+use crate::ser::Services;
+use crate::set::Commit;
+use crate::set::Ctor;
+use crate::set::Filter;
+use crate::set::Pre;
+use crate::set::Set;
+use crate::set::SetCfg;
+use crate::set::SetOpt;
+use crate::Arc;
+use crate::Error;
+use crate::RawVal;
+use crate::Str;
+use crate::Uid;
 
 #[derive(Debug, Clone)]
-pub struct ValueKeeper {
-    pub id: Uid,
-    pub index: usize,
-    pub value: OptValue,
+pub struct CtxSaver {
+    /// option uid
+    pub uid: Uid,
+
+    /// Index of matcher
+    pub idx: usize,
+
+    /// invoke context
+    pub ctx: Ctx,
 }
 
 /// [`Policy`] doing real parsing work.
 ///
 /// # Example
 /// ```ignore
-/// #[derive(Debug)]
-/// pub struct EmptyPolicy;
 ///
-/// impl<S: Set, SS: Service<S>> Policy<S, SS> for EmptyPolicy {
-///     fn parse(
-///         &mut self,
-///         set: &mut S,
-///         service: &mut SS,
-///         iter: &mut dyn Iterator<Item = aopt::arg::Argument>,
-///     ) -> Result<bool> {
+/// #[derive(Debug)]
+/// pub struct EmptyPolicy<S>(PhantomData<S>);
+///
+/// // An empty policy do nothing.
+/// impl<S: Set> Policy for EmptyPolicy<S> {
+///     type Ret = bool;
+///
+///     type Set = S;
+///
+///     type Error = Error;
+///
+///     fn parse(&mut self, _: &mut S, _: &mut ASer, _: Arc<Args>) -> Result<Option<bool>, Error> {
 ///         // ... parsing logical code
-///         Ok(true)
+///         Ok(Some(true))
 ///     }
 /// }
 /// ```
-pub trait Policy<S: Set, SS: Service<S>>: Debug {
+pub trait Policy {
+    type Ret;
+    type Set: Set;
+    type Error: Into<Error>;
+
     fn parse(
         &mut self,
-        set: &mut S,
-        service: &mut SS,
-        iter: &mut dyn Iterator<Item = Argument>,
-    ) -> Result<bool>;
+        set: &mut Self::Set,
+        ser: &mut Services,
+        args: Arc<Args>,
+    ) -> Result<Option<Self::Ret>, Self::Error>;
 }
 
-/// [`Service`] provide common service using for [`Policy`].
-pub trait Service<S: Set> {
-    /// Generate M base on [`Argument`] and [`ParserState`].
-    fn gen_opt<M: Matcher + Default>(
-        &self,
-        arg: &Argument,
-        style: &ParserState,
-        arg_index: u64,
-    ) -> Result<Option<M>>;
+impl<S, R, E> Policy for Box<dyn Policy<Ret = R, Set = S, Error = E>>
+where
+    S: Set,
+    E: Into<Error>,
+{
+    type Ret = R;
 
-    /// Generate M base on position information of `NOA` and [`ParserState`].
-    fn gen_nonopt<M: Matcher + Default>(
-        &self,
-        noa: &Ustr,
-        total: usize,
-        current: usize,
-        style: &ParserState,
-    ) -> Result<Option<M>>;
+    type Set = S;
 
-    /// Matching the `matcher` with [`Opt`](crate::opt::Opt)s in `set`.
-    ///
-    /// The `invoke` should be false if caller don't want invoke callback when
-    /// [`Opt`](crate::opt::Opt) matched.
-    fn matching<M: Matcher + Default>(
+    type Error = E;
+
+    fn parse(
         &mut self,
-        matcher: &mut M,
-        set: &mut S,
-        invoke: bool,
-    ) -> Result<Vec<ValueKeeper>>;
-
-    /// Checking if the `set` data valid.
-    fn pre_check(&self, set: &S) -> Result<bool>;
-
-    /// Checking if the `set` data valid.
-    fn opt_check(&self, set: &S) -> Result<bool>;
-
-    /// Checking if the `set` data valid.
-    fn pos_check(&self, set: &S) -> Result<bool>;
-
-    /// Checking if the `set` data valid.
-    fn cmd_check(&self, set: &S) -> Result<bool>;
-
-    /// Checking if the `set` data valid.
-    fn post_check(&self, set: &S) -> Result<bool>;
-
-    /// Invoke callback connected with given [`Opt`](crate::opt::Opt).
-    fn invoke(
-        &mut self,
-        uid: Uid,
-        set: &mut S,
-        noa_idx: usize,
-        optvalue: OptValue,
-    ) -> Result<Option<OptValue>>;
-
-    /// Return the callback map reference.
-    fn get_callback(&self) -> &CallbackStore<S>;
-
-    /// Return the subscriber info vector reference.
-    fn get_subscriber_info<I: 'static + Info>(&self) -> &Vec<Box<dyn Info>>;
-
-    /// Return the NOA vector reference.
-    fn get_noa(&self) -> &Vec<Ustr>;
-
-    /// Return the callback map mutable reference.
-    fn get_callback_mut(&mut self) -> &mut CallbackStore<S>;
-
-    /// Return the subscriber info vector mutable reference.
-    fn get_subscriber_info_mut(&mut self) -> &mut Vec<Box<dyn Info>>;
-
-    /// Return the NOA vector mutable reference.
-    fn get_noa_mut(&mut self) -> &mut Vec<Ustr>;
-
-    /// Reset the [`Service`].
-    fn reset(&mut self);
+        set: &mut Self::Set,
+        ser: &mut Services,
+        args: Arc<Args>,
+    ) -> Result<Option<Self::Ret>, Self::Error> {
+        Policy::parse(self.as_mut(), set, ser, args)
+    }
 }
 
-/// Parser manage the [`Set`], [`Service`] and [`Policy`].
+/// Parser manage the [`Set`], [`Services`] and [`Policy`].
 ///
 /// # Example
 ///
 /// ```rust
-/// use aopt::err::Result;
-/// use aopt::prelude::*;
+/// # use aopt::getopt;
+/// # use aopt::prelude::*;
+/// # use aopt::Arc;
+/// # use aopt::Error;
+/// #
+/// # fn main() -> Result<(), Error> {
+/// let mut parser1 = Parser::new(AFwdPolicy::default());
 ///
-/// fn main() -> Result<()> {
-///     #[derive(Debug, Default)]
-///     pub struct EmptyPolicy(i64);
+/// parser1.add_opt("Where=c")?;
+/// parser1.add_opt("question=m")?.on(question)?;
 ///
-///     impl<S: Set, SS: Service<S>> Policy<S, SS> for EmptyPolicy {
-///         fn parse(
-///             &mut self,
-///             set: &mut S,
-///             service: &mut SS,
-///             iter: &mut dyn Iterator<Item = aopt::arg::Argument>,
-///         ) -> Result<bool> {
-///             println!("In parser policy {} with argument length = {}", self.0, iter.count());
-///             Ok(false)
-///         }
-///     }
+/// let mut parser2 = Parser::new(AFwdPolicy::default());
 ///
-///     let mut parser1 = Parser::<SimpleSet, DefaultService, EmptyPolicy>::default();
-///     let mut parser2 = Parser::<SimpleSet, DefaultService, EmptyPolicy>::new_policy(EmptyPolicy(42));
+/// parser2.add_opt("Who=c")?;
+/// parser2.add_opt("question=m")?.on(question)?;
 ///
-///     getopt!(
-///         ["Happy", "Chinese", "new", "year", "!"].into_iter(),
-///         parser1,
-///         parser2
-///     )?;
-///     Ok(())
+/// fn question(_: &mut ASet, _: &mut ASer, args: ctx::Args) -> Result<Option<()>, Error> {
+///     // Output: The question is: Where are you from ?
+///     println!(
+///         "The question is: {}",
+///         args.iter()
+///             .map(|v| v.get_str().unwrap().to_owned())
+///             .collect::<Vec<String>>()
+///             .join(" ")
+///     );
+///     Ok(Some(()))
 /// }
+///
+/// let ret = getopt!(
+///     ["Where", "are", "you", "from", "?"].into_iter(),
+///     &mut parser1,
+///     &mut parser2
+/// )?;
+///
+/// assert!(ret.is_some());
+/// assert_eq!(
+///     ret.unwrap()[0].name(),
+///     "Where",
+///     "Parser with `Where` cmd matched"
+/// );
+/// #
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// Using it with macro [`getopt`](crate::getopt),
 /// which can process multiple [`Parser`] with same type [`Policy`].
 #[derive(Debug)]
-pub struct Parser<S, SS, P>
-where
-    S: Set,
-    SS: Service<S>,
-    P: Policy<S, SS>,
-{
+pub struct Parser<P: Policy> {
     policy: P,
-    service: SS,
-    set: S,
+    optset: P::Set,
+    services: Services,
+    return_value: Option<P::Ret>,
 }
 
-impl<S, SS, P> Default for Parser<S, SS, P>
+impl<P: Policy> Default for Parser<P>
 where
-    S: Set + Default,
-    SS: Service<S> + Default,
-    P: Policy<S, SS> + Default,
+    P::Set: Default + Set,
+    P: Default + Policy + APolicyExt<P::Set>,
 {
     fn default() -> Self {
+        let policy = P::default();
+
         Self {
-            policy: P::default(),
-            service: SS::default(),
-            set: S::default(),
+            optset: policy.default_set(),
+            services: policy.default_ser(),
+            policy,
+            return_value: None,
         }
     }
 }
 
-impl<S, SS, P> Deref for Parser<S, SS, P>
-where
-    S: Set,
-    SS: Service<S>,
-    P: Policy<S, SS>,
-{
-    type Target = S;
+impl<P: Policy> Deref for Parser<P> {
+    type Target = P::Set;
 
     fn deref(&self) -> &Self::Target {
-        &self.set
+        &self.optset
     }
 }
 
-impl<S, SS, P> DerefMut for Parser<S, SS, P>
-where
-    S: Set,
-    SS: Service<S>,
-    P: Policy<S, SS>,
-{
+impl<P: Policy> DerefMut for Parser<P> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.set
+        &mut self.optset
     }
 }
 
-impl<S, SS, P> Parser<S, SS, P>
+impl<P> Parser<P>
 where
-    S: Set + Default,
-    SS: Service<S> + Default,
-    P: Policy<S, SS>,
+    P: Policy + APolicyExt<P::Set>,
 {
-    /// Initialize the [`Parser`] with specify [`Policy`] and the
-    /// default value of `S` and `SS`.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use aopt::err::Result;
-    /// use aopt::prelude::*;
-    ///
-    /// fn main() -> Result<()> {
-    ///     #[derive(Debug)]
-    ///     pub struct EmptyPolicy;
-    ///
-    ///     impl<S: Set, SS: Service<S>> Policy<S, SS> for EmptyPolicy {
-    ///         fn parse(
-    ///             &mut self,
-    ///             set: &mut S,
-    ///             service: &mut SS,
-    ///             iter: &mut dyn Iterator<Item = aopt::arg::Argument>,
-    ///         ) -> Result<bool> {
-    ///             todo!()
-    ///         }
-    ///     }
-    ///
-    ///     dbg!(Parser::<SimpleSet, DefaultService, EmptyPolicy>::new_policy(EmptyPolicy {}));
-    ///     Ok(())
-    /// }
-    /// ```
-    pub fn new_policy(policy: P) -> Self {
+    pub fn new(policy: P) -> Self {
+        let set = policy.default_set();
+        let services = policy.default_ser();
+
         Self {
-            set: S::default(),
-            service: SS::default(),
+            optset: set,
             policy,
+            services,
+            return_value: None,
         }
     }
 }
 
-impl<S, SS, P> Parser<S, SS, P>
+impl<P> Parser<P>
 where
-    S: Set,
-    SS: Service<S>,
-    P: Policy<S, SS>,
+    P: Policy + 'static,
 {
-    pub fn new(set: S, service: SS, policy: P) -> Self {
-        Self {
-            set,
-            service,
+    pub fn into_boxed(
+        self,
+    ) -> Parser<Box<dyn Policy<Ret = P::Ret, Set = P::Set, Error = P::Error>>> {
+        let policy: Box<dyn Policy<Ret = P::Ret, Set = P::Set, Error = P::Error>> =
+            Box::new(self.policy);
+
+        Parser {
+            optset: self.optset,
             policy,
+            services: self.services,
+            return_value: self.return_value,
+        }
+    }
+}
+
+impl<P> Parser<P>
+where
+    P: Policy<Error = Error>,
+{
+    pub fn new_with(policy: P, optset: P::Set, services: Services) -> Self {
+        Self {
+            optset,
+            policy,
+            services,
+            return_value: None,
         }
     }
 
-    pub fn get_policy(&self) -> &P {
+    pub fn policy(&self) -> &P {
         &self.policy
     }
 
-    pub fn get_policy_mut(&mut self) -> &mut P {
+    pub fn policy_mut(&mut self) -> &mut P {
         &mut self.policy
     }
 
@@ -309,311 +273,332 @@ where
         self
     }
 
-    pub fn get_service(&self) -> &SS {
-        &self.service
+    pub fn service(&self) -> &Services {
+        &self.services
     }
 
-    pub fn get_service_mut(&mut self) -> &mut SS {
-        &mut self.service
+    pub fn service_mut(&mut self) -> &mut Services {
+        &mut self.services
     }
 
-    pub fn set_service(&mut self, service: SS) -> &mut Self {
-        self.service = service;
+    pub fn set_service(&mut self, services: Services) -> &mut Self {
+        self.services = services;
         self
     }
 
-    pub fn get_set(&self) -> &S {
-        &self.set
+    pub fn optset(&self) -> &P::Set {
+        &self.optset
     }
 
-    pub fn get_set_mut(&mut self) -> &mut S {
-        &mut self.set
+    pub fn optset_mut(&mut self) -> &mut P::Set {
+        &mut self.optset
     }
 
-    pub fn set_set(&mut self, set: S) -> &mut Self {
-        self.set = set;
+    pub fn set_optset(&mut self, optset: P::Set) -> &mut Self {
+        self.optset = optset;
         self
     }
 
-    // extern the add_opt function, attach callback to option
-    pub fn add_opt_cb(
-        &mut self,
-        opt_str: &str,
-        callback: OptCallback<S>,
-    ) -> Result<CallbackCommit<'_, '_, S, SS>> {
-        let info = CreateInfo::parse(gstr(opt_str), self.get_prefix())?;
+    /// Reset the option set, and clear the [`ValService`](crate::ser::ValService`),
+    /// [`UsrValService`](crate::ser::UsrValService`), [`RawValService`](crate::ser::RawValService`).
+    pub fn clear_all(&mut self) -> Result<&mut Self, Error> {
+        self.optset.reset();
+        self.services.ser_val_mut()?.clear();
+        self.services.ser_usrval_mut()?.clear();
+        self.services.ser_rawval_mut::<RawVal>()?.clear();
+        Ok(self)
+    }
 
-        debug!(%opt_str, "create option has callback");
-        Ok(CallbackCommit::new(
-            &mut self.set,
-            &mut self.service,
-            info,
-            callback,
+    pub fn retval(&self) -> Option<&P::Ret> {
+        self.return_value.as_ref()
+    }
+
+    pub fn take_retval(&mut self) -> Option<P::Ret> {
+        self.return_value.take()
+    }
+
+    pub fn set_retval(&mut self, val: Option<P::Ret>) -> &mut Self {
+        self.return_value = val;
+        self
+    }
+
+    pub fn usrval<T: 'static>(&self) -> Result<&T, Error> {
+        self.services.ser_usrval()?.val::<T>()
+    }
+
+    pub fn usrval_mut<T: 'static>(&mut self) -> Result<&mut T, Error> {
+        self.services.ser_usrval_mut()?.val_mut::<T>()
+    }
+
+    /// Set the user value that can access in option handler.
+    ///
+    /// # Example 1
+    /// ```rust
+    /// # use aopt::getopt;
+    /// # use aopt::prelude::*;
+    /// # use aopt::Arc;
+    /// # use aopt::Error;
+    /// # use std::ops::Deref;
+    /// #
+    /// # fn main() -> Result<(), Error> {
+    /// struct Int(i64);
+    ///
+    /// let mut parser = Parser::new(AFwdPolicy::default());
+    ///
+    /// // Register a value can access in handler parameter.
+    /// parser.set_usrval(ser::Value::new(Int(42)))?;
+    /// parser.add_opt("--guess=i!")?.on(
+    ///   |_: &mut ASet, _: &mut ASer, mut val: ctx::Value<i64>, answer: ser::Value<Int>| {
+    ///       if &answer.0 == val.deref() {
+    ///           println!("Congratulation, you win!");
+    ///       } else if &answer.0 > val.deref() {
+    ///           println!("Oops, too bigger!")
+    ///       } else {
+    ///           println!("Oops, too little!")
+    ///       }
+    ///       Ok(Some(val.take()))
+    ///   },
+    /// )?;
+    ///
+    /// getopt!(["--guess", "42"].into_iter(), &mut parser)?;
+    /// #
+    /// # Ok(())
+    /// # }
+    ///```
+    ///
+    /// # Example 2
+    /// ```rust
+    /// # use aopt::getopt;
+    /// # use aopt::prelude::*;
+    /// # use aopt::Arc;
+    /// # use aopt::Error;
+    /// # use std::ops::Deref;
+    /// #
+    /// # fn main() -> Result<(), Error> {
+    /// struct Int(i64);
+    ///
+    /// let mut parser = Parser::new(AFwdPolicy::default());
+    ///
+    /// // Register a value can access in handler parameter.
+    /// parser.set_usrval(Int(42))?;
+    /// parser.add_opt("--guess=i!")?.on(
+    ///   |_: &mut ASet, ser: &mut ASer, mut val: ctx::Value<i64>| {
+    ///       let answer = ser.sve_usrval::<Int>()?;
+    ///
+    ///       if &answer.0 == val.deref() {
+    ///           println!("Congratulation, you win!");
+    ///       } else if &answer.0 > val.deref() {
+    ///           println!("Oops, too bigger!")
+    ///       } else {
+    ///           println!("Oops, too little!")
+    ///       }
+    ///       Ok(Some(val.take()))
+    ///   },
+    /// )?;
+    ///
+    /// getopt!(["--guess", "42"].into_iter(), &mut parser)?;
+    /// #
+    /// # Ok(())
+    /// # }
+    ///```
+    pub fn set_usrval<T: 'static>(&mut self, val: T) -> Result<Option<T>, Error> {
+        Ok(self.services.ser_usrval_mut()?.insert(val))
+    }
+
+    pub fn val<T: 'static>(&self, uid: Uid) -> Result<&T, Error> {
+        self.services.ser_val()?.val::<T>(uid)
+    }
+
+    pub fn val_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut T, Error> {
+        self.services.ser_val_mut()?.val_mut::<T>(uid)
+    }
+
+    pub fn vals<T: 'static>(&self, uid: Uid) -> Result<&Vec<T>, Error> {
+        self.services.ser_val()?.vals::<T>(uid)
+    }
+
+    pub fn vals_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error> {
+        self.services.ser_val_mut()?.vals_mut::<T>(uid)
+    }
+
+    pub fn rawval(&self, uid: Uid) -> Result<&RawVal, Error> {
+        self.services.ser_rawval()?.val(uid)
+    }
+
+    pub fn rawval_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut RawVal, Error> {
+        self.services.ser_rawval_mut()?.val_mut(uid)
+    }
+
+    pub fn rawvals<T: 'static>(&self, uid: Uid) -> Result<&Vec<RawVal>, Error> {
+        self.services.ser_rawval()?.vals(uid)
+    }
+
+    pub fn rawvals_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut Vec<RawVal>, Error> {
+        self.services.ser_rawval_mut()?.vals_mut(uid)
+    }
+}
+
+impl<P> Parser<P>
+where
+    P: Policy<Error = Error>,
+{
+    pub fn parse(&mut self, args: Arc<Args>) -> Result<Option<()>, P::Error> {
+        let optset = &mut self.optset;
+        let services = &mut self.services;
+        let ret = self.policy.parse(optset, services, args)?;
+        let parser_ret = ret.as_ref().map(|_| ());
+
+        self.return_value = ret;
+        Ok(parser_ret)
+    }
+}
+
+impl<P> Parser<P>
+where
+    P::Set: 'static,
+    P: Policy<Error = Error>,
+    SetOpt<P::Set>: Opt,
+    P::Set: Pre + Set + OptParser,
+    <P::Set as OptParser>::Output: Information,
+    SetCfg<P::Set>: Config + ConfigValue + Default,
+{
+    /// Add an option to the [`Set`](Policy::Set), return a [`ParserCommit`].
+    ///
+    /// Then you can modify the option configurations through the api of [`ParserCommit`].
+    /// Also you can call the function [`on`](crate::parser::ParserCommit::on),
+    /// register option handler which will called when option set by user.
+    /// # Example
+    ///
+    ///```rust
+    /// # use aopt::getopt;
+    /// # use aopt::prelude::*;
+    /// # use aopt::Arc;
+    /// # use aopt::Error;
+    /// # use aopt::RawVal;
+    /// # use std::ops::Deref;
+    /// #
+    /// # fn main() -> Result<(), Error> {
+    /// let mut parser1 = Parser::new(AFwdPolicy::default());
+    ///
+    /// // Add an option `--count` with type `i`.
+    /// parser1.add_opt("--count=i")?;
+    /// // Add an option `--len` with type `u`, and get its unique id.
+    /// let _len_id = parser1.add_opt("--len=u")?.run()?;
+    ///
+    /// // Add an option `--size` with type `u`, it has an alias `-s`.
+    /// parser1.add_opt("--size=u")?.add_alias("-s");
+    ///
+    /// // Add an option `--path` with type `s`.
+    /// // Set its value action to `Action::Set`.
+    /// // The handler which add by `on` will called when option set.
+    /// parser1
+    ///     .add_opt("--path=s")?
+    ///     .set_action(Action::Set)
+    ///     .on(|_: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>| Ok(Some(val.take())))?;
+    ///
+    /// fn file_count_storer(
+    ///     uid: Uid,
+    ///     _: &mut ASet,
+    ///     ser: &mut ASer,
+    ///     _: Option<&RawVal>,
+    ///     val: Option<bool>,
+    /// ) -> Result<Option<()>, Error> {
+    ///     let values = ser.ser_val_mut()?.entry::<u64>(uid).or_insert(vec![0]);
+    ///
+    ///     if let Some(is_file) = val {
+    ///         if is_file {
+    ///             values[0] += 1;
+    ///             return Ok(Some(()));
+    ///         }
+    ///     }
+    ///     Ok(None)
+    /// }
+    /// // Add an NOA `file` with type `p`.
+    /// // The handler which add by `on` will called when option set.
+    /// // The store will called by `InvokeService` when storing option value.
+    /// parser1
+    ///     .add_opt("file=p@2..")?
+    ///     .on(|_: &mut ASet, _: &mut ASer, val: ctx::Value<String>| {
+    ///         let path = val.deref();
+    ///
+    ///         if let Ok(meta) = std::fs::metadata(path) {
+    ///             if meta.is_file() {
+    ///                 println!("Got a file {:?}", path);
+    ///                 return Ok(Some(true));
+    ///             }
+    ///         }
+    ///         Ok(Some(false))
+    ///     })?
+    ///     .then(file_count_storer);
+    ///
+    /// getopt!(["foo", "bar"].into_iter(), &mut parser1)?;
+    ///
+    /// dbg!(parser1.find_val::<u64>("file=p")?);
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn add_opt<T: Into<Str>>(&mut self, opt: T) -> Result<ParserCommit<'_, P::Set>, Error> {
+        let info =
+            <<<P::Set as Set>::Ctor as Ctor>::Config as Config>::new(&self.optset, opt.into())?;
+
+        Ok(ParserCommit::new(
+            Commit::new(&mut self.optset, info),
+            self.services.ser_invoke_mut()?,
         ))
     }
 
-    pub fn add_callback(&mut self, uid: Uid, callback: OptCallback<S>) {
-        self.get_service_mut()
-            .get_callback_mut()
-            .add_callback(uid, callback);
+    pub fn entry<A, O, H>(&mut self, uid: Uid) -> Result<HandlerEntry<'_, P::Set, H, A, O>, Error>
+    where
+        O: 'static,
+        H: Handler<P::Set, A, Output = Option<O>, Error = Error> + 'static,
+        A: Extract<P::Set, Error = Error> + 'static,
+    {
+        Ok(HandlerEntry::new(self.services.ser_invoke_mut()?, uid))
+    }
+}
+
+impl<P> Parser<P>
+where
+    P: Policy<Error = Error>,
+    P::Set: Pre + Set + OptParser,
+    <P::Set as OptParser>::Output: Information,
+    SetCfg<P::Set>: Config + ConfigValue + Default,
+{
+    pub(crate) fn filter_optstr(&self, opt: Str) -> Result<Uid, Error> {
+        let filter = Filter::new(
+            &self.optset,
+            SetCfg::<P::Set>::new(&self.optset, opt.clone())?,
+        );
+        filter.find().map(|v| v.uid()).ok_or_else(|| {
+            Error::raise_error(format!(
+                "Can not find option: invalid option string {}",
+                opt
+            ))
+        })
     }
 
-    pub fn parse(&mut self, iter: &mut dyn Iterator<Item = Argument>) -> Result<bool> {
-        let service = &mut self.service;
-        let policy = &mut self.policy;
-        let set = &mut self.set;
-
-        policy.parse(set, service, iter)
+    pub fn find_val<T: 'static>(&self, opt: &str) -> Result<&T, Error> {
+        self.val(self.filter_optstr(opt.into())?)
     }
 
-    pub fn reset(&mut self) {
-        self.service.reset();
-        self.set.reset();
+    pub fn find_val_mut<T: 'static>(&mut self, opt: &str) -> Result<&mut T, Error> {
+        self.val_mut(self.filter_optstr(opt.into())?)
+    }
+
+    pub fn find_vals<T: 'static>(&self, opt: &str) -> Result<&Vec<T>, Error> {
+        self.vals(self.filter_optstr(opt.into())?)
+    }
+
+    pub fn find_vals_mut<T: 'static>(&mut self, opt: &str) -> Result<&mut Vec<T>, Error> {
+        self.vals_mut(self.filter_optstr(opt.into())?)
     }
 }
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "sync")] {
-        unsafe impl<S, SS, P> Send for Parser<S, SS, P>
-            where S: Set, SS: Service<S>, P: Policy<S, SS> { }
+        unsafe impl<P: Policy> Send for Parser<P> { }
 
-        unsafe impl<S, SS, P> Sync for Parser<S, SS, P>
-            where S: Set, SS: Service<S>, P: Policy<S, SS> { }
-    }
-}
-
-/// DynParser manage the [`Set`], [`Service`] and [`Policy`].
-///
-/// # Example
-///
-/// ```no_run
-/// use aopt::err::Result;
-/// use aopt::prelude::*;
-///
-/// fn main() -> Result<()> {
-///     #[derive(Debug, Default)]
-///     pub struct EmptyPolicy;
-///
-///     impl<S: Set, SS: Service<S>> Policy<S, SS> for EmptyPolicy {
-///         fn parse(
-///             &mut self,
-///             set: &mut S,
-///             service: &mut SS,
-///             iter: &mut dyn Iterator<Item = aopt::arg::Argument>,
-///         ) -> Result<bool> {
-///             dbg!(set);
-///             Ok(false)
-///         }
-///     }
-///
-///     #[derive(Debug, Default)]
-///     pub struct ConsumeIterPolicy;
-///
-///     impl<S: Set, SS: Service<S>> Policy<S, SS> for ConsumeIterPolicy {
-///         fn parse(
-///             &mut self,
-///             set: &mut S,
-///             service: &mut SS,
-///             iter: &mut dyn Iterator<Item = aopt::arg::Argument>,
-///         ) -> Result<bool> {
-///             for item in iter {
-///                 dbg!(item);
-///             }
-///             Ok(true)
-///         }
-///     }
-///
-///     let mut parser1 = DynParser::<SimpleSet, DefaultService>::new_policy(EmptyPolicy::default());
-///
-///     let mut parser2 =
-///         DynParser::<SimpleSet, DefaultService>::new_policy(ConsumeIterPolicy::default());
-///
-///     getoptd!(
-///         ["Happy", "Chinese", "new", "year", "!"].into_iter(),
-///         parser1,
-///         parser2
-///     )?;
-///     Ok(())
-/// }
-/// ```
-///
-/// Using it with macro [`getoptd`](crate::getoptd),
-/// which can process multiple [`Parser`] with different type [`Policy`].
-pub struct DynParser<S, SS>
-where
-    S: Set,
-    SS: Service<S>,
-{
-    policy: Box<dyn Policy<S, SS>>,
-    service: SS,
-    set: S,
-}
-
-impl<S, SS> Deref for DynParser<S, SS>
-where
-    S: Set,
-    SS: Service<S>,
-{
-    type Target = S;
-
-    fn deref(&self) -> &Self::Target {
-        &self.set
-    }
-}
-
-impl<S, SS> DerefMut for DynParser<S, SS>
-where
-    S: Set,
-    SS: Service<S>,
-{
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.set
-    }
-}
-
-impl<S, SS> DynParser<S, SS>
-where
-    S: Set + Default,
-    SS: Service<S> + Default,
-{
-    pub fn new_policy<P: Policy<S, SS> + 'static>(policy: P) -> Self {
-        Self {
-            set: S::default(),
-            service: SS::default(),
-            policy: Box::new(policy),
-        }
-    }
-}
-
-impl<S, SS> DynParser<S, SS>
-where
-    S: Set,
-    SS: Service<S>,
-{
-    pub fn new<P: Policy<S, SS> + 'static>(set: S, service: SS, policy: P) -> Self {
-        Self {
-            set,
-            service,
-            policy: Box::new(policy),
-        }
-    }
-
-    pub fn get_policy(&self) -> &dyn Policy<S, SS> {
-        self.policy.as_ref()
-    }
-
-    pub fn get_policy_mut(&mut self) -> &mut dyn Policy<S, SS> {
-        self.policy.as_mut()
-    }
-
-    pub fn set_policy<P: Policy<S, SS> + 'static>(&mut self, policy: P) -> &mut Self {
-        self.policy = Box::new(policy);
-        self
-    }
-
-    pub fn get_service(&self) -> &SS {
-        &self.service
-    }
-
-    pub fn get_service_mut(&mut self) -> &mut SS {
-        &mut self.service
-    }
-
-    pub fn set_service(&mut self, service: SS) -> &mut Self {
-        self.service = service;
-        self
-    }
-
-    pub fn get_set(&self) -> &S {
-        &self.set
-    }
-
-    pub fn get_set_mut(&mut self) -> &mut S {
-        &mut self.set
-    }
-
-    pub fn set_set(&mut self, set: S) -> &mut Self {
-        self.set = set;
-        self
-    }
-
-    // extern the add_opt function, attach callback to option
-    pub fn add_opt_cb(
-        &mut self,
-        opt_str: &str,
-        callback: OptCallback<S>,
-    ) -> Result<CallbackCommit<'_, '_, S, SS>> {
-        let info = CreateInfo::parse(gstr(opt_str), self.get_prefix())?;
-
-        debug!(%opt_str, "create option has callback");
-        Ok(CallbackCommit::new(
-            &mut self.set,
-            &mut self.service,
-            info,
-            callback,
-        ))
-    }
-
-    pub fn add_callback(&mut self, uid: Uid, callback: OptCallback<S>) {
-        self.get_service_mut()
-            .get_callback_mut()
-            .add_callback(uid, callback);
-    }
-
-    pub fn parse(&mut self, iter: &mut dyn Iterator<Item = Argument>) -> Result<bool> {
-        let service = &mut self.service;
-        let policy = &mut self.policy;
-        let set = &mut self.set;
-
-        policy.parse(set, service, iter)
-    }
-
-    pub fn reset(&mut self) {
-        self.service.reset();
-        self.set.reset();
-    }
-}
-
-impl<S, SS, P> From<Parser<S, SS, P>> for DynParser<S, SS>
-where
-    S: Set + Default,
-    SS: Service<S> + Default,
-    P: Policy<S, SS> + Default + 'static,
-{
-    fn from(mut parser: Parser<S, SS, P>) -> Self {
-        use std::mem::take;
-
-        let set = take(parser.get_set_mut());
-        let service = take(parser.get_service_mut());
-        let policy = take(parser.get_policy_mut());
-
-        DynParser::new(set, service, policy)
-    }
-}
-
-impl<'a, S, SS, P> From<&'a mut Parser<S, SS, P>> for DynParser<S, SS>
-where
-    S: Set + Default,
-    SS: Service<S> + Default,
-    P: Policy<S, SS> + Default + 'static,
-{
-    fn from(parser: &'a mut Parser<S, SS, P>) -> Self {
-        use std::mem::take;
-
-        let set = take(parser.get_set_mut());
-        let service = take(parser.get_service_mut());
-        let policy = take(parser.get_policy_mut());
-
-        DynParser::new(set, service, policy)
-    }
-}
-
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        unsafe impl<S, SS> Send for DynParser<S, SS>
-            where S: Set, SS: Service<S> { }
-
-        unsafe impl<S, SS> Sync for DynParser<S, SS>
-            where S: Set, SS: Service<S> { }
+        unsafe impl<P: Policy> Sync for Parser<P> { }
     }
 }

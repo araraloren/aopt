@@ -1,6 +1,10 @@
 
 # Relase note
 
+## 0.7.0
+
+- refactor whole project
+
 ## 0.6.7
 
 - fix the noa process issue

@@ -1,74 +1,78 @@
-mod nonopt;
-mod opt;
+pub(crate) mod noa;
+pub(crate) mod opt;
 
-use std::fmt::Debug;
+pub use self::noa::NOAMatch;
+pub use self::noa::NOAProcess;
+pub use self::opt::OptMatch;
+pub use self::opt::OptProcess;
 
-use crate::ctx::Context;
-use crate::err::Result;
 use crate::opt::Style;
-use crate::parser::ValueKeeper;
+use crate::set::Ctor;
 use crate::set::Set;
-use crate::uid::Uid;
+use crate::Error;
+use crate::RawVal;
+use crate::Uid;
 
-pub use nonopt::NonOptMatcher;
-pub use opt::OptMatcher;
+/// [`Match`] match the configuration with [`Opt`](crate::opt::Opt).
+pub trait Match {
+    type Set: Set;
+    type Error: Into<Error>;
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        pub trait Info: Debug + Send + Sync {
-            fn info_uid(&self) -> Uid;
-        }
-    }
-    else {
-        pub trait Info: Debug {
-            fn info_uid(&self) -> Uid;
-        }
-    }
-}
-
-/// Trait using for process [`Matcher`].
-pub trait Proc<S: Set, M: Matcher>: Debug {
-    fn process(&mut self, matcher: &mut M, set: &mut S, invoke: bool) -> Result<Vec<ValueKeeper>>;
-}
-
-/// Trait using for hold [`Context`], and matched with [`Opt`](crate::opt::Opt) in [`Set`].
-pub trait Matcher: Debug {
-    fn get_uid(&self) -> Uid;
-
-    /// Add [`Context`] to current [`Matcher`].
-    fn add_ctx(&mut self, ctx: Box<dyn Context>);
-
-    /// Get [`Context`] reference with index.
-    fn get_ctx(&self, index: usize) -> Option<&Box<dyn Context>>;
-
-    /// Get mutable [`Context`] reference with index.
-    fn get_ctx_mut(&mut self, index: usize) -> Option<&mut Box<dyn Context>>;
-
-    /// Get [`Style`] current [`Matcher] support.
-    fn get_style(&self) -> Style;
-
-    /// Matching specify [`Opt`](crate::opt::Opt) with current [`Matcher`].
-    ///
-    /// # Return
-    ///
-    /// Return the [`Context`] that matched successful. Or return [`None`] if not matched.
-    fn process<S: Set>(&mut self, uid: Uid, set: &mut S) -> Result<Option<&mut Box<dyn Context>>>;
-
-    /// Revert the change applied by [`process`](Matcher::process).
-    fn undo<S: Set>(&mut self, set: &mut S);
-
-    /// If all the [`Context`] matched.
-    fn is_matched(&self) -> bool;
-
-    /// Return True if the [`Matcher`] consumed command line argument.
-    fn is_comsume_argument(&self) -> bool;
-
-    /// Return True if we can quit midway from matching.
-    fn quit(&self) -> bool;
-
-    /// Reset the [`Matcher`].
     fn reset(&mut self);
 
-    /// Return the count of [`Context`] in current [`Matcher`].
-    fn len(&self) -> usize;
+    /// Return true if the [`Match`] matched.
+    fn is_mat(&self) -> bool;
+
+    /// Return the matched option `Uid`.
+    fn mat_uid(&self) -> Option<Uid>;
+
+    fn set_uid(&mut self, uid: Uid);
+
+    /// Return the [`Style`] of option.
+    fn style(&self) -> Style;
+
+    /// Return the raw value.
+    fn arg(&self) -> Option<&RawVal>;
+
+    /// Return true if the option need cosume a argument.
+    fn consume(&self) -> bool;
+
+    fn undo(
+        &mut self,
+        opt: &mut <<Self::Set as Set>::Ctor as Ctor>::Opt,
+    ) -> Result<(), Self::Error>;
+
+    fn process(
+        &mut self,
+        opt: &mut <<Self::Set as Set>::Ctor as Ctor>::Opt,
+    ) -> Result<bool, Self::Error>;
+}
+
+/// [`Process`] matching the [`Opt`](crate::set::Ctor::Opt) with [`Match`], and return the first matched
+/// [`Match`] if successful.
+pub trait Process<M: Match> {
+    type Set: Set;
+    type Error: Into<Error>;
+
+    fn reset(&mut self);
+
+    fn quit(&self) -> bool;
+
+    fn count(&self) -> usize;
+
+    fn sty(&self) -> Style;
+
+    fn is_mat(&self) -> bool;
+
+    fn consume(&self) -> bool;
+
+    fn add_mat(&mut self, mat: M) -> &mut Self;
+
+    fn mat(&self, index: usize) -> Option<&M>;
+
+    fn mat_mut(&mut self, index: usize) -> Option<&mut M>;
+
+    fn undo(&mut self, set: &mut Self::Set) -> Result<(), Self::Error>;
+
+    fn process(&mut self, uid: Uid, set: &mut Self::Set) -> Result<Option<usize>, Self::Error>;
 }

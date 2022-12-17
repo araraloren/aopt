@@ -1,13 +1,11 @@
-use ustr::Ustr;
+use regex::Regex;
 
-use super::index::Index;
+use super::{ConstrctInfo, OptParser};
+use crate::set::Pre;
+use crate::Error;
+use crate::Str;
 
-use crate::err::Error;
-use crate::err::Result;
-use crate::pat::ParseIndex;
-use crate::pat::ParserPattern;
-
-/// Parse the option string with given prefixs, return an [`DataKeeper`].
+/// Parse the option string with given prefixs, return an [`ConstrctInfo`].
 ///
 /// The struct of the option string are:
 ///
@@ -41,16 +39,17 @@ use crate::pat::ParserPattern;
 /// # Example
 ///
 /// ```rust
-/// use aopt::gstr;
-/// use aopt::err::Result;
-/// use aopt::opt::parse_option_str;
+/// # use aopt::prelude::*;
+/// # use aopt::astr;
+/// # use aopt::Error;
+/// #
+/// # fn main() -> Result<(), Error> {
+///     let parser = StrParser::default().with_pre("--");
+///     let ret = parser.parse("--aopt=t!/".into())?;
 ///
-/// fn main() -> Result<()> {
-///     let ret = parse_option_str("--aopt=t!/".into(), &[gstr("--")])?;
-///
-///     assert_eq!(ret.prefix, Some(gstr("--")));
-///     assert_eq!(ret.name , Some(gstr("aopt")));
-///     assert_eq!(ret.type_name, Some(gstr("t")));
+///     assert_eq!(ret.prefix, Some(astr("--")));
+///     assert_eq!(ret.name , Some(astr("aopt")));
+///     assert_eq!(ret.type_name, Some(astr("t")));
 ///     assert_eq!(ret.deactivate, Some(true));
 ///     assert_eq!(ret.optional, Some(true));
 ///     assert_eq!(ret.forward_index, None);
@@ -58,456 +57,317 @@ use crate::pat::ParserPattern;
 ///     assert_eq!(ret.anywhere, None);
 ///     assert_eq!(ret.list, []);
 ///     assert_eq!(ret.except, []);
-///     assert_eq!(ret.greater, None);
-///     assert_eq!(ret.less, None);
+///     assert_eq!(ret.range, None);
 ///
-///     let ret = parse_option_str("bopt=t@[1,2,3]".into(), &[gstr("--")])?;
+///     let ret = parser.parse("bopt=t@[1,2,3]".into())?;
 ///
 ///     assert_eq!(ret.prefix, None);
-///     assert_eq!(ret.name , Some(gstr("bopt")));
-///     assert_eq!(ret.type_name, Some(gstr("t")));
+///     assert_eq!(ret.name , Some(astr("bopt")));
+///     assert_eq!(ret.type_name, Some(astr("t")));
 ///     assert_eq!(ret.deactivate, None);
 ///     assert_eq!(ret.optional, None);
 ///     assert_eq!(ret.forward_index, None);
 ///     assert_eq!(ret.backward_index, None);
 ///     assert_eq!(ret.anywhere, None);
-///     assert_eq!(ret.list, [1, 2, 3]);
+///     assert_eq!(ret.list, []);
 ///     assert_eq!(ret.except, []);
-///     assert_eq!(ret.greater, None);
-///     assert_eq!(ret.less, None);
+///     assert_eq!(ret.range, None);
+///     assert_eq!(ret.idx(), Some(&Index::list(vec![1, 2, 3])));
 ///
-///     Ok(())
-/// }
+/// #   Ok(())
+/// # }
 /// ```
 ///
-/// For more examples, please reference test case [`test_option_str_parser`](../../src/aopt/opt/parser.rs.html#542).
+/// For more examples, please reference test case [`test_option_str_parser`](../../src/aopt/set/parser.rs.html#542).
 ///
-pub fn parse_option_str(pattern: Ustr, prefix: &[Ustr]) -> Result<DataKeeper> {
-    let pattern = ParserPattern::new(pattern, prefix);
-    let mut index = ParseIndex::new(pattern.len());
-    let mut data_keeper = DataKeeper::default();
-
-    let res = State::default().parse(&mut index, &pattern, &mut data_keeper)?;
-
-    if res {
-        trace!(
-            ?pattern,
-            ?prefix,
-            ?data_keeper,
-            "parsing option string successed"
-        );
-        // don't check anything
-        return Ok(data_keeper);
-    }
-    trace!(
-        ?pattern,
-        ?prefix,
-        ?data_keeper,
-        "parsing option string failed"
-    );
-    Err(Error::opt_parsing_constructor_failed(pattern.get_pattern()))
+#[derive(Debug)]
+pub struct StrParser {
+    regex: Regex,
+    prefix: Vec<Str>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum State {
-    PreCheck,
-    Prefix,
-    Name,
-    Equal,
-    Type,
-    Deactivate,
-    Optional,
-    Index,
-    FowradIndex,
-    BackwardIndex,
-    List,
-    Except,
-    AnyWhere,
-    Greater,
-    Less,
-    End,
-}
-
-#[derive(Debug, Default)]
-pub struct DataKeeper {
-    pub pattern: Ustr,
-
-    pub prefix: Option<Ustr>,
-
-    pub name: Option<Ustr>,
-
-    pub type_name: Option<Ustr>,
-
-    pub deactivate: Option<bool>,
-
-    pub optional: Option<bool>,
-
-    pub forward_index: Option<u64>,
-
-    pub backward_index: Option<u64>,
-
-    pub anywhere: Option<bool>,
-
-    pub list: Vec<u64>,
-
-    pub except: Vec<u64>,
-
-    pub greater: Option<u64>,
-
-    pub less: Option<u64>,
-}
-
-impl DataKeeper {
-    pub fn gen_index(&mut self) -> Index {
-        if self.forward_index.is_some() {
-            Index::forward(self.forward_index.unwrap())
-        } else if self.backward_index.is_some() {
-            Index::backward(self.backward_index.unwrap())
-        } else if self.anywhere.unwrap_or(false) {
-            Index::anywhere()
-        } else if !self.list.is_empty() {
-            Index::list(std::mem::take(&mut self.list))
-        } else if !self.except.is_empty() {
-            Index::except(std::mem::take(&mut self.except))
-        } else if self.greater.is_some() {
-            Index::greater(self.greater.unwrap())
-        } else if self.less.is_some() {
-            Index::less(self.less.unwrap())
-        } else {
-            Index::default()
-        }
-    }
-
-    pub fn has_index(&mut self) -> bool {
-        self.forward_index.is_some()
-            || self.backward_index.is_some()
-            || self.anywhere.is_some()
-            || !self.list.is_empty()
-            || !self.except.is_empty()
-            || self.greater.is_some()
-            || self.less.is_some()
-    }
-}
-
-impl Default for State {
+impl Default for StrParser {
     fn default() -> Self {
-        Self::PreCheck
+        let regex = Regex::new(r"^([^=]+)?(=([^=/!@]+))?([!/])?([!/])?(@(?:([+-])?(\d+)|(\d+)?(..)(\d+)?|([+-])?(\[(?:\s*\d+,?\s*)+\])|(\*)))?$").unwrap();
+        Self::new(regex)
     }
 }
 
-const NAME_VALUE_SPLIT: char = '=';
-
-impl State {
-    pub fn anywhere_symbol() -> &'static str {
-        "*"
+impl Pre for StrParser {
+    fn prefix(&self) -> &[Str] {
+        &self.prefix
     }
 
-    pub fn self_transition<'pre>(&mut self, index: &ParseIndex, pattern: &ParserPattern<'pre>) {
-        let index_not_end = pattern.len() > index.get();
-        let next_state = match self.clone() {
-            Self::PreCheck => Self::Prefix,
-            Self::Prefix => {
-                if index_not_end {
-                    Self::Name
-                } else {
-                    Self::End
-                }
-            }
-            Self::Name => {
-                if index_not_end {
-                    if pattern.starts(NAME_VALUE_SPLIT, index.get()) {
-                        Self::Equal
-                    } else {
-                        Self::Type
-                    }
-                } else {
-                    Self::End
-                }
-            }
-            Self::Equal => Self::Type,
-            Self::Type | Self::Deactivate | Self::Optional => {
-                if let Some(ch) = pattern.get_chars(index.get()).get(0) {
-                    match ch {
-                        '!' => Self::Optional,
-                        '/' => Self::Deactivate,
-                        '@' => Self::Index,
-                        _ => Self::End,
-                    }
-                } else {
-                    Self::End
-                }
-            }
-            Self::Index => {
-                let (_, index_part) = pattern.get_pattern().split_at(index.get());
+    fn add_prefix<S: Into<Str>>(&mut self, prefix: S) -> &mut Self {
+        self.prefix.push(prefix.into());
+        self.prefix.sort_by_key(|b| std::cmp::Reverse(b.len()));
+        self
+    }
+}
 
-                if index_part.starts_with("+[") || index_part.starts_with('[') {
-                    Self::List
-                } else if index_part.starts_with("-[") {
-                    Self::Except
-                } else if index_part.starts_with('-') {
-                    Self::BackwardIndex
-                } else if index_part == Self::anywhere_symbol() {
-                    Self::AnyWhere
-                } else if index_part.starts_with('>') {
-                    Self::Greater
-                } else if index_part.starts_with('<') {
-                    Self::Less
-                } else {
-                    Self::FowradIndex
-                }
-            }
-            Self::FowradIndex
-            | Self::BackwardIndex
-            | Self::List
-            | Self::Except
-            | Self::AnyWhere
-            | Self::Greater
-            | Self::Less => Self::End,
-            Self::End => {
-                unreachable!("The end state can't going on!");
-            }
-        };
-        trace!("transition state from '{:?}' to '{:?}'", self, next_state);
-        *self = next_state;
+impl StrParser {
+    pub fn new(regex: Regex) -> Self {
+        Self {
+            regex,
+            prefix: vec![],
+        }
     }
 
-    pub fn parse<'pre>(
-        mut self,
-        index: &mut ParseIndex,
-        pattern: &ParserPattern<'pre>,
-        data_keeper: &mut DataKeeper,
-    ) -> Result<bool> {
-        let current_state = self.clone();
+    pub fn with_pre(mut self, prefix: &str) -> Self {
+        self.add_prefix(prefix);
+        self
+    }
 
-        match current_state {
-            Self::PreCheck => {
-                if pattern.get_pattern().is_empty() {
-                    warn!("got an empty pattern");
-                    return Ok(false);
-                }
-                data_keeper.pattern = pattern.clone_pattern();
-            }
-            Self::Prefix => {
-                if let Some(prefix) = pattern.get_prefix() {
-                    data_keeper.prefix = Some(*prefix);
-                    index.inc(prefix.chars().count());
-                }
-            }
-            Self::Name => {
-                let start = index.get();
+    pub fn regex(&self) -> &Regex {
+        &self.regex
+    }
 
-                for (cur, ch) in pattern.get_chars(start).iter().enumerate() {
-                    let mut name_end = 0;
-
-                    if *ch == '=' || *ch == '!' || *ch == '/' || *ch == '@' {
-                        if cur >= 1 {
-                            name_end = start + cur;
-                        } else if cur == 0 {
-                            // current is '='
-                            break;
-                        }
-                    } else if start + cur + 1 == index.len() {
-                        name_end = start + cur + 1;
-                    }
-                    if name_end > 0 {
-                        let name = pattern.get_substr(start, name_end);
-
-                        debug!("get name from '{:?}': '{}'", pattern, name);
-                        data_keeper.name = Some(name);
-                        index.set(name_end);
-                        break;
-                    }
-                }
-            }
-            Self::Equal => {
-                index.inc(1);
-            }
-            Self::Type => {
-                let start = index.get();
-
-                for (cur, ch) in pattern.get_chars(start).iter().enumerate() {
-                    let mut type_end = 0;
-
-                    if *ch == '!' || *ch == '/' || *ch == '@' {
-                        if cur >= 1 {
-                            type_end = start + cur;
-                        } else if cur == 0 {
-                            // current is '='
-                            break;
-                        }
-                    } else if start + cur + 1 == index.len() {
-                        type_end = start + cur + 1;
-                    }
-                    if type_end > 0 {
-                        let type_ = pattern.get_substr(start, type_end);
-
-                        debug!("get type name from {:?}: {}", pattern, type_);
-                        data_keeper.type_name = Some(type_);
-                        index.set(type_end);
-                        break;
-                    }
-                }
-            }
-            Self::Deactivate => {
-                data_keeper.deactivate = Some(true);
-                index.inc(1);
-            }
-            Self::Optional => {
-                data_keeper.optional = Some(true);
-                index.inc(1);
-            }
-            Self::Index => {
-                index.inc(1);
-            }
-            Self::FowradIndex => {
-                let index_part = pattern.get_chars(index.get());
-                let ret = Self::parse_as_u64(pattern, index_part)?;
-
-                if ret > 0 {
-                    data_keeper.forward_index = Some(ret);
-                } else {
-                    data_keeper.anywhere = Some(true);
-                }
-                index.set(index.len());
-            }
-            Self::BackwardIndex => {
-                let index_part = pattern.get_chars(index.get() + 1);
-                let ret = Self::parse_as_u64(pattern, index_part)?;
-
-                if ret > 0 {
-                    data_keeper.backward_index = Some(ret);
-                } else {
-                    data_keeper.anywhere = Some(true);
-                }
-                index.set(index.len());
-            }
-            Self::List => {
-                let index_part = pattern.get_chars(index.get());
-                let mut start_index = index.get() + 1;
-
-                if index_part[0] == '+' {
-                    start_index += 1;
-                }
-                data_keeper.list = Self::parse_as_u64_sequence(
-                    pattern,
-                    pattern.get_subchars(start_index, index.len()),
-                )?;
-                index.set(index.len());
-            }
-            Self::Except => {
-                data_keeper.except = Self::parse_as_u64_sequence(
-                    pattern,
-                    pattern.get_subchars(index.get() + 2, index.len()),
-                )?;
-                index.set(index.len());
-            }
-            Self::AnyWhere => {
-                data_keeper.anywhere = Some(true);
-                index.set(index.len());
-            }
-            Self::Greater => {
-                let index_part = pattern.get_chars(index.get() + 1);
-                let ret = Self::parse_as_u64(pattern, index_part)?;
-
-                data_keeper.greater = Some(ret);
-                index.set(index.len());
-            }
-            Self::Less => {
-                let index_part = pattern.get_chars(index.get() + 1);
-                let ret = Self::parse_as_u64(pattern, index_part)?;
-
-                data_keeper.less = Some(ret);
-                index.set(index.len());
-            }
-            Self::End => {
-                debug!(?index, "State is End, index info");
-                if !index.is_end() {
-                    return Err(Error::opt_parsing_constructor_failed(pattern.get_pattern()));
-                } else {
-                    return Ok(true);
-                }
+    pub fn rem_pre(&mut self, prefix: &str) -> &mut Self {
+        for (idx, value) in self.prefix.iter().enumerate() {
+            if *value == prefix {
+                self.prefix.remove(idx);
+                break;
             }
         }
-
-        self.self_transition(index, pattern);
-
-        self.parse(index, pattern, data_keeper)
+        self
     }
 
     // the index number is small in generally
-    fn parse_as_u64<'pre>(pattern: &ParserPattern<'pre>, data: &[char]) -> Result<u64> {
+    fn parse_as_usize(pattern: &Str, data: &str) -> Result<usize, Error> {
         let mut count = 0;
-        let mut ret = 0u64;
+        let mut ret = 0usize;
 
-        for ch in data {
+        for ch in data.chars() {
             // skip '+'
-            if *ch == '+' || ch.is_ascii_whitespace() {
+            if ch == '+' || ch.is_ascii_whitespace() {
                 continue;
             }
             count += 1;
             ret = ret * 10
                 + ch.to_digit(10).ok_or_else(|| {
-                    Error::opt_parsing_index_failed(
-                        pattern.get_pattern().to_string(),
-                        format!("{:?} is not a valid number", data),
+                    Error::con_parsing_index_failed(
+                        pattern.to_string(),
+                        format!("{} is not a valid number", data),
                     )
-                })? as u64;
+                })? as usize;
         }
         if count == 0 {
-            return Err(Error::opt_parsing_index_failed(
-                pattern.get_pattern().to_string(),
-                format!("{:?} is not a valid number", data),
+            return Err(Error::con_parsing_index_failed(
+                pattern.to_string(),
+                format!("{} is not a valid number", data),
             ));
         }
         Ok(ret)
     }
 
-    fn parse_as_u64_sequence<'pre>(
-        pattern: &ParserPattern<'pre>,
-        data: &[char],
-    ) -> Result<Vec<u64>> {
+    fn parse_as_usize_sequence(pattern: &Str, data: &str) -> Result<Vec<usize>, Error> {
         let mut ret = vec![];
         let mut last = 0usize;
 
-        for (index, ch) in data.iter().enumerate() {
+        for (index, ch) in data.chars().enumerate() {
             // skip '+'
-            if *ch == '+' || ch.is_ascii_whitespace() {
+            if ch == '+' || ch == '[' {
+                last += 1;
                 continue;
             }
-            if *ch == ',' || *ch == ']' {
+            if ch.is_ascii_whitespace() {
+                continue;
+            }
+            if ch == ',' || ch == ']' {
                 if last == index {
-                    return Err(Error::opt_parsing_index_failed(
-                        pattern.get_pattern().to_string(),
-                        format!("{:?} is not a valid number sequence", data),
+                    return Err(Error::con_parsing_index_failed(
+                        pattern.to_string(),
+                        format!("{} is not a valid number", data),
                     ));
                 }
-                ret.push(Self::parse_as_u64(pattern, &data[last..index])?);
+                ret.push(Self::parse_as_usize(pattern, &data[last..index])?);
                 last = index + 1;
             }
         }
         Ok(ret)
     }
+
+    pub fn parse_creator_string(&self, pattern: Str, prefix: Str) -> Result<ConstrctInfo, Error> {
+        let (_, left_part) = pattern.split_at(prefix.len());
+
+        if let Some(cap) = self.regex().captures(left_part) {
+            let mut deactivate = None;
+            let mut optional = None;
+            let mut forward_index = None;
+            let mut backward_index = None;
+            let mut list = vec![];
+            let mut except = vec![];
+            let mut range = None;
+            let anywhere = cap.get(IDX_ANY).map(|_| true);
+
+            for index in [IDX_DEAC, IDX_OPTN] {
+                if let Some(mat) = cap.get(index) {
+                    match mat.as_str() {
+                        "!" => {
+                            optional = Some(true);
+                        }
+                        "/" => {
+                            deactivate = Some(true);
+                        }
+                        _ => {
+                            return Err(Error::raise_error(format!(
+                                "Index syntax error, except ! or /, found {}",
+                                mat.as_str()
+                            )))
+                        }
+                    }
+                }
+            }
+            if let Some(value_mat) = cap.get(IDX_IDX1) {
+                forward_index = Some(Self::parse_as_usize(&pattern, value_mat.as_str())?);
+            }
+            if let Some(list_mat) = cap.get(IDX_IDX2) {
+                list = Self::parse_as_usize_sequence(&pattern, list_mat.as_str())?;
+            }
+            if let Some(mat) = cap.get(IDX_SIGN1) {
+                match mat.as_str() {
+                    "+" | "" => {}
+                    "-" => {
+                        backward_index = forward_index;
+                        forward_index = None;
+                    }
+                    _ => {
+                        return Err(Error::raise_error(format!(
+                            "Index syntax error, except + or -, found {}",
+                            mat.as_str()
+                        )))
+                    }
+                }
+            }
+            if let Some(mat) = cap.get(IDX_SIGN3) {
+                if mat.as_str() == ".." {
+                    let mat_beg = cap.get(IDX_START);
+                    let mat_end = cap.get(IDX_END);
+
+                    match (mat_beg, mat_end) {
+                        (None, None) => {
+                            return Err(Error::raise_error("Not support empty index range"))
+                        }
+                        (None, Some(end)) => {
+                            range =
+                                Some((None, Some(Self::parse_as_usize(&pattern, end.as_str())?)));
+                        }
+                        (Some(start), None) => {
+                            range =
+                                Some((Some(Self::parse_as_usize(&pattern, start.as_str())?), None));
+                        }
+                        (Some(start), Some(end)) => {
+                            range = Some((
+                                Some(Self::parse_as_usize(&pattern, start.as_str())?),
+                                Some(Self::parse_as_usize(&pattern, end.as_str())?),
+                            ));
+                        }
+                    }
+                } else {
+                    return Err(Error::raise_error(format!(
+                        "Index syntax error, except .., found {}",
+                        mat.as_str()
+                    )));
+                }
+            }
+            if let Some(mat) = cap.get(IDX_SIGN2) {
+                match mat.as_str() {
+                    "+" | "" => {}
+                    "-" => {
+                        except = list;
+                        list = vec![];
+                    }
+                    _ => {
+                        return Err(Error::raise_error(format!(
+                            "Index syntax error, except + or -, found {}",
+                            mat.as_str()
+                        )))
+                    }
+                }
+            }
+            Ok(ConstrctInfo::default()
+                .with_pre(Some(prefix))
+                .with_deact(deactivate)
+                .with_opt(optional)
+                .with_fwd(forward_index)
+                .with_bwd(backward_index)
+                .with_aw(anywhere)
+                .with_ls(list)
+                .with_exp(except)
+                .with_range(range)
+                .with_pat(pattern.clone())
+                .with_name(cap.get(IDX_NAME).map(|v| Str::from(v.as_str())))
+                .with_ty(cap.get(IDX_TYPE).map(|v| Str::from(v.as_str()))))
+        } else {
+            Err(Error::con_parsing_failed(pattern))
+        }
+    }
+}
+
+const IDX_NAME: usize = 1;
+const IDX_TYPE: usize = 3;
+const IDX_DEAC: usize = 4;
+const IDX_OPTN: usize = 5;
+const IDX_SIGN1: usize = 7;
+const IDX_IDX1: usize = 8;
+const IDX_SIGN2: usize = 12;
+const IDX_IDX2: usize = 13;
+const IDX_SIGN3: usize = 10;
+const IDX_START: usize = 9;
+const IDX_END: usize = 11;
+const IDX_ANY: usize = 14;
+
+impl OptParser for StrParser {
+    type Output = ConstrctInfo;
+
+    type Error = Error;
+
+    fn parse(&self, pattern: Str) -> Result<Self::Output, Self::Error> {
+        if pattern.trim().is_empty() {
+            return Ok(Self::Output::default());
+        } else {
+            for prefix in self.prefix.iter() {
+                if pattern.starts_with(prefix.as_str()) {
+                    if let Ok(mut data_keeper) =
+                        self.parse_creator_string(pattern.clone(), prefix.clone())
+                    {
+                        data_keeper.gen_idx();
+                        return Ok(data_keeper);
+                    }
+                }
+            }
+            // pass en empty prefix to the parser
+            if let Ok(mut data_keeper) = self.parse_creator_string(pattern.clone(), Str::from("")) {
+                data_keeper.prefix = None;
+                data_keeper.gen_idx();
+                return Ok(data_keeper);
+            }
+        }
+        Err(Error::con_parsing_failed(pattern))
+    }
 }
 
 #[cfg(test)]
 mod test {
-    use super::parse_option_str;
-    use crate::gstr;
-    use crate::opt::index::Index;
-    use ustr::Ustr;
+    use super::StrParser;
+    use crate::astr;
+    use crate::opt::Index;
+    use crate::opt::Information;
+    use crate::opt::OptParser;
+    use crate::Str;
 
     #[test]
     fn test_option_str_parser() {
         {
             // test 1
             let test_cases = vec![
-                ("", None),
+                ("", Some((None, None, None, Index::default(), None, None))),
                 (
                     "o=b",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::default(),
                         None,
                         None,
@@ -517,8 +377,8 @@ mod test {
                     "o=b!",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::default(),
                         None,
                         Some(true),
@@ -528,8 +388,8 @@ mod test {
                     "o=b/",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::default(),
                         Some(true),
                         None,
@@ -539,8 +399,8 @@ mod test {
                     "o=b!/",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::default(),
                         Some(true),
                         Some(true),
@@ -550,8 +410,8 @@ mod test {
                     "o=b/!",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::default(),
                         Some(true),
                         Some(true),
@@ -560,9 +420,9 @@ mod test {
                 (
                     "-o=b",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::default(),
                         None,
                         None,
@@ -571,9 +431,9 @@ mod test {
                 (
                     "-o=b!",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::default(),
                         None,
                         Some(true),
@@ -582,9 +442,9 @@ mod test {
                 (
                     "-o=b/",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::default(),
                         Some(true),
                         None,
@@ -593,9 +453,9 @@ mod test {
                 (
                     "-o=b!/",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::default(),
                         Some(true),
                         Some(true),
@@ -604,9 +464,9 @@ mod test {
                 (
                     "-o=b/!",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::default(),
                         Some(true),
                         Some(true),
@@ -615,9 +475,9 @@ mod test {
                 (
                     "--o=b",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::default(),
                         None,
                         None,
@@ -626,9 +486,9 @@ mod test {
                 (
                     "--o=b!",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::default(),
                         None,
                         Some(true),
@@ -637,9 +497,9 @@ mod test {
                 (
                     "--o=b/",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::default(),
                         Some(true),
                         None,
@@ -648,9 +508,9 @@ mod test {
                 (
                     "--o=b!/",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::default(),
                         Some(true),
                         Some(true),
@@ -659,9 +519,9 @@ mod test {
                 (
                     "--o=b/!",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::default(),
                         Some(true),
                         Some(true),
@@ -669,14 +529,14 @@ mod test {
                 ),
                 (
                     "=b",
-                    Some((None, None, Some(gstr("b")), Index::default(), None, None)),
+                    Some((None, None, Some(astr("b")), Index::default(), None, None)),
                 ),
                 (
                     "=b!",
                     Some((
                         None,
                         None,
-                        Some(gstr("b")),
+                        Some(astr("b")),
                         Index::default(),
                         None,
                         Some(true),
@@ -687,7 +547,7 @@ mod test {
                     Some((
                         None,
                         None,
-                        Some(gstr("b")),
+                        Some(astr("b")),
                         Index::default(),
                         Some(true),
                         None,
@@ -698,7 +558,7 @@ mod test {
                     Some((
                         None,
                         None,
-                        Some(gstr("b")),
+                        Some(astr("b")),
                         Index::default(),
                         Some(true),
                         Some(true),
@@ -709,7 +569,7 @@ mod test {
                     Some((
                         None,
                         None,
-                        Some(gstr("b")),
+                        Some(astr("b")),
                         Index::default(),
                         Some(true),
                         Some(true),
@@ -719,8 +579,8 @@ mod test {
                     "o=b@*",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::anywhere(),
                         None,
                         None,
@@ -730,8 +590,8 @@ mod test {
                     "o=b@1",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(1),
                         None,
                         None,
@@ -741,8 +601,8 @@ mod test {
                     "o=b@-1",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::backward(1),
                         None,
                         None,
@@ -752,31 +612,31 @@ mod test {
                     "o=b@+42",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(42),
                         None,
                         None,
                     )),
                 ),
                 (
-                    "o=b@>1",
+                    "o=b@1..",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::greater(1),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(Some(1), None),
                         None,
                         None,
                     )),
                 ),
                 (
-                    "o=b@<8",
+                    "o=b@..8",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::less(8),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(None, Some(8)),
                         None,
                         None,
                     )),
@@ -785,8 +645,8 @@ mod test {
                     "o=b@[1, 2, 3]",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![1, 2, 3]),
                         None,
                         None,
@@ -796,8 +656,8 @@ mod test {
                     "o=b@+[4, 5, 12]",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![4, 5, 12]),
                         None,
                         None,
@@ -807,8 +667,8 @@ mod test {
                     "o=b@-[1, 2, 4]",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::except(vec![1, 2, 4]),
                         None,
                         None,
@@ -817,9 +677,9 @@ mod test {
                 (
                     "-o=b@*",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::anywhere(),
                         None,
                         None,
@@ -828,9 +688,9 @@ mod test {
                 (
                     "-o=b@1",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(1),
                         None,
                         None,
@@ -839,9 +699,9 @@ mod test {
                 (
                     "-o=b@-1",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::backward(1),
                         None,
                         None,
@@ -850,32 +710,32 @@ mod test {
                 (
                     "-o=b@+42",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(42),
                         None,
                         None,
                     )),
                 ),
                 (
-                    "-o=b@>1",
+                    "-o=b@1..3",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::greater(1),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(Some(1), Some(3)),
                         None,
                         None,
                     )),
                 ),
                 (
-                    "-o=b@<8",
+                    "-o=b@2..8",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::less(8),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(Some(2), Some(8)),
                         None,
                         None,
                     )),
@@ -883,9 +743,9 @@ mod test {
                 (
                     "-o=b@[1, 2, 3]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![1, 2, 3]),
                         None,
                         None,
@@ -894,9 +754,9 @@ mod test {
                 (
                     "-o=b@+[4, 5, 12]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![4, 5, 12]),
                         None,
                         None,
@@ -905,9 +765,9 @@ mod test {
                 (
                     "-o=b@-[1, 2, 4]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::except(vec![1, 2, 4]),
                         None,
                         None,
@@ -916,9 +776,9 @@ mod test {
                 (
                     "--o=b@*",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::anywhere(),
                         None,
                         None,
@@ -927,9 +787,9 @@ mod test {
                 (
                     "--o=b@1",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(1),
                         None,
                         None,
@@ -938,9 +798,9 @@ mod test {
                 (
                     "--o=b@-1",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::backward(1),
                         None,
                         None,
@@ -949,32 +809,32 @@ mod test {
                 (
                     "--o=b@+42",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(42),
                         None,
                         None,
                     )),
                 ),
                 (
-                    "--o=b@>1",
+                    "--o=b@1..8",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::greater(1),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(Some(1), Some(8)),
                         None,
                         None,
                     )),
                 ),
                 (
-                    "--o=b@<42",
+                    "--o=b@..42",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::less(42),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(None, Some(42)),
                         None,
                         None,
                     )),
@@ -982,9 +842,9 @@ mod test {
                 (
                     "--o=b@[1, 2, 3]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![1, 2, 3]),
                         None,
                         None,
@@ -993,9 +853,9 @@ mod test {
                 (
                     "--o=b@+[4, 5, 12]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![4, 5, 12]),
                         None,
                         None,
@@ -1004,9 +864,9 @@ mod test {
                 (
                     "--o=b@-[1, 2, 4]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::except(vec![1, 2, 4]),
                         None,
                         None,
@@ -1016,8 +876,8 @@ mod test {
                     "o=b!@*",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::anywhere(),
                         None,
                         Some(true),
@@ -1027,8 +887,8 @@ mod test {
                     "o=b!@1",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(1),
                         None,
                         Some(true),
@@ -1038,8 +898,8 @@ mod test {
                     "o=b!@-1",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::backward(1),
                         None,
                         Some(true),
@@ -1049,31 +909,31 @@ mod test {
                     "o=b!@+42",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(42),
                         None,
                         Some(true),
                     )),
                 ),
                 (
-                    "o=b!@>12",
+                    "o=b!@..12",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::greater(12),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(None, Some(12)),
                         None,
                         Some(true),
                     )),
                 ),
                 (
-                    "o=b!@<42",
+                    "o=b!@..42",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::less(42),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(None, Some(42)),
                         None,
                         Some(true),
                     )),
@@ -1082,8 +942,8 @@ mod test {
                     "o=b!@[1, 2, 3]",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![1, 2, 3]),
                         None,
                         Some(true),
@@ -1093,8 +953,8 @@ mod test {
                     "o=b!@+[4, 5, 12]",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![4, 5, 12]),
                         None,
                         Some(true),
@@ -1104,8 +964,8 @@ mod test {
                     "o=b!@-[1, 2, 4]",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::except(vec![1, 2, 4]),
                         None,
                         Some(true),
@@ -1114,9 +974,9 @@ mod test {
                 (
                     "-o=b!@1",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(1),
                         None,
                         Some(true),
@@ -1125,9 +985,9 @@ mod test {
                 (
                     "-o=b!@-1",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::backward(1),
                         None,
                         Some(true),
@@ -1136,9 +996,9 @@ mod test {
                 (
                     "-o=b!@+42",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(42),
                         None,
                         Some(true),
@@ -1147,32 +1007,32 @@ mod test {
                 (
                     "-o=b!@*",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::anywhere(),
                         None,
                         Some(true),
                     )),
                 ),
                 (
-                    "-o=b!@>11",
+                    "-o=b!@11..",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::greater(11),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(Some(11), None),
                         None,
                         Some(true),
                     )),
                 ),
                 (
-                    "-o=b!@<4",
+                    "-o=b!@..4",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::less(4),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(None, Some(4)),
                         None,
                         Some(true),
                     )),
@@ -1180,9 +1040,9 @@ mod test {
                 (
                     "-o=b!@[1, 2, 3]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![1, 2, 3]),
                         None,
                         Some(true),
@@ -1191,9 +1051,9 @@ mod test {
                 (
                     "-o=b!@+[4, 5, 12]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![4, 5, 12]),
                         None,
                         Some(true),
@@ -1202,9 +1062,9 @@ mod test {
                 (
                     "-o=b!@-[1, 2, 4]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::except(vec![1, 2, 4]),
                         None,
                         Some(true),
@@ -1213,9 +1073,9 @@ mod test {
                 (
                     "--o=b!@1",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(1),
                         None,
                         Some(true),
@@ -1224,9 +1084,9 @@ mod test {
                 (
                     "--o=b!@-1",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::backward(1),
                         None,
                         Some(true),
@@ -1235,9 +1095,9 @@ mod test {
                 (
                     "--o=b!@+42",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(42),
                         None,
                         Some(true),
@@ -1246,32 +1106,32 @@ mod test {
                 (
                     "--o=b!@*",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::anywhere(),
                         None,
                         Some(true),
                     )),
                 ),
                 (
-                    "--o=b!@<1",
+                    "--o=b!@..1",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::less(1),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(None, Some(1)),
                         None,
                         Some(true),
                     )),
                 ),
                 (
-                    "--o=b!@>42",
+                    "--o=b!@42..",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::greater(42),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(Some(42), None),
                         None,
                         Some(true),
                     )),
@@ -1279,9 +1139,9 @@ mod test {
                 (
                     "--o=b!@[1, 2, 3]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![1, 2, 3]),
                         None,
                         Some(true),
@@ -1290,9 +1150,9 @@ mod test {
                 (
                     "--o=b!@+[4, 5, 12]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![4, 5, 12]),
                         None,
                         Some(true),
@@ -1301,9 +1161,9 @@ mod test {
                 (
                     "--o=b!@-[1, 2, 4]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::except(vec![1, 2, 4]),
                         None,
                         Some(true),
@@ -1313,8 +1173,8 @@ mod test {
                     "o=b/@1",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(1),
                         Some(true),
                         None,
@@ -1324,8 +1184,8 @@ mod test {
                     "o=b/@-1",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::backward(1),
                         Some(true),
                         None,
@@ -1335,8 +1195,8 @@ mod test {
                     "o=b/@+42",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(42),
                         Some(true),
                         None,
@@ -1346,31 +1206,31 @@ mod test {
                     "o=b/@*",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::anywhere(),
                         Some(true),
                         None,
                     )),
                 ),
                 (
-                    "o=b/@>1",
+                    "o=b/@1..",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::greater(1),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(Some(1), None),
                         Some(true),
                         None,
                     )),
                 ),
                 (
-                    "o=b/@<2",
+                    "o=b/@..2",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::less(2),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(None, Some(2)),
                         Some(true),
                         None,
                     )),
@@ -1379,8 +1239,8 @@ mod test {
                     "o=b/@[1, 2, 3]",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![1, 2, 3]),
                         Some(true),
                         None,
@@ -1390,8 +1250,8 @@ mod test {
                     "o=b/@+[4, 5, 12]",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![4, 5, 12]),
                         Some(true),
                         None,
@@ -1401,8 +1261,8 @@ mod test {
                     "o=b/@-[1, 2, 4]",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::except(vec![1, 2, 4]),
                         Some(true),
                         None,
@@ -1411,9 +1271,9 @@ mod test {
                 (
                     "-o=b/@1",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(1),
                         Some(true),
                         None,
@@ -1422,9 +1282,9 @@ mod test {
                 (
                     "-o=b/@-1",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::backward(1),
                         Some(true),
                         None,
@@ -1433,9 +1293,9 @@ mod test {
                 (
                     "-o=b/@+42",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(42),
                         Some(true),
                         None,
@@ -1444,32 +1304,32 @@ mod test {
                 (
                     "-o=b/@*",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::anywhere(),
                         Some(true),
                         None,
                     )),
                 ),
                 (
-                    "-o=b/@>1",
+                    "-o=b/@1..",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::greater(1),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(Some(1), None),
                         Some(true),
                         None,
                     )),
                 ),
                 (
-                    "-o=b/@<42",
+                    "-o=b/@..42",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::less(42),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(None, Some(42)),
                         Some(true),
                         None,
                     )),
@@ -1477,9 +1337,9 @@ mod test {
                 (
                     "-o=b/@[1, 2, 3]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![1, 2, 3]),
                         Some(true),
                         None,
@@ -1488,9 +1348,9 @@ mod test {
                 (
                     "-o=b/@+[4, 5, 12]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![4, 5, 12]),
                         Some(true),
                         None,
@@ -1499,9 +1359,9 @@ mod test {
                 (
                     "-o=b/@-[1, 2, 4]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::except(vec![1, 2, 4]),
                         Some(true),
                         None,
@@ -1510,9 +1370,9 @@ mod test {
                 (
                     "--o=b/@1",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(1),
                         Some(true),
                         None,
@@ -1521,9 +1381,9 @@ mod test {
                 (
                     "--o=b/@-1",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::backward(1),
                         Some(true),
                         None,
@@ -1532,9 +1392,9 @@ mod test {
                 (
                     "--o=b/@+42",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(42),
                         Some(true),
                         None,
@@ -1543,32 +1403,32 @@ mod test {
                 (
                     "--o=b/@*",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::anywhere(),
                         Some(true),
                         None,
                     )),
                 ),
                 (
-                    "--o=b/@<11",
+                    "--o=b/@..11",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::less(11),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(None, Some(11)),
                         Some(true),
                         None,
                     )),
                 ),
                 (
-                    "--o=b/@>42",
+                    "--o=b/@42..",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::greater(42),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(Some(42), None),
                         Some(true),
                         None,
                     )),
@@ -1576,9 +1436,9 @@ mod test {
                 (
                     "--o=b/@[1, 2, 3]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![1, 2, 3]),
                         Some(true),
                         None,
@@ -1587,9 +1447,9 @@ mod test {
                 (
                     "--o=b/@+[4, 5, 12]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![4, 5, 12]),
                         Some(true),
                         None,
@@ -1598,9 +1458,9 @@ mod test {
                 (
                     "--o=b/@-[1, 2, 4]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::except(vec![1, 2, 4]),
                         Some(true),
                         None,
@@ -1610,8 +1470,8 @@ mod test {
                     "o=b!/@1",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(1),
                         Some(true),
                         Some(true),
@@ -1621,8 +1481,8 @@ mod test {
                     "o=b!/@-1",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::backward(1),
                         Some(true),
                         Some(true),
@@ -1632,8 +1492,8 @@ mod test {
                     "o=b!/@+42",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(42),
                         Some(true),
                         Some(true),
@@ -1643,31 +1503,31 @@ mod test {
                     "o=b!/@*",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::anywhere(),
                         Some(true),
                         Some(true),
                     )),
                 ),
                 (
-                    "o=b!/@>1",
+                    "o=b!/@1..12",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::greater(1),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(Some(1), Some(12)),
                         Some(true),
                         Some(true),
                     )),
                 ),
                 (
-                    "o=b!/@<42",
+                    "o=b!/@..42",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::less(42),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(None, Some(42)),
                         Some(true),
                         Some(true),
                     )),
@@ -1676,8 +1536,8 @@ mod test {
                     "o=b!/@[1, 2, 3]",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![1, 2, 3]),
                         Some(true),
                         Some(true),
@@ -1687,8 +1547,8 @@ mod test {
                     "o=b!/@+[4, 5, 12]",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![4, 5, 12]),
                         Some(true),
                         Some(true),
@@ -1698,8 +1558,8 @@ mod test {
                     "o=b!/@-[1, 2, 4]",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::except(vec![1, 2, 4]),
                         Some(true),
                         Some(true),
@@ -1708,9 +1568,9 @@ mod test {
                 (
                     "-o=b!/@1",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(1),
                         Some(true),
                         Some(true),
@@ -1719,9 +1579,9 @@ mod test {
                 (
                     "-o=b!/@-1",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::backward(1),
                         Some(true),
                         Some(true),
@@ -1730,9 +1590,9 @@ mod test {
                 (
                     "-o=b!/@+42",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(42),
                         Some(true),
                         Some(true),
@@ -1741,9 +1601,9 @@ mod test {
                 (
                     "-o=b!/@[1, 2, 3]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![1, 2, 3]),
                         Some(true),
                         Some(true),
@@ -1752,9 +1612,9 @@ mod test {
                 (
                     "-o=b!/@+[4, 5, 12]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![4, 5, 12]),
                         Some(true),
                         Some(true),
@@ -1763,9 +1623,9 @@ mod test {
                 (
                     "-o=b!/@-[1, 2, 4]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::except(vec![1, 2, 4]),
                         Some(true),
                         Some(true),
@@ -1774,9 +1634,9 @@ mod test {
                 (
                     "--o=b!/@1",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(1),
                         Some(true),
                         Some(true),
@@ -1785,9 +1645,9 @@ mod test {
                 (
                     "--o=b!/@-1",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::backward(1),
                         Some(true),
                         Some(true),
@@ -1796,9 +1656,9 @@ mod test {
                 (
                     "--o=b!/@+42",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(42),
                         Some(true),
                         Some(true),
@@ -1807,32 +1667,32 @@ mod test {
                 (
                     "--o=b!/@*",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::anywhere(),
                         Some(true),
                         Some(true),
                     )),
                 ),
                 (
-                    "--o=b!/@>1",
+                    "--o=b!/@1..",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::greater(1),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(Some(1), None),
                         Some(true),
                         Some(true),
                     )),
                 ),
                 (
-                    "--o=b!/@<42",
+                    "--o=b!/@..42",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::less(42),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(None, Some(42)),
                         Some(true),
                         Some(true),
                     )),
@@ -1840,9 +1700,9 @@ mod test {
                 (
                     "--o=b!/@[1, 2, 3]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![1, 2, 3]),
                         Some(true),
                         Some(true),
@@ -1851,9 +1711,9 @@ mod test {
                 (
                     "--o=b!/@+[4, 5, 12]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![4, 5, 12]),
                         Some(true),
                         Some(true),
@@ -1862,9 +1722,9 @@ mod test {
                 (
                     "--o=b!/@-[1, 2, 4]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::except(vec![1, 2, 4]),
                         Some(true),
                         Some(true),
@@ -1874,8 +1734,8 @@ mod test {
                     "o=b/!@1",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(1),
                         Some(true),
                         Some(true),
@@ -1885,8 +1745,8 @@ mod test {
                     "o=b/!@-1",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::backward(1),
                         Some(true),
                         Some(true),
@@ -1896,8 +1756,8 @@ mod test {
                     "o=b/!@+42",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(42),
                         Some(true),
                         Some(true),
@@ -1907,31 +1767,31 @@ mod test {
                     "o=b/!@*",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::anywhere(),
                         Some(true),
                         Some(true),
                     )),
                 ),
                 (
-                    "o=b/!@>11",
+                    "o=b/!@11..",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::greater(11),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(Some(11), None),
                         Some(true),
                         Some(true),
                     )),
                 ),
                 (
-                    "o=b/!@<4",
+                    "o=b/!@..4",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::less(4),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(None, Some(4)),
                         Some(true),
                         Some(true),
                     )),
@@ -1940,8 +1800,8 @@ mod test {
                     "o=b/!@[1, 2, 3]",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![1, 2, 3]),
                         Some(true),
                         Some(true),
@@ -1951,8 +1811,8 @@ mod test {
                     "o=b/!@+[4, 5, 12]",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![4, 5, 12]),
                         Some(true),
                         Some(true),
@@ -1962,8 +1822,8 @@ mod test {
                     "o=b/!@-[1, 2, 4]",
                     Some((
                         None,
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::except(vec![1, 2, 4]),
                         Some(true),
                         Some(true),
@@ -1972,9 +1832,9 @@ mod test {
                 (
                     "-o=b/!@1",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(1),
                         Some(true),
                         Some(true),
@@ -1983,9 +1843,9 @@ mod test {
                 (
                     "-o=b/!@-1",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::backward(1),
                         Some(true),
                         Some(true),
@@ -1994,9 +1854,9 @@ mod test {
                 (
                     "-o=b/!@+42",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(42),
                         Some(true),
                         Some(true),
@@ -2005,32 +1865,32 @@ mod test {
                 (
                     "-o=b/!@*",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::anywhere(),
                         Some(true),
                         Some(true),
                     )),
                 ),
                 (
-                    "-o=b/!@>1",
+                    "-o=b/!@1..42",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::greater(1),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(Some(1), Some(42)),
                         Some(true),
                         Some(true),
                     )),
                 ),
                 (
-                    "-o=b/!@<42",
+                    "-o=b/!@6..42",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::less(42),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(Some(6), Some(42)),
                         Some(true),
                         Some(true),
                     )),
@@ -2038,9 +1898,9 @@ mod test {
                 (
                     "-o=b/!@[1, 2, 3]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![1, 2, 3]),
                         Some(true),
                         Some(true),
@@ -2049,9 +1909,9 @@ mod test {
                 (
                     "-o=b/!@+[4, 5, 12]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![4, 5, 12]),
                         Some(true),
                         Some(true),
@@ -2060,9 +1920,9 @@ mod test {
                 (
                     "-o=b/!@-[1, 2, 4]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("-")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::except(vec![1, 2, 4]),
                         Some(true),
                         Some(true),
@@ -2071,9 +1931,9 @@ mod test {
                 (
                     "--o=b/!@1",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(1),
                         Some(true),
                         Some(true),
@@ -2082,9 +1942,9 @@ mod test {
                 (
                     "--o=b/!@-1",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::backward(1),
                         Some(true),
                         Some(true),
@@ -2093,9 +1953,9 @@ mod test {
                 (
                     "--o=b/!@+42",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::forward(42),
                         Some(true),
                         Some(true),
@@ -2104,32 +1964,32 @@ mod test {
                 (
                     "--o=b/!@*",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::anywhere(),
                         Some(true),
                         Some(true),
                     )),
                 ),
                 (
-                    "--o=b/!@>1",
+                    "--o=b/!@1..12",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::greater(1),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(Some(1), Some(12)),
                         Some(true),
                         Some(true),
                     )),
                 ),
                 (
-                    "--o=b/!@<42",
+                    "--o=b/!@..42",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
-                        Index::less(42),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
+                        Index::range(None, Some(42)),
                         Some(true),
                         Some(true),
                     )),
@@ -2137,9 +1997,9 @@ mod test {
                 (
                     "--o=b/!@[1, 2, 3]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![1, 2, 3]),
                         Some(true),
                         Some(true),
@@ -2148,9 +2008,9 @@ mod test {
                 (
                     "--o=b/!@+[4, 5, 12]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::list(vec![4, 5, 12]),
                         Some(true),
                         Some(true),
@@ -2159,9 +2019,9 @@ mod test {
                 (
                     "--o=b/!@-[1, 2, 4]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("o")),
-                        Some(gstr("b")),
+                        Some(astr("--")),
+                        Some(astr("o")),
+                        Some(astr("b")),
                         Index::except(vec![1, 2, 4]),
                         Some(true),
                         Some(true),
@@ -2171,8 +2031,8 @@ mod test {
                     "option=bar",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::default(),
                         None,
                         None,
@@ -2182,8 +2042,8 @@ mod test {
                     "option=bar!",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::default(),
                         None,
                         Some(true),
@@ -2193,8 +2053,8 @@ mod test {
                     "option=bar/",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::default(),
                         Some(true),
                         None,
@@ -2204,8 +2064,8 @@ mod test {
                     "option=bar!/",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::default(),
                         Some(true),
                         Some(true),
@@ -2215,8 +2075,8 @@ mod test {
                     "option=bar/!",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::default(),
                         Some(true),
                         Some(true),
@@ -2225,9 +2085,9 @@ mod test {
                 (
                     "-option=bar",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::default(),
                         None,
                         None,
@@ -2236,9 +2096,9 @@ mod test {
                 (
                     "-option=bar!",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::default(),
                         None,
                         Some(true),
@@ -2247,9 +2107,9 @@ mod test {
                 (
                     "-option=bar/",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::default(),
                         Some(true),
                         None,
@@ -2258,9 +2118,9 @@ mod test {
                 (
                     "-option=bar!/",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::default(),
                         Some(true),
                         Some(true),
@@ -2269,9 +2129,9 @@ mod test {
                 (
                     "-option=bar/!",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::default(),
                         Some(true),
                         Some(true),
@@ -2280,9 +2140,9 @@ mod test {
                 (
                     "--option=bar",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::default(),
                         None,
                         None,
@@ -2291,9 +2151,9 @@ mod test {
                 (
                     "--option=bar!",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::default(),
                         None,
                         Some(true),
@@ -2302,9 +2162,9 @@ mod test {
                 (
                     "--option=bar/",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::default(),
                         Some(true),
                         None,
@@ -2313,9 +2173,9 @@ mod test {
                 (
                     "--option=bar!/",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::default(),
                         Some(true),
                         Some(true),
@@ -2324,9 +2184,9 @@ mod test {
                 (
                     "--option=bar/!",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::default(),
                         Some(true),
                         Some(true),
@@ -2334,14 +2194,14 @@ mod test {
                 ),
                 (
                     "=bar",
-                    Some((None, None, Some(gstr("bar")), Index::default(), None, None)),
+                    Some((None, None, Some(astr("bar")), Index::default(), None, None)),
                 ),
                 (
                     "=bar!",
                     Some((
                         None,
                         None,
-                        Some(gstr("bar")),
+                        Some(astr("bar")),
                         Index::default(),
                         None,
                         Some(true),
@@ -2352,7 +2212,7 @@ mod test {
                     Some((
                         None,
                         None,
-                        Some(gstr("bar")),
+                        Some(astr("bar")),
                         Index::default(),
                         Some(true),
                         None,
@@ -2363,7 +2223,7 @@ mod test {
                     Some((
                         None,
                         None,
-                        Some(gstr("bar")),
+                        Some(astr("bar")),
                         Index::default(),
                         Some(true),
                         Some(true),
@@ -2374,7 +2234,7 @@ mod test {
                     Some((
                         None,
                         None,
-                        Some(gstr("bar")),
+                        Some(astr("bar")),
                         Index::default(),
                         Some(true),
                         Some(true),
@@ -2384,8 +2244,8 @@ mod test {
                     "option=bar@1",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(1),
                         None,
                         None,
@@ -2395,8 +2255,8 @@ mod test {
                     "option=bar@-1",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::backward(1),
                         None,
                         None,
@@ -2406,8 +2266,8 @@ mod test {
                     "option=bar@+42",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(42),
                         None,
                         None,
@@ -2417,31 +2277,31 @@ mod test {
                     "option=bar@*",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::anywhere(),
                         None,
                         None,
                     )),
                 ),
                 (
-                    "option=bar@>1",
+                    "option=bar@1..166",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
-                        Index::greater(1),
+                        Some(astr("option")),
+                        Some(astr("bar")),
+                        Index::range(Some(1), Some(166)),
                         None,
                         None,
                     )),
                 ),
                 (
-                    "option=bar@<42",
+                    "option=bar@8..42",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
-                        Index::less(42),
+                        Some(astr("option")),
+                        Some(astr("bar")),
+                        Index::range(Some(8), Some(42)),
                         None,
                         None,
                     )),
@@ -2450,8 +2310,8 @@ mod test {
                     "option=bar@[1, 2, 3]",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![1, 2, 3]),
                         None,
                         None,
@@ -2461,8 +2321,8 @@ mod test {
                     "option=bar@+[4, 5, 12]",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![4, 5, 12]),
                         None,
                         None,
@@ -2472,8 +2332,8 @@ mod test {
                     "option=bar@-[1, 2, 4]",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::except(vec![1, 2, 4]),
                         None,
                         None,
@@ -2482,9 +2342,9 @@ mod test {
                 (
                     "-option=bar@1",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(1),
                         None,
                         None,
@@ -2493,9 +2353,9 @@ mod test {
                 (
                     "-option=bar@-1",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::backward(1),
                         None,
                         None,
@@ -2504,9 +2364,9 @@ mod test {
                 (
                     "-option=bar@+42",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(42),
                         None,
                         None,
@@ -2515,32 +2375,32 @@ mod test {
                 (
                     "-option=bar@*",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::anywhere(),
                         None,
                         None,
                     )),
                 ),
                 (
-                    "-option=bar@>1",
+                    "-option=bar@1..",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
-                        Index::greater(1),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
+                        Index::range(Some(1), None),
                         None,
                         None,
                     )),
                 ),
                 (
-                    "-option=bar@<42",
+                    "-option=bar@..42",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
-                        Index::less(42),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
+                        Index::range(None, Some(42)),
                         None,
                         None,
                     )),
@@ -2548,9 +2408,9 @@ mod test {
                 (
                     "-option=bar@[1, 2, 3]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![1, 2, 3]),
                         None,
                         None,
@@ -2559,9 +2419,9 @@ mod test {
                 (
                     "-option=bar@+[4, 5, 12]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![4, 5, 12]),
                         None,
                         None,
@@ -2570,9 +2430,9 @@ mod test {
                 (
                     "-option=bar@-[1, 2, 4]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::except(vec![1, 2, 4]),
                         None,
                         None,
@@ -2581,9 +2441,9 @@ mod test {
                 (
                     "--option=bar@1",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(1),
                         None,
                         None,
@@ -2592,9 +2452,9 @@ mod test {
                 (
                     "--option=bar@-1",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::backward(1),
                         None,
                         None,
@@ -2603,9 +2463,9 @@ mod test {
                 (
                     "--option=bar@+42",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(42),
                         None,
                         None,
@@ -2614,32 +2474,32 @@ mod test {
                 (
                     "--option=bar@*",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::anywhere(),
                         None,
                         None,
                     )),
                 ),
                 (
-                    "--option=bar@>11",
+                    "--option=bar@11..",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
-                        Index::greater(11),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
+                        Index::range(Some(11), None),
                         None,
                         None,
                     )),
                 ),
                 (
-                    "--option=bar@<42",
+                    "--option=bar@..82",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
-                        Index::less(42),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
+                        Index::range(None, Some(82)),
                         None,
                         None,
                     )),
@@ -2647,9 +2507,9 @@ mod test {
                 (
                     "--option=bar@[1, 2, 3]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![1, 2, 3]),
                         None,
                         None,
@@ -2658,9 +2518,9 @@ mod test {
                 (
                     "--option=bar@+[4, 5, 12]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![4, 5, 12]),
                         None,
                         None,
@@ -2669,9 +2529,9 @@ mod test {
                 (
                     "--option=bar@-[1, 2, 4]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::except(vec![1, 2, 4]),
                         None,
                         None,
@@ -2681,8 +2541,8 @@ mod test {
                     "option=bar!@1",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(1),
                         None,
                         Some(true),
@@ -2692,8 +2552,8 @@ mod test {
                     "option=bar!@-1",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::backward(1),
                         None,
                         Some(true),
@@ -2703,8 +2563,8 @@ mod test {
                     "option=bar!@+42",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(42),
                         None,
                         Some(true),
@@ -2714,8 +2574,8 @@ mod test {
                     "option=bar!@[1, 2, 3]",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![1, 2, 3]),
                         None,
                         Some(true),
@@ -2725,8 +2585,8 @@ mod test {
                     "option=bar!@+[4, 5, 12]",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![4, 5, 12]),
                         None,
                         Some(true),
@@ -2736,8 +2596,8 @@ mod test {
                     "option=bar!@-[1, 2, 4]",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::except(vec![1, 2, 4]),
                         None,
                         Some(true),
@@ -2746,9 +2606,9 @@ mod test {
                 (
                     "-option=bar!@1",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(1),
                         None,
                         Some(true),
@@ -2757,9 +2617,9 @@ mod test {
                 (
                     "-option=bar!@-1",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::backward(1),
                         None,
                         Some(true),
@@ -2768,9 +2628,9 @@ mod test {
                 (
                     "-option=bar!@+42",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(42),
                         None,
                         Some(true),
@@ -2779,9 +2639,9 @@ mod test {
                 (
                     "-option=bar!@[1, 2, 3]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![1, 2, 3]),
                         None,
                         Some(true),
@@ -2790,9 +2650,9 @@ mod test {
                 (
                     "-option=bar!@+[4, 5, 12]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![4, 5, 12]),
                         None,
                         Some(true),
@@ -2801,9 +2661,9 @@ mod test {
                 (
                     "-option=bar!@-[1, 2, 4]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::except(vec![1, 2, 4]),
                         None,
                         Some(true),
@@ -2812,9 +2672,9 @@ mod test {
                 (
                     "--option=bar!@1",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(1),
                         None,
                         Some(true),
@@ -2823,9 +2683,9 @@ mod test {
                 (
                     "--option=bar!@-1",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::backward(1),
                         None,
                         Some(true),
@@ -2834,9 +2694,9 @@ mod test {
                 (
                     "--option=bar!@+42",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(42),
                         None,
                         Some(true),
@@ -2845,9 +2705,9 @@ mod test {
                 (
                     "--option=bar!@[1, 2, 3]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![1, 2, 3]),
                         None,
                         Some(true),
@@ -2856,9 +2716,9 @@ mod test {
                 (
                     "--option=bar!@+[4, 5, 12]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![4, 5, 12]),
                         None,
                         Some(true),
@@ -2867,9 +2727,9 @@ mod test {
                 (
                     "--option=bar!@-[1, 2, 4]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::except(vec![1, 2, 4]),
                         None,
                         Some(true),
@@ -2879,8 +2739,8 @@ mod test {
                     "option=bar/@1",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(1),
                         Some(true),
                         None,
@@ -2890,8 +2750,8 @@ mod test {
                     "option=bar/@-1",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::backward(1),
                         Some(true),
                         None,
@@ -2901,8 +2761,8 @@ mod test {
                     "option=bar/@+42",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(42),
                         Some(true),
                         None,
@@ -2912,8 +2772,8 @@ mod test {
                     "option=bar/@[1, 2, 3]",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![1, 2, 3]),
                         Some(true),
                         None,
@@ -2923,8 +2783,8 @@ mod test {
                     "option=bar/@+[4, 5, 12]",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![4, 5, 12]),
                         Some(true),
                         None,
@@ -2934,8 +2794,8 @@ mod test {
                     "option=bar/@-[1, 2, 4]",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::except(vec![1, 2, 4]),
                         Some(true),
                         None,
@@ -2944,9 +2804,9 @@ mod test {
                 (
                     "-option=bar/@1",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(1),
                         Some(true),
                         None,
@@ -2955,9 +2815,9 @@ mod test {
                 (
                     "-option=bar/@-1",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::backward(1),
                         Some(true),
                         None,
@@ -2966,9 +2826,9 @@ mod test {
                 (
                     "-option=bar/@+42",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(42),
                         Some(true),
                         None,
@@ -2977,9 +2837,9 @@ mod test {
                 (
                     "-option=bar/@[1, 2, 3]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![1, 2, 3]),
                         Some(true),
                         None,
@@ -2988,9 +2848,9 @@ mod test {
                 (
                     "-option=bar/@+[4, 5, 12]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![4, 5, 12]),
                         Some(true),
                         None,
@@ -2999,9 +2859,9 @@ mod test {
                 (
                     "-option=bar/@-[1, 2, 4]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::except(vec![1, 2, 4]),
                         Some(true),
                         None,
@@ -3010,9 +2870,9 @@ mod test {
                 (
                     "--option=bar/@1",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(1),
                         Some(true),
                         None,
@@ -3021,9 +2881,9 @@ mod test {
                 (
                     "--option=bar/@-1",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::backward(1),
                         Some(true),
                         None,
@@ -3032,9 +2892,9 @@ mod test {
                 (
                     "--option=bar/@+42",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(42),
                         Some(true),
                         None,
@@ -3043,9 +2903,9 @@ mod test {
                 (
                     "--option=bar/@[1, 2, 3]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![1, 2, 3]),
                         Some(true),
                         None,
@@ -3054,9 +2914,9 @@ mod test {
                 (
                     "--option=bar/@+[4, 5, 12]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![4, 5, 12]),
                         Some(true),
                         None,
@@ -3065,9 +2925,9 @@ mod test {
                 (
                     "--option=bar/@-[1, 2, 4]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::except(vec![1, 2, 4]),
                         Some(true),
                         None,
@@ -3077,8 +2937,8 @@ mod test {
                     "option=bar!/@1",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(1),
                         Some(true),
                         Some(true),
@@ -3088,8 +2948,8 @@ mod test {
                     "option=bar!/@-1",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::backward(1),
                         Some(true),
                         Some(true),
@@ -3099,8 +2959,8 @@ mod test {
                     "option=bar!/@+42",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(42),
                         Some(true),
                         Some(true),
@@ -3110,8 +2970,8 @@ mod test {
                     "option=bar!/@[1, 2, 3]",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![1, 2, 3]),
                         Some(true),
                         Some(true),
@@ -3121,8 +2981,8 @@ mod test {
                     "option=bar!/@+[4, 5, 12]",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![4, 5, 12]),
                         Some(true),
                         Some(true),
@@ -3132,8 +2992,8 @@ mod test {
                     "option=bar!/@-[1, 2, 4]",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::except(vec![1, 2, 4]),
                         Some(true),
                         Some(true),
@@ -3142,9 +3002,9 @@ mod test {
                 (
                     "-option=bar!/@1",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(1),
                         Some(true),
                         Some(true),
@@ -3153,9 +3013,9 @@ mod test {
                 (
                     "-option=bar!/@-1",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::backward(1),
                         Some(true),
                         Some(true),
@@ -3164,9 +3024,9 @@ mod test {
                 (
                     "-option=bar!/@+42",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(42),
                         Some(true),
                         Some(true),
@@ -3175,9 +3035,9 @@ mod test {
                 (
                     "-option=bar!/@[1, 2, 3]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![1, 2, 3]),
                         Some(true),
                         Some(true),
@@ -3186,9 +3046,9 @@ mod test {
                 (
                     "-option=bar!/@+[4, 5, 12]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![4, 5, 12]),
                         Some(true),
                         Some(true),
@@ -3197,9 +3057,9 @@ mod test {
                 (
                     "-option=bar!/@-[1, 2, 4]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::except(vec![1, 2, 4]),
                         Some(true),
                         Some(true),
@@ -3208,9 +3068,9 @@ mod test {
                 (
                     "--option=bar!/@1",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(1),
                         Some(true),
                         Some(true),
@@ -3219,9 +3079,9 @@ mod test {
                 (
                     "--option=bar!/@-1",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::backward(1),
                         Some(true),
                         Some(true),
@@ -3230,9 +3090,9 @@ mod test {
                 (
                     "--option=bar!/@+42",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(42),
                         Some(true),
                         Some(true),
@@ -3241,9 +3101,9 @@ mod test {
                 (
                     "--option=bar!/@[1, 2, 3]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![1, 2, 3]),
                         Some(true),
                         Some(true),
@@ -3252,9 +3112,9 @@ mod test {
                 (
                     "--option=bar!/@+[4, 5, 12]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![4, 5, 12]),
                         Some(true),
                         Some(true),
@@ -3263,9 +3123,9 @@ mod test {
                 (
                     "--option=bar!/@-[1, 2, 4]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::except(vec![1, 2, 4]),
                         Some(true),
                         Some(true),
@@ -3275,8 +3135,8 @@ mod test {
                     "option=bar/!@1",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(1),
                         Some(true),
                         Some(true),
@@ -3286,8 +3146,8 @@ mod test {
                     "option=bar/!@-1",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::backward(1),
                         Some(true),
                         Some(true),
@@ -3297,8 +3157,8 @@ mod test {
                     "option=bar/!@+42",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(42),
                         Some(true),
                         Some(true),
@@ -3308,8 +3168,8 @@ mod test {
                     "option=bar/!@[1, 2, 3]",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![1, 2, 3]),
                         Some(true),
                         Some(true),
@@ -3319,8 +3179,8 @@ mod test {
                     "option=bar/!@+[4, 5, 12]",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![4, 5, 12]),
                         Some(true),
                         Some(true),
@@ -3330,8 +3190,8 @@ mod test {
                     "option=bar/!@-[1, 2, 4]",
                     Some((
                         None,
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::except(vec![1, 2, 4]),
                         Some(true),
                         Some(true),
@@ -3340,9 +3200,9 @@ mod test {
                 (
                     "-option=bar/!@1",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(1),
                         Some(true),
                         Some(true),
@@ -3351,9 +3211,9 @@ mod test {
                 (
                     "-option=bar/!@-1",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::backward(1),
                         Some(true),
                         Some(true),
@@ -3362,9 +3222,9 @@ mod test {
                 (
                     "-option=bar/!@+42",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(42),
                         Some(true),
                         Some(true),
@@ -3373,9 +3233,9 @@ mod test {
                 (
                     "-option=bar/!@[1, 2, 3]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![1, 2, 3]),
                         Some(true),
                         Some(true),
@@ -3384,9 +3244,9 @@ mod test {
                 (
                     "-option=bar/!@+[4, 5, 12]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![4, 5, 12]),
                         Some(true),
                         Some(true),
@@ -3395,9 +3255,9 @@ mod test {
                 (
                     "-option=bar/!@-[1, 2, 4]",
                     Some((
-                        Some(gstr("-")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("-")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::except(vec![1, 2, 4]),
                         Some(true),
                         Some(true),
@@ -3406,9 +3266,9 @@ mod test {
                 (
                     "--option=bar/!@1",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(1),
                         Some(true),
                         Some(true),
@@ -3417,9 +3277,9 @@ mod test {
                 (
                     "--option=bar/!@-1",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::backward(1),
                         Some(true),
                         Some(true),
@@ -3428,9 +3288,9 @@ mod test {
                 (
                     "--option=bar/!@+42",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::forward(42),
                         Some(true),
                         Some(true),
@@ -3439,9 +3299,9 @@ mod test {
                 (
                     "--option=bar/!@[1, 2, 3]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![1, 2, 3]),
                         Some(true),
                         Some(true),
@@ -3450,9 +3310,9 @@ mod test {
                 (
                     "--option=bar/!@+[4, 5, 12]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::list(vec![4, 5, 12]),
                         Some(true),
                         Some(true),
@@ -3461,48 +3321,47 @@ mod test {
                 (
                     "--option=bar/!@-[1, 2, 4]",
                     Some((
-                        Some(gstr("--")),
-                        Some(gstr("option")),
-                        Some(gstr("bar")),
+                        Some(astr("--")),
+                        Some(astr("option")),
+                        Some(astr("bar")),
                         Index::except(vec![1, 2, 4]),
                         Some(true),
                         Some(true),
                     )),
                 ),
             ];
-
-            let prefixs = vec![gstr("--"), gstr("-")];
+            let parser = StrParser::default().with_pre("--").with_pre("-");
 
             for case in test_cases.iter() {
-                try_to_verify_one_task(gstr(case.0), &prefixs, &case.1);
+                try_to_verify_one_task(astr(case.0), &parser, &case.1);
             }
         }
     }
 
     fn try_to_verify_one_task(
-        pattern: Ustr,
-        prefix: &Vec<Ustr>,
+        pattern: Str,
+        parser: &StrParser,
         except: &Option<(
-            Option<Ustr>,
-            Option<Ustr>,
-            Option<Ustr>,
+            Option<Str>,
+            Option<Str>,
+            Option<Str>,
             Index,
             Option<bool>,
             Option<bool>,
         )>,
     ) {
-        let ret = parse_option_str(pattern, prefix);
+        let ret = parser.parse(pattern);
 
-        if let Ok(mut dk) = ret {
+        if let Ok(dk) = ret {
             assert!(except.is_some());
 
             if let Some(except) = except {
-                let index = dk.gen_index();
+                let index = dk.idx();
 
                 assert_eq!(except.0, dk.prefix);
                 assert_eq!(except.1, dk.name);
                 assert_eq!(except.2, dk.type_name);
-                assert_eq!(except.3, index);
+                assert_eq!(Some(&except.3), index.or(Some(&Index::default())));
                 assert_eq!(except.4, dk.deactivate);
                 assert_eq!(except.5, dk.optional);
             }

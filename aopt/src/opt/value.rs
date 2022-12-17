@@ -1,492 +1,108 @@
-use std::any::Any;
-use std::convert::From;
-use std::fmt::Debug;
+use std::path::PathBuf;
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        pub trait AnyTrait : Any + Debug + Send + Sync {
-            fn as_any(&self) -> &dyn Any;
+use crate::ctx::Ctx;
+use crate::Error;
+use crate::RawVal;
 
-            fn as_any_mut(&mut self) -> &mut dyn Any;
-        }
+pub trait RawValParser<Opt>
+where
+    Self: Sized,
+{
+    type Error: Into<Error>;
 
-        impl<T: Any + Debug + Send + Sync> AnyTrait for T {
-            fn as_any(&self) -> &dyn Any {
-                self
-            }
+    fn parse(opt: &Opt, val: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error>;
+}
 
-            fn as_any_mut(&mut self) -> &mut dyn Any {
-                self
-            }
-        }
-    }
-    else {
-        pub trait AnyTrait: Any + Debug {
-            fn as_any(&self) -> &dyn Any;
+macro_rules! impl_raw_val_parser {
+    ($int:ty) => {
+        impl<Opt: crate::opt::Opt> RawValParser<Opt> for $int {
+            type Error = Error;
 
-            fn as_any_mut(&mut self) -> &mut dyn Any;
-        }
+            fn parse(opt: &Opt, val: Option<&RawVal>, _ctx: &Ctx) -> Result<$int, Self::Error> {
+                let name = opt.name().as_str();
 
-        impl<T: Any + Debug> AnyTrait for T {
-            fn as_any(&self) -> &dyn Any {
-                self
-            }
-
-            fn as_any_mut(&mut self) -> &mut dyn Any {
-                self
+                val.ok_or_else(|| Error::sp_missing_argument(name))?
+                    .get_str()
+                    .ok_or_else(|| {
+                        Error::sp_invalid_option_value(
+                            name,
+                            &format!("Can't convert value to {}: invalid utf8", stringify!($int)),
+                        )
+                    })?
+                    .parse::<$int>()
+                    .map_err(|e| Error::sp_invalid_option_value(name.to_string(), e.to_string()))
             }
         }
+    };
+}
+
+impl_raw_val_parser!(i8);
+impl_raw_val_parser!(i16);
+impl_raw_val_parser!(i32);
+impl_raw_val_parser!(i64);
+impl_raw_val_parser!(u8);
+impl_raw_val_parser!(u16);
+impl_raw_val_parser!(u32);
+impl_raw_val_parser!(u64);
+impl_raw_val_parser!(f32);
+impl_raw_val_parser!(f64);
+impl_raw_val_parser!(isize);
+impl_raw_val_parser!(usize);
+
+impl<Opt: crate::opt::Opt> RawValParser<Opt> for String {
+    type Error = Error;
+
+    fn parse(opt: &Opt, val: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
+        let name = opt.name().as_str();
+
+        val.ok_or_else(|| Error::sp_missing_argument(name))?
+            .get_str()
+            .map(|v| v.to_string())
+            .ok_or_else(|| {
+                Error::sp_invalid_option_value(name, "Can't convert value to String: invalid utf8")
+            })
     }
 }
 
-/// The value type of option.
-#[derive(Debug)]
-pub enum Value {
-    Int(i64),
+impl<Opt: crate::opt::Opt> RawValParser<Opt> for bool {
+    type Error = Error;
 
-    Uint(u64),
+    fn parse(opt: &Opt, val: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
+        let name = opt.name().as_str();
+        let val = val
+            .ok_or_else(|| Error::sp_missing_argument(name))?
+            .get_str()
+            .ok_or_else(|| {
+                Error::sp_invalid_option_value(name, "Can't convert value to bool: invalid utf8")
+            })?;
 
-    Flt(f64),
-
-    Str(String),
-
-    Bool(bool),
-
-    Array(Vec<String>),
-
-    Any(Box<dyn AnyTrait>),
-
-    Null,
-}
-
-impl From<i64> for Value {
-    fn from(v: i64) -> Self {
-        Self::Int(v)
-    }
-}
-
-impl From<i32> for Value {
-    fn from(v: i32) -> Self {
-        Self::Int(v as i64)
-    }
-}
-
-impl From<i16> for Value {
-    fn from(v: i16) -> Self {
-        Self::Int(v as i64)
-    }
-}
-
-impl From<i8> for Value {
-    fn from(v: i8) -> Self {
-        Self::Int(v as i64)
-    }
-}
-
-impl From<u64> for Value {
-    fn from(v: u64) -> Self {
-        Self::Uint(v)
-    }
-}
-
-impl From<u32> for Value {
-    fn from(v: u32) -> Self {
-        Self::Uint(v as u64)
-    }
-}
-
-impl From<u16> for Value {
-    fn from(v: u16) -> Self {
-        Self::Uint(v as u64)
-    }
-}
-
-impl From<u8> for Value {
-    fn from(v: u8) -> Self {
-        Self::Uint(v as u64)
-    }
-}
-
-impl From<f64> for Value {
-    fn from(v: f64) -> Self {
-        Self::Flt(v)
-    }
-}
-
-impl From<f32> for Value {
-    fn from(v: f32) -> Self {
-        Self::Flt(v as f64)
-    }
-}
-
-impl From<String> for Value {
-    fn from(v: String) -> Self {
-        Self::Str(v)
-    }
-}
-
-impl From<&str> for Value {
-    fn from(v: &str) -> Self {
-        Self::Str(String::from(v))
-    }
-}
-
-impl From<bool> for Value {
-    fn from(v: bool) -> Self {
-        Self::Bool(v)
-    }
-}
-
-impl From<Vec<String>> for Value {
-    fn from(v: Vec<String>) -> Self {
-        Self::Array(v)
-    }
-}
-
-impl<'a> From<&'a [String]> for Value {
-    fn from(v: &'a [String]) -> Self {
-        Self::Array(v.to_vec())
-    }
-}
-
-impl Default for Value {
-    fn default() -> Self {
-        Self::Null
-    }
-}
-
-impl Value {
-    pub fn from_any<T: AnyTrait>(t: Box<T>) -> Self {
-        Self::Any(t)
-    }
-
-    pub fn as_int(&self) -> Option<&i64> {
-        match self {
-            Self::Int(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn as_uint(&self) -> Option<&u64> {
-        match self {
-            Self::Uint(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn as_flt(&self) -> Option<&f64> {
-        match self {
-            Self::Flt(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn as_str(&self) -> Option<&String> {
-        match self {
-            Self::Str(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn as_bool(&self) -> Option<&bool> {
-        match self {
-            Self::Bool(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn as_vec(&self) -> Option<&Vec<String>> {
-        match self {
-            Self::Array(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn as_slice(&self) -> Option<&[String]> {
-        match self {
-            Self::Array(v) => Some(v.as_ref()),
-            _ => None,
-        }
-    }
-
-    pub fn as_any(&self) -> Option<&Box<dyn AnyTrait>> {
-        match self {
-            Self::Any(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn downcast_ref<T: AnyTrait>(&self) -> Option<&T> {
-        match self {
-            Self::Any(v) => v.as_ref().as_any().downcast_ref::<T>(),
-            _ => None,
-        }
-    }
-
-    pub fn as_int_mut(&mut self) -> Option<&mut i64> {
-        match self {
-            Self::Int(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn as_uint_mut(&mut self) -> Option<&mut u64> {
-        match self {
-            Self::Uint(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn as_flt_mut(&mut self) -> Option<&mut f64> {
-        match self {
-            Self::Flt(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn as_str_mut(&mut self) -> Option<&mut String> {
-        match self {
-            Self::Str(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn as_bool_mut(&mut self) -> Option<&mut bool> {
-        match self {
-            Self::Bool(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn as_vec_mut(&mut self) -> Option<&mut Vec<String>> {
-        match self {
-            Self::Array(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn as_slice_mut(&mut self) -> Option<&mut [String]> {
-        match self {
-            Self::Array(v) => Some(v.as_mut()),
-            _ => None,
-        }
-    }
-
-    pub fn as_any_mut(&mut self) -> Option<&mut Box<dyn AnyTrait>> {
-        match self {
-            Self::Any(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn downcast_mut<T: AnyTrait>(&mut self) -> Option<&mut T> {
-        match self {
-            Self::Any(v) => v.as_mut().as_any_mut().downcast_mut::<T>(),
-            _ => None,
-        }
-    }
-
-    pub fn is_int(&self) -> bool {
-        matches!(self, Self::Int(_))
-    }
-
-    pub fn is_uint(&self) -> bool {
-        matches!(self, Self::Uint(_))
-    }
-
-    pub fn is_flt(&self) -> bool {
-        matches!(self, Self::Flt(_))
-    }
-
-    pub fn is_str(&self) -> bool {
-        matches!(self, Self::Str(_))
-    }
-
-    pub fn is_bool(&self) -> bool {
-        matches!(self, Self::Bool(_))
-    }
-
-    pub fn is_vec(&self) -> bool {
-        matches!(self, Self::Array(_))
-    }
-
-    pub fn is_any(&self) -> bool {
-        matches!(self, Self::Any(_))
-    }
-
-    pub fn is_null(&self) -> bool {
-        matches!(self, Self::Null)
-    }
-
-    pub fn reset(&mut self) {
-        *self = Self::Null;
-    }
-
-    /// Add string if current value is [`Value::Array`].
-    pub fn add_str(&mut self, string: String) -> &mut Self {
-        if let Self::Array(v) = self {
-            v.push(string);
-        }
-        self
-    }
-
-    /// Append string if current value is [`Value::Array`].
-    pub fn app_str(&mut self, values: &[String]) -> &mut Self {
-        if let Self::Array(v) = self {
-            for value in values {
-                v.push(value.clone());
-            }
-        }
-        self
-    }
-
-    /// Return a new value contains inner strings and other's strings if type is [`Value::Array`].
-    ///
-    /// It will take the ownership of strings of current value.
-    pub fn merge(&mut self, other: &Self) -> Option<Self> {
-        match self {
-            Self::Array(values) => {
-                let mut ret = vec![];
-
-                if let Some(ov) = other.as_vec() {
-                    for value in values {
-                        ret.push(std::mem::take(value))
-                    }
-                    for item in ov {
-                        ret.push(item.clone());
-                    }
-                    Some(Self::from(ret))
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        }
-    }
-
-    /// Return a new value contains inner strings and other's strings if type is [`Value::Array`].
-    ///
-    /// It will take the ownership of strings of current value.
-    /// And also will take ownership of strings in other value.
-    pub fn merge_mut(&mut self, other: &mut Self) -> Option<Self> {
-        match self {
-            Self::Array(values) => {
-                let mut ret = vec![];
-
-                if let Some(ov) = other.as_vec_mut() {
-                    for value in values {
-                        ret.push(std::mem::take(value))
-                    }
-                    for value in ov {
-                        ret.push(std::mem::take(value));
-                    }
-                    Some(Self::from(ret))
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        }
-    }
-
-    pub fn take_int(&mut self) -> Option<i64> {
-        match self {
-            Self::Int(v) => Some(std::mem::take(v)),
-            _ => None,
-        }
-    }
-
-    pub fn take_uint(&mut self) -> Option<u64> {
-        match self {
-            Self::Uint(v) => Some(std::mem::take(v)),
-            _ => None,
-        }
-    }
-
-    pub fn take_flt(&mut self) -> Option<f64> {
-        match self {
-            Self::Flt(v) => Some(std::mem::take(v)),
-            _ => None,
-        }
-    }
-
-    pub fn take_str(&mut self) -> Option<String> {
-        match self {
-            Self::Str(v) => Some(std::mem::take(v)),
-            _ => None,
-        }
-    }
-
-    pub fn take_bool(&mut self) -> Option<bool> {
-        match self {
-            Self::Bool(v) => Some(std::mem::take(v)),
-            _ => None,
-        }
-    }
-
-    pub fn take_vec(&mut self) -> Option<Vec<String>> {
-        match self {
-            Self::Array(v) => Some(std::mem::take(v)),
-            _ => None,
+        match val {
+            crate::opt::BOOL_TRUE => Ok(true),
+            crate::opt::BOOL_FALSE => Ok(false),
+            _ => Err(Error::sp_invalid_option_value(
+                name,
+                &format!("Except true or false, found value: {}", val),
+            )),
         }
     }
 }
 
-impl Clone for Value {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Null | Self::Any(_) => Self::Null,
-            Self::Int(v) => Self::Int(*v),
-            Self::Uint(v) => Self::Uint(*v),
-            Self::Flt(v) => Self::Flt(*v),
-            Self::Str(v) => Self::Str(v.clone()),
-            Self::Bool(v) => Self::Bool(*v),
-            Self::Array(v) => Self::Array(v.clone()),
-        }
-    }
-}
+impl<Opt: crate::opt::Opt> RawValParser<Opt> for PathBuf {
+    type Error = Error;
 
-pub struct CloneHelper(Box<dyn Fn(&dyn Any) -> Box<dyn Any>>);
+    fn parse(opt: &Opt, val: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
+        let name = opt.name().as_str();
 
-impl Debug for CloneHelper {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AnyCloneHelper")
-            .field("Fn", &String::from("..."))
-            .finish()
-    }
-}
-
-impl PartialEq for Value {
-    fn eq(&self, other: &Self) -> bool {
-        match self {
-            Self::Null => {
-                matches!(other, Self::Null)
-            }
-            Value::Int(v) => match other {
-                Self::Int(ov) => *v == *ov,
-                _ => false,
-            },
-            Value::Uint(v) => match other {
-                Self::Uint(ov) => *v == *ov,
-                _ => false,
-            },
-            Value::Flt(v) => match other {
-                Self::Flt(ov) => *v == *ov,
-                _ => false,
-            },
-            Value::Str(v) => match other {
-                Self::Str(ov) => v == ov,
-                _ => false,
-            },
-            Value::Bool(v) => match other {
-                Self::Bool(ov) => *v == *ov,
-                _ => false,
-            },
-            Value::Array(v) => match other {
-                Self::Array(ov) => v == ov,
-                _ => false,
-            },
-            Value::Any(_) => false,
-        }
+        Ok(PathBuf::from(
+            val.ok_or_else(|| Error::sp_missing_argument(name))?
+                .get_str()
+                .map(|v| v.to_string())
+                .ok_or_else(|| {
+                    Error::sp_invalid_option_value(
+                        name,
+                        "Can't convert value to String: invalid utf8",
+                    )
+                })?,
+        ))
     }
 }

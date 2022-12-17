@@ -1,10 +1,10 @@
 [package]
 name = "aopt-help"
-version = "0.2.8"
+version = "0.3.1"
 authors = ["araraloren <araraloren@gmail.com>"]
 edition = "2021"
 license = "MPL-2.0"
-description = "Generate help message for aopt"
+description = "Generate help message for command line program"
 repository = "https://github.com/araraloren/aopt/"
 keywords = ["getopt", "cli", "help", "usage"]
 categories = ["command-line-interface"]
@@ -17,6 +17,5 @@ name="temp"
 path="src/temp.rs"
 
 [dependencies]
-textwrap = "0.14.2"
+textwrap = "0.16.0"
 thiserror = "1.0.30"
-ustr = "0.8.1"

@@ -1,9 +1,11 @@
-use std::os::windows::prelude::MetadataExt;
+use std::borrow::Cow;
 use std::path::Path;
+use std::{ops::Deref, os::windows::prelude::MetadataExt};
 
-use aopt::err::create_error;
+use aopt::Error;
 use aopt::{getopt, prelude::*};
-use aopt_help::prelude::*;
+use aopt_help::prelude::Block;
+use aopt_help::store::Store;
 use regex::Regex;
 
 fn main() -> color_eyre::Result<()> {
@@ -12,29 +14,29 @@ fn main() -> color_eyre::Result<()> {
         .init();
     color_eyre::install()?;
 
-    let mut parser = Parser::<SimpleSet, DefaultService, ForwardPolicy>::default();
+    let mut parser = AFwdParser::default();
 
-    parser.get_set_mut().add_prefix(gstr("+"));
-
-    if let Ok(mut commit) = parser.add_opt("directory=p@0") {
-        commit.set_help("Set the target directory");
-        let id = commit.commit()?;
-        parser.add_callback(
-            id,
-            simple_pos_cb!(|_, _, dir, _, _| {
-                if !dir.is_empty() {
-                    if let Ok(files) = find_file_in_directory(dir) {
-                        Ok(Some(OptValue::from(files)))
-                    } else {
-                        Err(create_error(format!("Directory access error: {:?}", dir)))
-                    }
+    parser
+        .add_opt("directory=p@1")?
+        .set_help("The target directory will be search")
+        .on(|_: &mut ASet, _: &mut ASer, dir: ctx::Value<String>| {
+            if !dir.is_empty() {
+                if let Ok(files) = find_file_in_directory(dir.deref()) {
+                    Ok(Some(files))
                 } else {
-                    Err(create_error("Directory can not be empty!".to_string()))
+                    Err(Error::raise_error(format!(
+                        "Directory access error: {:?}",
+                        dir
+                    )))
                 }
-            }),
-        );
-    }
-    for (opt, help, alias_prefix, alias_name, mut filter_type) in [
+            } else {
+                Err(Error::raise_error(
+                    "Directory can not be empty!".to_string(),
+                ))
+            }
+        })?;
+
+    for (opt, help, alias_prefix, alias_name, filter_type) in [
         (
             "--dir=b",
             "Show the files type are directory",
@@ -71,82 +73,47 @@ fn main() -> color_eyre::Result<()> {
             FilterType::Regex(String::default()),
         ),
     ] {
-        if let Ok(mut commit) = parser.add_opt(opt) {
-            commit.set_help(help);
-            commit.add_alias(&format!("{}{}", alias_prefix, alias_name))?;
-            let id = commit.commit()?;
-            parser.add_callback(
-                id,
-                simple_opt_mut_cb!(move |_, set_cb: &mut SimpleSet, value| {
-                    let filter_type = filter_type.copy_value_from(&value);
-                    let ret = filter_file(set_cb, "directory", filter_type)
-                        .iter()
-                        .map(|&v| String::from(v))
-                        .collect::<Vec<String>>();
-                    if let Ok(mut filter) = set_cb.filter_mut("directory") {
-                        if let Some(dir_opt) = filter.find() {
-                            dir_opt.set_value(OptValue::from(ret))
-                        }
-                    }
-                    Ok(Some(value))
-                }),
-            )
-        }
-    }
-    if let Ok(mut commit) = parser.add_opt("--help=b") {
-        commit.add_alias("-h")?;
-        commit.set_help("Show the help message");
-        commit.commit()?;
-    }
-    if let Ok(mut commit) = parser.add_opt("main=m") {
-        commit.set_help("Main function");
-        let id = commit.commit()?;
-        parser.add_callback(
-            id,
-            simple_main_cb!(|_, set: &SimpleSet, _, value| {
-                let mut is_need_help = false;
+        parser
+            .add_opt(opt)?
+            .set_help(help)
+            .add_alias(format!("{}{}", alias_prefix, alias_name))
+            .fallback(
+                move |set: &mut ASet, ser: &mut ASer, mut val: ctx::Value<String>| {
+                    let mut filter_type = filter_type.clone();
 
-                if let Some(help_value) = set.filter("--help")?.find() {
-                    if help_value.get_value().as_bool() == Some(&true) {
-                        is_need_help = true;
-                    }
-                }
-                if is_need_help {
-                    let mut app_help = getopt_help!(set);
+                    ser.sve_filter(set["directory"].uid(), move |path: &String| {
+                        let filter_type = filter_type.copy_value_from(val.take());
 
-                    app_help.print_cmd_help(None).map_err(|e| {
-                        create_error(format!("can not write help to stdout: {:?}", e))
+                        filter_type.filter(path)
                     })?;
-                } else {
-                    for file in filter_file(set, "directory", &FilterType::All) {
-                        println!("{}", file);
-                    }
-                }
-                Ok(Some(value))
-            }),
-        );
+                    Ok(None::<String>)
+                },
+            )?;
     }
+    parser
+        .add_opt("--help=b")?
+        .add_alias("-h")
+        .set_help("Show the help message");
 
-    getopt!(&mut std::env::args().skip(1), parser)?;
-
-    Ok(())
-}
-
-fn filter_file<'a>(set: &'a dyn Set, opt: &str, filter_type: &FilterType) -> Vec<&'a str> {
-    let mut ret = vec![];
-    if let Ok(filter) = set.filter(opt) {
-        if let Some(dir_opt) = filter.find() {
-            let value = dir_opt.get_value();
-            if let Some(files) = value.as_slice() {
-                for file in files {
-                    if filter_type.filter(file) {
-                        ret.push(file.as_str());
-                    }
+    parser
+        .add_opt("main=m")?
+        .set_help("Main function")
+        .fallback(|set: &mut ASet, ser: &mut ASer| {
+            if *ser.sve_val::<bool>(set["--help"].uid())? {
+                display_help(set).map_err(|e| {
+                    Error::raise_error(format!("can not write help to stdout: {:?}", e))
+                })?;
+            } else {
+                for file in ser.sve_vals::<String>(set["directory"].uid())? {
+                    println!("{}", file);
                 }
             }
-        }
-    }
-    ret
+            Ok(None::<()>)
+        })?;
+
+    getopt!(std::env::args().skip(1), &mut parser)?;
+
+    Ok(())
 }
 
 fn find_file_in_directory(dir: &str) -> color_eyre::Result<Vec<String>> {
@@ -178,13 +145,13 @@ impl Default for FilterType {
 }
 
 impl FilterType {
-    pub fn copy_value_from(&mut self, value: &OptValue) -> &mut Self {
+    pub fn copy_value_from(&mut self, value: String) -> &mut Self {
         match self {
             FilterType::Regex(regex_str) => {
-                *regex_str = value.as_str().unwrap_or(&String::from(".")).clone();
+                *regex_str = value;
             }
             FilterType::Size(size) => {
-                *size = *value.as_uint().unwrap_or(&u64::MAX);
+                *size = value.parse::<u64>().unwrap_or(u64::MAX);
             }
             _ => {}
         }
@@ -211,4 +178,57 @@ impl FilterType {
             false
         }
     }
+}
+
+fn display_help<S: Set>(set: &S) -> Result<(), aopt_help::Error> {
+    let foot = format!(
+        "Create by {} v{}",
+        env!("CARGO_PKG_AUTHORS"),
+        env!("CARGO_PKG_VERSION")
+    );
+    let mut app_help = aopt_help::AppHelp::new(
+        env!("CARGO_PKG_NAME"),
+        env!("CARGO_PKG_DESCRIPTION"),
+        &foot,
+        aopt_help::prelude::Style::default(),
+        std::io::stdout(),
+    );
+    let global = app_help.global_mut();
+
+    global.add_block(Block::new("option", "[OPTION]", "", "OPTION:", ""))?;
+    global.add_block(Block::new("args", "[ARGS]", "", "ARGS:", ""))?;
+    for opt in set.iter() {
+        if opt.mat_style(Style::Pos) {
+            global.add_store(
+                "args",
+                Store::new(
+                    Cow::from(opt.name().as_str()),
+                    Cow::from(opt.hint().as_str()),
+                    Cow::from(opt.help().as_str()),
+                    Cow::from(opt.r#type().to_string()),
+                    opt.optional(),
+                    true,
+                ),
+            )?;
+        } else if opt.mat_style(Style::Argument)
+            || opt.mat_style(Style::Boolean)
+            || opt.mat_style(Style::Combined)
+        {
+            global.add_store(
+                "option",
+                Store::new(
+                    Cow::from(opt.name().as_str()),
+                    Cow::from(opt.hint().as_str()),
+                    Cow::from(opt.help().as_str()),
+                    Cow::from(opt.r#type().to_string()),
+                    opt.optional(),
+                    false,
+                ),
+            )?;
+        }
+    }
+
+    app_help.display(true)?;
+
+    Ok(())
 }

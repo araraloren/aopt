@@ -1,10 +1,11 @@
+use std::convert::From;
 use std::fmt::Display;
-use thiserror::Error;
-use ustr::Ustr;
+
+use crate::Str;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-/// Error string of [`Error`](crate::err::Error) type.
+/// Error string of [`Error`](crate::Error) type.
 #[derive(Debug, Clone, Default)]
 pub struct ErrorStr(String);
 
@@ -32,20 +33,20 @@ impl<'a> From<&'a str> for ErrorStr {
     }
 }
 
-impl From<Ustr> for ErrorStr {
-    fn from(v: Ustr) -> Self {
+impl From<Str> for ErrorStr {
+    fn from(v: Str) -> Self {
         Self(v.to_string())
     }
 }
 
-impl<'a> From<&'a Ustr> for ErrorStr {
-    fn from(v: &'a Ustr) -> Self {
+impl<'a> From<&'a Str> for ErrorStr {
+    fn from(v: &'a Str) -> Self {
         Self(v.to_string())
     }
 }
 
-impl<'a> From<&'a mut Ustr> for ErrorStr {
-    fn from(v: &'a mut Ustr) -> Self {
+impl<'a> From<&'a mut Str> for ErrorStr {
+    fn from(v: &'a mut Str) -> Self {
         Self(v.to_string())
     }
 }
@@ -56,24 +57,94 @@ impl Display for ErrorStr {
     }
 }
 
-#[derive(Debug, Error)]
 pub enum Error {
-    #[error("Argument error: {0}")]
-    FromArgumentError(#[from] ArgumentError),
+    Null,
 
-    #[error("Construct error: {0}")]
-    FromConstrutError(#[from] ConstructError),
+    Failure(ErrorStr),
 
-    #[error("Special error: {0}")]
-    FromSpecialError(#[from] SpecialError),
-
-    #[error("{0}")]
     CustomError(ErrorStr),
+
+    ArgMissingName(ErrorStr),
+
+    ArgParsingError(ErrorStr),
+
+    ArgMissingValue(ErrorStr),
+
+    ArgMissingPrefix(ErrorStr),
+
+    ConParsingFailed(ErrorStr),
+
+    ConNoPOSIfCMDExists,
+
+    ConOptionTypeError(ErrorStr),
+
+    ConDeactivateStyleError(ErrorStr),
+
+    ConMissingPrefix(ErrorStr, ErrorStr),
+
+    ConMissingIndex(ErrorStr, ErrorStr),
+
+    ConMissingField(ErrorStr, ErrorStr, ErrorStr),
+
+    ConOptionAliasError(ErrorStr),
+
+    ConParsingIndexFailed(ErrorStr, ErrorStr),
+
+    SpExtractError(ErrorStr),
+
+    SpMissingArgument(ErrorStr),
+
+    SpOptForceRequired(ErrorStr),
+
+    SpPOSForceRequired(ErrorStr),
+
+    SpCMDForceRequired(ErrorStr),
+
+    SpInvalidOptionName(ErrorStr),
+
+    SpInvalidOptionValue(ErrorStr, ErrorStr),
+
+    SpDeactivateStyleError(ErrorStr, bool),
+
+    InvokeError(ErrorStr),
+}
+
+impl std::fmt::Debug for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.display())
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
+
+    fn cause(&self) -> Option<&dyn std::error::Error> {
+        self.source()
+    }
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.display())
+    }
 }
 
 impl Error {
-    pub fn is_special(&self) -> bool {
-        matches!(self, Self::FromSpecialError(_))
+    pub fn is_failure(&self) -> bool {
+        matches!(
+            self,
+            Error::Failure(_)
+                | Error::SpMissingArgument(_)
+                | Error::SpPOSForceRequired(_)
+                | Error::SpCMDForceRequired(_)
+                | Error::SpInvalidOptionName(_)
+                | Error::SpInvalidOptionValue(_, _)
+                | Error::SpDeactivateStyleError(_, _)
+                | Error::SpExtractError(_)
+                | Error::InvokeError(_)
+        )
     }
 
     /// Create Error::CustomError error
@@ -83,248 +154,177 @@ impl Error {
 
     /// Create SpecialError::CustomFailure error
     pub fn raise_failure<T: Into<ErrorStr>>(t: T) -> Self {
-        SpecialError::CustomFailure(t.into()).into()
+        Error::Failure(t.into())
     }
 
     /// Create ArgumentError::ParsingFailed error
     pub fn arg_parsing_failed<T: Into<ErrorStr>>(t: T) -> Self {
-        ArgumentError::ParsingFailed(t.into()).into()
-    }
-
-    /// Create ArgumentError::PatternOutOfRange error
-    pub fn arg_pattern_out_of_range<T: Into<ErrorStr>>(t: T, start: usize, end: usize) -> Self {
-        ArgumentError::PatternOutOfRange(t.into(), start, end).into()
-    }
-
-    /// Create ArgumentError::MissingValue error
-    pub fn arg_missing_value<T: Into<ErrorStr>>(t: T) -> Self {
-        ArgumentError::MissingValue(t.into()).into()
-    }
-
-    /// Create ArgumentError::MissingPrefix error
-    pub fn arg_missing_prefix<T: Into<ErrorStr>>(t: T) -> Self {
-        ArgumentError::MissingPrefix(t.into()).into()
+        Self::ArgParsingError(t.into())
     }
 
     /// Create ArgumentError::MissingName error
     pub fn arg_missing_name<T: Into<ErrorStr>>(t: T) -> Self {
-        ArgumentError::MissingName(t.into()).into()
-    }
-
-    /// Create ArgumentError::UnwrapError error
-    pub fn arg_unwrap_value_failed<T: Into<ErrorStr>>(t: T) -> Self {
-        ArgumentError::UnwrapValueFailed(t.into()).into()
-    }
-
-    /// Create ConstructError::ParsingValueFailed error
-    pub fn opt_parsing_value_failed<T: Into<ErrorStr>>(t: T, e: T) -> Self {
-        ConstructError::ParsingValueFailed(t.into(), e.into()).into()
-    }
-
-    /// Create ConstructError::InvalidReturnValueOfCallback error
-    pub fn opt_invalid_ret_value<T: Into<ErrorStr>>(t: T) -> Self {
-        ConstructError::InvalidRetValueOfCallback(t.into()).into()
+        Self::ArgMissingName(t.into())
     }
 
     /// Create ConstructError::CanNotInsertPOSIfCMDExists error
-    pub fn opt_can_not_insert_pos() -> Self {
-        ConstructError::CanNotInsertPOSIfCMDExists.into()
-    }
-
-    /// Create ConstructError::MissingOptionType error
-    pub fn opt_missing_type<T: Into<ErrorStr>>(t: T) -> Self {
-        ConstructError::MissingOptionType(t.into()).into()
-    }
-
-    /// Create ConstructError::MissingOptionName error
-    pub fn opt_missing_name<T: Into<ErrorStr>>(t: T) -> Self {
-        ConstructError::MissingOptionName(t.into()).into()
+    pub fn con_can_not_insert_pos() -> Self {
+        Self::ConNoPOSIfCMDExists
     }
 
     /// Create ConstructError::MissingOptionPrefix error
-    pub fn opt_missing_prefix<T: Into<ErrorStr>>(t: T, p: T) -> Self {
-        ConstructError::MissingOptionPrefix(t.into(), p.into()).into()
+    pub fn con_missing_prefix<T: Into<ErrorStr>>(t: T, p: T) -> Self {
+        Self::ConMissingPrefix(t.into(), p.into())
     }
 
-    /// Create ConstructError::MissingNonOptionIndex error
-    pub fn opt_missing_index<T: Into<ErrorStr>>(t: T) -> Self {
-        ConstructError::MissingNonOptionIndex(t.into()).into()
+    /// Create ConstructError::MissingOptionPrefix error
+    pub fn con_missing_index<T: Into<ErrorStr>>(t: T, p: T) -> Self {
+        Self::ConMissingIndex(t.into(), p.into())
+    }
+
+    /// Create ConstructError::MissingOptionPrefix error
+    pub fn con_missing_field<T: Into<ErrorStr>>(f: T, t: T, p: T) -> Self {
+        Self::ConMissingField(f.into(), t.into(), p.into())
     }
 
     /// Create ConstructError::ParsingConstructorFailed error
-    pub fn opt_parsing_constructor_failed<T: Into<ErrorStr>>(t: T) -> Self {
-        ConstructError::ParsingConstructorFailed(t.into()).into()
-    }
-
-    /// Create ConstructError::PatternOutOfRange error
-    pub fn opt_pattern_out_of_range<T: Into<ErrorStr>>(t: T, start: usize, end: usize) -> Self {
-        ConstructError::PatternOutOfRange(t.into(), start, end).into()
+    pub fn con_parsing_failed<T: Into<ErrorStr>>(t: T) -> Self {
+        Self::ConParsingFailed(t.into())
     }
 
     /// Create ConstructError::IndexParsingFailed error
-    pub fn opt_parsing_index_failed<T: Into<ErrorStr>>(t: T, e: T) -> Self {
-        ConstructError::IndexParsingFailed(t.into(), e.into()).into()
+    pub fn con_parsing_index_failed<T: Into<ErrorStr>>(t: T, e: T) -> Self {
+        Self::ConParsingIndexFailed(t.into(), e.into())
     }
 
     /// Create ConstructError::NotSupportDeactivateStyle error
-    pub fn opt_unsupport_deactivate_style<T: Into<ErrorStr>>(t: T) -> Self {
-        ConstructError::NotSupportDeactivateStyle(t.into()).into()
-    }
-
-    /// Create ConstructError::NotSupportCallbackType error
-    pub fn opt_unsupport_callback_type<T: Into<ErrorStr>>(t: T, v: T) -> Self {
-        ConstructError::NotSupportCallbackType(t.into(), v.into()).into()
+    pub fn con_unsupport_deactivate_style<T: Into<ErrorStr>>(t: T) -> Self {
+        Self::ConDeactivateStyleError(t.into())
     }
 
     /// Create ConstructError::NotSupportOptionType error
-    pub fn opt_unsupport_option_type<T: Into<ErrorStr>>(t: T) -> Self {
-        ConstructError::NotSupportOptionType(t.into()).into()
+    pub fn con_unsupport_option_type<T: Into<ErrorStr>>(t: T) -> Self {
+        Self::ConOptionTypeError(t.into())
     }
 
     /// Create ConstructError::InvalidOptionAlias error
-    pub fn opt_invalid_alias<T: Into<ErrorStr>>(t: T) -> Self {
-        ConstructError::InvalidOptionAlias(t.into()).into()
+    pub fn con_invalid_option_alias<T: Into<ErrorStr>>(t: T) -> Self {
+        Self::ConOptionAliasError(t.into())
     }
 
-    /// Create SpecialError::OptionForceRequired error
-    pub fn sp_option_force_require<T: Into<ErrorStr>>(t: T) -> Self {
-        SpecialError::OptionForceRequired(t.into()).into()
-    }
-
-    /// Create SpecialError::MissingArgumentForOption error    
+    /// Create SpecialError::MissingArgumentForOption error
     pub fn sp_missing_argument<T: Into<ErrorStr>>(t: T) -> Self {
-        SpecialError::MissingArgumentForOption(t.into()).into()
-    }
-
-    /// Create SpecialError::InvalidArgumentForOption error
-    pub fn sp_invalid_argument<T: Into<ErrorStr>>(t: T) -> Self {
-        SpecialError::InvalidArgumentForOption(t.into()).into()
+        Self::SpMissingArgument(t.into())
     }
 
     /// Create SpecialError::POSForceRequired error
     pub fn sp_pos_force_require<T: Into<ErrorStr>>(t: T) -> Self {
-        SpecialError::POSForceRequired(t.into()).into()
+        Self::SpPOSForceRequired(t.into())
+    }
+
+    /// Create SpecialError::OptForceRequired error
+    pub fn sp_opt_force_require<T: Into<ErrorStr>>(t: T) -> Self {
+        Self::SpOptForceRequired(t.into())
     }
 
     /// Create SpecialError::CMDForceRequired error
     pub fn sp_cmd_force_require<T: Into<ErrorStr>>(t: T) -> Self {
-        SpecialError::CMDForceRequired(t.into()).into()
+        Self::SpCMDForceRequired(t.into())
     }
 
     /// Create SpecialError::InvalidOptionName error
     pub fn sp_invalid_option_name<T: Into<ErrorStr>>(t: T) -> Self {
-        SpecialError::InvalidOptionName(t.into()).into()
+        Self::SpInvalidOptionName(t.into())
     }
 
-    /// Create SpecialError::NotSupportDeactivateStyle error
-    pub fn sp_unsupport_deactivate_style<T: Into<ErrorStr>>(t: T) -> Self {
-        SpecialError::NotSupportDeactivateStyle(t.into()).into()
+    pub fn sp_invalid_option_value<T: Into<ErrorStr>>(n: T, t: T) -> Self {
+        Self::SpInvalidOptionValue(n.into(), t.into())
     }
-}
 
-pub fn create_error(error_description: String) -> Error {
-    Error::CustomError(error_description.into())
-}
+    pub fn sp_deactivate_style_error<T: Into<ErrorStr>>(t: T, support: bool) -> Self {
+        Self::SpDeactivateStyleError(t.into(), support)
+    }
 
-pub fn create_failure(msg: String) -> SpecialError {
-    SpecialError::CustomFailure(msg.into())
-}
+    pub fn sp_extract_error<T: Into<ErrorStr>>(t: T) -> Self {
+        Self::SpExtractError(t.into())
+    }
 
-/// Errors of parsing command line item.
-#[derive(Debug, thiserror::Error)]
-pub enum ArgumentError {
-    #[error("Failed parsing `{0}` as an option string")]
-    ParsingFailed(ErrorStr),
+    pub fn invoke_error<T: Into<ErrorStr>>(t: T) -> Self {
+        Self::InvokeError(t.into())
+    }
 
-    #[error("Can not get sub-pattern({1} .. {2}) of `{0}`")]
-    PatternOutOfRange(ErrorStr, usize, usize),
-
-    #[error("Syntax error! Missing an value after '=': {0}")]
-    MissingValue(ErrorStr),
-
-    #[error("Syntax error! Missing option prefix: {0}")]
-    MissingPrefix(ErrorStr),
-
-    #[error("Syntax error! Missing option name: {0}")]
-    MissingName(ErrorStr),
-
-    #[error("Can not unwrap `{0}` from Argument")]
-    UnwrapValueFailed(ErrorStr),
-}
-
-/// Errors of option construct and parsing.
-#[derive(Debug, thiserror::Error)]
-pub enum ConstructError {
-    #[error("Syntax error! Missing option type: {0}")]
-    MissingOptionType(ErrorStr),
-
-    #[error("Syntax error! Missing option name: {0}")]
-    MissingOptionName(ErrorStr),
-
-    #[error("Syntax error! Failed to parsing constructor: {0}")]
-    ParsingConstructorFailed(ErrorStr),
-
-    #[error("Can not get sub-pattern({1} .. {2}) of `{0}`")]
-    PatternOutOfRange(ErrorStr, usize, usize),
-
-    #[error("Syntax error! Invalid index `{0}`: {1}")]
-    IndexParsingFailed(ErrorStr, ErrorStr),
-
-    #[error("Option `{0}` not support deactivate style")]
-    NotSupportDeactivateStyle(ErrorStr),
-
-    #[error("Syntax error! Missing prefix for option `{0}` with type `{1}`")]
-    MissingOptionPrefix(ErrorStr, ErrorStr),
-
-    #[error("Syntax error! Missing Non-Option index: `{0}`")]
-    MissingNonOptionIndex(ErrorStr),
-
-    #[error("Option `{0}` not support callback type `{1}`")]
-    NotSupportCallbackType(ErrorStr, ErrorStr),
-
-    #[error("Not support option type `{0}`")]
-    NotSupportOptionType(ErrorStr),
-
-    #[error("Invalid alias `{0}`, check the option prefix or name")]
-    InvalidOptionAlias(ErrorStr),
-
-    #[error("Failed parsing `{0}` as option value: {1}")]
-    ParsingValueFailed(ErrorStr, ErrorStr),
-
-    #[error("Invalid callback return value type: `{0}`")]
-    InvalidRetValueOfCallback(ErrorStr),
-
-    #[error("Can not have force required POS if CMD exists")]
-    CanNotInsertPOSIfCMDExists,
-}
-
-/// Special error using for parser.
-///
-/// When using [`getopt!`](crate::getopt!) for multiple [`Parser`](crate::parser::Parser),
-/// current error will not treat as error until last Parser.
-#[derive(Debug, thiserror::Error)]
-pub enum SpecialError {
-    #[error("Option `{0}` is force required")]
-    OptionForceRequired(ErrorStr),
-
-    #[error("Missing argument for option `{0}`")]
-    MissingArgumentForOption(ErrorStr),
-
-    #[error("Invalid value for option `{0}`")]
-    InvalidArgumentForOption(ErrorStr),
-
-    #[error("POS `{0}` is force required")]
-    POSForceRequired(ErrorStr),
-
-    #[error("CMD `{0}` is force required")]
-    CMDForceRequired(ErrorStr),
-
-    #[error("Invalid option name: `{0}`")]
-    InvalidOptionName(ErrorStr),
-
-    #[error("Can not disable option which not support deactivate style: `{0}`")]
-    NotSupportDeactivateStyle(ErrorStr),
-
-    #[error("{0}")]
-    CustomFailure(ErrorStr),
+    pub fn display(&self) -> String {
+        match self {
+            Error::Null => String::default(),
+            Error::Failure(opt) => opt.to_string(),
+            Error::CustomError(opt) => opt.to_string(),
+            Error::ArgMissingName(opt) => {
+                format!("Syntax error! Missing option name: '{opt}'")
+            }
+            Error::ArgParsingError(opt) => {
+                format!("Syntax error! Parsing failed: '{opt}'.")
+            }
+            Error::ArgMissingValue(opt) => {
+                format!("Syntax error! Missing option value: '{opt}'.")
+            }
+            Error::ArgMissingPrefix(opt) => {
+                format!("Syntax error! Missing option prefix: '{opt}'.")
+            }
+            Error::ConNoPOSIfCMDExists => {
+                "Can not have force required POS if CMD exists.".to_owned()
+            }
+            Error::ConOptionTypeError(r#type) => {
+                format!("Not support option type '{type}'.")
+            }
+            Error::ConDeactivateStyleError(name) => {
+                format!("Option '{name}' not support deactivate style.")
+            }
+            Error::ConMissingPrefix(name, r#type) => {
+                format!("Syntax error! Missing prefix for option '{name}' with type '{type}'.")
+            }
+            Error::ConMissingIndex(name, r#type) => {
+                format!("Syntax error! Missing index for option '{name}' with type '{type}'.")
+            }
+            Error::ConMissingField(field, name, r#type) => {
+                format!("Syntax error! Missing `{field}` for option '{name}' with type '{type}'.")
+            }
+            Error::ConOptionAliasError(alias) => {
+                format!("Invalid alias '{alias}', check the option prefix or name.")
+            }
+            Error::ConParsingIndexFailed(opt, err) => {
+                format!("Syntax error! Parsing index '{opt}' failed: {err}.")
+            }
+            Error::ConParsingFailed(opt) => {
+                format!("Syntax error! Parsing option string '{opt}' failed.")
+            }
+            Error::SpMissingArgument(opt) => {
+                format!("Syntax error! Missing argument for option '{opt}'.")
+            }
+            Error::SpOptForceRequired(poss) => {
+                format!("Option '{poss}' are force required.")
+            }
+            Error::SpPOSForceRequired(poss) => {
+                format!("POS '{poss}' are force required.")
+            }
+            Error::SpCMDForceRequired(cmds) => {
+                format!("CMD '{cmds}' are force required.")
+            }
+            Error::SpInvalidOptionName(name) => {
+                format!("Can not find option '{name}'.")
+            }
+            Error::SpInvalidOptionValue(name, error) => {
+                format!("Invalid option value for '{name}': {error}")
+            }
+            Error::SpDeactivateStyleError(msg, support) => {
+                format!(
+                    "Syntax error, option '{msg}' {} support deactivate style",
+                    if *support { "only" } else { "not" }
+                )
+            }
+            Error::SpExtractError(msg) => {
+                format!("Extract error: {}", msg)
+            }
+            Error::InvokeError(msg) => msg.to_string(),
+        }
+    }
 }

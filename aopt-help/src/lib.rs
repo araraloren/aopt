@@ -1,473 +1,531 @@
-//! Generate help message for aopt.
-//!
-//! # Example
-//!
-//! See the example code of [`snowball`](https://github.com/araraloren/aopt/blob/main/snowball-follow/src/main.rs#L384).
-//!
-//! ```ignore
-//! fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout, DefaultFormat> {
-//!     let mut help = AppHelp::default();
-//!
-//!     help.set_name("snowball".into());
-//!
-//!     let global = help.store.get_global_mut();
-//!
-//!     for opt in set.opt_iter() {
-//!         if opt.match_style(aopt::opt::Style::Pos) {
-//!             global.add_pos(PosStore::new(
-//!                 opt.get_name(),
-//!                 opt.get_hint(),
-//!                 opt.get_help(),
-//!                 opt.get_index().unwrap().to_string().into(),
-//!                 opt.get_optional(),
-//!             ));
-//!         } else if !opt.match_style(aopt::opt::Style::Main) {
-//!             global.add_opt(OptStore::new(
-//!                 opt.get_name(),
-//!                 opt.get_hint(),
-//!                 opt.get_help(),
-//!                 opt.get_type_name(),
-//!                 opt.get_optional(),
-//!             ));
-//!         }
-//!     }
-//!
-//!     global.set_header(gstr("Get the follow people number in https://xueqiu.com/"));
-//!     global.set_footer(gstr(&format!("Create by araraloren {}", env!("CARGO_PKG_VERSION"))));
-//!
-//!     help
-//! }
-//! ```
-//!
-//!
-mod err;
-mod format;
-mod printer;
-mod store;
-mod style;
-mod wrapper;
+pub mod block;
+pub mod cmd;
+pub mod error;
+pub mod format;
+pub mod store;
+pub mod style;
+pub mod wrapper;
 
-use std::io::{Stdout, Write};
-use ustr::Ustr;
-
-pub use crate::err::Error;
-pub use crate::err::Result;
-pub use crate::format::Format;
-pub use crate::printer::Printer;
-pub use crate::store::CmdMut;
-pub use crate::store::CmdOptMut;
-pub use crate::store::CmdPosMut;
-pub use crate::store::CmdStore;
-pub use crate::store::OptStore;
-pub use crate::store::PosStore;
-pub use crate::store::SecStore;
-pub use crate::store::SectionMut;
-pub use crate::store::Store;
-pub use crate::style::Alignment;
-pub use crate::style::Style;
-pub use crate::wrapper::Wrapped;
-pub use crate::wrapper::Wrapper;
+pub use error::Error;
+pub use error::Result;
 
 pub mod prelude {
-    pub use crate::format::Format;
-    pub use crate::printer::Printer;
-    pub use crate::store::CmdMut;
-    pub use crate::store::CmdOptMut;
-    pub use crate::store::CmdPosMut;
-    pub use crate::store::CmdStore;
-    pub use crate::store::OptStore;
-    pub use crate::store::PosStore;
-    pub use crate::store::SecStore;
-    pub use crate::store::SectionMut;
+    pub use crate::block::Block;
+    pub use crate::cmd::AddStore2Block;
+    pub use crate::cmd::BlockMut;
+    pub use crate::cmd::Command;
+    pub use crate::format::DefaultAppPolicy;
+    pub use crate::format::DefaultPolicy;
+    pub use crate::format::HelpDisplay;
+    pub use crate::format::HelpPolicy;
     pub use crate::store::Store;
-    pub use crate::style::Alignment;
+    pub use crate::style::Align;
     pub use crate::style::Style;
-    pub use crate::wrapper::Wrapped;
-    pub use crate::wrapper::Wrapper;
     pub use crate::AppHelp;
-    pub use crate::DefaultFormat;
-    pub use std::io::Stdout;
-    pub use std::io::Write;
-    pub use ustr::Ustr;
 }
 
-#[derive(Debug)]
-pub struct AppHelp<W: Write, F: Format> {
-    name: Ustr,
+use crate::block::Block;
+use crate::cmd::Command;
+use crate::format::DefaultAppPolicy;
+use crate::format::DefaultPolicy;
+use crate::format::HelpPolicy;
+use crate::store::Store;
+use crate::style::Style;
 
-    pub store: Store,
+use std::io::Stdout;
+use std::{borrow::Cow, io::Write};
 
+#[derive(Debug, Clone)]
+pub struct AppHelp<'a, W> {
     style: Style,
 
     writer: W,
 
-    format: F,
+    blocks: Vec<Block<'a, Cow<'a, str>>>, // store command sections
+
+    cmds: Vec<Command<'a>>,
+
+    global: usize,
 }
 
-impl<W: Write, F: Format> AppHelp<W, F> {
-    pub fn new(name: Ustr, style: Style, writer: W) -> Self {
+impl<'a> Default for AppHelp<'a, Stdout> {
+    fn default() -> Self {
         Self {
-            name,
-            store: Store::default(),
-            style: style.clone(),
-            writer,
-            format: F::from(style),
+            style: Default::default(),
+            writer: std::io::stdout(),
+            blocks: Default::default(),
+            cmds: Default::default(),
+            global: 0,
         }
     }
+}
 
-    pub fn get_name(&self) -> Ustr {
-        self.name
+impl<'a, W: Write> AppHelp<'a, W> {
+    pub fn new<S: Into<Cow<'a, str>>>(name: S, head: S, foot: S, style: Style, writer: W) -> Self {
+        Self {
+            writer,
+            style,
+            blocks: vec![],
+            cmds: vec![],
+            global: 0,
+        }
+        .with_global(name, head, foot)
     }
 
-    pub fn set_name(&mut self, name: Ustr) {
-        self.name = name;
+    pub fn with_global<S: Into<Cow<'a, str>>>(mut self, name: S, head: S, foot: S) -> Self {
+        let name = name.into();
+        let hint = Cow::from("");
+        let help = Cow::from("");
+        let head = head.into();
+        let foot = foot.into();
+        let global = Command::new(name, hint, help, head, foot);
+
+        self.cmds.push(global);
+        self.global = self.cmds.len() - 1;
+        self
     }
 
-    pub fn get_style(&self) -> &Style {
+    pub fn foot(&self) -> Cow<'a, str> {
+        self.global().foot()
+    }
+
+    pub fn head(&self) -> Cow<'a, str> {
+        self.global().head()
+    }
+
+    pub fn name(&self) -> Cow<'a, str> {
+        self.global().name()
+    }
+
+    pub fn style(&self) -> &Style {
         &self.style
     }
 
-    pub fn set_style(&mut self, style: Style) {
-        self.style = style.clone();
-        self.format.set_style(style);
+    pub fn global(&self) -> &Command<'a> {
+        &self.cmds[self.global]
     }
 
-    pub fn set_writer(&mut self, writer: W) {
-        self.writer = writer;
+    pub fn global_mut(&mut self) -> &mut Command<'a> {
+        &mut self.cmds[self.global]
     }
-}
 
-impl<F: Format> Default for AppHelp<Stdout, F> {
-    fn default() -> Self {
-        Self {
-            name: Ustr::default(),
-            store: Store::default(),
-            style: Style::default(),
-            writer: std::io::stdout(),
-            format: F::from(Style::default()),
-        }
+    pub fn block(&self) -> &[Block<'a, Cow<'a, str>>] {
+        &self.blocks
     }
-}
 
-impl<W: Write, F: Format> Printer<W> for AppHelp<W, F> {
-    fn set_style(&mut self, style: Style) {
+    pub fn block_mut(&mut self) -> &mut [Block<'a, Cow<'a, str>>] {
+        &mut self.blocks
+    }
+
+    /// If the app has command except global one.
+    pub fn has_cmd(&self) -> bool {
+        self.cmds.len() >= 2
+    }
+
+    /// If the app has position args in any command.
+    pub fn has_pos(&self) -> bool {
+        self.cmds.iter().any(|cmd| cmd.has_position())
+    }
+
+    pub fn find_cmd<S: Into<Cow<'a, str>>>(&self, cmd: S) -> Option<&Command<'a>> {
+        let name = cmd.into();
+
+        self.cmds.iter().find(|v| v.name() == name)
+    }
+
+    pub fn find_cmd_mut<S: Into<Cow<'a, str>>>(&mut self, cmd: S) -> Option<&mut Command<'a>> {
+        let name = cmd.into();
+
+        self.cmds.iter_mut().find(|v| v.name() == name)
+    }
+
+    pub fn find_block<S: Into<Cow<'a, str>>>(&self, block: S) -> Option<&Block<'a, Cow<'a, str>>> {
+        let name = block.into();
+
+        self.blocks.iter().find(|v| v.name() == name)
+    }
+
+    pub fn find_block_mut<S: Into<Cow<'a, str>>>(
+        &mut self,
+        block: S,
+    ) -> Option<&mut Block<'a, Cow<'a, str>>> {
+        let name = block.into();
+
+        self.blocks.iter_mut().find(|v| v.name() == name)
+    }
+
+    pub fn with_name<S: Into<Cow<'a, str>>>(mut self, name: S) -> Self {
+        self.global_mut().set_name(name);
+        self
+    }
+
+    pub fn with_head<S: Into<Cow<'a, str>>>(mut self, head: S) -> Self {
+        self.global_mut().set_head(head);
+        self
+    }
+
+    pub fn with_foot<S: Into<Cow<'a, str>>>(mut self, foot: S) -> Self {
+        self.global_mut().set_foot(foot);
+        self
+    }
+
+    pub fn with_style(mut self, style: Style) -> Self {
         self.style = style;
+        self
     }
 
-    fn set_output_handle(&mut self, w: W) {
-        self.writer = w;
+    pub fn with_writer(mut self, writer: W) -> Self {
+        self.writer = writer;
+        self
     }
 
-    fn print_help(&mut self) -> Result<usize> {
-        self.print_cmd_usage(None)?;
-        self.print_cmd_header(None)?;
-        self.print_section_all()?;
-        self.print_cmd_footer(None)
+    pub fn set_name<S: Into<Cow<'a, str>>>(&mut self, name: S) -> &mut Self {
+        self.global_mut().set_name(name);
+        self
     }
 
-    fn print_cmd_help(&mut self, cmd: Option<Ustr>) -> Result<usize> {
-        self.print_cmd_usage(cmd)?;
-        self.print_cmd_header(cmd)?;
-        self.print_cmd_pos(cmd)?;
-        self.print_cmd_opt(cmd)?;
-        self.print_cmd_footer(cmd)
+    pub fn set_head<S: Into<Cow<'a, str>>>(&mut self, head: S) -> &mut Self {
+        self.global_mut().set_head(head);
+        self
     }
 
-    fn print_section_all(&mut self) -> Result<usize> {
-        let mut out: usize = 0;
-        for sec_store in self.store.sec_iter() {
-            let mut cmd_info = vec![];
-
-            for cmd_name in sec_store.cmd_iter() {
-                if let Some(cmd_store) = self.store.get_cmd(*cmd_name) {
-                    cmd_info.push(vec![
-                        cmd_store.get_hint().as_ref(),
-                        cmd_store.get_help().as_ref(),
-                    ]);
-                }
-            }
-            let mut buffer = String::new();
-
-            buffer += self
-                .format
-                .format_sec_title(sec_store.get_help().as_ref())
-                .as_ref();
-            if !cmd_info.is_empty() {
-                let mut wrapper = Wrapper::new(&cmd_info);
-
-                wrapper.wrap();
-                let wrapped = wrapper.get_output();
-
-                for wrapped_line in wrapped {
-                    let max_len = wrapped_line.iter().map(|v| v.len()).max().unwrap_or(1);
-
-                    for i in 0..max_len {
-                        buffer += self
-                            .format
-                            .format_sec_line(
-                                &wrapped_line
-                                    .iter()
-                                    .map(|v| v.get_line(i))
-                                    .collect::<Vec<String>>(),
-                            )
-                            .as_ref();
-                        buffer += self.format.format_sec_new_line().as_ref();
-                    }
-                }
-                buffer.truncate(buffer.len() - 1);
-            }
-
-            out += self.writer.write(buffer.as_bytes())?;
-            out += self.writer.write("\n".as_bytes())?;
-        }
-        Ok(out)
+    pub fn set_foot<S: Into<Cow<'a, str>>>(&mut self, foot: S) -> &mut Self {
+        self.global_mut().set_foot(foot);
+        self
     }
 
-    fn print_section(&mut self, section: Ustr) -> Result<usize> {
-        let mut cmd_info = vec![];
-        let sec_store = self
-            .store
-            .get_sec(section)
-            .ok_or_else(|| Error::InvalidSecName(section.to_string()))?;
-
-        for cmd_name in sec_store.cmd_iter() {
-            if let Some(cmd_store) = self.store.get_cmd(*cmd_name) {
-                cmd_info.push(vec![
-                    cmd_store.get_hint().as_ref(),
-                    cmd_store.get_help().as_ref(),
-                ]);
-            }
-        }
-        let mut buffer = String::new();
-
-        buffer += self
-            .format
-            .format_sec_title(sec_store.get_help().as_ref())
-            .as_ref();
-        if !cmd_info.is_empty() {
-            let mut wrapper = Wrapper::new(&cmd_info);
-
-            wrapper.wrap();
-            let wrapped = wrapper.get_output();
-
-            for wrapped_line in wrapped {
-                let max_len = wrapped_line.iter().map(|v| v.len()).max().unwrap_or(1);
-
-                for i in 0..max_len {
-                    buffer += self
-                        .format
-                        .format_sec_line(
-                            &wrapped_line
-                                .iter()
-                                .map(|v| v.get_line(i))
-                                .collect::<Vec<String>>(),
-                        )
-                        .as_ref();
-                    buffer += self.format.format_sec_new_line().as_ref();
-                }
-            }
-            buffer.truncate(buffer.len() - 1);
-        }
-
-        Ok(self.writer.write(buffer.as_bytes())?)
+    pub fn set_style(&mut self, style: Style) -> &mut Self {
+        self.style = style;
+        self
     }
 
-    fn print_cmd_usage(&mut self, cmd: Option<Ustr>) -> Result<usize> {
-        let mut buffer = String::new();
-        let cmd_store = if let Some(cmd_name) = cmd {
-            self.store
-                .get_cmd(cmd_name)
-                .ok_or_else(|| Error::InvalidCmdName(cmd_name.to_string()))?
+    pub fn set_write(&mut self, writer: W) -> &mut Self {
+        self.writer = writer;
+        self
+    }
+
+    pub fn add_block(&mut self, block: Block<'a, Cow<'a, str>>) -> Result<&mut Self> {
+        if self.find_block(block.name()).is_some() {
+            Err(Error::DuplicatedBlockName(block.name().to_string()))
         } else {
-            self.store.get_global()
-        };
-
-        buffer += self
-            .format
-            .format_usage_name(self.get_name().as_ref())
-            .as_ref();
-        // for global cmd, print global option before <COMMAND>
-        if cmd.is_none() {
-            for opt_store in cmd_store.opt_iter() {
-                buffer += self
-                    .format
-                    .format_usage_opt(opt_store.get_hint().as_ref(), opt_store.get_optional())
-                    .as_ref();
-            }
-            if self.store.cmd_iter().len() > 0 {
-                buffer += self.format.format_usage_cmd(None).as_ref();
-            }
-            buffer += self
-                .format
-                .format_usage_pos(
-                    cmd_store.pos_len() + self.store.cmd_iter().fold(0, |acc, x| acc + x.pos_len()),
-                )
-                .as_ref();
-        } else {
-            // for any CMD, print option after it
-            buffer += self
-                .format
-                .format_usage_cmd(Some(cmd_store.get_name().as_ref()))
-                .as_ref();
-            for opt_store in cmd_store.opt_iter() {
-                buffer += self
-                    .format
-                    .format_usage_opt(opt_store.get_hint().as_ref(), opt_store.get_optional())
-                    .as_ref();
-            }
-            buffer += self.format.format_usage_pos(cmd_store.pos_len()).as_ref();
-        }
-        buffer += "\n";
-        Ok(self.writer.write(buffer.as_bytes())?)
-    }
-
-    fn print_cmd_header(&mut self, cmd: Option<Ustr>) -> Result<usize> {
-        let cmd_store = if let Some(cmd_name) = cmd {
-            self.store
-                .get_cmd(cmd_name)
-                .ok_or_else(|| Error::InvalidCmdName(cmd_name.to_string()))?
-        } else {
-            self.store.get_global()
-        };
-        let header = cmd_store.get_header();
-        if header.is_empty() {
-            Ok(0)
-        } else {
-            Ok(self
-                .writer
-                .write(self.format.format_header(header).as_bytes())?)
+            self.blocks.push(block);
+            Ok(self)
         }
     }
 
-    fn print_cmd_footer(&mut self, cmd: Option<Ustr>) -> Result<usize> {
-        let cmd_store = if let Some(cmd_name) = cmd {
-            self.store
-                .get_cmd(cmd_name)
-                .ok_or_else(|| Error::InvalidCmdName(cmd_name.to_string()))?
+    pub fn add_cmd<S: Into<Cow<'a, str>>>(
+        &mut self,
+        block: S,
+        cmd: Command<'a>,
+    ) -> Result<&mut Self> {
+        let block = block.into();
+
+        self.find_block_mut(block.clone())
+            .ok_or_else(|| Error::InvalidBlockName(block.to_string()))?
+            .push(cmd.name());
+        if self.find_cmd(cmd.name()).is_some() {
+            Err(Error::DuplicatedCommandName(cmd.name().to_string()))
         } else {
-            self.store.get_global()
-        };
-        let footer = cmd_store.get_footer();
-        if footer.is_empty() {
-            Ok(0)
-        } else {
-            Ok(self
-                .writer
-                .write(self.format.format_footer(footer).as_bytes())?)
+            self.cmds.push(cmd);
+            Ok(self)
         }
     }
 
-    fn print_cmd_pos(&mut self, cmd: Option<Ustr>) -> Result<usize> {
-        let mut pos_info = vec![];
-        let cmd_store = if let Some(cmd_name) = cmd {
-            self.store
-                .get_cmd(cmd_name)
-                .ok_or_else(|| Error::InvalidCmdName(cmd_name.to_string()))?
+    pub fn new_block<S: Into<Cow<'a, str>>>(&mut self, name: S) -> Result<AddBlock2App<'a, '_>> {
+        let name = name.into();
+
+        if self.find_block(name.clone()).is_some() {
+            Err(Error::DuplicatedBlockName(name.to_string()))
         } else {
-            self.store.get_global()
-        };
-
-        for pos_store in cmd_store.pos_iter() {
-            pos_info.push(vec![
-                pos_store.get_hint().as_ref(),
-                pos_store.get_help().as_ref(),
-            ]);
+            Ok(AddBlock2App::new(&mut self.blocks, name))
         }
-        let mut buffer = String::new();
-
-        if !pos_info.is_empty() {
-            buffer += self.format.get_pos_title().as_ref();
-
-            let mut wrapper = Wrapper::new(&pos_info);
-
-            wrapper.wrap();
-            let wrapped = wrapper.get_output();
-
-            for wrapped_line in wrapped {
-                let max_len = wrapped_line.iter().map(|v| v.len()).max().unwrap_or(1);
-
-                for i in 0..max_len {
-                    buffer += self
-                        .format
-                        .format_pos_line(
-                            &wrapped_line
-                                .iter()
-                                .map(|v| v.get_line(i))
-                                .collect::<Vec<String>>(),
-                        )
-                        .as_ref();
-                    buffer += self.format.format_pos_new_line().as_ref();
-                }
-            }
-        }
-
-        Ok(self.writer.write(buffer.as_bytes())?)
     }
 
-    fn print_cmd_opt(&mut self, cmd: Option<Ustr>) -> Result<usize> {
-        let mut opt_info = vec![];
-        let cmd_store = if let Some(cmd_name) = cmd {
-            self.store
-                .get_cmd(cmd_name)
-                .ok_or_else(|| Error::InvalidCmdName(cmd_name.to_string()))?
+    pub fn new_cmd<S: Into<Cow<'a, str>>>(
+        &mut self,
+        block: S,
+        name: S,
+    ) -> Result<AddCmd2App<'a, '_, W>> {
+        let name = name.into();
+        let block = block.into();
+
+        self.find_block_mut(block.clone())
+            .ok_or_else(|| Error::InvalidBlockName(block.to_string()))?;
+        if self.find_cmd(name.clone()).is_some() {
+            Err(Error::DuplicatedCommandName(name.to_string()))
         } else {
-            self.store.get_global()
-        };
-
-        for opt_store in cmd_store.opt_iter() {
-            opt_info.push(vec![
-                opt_store.get_hint().as_ref(),
-                opt_store.get_type_name().as_ref(),
-                opt_store.get_help().as_ref(),
-            ]);
+            Ok(AddCmd2App::new(self, block, name))
         }
-        let mut buffer = String::new();
+    }
 
-        if !opt_info.is_empty() {
-            buffer += self.format.get_opt_title().as_ref();
+    pub fn display(&mut self, show_global: bool) -> Result<()> {
+        let policy = DefaultAppPolicy::new(vec![], show_global);
+        let help = policy.format(self).ok_or_else(|| {
+            Error::raise("Can not format app help with DefaultAppPolicy".to_string())
+        })?;
 
-            let mut wrapper = Wrapper::new(&opt_info);
+        write!(&mut self.writer, "{}", help)
+            .map_err(|e| Error::raise(format!("Can not write to handler: {:?}", e)))
+    }
 
-            wrapper.wrap();
-            let wrapped = wrapper.get_output();
+    pub fn display_with<P>(&mut self, policy: P) -> Result<()>
+    where
+        P: HelpPolicy<'a, Self>,
+    {
+        let help = policy
+            .format(self)
+            .ok_or_else(|| Error::raise("Can not format app help with given policy".to_string()))?;
 
-            for wrapped_line in wrapped {
-                let max_len = wrapped_line.iter().map(|v| v.len()).max().unwrap_or(1);
+        write!(&mut self.writer, "{}", help)
+            .map_err(|e| Error::raise(format!("Can not write to handler: {:?}", e)))
+    }
 
-                for i in 0..max_len {
-                    buffer += self
-                        .format
-                        .format_opt_line(
-                            &wrapped_line
-                                .iter()
-                                .map(|v| v.get_line(i))
-                                .collect::<Vec<String>>(),
-                        )
-                        .as_ref();
-                    buffer += self.format.format_opt_new_line().as_ref();
-                }
-            }
-        }
+    pub fn display_cmd<S>(&mut self, cmd: S) -> Result<()>
+    where
+        S: Into<Cow<'a, str>>,
+    {
+        let name = cmd.into();
+        let cmd = self.cmds.iter().find(|v| v.name() == name).ok_or_else(|| {
+            Error::raise(format!("Can not format help of {name} with DefaultPolicy"))
+        })?;
+        let policy = DefaultPolicy::new(self.name(), self.style.clone(), vec![], true);
+        let help = policy.format(cmd).ok_or_else(|| todo!())?;
 
-        Ok(self.writer.write(buffer.as_bytes())?)
+        writeln!(&mut self.writer, "{}", help)
+            .map_err(|e| Error::raise(format!("Can not write to handler: {:?}", e)))
+    }
+
+    pub fn display_cmd_with<S, P>(&mut self, cmd: S, policy: P) -> Result<()>
+    where
+        P: HelpPolicy<'a, Command<'a>>,
+        S: Into<Cow<'a, str>>,
+    {
+        let name = cmd.into();
+        let cmd = self.cmds.iter().find(|v| v.name() == name).ok_or_else(|| {
+            Error::raise(format!("Can not format help of {name} with given policy"))
+        })?;
+        let help = policy.format(cmd).ok_or_else(|| todo!())?;
+
+        write!(&mut self.writer, "{}", help)
+            .map_err(|e| Error::raise(format!("Can not write to handler: {:?}", e)))
     }
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct DefaultFormat(Style);
+pub struct AddStore2App<'a, 'b> {
+    store: Store<'a>,
 
-impl Format for DefaultFormat {
-    fn current_style(&self) -> &Style {
-        &self.0
+    block: &'b mut Block<'a, Store<'a>>,
+
+    added: bool,
+}
+
+impl<'a, 'b> AddStore2App<'a, 'b> {
+    pub fn new<S: Into<Cow<'a, str>>>(block: &'b mut Block<'a, Store<'a>>, name: S) -> Self {
+        let mut store = Store::default();
+
+        store.set_optional(true);
+        store.set_name(name);
+        Self {
+            block,
+            store,
+            added: false,
+        }
     }
 
-    fn set_style(&mut self, style: Style) {
-        self.0 = style;
+    pub fn set_optional(mut self, optional: bool) -> Self {
+        self.store.set_optional(optional);
+        self
+    }
+
+    pub fn set_position(mut self, position: bool) -> Self {
+        self.store.set_position(position);
+        self
+    }
+
+    pub fn set_hint<S: Into<Cow<'a, str>>>(mut self, hint: S) -> Self {
+        self.store.set_hint(hint);
+        self
+    }
+
+    pub fn set_help<S: Into<Cow<'a, str>>>(mut self, help: S) -> Self {
+        self.store.set_help(help);
+        self
+    }
+
+    pub fn set_name<S: Into<Cow<'a, str>>>(mut self, name: S) -> Self {
+        self.store.set_name(name);
+        self
+    }
+
+    pub fn set_type<S: Into<Cow<'a, str>>>(mut self, type_name: S) -> Self {
+        self.store.set_type(type_name);
+        self
+    }
+
+    pub fn submit(mut self) {
+        if !self.added {
+            let store = std::mem::take(&mut self.store);
+
+            self.block.attach(store);
+            self.added = true;
+        }
     }
 }
 
-impl From<Style> for DefaultFormat {
-    fn from(s: Style) -> Self {
-        Self(s)
+impl<'a, 'b> Drop for AddStore2App<'a, 'b> {
+    fn drop(&mut self) {
+        if !self.added {
+            let store = std::mem::take(&mut self.store);
+
+            self.block.attach(store);
+            self.added = true;
+        }
+    }
+}
+
+pub struct AddBlock2App<'a, 'b> {
+    block: Block<'a, Cow<'a, str>>,
+
+    blocks: &'b mut Vec<Block<'a, Cow<'a, str>>>,
+
+    added: bool,
+}
+
+impl<'a, 'b> AddBlock2App<'a, 'b> {
+    pub fn new<S: Into<Cow<'a, str>>>(
+        blocks: &'b mut Vec<Block<'a, Cow<'a, str>>>,
+        name: S,
+    ) -> Self {
+        let mut block = Block::default();
+
+        block.set_name(name);
+        Self {
+            blocks,
+            block,
+            added: false,
+        }
+    }
+
+    pub fn attach<S: Into<Cow<'a, str>>>(&mut self, store: S) -> &mut Self {
+        self.block.attach(store.into());
+        self
+    }
+
+    pub fn set_hint<S: Into<Cow<'a, str>>>(mut self, hint: S) -> Self {
+        self.block.set_hint(hint);
+        self
+    }
+
+    pub fn set_help<S: Into<Cow<'a, str>>>(mut self, help: S) -> Self {
+        self.block.set_help(help);
+        self
+    }
+
+    pub fn set_name<S: Into<Cow<'a, str>>>(mut self, name: S) -> Self {
+        self.block.set_name(name);
+        self
+    }
+
+    pub fn set_head<S: Into<Cow<'a, str>>>(mut self, head: S) -> Self {
+        self.block.set_head(head);
+        self
+    }
+
+    pub fn set_foot<S: Into<Cow<'a, str>>>(mut self, foot: S) -> Self {
+        self.block.set_foot(foot);
+        self
+    }
+
+    pub fn submit(mut self) {
+        if !self.added {
+            let block = std::mem::take(&mut self.block);
+
+            self.blocks.push(block);
+            self.added = true;
+        }
+    }
+}
+
+impl<'a, 'b> Drop for AddBlock2App<'a, 'b> {
+    fn drop(&mut self) {
+        if !self.added {
+            let block = std::mem::take(&mut self.block);
+
+            self.blocks.push(block);
+            self.added = true;
+        }
+    }
+}
+
+pub struct AddCmd2App<'a, 'b, W: Write> {
+    cmd: Command<'a>,
+
+    app: &'b mut AppHelp<'a, W>,
+
+    block: Cow<'a, str>,
+
+    added: bool,
+}
+
+impl<'a, 'b, W: Write> AddCmd2App<'a, 'b, W> {
+    pub fn new<S: Into<Cow<'a, str>>>(app: &'b mut AppHelp<'a, W>, block: S, name: S) -> Self {
+        let mut cmd = Command::default();
+
+        cmd.set_name(name);
+        Self {
+            app,
+            cmd,
+            block: block.into(),
+            added: false,
+        }
+    }
+
+    pub fn inner(&mut self) -> &mut Command<'a> {
+        &mut self.cmd
+    }
+
+    pub fn set_name<S: Into<Cow<'a, str>>>(&mut self, name: S) -> &mut Self {
+        self.cmd.set_name(name);
+        self
+    }
+
+    pub fn set_hint<S: Into<Cow<'a, str>>>(&mut self, hint: S) -> &mut Self {
+        self.cmd.set_hint(hint);
+        self
+    }
+
+    pub fn set_help<S: Into<Cow<'a, str>>>(&mut self, help: S) -> &mut Self {
+        self.cmd.set_help(help);
+        self
+    }
+
+    pub fn set_foot<S: Into<Cow<'a, str>>>(&mut self, foot: S) -> &mut Self {
+        self.cmd.set_foot(foot);
+        self
+    }
+
+    pub fn set_head<S: Into<Cow<'a, str>>>(&mut self, head: S) -> &mut Self {
+        self.cmd.set_head(head);
+        self
+    }
+
+    pub fn submit(mut self) {
+        if !self.added {
+            let store = std::mem::take(&mut self.cmd);
+
+            self.app.add_cmd(self.block.clone(), store).unwrap();
+            self.added = true;
+        }
+    }
+}
+
+impl<'a, 'b, W: Write> Drop for AddCmd2App<'a, 'b, W> {
+    fn drop(&mut self) {
+        if !self.added {
+            let store = std::mem::take(&mut self.cmd);
+
+            self.app.add_cmd(self.block.clone(), store).unwrap();
+            self.added = true;
+        }
     }
 }

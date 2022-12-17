@@ -1,10 +1,10 @@
 #[derive(Debug, Clone)]
-pub enum Alignment {
+pub enum Align {
     Left,
     Right,
 }
 
-impl Default for Alignment {
+impl Default for Align {
     fn default() -> Self {
         Self::Left
     }
@@ -12,7 +12,7 @@ impl Default for Alignment {
 
 #[derive(Debug, Clone)]
 pub struct Style {
-    pub align: Alignment,
+    pub align: Align,
 
     pub indent: usize,
 
@@ -22,24 +22,21 @@ pub struct Style {
 
     pub row_spacing: usize,
 
-    pub opt_line_spacing: usize,
+    pub line_spacing: usize,
 
-    pub pos_line_spacing: usize,
-
-    pub cmd_line_spacing: usize,
+    pub block_spacing: usize,
 }
 
 impl Default for Style {
     fn default() -> Self {
         Self {
-            align: Alignment::default(),
+            align: Align::default(),
             indent: 2,
             padding_char: ' ',
             wrap_width: 0,
             row_spacing: 4,
-            opt_line_spacing: 0,
-            pos_line_spacing: 0,
-            cmd_line_spacing: 0,
+            line_spacing: 0,
+            block_spacing: 1,
         }
     }
 }

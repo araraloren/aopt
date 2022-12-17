@@ -1,22 +1,27 @@
-use super::Set;
-use crate::opt::Opt;
-use crate::uid::Uid;
+use crate::set::Ctor;
+use crate::set::Set;
+use crate::set::SetExt;
+use crate::Error;
+use crate::Uid;
 
-pub trait SetIndex<T: Set> {
-    fn ref_from<'s>(&self, set: &'s T) -> Option<&'s Box<dyn Opt>>;
+pub trait SetIndex<S: Set> {
+    fn ref_from<'a>(&self, set: &'a S) -> Result<&'a <S::Ctor as Ctor>::Opt, Error>;
 
-    fn mut_from<'s>(&self, set: &'s mut T) -> Option<&'s mut Box<dyn Opt>>;
+    fn mut_from<'a>(&self, set: &'a mut S) -> Result<&'a mut <S::Ctor as Ctor>::Opt, Error>;
 }
 
 macro_rules! impl_num_index_for {
     ($num:ty) => {
-        impl<T: Set> SetIndex<T> for $num {
-            fn ref_from<'s>(&self, set: &'s T) -> Option<&'s Box<dyn Opt>> {
-                set.get_opt(*self as Uid)
+        impl<S: Set> SetIndex<S> for $num {
+            fn ref_from<'a>(&self, set: &'a S) -> Result<&'a <S::Ctor as Ctor>::Opt, Error> {
+                set.opt(*self as Uid)
             }
 
-            fn mut_from<'s>(&self, set: &'s mut T) -> Option<&'s mut Box<dyn Opt>> {
-                set.get_opt_mut(*self as Uid)
+            fn mut_from<'a>(
+                &self,
+                set: &'a mut S,
+            ) -> Result<&'a mut <S::Ctor as Ctor>::Opt, Error> {
+                set.opt_mut(*self as Uid)
             }
         }
     };
@@ -34,27 +39,3 @@ impl_num_index_for!(u64);
 impl_num_index_for!(u128);
 impl_num_index_for!(usize);
 impl_num_index_for!(isize);
-
-impl<'a, T: Set> SetIndex<T> for &'a str {
-    fn ref_from<'s>(&self, set: &'s T) -> Option<&'s Box<dyn Opt>> {
-        set.find(self)
-            .unwrap_or_else(|e| panic!("Can not find option {}: {:?}", self, e))
-    }
-
-    fn mut_from<'s>(&self, set: &'s mut T) -> Option<&'s mut Box<dyn Opt>> {
-        set.find_mut(self)
-            .unwrap_or_else(|e| panic!("Can not find option {}: {:?}", self, e))
-    }
-}
-
-impl<T: Set> SetIndex<T> for String {
-    fn ref_from<'s>(&self, set: &'s T) -> Option<&'s Box<dyn Opt>> {
-        set.find(self)
-            .unwrap_or_else(|e| panic!("Can not find option {}: {:?}", self, e))
-    }
-
-    fn mut_from<'s>(&self, set: &'s mut T) -> Option<&'s mut Box<dyn Opt>> {
-        set.find_mut(self)
-            .unwrap_or_else(|e| panic!("Can not find option {}: {:?}", self, e))
-    }
-}

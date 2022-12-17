@@ -1,6 +1,6 @@
 [package]
 name = "aopt"
-version = "0.6.7"
+version = "0.7.0"
 authors = ["araraloren <blackcatoverwall@gmail.com>"]
 edition = "2021"
 license = "MPL-2.0"
@@ -13,11 +13,12 @@ readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aopt-macro = {version = "0.1.2"}
-thiserror = "1.0.30"
-tracing = "0.1.29"
-ustr = "0.8.1"
 cfg-if = "1.0.0"
+regex = "1.5.0"
+ahash = "0.8.0"
+serde = { version = "1.0", features = [ "derive" ] }
+tracing = "0.1.37"
 
 [features]
 sync = []
+utf8 = []

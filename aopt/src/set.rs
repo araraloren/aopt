@@ -1,121 +1,199 @@
-mod commit;
-mod filter;
-mod index;
-mod info;
-mod simple_set;
-
-use std::fmt::Debug;
-use std::slice::{Iter, IterMut};
-use ustr::Ustr;
-
-use crate::err::Result;
-use crate::opt::Opt;
-use crate::opt::OptValue;
-use crate::uid::Uid;
+pub(crate) mod commit;
+pub(crate) mod filter;
+pub(crate) mod index;
+pub(crate) mod optset;
 
 pub use self::commit::Commit;
 pub use self::filter::Filter;
+pub use self::filter::FilterMatcher;
 pub use self::filter::FilterMut;
 pub use self::index::SetIndex;
-pub use self::info::CreateInfo;
-pub use self::info::FilterInfo;
-pub use self::info::OptionInfo;
-pub use self::simple_set::SimpleSet;
+pub use self::optset::OptSet;
+
+use std::fmt::Debug;
+use std::slice::Iter;
+use std::slice::IterMut;
+
+use crate::opt::Opt;
+use crate::Error;
+use crate::Str;
+use crate::Uid;
+
+/// An type alias for `<<I as Set>::Ctor as Ctor>::Opt`
+pub type SetOpt<I> = <<I as Set>::Ctor as Ctor>::Opt;
+/// An type alias for `<<I as Set>::Ctor as Ctor>::Config`
+pub type SetCfg<I> = <<I as Set>::Ctor as Ctor>::Config;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "sync")] {
-        /// Trait using for create [`Opt`] with given [`CreateInfo`].
-        pub trait Creator: Debug + Send + Sync {
-            fn get_type_name(&self) -> Ustr;
+        /// Create [`Opt`](crate::set::Ctor::Opt) with given [`Config`](crate::set::Ctor::Config).
+        pub trait Ctor: Send + Sync {
+            type Opt: Opt;
+            type Config;
+            type Error: Into<Error>;
 
-            fn is_support_deactivate_style(&self) -> bool;
+            fn r#type(&self) -> Str;
 
-            fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>>;
+            /// Return true if the option type support deactivate style such as `--/bool`.
+            fn sp_deactivate(&self) -> bool;
+
+            fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error>;
         }
-
-        pub trait Set: Debug + PrefixSet + OptionSet + CreatorSet + Send + Sync {}
     }
     else {
-        /// Trait using for create [`Opt`] with given [`CreateInfo`].
-        pub trait Creator: Debug {
-            fn get_type_name(&self) -> Ustr;
+        /// Create [`Opt`](crate::set::Ctor::Opt) with given [`Config`](crate::set::Ctor::Config).
+        pub trait Ctor {
+            type Opt: Opt;
+            type Config;
+            type Error: Into<Error>;
 
-            fn is_support_deactivate_style(&self) -> bool;
+            fn r#type(&self) -> Str;
 
-            fn create_with(&self, create_info: CreateInfo) -> Result<Box<dyn Opt>>;
+            /// Return true if the option type support deactivate style such as `--/bool`.
+            fn sp_deactivate(&self) -> bool;
+
+            fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error>;
         }
-
-        pub trait Set: Debug + PrefixSet + OptionSet + CreatorSet {}
     }
 }
 
-pub trait PrefixSet {
-    fn add_prefix(&mut self, prefix: Ustr);
+/// Implement [`Ctor`] for `Box<dyn Ctor>`.
+impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Ctor
+    for Box<dyn Ctor<Opt = Opt, Config = Config, Error = Err>>
+{
+    type Opt = Opt;
 
-    fn get_prefix(&self) -> &[Ustr];
+    type Config = Config;
 
-    fn clr_prefix(&mut self);
+    type Error = Err;
+
+    fn r#type(&self) -> Str {
+        Ctor::r#type(self.as_ref())
+    }
+
+    fn sp_deactivate(&self) -> bool {
+        Ctor::sp_deactivate(self.as_ref())
+    }
+
+    fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
+        Ctor::new_with(self.as_mut(), config)
+    }
 }
 
-pub trait OptionSet {
-    fn add_opt(&mut self, opt_str: &str) -> Result<Commit<'_, Self>>
-    where
-        Self: Sized;
+impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Debug
+    for Box<dyn Ctor<Opt = Opt, Config = Config, Error = Err>>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Ctor")
+            .field(&format!("{{{}}}", self.r#type()))
+            .finish()
+    }
+}
 
-    fn add_opt_ci(&mut self, ci: CreateInfo) -> Result<Uid>;
+impl<T: Ctor> From<T> for Str {
+    fn from(c: T) -> Self {
+        c.r#type()
+    }
+}
 
-    fn add_opt_raw(&mut self, opt: Box<dyn Opt>) -> Result<Uid>;
+/// A collection store the [`Ctor`](Set::Ctor) and [`Opt`](Ctor::Opt).
+pub trait Set {
+    type Ctor: Ctor;
 
-    fn get_opt(&self, uid: Uid) -> Option<&Box<dyn Opt>>;
+    /// Register a option creator type into option set.
+    fn register(&mut self, ctor: Self::Ctor) -> Option<Self::Ctor>;
 
-    fn get_opt_mut(&mut self, uid: Uid) -> Option<&mut Box<dyn Opt>>;
+    fn ctor_iter(&self) -> Iter<'_, Self::Ctor>;
 
-    fn len(&self) -> usize;
+    fn ctor_iter_mut(&mut self) -> IterMut<'_, Self::Ctor>;
 
-    fn opt_iter(&self) -> Iter<Box<dyn Opt>>;
+    fn contain_ctor<S: Into<Str>>(&self, type_name: S) -> bool {
+        let type_name = type_name.into();
+        self.ctor_iter().any(|v| v.r#type() == type_name)
+    }
 
-    fn opt_iter_mut(&mut self) -> IterMut<Box<dyn Opt>>;
+    fn get_ctor<S: Into<Str>>(&self, type_name: S) -> Option<&Self::Ctor> {
+        let type_name = type_name.into();
 
-    fn find(&self, opt_str: &str) -> Result<Option<&Box<dyn Opt>>>;
+        self.ctor_iter().find(|v| v.r#type() == type_name)
+    }
 
-    fn find_mut(&mut self, opt_str: &str) -> Result<Option<&mut Box<dyn Opt>>>;
+    fn get_ctor_mut<S: Into<Str>>(&mut self, type_name: S) -> Option<&mut Self::Ctor> {
+        let type_name = type_name.into();
 
-    fn filter(&self, opt_str: &str) -> Result<Filter>;
-
-    fn filter_mut(&mut self, opt_str: &str) -> Result<FilterMut>;
+        self.ctor_iter_mut().find(|v| v.r#type() == type_name)
+    }
 
     fn reset(&mut self);
+
+    /// Return the number of options.
+    fn len(&self) -> usize;
 
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
-    // some help functions access option data
-
-    fn get_value(&self, opt_str: &str) -> Result<Option<&OptValue>> {
-        Ok(self.find(opt_str)?.map(|v| v.get_value()))
+    /// Return all the unique id of option set.
+    fn keys(&self) -> Vec<Uid> {
+        self.iter().map(|v| v.uid()).collect()
     }
 
-    fn get_value_mut(&mut self, opt_str: &str) -> Result<Option<&mut OptValue>> {
-        Ok(self.find_mut(opt_str)?.map(|v| v.get_value_mut()))
+    fn iter(&self) -> Iter<'_, SetOpt<Self>>;
+
+    fn iter_mut(&mut self) -> IterMut<'_, SetOpt<Self>>;
+
+    fn contain(&self, uid: Uid) -> bool {
+        self.iter().any(|v| v.uid() == uid)
     }
 
-    fn set_value(&mut self, opt_str: &str, value: OptValue) -> Result<Option<&mut Box<dyn Opt>>> {
-        Ok(self.find_mut(opt_str)?.map(|v| {
-            v.set_value(value);
-            v
-        }))
+    fn insert(&mut self, opt: SetOpt<Self>) -> Uid;
+
+    fn get(&self, id: Uid) -> Option<&SetOpt<Self>> {
+        self.iter().find(|v| v.uid() == id)
+    }
+
+    fn get_mut(&mut self, id: Uid) -> Option<&mut SetOpt<Self>> {
+        self.iter_mut().find(|v| v.uid() == id)
     }
 }
 
-pub trait CreatorSet {
-    fn has_creator(&self, type_name: Ustr) -> bool;
+pub trait SetExt<C: Ctor> {
+    fn opt(&self, id: Uid) -> Result<&C::Opt, Error>;
 
-    fn add_creator(&mut self, creator: Box<dyn Creator>);
+    fn opt_mut(&mut self, id: Uid) -> Result<&mut C::Opt, Error>;
 
-    fn app_creator(&mut self, creator: Vec<Box<dyn Creator>>);
+    fn ctor<S: Into<Str>>(&self, type_name: S) -> Result<&C, Error>;
 
-    fn rem_creator(&mut self, opt_type: Ustr) -> bool;
+    fn ctor_mut<S: Into<Str>>(&mut self, type_name: S) -> Result<&mut C, Error>;
+}
 
-    fn get_creator(&self, opt_type: Ustr) -> Option<&dyn Creator>;
+impl<S: Set> SetExt<S::Ctor> for S {
+    fn opt(&self, id: Uid) -> Result<&<S::Ctor as Ctor>::Opt, Error> {
+        self.get(id)
+            .ok_or_else(|| Error::raise_error(format!("Invalid uid {id} for Set")))
+    }
+
+    fn opt_mut(&mut self, id: Uid) -> Result<&mut <S::Ctor as Ctor>::Opt, Error> {
+        self.get_mut(id)
+            .ok_or_else(|| Error::raise_error(format!("Invalid uid {id} for Set")))
+    }
+
+    fn ctor<T: Into<Str>>(&self, type_name: T) -> Result<&S::Ctor, Error> {
+        let type_name: Str = type_name.into();
+        self.get_ctor(type_name.clone())
+            .ok_or_else(|| Error::con_unsupport_option_type(type_name))
+    }
+
+    fn ctor_mut<T: Into<Str>>(&mut self, type_name: T) -> Result<&mut S::Ctor, Error> {
+        let type_name: Str = type_name.into();
+        self.get_ctor_mut(type_name.clone())
+            .ok_or_else(|| Error::con_unsupport_option_type(type_name))
+    }
+}
+
+/// Prefix set for option set.
+pub trait Pre {
+    fn prefix(&self) -> &[Str];
+
+    fn add_prefix<S: Into<Str>>(&mut self, prefix: S) -> &mut Self;
 }
