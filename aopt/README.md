@@ -55,10 +55,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .fallback(|set: &mut ASet, ser: &mut ASer| {
             println!(
                 "invoke list command: debug={:?}, force={:?}, local-only={:?}, source={:?}",
-                bool::sve_val(set["debug"].uid(), ser)?,
-                bool::sve_val(set["force"].uid(), ser)?,
-                bool::sve_val(set["local-only"].uid(), ser)?,
-                String::sve_val(set["source"].uid(), ser)?,
+                ser.sve_val::<bool>(set["debug"].uid())?,
+                ser.sve_val::<bool>(set["force"].uid())?,
+                ser.sve_val::<bool>(set["local-only"].uid())?,
+                ser.sve_val::<String>(set["source"].uid())?,
             );
             Ok(None::<()>)
         })?;
@@ -73,9 +73,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .on(|set: &mut ASet, ser: &mut ASer| {
             println!(
                 "invoke update command: debug={:?}, force={:?}, source={:?}",
-                bool::sve_val(set["debug"].uid(), ser)?,
-                bool::sve_val(set["force"].uid(), ser)?,
-                String::sve_val(set["source"].uid(), ser)?,
+                ser.sve_val::<bool>(set["debug"].uid())?,
+                ser.sve_val::<bool>(set["force"].uid())?,
+                ser.sve_val::<String>(set["source"].uid())?,
             );
             Ok(Some(true))
         })?;
@@ -90,9 +90,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if val.deref() == "software" {
                 println!(
                     "invoke install command: debug={:?}, override={:?}, source={:?}",
-                    bool::sve_val(set["debug"].uid(), ser)?,
-                    bool::sve_val(set["override"].uid(), ser)?,
-                    String::sve_val(set["source"].uid(), ser)?,
+                    ser.sve_val::<bool>(set["debug"].uid())?,
+                    ser.sve_val::<bool>(set["override"].uid())?,
+                    ser.sve_val::<String>(set["source"].uid())?,
                 );
                 Ok(Some(val.take()))
             } else {
