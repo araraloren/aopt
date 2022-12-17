@@ -45,7 +45,7 @@ use crate::Error;
 /// cfg_loader.set_usrval(parser)?;
 /// cfg_loader.add_opt("--load=s")?.on(
 ///     |_: &mut ASet, ser: &mut ASer, mut cfg: ctx::Value<String>| {
-///         let parser = AFwdParser::sve_usrval_mut(ser)?;
+///         let parser = ser.sve_usrval_mut::<AFwdParser>()?;
 ///
 ///         match cfg.as_str() {
 ///             "cxx" => {
@@ -71,7 +71,7 @@ use crate::Error;
 ///
 /// getopt!(["--load", "cxx", "-check", "cc"].into_iter(), &mut cfg_loader)?;
 ///
-/// let mut parser = AFwdParser::sve_take_usrval(cfg_loader.service_mut())?;
+/// let mut parser = cfg_loader.service_mut().sve_take_usrval::<AFwdParser>()?;
 ///
 /// parser
 ///     .add_opt("-check=s")?
@@ -80,7 +80,7 @@ use crate::Error;
 ///
 ///         for name in ["c", "cxx"] {
 ///             if let Some(opt) = set.find(name)? {
-///                 if let Ok(file) = String::sve_vals(opt.uid(), ser) {
+///                 if let Ok(file) = ser.sve_vals::<String>(opt.uid()) {
 ///                     if file.contains(ext.deref()) {
 ///                         found = true;
 ///                     }
@@ -339,7 +339,7 @@ mod test {
                 deactivate,
                 "deactivate style not matched!"
             );
-            if let Ok(opt_vals) = T::sve_vals(opt_uid, ser) {
+            if let Ok(opt_vals) = ser.sve_vals::<T>(opt_uid) {
                 if let Some(vals) = vals {
                     assert_eq!(
                         opt_vals.len(),
@@ -473,7 +473,7 @@ mod test {
             .entry(set.add_opt("--iopt=i")?.add_alias("--iopt-alias1").run()?)
             .on(|set: &mut ASet, ser: &mut ASer, val: ctx::Value<i64>| {
                 assert_eq!(
-                    i64::sve_val(set["--hopt"].uid(), ser).ok(),
+                    ser.sve_val::<i64>(set["--hopt"].uid()).ok(),
                     None,
                     "Option can set in any order, not access it in option"
                 );
@@ -734,7 +734,7 @@ mod test {
                     false,
                 )?;
                 assert!(idx.deref() == &5 || idx.deref() == &6);
-                match String::sve_val(set["dpos"].uid(), &ser) {
+                match ser.sve_val::<String>(set["dpos"].uid()) {
                     Ok(last_val) => Ok(Some(format!("{} -- {}", last_val, val.take()))),
                     Err(_) => Ok(Some(val.take())),
                 }
@@ -793,7 +793,7 @@ mod test {
                 let mut sum = 0.0;
 
                 for uid in [lopt, mopt, nopt].iter().map(|v| v.uid()) {
-                    sum += f64::sve_val(uid, ser)?;
+                    sum += ser.sve_val::<f64>(uid)?;
                 }
 
                 match val.deref().as_str() {
@@ -838,7 +838,7 @@ mod test {
                 )?;
                 assert!(idx.deref() == &2 || idx.deref() == &3);
                 Ok(Some(
-                    val.deref() * u64::sve_val(set["--alias-k"].uid(), ser)?,
+                    val.deref() * ser.sve_val::<u64>(set["--alias-k"].uid())?,
                 ))
             },
         );

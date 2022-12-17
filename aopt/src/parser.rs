@@ -383,7 +383,7 @@ where
     /// parser.set_usrval(Int(42))?;
     /// parser.add_opt("--guess=i!")?.on(
     ///   |_: &mut ASet, ser: &mut ASer, mut val: ctx::Value<i64>| {
-    ///       let answer = Int::sve_usrval(ser)?;
+    ///       let answer = ser.sve_usrval::<Int>()?;
     ///
     ///       if &answer.0 == val.deref() {
     ///           println!("Congratulation, you win!");

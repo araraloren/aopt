@@ -67,7 +67,7 @@ use crate::Error;
 ///     move |set: &mut ASet, ser: &mut ASer| {
 ///         let uid = set["directory"].uid();
 ///
-///         PathBuf::sve_filter(uid, ser, f)?;
+///         ser.sve_filter::<PathBuf>(uid, f)?;
 ///         Ok(Some(true))
 ///     }
 /// };
@@ -108,7 +108,7 @@ use crate::Error;
 /// parser
 ///     .add_opt("main=m")?
 ///     .on(move |set: &mut ASet, ser: &mut ASer| {
-///         if let Ok(vals) = PathBuf::sve_vals(set["directory"].uid(), ser) {
+///         if let Ok(vals) = ser.sve_vals::<PathBuf>(set["directory"].uid()) {
 ///             for val in vals {
 ///                 println!("{:?}", val);
 ///             }
@@ -365,7 +365,7 @@ mod test {
                 deactivate,
                 "deactivate style not matched!"
             );
-            if let Ok(opt_vals) = T::sve_vals(opt_uid, ser) {
+            if let Ok(opt_vals) = ser.sve_vals::<T>(opt_uid) {
                 if let Some(vals) = vals {
                     assert_eq!(
                         opt_vals.len(),
@@ -438,18 +438,16 @@ mod test {
         ser.ser_invoke_mut()?
             .entry(set.add_opt("--positive=b")?.add_alias("+>").run()?)
             .on(|set: &mut ASet, ser: &mut ASer| {
-                f64::sve_filter(set["args=p"].uid(), ser, |v: &f64| v <= &0.0)?;
+                ser.sve_filter::<f64>(set["args=p"].uid(), |v: &f64| v <= &0.0)?;
                 Ok(Some(true))
             });
         ser.ser_invoke_mut()?
             .entry(set.add_opt("--bigger-than=f")?.add_alias("+>").run()?)
             .on(|set: &mut ASet, ser: &mut ASer, val: ctx::Value<f64>| {
                 // this is a vec![vec![], ..]
-                Ok(Some(f64::sve_filter(
-                    set["args=p"].uid(),
-                    ser,
-                    |v: &f64| v <= val.deref(),
-                )?))
+                Ok(Some(
+                    ser.sve_filter::<f64>(set["args=p"].uid(), |v: &f64| v <= val.deref())?,
+                ))
             });
         ser.ser_invoke_mut()?
             .entry(set.add_opt("main=m")?.run()?)

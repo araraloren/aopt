@@ -58,51 +58,53 @@ pub trait ServicesExt {
     fn ser_check<S: 'static>(&self) -> Result<&CheckService<S>, Error>;
 }
 
-pub trait ServicesValExt<T: 'static> {
+pub trait ServicesValExt {
     /// Get the last value reference of option `uid` from [`ValService`].
-    fn sve_val(uid: Uid, ser: &Services) -> Result<&T, Error>;
+    fn sve_val<T: 'static>(&self, uid: Uid) -> Result<&T, Error>;
 
     /// Get the last value mutable reference of option `uid` from [`ValService`].
-    fn sve_val_mut(uid: Uid, ser: &mut Services) -> Result<&mut T, Error>;
+    fn sve_val_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut T, Error>;
 
     /// Take last value of option `uid` from [`ValService`].
-    fn sve_take_val(uid: Uid, ser: &mut Services) -> Result<T, Error>;
+    fn sve_take_val<T: 'static>(&mut self, uid: Uid) -> Result<T, Error>;
 
     /// Get the values reference of option `uid` from [`ValService`].
-    fn sve_vals(uid: Uid, ser: &Services) -> Result<&Vec<T>, Error>;
+    fn sve_vals<T: 'static>(&self, uid: Uid) -> Result<&Vec<T>, Error>;
 
     /// Get the values mutable reference of option `uid` from [`ValService`].
-    fn sve_vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<T>, Error>;
+    fn sve_vals_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error>;
 
     /// Take the values of option `uid` from [`ValService`].
-    fn sve_take_vals(uid: Uid, ser: &mut Services) -> Result<Vec<T>, Error>;
+    fn sve_take_vals<T: 'static>(&mut self, uid: Uid) -> Result<Vec<T>, Error>;
 
     /// Apply filter on the values of option from [`ValService`].
     /// The `F` should return true if you want remove the element.
-    fn sve_filter<F: FnMut(&T) -> bool>(
+    fn sve_filter<T: 'static>(
+        &mut self,
         uid: Uid,
-        ser: &mut Services,
-        f: F,
+        f: impl FnMut(&T) -> bool,
     ) -> Result<Vec<T>, Error>;
 
     /// Get the user value reference of option `uid` from [`UsrValService`].
-    fn sve_usrval(ser: &Services) -> Result<&T, Error>;
+    fn sve_usrval<T: 'static>(&self) -> Result<&T, Error>;
 
     /// Get the user value mutable reference of option `uid` from [`UsrValService`].
-    fn sve_usrval_mut(ser: &mut Services) -> Result<&mut T, Error>;
+    fn sve_usrval_mut<T: 'static>(&mut self) -> Result<&mut T, Error>;
 
     /// Take the user value of option `uid` from [`UsrValService`].
-    fn sve_take_usrval(ser: &mut Services) -> Result<T, Error>;
-}
+    fn sve_take_usrval<T: 'static>(&mut self) -> Result<T, Error>;
 
-pub trait ServicesRawValExt<T: 'static> {
-    fn srve_val(uid: Uid, ser: &Services) -> Result<&T, Error>;
+    /// Get the raw value reference of option `uid` from [`RawValService`].
+    fn sve_rawval(&self, uid: Uid) -> Result<&RawVal, Error>;
 
-    fn srve_val_mut(uid: Uid, ser: &mut Services) -> Result<&mut T, Error>;
+    /// Get the raw value mutable reference of option `uid` from [`RawValService`].
+    fn sve_rawval_mut(&mut self, uid: Uid) -> Result<&mut RawVal, Error>;
 
-    fn srve_vals(uid: Uid, ser: &Services) -> Result<&Vec<T>, Error>;
+    /// Get the raw values reference of option `uid` from [`RawValService`].
+    fn sve_rawvals(&self, uid: Uid) -> Result<&Vec<RawVal>, Error>;
 
-    fn srve_vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<T>, Error>;
+    /// Get the raw values mutable reference of option `uid` from [`RawValService`].
+    fn sve_rawvals_mut(&mut self, uid: Uid) -> Result<&mut Vec<RawVal>, Error>;
 }
 
 pub trait APolicyExt<I: crate::set::Set> {

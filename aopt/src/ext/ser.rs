@@ -10,7 +10,6 @@ use std::ops::DerefMut;
 use crate::ctx::Ctx;
 use crate::ctx::Extract;
 use crate::ext::ServicesExt;
-use crate::ext::ServicesRawValExt;
 use crate::ext::ServicesValExt;
 use crate::prelude::CheckService;
 use crate::ser::InvokeService;
@@ -62,66 +61,41 @@ impl ServicesExt for Services {
     }
 }
 
-impl ServicesRawValExt<RawVal> for RawVal {
-    /// Get the raw value reference of option `uid` from [`RawValService`].
-    fn srve_val(uid: Uid, ser: &Services) -> Result<&RawVal, Error> {
-        ser.ser_rawval()?.val(uid)
+impl ServicesValExt for Services {
+    fn sve_val<T: 'static>(&self, uid: Uid) -> Result<&T, Error> {
+        self.ser_val()?.val(uid)
     }
 
-    /// Get the raw value mutable reference of option `uid` from [`RawValService`].
-    fn srve_val_mut(uid: Uid, ser: &mut Services) -> Result<&mut RawVal, Error> {
-        ser.ser_rawval_mut()?.val_mut(uid)
+    fn sve_val_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut T, Error> {
+        self.ser_val_mut()?.val_mut(uid)
     }
 
-    /// Get the raw values reference of option `uid` from [`RawValService`].
-    fn srve_vals(uid: Uid, ser: &Services) -> Result<&Vec<RawVal>, Error> {
-        ser.ser_rawval()?.vals(uid)
-    }
-
-    /// Get the raw values mutable reference of option `uid` from [`RawValService`].
-    fn srve_vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<RawVal>, Error> {
-        ser.ser_rawval_mut()?.vals_mut(uid)
-    }
-}
-
-impl<T> ServicesValExt<T> for T
-where
-    T: 'static,
-{
-    fn sve_val(uid: Uid, ser: &Services) -> Result<&T, Error> {
-        ser.ser_val()?.val(uid)
-    }
-
-    fn sve_val_mut(uid: Uid, ser: &mut Services) -> Result<&mut T, Error> {
-        ser.ser_val_mut()?.val_mut(uid)
-    }
-
-    fn sve_take_val(uid: Uid, ser: &mut Services) -> Result<T, Error> {
-        ser.ser_val_mut()?
+    fn sve_take_val<T: 'static>(&mut self, uid: Uid) -> Result<T, Error> {
+        self.ser_val_mut()?
             .pop(uid)
             .ok_or_else(|| Error::raise_error("Can not take value from ValService"))
     }
 
-    fn sve_vals(uid: Uid, ser: &Services) -> Result<&Vec<T>, Error> {
-        ser.ser_val()?.vals(uid)
+    fn sve_vals<T: 'static>(&self, uid: Uid) -> Result<&Vec<T>, Error> {
+        self.ser_val()?.vals(uid)
     }
 
-    fn sve_vals_mut(uid: Uid, ser: &mut Services) -> Result<&mut Vec<T>, Error> {
-        ser.ser_val_mut()?.vals_mut(uid)
+    fn sve_vals_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error> {
+        self.ser_val_mut()?.vals_mut(uid)
     }
 
-    fn sve_take_vals(uid: Uid, ser: &mut Services) -> Result<Vec<T>, Error> {
-        ser.ser_val_mut()?
+    fn sve_take_vals<T: 'static>(&mut self, uid: Uid) -> Result<Vec<T>, Error> {
+        self.ser_val_mut()?
             .remove(uid)
             .ok_or_else(|| Error::raise_error("Can not take values from ValService"))
     }
 
-    fn sve_filter<F: FnMut(&T) -> bool>(
+    fn sve_filter<T: 'static>(
+        &mut self,
         uid: Uid,
-        ser: &mut Services,
-        mut f: F,
+        mut f: impl FnMut(&T) -> bool,
     ) -> Result<Vec<T>, Error> {
-        let vals = T::sve_vals_mut(uid, ser)?;
+        let vals = self.sve_vals_mut::<T>(uid)?;
         let mut i = 0;
         let mut removed = vec![];
 
@@ -135,18 +109,38 @@ where
         Ok(removed)
     }
 
-    fn sve_usrval(ser: &Services) -> Result<&T, Error> {
-        ser.ser_usrval()?.val::<T>()
+    fn sve_usrval<T: 'static>(&self) -> Result<&T, Error> {
+        self.ser_usrval()?.val::<T>()
     }
 
-    fn sve_usrval_mut(ser: &mut Services) -> Result<&mut T, Error> {
-        ser.ser_usrval_mut()?.val_mut::<T>()
+    fn sve_usrval_mut<T: 'static>(&mut self) -> Result<&mut T, Error> {
+        self.ser_usrval_mut()?.val_mut::<T>()
     }
 
-    fn sve_take_usrval(ser: &mut Services) -> Result<T, Error> {
-        ser.ser_usrval_mut()?
+    fn sve_take_usrval<T: 'static>(&mut self) -> Result<T, Error> {
+        self.ser_usrval_mut()?
             .remove::<T>()
             .ok_or_else(|| Error::raise_error("Can not take value from UsrValService"))
+    }
+
+    /// Get the raw value reference of option `uid` from [`RawValService`].
+    fn sve_rawval(&self, uid: Uid) -> Result<&RawVal, Error> {
+        self.ser_rawval()?.val(uid)
+    }
+
+    /// Get the raw value mutable reference of option `uid` from [`RawValService`].
+    fn sve_rawval_mut(&mut self, uid: Uid) -> Result<&mut RawVal, Error> {
+        self.ser_rawval_mut()?.val_mut(uid)
+    }
+
+    /// Get the raw values reference of option `uid` from [`RawValService`].
+    fn sve_rawvals(&self, uid: Uid) -> Result<&Vec<RawVal>, Error> {
+        self.ser_rawval()?.vals(uid)
+    }
+
+    /// Get the raw values mutable reference of option `uid` from [`RawValService`].
+    fn sve_rawvals_mut(&mut self, uid: Uid) -> Result<&mut Vec<RawVal>, Error> {
+        self.ser_rawval_mut()?.vals_mut(uid)
     }
 }
 
@@ -212,7 +206,7 @@ where
 /// policy.parse(&mut set, &mut ser, Arc::new(args))?;
 ///
 /// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
-/// ser::Value::<PosList>::sve_usrval(&ser)?.test_pos(
+/// ser.sve_usrval::<ser::Value::<PosList>>()?.test_pos(
 ///     ["set", "42", "foo", "bar"]
 ///         .into_iter()
 ///         .map(RawVal::from)
