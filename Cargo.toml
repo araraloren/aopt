@@ -2,6 +2,7 @@
 
 members = [
     "aopt",
+    "cote",
     "snowball-follow",
     "aopt-help",
     "simple-find-file",
