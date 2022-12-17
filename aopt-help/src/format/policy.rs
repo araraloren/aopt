@@ -55,7 +55,7 @@ impl<'a> DefaultPolicy<'a, Command<'a>> {
     pub fn get_block_usage(
         &self,
         item: &Block<'a, Cow<'a, str>>,
-        stores: &Vec<Store<'a>>,
+        stores: &[Store<'a>],
     ) -> (Vec<String>, Vec<String>) {
         let mut usages = vec![];
         let mut args = vec![];
@@ -71,12 +71,10 @@ impl<'a> DefaultPolicy<'a, Command<'a>> {
                         } else {
                             args.push(format!("<{}>", hint));
                         }
+                    } else if store.optional() {
+                        usages.push(format!("[{}]", hint));
                     } else {
-                        if store.optional() {
-                            usages.push(format!("[{}]", hint));
-                        } else {
-                            usages.push(format!("<{}>", hint));
-                        }
+                        usages.push(format!("<{}>", hint));
                     }
                 }
             }
@@ -90,7 +88,7 @@ impl<'a> DefaultPolicy<'a, Command<'a>> {
         let mut block_hint = vec![];
 
         for block in item.block() {
-            let (mut block_usages, mut block_args) = self.get_block_usage(block, &item);
+            let (mut block_usages, mut block_args) = self.get_block_usage(block, item);
 
             if !block_usages.is_empty() {
                 usages.append(&mut block_usages);
@@ -115,19 +113,18 @@ impl<'a> DefaultPolicy<'a, Command<'a>> {
             args.join(" ")
         };
         let block_hint = block_hint.join(" ");
-        let ret;
 
-        if self.hiding_pos {
-            ret = format!(
+        let ret = if self.hiding_pos {
+            format!(
                 "Usage: {} {} {} {}",
                 self.name,
                 item.name(),
                 usage,
                 block_hint
-            );
+            )
         } else {
-            ret = format!("Usage: {} {} {} {}", self.name, item.name(), usage, args);
-        }
+            format!("Usage: {} {} {} {}", self.name, item.name(), usage, args)
+        };
 
         ret.into()
     }
@@ -225,7 +222,7 @@ impl<'a> HelpPolicy<'a, Command<'a>> for DefaultPolicy<'a, Command<'a>> {
             blocks.push(head);
         }
         for block in item.block() {
-            let help = self.get_block_help(block, &item);
+            let help = self.get_block_help(block, item);
 
             if !help.is_empty() {
                 blocks.push(help);
@@ -274,7 +271,7 @@ impl<'a, W: Write> DefaultAppPolicy<'a, AppHelp<'a, W>> {
     pub fn get_block_usage(
         &self,
         item: &Block<'a, Cow<'a, str>>,
-        stores: &Vec<Store<'a>>,
+        stores: &[Store<'a>],
     ) -> (Vec<String>, Vec<String>) {
         let mut usages = vec![];
         let mut args = vec![];
@@ -290,12 +287,10 @@ impl<'a, W: Write> DefaultAppPolicy<'a, AppHelp<'a, W>> {
                         } else {
                             args.push(format!("<{}>", hint));
                         }
+                    } else if store.optional() {
+                        usages.push(format!("[{}]", hint));
                     } else {
-                        if store.optional() {
-                            usages.push(format!("[{}]", hint));
-                        } else {
-                            usages.push(format!("<{}>", hint));
-                        }
+                        usages.push(format!("<{}>", hint));
                     }
                 }
             }
@@ -310,7 +305,7 @@ impl<'a, W: Write> DefaultAppPolicy<'a, AppHelp<'a, W>> {
         let mut block_hint = vec![];
 
         for block in global.block() {
-            let (mut block_usages, mut block_args) = self.get_block_usage(block, &global);
+            let (mut block_usages, mut block_args) = self.get_block_usage(block, global);
 
             if !block_usages.is_empty() {
                 usages.append(&mut block_usages);
@@ -338,26 +333,25 @@ impl<'a, W: Write> DefaultAppPolicy<'a, AppHelp<'a, W>> {
         };
         let usage_space = if global_usage.is_empty() { "" } else { " " };
         let block_hint = block_hint.join(" ");
-        let command_usage = if app.has_cmd() {  "<COMMAND>" } else { "" };
-        let ret;
+        let command_usage = if app.has_cmd() { "<COMMAND>" } else { "" };
 
-        if self.hiding_pos {
-            ret = format!(
+        let ret = if self.hiding_pos {
+            format!(
                 "Usage: {}{usage_space}{} {} {}",
                 global.name(),
                 global_usage,
                 command_usage,
                 block_hint
-            );
+            )
         } else {
-            ret = format!(
+            format!(
                 "Usage: {}{usage_space}{} {} {}",
                 global.name(),
                 global_usage,
                 command_usage,
                 args
-            );
-        }
+            )
+        };
 
         ret.into()
     }
@@ -444,7 +438,7 @@ impl<'a, W: Write> DefaultAppPolicy<'a, AppHelp<'a, W>> {
             usages.push(wrapped_output.into());
         }
 
-        usages.join(&line_spacing).into()
+        usages.join(line_spacing).into()
     }
 
     pub fn get_global_help(

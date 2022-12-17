@@ -126,7 +126,7 @@ impl<'a> Command<'a> {
         let name: Cow<'a, str> = block.into();
 
         if self.find_store(name.clone()).is_some() {
-            return Err(Error::DuplicatedStoreName(store.name().to_string()));
+            Err(Error::DuplicatedStoreName(store.name().to_string()))
         } else {
             let block = self
                 .find_block_mut(name.clone())
@@ -142,7 +142,7 @@ impl<'a> Command<'a> {
         let name = block.name();
 
         if self.find_block(name.clone()).is_some() {
-            return Err(Error::DuplicatedBlockName(name.to_string()));
+            Err(Error::DuplicatedBlockName(name.to_string()))
         } else {
             self.blocks.push(block);
             Ok(self)
@@ -157,7 +157,7 @@ impl<'a> Command<'a> {
         let name = name.into();
 
         if self.find_store(name.clone()).is_some() {
-            return Err(Error::DuplicatedStoreName(name.to_string()));
+            Err(Error::DuplicatedStoreName(name.to_string()))
         } else {
             let block = block.into();
             let block = self
@@ -175,7 +175,7 @@ impl<'a> Command<'a> {
         let name = name.into();
 
         if self.find_block(name.clone()).is_some() {
-            return Err(Error::DuplicatedBlockName(name.to_string()));
+            Err(Error::DuplicatedBlockName(name.to_string()))
         } else {
             Ok(BlockMut::new(self, name))
         }
@@ -311,9 +311,9 @@ impl<'a, 'b> BlockMut<'a, 'b> {
         let name = name.into();
 
         if self.cmd.find_store(name.clone()).is_none() {
-            return Err(Error::InvalidStoreName(name.to_string()));
+            Err(Error::InvalidStoreName(name.to_string()))
         } else if self.block.iter().any(|v| v == &name) {
-            return Err(Error::DuplicatedStoreName(name.to_string()));
+            Err(Error::DuplicatedStoreName(name.to_string()))
         } else {
             self.block.attach(name);
             Ok(self)
@@ -370,7 +370,7 @@ impl<'a, 'b> Drop for BlockMut<'a, 'b> {
 
             self.cmd
                 .add_block(block)
-                .expect(&format!("Can not add block to Command {cmd_name}"));
+                .unwrap_or_else(|_| panic!("Can not add block to Command {cmd_name}"));
         }
     }
 }

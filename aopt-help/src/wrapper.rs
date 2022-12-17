@@ -105,8 +105,8 @@ where
     }
 
     /// Modify wrap_width if wrap_width is 0
-    pub fn wrap_with(&mut self, styles: &Vec<Style>) {
-        let mut styles = styles.clone();
+    pub fn wrap_with(&mut self, styles: &[Style]) {
+        let mut styles = styles.to_owned();
         let status: Vec<bool> = styles.iter().map(|v| v.wrap_width == 0).collect();
 
         for (line, status) in self.data.iter().zip(status.iter()) {

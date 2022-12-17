@@ -291,7 +291,7 @@ impl<'a, W: Write> AppHelp<'a, W> {
         let policy = DefaultPolicy::new(self.name(), self.style.clone(), vec![], true);
         let help = policy.format(cmd).ok_or_else(|| todo!())?;
 
-        write!(&mut self.writer, "{}\n", help)
+        writeln!(&mut self.writer, "{}", help)
             .map_err(|e| Error::raise(format!("Can not write to handler: {:?}", e)))
     }
 
