@@ -25,6 +25,32 @@ pub enum Action {
     Null,
 }
 
+impl Action {
+    pub fn is_set(&self) -> bool {
+        matches!(self, Self::Set)
+    }
+
+    pub fn is_app(&self) -> bool {
+        matches!(self, Self::App)
+    }
+
+    pub fn is_pop(&self) -> bool {
+        matches!(self, Self::Pop)
+    }
+
+    pub fn is_cnt(&self) -> bool {
+        matches!(self, Self::Cnt)
+    }
+
+    pub fn is_clr(&self) -> bool {
+        matches!(self, Self::Clr)
+    }
+
+    pub fn is_null(&self) -> bool {
+        matches!(self, Self::Null)
+    }
+}
+
 impl Default for Action {
     fn default() -> Self {
         Action::Null
@@ -156,6 +182,40 @@ pub enum Assoc {
     Path,
 
     Null,
+}
+
+impl Assoc {
+    pub fn is_bool(&self) -> bool {
+        matches!(self, Self::Bool)
+    }
+
+    pub fn is_int(&self) -> bool {
+        matches!(self, Self::Int)
+    }
+
+    pub fn is_uint(&self) -> bool {
+        matches!(self, Self::Uint)
+    }
+
+    pub fn is_flt(&self) -> bool {
+        matches!(self, Self::Flt)
+    }
+
+    pub fn is_str(&self) -> bool {
+        matches!(self, Self::Str)
+    }
+
+    pub fn is_path(&self) -> bool {
+        matches!(self, Self::Path)
+    }
+
+    pub fn is_noa(&self) -> bool {
+        matches!(self, Self::Noa)
+    }
+
+    pub fn is_null(&self) -> bool {
+        matches!(self, Self::Null)
+    }
 }
 
 impl Default for Assoc {

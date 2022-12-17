@@ -6,6 +6,7 @@ pub use self::context::Ctx;
 pub use self::extract::Extract;
 pub use self::handler::Handler;
 
+use crate::ext::ServicesExt;
 use crate::opt::Opt;
 use crate::ser::InvokeService;
 use crate::ser::Services;
@@ -75,6 +76,53 @@ impl<Set, Value> Store<Set, Value> for NullStore {
         val: Option<Value>,
     ) -> Result<Option<Self::Ret>, Self::Error> {
         Ok(val)
+    }
+}
+
+/// Vector store, append the value to the [`ValService`](crate::ser::ValService)
+/// if option's action is Action::App.
+/// See [`Action`](crate::opt::Action) for default store.
+pub struct VecStore;
+
+impl<Set, Value: 'static> Store<Set, Vec<Value>> for VecStore
+where
+    Set: crate::set::Set,
+    SetOpt<Set>: Opt,
+{
+    type Ret = ();
+
+    type Error = Error;
+
+    fn process(
+        &mut self,
+        uid: Uid,
+        set: &mut Set,
+        ser: &mut Services,
+        raw: Option<&RawVal>,
+        val: Option<Vec<Value>>,
+    ) -> Result<Option<Self::Ret>, Self::Error> {
+        let has_value = val.is_some();
+
+        // Set the value if return Some(Value)
+        if let Some(val) = val {
+            let raw_ser = ser.ser_rawval_mut()?;
+
+            if let Some(raw) = raw {
+                raw_ser.push(uid, raw.clone());
+            }
+
+            let val_ser = ser.ser_val_mut()?;
+
+            if let Some(opt) = set.get(uid) {
+                if opt.action().is_app() {
+                    for value in val {
+                        val_ser.push(uid, value);
+                    }
+                }
+            }
+        }
+
+        Ok(has_value.then_some(()))
     }
 }
 
