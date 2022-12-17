@@ -1,46 +1,73 @@
 # aopt
 
-Generate help message for aopt.
+Generate help message for command line program.
 
 ## Example
 
 ```rust
-fn simple_help_generate(set: &dyn Set) -> AppHelp<Stdout, DefaultFormat> {
-    let mut help = AppHelp::default();
+fn display_help<S: Set>(set: &S) -> Result<(), aopt_help::Error> {
+    let foot = format!(
+        "Create by {} v{}",
+        env!("CARGO_PKG_AUTHORS"),
+        env!("CARGO_PKG_VERSION")
+    );
+    let mut app_help = aopt_help::AppHelp::new(
+        env!("CARGO_PKG_NAME"),
+        env!("CARGO_PKG_DESCRIPTION"),
+        &foot,
+        aopt_help::prelude::Style::default(),
+        std::io::stdout(),
+    );
+    let global = app_help.global_mut();
 
-    help.set_name("snowball".into());
-
-    let global = help.store.get_global_mut();
-
-    for opt in set.opt_iter() {
-        if opt.match_style(aopt::opt::Style::Pos) {
-            global.add_pos(PosStore::new(
-                opt.get_name(),
-                opt.get_hint(),
-                opt.get_help(),
-                opt.get_index().unwrap().to_string().into(),
-                opt.get_optional(),
-            ));
-        } else if !opt.match_style(aopt::opt::Style::Main) {
-            global.add_opt(OptStore::new(
-                opt.get_name(),
-                opt.get_hint(),
-                opt.get_help(),
-                opt.get_type_name(),
-                opt.get_optional(),
-            ));
+    global.add_block(Block::new("option", "[OPTION]", "", "OPTION:", ""))?;
+    global.add_block(Block::new("args", "[ARGS]", "", "ARGS:", ""))?;
+    for opt in set.iter() {
+        if opt.mat_style(Style::Pos) {
+            global.add_store(
+                "args",
+                Store::new(
+                    Cow::from(opt.name().as_str()),
+                    Cow::from(opt.hint().as_str()),
+                    Cow::from(opt.help().as_str()),
+                    Cow::from(opt.r#type().to_string()),
+                    opt.optional(),
+                    true,
+                ),
+            )?;
+        } else if opt.mat_style(Style::Argument)
+            || opt.mat_style(Style::Boolean)
+            || opt.mat_style(Style::Combined)
+        {
+            global.add_store(
+                "option",
+                Store::new(
+                    Cow::from(opt.name().as_str()),
+                    Cow::from(opt.hint().as_str()),
+                    Cow::from(opt.help().as_str()),
+                    Cow::from(opt.r#type().to_string()),
+                    opt.optional(),
+                    false,
+                ),
+            )?;
         }
     }
 
-    global.set_header(gstr("Get the follow people number in https://xueqiu.com/"));
-    global.set_footer(gstr(&format!(
-        "Create by araraloren {}",
-        env!("CARGO_PKG_VERSION")
-    )));
+    app_help.display(true)?;
 
-    help
+    Ok(())
 }
 ```
+
+## More 
+
+- simple-find-file
+
+A simple file search tools, try it using [`cargo install --path simple-find-file`](https://github.com/araraloren/aopt/tree/main/simple-find-file).
+
+- snowball-follow
+
+Get the follow count of stock in `xueqiu.com`, try it using [`cargo install --path snowball-follow`](https://github.com/araraloren/aopt/tree/main/snowball-follow)
 
 ## LICENSE
 
