@@ -1,10 +1,17 @@
 [package]
 name = "cote"
 version = "0.1.0"
+authors = ["araraloren <araraloren@gmail.com>"]
 edition = "2021"
+license = "MPL-2.0"
+description = "Quickly build your command line utils"
+repository = "https://github.com/araraloren/aopt/"
+keywords = ["getopt", "cli"]
+categories = ["command-line-interface"]
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 aopt = { version = "0.7.0" }
-aopt-help = { version = "0.3.1" }
+aopt-help = { version = "0.3.2" }

@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     fmt::Debug,
     future::Future,
     ops::{Deref, DerefMut},
@@ -7,6 +8,7 @@ use std::{
 use aopt::{prelude::*, RawVal};
 
 pub use aopt::Error;
+use aopt_help::{prelude::Block, store::Store};
 
 pub struct Cote<P>
 where
@@ -316,4 +318,94 @@ where
         }
         async_ret
     }
+
+    pub fn display_help<'a, S: Into<Cow<'a, str>>>(&self, head: S, foot: S) -> Result<(), Error> {
+        self.__display_help(head, foot)
+            .map_err(|e| Error::raise_error(format!("Can not show help message: {:?}", e)))
+    }
+
+    fn __display_help<'a, S: Into<Cow<'a, str>>>(
+        &self,
+        head: S,
+        foot: S,
+    ) -> Result<(), aopt_help::Error> {
+        let head = head.into();
+        let foot = foot.into();
+        let mut app_help = aopt_help::AppHelp::new(
+            self.name.as_str(),
+            &head,
+            &foot,
+            aopt_help::prelude::Style::default(),
+            std::io::stdout(),
+        );
+        let global = app_help.global_mut();
+        let set = self.parser.optset();
+
+        global.add_block(Block::new("command", "<COMMAND>", "", "COMMAND:", ""))?;
+        global.add_block(Block::new("option", "", "", "OPTION:", ""))?;
+        global.add_block(Block::new("args", "[ARGS]", "", "ARGS:", ""))?;
+        for opt in set.iter() {
+            if opt.mat_style(Style::Pos) {
+                global.add_store(
+                    "args",
+                    Store::new(
+                        Cow::from(opt.name().as_str()),
+                        Cow::from(opt.hint().as_str()),
+                        Cow::from(opt.help().as_str()),
+                        Cow::from(opt.r#type().to_string()),
+                        opt.optional(),
+                        true,
+                    ),
+                )?;
+            } else if opt.mat_style(Style::Cmd) {
+                global.add_store(
+                    "command",
+                    Store::new(
+                        Cow::from(opt.name().as_str()),
+                        Cow::from(opt.hint().as_str()),
+                        Cow::from(opt.help().as_str()),
+                        Cow::from(opt.r#type().to_string()),
+                        opt.optional(),
+                        true,
+                    ),
+                )?;
+            } else if opt.mat_style(Style::Argument)
+                || opt.mat_style(Style::Boolean)
+                || opt.mat_style(Style::Combined)
+            {
+                global.add_store(
+                    "option",
+                    Store::new(
+                        Cow::from(opt.name().as_str()),
+                        Cow::from(opt.hint().as_str()),
+                        Cow::from(opt.help().as_str()),
+                        Cow::from(opt.r#type().to_string()),
+                        opt.optional(),
+                        false,
+                    ),
+                )?;
+            }
+        }
+
+        app_help.display(true)?;
+
+        Ok(())
+    }
+}
+
+/// Display help message of [`Cote`] generate from `Cargo.toml`.
+/// The `head` will be generate from package's description.
+/// The `foot` will be generate from package's authors and version.
+#[macro_export]
+macro_rules! display_help {
+    ($cote:ident) => {{
+        let foot = format!(
+            "Create by {} v{}",
+            env!("CARGO_PKG_AUTHORS"),
+            env!("CARGO_PKG_VERSION")
+        );
+        let head = format!("{}", env!("CARGO_PKG_DESCRIPTION"));
+
+        $cote.display_help(head, foot)
+    }};
 }
