@@ -1,3 +1,5 @@
+pub mod meta;
+
 use std::{
     borrow::Cow,
     fmt::Debug,
@@ -5,10 +7,22 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use aopt::{prelude::*, RawVal};
+use aopt::{
+    prelude::*,
+    set::{SetCfg, SetOpt},
+    RawVal,
+};
+use aopt_help::{prelude::Block, store::Store};
 
 pub use aopt::Error;
-use aopt_help::{prelude::Block, store::Store};
+use prelude::MetaConfig;
+
+pub mod prelude {
+    pub use crate::cote_help;
+    pub use crate::meta::MetaConfig;
+    pub use crate::Cote;
+    pub use aopt::Error;
+}
 
 pub struct Cote<P>
 where
@@ -70,6 +84,40 @@ where
 
             parser: Parser::new(policy),
         }
+    }
+}
+
+impl<P> Cote<P>
+where
+    P::Set: 'static,
+    P: Policy<Error = Error>,
+    SetOpt<P::Set>: Opt,
+    P::Set: Pre + Set + OptParser,
+    <P::Set as OptParser>::Output: Information,
+    SetCfg<P::Set>: Config + ConfigValue + Default,
+{
+    pub fn from_meta<T: Clone + 'static>(
+        &mut self,
+        mut meta: MetaConfig<T>,
+    ) -> Result<ParserCommit<'_, P::Set>, Error> {
+        let mut pc = self.add_opt(meta.take_option())?;
+
+        if let Some(hint) = meta.take_hint() {
+            pc = pc.set_hint(hint);
+        }
+        if let Some(help) = meta.take_help() {
+            pc = pc.set_help(help);
+        }
+        if let Some(action) = meta.take_action() {
+            pc = pc.set_action(action);
+        }
+        if let Some(assoc) = meta.take_assoc() {
+            pc = pc.set_assoc(assoc);
+        }
+        if let Some(value) = meta.take_value() {
+            pc = pc.set_initiator(ValInitiator::with(value));
+        }
+        Ok(pc)
     }
 }
 
