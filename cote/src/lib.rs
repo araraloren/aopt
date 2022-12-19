@@ -1,3 +1,4 @@
+#![doc = include_str!("../README.md")]
 pub mod meta;
 
 use std::{
@@ -96,7 +97,68 @@ where
     <P::Set as OptParser>::Output: Information,
     SetCfg<P::Set>: Config + ConfigValue + Default,
 {
-    pub fn from_meta<T: Clone + 'static>(
+    /// Add the option from the [`MetaConfig`].
+    ///
+    ///```rust
+    /// # use aopt::prelude::*;
+    /// # use cote::Cote;
+    /// # use cote::Error;
+    /// #
+    /// # fn main() -> Result<(), Error> {
+    ///     let mut cote = Cote::<AFwdPolicy>::default();
+    ///
+    ///     cote.add_meta::<String>(
+    ///         serde_json::from_str(
+    ///             r#"
+    ///     {
+    ///         "option": "-c=s",
+    ///         "hint": "-c <str>",
+    ///         "help": "This is a help for option c",
+    ///         "action": "App",
+    ///         "assoc": "Str",
+    ///         "alias": null,
+    ///         "value": [
+    ///           "we",
+    ///           "it"
+    ///         ]
+    ///     }
+    ///     "#,
+    ///         )
+    ///         .unwrap(),
+    ///     )?;
+    ///     cote.add_meta::<i64>(
+    ///         serde_json::from_str(
+    ///             r#"
+    ///     {
+    ///         "option": "--point=i",
+    ///         "hint": "--point <int>",
+    ///         "help": "This is a help for option",
+    ///         "action": "App",
+    ///         "assoc": "Int",
+    ///         "alias": [
+    ///             "-p"
+    ///         ]
+    ///       }
+    ///     "#,
+    ///         )
+    ///         .unwrap(),
+    ///     )?;
+    ///
+    ///     cote.run(["-p", "256"].into_iter(), |ret, cote: &Cote<AFwdPolicy>| {
+    ///         if ret.is_some() {
+    ///             assert_eq!(
+    ///                 &vec!["we".to_owned(), "it".to_owned()],
+    ///                 cote.find_vals::<String>("-c")?
+    ///             );
+    ///             assert_eq!(&256, cote.find_val::<i64>("--point")?);
+    ///             println!("cote running okay!!!");
+    ///         }
+    ///         Ok(())
+    ///     })?;
+    ///     # Ok(())
+    /// # }
+    /// ```
+    pub fn add_meta<T: Clone + 'static>(
         &mut self,
         mut meta: MetaConfig<T>,
     ) -> Result<ParserCommit<'_, P::Set>, Error> {
@@ -116,6 +178,11 @@ where
         }
         if let Some(value) = meta.take_value() {
             pc = pc.set_initiator(ValInitiator::with(value));
+        }
+        if let Some(alias_) = meta.take_alias() {
+            for alias in alias_ {
+                pc = pc.add_alias(alias);
+            }
         }
         Ok(pc)
     }
