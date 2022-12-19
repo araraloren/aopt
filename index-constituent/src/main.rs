@@ -1,10 +1,11 @@
 mod spyder;
 
-use aopt::app::SingleApp;
-use aopt::err::create_error;
-use aopt::err::Result;
+use std::ops::Deref;
+
+use cote::prelude::*;
 use aopt::prelude::*;
-use aopt_help::prelude::*;
+use aopt::Error;
+use aopt::set::SetCfg;
 use spyder::cnindex::CNIndex;
 use spyder::csindex::CSIndex;
 use spyder::Spyder;
@@ -20,161 +21,112 @@ async fn main() -> color_eyre::Result<()> {
         .init();
     color_eyre::install()?;
 
-    let mut app = SingleApp::<SimpleSet, DefaultService, ForwardPolicy>::default();
+    let mut cote = Cote::<AFwdPolicy>::default();
 
-    for (opt, long, help, value) in [
+    for (opt, alias, help, value) in [
         ("-h=b", "-help", "Print help message", None),
         ("-d=b", "--debug", "Print debug message", None),
         (
             "-n=i",
             "--page-number",
             "Set page number of results",
-            Some(OptValue::from(1i64)),
+            Some(ValInitiator::i64(1i64)),
         ),
         ("-a=b", "--all", "Get all the result", None),
         ("-i=b", "--id-only", "Display only id column", None),
-        (
-            "-r=b/",
-            "--reverse",
-            "Reverse the order of result",
-            Some(OptValue::from(true)),
-        ),
+        ("-r=b/", "--reverse", "Reverse the order of result", None),
     ] {
-        let mut commit = app.add_opt(opt)?;
+        let pc = cote.add_opt(opt)?.add_alias(alias).set_help(help);
 
         if let Some(value) = value {
-            commit.set_default_value(value);
+            pc.set_initiator(value);
         }
-        commit.add_alias(long)?;
-        commit.set_help(help);
-        commit.commit()?;
     }
-
-    let uid = app
-        .add_opt("-t=s!")?
-        .add_alias("--type")?
+    cote.add_opt("-t=s!")?
+        .add_alias("--type")
         .set_help("Search keyword and list result")
-        .commit()?;
-
-    app.add_callback(
-        uid,
-        simple_opt_cb!(|_, _, value| {
-            match value.as_str().unwrap_or(&String::default()).as_str() {
-                "CS" | "CN" => Ok(Some(value)),
-                _ => Err(create_error(
+        .on(
+            |_: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>| match val.as_str() {
+                "CS" | "CN" => Ok(Some(val.take())),
+                _ => Err(Error::raise_failure(
                     "The type must be one of [\"CS\", \"CN\"]!".to_string(),
                 )),
-            }
-        }),
-    );
-    let uid = app
-        .add_opt("-s=i")?
-        .add_alias("--page-size")?
+            },
+        )?;
+    cote.add_opt("-s=i")?
+        .add_alias("--page-size")
         .set_help("Set page size of results")
-        .set_default_value(OptValue::from(30i64))
-        .commit()?;
-
-    app.add_callback(
-        uid,
-        simple_opt_cb!(|_, _, value| {
-            match value.as_int().unwrap_or(&0) {
-                5 | 10 | 20 | 30 => Ok(Some(value)),
-                _ => Err(create_error(
+        .set_value(30i64)
+        .on(
+            |_: &mut ASet, _: &mut ASer, val: ctx::Value<i64>| match val.deref() {
+                5 | 10 | 20 | 30 => Ok(Some(val)),
+                _ => Err(Error::raise_failure(
                     "The page size must be one of [5, 10, 20, 30]!".to_string(),
                 )),
-            }
-        }),
-    );
-    app.add_opt("search=c")?
-        .set_help("Search keyword and list result")
-        .commit()?;
-
-    app.add_opt("cons=c")?
-        .set_help("Get and list constituents of given code")
-        .commit()?;
-
+            },
+        )?;
+    cote.add_opt("search=c")?
+        .set_help("Search keyword and list result");
+    cote.add_opt("cons=c")?
+        .set_help("Get and list constituents of given code");
     // add a pos to last, but don't use it
-    app.add_opt("args=p@-1")?
-        .set_help("Argument of operate, such as keyword of search")
-        .commit()?;
+    cote.add_opt("args=p@2")?
+        .set_assoc(Assoc::Str)
+        .set_optional(false)
+        .set_help("Argument of operate, such as keyword of search");
+    Ok(cote
+        .run_async_mut(std::env::args().skip(1), |ret, app| async move {
+            let debug: bool = *app.find_val("--debug")?;
+            let display_help = ret.is_none();
 
-    Ok(app
-        .run_async(std::env::args().skip(1), |ret, app| async move {
-            let parser = app.get_parser();
-            let noa = parser.get_service().get_noa();
-            let set = parser.get_set();
-            let debug = value_of(set, "--debug")?.as_bool().unwrap_or(&false);
-
-            if *debug {
-                dbg!(&noa);
-            }
-            if !ret || (noa.len() < 2) {
-                print_help(set, true)?;
+            if display_help {
+                cote_help!(app)?;
             } else {
-                let string = String::default();
-                let data = noa[1];
-                let all = value_of(set, "--all")?.as_bool().unwrap_or(&false);
-                let type_ = value_of(set, "--type")?.as_str().unwrap_or(&string);
-                let mut ctx = SearchCtx::new(set, data.as_str(), type_)
-                    .with_all(*all)
-                    .with_debug(*debug);
-                let page_size = value_of(set, "--page-size")?.as_int();
-                let page_number = value_of(set, "--page-number")?.as_int();
+                let data = app.find_val::<String>("args")?;
+                let all = *app.find_val::<bool>("--all")?;
+                let type_ = app.find_val::<String>("--type")?;
+                let page_size = *app.find_val::<i64>("--page-size")?;
+                let page_number = *app.find_val::<i64>("--page-number")?;
+                let mut ctx = SearchCtx::new(app, data, type_)
+                    .with_all(all)
+                    .with_debug(debug)
+                    .with_page_size(page_size as usize)
+                    .with_page_number(page_number as usize);
+                let mut data = vec![];
+                let id_only = *app.find_val::<bool>("--id-only")?;
+                let reverse = *app.find_val::<bool>("--reverse")?;
 
-                match type_.as_str() {
-                    "CS" => {
-                        ctx = ctx
-                            .with_page_size(*page_size.unwrap_or(&30) as usize)
-                            .with_page_number(*page_number.unwrap_or(&1) as usize);
+                loop {
+                    let ret = run_command(&ctx).await?;
+
+                    if ret.is_empty() || !ctx.get_all() {
+                        for item in ret.iter() {
+                            data.push(item.clone());
+                        }
+                        break;
                     }
-                    "CN" => {
-                        ctx = ctx
-                            .with_page_size(*page_size.unwrap_or(&20) as usize)
-                            .with_page_number(*page_number.unwrap_or(&1) as usize);
+                    if ctx.get_all() {
+                        ctx.set_page_number(ctx.get_page_number() + 1);
                     }
-                    _ => {}
                 }
-                if *debug {
-                    dbg!(&ctx);
+                if reverse {
+                    data.reverse();
                 }
-                if !print_help(set, false)? {
-                    let mut data = vec![];
-                    loop {
-                        let ret = run_command(&ctx).await?;
-
-                        if ret.is_empty() || !ctx.get_all() {
-                            for item in ret.iter() {
-                                data.push(item.clone());
-                            }
-                            break;
-                        }
-                        if ctx.get_all() {
-                            ctx.set_page_number(ctx.get_page_number() + 1);
-                        }
+                if id_only {
+                    for data in data.iter() {
+                        println!("{}", data.code);
                     }
-
-                    let id_only = *value_of(set, "--id-only")?.as_bool().unwrap_or(&false);
-                    let reverse = *value_of(set, "--reverse")?.as_bool().unwrap_or(&false);
-
-                    if reverse {
-                        data.reverse();
-                    }
-                    if id_only {
-                        for data in data.iter() {
-                            println!("{}", data.code);
-                        }
-                    } else {
-                        for data in data.iter() {
-                            if ctx.is_search()? {
-                                println!("{}\t\t{}\t\t{:02}", data.code, data.name, data.number);
-                            } else if ctx.is_cons()? {
-                                println!(
-                                    "{}\t\t{}\t\t{}",
-                                    data.code,
-                                    data.name,
-                                    data.number as f64 / 100.0
-                                );
-                            }
+                } else {
+                    for data in data.iter() {
+                        if ctx.is_search()? {
+                            println!("{}\t\t{}\t\t{:02}", data.code, data.name, data.number);
+                        } else if ctx.is_cons()? {
+                            println!(
+                                "{}\t\t{}\t\t{}",
+                                data.code,
+                                data.name,
+                                data.number as f64 / 100.0
+                            );
                         }
                     }
                 }
@@ -184,9 +136,9 @@ async fn main() -> color_eyre::Result<()> {
         .await?)
 }
 
-#[derive(Debug, Clone)]
-struct SearchCtx<'a, 'b, 'c> {
-    set: &'a dyn Set,
+#[derive(Clone)]
+struct SearchCtx<'a, 'b, 'c, P: Policy> {
+    cote: &'a Cote<P>,
     arg: &'b str,
     all: bool,
     type_: &'c str,
@@ -195,10 +147,16 @@ struct SearchCtx<'a, 'b, 'c> {
     page_number: usize,
 }
 
-impl<'a, 'b, 'c> SearchCtx<'a, 'b, 'c> {
-    pub fn new(set: &'a dyn Set, arg: &'b str, type_: &'c str) -> Self {
+impl<'a, 'b, 'c, P: Policy> SearchCtx<'a, 'b, 'c, P>
+where
+    P: Policy<Error = Error>,
+    P::Set: Pre + Set + OptParser,
+    <P::Set as OptParser>::Output: Information,
+    SetCfg<P::Set>: Config + ConfigValue + Default,
+{
+    pub fn new(cote: &'a Cote<P>, arg: &'b str, type_: &'c str) -> Self {
         Self {
-            set,
+            cote,
             arg,
             all: false,
             type_,
@@ -252,12 +210,12 @@ impl<'a, 'b, 'c> SearchCtx<'a, 'b, 'c> {
         self.page_number
     }
 
-    pub fn is_search(&self) -> Result<bool> {
-        Ok(*value_of(self.set, SEARCH_CMD)?.as_bool().unwrap_or(&false))
+    pub fn is_search(&self) -> Result<bool, Error> {
+        Ok(*self.cote.find_val::<bool>(SEARCH_CMD)?)
     }
 
-    pub fn is_cons(&self) -> Result<bool> {
-        Ok(*value_of(self.set, CONS_CMD)?.as_bool().unwrap_or(&false))
+    pub fn is_cons(&self) -> Result<bool, Error> {
+        Ok(*self.cote.find_val::<bool>(CONS_CMD)?)
     }
 
     // pub fn set_set(&mut self, set: &'a dyn Set)  {
@@ -289,7 +247,15 @@ impl<'a, 'b, 'c> SearchCtx<'a, 'b, 'c> {
     }
 }
 
-async fn run_command<'a, 'b, 'c>(ctx: &SearchCtx<'a, 'b, 'c>) -> Result<SpyderIndexData> {
+async fn run_command<'a, 'b, 'c, P: Policy>(
+    ctx: &SearchCtx<'a, 'b, 'c, P>,
+) -> Result<SpyderIndexData, Error>
+where
+    P: Policy<Error = Error>,
+    P::Set: Pre + Set + OptParser,
+    <P::Set as OptParser>::Output: Information,
+    SetCfg<P::Set>: Config + ConfigValue + Default,
+{
     if ctx.is_search()? {
         let ret = search_keyword(ctx).await?;
 
@@ -310,60 +276,38 @@ async fn run_command<'a, 'b, 'c>(ctx: &SearchCtx<'a, 'b, 'c>) -> Result<SpyderIn
     }
 }
 
-async fn search_keyword<'a, 'b, 'c>(ctx: &SearchCtx<'a, 'b, 'c>) -> Result<SpyderIndexData> {
+async fn search_keyword<'a, 'b, 'c, P: Policy>(
+    ctx: &SearchCtx<'a, 'b, 'c, P>,
+) -> Result<SpyderIndexData, Error>
+where
+    P: Policy<Error = Error>,
+    P::Set: Pre + Set + OptParser,
+    <P::Set as OptParser>::Output: Information,
+    SetCfg<P::Set>: Config + ConfigValue + Default,
+{
     match ctx.get_type_() {
         "CS" => {
             let csspyder = CSIndex::new(ctx.get_debug(), ctx.get_page_size() as usize)
-                .map_err(|e| create_error(format!("Can not init CSIndexSpyder: {:?}", e)))?;
+                .map_err(|e| Error::raise_error(format!("Can not init CSIndexSpyder: {:?}", e)))?;
 
             let ret = csspyder
                 .search(ctx.get_arg(), ctx.get_page_number() as usize)
-                .await
-                .map_err(|e| create_error(format!("Can not search {}: {:?}", ctx.get_arg(), e)))?;
-
-            Ok(ret)
-        }
-        "CN" => {
-            let cnspyder = CNIndex::new(ctx.get_debug(), ctx.get_page_size() as usize)
-                .map_err(|e| create_error(format!("Can not init CSIndexSpyder: {:?}", e)))?;
-
-            let ret = cnspyder
-                .search(ctx.get_arg(), ctx.get_page_number() as usize)
-                .await
-                .map_err(|e| create_error(format!("Can not search {}: {:?}", ctx.get_arg(), e)))?;
-
-            Ok(ret)
-        }
-        type_ => {
-            panic!("Unknow search type {}", type_)
-        }
-    }
-}
-
-async fn display_cons_of<'a, 'b, 'c>(ctx: &SearchCtx<'a, 'b, 'c>) -> Result<SpyderIndexData> {
-    match ctx.get_type_() {
-        "CS" => {
-            let csspyder = CSIndex::new(ctx.get_debug(), ctx.get_page_size() as usize)
-                .map_err(|e| create_error(format!("Can not init CSIndexSpyder: {:?}", e)))?;
-
-            let ret = csspyder
-                .fetch_cons(ctx.get_arg(), ctx.get_page_number() as usize)
                 .await
                 .map_err(|e| {
-                    create_error(format!("Can not fetch cons {}: {:?}", ctx.get_arg(), e))
+                    Error::raise_error(format!("Can not search {}: {:?}", ctx.get_arg(), e))
                 })?;
 
             Ok(ret)
         }
         "CN" => {
             let cnspyder = CNIndex::new(ctx.get_debug(), ctx.get_page_size() as usize)
-                .map_err(|e| create_error(format!("Can not init CSIndexSpyder: {:?}", e)))?;
+                .map_err(|e| Error::raise_error(format!("Can not init CSIndexSpyder: {:?}", e)))?;
 
             let ret = cnspyder
-                .fetch_cons(ctx.get_arg(), ctx.get_page_number() as usize)
+                .search(ctx.get_arg(), ctx.get_page_number() as usize)
                 .await
                 .map_err(|e| {
-                    create_error(format!("Can not fetch cons {}: {:?}", ctx.get_arg(), e))
+                    Error::raise_error(format!("Can not search {}: {:?}", ctx.get_arg(), e))
                 })?;
 
             Ok(ret)
@@ -374,37 +318,44 @@ async fn display_cons_of<'a, 'b, 'c>(ctx: &SearchCtx<'a, 'b, 'c>) -> Result<Spyd
     }
 }
 
-fn value_of<'a>(set: &'a dyn Set, opt: &str) -> Result<&'a OptValue> {
-    Ok(set
-        .find(opt)?
-        .ok_or_else(|| create_error(format!("can not get option {}", opt)))?
-        .get_value())
-}
+async fn display_cons_of<'a, 'b, 'c, P: Policy>(
+    ctx: &SearchCtx<'a, 'b, 'c, P>,
+) -> Result<SpyderIndexData, Error>
+where
+    P: Policy<Error = Error>,
+    P::Set: Pre + Set + OptParser,
+    <P::Set as OptParser>::Output: Information,
+    SetCfg<P::Set>: Config + ConfigValue + Default,
+{
+    match ctx.get_type_() {
+        "CS" => {
+            let csspyder = CSIndex::new(ctx.get_debug(), ctx.get_page_size() as usize)
+                .map_err(|e| Error::raise_error(format!("Can not init CSIndexSpyder: {:?}", e)))?;
 
-fn print_help<S: Set>(set: &S, force: bool) -> Result<bool> {
-    let mut is_need_help = false;
+            let ret = csspyder
+                .fetch_cons(ctx.get_arg(), ctx.get_page_number() as usize)
+                .await
+                .map_err(|e| {
+                    Error::raise_error(format!("Can not fetch cons {}: {:?}", ctx.get_arg(), e))
+                })?;
 
-    if let Ok(Some(opt)) = set.find("help") {
-        if opt.get_value().as_bool() == Some(&true) {
-            is_need_help = true;
+            Ok(ret)
+        }
+        "CN" => {
+            let cnspyder = CNIndex::new(ctx.get_debug(), ctx.get_page_size() as usize)
+                .map_err(|e| Error::raise_error(format!("Can not init CSIndexSpyder: {:?}", e)))?;
+
+            let ret = cnspyder
+                .fetch_cons(ctx.get_arg(), ctx.get_page_number() as usize)
+                .await
+                .map_err(|e| {
+                    Error::raise_error(format!("Can not fetch cons {}: {:?}", ctx.get_arg(), e))
+                })?;
+
+            Ok(ret)
+        }
+        type_ => {
+            panic!("Unknow search type {}", type_)
         }
     }
-    if is_need_help || force {
-        let mut app_help = getopt_help!(set, SEARCH_CMD, CONS_CMD);
-
-        if *value_of(set, SEARCH_CMD)?.as_bool().unwrap_or(&false) {
-            app_help
-                .print_cmd_help(Some(SEARCH_CMD.into()))
-                .map_err(|e| create_error(format!("can not write help to stdout: {:?}", e)))?;
-        } else if *value_of(set, CONS_CMD)?.as_bool().unwrap_or(&false) {
-            app_help
-                .print_cmd_help(Some(CONS_CMD.into()))
-                .map_err(|e| create_error(format!("can not write help to stdout: {:?}", e)))?;
-        } else {
-            app_help
-                .print_help()
-                .map_err(|e| create_error(format!("can not write help to stdout: {:?}", e)))?;
-        }
-    }
-    Ok(is_need_help)
 }
