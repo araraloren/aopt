@@ -397,7 +397,7 @@ where
 /// The `head` will be generate from package's description.
 /// The `foot` will be generate from package's authors and version.
 #[macro_export]
-macro_rules! display_help {
+macro_rules! cote_help {
     ($cote:ident) => {{
         let foot = format!(
             "Create by {} v{}",
