@@ -1,6 +1,10 @@
 
 # Relase note
 
+## 0.7.1
+
+- Fix a backward POS check issue
+
 ## 0.7.0
 
 - refactor whole project
