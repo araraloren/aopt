@@ -1,6 +1,7 @@
 use serde::de::Visitor;
 use serde::Deserialize;
 use serde::Serialize;
+use std::borrow::Cow;
 use std::fmt::Display;
 use std::ops::Deref;
 use std::ops::DerefMut;
@@ -52,6 +53,12 @@ impl From<String> for Str {
 impl<'a> From<&'a Str> for Str {
     fn from(value: &'a Str) -> Self {
         value.clone()
+    }
+}
+
+impl<'a> From<Cow<'a, str>> for Str {
+    fn from(value: Cow<'a, str>) -> Self {
+        Self(Arc::from(value))
     }
 }
 
