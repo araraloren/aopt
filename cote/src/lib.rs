@@ -22,7 +22,8 @@ pub mod prelude {
     pub use crate::cote_help;
     pub use crate::meta::MetaConfig;
     pub use crate::Cote;
-    pub use aopt::Error;
+    pub use aopt;
+    pub use aopt_help;
 }
 
 pub struct Cote<P>
