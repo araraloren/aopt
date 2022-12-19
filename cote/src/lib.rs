@@ -100,10 +100,10 @@ where
 {
     /// Add the option from the [`MetaConfig`].
     ///
-    ///```rust
+    ///```ignore
+    /// # use cote::prelude::*;
     /// # use aopt::prelude::*;
-    /// # use cote::Cote;
-    /// # use cote::Error;
+    /// # use aopt::Error;
     /// #
     /// # fn main() -> Result<(), Error> {
     ///     let mut cote = Cote::<AFwdPolicy>::default();
