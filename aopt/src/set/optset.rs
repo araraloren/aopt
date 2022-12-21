@@ -28,7 +28,7 @@ use super::SetOpt;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<()> {
-///  let mut set = OptSet::<StrParser, Box<dyn Ctor<Opt = AOpt, Config = OptConfig, Error = Error>>>::default();
+///  let mut set = OptSet::<StrParser, ACreator>::default();
 ///
 ///  // add prefix for option
 ///  set.add_prefix("/");

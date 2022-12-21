@@ -289,7 +289,7 @@ mod test {
     }
 
     fn testing_1_main() -> Result<(), Error> {
-        fn check_opt_val<T: std::fmt::Debug + PartialEq + 'static>(
+        fn check_opt_val<T: std::fmt::Debug + PartialEq + ErasedTy + 'static>(
             ser: &mut ASer,
             opt: &AOpt,
             uid: Uid,
