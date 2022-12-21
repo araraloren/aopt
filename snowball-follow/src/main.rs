@@ -254,6 +254,7 @@ fn parser_command_line(args: Args) -> Result<AFwdParser, Error> {
         )?
         .then(VecStore);
 
+    parser.init()?;
     parser.parse(aopt::Arc::new(args))?;
 
     Ok(parser)
