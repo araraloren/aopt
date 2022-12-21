@@ -1,5 +1,4 @@
 use std::fmt::Debug;
-use tracing::trace;
 
 use crate::map::ErasedTy;
 use crate::opt::Action;
@@ -182,7 +181,6 @@ where
                 .map_err(|e| e.into())?;
             let uid = self.set.insert(opt);
 
-            trace!("Register a opt {:?} --> {}", name, uid);
             self.commited = Some(uid);
             Ok(uid)
         }

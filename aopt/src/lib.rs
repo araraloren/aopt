@@ -172,21 +172,14 @@ macro_rules! getopt {
 }
 
 pub mod prelude {
-    cfg_if::cfg_if! {
-        if #[cfg(feature = "sync")] {
-            pub use crate::opt::Creator;
-        }
-        else {
-            pub use crate::opt::BoolCreator;
-            pub use crate::opt::CmdCreator;
-            pub use crate::opt::FltCreator;
-            pub use crate::opt::IntCreator;
-            pub use crate::opt::MainCreator;
-            pub use crate::opt::PosCreator;
-            pub use crate::opt::StrCreator;
-            pub use crate::opt::UintCreator;
-        }
-    }
+    pub use crate::opt::BoolCreator;
+    pub use crate::opt::CmdCreator;
+    pub use crate::opt::FltCreator;
+    pub use crate::opt::IntCreator;
+    pub use crate::opt::MainCreator;
+    pub use crate::opt::PosCreator;
+    pub use crate::opt::StrCreator;
+    pub use crate::opt::UintCreator;
 
     pub use crate::args::Args;
     pub use crate::ctx::wrap_handler;

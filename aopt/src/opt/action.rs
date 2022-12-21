@@ -5,7 +5,6 @@ use crate::ser::Services;
 use crate::Error;
 use crate::RawVal;
 use crate::Uid;
-use tracing::trace;
 
 /// The default action type for option value saving, see [`Action::process`].
 #[non_exhaustive]
@@ -92,7 +91,6 @@ where
     ) -> Result<Option<Self::Ret>, Self::Error> {
         let has_value = val.is_some();
 
-        trace!("Store the value of {{{uid}}} ==> {:?}", raw);
         // Set the value if return Some(Value)
         if let Some(val) = val {
             let raw_ser = ser.ser_rawval_mut()?;

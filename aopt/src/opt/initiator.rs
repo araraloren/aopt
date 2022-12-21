@@ -1,5 +1,4 @@
 use std::fmt::Debug;
-use tracing::trace;
 
 use crate::ext::ServicesExt;
 use crate::map::ErasedTy;
@@ -85,7 +84,6 @@ impl ValInitiator {
     }
 
     pub fn do_initialize(&mut self, uid: Uid, ser: &mut Services) -> Result<(), Error> {
-        trace!("Try to initialize the value of {{{uid}}}");
         (self.0)(uid, ser)
     }
 }

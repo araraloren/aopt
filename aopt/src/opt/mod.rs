@@ -1,8 +1,6 @@
 pub(crate) mod action;
 pub(crate) mod aopt;
 pub(crate) mod config;
-#[cfg_attr(feature = "sync", path = "../sync/opt/creator.rs")]
-#[cfg_attr(not(feature = "sync"), path = "creator.rs")]
 pub(crate) mod creator;
 pub(crate) mod help;
 pub(crate) mod index;
@@ -20,21 +18,14 @@ pub use self::aopt::AOpt;
 pub use self::config::Config;
 pub use self::config::ConfigValue;
 pub use self::config::OptConfig;
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        pub use self::creator::Creator;
-    }
-    else {
-        pub use self::creator::BoolCreator;
-        pub use self::creator::CmdCreator;
-        pub use self::creator::FltCreator;
-        pub use self::creator::IntCreator;
-        pub use self::creator::MainCreator;
-        pub use self::creator::PosCreator;
-        pub use self::creator::StrCreator;
-        pub use self::creator::UintCreator;
-    }
-}
+pub use self::creator::BoolCreator;
+pub use self::creator::CmdCreator;
+pub use self::creator::FltCreator;
+pub use self::creator::IntCreator;
+pub use self::creator::MainCreator;
+pub use self::creator::PosCreator;
+pub use self::creator::StrCreator;
+pub use self::creator::UintCreator;
 pub use self::help::Help;
 pub use self::index::Index;
 pub use self::info::ConstrctInfo;

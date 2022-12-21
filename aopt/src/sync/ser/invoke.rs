@@ -1,7 +1,6 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::path::PathBuf;
-use tracing::trace;
 
 use crate::astr;
 use crate::ctx::wrap_handler;
@@ -218,11 +217,6 @@ where
         let val = arg.as_ref().map(|v| v.as_ref());
         let mut action = *opt.action();
 
-        trace!(
-            "Invoke default handler for {{{uid}}}, ctx{{{ctx:?}}} action{{{}}} & assoc{{{}}}",
-            action,
-            assoc
-        );
         match assoc {
             Assoc::Bool => action.process(uid, set, ser, val, bool::parse(opt, val, ctx).ok()),
             Assoc::Int => action.process(uid, set, ser, val, i64::parse(opt, val, ctx).ok()),

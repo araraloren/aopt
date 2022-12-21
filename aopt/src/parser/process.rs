@@ -1,5 +1,3 @@
-use tracing::trace;
-
 use crate::ctx::Ctx;
 use crate::opt::Opt;
 use crate::parser::CtxSaver;
@@ -28,11 +26,9 @@ where
     let mut inv_ser = ser.take::<InvokeService<Set>>()?;
     let ret = match inv_ser.has(uid) {
         true => {
-            trace!("Invoke callback of Opt{{{uid}}} with {:?}", saver.ctx);
             inv_ser.invoke(set, ser, &saver.ctx)
         }
         false => {
-            trace!("Invoke default of Opt{{{uid}}} with {:?}", saver.ctx);
             inv_ser.invoke_default(set, ser, &saver.ctx)
         }
     };
@@ -130,12 +126,10 @@ where
                     let ret = match inv_ser.has(uid) {
                         true => {
                             // callback in InvokeService
-                            trace!("Invoke callback of NOA{{{uid}}} with {:?}", &ctx);
                             inv_ser.invoke(set, ser, &ctx)
                         }
                         false => {
                             // call `invoke_default` if callback not exist
-                            trace!("Invoke default of NOA{{{uid}}} with {:?}", &ctx);
                             inv_ser.invoke_default(set, ser, &ctx)
                         }
                     };
