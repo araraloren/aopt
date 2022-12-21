@@ -159,7 +159,7 @@ where
     ///     # Ok(())
     /// # }
     /// ```
-    pub fn add_meta<T: Clone + 'static>(
+    pub fn add_meta<T: ErasedTy + Clone + 'static>(
         &mut self,
         mut meta: MetaConfig<T>,
     ) -> Result<ParserCommit<'_, P::Set>, Error> {

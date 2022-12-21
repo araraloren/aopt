@@ -1,10 +1,9 @@
 use aopt::prelude::{Action, Assoc};
+use aopt::map::ErasedTy;
 
 ///
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct MetaConfig<T>
-where
-    T: Clone,
+pub struct MetaConfig<T: ErasedTy + Clone>
 {
     option: String,
 
@@ -21,9 +20,7 @@ where
     value: Option<Vec<T>>,
 }
 
-impl<T> MetaConfig<T>
-where
-    T: Clone,
+impl<T: ErasedTy + Clone> MetaConfig<T>
 {
     pub fn new<S: Into<String>>(option: S) -> Self {
         Self {
