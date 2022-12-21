@@ -68,7 +68,7 @@ use crate::Error;
 ///         Ok(Some(cfg.take()))
 ///     },
 /// )?;
-///
+/// 
 /// getopt!(["--load", "cxx", "-check", "cc"].into_iter(), &mut cfg_loader)?;
 ///
 /// let mut parser = cfg_loader.service_mut().sve_take_usrval::<AFwdParser>()?;
@@ -89,8 +89,6 @@ use crate::Error;
 ///         }
 ///         Ok(Some(found))
 ///     })?;
-///
-///
 ///
 /// getopt!(cfg_loader.take_retval().unwrap().take_args().into_iter(), &mut parser)?;
 ///
@@ -174,9 +172,6 @@ where
         ser: &mut Services,
         args: Arc<Args>,
     ) -> Result<Option<Self::Ret>, Self::Error> {
-        for opt in set.iter_mut() {
-            Self::ig_failure(opt.init(ser))?;
-        }
         Self::ig_failure(ser.ser_check()?.pre_check(set))?;
 
         let opt_styles = [
@@ -974,6 +969,9 @@ mod test {
                 Ok(Some(value.take()))
             },
         );
+        for opt in set.iter_mut() {
+            opt.init(&mut ser)?;
+        }
         let ret = policy.parse(&mut set, &mut ser, Arc::new(args))?;
 
         assert!(ret.is_some());

@@ -1,6 +1,14 @@
 
 # Relase note
 
+## 0.7.3
+
+- Fix a issue when using Parser inside async function
+
+- Remove the initialize code inside Policy::parse, call it outside
+
+- Fix getopt!, add initialize for option
+
 ## 0.7.1
 
 - Fix a backward POS check issue

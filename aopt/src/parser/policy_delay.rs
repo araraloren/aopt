@@ -197,9 +197,6 @@ where
         ser: &mut Services,
         args: Arc<Args>,
     ) -> Result<Option<Self::Ret>, Self::Error> {
-        for opt in set.iter_mut() {
-            opt.init(ser)?;
-        }
         ser.ser_check()?.pre_check(set)?;
 
         // take the invoke service, avoid borrow the ser
@@ -488,6 +485,9 @@ mod test {
 
         let args = Arc::new(args);
 
+        for opt in set.iter_mut() {
+            opt.init(&mut ser)?;
+        }
         assert!(policy.parse(&mut set, &mut ser, args.clone()).is_err());
         policy.set_strict(false);
         policy.parse(&mut set, &mut ser, args)?;

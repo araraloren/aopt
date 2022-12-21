@@ -150,6 +150,7 @@ macro_rules! getopt {
                 $(
                     let parser = __check_p($parser_left);
 
+                    parser.init()?;
                     match parser.parse(args.clone()) {
                         Ok(parse_ret) => {
                             if let Some(_) = parse_ret {

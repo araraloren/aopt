@@ -445,6 +445,17 @@ impl<P> Parser<P>
 where
     P: Policy<Error = Error>,
 {
+    /// Call the [`init`](crate::opt::Opt::init) on [`Services`] initialize the option value.
+    pub fn init(&mut self) -> Result<(), P::Error> {
+        let optset = &mut self.optset;
+        let services = &mut self.services;
+
+        for opt in optset.iter_mut() {
+            opt.init(services)?;
+        }
+        Ok(())
+    }
+
     pub fn parse(&mut self, args: Arc<Args>) -> Result<Option<()>, P::Error> {
         let optset = &mut self.optset;
         let services = &mut self.services;

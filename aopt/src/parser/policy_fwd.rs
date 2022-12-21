@@ -72,6 +72,9 @@ use crate::Error;
 ///
 /// let args = Args::new(["set", "42", "foo", "bar"].into_iter());
 ///
+/// for opt in set.iter_mut() {
+///     opt.init(&mut ser)?;
+/// }
 /// policy.parse(&mut set, &mut ser, Arc::new(args))?;
 ///
 /// let values = ser.sve_vals::<String>(pos_id)?;
@@ -81,6 +84,9 @@ use crate::Error;
 ///
 /// let args = Args::new(["--/filter", "set", "42", "foo", "bar"].into_iter());
 ///
+/// for opt in set.iter_mut() {
+///     opt.init(&mut ser)?;
+/// }
 /// policy.parse(&mut set, &mut ser, Arc::new(args))?;
 ///
 /// let values = ser.sve_vals::<String>(pos_id)?;
@@ -160,9 +166,6 @@ where
         ser: &mut Services,
         args: Arc<Args>,
     ) -> Result<Option<Self::Ret>, Self::Error> {
-        for opt in set.iter_mut() {
-            opt.init(ser)?;
-        }
         ser.ser_check()?.pre_check(set)?;
 
         let stys = [
@@ -952,6 +955,9 @@ mod test {
                 Ok(Some(value.take()))
             },
         );
+        for opt in set.iter_mut() {
+            opt.init(&mut ser)?;
+        }
         policy.parse(&mut set, &mut ser, Arc::new(args))?;
         Ok(())
     }

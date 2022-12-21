@@ -145,78 +145,85 @@ impl ServicesValExt for Services {
     }
 }
 
-/// Simple wrapper of user value stored in [`UsrValService`](crate::ser::UsrValService).
-///
-/// Value internally use [Arc](crate::Arc), it is cheap to clone.
-/// Before used it in `handler` which register in [`InvokeService`](crate::ser::InvokeService),
-/// you need add it to [`UsrValService`].
-///
-/// # Examples
-/// ```rust
-/// # use aopt::prelude::*;
-/// # use aopt::Arc;
-/// # use aopt::Error;
-/// # use aopt::RawVal;
-/// # use std::cell::RefCell;
-/// # use std::ops::Deref;
-/// # fn main() -> Result<(), Error> {
-/// #
-/// #[derive(Debug, Clone)]
-/// pub struct PosList(RefCell<Vec<RawVal>>);
-///
-/// impl PosList {
-///     pub fn add_pos(&self, val: RawVal) {
-///         self.0.borrow_mut().push(val);
-///     }
-///
-///     pub fn test_pos(&self, test: Vec<RawVal>) {
-///         assert_eq!(self.0.borrow().len(), test.len());
-///         for (vall, valr) in self.0.borrow().iter().zip(test.iter()) {
-///             assert_eq!(vall, valr);
-///         }
-///     }
-/// }
-///
-///
-/// let mut policy = AFwdPolicy::default();
-/// let mut set = policy.default_set();
-/// let mut ser = policy.default_ser();
-///
-/// ser.ser_usrval_mut()?
-///     .insert(ser::Value::new(PosList(RefCell::new(vec![]))));
-/// set.add_opt("--bool=b/")?.run()?;
-/// set.add_opt("pos_v=p@*")?.run()?;
-/// ser.ser_invoke_mut()?
-///     .entry(0)
-///     .on(|_: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
-///         assert_eq!(&true, disable.deref());
-///         Ok(Some(false))
-///     });
-///
-/// ser.ser_invoke_mut()?
-///     .entry(1)
-///     .on(
-///         |_: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal, data: ser::Value<PosList>| {
-///             data.add_pos(raw_val.clone_rawval());
-///             Ok(Some(true))
-///         },
-///     );
-///
-/// let args = Args::new(["--/bool", "set", "42", "foo", "bar"].into_iter());
-///
-/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
-///
-/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
-/// ser.sve_usrval::<ser::Value::<PosList>>()?.test_pos(
-///     ["set", "42", "foo", "bar"]
-///         .into_iter()
-///         .map(RawVal::from)
-///         .collect(),
-/// );
-/// # Ok(())
-/// # }
-/// ```
-pub struct Value<T: ?Sized>(Arc<T>);
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        pub struct Value<T: ?Sized>(Arc<T>);
+    }
+    else {
+        /// Simple wrapper of user value stored in [`UsrValService`](crate::ser::UsrValService).
+        ///
+        /// Value internally use [Arc](crate::Arc), it is cheap to clone.
+        /// Before used it in `handler` which register in [`InvokeService`](crate::ser::InvokeService),
+        /// you need add it to [`UsrValService`].
+        ///
+        /// # Examples
+        /// ```rust
+        /// # use aopt::prelude::*;
+        /// # use aopt::Arc;
+        /// # use aopt::Error;
+        /// # use aopt::RawVal;
+        /// # use std::cell::RefCell;
+        /// # use std::ops::Deref;
+        /// # fn main() -> Result<(), Error> {
+        /// #
+        /// #[derive(Debug, Clone)]
+        /// pub struct PosList(RefCell<Vec<RawVal>>);
+        ///
+        /// impl PosList {
+        ///     pub fn add_pos(&self, val: RawVal) {
+        ///         self.0.borrow_mut().push(val);
+        ///     }
+        ///
+        ///     pub fn test_pos(&self, test: Vec<RawVal>) {
+        ///         assert_eq!(self.0.borrow().len(), test.len());
+        ///         for (vall, valr) in self.0.borrow().iter().zip(test.iter()) {
+        ///             assert_eq!(vall, valr);
+        ///         }
+        ///     }
+        /// }
+        ///
+        ///
+        /// let mut policy = AFwdPolicy::default();
+        /// let mut set = policy.default_set();
+        /// let mut ser = policy.default_ser();
+        ///
+        /// ser.ser_usrval_mut()?
+        ///     .insert(ser::Value::new(PosList(RefCell::new(vec![]))));
+        /// set.add_opt("--bool=b/")?.run()?;
+        /// set.add_opt("pos_v=p@*")?.run()?;
+        /// ser.ser_invoke_mut()?
+        ///     .entry(0)
+        ///     .on(|_: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
+        ///         assert_eq!(&true, disable.deref());
+        ///         Ok(Some(false))
+        ///     });
+        ///
+        /// ser.ser_invoke_mut()?
+        ///     .entry(1)
+        ///     .on(
+        ///         |_: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal, data: ser::Value<PosList>| {
+        ///             data.add_pos(raw_val.clone_rawval());
+        ///             Ok(Some(true))
+        ///         },
+        ///     );
+        ///
+        /// let args = Args::new(["--/bool", "set", "42", "foo", "bar"].into_iter());
+        ///
+        /// policy.parse(&mut set, &mut ser, Arc::new(args))?;
+        ///
+        /// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
+        /// ser.sve_usrval::<ser::Value::<PosList>>()?.test_pos(
+        ///     ["set", "42", "foo", "bar"]
+        ///         .into_iter()
+        ///         .map(RawVal::from)
+        ///         .collect(),
+        /// );
+        /// # Ok(())
+        /// # }
+        /// ```
+        pub struct Value<T: ?Sized>(Arc<T>);
+    }
+}
 
 impl<T> Value<T> {
     pub fn new(value: T) -> Self {
