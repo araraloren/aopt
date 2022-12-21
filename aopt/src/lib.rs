@@ -172,6 +172,22 @@ macro_rules! getopt {
 }
 
 pub mod prelude {
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "sync")] {
+            pub use crate::opt::Creator;
+        }
+        else {
+            pub use crate::opt::BoolCreator;
+            pub use crate::opt::CmdCreator;
+            pub use crate::opt::FltCreator;
+            pub use crate::opt::IntCreator;
+            pub use crate::opt::MainCreator;
+            pub use crate::opt::PosCreator;
+            pub use crate::opt::StrCreator;
+            pub use crate::opt::UintCreator;
+        }
+    }
+
     pub use crate::args::Args;
     pub use crate::ctx::wrap_handler;
     pub use crate::ctx::wrap_handler_action;
@@ -186,28 +202,20 @@ pub mod prelude {
     pub use crate::opt::AOpt;
     pub use crate::opt::Action;
     pub use crate::opt::Assoc;
-    pub use crate::opt::BoolCreator;
-    pub use crate::opt::CmdCreator;
     pub use crate::opt::Config;
     pub use crate::opt::ConfigValue;
     pub use crate::opt::ConstrctInfo;
-    pub use crate::opt::FltCreator;
     pub use crate::opt::Help;
     pub use crate::opt::Index;
     pub use crate::opt::Information;
-    pub use crate::opt::IntCreator;
-    pub use crate::opt::MainCreator;
     pub use crate::opt::Opt;
     pub use crate::opt::OptConfig;
     pub use crate::opt::OptParser;
-    pub use crate::opt::PosCreator;
     pub use crate::opt::RawValParser;
     pub use crate::opt::RawValValidator;
     pub use crate::opt::Serde;
-    pub use crate::opt::StrCreator;
     pub use crate::opt::StrParser;
     pub use crate::opt::Style;
-    pub use crate::opt::UintCreator;
     pub use crate::opt::ValInitialize;
     pub use crate::opt::ValInitiator;
     pub use crate::opt::ValValidator;
