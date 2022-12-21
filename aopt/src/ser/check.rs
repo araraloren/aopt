@@ -53,8 +53,8 @@ where
         set.get(*id).unwrap()
     }
 
-    /// Check if we have [`Cmd`](crate::opt::CmdCreator),
-    /// then no force required [`Pos`](crate::opt::PosCreator)@1 allowed.
+    /// Check if we have [`Cmd`](crate::opt::Creator::cmd),
+    /// then no force required [`Pos`](crate::opt::Creator::pos)@1 allowed.
     pub fn pre_check(&self, set: &mut S) -> Result<bool, Error> {
         let has_cmd = set.iter().any(|opt| opt.mat_style(Style::Cmd));
 

@@ -11,6 +11,8 @@ use crate::Error;
 use crate::RawVal;
 use crate::Str;
 use crate::Uid;
+#[allow(unused)]
+use crate::opt::Creator;
 
 /// A multiple features option type.
 ///
@@ -18,25 +20,25 @@ use crate::Uid;
 ///
 /// |  creator   | assoc  | default action |string | ignore name | styles | deactivate style |
 /// |  ----  | ----  | -- | -- | -- | -- | -- |
-/// | [`BoolCreator`](crate::opt::BoolCreator)  | [`Assoc::Bool`] | [`Action::App`] | `b` | false | [`Style::Boolean`],[`Style::Combined`] | yes |
-/// | [`StrCreator`](crate::opt::StrCreator)  | [`Assoc::Str`] | [`Action::App`] | `s` | false | [`Style::Argument`] | no |
-/// | [`FltCreator`](crate::opt::FltCreator)  | [`Assoc::Flt`] | [`Action::App`] | `f` | false | [`Style::Argument`] | no |
-/// | [`IntCreator`](crate::opt::IntCreator)  | [`Assoc::Int`] | [`Action::App`] | `i` | false | [`Style::Argument`] | no |
-/// | [`UintCreator`](crate::opt::UintCreator)  | [`Assoc::Uint`] | [`Action::App`] | `u` | false | [`Style::Argument`] | no |
-/// | [`CmdCreator`](crate::opt::CmdCreator)  | [`Assoc::Noa`] | [`Action::Set`] | `c` | false | [`Style::Cmd`] | no |
-/// | [`PosCreator`](crate::opt::PosCreator)  | [`Assoc::Noa`] | [`Action::App`] | `p` | true | [`Style::Pos`] | no |
-/// | [`MainCreator`](crate::opt::MainCreator)  | [`Assoc::Null`] | [`Action::Set`] | `m` | true | [`Style::Main`] | no |
+/// | [`bool`](Creator::bool)  | [`Assoc::Bool`] | [`Action::App`] | `b` | false | [`Style::Boolean`],[`Style::Combined`] | yes |
+/// | [`str`](Creator::str)  | [`Assoc::Str`] | [`Action::App`] | `s` | false | [`Style::Argument`] | no |
+/// | [`flt`](Creator::flt)  | [`Assoc::Flt`] | [`Action::App`] | `f` | false | [`Style::Argument`] | no |
+/// | [`int`](Creator::int)  | [`Assoc::Int`] | [`Action::App`] | `i` | false | [`Style::Argument`] | no |
+/// | [`uint`](Creator::uint)  | [`Assoc::Uint`] | [`Action::App`] | `u` | false | [`Style::Argument`] | no |
+/// | [`cmd`](Creator::cmd)  | [`Assoc::Noa`] | [`Action::Set`] | `c` | false | [`Style::Cmd`] | no |
+/// | [`pos`](Creator::pos)  | [`Assoc::Noa`] | [`Action::App`] | `p` | true | [`Style::Pos`] | no |
+/// | [`main`](Creator::main)  | [`Assoc::Null`] | [`Action::Set`] | `m` | true | [`Style::Main`] | no |
 ///
 /// |  creator   | index support  | optional support | prefix support | alias support | validator |
 /// |  ----  | ----  | -- | -- | -- | -- |
-/// | [`BoolCreator`](crate::opt::BoolCreator)  | no | yes | yes | yes | [`bool`](ValValidator::bool) |
-/// | [`StrCreator`](crate::opt::StrCreator)  | no | yes | yes | yes | [`str`](ValValidator::str) |
-/// | [`FltCreator`](crate::opt::FltCreator)  | no | yes | yes | yes |  [`f64`](ValValidator::f64) |
-/// | [`IntCreator`](crate::opt::IntCreator)  | no | yes | yes | yes |  [`i64`](ValValidator::i64) |
-/// | [`UintCreator`](crate::opt::UintCreator)  | no | yes | yes | yes |  [`u64`](ValValidator::u64) |
-/// | [`CmdCreator`](crate::opt::CmdCreator)  | [`Forward(1)`](crate::opt::Index::Forward) | `false` | no | no | [`some`](ValValidator::some) |
-/// | [`PosCreator`](crate::opt::PosCreator)  | yes | yes | no | no |  [`some`](ValValidator::some) |
-/// | [`MainCreator`](crate::opt::MainCreator)  | [`AnyWhere`](crate::opt::Index::AnyWhere) | no | no | no | [`null`](ValValidator::null) |
+/// | [`bool`](Creator::bool)  | no | yes | yes | yes | [`bool`](ValValidator::bool) |
+/// | [`str`](Creator::str)  | no | yes | yes | yes | [`str`](ValValidator::str) |
+/// | [`flt`](Creator::flt)  | no | yes | yes | yes |  [`f64`](ValValidator::f64) |
+/// | [`int`](Creator::int)  | no | yes | yes | yes |  [`i64`](ValValidator::i64) |
+/// | [`uint`](Creator::uint)  | no | yes | yes | yes |  [`u64`](ValValidator::u64) |
+/// | [`cmd`](Creator::cmd)  | [`Forward(1)`](crate::opt::Index::Forward) | `false` | no | no | [`some`](ValValidator::some) |
+/// | [`pos`](Creator::pos)  | yes | yes | no | no |  [`some`](ValValidator::some) |
+/// | [`main`](Creator::main)  | [`AnyWhere`](crate::opt::Index::AnyWhere) | no | no | no | [`null`](ValValidator::null) |
 #[derive(Debug, Default)]
 pub struct AOpt {
     uid: Uid,

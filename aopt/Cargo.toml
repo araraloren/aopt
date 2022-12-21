@@ -22,4 +22,3 @@ tracing = "0.1.37"
 [features]
 sync = []
 utf8 = []
-default = ["sync"]

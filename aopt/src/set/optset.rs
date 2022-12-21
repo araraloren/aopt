@@ -33,7 +33,7 @@ use super::SetOpt;
 ///  // add prefix for option
 ///  set.add_prefix("/");
 ///  // add bool creator
-///  set.register(BoolCreator::boxed());
+///  set.register(Creator::bool());
 ///  // create a bool option
 ///  set.add_opt("/foo=b")?.run()?;
 ///  // filter the set option

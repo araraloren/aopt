@@ -1,20 +1,6 @@
 use crate::map::ErasedTy;
 use crate::opt::AOpt;
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        pub use crate::opt::Creator;
-    }
-    else {
-        pub use crate::opt::BoolCreator;
-        pub use crate::opt::CmdCreator;
-        pub use crate::opt::FltCreator;
-        pub use crate::opt::IntCreator;
-        pub use crate::opt::MainCreator;
-        pub use crate::opt::PosCreator;
-        pub use crate::opt::StrCreator;
-        pub use crate::opt::UintCreator;
-    }
-}
+use crate::opt::Creator;
 use crate::opt::OptConfig;
 use crate::opt::StrParser;
 use crate::parser::DelayPolicy;
@@ -27,7 +13,6 @@ use crate::ser::RawValService;
 use crate::ser::Services;
 use crate::ser::UsrValService;
 use crate::ser::ValService;
-use crate::set::Ctor;
 use crate::set::OptSet;
 use crate::set::Set;
 use crate::Error;
@@ -122,14 +107,7 @@ pub trait APolicyExt<I: crate::set::Set> {
     fn default_set(&self) -> I;
 }
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        pub type ACreator = Creator<AOpt, OptConfig, Error>;
-    }
-    else {
-        pub type ACreator = Box<dyn Ctor<Opt = AOpt, Config = OptConfig, Error = Error>>;
-    }
-}
+pub type ACreator = Creator<AOpt, OptConfig, Error>;
 
 pub type ASet = OptSet<StrParser, ACreator>;
 
@@ -184,38 +162,28 @@ impl APolicyExt<ASet> for ADelayPolicy {
 }
 
 /// Return an [`Set`](crate::set::Set) with default prefix `-` and `--`,
-/// and below [`Ctor`]s:
+/// and below creators:
 ///
-/// * [`IntCreator`]
-/// * [`BoolCreator`]
-/// * [`UintCreator`]
-/// * [`StrCreator`]
-/// * [`FltCreator`]
-/// * [`CmdCreator`]
-/// * [`PosCreator`]
-/// * [`MainCreator`]
+/// * [`int`](Creator::int)
+/// * [`bool`](Creator::bool)
+/// * [`uint`](Creator::uint)
+/// * [`str`](Creator::str)
+/// * [`flt`](Creator::flt)
+/// * [`cmd`](Creator::cmd)
+/// * [`pos`](Creator::pos)
+/// * [`main`](Creator::main)
 pub fn aset_with_default_creators() -> ASet {
-    cfg_if::cfg_if! {
-        if #[cfg(feature = "sync")] {
-            ASet::default()
-            .with_prefix("--")
-            .with_prefix("-")
-            .with_creator(Creator::int())
-        }
-        else {
-            ASet::default()
-            .with_prefix("--")
-            .with_prefix("-")
-            .with_creator(IntCreator::boxed())
-            .with_creator(BoolCreator::boxed())
-            .with_creator(UintCreator::boxed())
-            .with_creator(StrCreator::boxed())
-            .with_creator(FltCreator::boxed())
-            .with_creator(CmdCreator::boxed())
-            .with_creator(PosCreator::boxed())
-            .with_creator(MainCreator::boxed())
-        }
-    }
+    ASet::default()
+        .with_prefix("--")
+        .with_prefix("-")
+        .with_creator(Creator::int())
+        .with_creator(Creator::bool())
+        .with_creator(Creator::uint())
+        .with_creator(Creator::flt())
+        .with_creator(Creator::str())
+        .with_creator(Creator::cmd())
+        .with_creator(Creator::main())
+        .with_creator(Creator::pos())
 }
 
 /// Return an [`Services`] with below [`Service`](crate::ser::Service)s:
