@@ -1,5 +1,6 @@
 use crate::ctx::Store;
 use crate::ext::ServicesExt;
+use crate::map::ErasedTy;
 use crate::ser::Services;
 use crate::Error;
 use crate::RawVal;
@@ -75,7 +76,7 @@ impl Default for Action {
 /// * [`Action::Null`] : Do nothing.
 impl<Set, Val> Store<Set, Val> for Action
 where
-    Val: 'static,
+    Val: ErasedTy,
 {
     type Ret = ();
 

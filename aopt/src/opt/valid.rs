@@ -3,40 +3,62 @@ use crate::RawVal;
 use std::any::Any;
 use std::fmt::Debug;
 
-pub trait RawValValidator {
-    fn check(
-        &mut self,
-        name: &str,
-        value: Option<&RawVal>,
-        disable: bool,
-        index: (usize, usize),
-    ) -> Result<bool, Error>;
-}
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        pub trait RawValValidator: Send + Sync {
+            fn check(
+                &mut self,
+                name: &str,
+                value: Option<&RawVal>,
+                disable: bool,
+                index: (usize, usize),
+            ) -> Result<bool, Error>;
+        }
 
-impl<Func> RawValValidator for Func
-where
-    Func: FnMut(&str, Option<&RawVal>, bool, (usize, usize)) -> Result<bool, Error>,
-{
-    fn check(
-        &mut self,
-        name: &str,
-        value: Option<&RawVal>,
-        disable: bool,
-        index: (usize, usize),
-    ) -> Result<bool, Error> {
-        (self)(name, value, disable, index)
+        impl<Func> RawValValidator for Func
+        where
+            Func: FnMut(&str, Option<&RawVal>, bool, (usize, usize)) -> Result<bool, Error> + Send + Sync,
+        {
+            fn check(
+                &mut self,
+                name: &str,
+                value: Option<&RawVal>,
+                disable: bool,
+                index: (usize, usize),
+            ) -> Result<bool, Error> {
+                (self)(name, value, disable, index)
+            }
+        }
+    }
+    else {
+        pub trait RawValValidator {
+            fn check(
+                &mut self,
+                name: &str,
+                value: Option<&RawVal>,
+                disable: bool,
+                index: (usize, usize),
+            ) -> Result<bool, Error>;
+        }
+
+        impl<Func> RawValValidator for Func
+        where
+            Func: FnMut(&str, Option<&RawVal>, bool, (usize, usize)) -> Result<bool, Error>,
+        {
+            fn check(
+                &mut self,
+                name: &str,
+                value: Option<&RawVal>,
+                disable: bool,
+                index: (usize, usize),
+            ) -> Result<bool, Error> {
+                (self)(name, value, disable, index)
+            }
+        }
     }
 }
 
 pub struct ValValidator(Box<dyn RawValValidator>);
-
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        unsafe impl Send for ValValidator { }
-
-        unsafe impl Sync for ValValidator { }
-    }
-}
 
 impl Default for ValValidator {
     fn default() -> Self {
@@ -179,24 +201,49 @@ impl ValValidator {
         )
     }
 
-    pub fn val_fn<F: FnMut(Option<&RawVal>) -> Result<bool, Error> + 'static>(mut f: F) -> Self {
-        Self::new(
-            move |_: &str,
-                  val: Option<&RawVal>,
-                  _: bool,
-                  _: (usize, usize)|
-                  -> Result<bool, Error> { (f)(val) },
-        )
-    }
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "sync")] {
+            pub fn val_fn<F: FnMut(Option<&RawVal>) -> Result<bool, Error> + Send + Sync + 'static>(mut f: F) -> Self {
+                Self::new(
+                    move |_: &str,
+                          val: Option<&RawVal>,
+                          _: bool,
+                          _: (usize, usize)|
+                          -> Result<bool, Error> { (f)(val) },
+                )
+            }
 
-    pub fn idx_fn<F: FnMut((usize, usize)) -> Result<bool, Error> + 'static>(mut f: F) -> Self {
-        Self::new(
-            move |_: &str,
-                  _: Option<&RawVal>,
-                  _: bool,
-                  idx: (usize, usize)|
-                  -> Result<bool, Error> { (f)(idx) },
-        )
+            pub fn idx_fn<F: FnMut((usize, usize)) -> Result<bool, Error> + Send + Sync + 'static>(mut f: F) -> Self {
+                Self::new(
+                    move |_: &str,
+                          _: Option<&RawVal>,
+                          _: bool,
+                          idx: (usize, usize)|
+                          -> Result<bool, Error> { (f)(idx) },
+                )
+            }
+        }
+        else {
+            pub fn val_fn<F: FnMut(Option<&RawVal>) -> Result<bool, Error> + 'static>(mut f: F) -> Self {
+                Self::new(
+                    move |_: &str,
+                          val: Option<&RawVal>,
+                          _: bool,
+                          _: (usize, usize)|
+                          -> Result<bool, Error> { (f)(val) },
+                )
+            }
+
+            pub fn idx_fn<F: FnMut((usize, usize)) -> Result<bool, Error> + 'static>(mut f: F) -> Self {
+                Self::new(
+                    move |_: &str,
+                          _: Option<&RawVal>,
+                          _: bool,
+                          idx: (usize, usize)|
+                          -> Result<bool, Error> { (f)(idx) },
+                )
+            }
+        }
     }
 }
 

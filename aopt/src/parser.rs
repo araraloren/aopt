@@ -1,3 +1,5 @@
+#[cfg_attr(feature = "sync", path = "sync/parser/commit.rs")]
+#[cfg_attr(not(feature = "sync"), path = "parser/commit.rs")]
 pub(crate) mod commit;
 pub(crate) mod policy_delay;
 pub(crate) mod policy_fwd;
@@ -32,6 +34,7 @@ use crate::ctx::Extract;
 use crate::ctx::Handler;
 use crate::ext::APolicyExt;
 use crate::ext::ServicesExt;
+use crate::map::ErasedTy;
 use crate::opt::Config;
 use crate::opt::ConfigValue;
 use crate::opt::Information;
@@ -322,11 +325,11 @@ where
         self
     }
 
-    pub fn usrval<T: 'static>(&self) -> Result<&T, Error> {
+    pub fn usrval<T: ErasedTy>(&self) -> Result<&T, Error> {
         self.services.ser_usrval()?.val::<T>()
     }
 
-    pub fn usrval_mut<T: 'static>(&mut self) -> Result<&mut T, Error> {
+    pub fn usrval_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
         self.services.ser_usrval_mut()?.val_mut::<T>()
     }
 
@@ -401,23 +404,23 @@ where
     /// # Ok(())
     /// # }
     ///```
-    pub fn set_usrval<T: 'static>(&mut self, val: T) -> Result<Option<T>, Error> {
+    pub fn set_usrval<T: ErasedTy>(&mut self, val: T) -> Result<Option<T>, Error> {
         Ok(self.services.ser_usrval_mut()?.insert(val))
     }
 
-    pub fn val<T: 'static>(&self, uid: Uid) -> Result<&T, Error> {
+    pub fn val<T: ErasedTy>(&self, uid: Uid) -> Result<&T, Error> {
         self.services.ser_val()?.val::<T>(uid)
     }
 
-    pub fn val_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut T, Error> {
+    pub fn val_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut T, Error> {
         self.services.ser_val_mut()?.val_mut::<T>(uid)
     }
 
-    pub fn vals<T: 'static>(&self, uid: Uid) -> Result<&Vec<T>, Error> {
+    pub fn vals<T: ErasedTy>(&self, uid: Uid) -> Result<&Vec<T>, Error> {
         self.services.ser_val()?.vals::<T>(uid)
     }
 
-    pub fn vals_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error> {
+    pub fn vals_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error> {
         self.services.ser_val_mut()?.vals_mut::<T>(uid)
     }
 
@@ -425,15 +428,15 @@ where
         self.services.ser_rawval()?.val(uid)
     }
 
-    pub fn rawval_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut RawVal, Error> {
+    pub fn rawval_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut RawVal, Error> {
         self.services.ser_rawval_mut()?.val_mut(uid)
     }
 
-    pub fn rawvals<T: 'static>(&self, uid: Uid) -> Result<&Vec<RawVal>, Error> {
+    pub fn rawvals<T: ErasedTy>(&self, uid: Uid) -> Result<&Vec<RawVal>, Error> {
         self.services.ser_rawval()?.vals(uid)
     }
 
-    pub fn rawvals_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut Vec<RawVal>, Error> {
+    pub fn rawvals_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut Vec<RawVal>, Error> {
         self.services.ser_rawval_mut()?.vals_mut(uid)
     }
 }
@@ -547,14 +550,27 @@ where
             self.services.ser_invoke_mut()?,
         ))
     }
-
-    pub fn entry<A, O, H>(&mut self, uid: Uid) -> Result<HandlerEntry<'_, P::Set, H, A, O>, Error>
-    where
-        O: 'static,
-        H: Handler<P::Set, A, Output = Option<O>, Error = Error> + 'static,
-        A: Extract<P::Set, Error = Error> + 'static,
-    {
-        Ok(HandlerEntry::new(self.services.ser_invoke_mut()?, uid))
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "sync")] {
+            pub fn entry<A, O, H>(&mut self, uid: Uid) -> Result<HandlerEntry<'_, P::Set, H, A, O>, Error>
+            where
+                O: Send + Sync + 'static,
+                H: Handler<P::Set, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
+                A: Extract<P::Set, Error = Error> + Send + Sync + 'static,
+            {
+                Ok(HandlerEntry::new(self.services.ser_invoke_mut()?, uid))
+            }
+        }
+        else {
+            pub fn entry<A, O, H>(&mut self, uid: Uid) -> Result<HandlerEntry<'_, P::Set, H, A, O>, Error>
+            where
+                O: 'static,
+                H: Handler<P::Set, A, Output = Option<O>, Error = Error> + 'static,
+                A: Extract<P::Set, Error = Error> + 'static,
+            {
+                Ok(HandlerEntry::new(self.services.ser_invoke_mut()?, uid))
+            }
+        }
     }
 }
 
@@ -578,27 +594,19 @@ where
         })
     }
 
-    pub fn find_val<T: 'static>(&self, opt: &str) -> Result<&T, Error> {
+    pub fn find_val<T: ErasedTy>(&self, opt: &str) -> Result<&T, Error> {
         self.val(self.filter_optstr(opt.into())?)
     }
 
-    pub fn find_val_mut<T: 'static>(&mut self, opt: &str) -> Result<&mut T, Error> {
+    pub fn find_val_mut<T: ErasedTy>(&mut self, opt: &str) -> Result<&mut T, Error> {
         self.val_mut(self.filter_optstr(opt.into())?)
     }
 
-    pub fn find_vals<T: 'static>(&self, opt: &str) -> Result<&Vec<T>, Error> {
+    pub fn find_vals<T: ErasedTy>(&self, opt: &str) -> Result<&Vec<T>, Error> {
         self.vals(self.filter_optstr(opt.into())?)
     }
 
-    pub fn find_vals_mut<T: 'static>(&mut self, opt: &str) -> Result<&mut Vec<T>, Error> {
+    pub fn find_vals_mut<T: ErasedTy>(&mut self, opt: &str) -> Result<&mut Vec<T>, Error> {
         self.vals_mut(self.filter_optstr(opt.into())?)
-    }
-}
-
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        unsafe impl<P: Policy> Send for Parser<P> { }
-
-        unsafe impl<P: Policy> Sync for Parser<P> { }
     }
 }

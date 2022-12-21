@@ -1,7 +1,6 @@
 use std::fmt::Debug;
 use tracing::trace;
 
-use crate::map::ErasedTy;
 use crate::opt::Action;
 use crate::opt::Assoc;
 use crate::opt::ConfigValue;
@@ -156,14 +155,14 @@ where
     }
 
     /// Set the option default value.
-    pub fn set_value<T: Clone + ErasedTy>(mut self, value: T) -> Self {
+    pub fn set_value<T: Clone + 'static>(mut self, value: T) -> Self {
         self.info
             .set_initiator(Some(ValInitiator::with(vec![value])));
         self
     }
 
     /// Set the option default value.
-    pub fn set_values<T: Clone + ErasedTy>(mut self, value: Vec<T>) -> Self {
+    pub fn set_values<T: Clone + 'static>(mut self, value: Vec<T>) -> Self {
         self.info.set_initiator(Some(ValInitiator::with(value)));
         self
     }

@@ -2,6 +2,7 @@ use std::fmt::Debug;
 
 use super::Service;
 use crate::astr;
+use crate::map::ErasedTy;
 use crate::Error;
 use crate::HashMap;
 use crate::Uid;
@@ -32,14 +33,11 @@ use crate::Uid;
 /// # }
 /// ```
 #[derive(Default)]
-pub struct RawValService<T> {
+pub struct RawValService<T: ErasedTy> {
     rets: HashMap<Uid, Vec<T>>,
 }
 
-impl<T> Debug for RawValService<T>
-where
-    T: Debug,
-{
+impl<T: ErasedTy + Debug> Debug for RawValService<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RawValService")
             .field("rets", &self.rets)
@@ -47,7 +45,7 @@ where
     }
 }
 
-impl<T> RawValService<T> {
+impl<T: ErasedTy> RawValService<T> {
     pub fn new() -> Self {
         Self {
             rets: HashMap::default(),
@@ -120,7 +118,7 @@ impl<T> RawValService<T> {
     }
 }
 
-impl<T> Service for RawValService<T> {
+impl<T: ErasedTy> Service for RawValService<T> {
     fn service_name() -> crate::Str {
         astr("RawValService")
     }

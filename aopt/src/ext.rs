@@ -1,3 +1,4 @@
+use crate::map::ErasedTy;
 use crate::opt::AOpt;
 use crate::opt::BoolCreator;
 use crate::opt::CmdCreator;
@@ -21,6 +22,7 @@ use crate::ser::UsrValService;
 use crate::ser::ValService;
 use crate::set::Ctor;
 use crate::set::OptSet;
+use crate::set::Set;
 use crate::Error;
 use crate::RawVal;
 use crate::Uid;
@@ -43,56 +45,56 @@ pub trait ServicesExt {
     fn ser_usrval_mut(&mut self) -> Result<&mut UsrValService, Error>;
 
     /// Get [`InvokeService`] reference.
-    fn ser_invoke<S: 'static>(&self) -> Result<&InvokeService<S>, Error>;
+    fn ser_invoke<S: Set + 'static>(&self) -> Result<&InvokeService<S>, Error>;
 
     /// Get [`InvokeService`] mutable reference.
-    fn ser_invoke_mut<S: 'static>(&mut self) -> Result<&mut InvokeService<S>, Error>;
+    fn ser_invoke_mut<S: Set + 'static>(&mut self) -> Result<&mut InvokeService<S>, Error>;
 
     /// Get [`RawValService`] reference.
-    fn ser_rawval<T: 'static>(&self) -> Result<&RawValService<T>, Error>;
+    fn ser_rawval<T: ErasedTy>(&self) -> Result<&RawValService<T>, Error>;
 
     /// Get [`RawValService`] mutable reference.
-    fn ser_rawval_mut<T: 'static>(&mut self) -> Result<&mut RawValService<T>, Error>;
+    fn ser_rawval_mut<T: ErasedTy>(&mut self) -> Result<&mut RawValService<T>, Error>;
 
     /// Get [`CheckService`] reference.
-    fn ser_check<S: 'static>(&self) -> Result<&CheckService<S>, Error>;
+    fn ser_check<S: Set + 'static>(&self) -> Result<&CheckService<S>, Error>;
 }
 
 pub trait ServicesValExt {
     /// Get the last value reference of option `uid` from [`ValService`].
-    fn sve_val<T: 'static>(&self, uid: Uid) -> Result<&T, Error>;
+    fn sve_val<T: ErasedTy>(&self, uid: Uid) -> Result<&T, Error>;
 
     /// Get the last value mutable reference of option `uid` from [`ValService`].
-    fn sve_val_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut T, Error>;
+    fn sve_val_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut T, Error>;
 
     /// Take last value of option `uid` from [`ValService`].
-    fn sve_take_val<T: 'static>(&mut self, uid: Uid) -> Result<T, Error>;
+    fn sve_take_val<T: ErasedTy>(&mut self, uid: Uid) -> Result<T, Error>;
 
     /// Get the values reference of option `uid` from [`ValService`].
-    fn sve_vals<T: 'static>(&self, uid: Uid) -> Result<&Vec<T>, Error>;
+    fn sve_vals<T: ErasedTy>(&self, uid: Uid) -> Result<&Vec<T>, Error>;
 
     /// Get the values mutable reference of option `uid` from [`ValService`].
-    fn sve_vals_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error>;
+    fn sve_vals_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error>;
 
     /// Take the values of option `uid` from [`ValService`].
-    fn sve_take_vals<T: 'static>(&mut self, uid: Uid) -> Result<Vec<T>, Error>;
+    fn sve_take_vals<T: ErasedTy>(&mut self, uid: Uid) -> Result<Vec<T>, Error>;
 
     /// Apply filter on the values of option from [`ValService`].
     /// The `F` should return true if you want remove the element.
-    fn sve_filter<T: 'static>(
+    fn sve_filter<T: ErasedTy>(
         &mut self,
         uid: Uid,
         f: impl FnMut(&T) -> bool,
     ) -> Result<Vec<T>, Error>;
 
     /// Get the user value reference of option `uid` from [`UsrValService`].
-    fn sve_usrval<T: 'static>(&self) -> Result<&T, Error>;
+    fn sve_usrval<T: ErasedTy>(&self) -> Result<&T, Error>;
 
     /// Get the user value mutable reference of option `uid` from [`UsrValService`].
-    fn sve_usrval_mut<T: 'static>(&mut self) -> Result<&mut T, Error>;
+    fn sve_usrval_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error>;
 
     /// Take the user value of option `uid` from [`UsrValService`].
-    fn sve_take_usrval<T: 'static>(&mut self) -> Result<T, Error>;
+    fn sve_take_usrval<T: ErasedTy>(&mut self) -> Result<T, Error>;
 
     /// Get the raw value reference of option `uid` from [`RawValService`].
     fn sve_rawval(&self, uid: Uid) -> Result<&RawVal, Error>;
@@ -113,7 +115,14 @@ pub trait APolicyExt<I: crate::set::Set> {
     fn default_set(&self) -> I;
 }
 
-pub type ACreator = Box<dyn Ctor<Opt = AOpt, Config = OptConfig, Error = Error>>;
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        pub type ACreator = Box<dyn Ctor<Opt = AOpt, Config = OptConfig, Error = Error> + Send + Sync>;
+    }
+    else {
+        pub type ACreator = Box<dyn Ctor<Opt = AOpt, Config = OptConfig, Error = Error>>;
+    }
+}
 
 pub type ASet = OptSet<StrParser, ACreator>;
 
@@ -199,7 +208,7 @@ pub fn aset_with_default_creators() -> ASet {
 /// * [`InvokeService`]
 /// * [`RawValService`]
 /// * [`ValService`]
-pub fn aser_with_default_service<S: 'static>() -> Services {
+pub fn aser_with_default_service<S: Set + 'static>() -> Services {
     Services::default()
         .with(CheckService::<S>::new())
         .with(UsrValService::new())

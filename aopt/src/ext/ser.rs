@@ -11,6 +11,7 @@ use crate::ctx::Ctx;
 use crate::ctx::Extract;
 use crate::ext::ServicesExt;
 use crate::ext::ServicesValExt;
+use crate::map::ErasedTy;
 use crate::prelude::CheckService;
 use crate::ser::InvokeService;
 use crate::ser::RawValService;
@@ -40,57 +41,57 @@ impl ServicesExt for Services {
         self.service_mut::<UsrValService>()
     }
 
-    fn ser_invoke<S: 'static>(&self) -> Result<&InvokeService<S>, Error> {
+    fn ser_invoke<S: Set + 'static>(&self) -> Result<&InvokeService<S>, Error> {
         self.service::<InvokeService<S>>()
     }
 
-    fn ser_invoke_mut<S: 'static>(&mut self) -> Result<&mut InvokeService<S>, Error> {
+    fn ser_invoke_mut<S: Set + 'static>(&mut self) -> Result<&mut InvokeService<S>, Error> {
         self.service_mut::<InvokeService<S>>()
     }
 
-    fn ser_rawval<T: 'static>(&self) -> Result<&RawValService<T>, Error> {
+    fn ser_rawval<T: ErasedTy>(&self) -> Result<&RawValService<T>, Error> {
         self.service::<RawValService<T>>()
     }
 
-    fn ser_rawval_mut<T: 'static>(&mut self) -> Result<&mut RawValService<T>, Error> {
+    fn ser_rawval_mut<T: ErasedTy>(&mut self) -> Result<&mut RawValService<T>, Error> {
         self.service_mut::<RawValService<T>>()
     }
 
-    fn ser_check<S: 'static>(&self) -> Result<&CheckService<S>, Error> {
+    fn ser_check<S: Set + 'static>(&self) -> Result<&CheckService<S>, Error> {
         self.service::<CheckService<S>>()
     }
 }
 
 impl ServicesValExt for Services {
-    fn sve_val<T: 'static>(&self, uid: Uid) -> Result<&T, Error> {
+    fn sve_val<T: ErasedTy>(&self, uid: Uid) -> Result<&T, Error> {
         self.ser_val()?.val(uid)
     }
 
-    fn sve_val_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut T, Error> {
+    fn sve_val_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut T, Error> {
         self.ser_val_mut()?.val_mut(uid)
     }
 
-    fn sve_take_val<T: 'static>(&mut self, uid: Uid) -> Result<T, Error> {
+    fn sve_take_val<T: ErasedTy>(&mut self, uid: Uid) -> Result<T, Error> {
         self.ser_val_mut()?
             .pop(uid)
             .ok_or_else(|| Error::raise_error("Can not take value from ValService"))
     }
 
-    fn sve_vals<T: 'static>(&self, uid: Uid) -> Result<&Vec<T>, Error> {
+    fn sve_vals<T: ErasedTy>(&self, uid: Uid) -> Result<&Vec<T>, Error> {
         self.ser_val()?.vals(uid)
     }
 
-    fn sve_vals_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error> {
+    fn sve_vals_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error> {
         self.ser_val_mut()?.vals_mut(uid)
     }
 
-    fn sve_take_vals<T: 'static>(&mut self, uid: Uid) -> Result<Vec<T>, Error> {
+    fn sve_take_vals<T: ErasedTy>(&mut self, uid: Uid) -> Result<Vec<T>, Error> {
         self.ser_val_mut()?
             .remove(uid)
             .ok_or_else(|| Error::raise_error("Can not take values from ValService"))
     }
 
-    fn sve_filter<T: 'static>(
+    fn sve_filter<T: ErasedTy>(
         &mut self,
         uid: Uid,
         mut f: impl FnMut(&T) -> bool,
@@ -109,15 +110,15 @@ impl ServicesValExt for Services {
         Ok(removed)
     }
 
-    fn sve_usrval<T: 'static>(&self) -> Result<&T, Error> {
+    fn sve_usrval<T: ErasedTy>(&self) -> Result<&T, Error> {
         self.ser_usrval()?.val::<T>()
     }
 
-    fn sve_usrval_mut<T: 'static>(&mut self) -> Result<&mut T, Error> {
+    fn sve_usrval_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
         self.ser_usrval_mut()?.val_mut::<T>()
     }
 
-    fn sve_take_usrval<T: 'static>(&mut self) -> Result<T, Error> {
+    fn sve_take_usrval<T: ErasedTy>(&mut self) -> Result<T, Error> {
         self.ser_usrval_mut()?
             .remove::<T>()
             .ok_or_else(|| Error::raise_error("Can not take value from UsrValService"))
@@ -223,7 +224,7 @@ impl<T> Value<T> {
     }
 }
 
-impl<T: 'static> Value<T> {
+impl<T: ErasedTy> Value<T> {
     pub fn extract_ser(ser: &Services) -> Result<Self, Error> {
         Ok(ser
             .ser_usrval()
@@ -265,7 +266,7 @@ impl<T: ?Sized> From<Arc<T>> for Value<T> {
     }
 }
 
-impl<T: 'static, S: Set> Extract<S> for Value<T> {
+impl<T: ErasedTy, S: Set> Extract<S> for Value<T> {
     type Error = Error;
 
     fn extract(_set: &S, ser: &Services, _ctx: &Ctx) -> Result<Self, Self::Error> {

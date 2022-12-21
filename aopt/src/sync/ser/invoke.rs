@@ -86,7 +86,8 @@ pub struct InvokeService<S: Set> {
     callbacks: HashMap<Uid, InvokeHandler<S, Error>>,
 }
 
-pub type InvokeHandler<S, E> = Box<dyn FnMut(&mut S, &mut Services, &Ctx) -> Result<Option<()>, E>>;
+pub type InvokeHandler<S, E> =
+    Box<dyn FnMut(&mut S, &mut Services, &Ctx) -> Result<Option<()>, E> + Send + Sync>;
 
 impl<S: Set> Debug for InvokeService<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -113,7 +114,9 @@ impl<S: Set> InvokeService<S> {
 }
 
 impl<S: Set + 'static> InvokeService<S> {
-    pub fn set_raw<H: FnMut(&mut S, &mut Services, &Ctx) -> Result<Option<()>, Error> + 'static>(
+    pub fn set_raw<
+        H: FnMut(&mut S, &mut Services, &Ctx) -> Result<Option<()>, Error> + Send + Sync + 'static,
+    >(
         &mut self,
         uid: Uid,
         handler: H,
@@ -148,10 +151,10 @@ impl<S: Set + 'static> InvokeService<S> {
     /// ```
     pub fn set_handler<A, O, H, T>(&mut self, uid: Uid, handler: H, store: T) -> &mut Self
     where
-        O: 'static,
-        A: Extract<S, Error = Error> + 'static,
-        T: Store<S, O, Ret = (), Error = Error> + 'static,
-        H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
+        O: Send + Sync + 'static,
+        A: Extract<S, Error = Error> + Send + Sync + 'static,
+        T: Store<S, O, Ret = (), Error = Error> + Send + Sync + 'static,
+        H: Handler<S, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
     {
         self.set_raw(uid, wrap_handler(handler, store));
         self
@@ -181,14 +184,14 @@ impl<S: Set + 'static> InvokeService<S> {
 
 impl<S> InvokeService<S>
 where
-    S: Set,
+    S: crate::set::Set,
     <S::Ctor as Ctor>::Opt: Opt,
 {
     pub fn entry<A, O, H>(&mut self, uid: Uid) -> HandlerEntry<'_, S, H, A, O>
     where
-        O: 'static,
-        H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
-        A: Extract<S, Error = Error> + 'static,
+        O: Send + Sync + 'static,
+        H: Handler<S, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
+        A: Extract<S, Error = Error> + Send + Sync + 'static,
     {
         HandlerEntry::new(self, uid)
     }
@@ -250,11 +253,11 @@ impl<S: Set> Service for InvokeService<S> {
 
 pub struct HandlerEntry<'a, S, H, A, O>
 where
-    O: 'static,
+    O: Send + Sync + 'static,
     S: Set + 'static,
     SetOpt<S>: Opt,
-    H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
-    A: Extract<S, Error = Error> + 'static,
+    H: Handler<S, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
+    A: Extract<S, Error = Error> + Send + Sync + 'static,
 {
     ser: &'a mut InvokeService<S>,
 
@@ -269,11 +272,11 @@ where
 
 impl<'a, A, S, O, H> HandlerEntry<'a, S, H, A, O>
 where
-    O: 'static,
+    O: Send + Sync + 'static,
     S: Set + 'static,
     SetOpt<S>: Opt,
-    H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
-    A: Extract<S, Error = Error> + 'static,
+    H: Handler<S, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
+    A: Extract<S, Error = Error> + Send + Sync + 'static,
 {
     pub fn new(inv_ser: &'a mut InvokeService<S>, uid: Uid) -> Self {
         Self {
@@ -304,7 +307,10 @@ where
 
     /// Register the handler with given store.
     /// The store will be used save the return value of option handler.
-    pub fn then(mut self, store: impl Store<S, O, Ret = (), Error = Error> + 'static) -> Self {
+    pub fn then(
+        mut self,
+        store: impl Store<S, O, Ret = (), Error = Error> + Send + Sync + 'static,
+    ) -> Self {
         if !self.register {
             if let Some(handler) = self.handler.take() {
                 self.ser.set_raw(self.uid, wrap_handler(handler, store));
@@ -327,11 +333,11 @@ where
 
 impl<'a, S, H, A, O> Drop for HandlerEntry<'a, S, H, A, O>
 where
-    O: 'static,
+    O: Send + Sync + 'static,
     S: Set + 'static,
     SetOpt<S>: Opt,
-    H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
-    A: Extract<S, Error = Error> + 'static,
+    H: Handler<S, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
+    A: Extract<S, Error = Error> + Send + Sync + 'static,
 {
     fn drop(&mut self) {
         if !self.register {

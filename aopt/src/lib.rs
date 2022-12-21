@@ -182,6 +182,7 @@ pub mod prelude {
     pub use crate::ctx::Store;
     pub use crate::ext::*;
     pub use crate::getopt;
+    pub use crate::map::ErasedTy;
     pub use crate::opt::AOpt;
     pub use crate::opt::Action;
     pub use crate::opt::Assoc;

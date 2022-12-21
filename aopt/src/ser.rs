@@ -1,4 +1,6 @@
 pub(crate) mod check;
+#[cfg_attr(feature = "sync", path = "sync/ser/invoke.rs")]
+#[cfg_attr(not(feature = "sync"), path = "ser/invoke.rs")]
 pub(crate) mod invoke;
 pub(crate) mod rawval;
 pub(crate) mod userval;
@@ -13,11 +15,21 @@ pub use self::value::ValEntry;
 pub use self::value::ValService;
 
 use crate::map::AnyMap;
+use crate::map::ErasedTy;
 use crate::Error;
 use crate::Str;
 
-pub trait Service {
-    fn service_name() -> Str;
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        pub trait Service: Send + Sync {
+            fn service_name() -> Str;
+        }
+    }
+    else {
+        pub trait Service {
+            fn service_name() -> Str;
+        }
+    }
 }
 
 /// Services keep different type [`Service`]s in a map.
@@ -71,20 +83,12 @@ pub trait Service {
 #[derive(Debug, Default)]
 pub struct Services(AnyMap);
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        unsafe impl Send for Services { }
-
-        unsafe impl Sync for Services { }
-    }
-}
-
 impl Services {
     pub fn new() -> Self {
         Self(AnyMap::new())
     }
 
-    pub fn with<T: Service + 'static>(mut self, value: T) -> Self {
+    pub fn with<T: Service + ErasedTy + 'static>(mut self, value: T) -> Self {
         self.register(value);
         self
     }
@@ -94,41 +98,41 @@ impl Services {
     }
 
     /// Return true if [`Services`] contain a service type T.
-    pub fn contain<T: Service + 'static>(&self) -> bool {
+    pub fn contain<T: Service + ErasedTy + 'static>(&self) -> bool {
         self.0.contain::<T>()
     }
 
-    pub fn get<T: Service + 'static>(&self) -> Option<&T> {
+    pub fn get<T: Service + ErasedTy + 'static>(&self) -> Option<&T> {
         self.0.get::<T>()
     }
 
-    pub fn get_mut<T: Service + 'static>(&mut self) -> Option<&mut T> {
+    pub fn get_mut<T: Service + ErasedTy + 'static>(&mut self) -> Option<&mut T> {
         self.0.get_mut::<T>()
     }
 
-    pub fn remove<T: Service + 'static>(&mut self) -> Option<T> {
+    pub fn remove<T: Service + ErasedTy + 'static>(&mut self) -> Option<T> {
         self.0.remove::<T>()
     }
 
     /// Register a [`Service`] T into the [`Services`].
-    pub fn register<T: Service + 'static>(&mut self, value: T) -> Option<T> {
+    pub fn register<T: Service + ErasedTy + 'static>(&mut self, value: T) -> Option<T> {
         self.0.insert(value)
     }
 
-    pub fn service<T: Service + 'static>(&self) -> Result<&T, Error> {
+    pub fn service<T: Service + ErasedTy + 'static>(&self) -> Result<&T, Error> {
         self.get::<T>().ok_or_else(|| {
             Error::raise_error(format!("Unknown type {} for Services", T::service_name()))
         })
     }
 
-    pub fn service_mut<T: Service + 'static>(&mut self) -> Result<&mut T, Error> {
+    pub fn service_mut<T: Service + ErasedTy + 'static>(&mut self) -> Result<&mut T, Error> {
         self.get_mut::<T>().ok_or_else(|| {
             Error::raise_error(format!("Unknown type {} for Services", T::service_name(),))
         })
     }
 
     /// Take the [`Service`].
-    pub fn take<T: Service + 'static>(&mut self) -> Result<T, Error> {
+    pub fn take<T: Service + ErasedTy + 'static>(&mut self) -> Result<T, Error> {
         self.remove::<T>().ok_or_else(|| {
             Error::raise_error(format!("Unknown type {} for Services", T::service_name(),))
         })

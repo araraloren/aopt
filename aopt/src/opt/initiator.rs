@@ -1,41 +1,59 @@
 use std::fmt::Debug;
+use tracing::trace;
 
 use crate::ext::ServicesExt;
+use crate::map::ErasedTy;
 use crate::ser::Services;
 use crate::Error;
 use crate::Uid;
-use tracing::trace;
-
-pub trait ValInitialize<T: 'static> {
-    type Error: Into<Error>;
-
-    fn prepare_initialize_val(&mut self) -> Result<T, Self::Error>;
-}
-
-impl<Func, Err, T: 'static> ValInitialize<T> for Func
-where
-    Err: Into<Error>,
-    Func: FnMut() -> Result<T, Err>,
-{
-    type Error = Err;
-
-    fn prepare_initialize_val(&mut self) -> Result<T, Self::Error> {
-        (self)()
-    }
-}
-
-pub type InitiatorHandler = Box<dyn FnMut(Uid, &mut Services) -> Result<(), Error>>;
-
-/// Initialize the value of option.
-pub struct ValInitiator(InitiatorHandler);
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "sync")] {
-        unsafe impl Send for ValInitiator { }
+        pub trait ValInitialize<T: ErasedTy>: Send + Sync {
+            type Error: Into<Error>;
 
-        unsafe impl Sync for ValInitiator { }
+            fn prepare_initialize_val(&mut self) -> Result<T, Self::Error>;
+        }
+
+        impl<Func, Err, T: ErasedTy> ValInitialize<T> for Func
+        where
+            Err: Into<Error>,
+            Func: FnMut() -> Result<T, Err> + Send + Sync,
+        {
+            type Error = Err;
+
+            fn prepare_initialize_val(&mut self) -> Result<T, Self::Error> {
+                (self)()
+            }
+        }
+
+        pub type InitiatorHandler = Box<dyn FnMut(Uid, &mut Services) -> Result<(), Error> + Send + Sync>;
+    }
+    else {
+        pub trait ValInitialize<T: ErasedTy> {
+            type Error: Into<Error>;
+
+            fn prepare_initialize_val(&mut self) -> Result<T, Self::Error>;
+        }
+
+        impl<Func, Err, T: ErasedTy> ValInitialize<T> for Func
+        where
+            Err: Into<Error>,
+            Func: FnMut() -> Result<T, Err>,
+        {
+            type Error = Err;
+
+            fn prepare_initialize_val(&mut self) -> Result<T, Self::Error> {
+                (self)()
+            }
+        }
+
+        pub type InitiatorHandler = Box<dyn FnMut(Uid, &mut Services) -> Result<(), Error>>;
     }
 }
+
+/// Initialize the value of option.
+pub struct ValInitiator(InitiatorHandler);
 
 impl Default for ValInitiator {
     fn default() -> Self {
@@ -44,7 +62,7 @@ impl Default for ValInitiator {
 }
 
 impl ValInitiator {
-    pub fn new<T: 'static>(mut init: impl ValInitialize<Vec<T>> + 'static) -> Self {
+    pub fn new<T: ErasedTy>(mut init: impl ValInitialize<Vec<T>> + 'static) -> Self {
         Self(Box::new(move |uid: Uid, ser: &mut Services| {
             let vals = init.prepare_initialize_val().map_err(|e| e.into())?;
             ser.ser_val_mut()?.set(uid, vals);
@@ -52,14 +70,14 @@ impl ValInitiator {
         }))
     }
 
-    pub fn empty<T: 'static>() -> Self {
+    pub fn empty<T: ErasedTy>() -> Self {
         Self(Box::new(move |uid: Uid, ser: &mut Services| {
             ser.ser_val_mut()?.set(uid, Vec::<T>::new());
             Ok(())
         }))
     }
 
-    pub fn with<T: Clone + 'static>(initialize_value: Vec<T>) -> Self {
+    pub fn with<T: Clone + ErasedTy + 'static>(initialize_value: Vec<T>) -> Self {
         Self(Box::new(move |uid: Uid, ser: &mut Services| {
             ser.ser_val_mut()?.set(uid, initialize_value.clone());
             Ok(())

@@ -9,8 +9,28 @@ use crate::typeid;
 use crate::Error;
 use crate::HashMap;
 
-#[derive(Default)]
-pub struct AnyMap(HashMap<TypeId, Box<dyn Any>>);
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        pub trait ErasedTy: Any + Sync + Send + 'static { }
+
+        impl<T:  Any + Sync + Send + 'static> ErasedTy for T { }
+
+        type BoxedAny = Box<dyn Any + Send + Sync>;
+
+        #[derive(Default)]
+        pub struct AnyMap(HashMap<TypeId, BoxedAny>);
+    }
+    else {
+        pub trait ErasedTy: Any + 'static { }
+
+        impl<T: Any + 'static> ErasedTy for T { }
+
+        type BoxedAny = Box<dyn Any>;
+
+        #[derive(Default)]
+        pub struct AnyMap(HashMap<TypeId, BoxedAny>);
+    }
+}
 
 impl Debug for AnyMap {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -19,10 +39,7 @@ impl Debug for AnyMap {
 }
 
 impl AnyMap {
-    pub fn with<T>(mut self, value: T) -> Self
-    where
-        T: 'static,
-    {
+    pub fn with<T: ErasedTy>(mut self, value: T) -> Self {
         self.0.insert(typeid::<T>(), Box::new(value));
         self
     }
@@ -45,33 +62,33 @@ impl AnyMap {
         self.0.is_empty()
     }
 
-    pub fn contain<T: 'static>(&self) -> bool {
+    pub fn contain<T: ErasedTy>(&self) -> bool {
         self.0.contains_key(&typeid::<T>())
     }
 
-    pub fn insert<T: 'static>(&mut self, value: T) -> Option<T> {
+    pub fn insert<T: ErasedTy>(&mut self, value: T) -> Option<T> {
         self.0
             .insert(typeid::<T>(), Box::new(value))
             .and_then(|v| v.downcast().ok().map(|v| *v))
     }
 
-    pub fn remove<T: 'static>(&mut self) -> Option<T> {
+    pub fn remove<T: ErasedTy>(&mut self) -> Option<T> {
         self.0
             .remove(&typeid::<T>())
             .and_then(|v| v.downcast().ok().map(|v| *v))
     }
 
-    pub fn get<T: 'static>(&self) -> Option<&T> {
+    pub fn get<T: ErasedTy>(&self) -> Option<&T> {
         self.0.get(&typeid::<T>()).and_then(|v| v.downcast_ref())
     }
 
-    pub fn get_mut<T: 'static>(&mut self) -> Option<&mut T> {
+    pub fn get_mut<T: ErasedTy>(&mut self) -> Option<&mut T> {
         self.0
             .get_mut(&typeid::<T>())
             .and_then(|v| v.downcast_mut())
     }
 
-    pub fn ty<T: 'static>(&self) -> Result<&T, Error> {
+    pub fn ty<T: ErasedTy>(&self) -> Result<&T, Error> {
         self.get::<T>().ok_or_else(|| {
             Error::raise_error(format!(
                 "Can not find type {{{:?}}} in AnyMap",
@@ -80,7 +97,7 @@ impl AnyMap {
         })
     }
 
-    pub fn ty_mut<T: 'static>(&mut self) -> Result<&mut T, Error> {
+    pub fn ty_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
         self.get_mut::<T>().ok_or_else(|| {
             Error::raise_error(format!(
                 "Can not find type {{{:?}}} in AnyMap",
@@ -89,22 +106,33 @@ impl AnyMap {
         })
     }
 
-    pub fn entry<T: 'static>(&mut self) -> Entry<'_, T> {
+    pub fn entry<T: ErasedTy>(&mut self) -> Entry<'_, T> {
         Entry::new(self.0.entry(typeid::<T>()))
     }
 }
 
-pub struct Entry<'a, T> {
-    inner: MapEntry<'a, TypeId, Box<dyn Any>>,
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        pub struct Entry<'a, T> {
+            inner: MapEntry<'a, TypeId, BoxedAny>,
 
-    marker: PhantomData<T>,
+            marker: PhantomData<T>,
+        }
+    }
+    else {
+        pub struct Entry<'a, T> {
+            inner: MapEntry<'a, TypeId, BoxedAny>,
+
+            marker: PhantomData<T>,
+        }
+    }
 }
 
 impl<'a, T> Entry<'a, T>
 where
-    T: 'static,
+    T: ErasedTy,
 {
-    pub fn new(entry: MapEntry<'a, TypeId, Box<dyn Any>>) -> Self {
+    pub fn new(entry: MapEntry<'a, TypeId, BoxedAny>) -> Self {
         Self {
             inner: entry,
             marker: PhantomData::default(),

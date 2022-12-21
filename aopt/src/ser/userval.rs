@@ -1,6 +1,7 @@
 use crate::astr;
 use crate::map::AnyMap;
 use crate::map::Entry;
+use crate::map::ErasedTy;
 use crate::ser::Service;
 use crate::Error;
 
@@ -30,35 +31,35 @@ impl UsrValService {
         self.0.is_empty()
     }
 
-    pub fn contain<T: 'static>(&self) -> bool {
+    pub fn contain<T: ErasedTy>(&self) -> bool {
         self.0.contain::<T>()
     }
 
-    pub fn insert<T: 'static>(&mut self, value: T) -> Option<T> {
+    pub fn insert<T: ErasedTy>(&mut self, value: T) -> Option<T> {
         self.0.insert(value)
     }
 
-    pub fn remove<T: 'static>(&mut self) -> Option<T> {
+    pub fn remove<T: ErasedTy>(&mut self) -> Option<T> {
         self.0.remove::<T>()
     }
 
-    pub fn get<T: 'static>(&self) -> Option<&T> {
+    pub fn get<T: ErasedTy>(&self) -> Option<&T> {
         self.0.get::<T>()
     }
 
-    pub fn get_mut<T: 'static>(&mut self) -> Option<&mut T> {
+    pub fn get_mut<T: ErasedTy>(&mut self) -> Option<&mut T> {
         self.0.get_mut::<T>()
     }
 
-    pub fn val<T: 'static>(&self) -> Result<&T, Error> {
+    pub fn val<T: ErasedTy>(&self) -> Result<&T, Error> {
         self.0.ty::<T>()
     }
 
-    pub fn val_mut<T: 'static>(&mut self) -> Result<&mut T, Error> {
+    pub fn val_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
         self.0.ty_mut::<T>()
     }
 
-    pub fn entry<T: 'static>(&mut self) -> Entry<'_, T> {
+    pub fn entry<T: ErasedTy>(&mut self) -> Entry<'_, T> {
         self.0.entry::<T>()
     }
 }

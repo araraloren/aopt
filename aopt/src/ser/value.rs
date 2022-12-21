@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 
 use super::Service;
 use crate::map::AnyMap;
+use crate::map::ErasedTy;
 use crate::Error;
 use crate::{astr, HashMap, Uid};
 
@@ -63,32 +64,32 @@ impl ValService {
         self.inner.contains_key(&uid)
     }
 
-    pub fn contain_type<T: 'static>(&self, uid: Uid) -> bool {
+    pub fn contain_type<T: ErasedTy>(&self, uid: Uid) -> bool {
         self.inner
             .get(&uid)
             .map(|v| v.contain::<Vec<T>>())
             .unwrap_or_default()
     }
 
-    pub fn get<T: 'static>(&self, uid: Uid) -> Option<&T> {
+    pub fn get<T: ErasedTy>(&self, uid: Uid) -> Option<&T> {
         self.gets::<T>(uid).and_then(|v| v.last())
     }
 
-    pub fn get_mut<T: 'static>(&mut self, uid: Uid) -> Option<&mut T> {
+    pub fn get_mut<T: ErasedTy>(&mut self, uid: Uid) -> Option<&mut T> {
         self.gets_mut::<T>(uid).and_then(|v| v.last_mut())
     }
 
-    pub fn gets<T: 'static>(&self, uid: Uid) -> Option<&Vec<T>> {
+    pub fn gets<T: ErasedTy>(&self, uid: Uid) -> Option<&Vec<T>> {
         self.inner.get(&uid).and_then(|map| map.get::<Vec<T>>())
     }
 
-    pub fn gets_mut<T: 'static>(&mut self, uid: Uid) -> Option<&mut Vec<T>> {
+    pub fn gets_mut<T: ErasedTy>(&mut self, uid: Uid) -> Option<&mut Vec<T>> {
         self.inner
             .get_mut(&uid)
             .and_then(|map| map.get_mut::<Vec<T>>())
     }
 
-    pub fn push<T: 'static>(&mut self, uid: Uid, val: T) -> &mut Self {
+    pub fn push<T: ErasedTy>(&mut self, uid: Uid, val: T) -> &mut Self {
         self.inner
             .entry(uid)
             .or_default()
@@ -98,18 +99,18 @@ impl ValService {
         self
     }
 
-    pub fn pop<T: 'static>(&mut self, uid: Uid) -> Option<T> {
+    pub fn pop<T: ErasedTy>(&mut self, uid: Uid) -> Option<T> {
         self.inner
             .get_mut(&uid)
             .and_then(|v| v.get_mut::<Vec<T>>())
             .and_then(|v| v.pop())
     }
 
-    pub fn set<T: 'static>(&mut self, uid: Uid, vals: Vec<T>) -> Option<Vec<T>> {
+    pub fn set<T: ErasedTy>(&mut self, uid: Uid, vals: Vec<T>) -> Option<Vec<T>> {
         self.inner.entry(uid).or_default().insert(vals)
     }
 
-    pub fn remove<T: 'static>(&mut self, uid: Uid) -> Option<Vec<T>> {
+    pub fn remove<T: ErasedTy>(&mut self, uid: Uid) -> Option<Vec<T>> {
         self.inner.get_mut(&uid).and_then(|v| v.remove::<Vec<T>>())
     }
 
@@ -117,22 +118,22 @@ impl ValService {
         ValEntry::new(uid, self.inner.entry(uid).or_default())
     }
 
-    pub fn val<T: 'static>(&self, uid: Uid) -> Result<&T, Error> {
+    pub fn val<T: ErasedTy>(&self, uid: Uid) -> Result<&T, Error> {
         self.get(uid)
             .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for ValueService")))
     }
 
-    pub fn val_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut T, Error> {
+    pub fn val_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut T, Error> {
         self.get_mut(uid)
             .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for ValueService")))
     }
 
-    pub fn vals<T: 'static>(&self, uid: Uid) -> Result<&Vec<T>, Error> {
+    pub fn vals<T: ErasedTy>(&self, uid: Uid) -> Result<&Vec<T>, Error> {
         self.gets(uid)
             .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for ValueService")))
     }
 
-    pub fn vals_mut<T: 'static>(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error> {
+    pub fn vals_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error> {
         self.gets_mut(uid)
             .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for ValueService")))
     }
@@ -162,7 +163,7 @@ impl<'a, T> ValEntry<'a, T> {
 
 impl<'a, T> ValEntry<'a, T>
 where
-    T: 'static,
+    T: ErasedTy,
 {
     pub fn key(&self) -> Uid {
         self.uid

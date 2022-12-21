@@ -16,6 +16,14 @@ use crate::Uid;
 /// Service which do option check in [`Policy`](crate::parser::Policy).
 pub struct CheckService<S>(PhantomData<S>);
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "sync")] {
+        unsafe impl<S> Send for CheckService<S> { }
+
+        unsafe impl<S> Sync for CheckService<S> { }
+    }
+}
+
 impl<S> Debug for CheckService<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CheckService").finish()

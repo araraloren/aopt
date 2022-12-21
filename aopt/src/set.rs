@@ -26,68 +26,87 @@ pub type SetCfg<I> = <<I as Set>::Ctor as Ctor>::Config;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "sync")] {
-        /// Create [`Opt`](crate::set::Ctor::Opt) with given [`Config`](crate::set::Ctor::Config).
-        pub trait Ctor: Send + Sync {
-            type Opt: Opt;
-            type Config;
-            type Error: Into<Error>;
+        /// Implement [`Ctor`] for `Box<dyn Ctor>`.
+        impl<Opt: crate::opt::Opt, Config: Send + Sync, Err: Into<Error>> Ctor
+        for Box<dyn Ctor<Opt = Opt, Config = Config, Error = Err> + Send + Sync>
+        {
+            type Opt = Opt;
 
-            fn r#type(&self) -> Str;
+            type Config = Config;
 
-            /// Return true if the option type support deactivate style such as `--/bool`.
-            fn sp_deactivate(&self) -> bool;
+            type Error = Err;
 
-            fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error>;
+            fn r#type(&self) -> Str {
+                Ctor::r#type(self.as_ref())
+            }
+
+            fn sp_deactivate(&self) -> bool {
+                Ctor::sp_deactivate(self.as_ref())
+            }
+
+            fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
+                Ctor::new_with(self.as_mut(), config)
+            }
+        }
+
+        impl<Opt: crate::opt::Opt, Config: Send + Sync, Err: Into<Error>> Debug
+        for Box<dyn Ctor<Opt = Opt, Config = Config, Error = Err> + Send + Sync>
+        {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.debug_tuple("Ctor")
+                    .field(&format!("{{{}}}", self.r#type()))
+                    .finish()
+            }
         }
     }
     else {
-        /// Create [`Opt`](crate::set::Ctor::Opt) with given [`Config`](crate::set::Ctor::Config).
-        pub trait Ctor {
-            type Opt: Opt;
-            type Config;
-            type Error: Into<Error>;
+        /// Implement [`Ctor`] for `Box<dyn Ctor>`.
+        impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Ctor
+        for Box<dyn Ctor<Opt = Opt, Config = Config, Error = Err>>
+        {
+            type Opt = Opt;
 
-            fn r#type(&self) -> Str;
+            type Config = Config;
 
-            /// Return true if the option type support deactivate style such as `--/bool`.
-            fn sp_deactivate(&self) -> bool;
+            type Error = Err;
 
-            fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error>;
+            fn r#type(&self) -> Str {
+                Ctor::r#type(self.as_ref())
+            }
+
+            fn sp_deactivate(&self) -> bool {
+                Ctor::sp_deactivate(self.as_ref())
+            }
+
+            fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
+                Ctor::new_with(self.as_mut(), config)
+            }
+        }
+
+        impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Debug
+        for Box<dyn Ctor<Opt = Opt, Config = Config, Error = Err>>
+        {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.debug_tuple("Ctor")
+                    .field(&format!("{{{}}}", self.r#type()))
+                    .finish()
+            }
         }
     }
 }
 
-/// Implement [`Ctor`] for `Box<dyn Ctor>`.
-impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Ctor
-    for Box<dyn Ctor<Opt = Opt, Config = Config, Error = Err>>
-{
-    type Opt = Opt;
+/// Create [`Opt`](crate::set::Ctor::Opt) with given [`Config`](crate::set::Ctor::Config).
+pub trait Ctor {
+    type Opt: Opt;
+    type Config;
+    type Error: Into<Error>;
 
-    type Config = Config;
+    fn r#type(&self) -> Str;
 
-    type Error = Err;
+    /// Return true if the option type support deactivate style such as `--/bool`.
+    fn sp_deactivate(&self) -> bool;
 
-    fn r#type(&self) -> Str {
-        Ctor::r#type(self.as_ref())
-    }
-
-    fn sp_deactivate(&self) -> bool {
-        Ctor::sp_deactivate(self.as_ref())
-    }
-
-    fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
-        Ctor::new_with(self.as_mut(), config)
-    }
-}
-
-impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Debug
-    for Box<dyn Ctor<Opt = Opt, Config = Config, Error = Err>>
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Ctor")
-            .field(&format!("{{{}}}", self.r#type()))
-            .finish()
-    }
+    fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error>;
 }
 
 impl<T: Ctor> From<T> for Str {
