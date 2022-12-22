@@ -1,10 +1,13 @@
 use aopt::prelude::{Action, Assoc};
-use aopt::map::ErasedTy;
 
 ///
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct MetaConfig<T: ErasedTy + Clone>
+pub struct MetaConfig<T>
+where
+    T: Clone,
 {
+    id: String,
+
     option: String,
 
     hint: Option<String>,
@@ -20,10 +23,13 @@ pub struct MetaConfig<T: ErasedTy + Clone>
     value: Option<Vec<T>>,
 }
 
-impl<T: ErasedTy + Clone> MetaConfig<T>
+impl<T> MetaConfig<T>
+where
+    T: Clone,
 {
-    pub fn new<S: Into<String>>(option: S) -> Self {
+    pub fn new<S: Into<String>>(id: S, option: S) -> Self {
         Self {
+            id: id.into(),
             option: option.into(),
             hint: None,
             help: None,
@@ -32,6 +38,10 @@ impl<T: ErasedTy + Clone> MetaConfig<T>
             alias: None,
             value: None,
         }
+    }
+
+    pub fn id(&self) -> &String {
+        &self.id
     }
 
     pub fn option(&self) -> &String {
@@ -90,6 +100,11 @@ impl<T: ErasedTy + Clone> MetaConfig<T>
         self.value.take()
     }
 
+    pub fn with_id<S: Into<String>>(mut self, id: S) -> Self {
+        self.id = id.into();
+        self
+    }
+
     pub fn with_option<S: Into<String>>(mut self, option: S) -> Self {
         self.option = option.into();
         self
@@ -122,6 +137,11 @@ impl<T: ErasedTy + Clone> MetaConfig<T>
 
     pub fn with_value(mut self, value: Option<Vec<T>>) -> Self {
         self.value = value;
+        self
+    }
+
+    pub fn set_id<S: Into<String>>(&mut self, id: S) -> &mut Self {
+        self.id = id.into();
         self
     }
 

@@ -112,6 +112,7 @@ where
     ///         serde_json::from_str(
     ///             r#"
     ///     {
+    ///         "id": "-c",
     ///         "option": "-c=s",
     ///         "hint": "-c <str>",
     ///         "help": "This is a help for option c",
@@ -131,6 +132,7 @@ where
     ///         serde_json::from_str(
     ///             r#"
     ///     {
+    ///         "id": "-p",
     ///         "option": "--point=i",
     ///         "hint": "--point <int>",
     ///         "help": "This is a help for option",
