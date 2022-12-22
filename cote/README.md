@@ -3,6 +3,35 @@
 
 A simple option manager manage the [`AOpt`](aopt::opt::AOpt), support auto generate help message.
 
+## Setup
+
+Add following to your `Cargo.toml` file:
+
+```toml
+[dependencies]
+cote = "0.1"
+```
+
+## Enable Features from aopt
+
+### Enable `sync` feature
+
+If you want the utils of current crate implement `Send` and `Sync`, you can enable `sync` feature.
+
+```toml
+[dependencies]
+cote = { version = "0.1", features = [ "sync" ] }
+```
+
+### Enable `utf8` feature
+
+By default, the command line parsing support `OsString`, enable `utf8` using `String` instead.
+
+```toml
+[dependencies]
+cote = { version = "0.1", features = [ "utf8" ] }
+```
+
 ## Example
 
 ```ignore
@@ -17,6 +46,7 @@ fn main() -> Result<(), Error> {
         serde_json::from_str(
             r#"
     {
+        "id": "s",
         "option": "-s=s",
         "hint": "-s <str>",
         "help": "This is a help for option [-s]",
