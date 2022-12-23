@@ -1,6 +1,6 @@
 [package]
 name = "cote"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["araraloren <araraloren@gmail.com>"]
 edition = "2021"
 license = "MPL-2.0"

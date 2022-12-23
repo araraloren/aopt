@@ -147,7 +147,7 @@ where
     ///         .unwrap(),
     ///     )?;
     ///
-    ///     cote.run(["-p", "256"].into_iter(), |ret, cote: &Cote<AFwdPolicy>| {
+    ///     cote.run_with(["-p", "256"].into_iter(), |ret, cote: &Cote<AFwdPolicy>| {
     ///         if ret.is_some() {
     ///             assert_eq!(
     ///                 &vec!["we".to_owned(), "it".to_owned()],
@@ -242,7 +242,7 @@ where
     ///     cote.add_opt("-a=b!")?;
     ///     cote.add_opt("-b=i")?;
     ///
-    ///     cote.run_mut(["-a", "-b", "42"].into_iter(), move |ret, cote| {
+    ///     cote.run_mut_with(["-a", "-b", "42"].into_iter(), move |ret, cote| {
     ///         if ret.is_some() {
     ///             assert_eq!(cote.find_val::<bool>("-a")?, &true);
     ///             assert_eq!(cote.find_val::<i64>("-b")?, &42);
@@ -251,12 +251,12 @@ where
     ///         Ok(())
     ///     })?;
     ///
-    ///     // app still avilable here, SingleApp::run_async_mut pass mutable reference to closure.
+    ///     // cote still avilable here, Cote::run_mut_with pass mutable reference to closure.
     ///
     ///     Ok(())
     /// }
     ///```
-    pub fn run_mut<'a, 'b, I, R, F>(
+    pub fn run_mut_with<'a, 'b, I, R, F>(
         &'a mut self,
         iter: impl Iterator<Item = I>,
         mut r: F,
@@ -268,9 +268,22 @@ where
     {
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
+
+        // initialize the option value
+        parser.init()?;
+
         let ret = parser.parse(aopt::Arc::new(Args::from(args)))?;
 
         r(ret, self)
+    }
+
+    /// Running with default arguments [`args()`](std::env::args).
+    pub fn run_mut<'a, 'b, R, F>(&'a mut self, r: F) -> Result<R, Error>
+    where
+        'a: 'b,
+        F: FnMut(Option<()>, &'b mut Cote<P>) -> Result<R, Error>,
+    {
+        self.run_mut_with(std::env::args(), r)
     }
 
     /// Running async function after parsing.
@@ -289,7 +302,7 @@ where
     ///     cote.add_opt("-a=b!")?;
     ///     cote.add_opt("-b=i")?;
     ///
-    ///     cote.run_async_mut(["-a", "-b", "42"].into_iter(), |ret, cote| async move {
+    ///     cote.run_async_mut_with(["-a", "-b", "42"].into_iter(), |ret, cote| async move {
     ///         if ret.is_some() {
     ///             assert_eq!(cote.find_val::<bool>("-a")?, &true);
     ///             assert_eq!(cote.find_val::<i64>("-b")?, &42);
@@ -299,12 +312,12 @@ where
     ///     })
     ///     .await?;
     ///
-    ///     // cote still avilable here, Cote::run_async_mut pass mutable reference to closure.
+    ///     // cote still avilable here, Cote::run_async_mut_with pass mutable reference to closure.
     ///
     ///     Ok(())
     /// }
     ///```
-    pub async fn run_async_mut<'a, 'b, I, R, FUT, F>(
+    pub async fn run_async_mut_with<'a, 'b, I, R, FUT, F>(
         &'a mut self,
         iter: impl Iterator<Item = I>,
         mut r: F,
@@ -319,6 +332,8 @@ where
         let parser = &mut self.parser;
         let async_ret;
 
+        // initialize the option value
+        parser.init()?;
         match parser.parse(aopt::Arc::new(Args::from(args))) {
             Ok(ret) => {
                 let ret = r(ret, self).await;
@@ -330,6 +345,16 @@ where
             }
         }
         async_ret
+    }
+
+    /// Running with default arguments [`args()`](std::env::args).
+    pub async fn run_async_mut<'a, 'b, R, FUT, F>(&'a mut self, r: F) -> Result<R, Error>
+    where
+        'a: 'b,
+        FUT: Future<Output = Result<R, Error>>,
+        F: FnMut(Option<()>, &'b mut Cote<P>) -> FUT,
+    {
+        self.run_async_mut_with(std::env::args(), r).await
     }
 
     /// Running function after parsing.
@@ -347,7 +372,7 @@ where
     ///     cote.add_opt("-a=b!")?;
     ///     cote.add_opt("-b=i")?;
     ///
-    ///     cote.run(["-a", "-b", "42"].into_iter(), move |ret, cote| {
+    ///     cote.run_with(["-a", "-b", "42"].into_iter(), move |ret, cote| {
     ///         if ret.is_some() {
     ///             assert_eq!(cote.find_val::<bool>("-a")?, &true);
     ///             assert_eq!(cote.find_val::<i64>("-b")?, &42);
@@ -356,12 +381,12 @@ where
     ///         Ok(())
     ///     })?;
     ///
-    ///     // cote still avilable here, Cote::run pass reference to closure.
+    ///     // cote still avilable here, Cote::run_with pass reference to closure.
     ///
     ///     Ok(())
     /// }
     ///```
-    pub fn run<'a, 'b, I, R, F>(
+    pub fn run_with<'a, 'b, I, R, F>(
         &'a mut self,
         iter: impl Iterator<Item = I>,
         mut r: F,
@@ -373,9 +398,22 @@ where
     {
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
+
+        // initialize the option value
+        parser.init()?;
+
         let ret = parser.parse(aopt::Arc::new(Args::from(args)))?;
 
         r(ret, self)
+    }
+
+    /// Running with default arguments [`args()`](std::env::args).
+    pub fn run<'a, 'b, R, F>(&'a mut self, r: F) -> Result<R, Error>
+    where
+        'a: 'b,
+        F: FnMut(Option<()>, &'b Cote<P>) -> Result<R, Error>,
+    {
+        self.run_with(std::env::args(), r)
     }
 
     /// Running async function after parsing.
@@ -394,7 +432,7 @@ where
     ///     cote.add_opt("-a=b!")?;
     ///     cote.add_opt("-b=i")?;
     ///
-    ///     cote.run_async(["-a", "-b", "42"].into_iter(), |ret, cote| async move {
+    ///     cote.run_async_with(["-a", "-b", "42"].into_iter(), |ret, cote| async move {
     ///         if ret.is_some() {
     ///             assert_eq!(cote.find_val::<bool>("-a")?, &true);
     ///             assert_eq!(cote.find_val::<i64>("-b")?, &42);
@@ -404,12 +442,12 @@ where
     ///     })
     ///     .await?;
     ///
-    ///     // cote still avilable here, Cote::run_async pass reference to closure.
+    ///     // cote still avilable here, Cote::run_async_with pass reference to closure.
     ///
     ///     Ok(())
     /// }
     ///```
-    pub async fn run_async<'a, 'b, I, R, FUT, F>(
+    pub async fn run_async_with<'a, 'b, I, R, FUT, F>(
         &'a mut self,
         iter: impl Iterator<Item = I>,
         mut r: F,
@@ -424,6 +462,8 @@ where
         let parser = &mut self.parser;
         let async_ret;
 
+        // initialize the option value
+        parser.init()?;
         match parser.parse(aopt::Arc::new(Args::from(args))) {
             Ok(ret) => {
                 let ret = r(ret, self).await;
@@ -435,6 +475,16 @@ where
             }
         }
         async_ret
+    }
+
+    /// Running with default arguments [`args()`](std::env::args).
+    pub async fn run_async<'a, 'b, R, FUT, F>(&'a mut self, r: F) -> Result<R, Error>
+    where
+        'a: 'b,
+        FUT: Future<Output = Result<R, Error>>,
+        F: FnMut(Option<()>, &'b Cote<P>) -> FUT,
+    {
+        self.run_async_with(std::env::args(), r).await
     }
 
     pub fn display_help<'a, S: Into<Cow<'a, str>>>(&self, head: S, foot: S) -> Result<(), Error> {

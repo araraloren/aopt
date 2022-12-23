@@ -64,7 +64,7 @@ fn main() -> Result<(), Error> {
     cote.add_opt("--to=i")?
         .add_alias("-t")
         .set_help("The sub string end index");
-    cote.run(
+    cote.run_with(
         ["-f", "5", "-t", "9"].into_iter(),
         |ret, cote: &Cote<AFwdPolicy>| {
             if ret.is_some() {
