@@ -68,7 +68,7 @@ use crate::Error;
 ///         Ok(Some(cfg.take()))
 ///     },
 /// )?;
-/// 
+///
 /// getopt!(["--load", "cxx", "-check", "cc"].into_iter(), &mut cfg_loader)?;
 ///
 /// let mut parser = cfg_loader.service_mut().sve_take_usrval::<AFwdParser>()?;

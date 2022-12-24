@@ -188,7 +188,7 @@ where
             matched = matched && opt.mat_name(self.name());
             matched = matched
                 && opt.mat_prefix(self.prefix())
-                && opt.mat_idx(Some((self.noa_index as usize, self.noa_total as usize)));
+                && opt.mat_idx(Some((self.noa_index, self.noa_total)));
             // NOA not support alias, skip alias matching
         }
         if matched {

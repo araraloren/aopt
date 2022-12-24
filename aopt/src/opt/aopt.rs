@@ -1,5 +1,7 @@
 use crate::opt::Action;
 use crate::opt::Assoc;
+#[allow(unused)]
+use crate::opt::Creator;
 use crate::opt::Help;
 use crate::opt::Index;
 use crate::opt::Opt;
@@ -11,8 +13,6 @@ use crate::Error;
 use crate::RawVal;
 use crate::Str;
 use crate::Uid;
-#[allow(unused)]
-use crate::opt::Creator;
 
 /// A multiple features option type.
 ///

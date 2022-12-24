@@ -1,6 +1,10 @@
 
 # Relase note
 
+## 0.7.4
+
+- Moving the index parsing logical from StrParser to Index
+
 ## 0.7.3
 
 - Fix a issue when using Parser inside async function

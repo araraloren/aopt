@@ -1,6 +1,7 @@
 use regex::Regex;
 
 use super::{ConstrctInfo, OptParser};
+use crate::opt::Index;
 use crate::set::Pre;
 use crate::Error;
 use crate::Str;
@@ -52,12 +53,7 @@ use crate::Str;
 ///     assert_eq!(ret.type_name, Some(astr("t")));
 ///     assert_eq!(ret.deactivate, Some(true));
 ///     assert_eq!(ret.optional, Some(true));
-///     assert_eq!(ret.forward_index, None);
-///     assert_eq!(ret.backward_index, None);
-///     assert_eq!(ret.anywhere, None);
-///     assert_eq!(ret.list, []);
-///     assert_eq!(ret.except, []);
-///     assert_eq!(ret.range, None);
+///     assert_eq!(ret.index, None);
 ///
 ///     let ret = parser.parse("bopt=t@[1,2,3]".into())?;
 ///
@@ -66,12 +62,6 @@ use crate::Str;
 ///     assert_eq!(ret.type_name, Some(astr("t")));
 ///     assert_eq!(ret.deactivate, None);
 ///     assert_eq!(ret.optional, None);
-///     assert_eq!(ret.forward_index, None);
-///     assert_eq!(ret.backward_index, None);
-///     assert_eq!(ret.anywhere, None);
-///     assert_eq!(ret.list, []);
-///     assert_eq!(ret.except, []);
-///     assert_eq!(ret.range, None);
 ///     assert_eq!(ret.idx(), Some(&Index::list(vec![1, 2, 3])));
 ///
 /// #   Ok(())
@@ -80,17 +70,13 @@ use crate::Str;
 ///
 /// For more examples, please reference test case [`test_option_str_parser`](../../src/aopt/set/parser.rs.html#542).
 ///
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct StrParser {
-    regex: Regex,
     prefix: Vec<Str>,
 }
 
-impl Default for StrParser {
-    fn default() -> Self {
-        let regex = Regex::new(r"^([^=]+)?(=([^=/!@]+))?([!/])?([!/])?(@(?:([+-])?(\d+)|(\d+)?(..)(\d+)?|([+-])?(\[(?:\s*\d+,?\s*)+\])|(\*)))?$").unwrap();
-        Self::new(regex)
-    }
+thread_local! {
+    static STR_PARSER: Regex = Regex::new(r"^([^=]+)?(=([^=/!@]+))?([!/])?([!/])?(@(.+))?$").unwrap();
 }
 
 impl Pre for StrParser {
@@ -106,20 +92,13 @@ impl Pre for StrParser {
 }
 
 impl StrParser {
-    pub fn new(regex: Regex) -> Self {
-        Self {
-            regex,
-            prefix: vec![],
-        }
+    pub fn new() -> Self {
+        Self { prefix: vec![] }
     }
 
     pub fn with_pre(mut self, prefix: &str) -> Self {
         self.add_prefix(prefix);
         self
-    }
-
-    pub fn regex(&self) -> &Regex {
-        &self.regex
     }
 
     pub fn rem_pre(&mut self, prefix: &str) -> &mut Self {
@@ -133,7 +112,7 @@ impl StrParser {
     }
 
     // the index number is small in generally
-    fn parse_as_usize(pattern: &Str, data: &str) -> Result<usize, Error> {
+    pub(crate) fn parse_as_usize(pattern: &str, data: &str) -> Result<usize, Error> {
         let mut count = 0;
         let mut ret = 0usize;
 
@@ -160,7 +139,7 @@ impl StrParser {
         Ok(ret)
     }
 
-    fn parse_as_usize_sequence(pattern: &Str, data: &str) -> Result<Vec<usize>, Error> {
+    pub(crate) fn parse_as_usize_sequence(pattern: &str, data: &str) -> Result<Vec<usize>, Error> {
         let mut ret = vec![];
         let mut last = 0usize;
 
@@ -189,118 +168,49 @@ impl StrParser {
 
     pub fn parse_creator_string(&self, pattern: Str, prefix: Str) -> Result<ConstrctInfo, Error> {
         let (_, left_part) = pattern.split_at(prefix.len());
+        let pattern_clone = pattern.clone();
 
-        if let Some(cap) = self.regex().captures(left_part) {
-            let mut deactivate = None;
-            let mut optional = None;
-            let mut forward_index = None;
-            let mut backward_index = None;
-            let mut list = vec![];
-            let mut except = vec![];
-            let mut range = None;
-            let anywhere = cap.get(IDX_ANY).map(|_| true);
+        STR_PARSER
+            .try_with(|regex| {
+                if let Some(cap) = regex.captures(left_part) {
+                    let mut deactivate = None;
+                    let mut optional = None;
+                    let mut opt_index = None;
 
-            for index in [IDX_DEAC, IDX_OPTN] {
-                if let Some(mat) = cap.get(index) {
-                    match mat.as_str() {
-                        "!" => {
-                            optional = Some(true);
-                        }
-                        "/" => {
-                            deactivate = Some(true);
-                        }
-                        _ => {
-                            return Err(Error::raise_error(format!(
-                                "Index syntax error, except ! or /, found {}",
-                                mat.as_str()
-                            )))
-                        }
-                    }
-                }
-            }
-            if let Some(value_mat) = cap.get(IDX_IDX1) {
-                forward_index = Some(Self::parse_as_usize(&pattern, value_mat.as_str())?);
-            }
-            if let Some(list_mat) = cap.get(IDX_IDX2) {
-                list = Self::parse_as_usize_sequence(&pattern, list_mat.as_str())?;
-            }
-            if let Some(mat) = cap.get(IDX_SIGN1) {
-                match mat.as_str() {
-                    "+" | "" => {}
-                    "-" => {
-                        backward_index = forward_index;
-                        forward_index = None;
-                    }
-                    _ => {
-                        return Err(Error::raise_error(format!(
-                            "Index syntax error, except + or -, found {}",
-                            mat.as_str()
-                        )))
-                    }
-                }
-            }
-            if let Some(mat) = cap.get(IDX_SIGN3) {
-                if mat.as_str() == ".." {
-                    let mat_beg = cap.get(IDX_START);
-                    let mat_end = cap.get(IDX_END);
-
-                    match (mat_beg, mat_end) {
-                        (None, None) => {
-                            return Err(Error::raise_error("Not support empty index range"))
-                        }
-                        (None, Some(end)) => {
-                            range =
-                                Some((None, Some(Self::parse_as_usize(&pattern, end.as_str())?)));
-                        }
-                        (Some(start), None) => {
-                            range =
-                                Some((Some(Self::parse_as_usize(&pattern, start.as_str())?), None));
-                        }
-                        (Some(start), Some(end)) => {
-                            range = Some((
-                                Some(Self::parse_as_usize(&pattern, start.as_str())?),
-                                Some(Self::parse_as_usize(&pattern, end.as_str())?),
-                            ));
+                    for index in [IDX_DEAC, IDX_OPTN] {
+                        if let Some(mat) = cap.get(index) {
+                            match mat.as_str() {
+                                "!" => {
+                                    optional = Some(true);
+                                }
+                                "/" => {
+                                    deactivate = Some(true);
+                                }
+                                _ => {
+                                    return Err(Error::raise_error(format!(
+                                        "Index syntax error, except ! or /, found {}",
+                                        mat.as_str()
+                                    )))
+                                }
+                            }
                         }
                     }
+                    if let Some(mat) = cap.get(IDX_INDEX) {
+                        opt_index = Some(Index::parse(mat.as_str())?);
+                    }
+                    Ok(ConstrctInfo::default()
+                        .with_pre(Some(prefix))
+                        .with_deact(deactivate)
+                        .with_opt(optional)
+                        .with_index(opt_index)
+                        .with_pat(pattern_clone)
+                        .with_name(cap.get(IDX_NAME).map(|v| Str::from(v.as_str())))
+                        .with_ty(cap.get(IDX_TYPE).map(|v| Str::from(v.as_str()))))
                 } else {
-                    return Err(Error::raise_error(format!(
-                        "Index syntax error, except .., found {}",
-                        mat.as_str()
-                    )));
+                    Err(Error::con_parsing_failed(pattern_clone))
                 }
-            }
-            if let Some(mat) = cap.get(IDX_SIGN2) {
-                match mat.as_str() {
-                    "+" | "" => {}
-                    "-" => {
-                        except = list;
-                        list = vec![];
-                    }
-                    _ => {
-                        return Err(Error::raise_error(format!(
-                            "Index syntax error, except + or -, found {}",
-                            mat.as_str()
-                        )))
-                    }
-                }
-            }
-            Ok(ConstrctInfo::default()
-                .with_pre(Some(prefix))
-                .with_deact(deactivate)
-                .with_opt(optional)
-                .with_fwd(forward_index)
-                .with_bwd(backward_index)
-                .with_aw(anywhere)
-                .with_ls(list)
-                .with_exp(except)
-                .with_range(range)
-                .with_pat(pattern.clone())
-                .with_name(cap.get(IDX_NAME).map(|v| Str::from(v.as_str())))
-                .with_ty(cap.get(IDX_TYPE).map(|v| Str::from(v.as_str()))))
-        } else {
-            Err(Error::con_parsing_failed(pattern))
-        }
+            })
+            .map_err(|e| Error::raise_error(format!("Can not access str parser regex: {:?}", e)))?
     }
 }
 
@@ -308,14 +218,7 @@ const IDX_NAME: usize = 1;
 const IDX_TYPE: usize = 3;
 const IDX_DEAC: usize = 4;
 const IDX_OPTN: usize = 5;
-const IDX_SIGN1: usize = 7;
-const IDX_IDX1: usize = 8;
-const IDX_SIGN2: usize = 12;
-const IDX_IDX2: usize = 13;
-const IDX_SIGN3: usize = 10;
-const IDX_START: usize = 9;
-const IDX_END: usize = 11;
-const IDX_ANY: usize = 14;
+const IDX_INDEX: usize = 7;
 
 impl OptParser for StrParser {
     type Output = ConstrctInfo;
@@ -328,10 +231,9 @@ impl OptParser for StrParser {
         } else {
             for prefix in self.prefix.iter() {
                 if pattern.starts_with(prefix.as_str()) {
-                    if let Ok(mut data_keeper) =
+                    if let Ok(data_keeper) =
                         self.parse_creator_string(pattern.clone(), prefix.clone())
                     {
-                        data_keeper.gen_idx();
                         return Ok(data_keeper);
                     }
                 }
@@ -339,7 +241,6 @@ impl OptParser for StrParser {
             // pass en empty prefix to the parser
             if let Ok(mut data_keeper) = self.parse_creator_string(pattern.clone(), Str::from("")) {
                 data_keeper.prefix = None;
-                data_keeper.gen_idx();
                 return Ok(data_keeper);
             }
         }

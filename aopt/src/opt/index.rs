@@ -1,3 +1,9 @@
+use regex::Regex;
+
+use crate::Error;
+
+use super::StrParser;
+
 /// Index using for option match.
 ///
 /// The index is the position of left arguments (non-option arguments, NOA) index, its base on 1.
@@ -71,7 +77,7 @@ pub enum Index {
     /// `@-[2]` will matching `"pos1"` or `"pos3"`.
     Except(Vec<usize>),
 
-    /// The NOA which index inside in given position range.
+    /// The NOA which index inside in given position range with format `(m..n]`.
     ///
     /// # Example
     ///
@@ -79,9 +85,9 @@ pub enum Index {
     ///
     /// `@0..` will matching `"pos1"`, `"pos2"` or `"pos3"`.
     ///
-    /// `@2..` will matching `"pos3"`.
+    /// `@2..` will matching `"pos2"`, `"pos3"`.
     ///
-    /// `@1..` will matching `"pos2"` or `"pos3"`.
+    /// `@1..` will matching `"pos1"`, `"pos2"` or `"pos3"`.
     ///
     /// `@..4` will matching `"pos1"`, `"pos2"` or `"pos3"`.
     ///
@@ -102,7 +108,90 @@ pub enum Index {
     Null,
 }
 
+thread_local! {
+    static IDX_PARSER: Regex = Regex::new(r"^(?:([+-])?(\d+)|(\d+)?(..)(\d+)?|([+-])?(\[(?:\s*\d+,?\s*)+\])|(\*))$").unwrap();
+}
+
+const IDX_INDEX: usize = 2;
+const IDX_INDEX_SIGN: usize = 1;
+const IDX_RANGE: usize = 4;
+const IDX_RANGE_BEG: usize = 3;
+const IDX_RANGE_END: usize = 5;
+const IDX_SEQUENCE: usize = 7;
+const IDX_SEQUENCE_SIGN: usize = 6;
+const IDX_ANYWHERE: usize = 8;
+
 impl Index {
+    pub fn parse(pattern: &str) -> Result<Self, Error> {
+        IDX_PARSER
+            .try_with(|regex| {
+                if let Some(cap) = regex.captures(pattern) {
+                    if let Some(value) = cap.get(IDX_INDEX) {
+                        let index = StrParser::parse_as_usize(pattern, value.as_str())?;
+                        let sign = cap
+                            .get(IDX_INDEX_SIGN)
+                            .map(|sign| sign.as_str() == "-")
+                            .unwrap_or(false);
+
+                        if sign {
+                            Ok(Self::backward(index))
+                        } else {
+                            Ok(Self::forward(index))
+                        }
+                    } else if cap.get(IDX_RANGE).is_some() {
+                        let range_beg = cap.get(IDX_RANGE_BEG);
+                        let range_end = cap.get(IDX_RANGE_END);
+
+                        match (range_beg, range_end) {
+                            (None, None) => {
+                                return Err(Error::con_invalid_index(
+                                    pattern,
+                                    "not support empty index range",
+                                ))
+                            }
+                            (None, Some(end)) => Ok(Self::range(
+                                None,
+                                Some(StrParser::parse_as_usize(pattern, end.as_str())?),
+                            )),
+                            (Some(beg), None) => Ok(Self::range(
+                                Some(StrParser::parse_as_usize(pattern, beg.as_str())?),
+                                None,
+                            )),
+                            (Some(beg), Some(end)) => Ok(Self::range(
+                                Some(StrParser::parse_as_usize(pattern, beg.as_str())?),
+                                Some(StrParser::parse_as_usize(pattern, end.as_str())?),
+                            )),
+                        }
+                    } else if let Some(value) = cap.get(IDX_SEQUENCE) {
+                        let list = StrParser::parse_as_usize_sequence(pattern, value.as_str())?;
+                        let sign = cap
+                            .get(IDX_SEQUENCE_SIGN)
+                            .map(|sign| sign.as_str() == "-")
+                            .unwrap_or(false);
+
+                        if sign {
+                            Ok(Self::except(list))
+                        } else {
+                            Ok(Self::list(list))
+                        }
+                    } else if cap.get(IDX_ANYWHERE).is_some() {
+                        Ok(Self::anywhere())
+                    } else {
+                        Err(Error::con_invalid_index(
+                            pattern,
+                            "parsing index string failed",
+                        ))
+                    }
+                } else {
+                    Err(Error::con_invalid_index(
+                        pattern,
+                        "parsing index string failed",
+                    ))
+                }
+            })
+            .map_err(|e| Error::raise_error(format!("Can not access index regex: {:?}", e)))?
+    }
+
     pub fn is_null(&self) -> bool {
         matches!(self, Self::Null)
     }

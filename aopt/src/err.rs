@@ -86,6 +86,8 @@ pub enum Error {
 
     ConMissingField(ErrorStr, ErrorStr, ErrorStr),
 
+    ConInvalidIndex(ErrorStr, ErrorStr),
+
     ConOptionAliasError(ErrorStr),
 
     ConParsingIndexFailed(ErrorStr, ErrorStr),
@@ -152,103 +154,112 @@ impl Error {
         Error::CustomError(t.into())
     }
 
-    /// Create SpecialError::CustomFailure error
+    /// Create Error::Failure error
     pub fn raise_failure<T: Into<ErrorStr>>(t: T) -> Self {
         Error::Failure(t.into())
     }
 
-    /// Create ArgumentError::ParsingFailed error
+    /// Create Error::ArgParsingError error
     pub fn arg_parsing_failed<T: Into<ErrorStr>>(t: T) -> Self {
         Self::ArgParsingError(t.into())
     }
 
-    /// Create ArgumentError::MissingName error
+    /// Create Error::ArgMissingName error
     pub fn arg_missing_name<T: Into<ErrorStr>>(t: T) -> Self {
         Self::ArgMissingName(t.into())
     }
 
-    /// Create ConstructError::CanNotInsertPOSIfCMDExists error
+    /// Create Error::ConNoPOSIfCMDExists error
     pub fn con_can_not_insert_pos() -> Self {
         Self::ConNoPOSIfCMDExists
     }
 
-    /// Create ConstructError::MissingOptionPrefix error
+    /// Create Error::ConMissingPrefix error
     pub fn con_missing_prefix<T: Into<ErrorStr>>(t: T, p: T) -> Self {
         Self::ConMissingPrefix(t.into(), p.into())
     }
 
-    /// Create ConstructError::MissingOptionPrefix error
+    /// Create Error::ConMissingIndex error
     pub fn con_missing_index<T: Into<ErrorStr>>(t: T, p: T) -> Self {
         Self::ConMissingIndex(t.into(), p.into())
     }
 
-    /// Create ConstructError::MissingOptionPrefix error
+    /// Create Error::ConMissingField error
     pub fn con_missing_field<T: Into<ErrorStr>>(f: T, t: T, p: T) -> Self {
         Self::ConMissingField(f.into(), t.into(), p.into())
     }
 
-    /// Create ConstructError::ParsingConstructorFailed error
+    /// Create Error::ConInvalidIndex error
+    pub fn con_invalid_index<T: Into<ErrorStr>>(p: T, e: T) -> Self {
+        Self::ConInvalidIndex(p.into(), e.into())
+    }
+
+    /// Create Error::ConParsingFailed error
     pub fn con_parsing_failed<T: Into<ErrorStr>>(t: T) -> Self {
         Self::ConParsingFailed(t.into())
     }
 
-    /// Create ConstructError::IndexParsingFailed error
+    /// Create Error::ConParsingIndexFailed error
     pub fn con_parsing_index_failed<T: Into<ErrorStr>>(t: T, e: T) -> Self {
         Self::ConParsingIndexFailed(t.into(), e.into())
     }
 
-    /// Create ConstructError::NotSupportDeactivateStyle error
+    /// Create Error::ConDeactivateStyleError error
     pub fn con_unsupport_deactivate_style<T: Into<ErrorStr>>(t: T) -> Self {
         Self::ConDeactivateStyleError(t.into())
     }
 
-    /// Create ConstructError::NotSupportOptionType error
+    /// Create Error::ConOptionTypeError error
     pub fn con_unsupport_option_type<T: Into<ErrorStr>>(t: T) -> Self {
         Self::ConOptionTypeError(t.into())
     }
 
-    /// Create ConstructError::InvalidOptionAlias error
+    /// Create Error::ConOptionAliasError error
     pub fn con_invalid_option_alias<T: Into<ErrorStr>>(t: T) -> Self {
         Self::ConOptionAliasError(t.into())
     }
 
-    /// Create SpecialError::MissingArgumentForOption error
+    /// Create Error::SpMissingArgument error
     pub fn sp_missing_argument<T: Into<ErrorStr>>(t: T) -> Self {
         Self::SpMissingArgument(t.into())
     }
 
-    /// Create SpecialError::POSForceRequired error
+    /// Create Error::SpPOSForceRequired error
     pub fn sp_pos_force_require<T: Into<ErrorStr>>(t: T) -> Self {
         Self::SpPOSForceRequired(t.into())
     }
 
-    /// Create SpecialError::OptForceRequired error
+    /// Create Error::SpOptForceRequired error
     pub fn sp_opt_force_require<T: Into<ErrorStr>>(t: T) -> Self {
         Self::SpOptForceRequired(t.into())
     }
 
-    /// Create SpecialError::CMDForceRequired error
+    /// Create Error::SpCMDForceRequired error
     pub fn sp_cmd_force_require<T: Into<ErrorStr>>(t: T) -> Self {
         Self::SpCMDForceRequired(t.into())
     }
 
-    /// Create SpecialError::InvalidOptionName error
+    /// Create Error::SpInvalidOptionName error
     pub fn sp_invalid_option_name<T: Into<ErrorStr>>(t: T) -> Self {
         Self::SpInvalidOptionName(t.into())
     }
 
+    /// Create Error::SpInvalidOptionValue error
     pub fn sp_invalid_option_value<T: Into<ErrorStr>>(n: T, t: T) -> Self {
         Self::SpInvalidOptionValue(n.into(), t.into())
     }
 
+    /// Create Error::SpDeactivateStyleError error
     pub fn sp_deactivate_style_error<T: Into<ErrorStr>>(t: T, support: bool) -> Self {
         Self::SpDeactivateStyleError(t.into(), support)
     }
 
+    /// Create Error::SpExtractError error
     pub fn sp_extract_error<T: Into<ErrorStr>>(t: T) -> Self {
         Self::SpExtractError(t.into())
     }
 
+    /// Create Error::InvokeError error
     pub fn invoke_error<T: Into<ErrorStr>>(t: T) -> Self {
         Self::InvokeError(t.into())
     }
@@ -325,6 +336,9 @@ impl Error {
                 format!("Extract error: {}", msg)
             }
             Error::InvokeError(msg) => msg.to_string(),
+            Error::ConInvalidIndex(pattern, msg) => {
+                format!("Syntax error, invalid index of '{pattern}': {msg}")
+            }
         }
     }
 }

@@ -54,19 +54,7 @@ pub struct ConstrctInfo {
 
     pub optional: Option<bool>,
 
-    pub forward_index: Option<usize>,
-
-    pub backward_index: Option<usize>,
-
-    pub anywhere: Option<bool>,
-
-    pub list: Vec<usize>,
-
-    pub except: Vec<usize>,
-
-    pub range: Option<(Option<usize>, Option<usize>)>,
-
-    index: Option<Index>,
+    pub index: Option<Index>,
 }
 
 impl ConstrctInfo {
@@ -100,60 +88,9 @@ impl ConstrctInfo {
         self
     }
 
-    pub fn with_fwd(mut self, forward_index: Option<usize>) -> Self {
-        self.forward_index = forward_index;
+    pub fn with_index(mut self, index: Option<Index>) -> Self {
+        self.index = index;
         self
-    }
-
-    pub fn with_bwd(mut self, backward_index: Option<usize>) -> Self {
-        self.backward_index = backward_index;
-        self
-    }
-
-    pub fn with_aw(mut self, anywhere: Option<bool>) -> Self {
-        self.anywhere = anywhere;
-        self
-    }
-
-    pub fn with_ls(mut self, list: Vec<usize>) -> Self {
-        self.list = list;
-        self
-    }
-
-    pub fn with_exp(mut self, except: Vec<usize>) -> Self {
-        self.except = except;
-        self
-    }
-
-    pub fn with_range(mut self, range: Option<(Option<usize>, Option<usize>)>) -> Self {
-        self.range = range;
-        self
-    }
-
-    pub fn gen_idx(&mut self) {
-        if self.has_idx() {
-            self.index = if self.forward_index.is_some() {
-                Some(Index::Forward(self.forward_index.unwrap()))
-            } else if self.backward_index.is_some() {
-                Some(Index::Backward(self.backward_index.unwrap()))
-            } else if self.anywhere.unwrap_or(false) {
-                Some(Index::AnyWhere)
-            } else if !self.list.is_empty() {
-                Some(Index::List(std::mem::take(&mut self.list)))
-            } else if !self.except.is_empty() {
-                Some(Index::Except(std::mem::take(&mut self.except)))
-            } else if self.range.is_some() {
-                if let Some(range) = self.range {
-                    Some(Index::range(range.0, range.1))
-                } else {
-                    panic!("Can not unwrap data from Some ?!!")
-                }
-            } else {
-                None
-            };
-        } else {
-            self.index = None;
-        }
     }
 }
 
@@ -175,12 +112,7 @@ impl Information for ConstrctInfo {
     }
 
     fn has_idx(&self) -> bool {
-        self.forward_index.is_some()
-            || self.backward_index.is_some()
-            || self.anywhere.is_some()
-            || !self.list.is_empty()
-            || !self.except.is_empty()
-            || self.range.is_some()
+        self.index.is_some()
     }
 
     fn has_deact(&self) -> bool {
