@@ -75,7 +75,7 @@ async fn main() -> color_eyre::Result<()> {
         .set_optional(false)
         .set_help("Argument of operate, such as keyword of search");
     Ok(cote
-        .run_async_mut(std::env::args().skip(1), |ret, app| async move {
+        .run_async_mut(|ret, app| async move {
             let debug: bool = *app.find_val("--debug")?;
             let display_help = ret.is_none();
 
