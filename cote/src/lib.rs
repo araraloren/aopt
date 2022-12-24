@@ -354,7 +354,7 @@ where
         FUT: Future<Output = Result<R, Error>>,
         F: FnMut(Option<()>, &'b mut Cote<P>) -> FUT,
     {
-        self.run_async_mut_with(std::env::args(), r).await
+        self.run_async_mut_with(std::env::args().skip(1), r).await
     }
 
     /// Running function after parsing.
@@ -413,7 +413,7 @@ where
         'a: 'b,
         F: FnMut(Option<()>, &'b Cote<P>) -> Result<R, Error>,
     {
-        self.run_with(std::env::args(), r)
+        self.run_with(std::env::args().skip(1), r)
     }
 
     /// Running async function after parsing.
@@ -484,7 +484,7 @@ where
         FUT: Future<Output = Result<R, Error>>,
         F: FnMut(Option<()>, &'b Cote<P>) -> FUT,
     {
-        self.run_async_with(std::env::args(), r).await
+        self.run_async_with(std::env::args().skip(1), r).await
     }
 
     pub fn display_help<'a, S: Into<Cow<'a, str>>>(&self, head: S, foot: S) -> Result<(), Error> {
