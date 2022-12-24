@@ -3,9 +3,8 @@ use std::path::Path;
 use std::{ops::Deref, os::windows::prelude::MetadataExt};
 
 use aopt::Error;
+use aopt::ctx::VecStore;
 use aopt::{getopt, prelude::*};
-use aopt_help::prelude::Block;
-use aopt_help::store::Store;
 use regex::Regex;
 
 fn main() -> color_eyre::Result<()> {
@@ -14,7 +13,7 @@ fn main() -> color_eyre::Result<()> {
         .init();
     color_eyre::install()?;
 
-    let mut parser = AFwdParser::default();
+    let mut parser = ADelayParser::default();
 
     parser
         .add_opt("directory=p@1")?
@@ -34,7 +33,8 @@ fn main() -> color_eyre::Result<()> {
                     "Directory can not be empty!".to_string(),
                 ))
             }
-        })?;
+        })?
+        .then(VecStore);
 
     for (opt, help, alias_prefix, alias_name, filter_type) in [
         (
@@ -84,7 +84,7 @@ fn main() -> color_eyre::Result<()> {
                     ser.sve_filter(set["directory"].uid(), move |path: &String| {
                         let filter_type = filter_type.copy_value_from(val.take());
 
-                        filter_type.filter(path)
+                        !filter_type.filter(path)
                     })?;
                     Ok(None::<String>)
                 },
@@ -181,6 +181,9 @@ impl FilterType {
 }
 
 fn display_help<S: Set>(set: &S) -> Result<(), aopt_help::Error> {
+    use aopt_help::prelude::Block;
+    use aopt_help::store::Store;
+
     let foot = format!(
         "Create by {} v{}",
         env!("CARGO_PKG_AUTHORS"),
