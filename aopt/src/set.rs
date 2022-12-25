@@ -209,10 +209,3 @@ impl<S: Set> SetExt<S::Ctor> for S {
             .ok_or_else(|| Error::con_unsupport_option_type(type_name))
     }
 }
-
-/// Prefix set for option set.
-pub trait Pre {
-    fn prefix(&self) -> &[Str];
-
-    fn add_prefix<S: Into<Str>>(&mut self, prefix: S) -> &mut Self;
-}

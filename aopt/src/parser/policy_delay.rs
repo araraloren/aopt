@@ -23,7 +23,6 @@ use crate::opt::OptParser;
 use crate::proc::Process;
 use crate::ser::Services;
 use crate::set::Ctor;
-use crate::set::Pre;
 use crate::set::Set;
 use crate::Arc;
 use crate::Error;
@@ -183,7 +182,7 @@ where
 impl<S> Policy for DelayPolicy<S>
 where
     <S::Ctor as Ctor>::Opt: Opt,
-    S: Set + OptParser + Pre + Debug + 'static,
+    S: Set + OptParser + Debug + 'static,
 {
     type Ret = ReturnVal;
 
@@ -219,7 +218,7 @@ where
             let arg = arg.map(|v| Arc::new(v.clone()));
 
             // parsing current argument
-            if let Ok(clopt) = opt.parse_arg(set.prefix()) {
+            if let Ok(clopt) = opt.parse_arg() {
                 for style in opt_styles.iter() {
                     if let Some(mut proc) = OptGuess::new()
                         .guess(style, GuessOptCfg::new(idx, args_len, arg.clone(), &clopt))?
@@ -243,8 +242,7 @@ where
                     let default_str = astr("");
 
                     return Err(Error::sp_invalid_option_name(format!(
-                        "{}{}",
-                        clopt.prefix().unwrap_or(&default_str),
+                        "{}",
                         clopt.name().unwrap_or(&default_str)
                     )));
                 }
@@ -339,14 +337,13 @@ mod test {
             action: &Action,
             assoc: &Assoc,
             index: Option<&Index>,
-            alias: Option<Vec<(&str, &str)>>,
+            alias: Option<Vec<&str>>,
             deactivate: bool,
         ) -> Result<(), Error> {
             let opt_uid = opt.uid();
 
             assert_eq!(opt_uid, uid);
             assert_eq!(opt.name(), name, "name not equal -{}-", opt_uid);
-            assert_eq!(opt.prefix().map(|v| v.as_str()), prefix);
             assert_eq!(
                 opt.optional(),
                 optional,
@@ -357,11 +354,6 @@ mod test {
             assert_eq!(opt.action(), action, "action not equal for {}", opt_uid);
             assert_eq!(opt.assoc(), assoc, "assoc not equal for {}", opt_uid);
             assert_eq!(opt.idx(), index, "option index not equal: {:?}", index);
-            assert_eq!(
-                opt.is_deactivate(),
-                deactivate,
-                "deactivate style not matched!"
-            );
             if let Ok(opt_vals) = ser.sve_vals::<T>(opt_uid) {
                 if let Some(vals) = vals {
                     assert_eq!(
@@ -388,12 +380,11 @@ mod test {
             if let Some(opt_alias) = opt.alias() {
                 if let Some(alias) = alias {
                     assert_eq!(opt_alias.len(), alias.len());
-                    for (prefix, name) in alias {
+                    for name in alias {
                         assert!(
-                            opt_alias.iter().any(|(p, n)| p == prefix && n == name),
-                            "alias => {:?} <--> {}, {}",
+                            opt_alias.iter().any(|n| n == name),
+                            "alias => {:?} <--> {}",
                             &opt_alias,
-                            prefix,
                             name,
                         );
                     }
@@ -427,7 +418,6 @@ mod test {
             .into_iter(),
         );
 
-        set.add_prefix("+");
         set.add_opt("set=c")?;
         set.add_opt("filter=c")?;
         let args_uid = set.add_opt("args=p@2..")?.set_assoc(Assoc::Flt).run()?;

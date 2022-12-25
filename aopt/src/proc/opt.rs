@@ -15,8 +15,6 @@ use crate::Str;
 use crate::Uid;
 
 pub struct OptMatch<S> {
-    prefix: Str,
-
     name: Str,
 
     style: Style,
@@ -24,8 +22,6 @@ pub struct OptMatch<S> {
     argument: Option<Arc<RawVal>>,
 
     matched_uid: Option<Uid>,
-
-    disbale: bool,
 
     consume_arg: bool,
 
@@ -39,14 +35,11 @@ pub struct OptMatch<S> {
 impl<S> Debug for OptMatch<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("OptMatch")
-            .field("prefix", &self.prefix)
             .field("name", &self.name)
             .field("style", &self.style)
             .field("argument", &self.argument)
             .field("matched_uid", &self.matched_uid)
-            .field("disbale", &self.disbale)
             .field("consume_arg", &self.consume_arg)
-            .field("index", &self.index)
             .field("total", &self.total)
             .finish()
     }
@@ -55,12 +48,10 @@ impl<S> Debug for OptMatch<S> {
 impl<S> Default for OptMatch<S> {
     fn default() -> Self {
         Self {
-            prefix: Str::default(),
             name: Str::default(),
             style: Style::default(),
             argument: None,
             matched_uid: None,
-            disbale: false,
             consume_arg: false,
             index: 0,
             total: 0,
@@ -78,18 +69,8 @@ where
         self
     }
 
-    pub fn with_prefix(mut self, prefix: Str) -> Self {
-        self.prefix = prefix;
-        self
-    }
-
     pub fn with_style(mut self, style: Style) -> Self {
         self.style = style;
-        self
-    }
-
-    pub fn with_disable(mut self, disbale: bool) -> Self {
-        self.disbale = disbale;
         self
     }
 
@@ -117,14 +98,6 @@ where
 impl<S> OptMatch<S> {
     pub fn name(&self) -> Option<&Str> {
         Some(&self.name)
-    }
-
-    pub fn prefix(&self) -> Option<&Str> {
-        Some(&self.prefix)
-    }
-
-    pub fn disable(&self) -> bool {
-        self.disbale
     }
 
     pub fn idx(&self) -> usize {
@@ -193,14 +166,13 @@ where
 
         if matched {
             matched = opt.mat_name(self.name());
-            matched = matched && opt.mat_prefix(self.prefix());
-            matched = matched || opt.mat_alias(&self.prefix, &self.name);
+            matched = matched || opt.mat_alias(&self.name);
         }
         if matched {
             if self.consume() && self.argument.is_none() {
                 return Err(Error::sp_missing_argument(opt.hint()));
             }
-            if opt.check_val(self.arg(), self.disbale, (self.index, self.total))? {
+            if opt.check_val(self.arg(), (self.index, self.total))? {
                 opt.set_setted(true);
                 self.matched_uid = Some(opt.uid());
             } else {
@@ -208,9 +180,8 @@ where
             }
         }
         trace!(
-            "Matching {{name: {:?}, prefix: {:?}, style: {}, arg: {:?}}} with Opt{{{}}}: {}",
+            "Matching {{name: {:?}, style: {}, arg: {:?}}} with Opt{{{}}}: {}",
             self.name(),
-            self.prefix(),
             self.style(),
             self.arg(),
             opt.hint(),

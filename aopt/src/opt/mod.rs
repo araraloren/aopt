@@ -81,16 +81,11 @@ pub trait Opt: Debug {
 
     fn action(&self) -> &Action;
 
-    fn is_deactivate(&self) -> bool;
-
-    /// The prefix of option.
-    fn prefix(&self) -> Option<&Str>;
-
     /// The index of option.
     fn idx(&self) -> Option<&Index>;
 
     /// The alias the option.
-    fn alias(&self) -> Option<&Vec<(Str, Str)>>;
+    fn alias(&self) -> Option<&Vec<Str>>;
 
     fn set_uid(&mut self, uid: Uid);
 
@@ -102,18 +97,11 @@ pub trait Opt: Debug {
 
     fn mat_name(&self, name: Option<&Str>) -> bool;
 
-    fn mat_prefix(&self, prefix: Option<&Str>) -> bool;
-
-    fn mat_alias(&self, prefix: &Str, name: &Str) -> bool;
+    fn mat_alias(&self, name: &Str) -> bool;
 
     fn mat_idx(&self, index: Option<(usize, usize)>) -> bool;
 
     fn init(&mut self, ser: &mut Services) -> Result<(), Error>;
 
-    fn check_val(
-        &mut self,
-        val: Option<&RawVal>,
-        disable: bool,
-        index: (usize, usize),
-    ) -> Result<bool, Error>;
+    fn check_val(&mut self, val: Option<&RawVal>, index: (usize, usize)) -> Result<bool, Error>;
 }

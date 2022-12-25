@@ -146,9 +146,7 @@ where
                             .with_total(count)
                             .with_arg(clopt.value.clone())
                             .with_style(Style::Argument)
-                            .with_disable(clopt.disable)
-                            .with_name(valueof("name", &clopt.name)?)
-                            .with_prefix(valueof("prefix", &clopt.prefix)?),
+                            .with_name(valueof("name", &clopt.name)?),
                     );
                 }
             }
@@ -161,9 +159,7 @@ where
                             .with_consume(true)
                             .with_arg(cfg.arg().cloned())
                             .with_style(Style::Argument)
-                            .with_disable(clopt.disable)
-                            .with_name(valueof("name", &clopt.name)?)
-                            .with_prefix(valueof("prefix", &clopt.prefix)?),
+                            .with_name(valueof("name", &clopt.name)?),
                     );
                 }
             }
@@ -181,9 +177,7 @@ where
                                     .with_total(count)
                                     .with_arg(Some(RawVal::from(name_value.1).into()))
                                     .with_style(Style::Argument)
-                                    .with_disable(clopt.disable)
-                                    .with_name(name_value.0.into())
-                                    .with_prefix(valueof("prefix", &clopt.prefix)?),
+                                    .with_name(name_value.0.into()),
                             );
                         }
                     }
@@ -200,9 +194,7 @@ where
                                         .with_total(count)
                                         .with_arg(None)
                                         .with_style(Style::Combined)
-                                        .with_disable(clopt.disable)
-                                        .with_name(format!("{}", char).into())
-                                        .with_prefix(valueof("prefix", &clopt.prefix)?),
+                                        .with_name(format!("{}", char).into()),
                                 );
                             }
                         }
@@ -215,11 +207,9 @@ where
                         OptMatch::default()
                             .with_idx(index)
                             .with_total(count)
-                            .with_arg(Some(OptGuess::<S>::bool2str(!clopt.disable)))
+                            .with_arg(Some(OptGuess::<S>::bool2str(todo!())))
                             .with_style(Style::Boolean)
-                            .with_disable(clopt.disable)
-                            .with_name(valueof("name", &clopt.name)?)
-                            .with_prefix(valueof("prefix", &clopt.prefix)?),
+                            .with_name(valueof("name", &clopt.name)?),
                     );
                 }
             }

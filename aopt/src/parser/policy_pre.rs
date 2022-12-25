@@ -20,7 +20,6 @@ use crate::opt::OptParser;
 use crate::proc::Process;
 use crate::ser::Services;
 use crate::set::Ctor;
-use crate::set::Pre;
 use crate::set::Set;
 use crate::Arc;
 use crate::Error;
@@ -158,7 +157,7 @@ impl<S> PrePolicy<S> {
 impl<S> Policy for PrePolicy<S>
 where
     <S::Ctor as Ctor>::Opt: Opt,
-    S: Set + OptParser + Pre + Debug + 'static,
+    S: Set + OptParser + Debug + 'static,
 {
     type Ret = ReturnVal;
 
@@ -194,7 +193,7 @@ where
             let mut like_opt = false;
             let arg = arg.map(|v| Arc::new(v.clone()));
 
-            if let Ok(clopt) = opt.parse_arg(set.prefix()) {
+            if let Ok(clopt) = opt.parse_arg() {
                 like_opt = true;
                 for style in opt_styles.iter() {
                     let ret = Self::ig_failure(
@@ -311,14 +310,13 @@ mod test {
             action: &Action,
             assoc: &Assoc,
             index: Option<&Index>,
-            alias: Option<Vec<(&str, &str)>>,
+            alias: Option<Vec<&str>>,
             deactivate: bool,
         ) -> Result<(), Error> {
             let opt_uid = opt.uid();
 
             assert_eq!(opt_uid, uid);
             assert_eq!(opt.name(), name, "name not equal -{}-", opt_uid);
-            assert_eq!(opt.prefix().map(|v| v.as_str()), prefix);
             assert_eq!(
                 opt.optional(),
                 optional,
@@ -329,11 +327,6 @@ mod test {
             assert_eq!(opt.action(), action, "action not equal for {}", opt_uid);
             assert_eq!(opt.assoc(), assoc, "assoc not equal for {}", opt_uid);
             assert_eq!(opt.idx(), index, "option index not equal: {:?}", index);
-            assert_eq!(
-                opt.is_deactivate(),
-                deactivate,
-                "deactivate style not matched!"
-            );
             if let Ok(opt_vals) = ser.sve_vals::<T>(opt_uid) {
                 if let Some(vals) = vals {
                     assert_eq!(
@@ -360,12 +353,11 @@ mod test {
             if let Some(opt_alias) = opt.alias() {
                 if let Some(alias) = alias {
                     assert_eq!(opt_alias.len(), alias.len());
-                    for (prefix, name) in alias {
+                    for name in alias {
                         assert!(
-                            opt_alias.iter().any(|(p, n)| p == prefix && n == name),
-                            "alias => {:?} <--> {}, {}",
+                            opt_alias.iter().any(|n| n == name),
+                            "alias => {:?} <--> {}",
                             &opt_alias,
-                            prefix,
                             name,
                         );
                     }
@@ -378,11 +370,7 @@ mod test {
 
         fn string_collection_validator(vals: Vec<&'static str>) -> ValValidator {
             ValValidator::new(
-                move |_: &str,
-                      val: Option<&RawVal>,
-                      _: bool,
-                      _: (usize, usize)|
-                      -> Result<bool, Error> {
+                move |_: &str, val: Option<&RawVal>, _: (usize, usize)| -> Result<bool, Error> {
                     Ok(val
                         .map(|v| v.get_str())
                         .flatten()
@@ -394,11 +382,9 @@ mod test {
 
         fn index_validator(idxs: Vec<usize>) -> ValValidator {
             ValValidator::new(
-                move |_: &str,
-                      _: Option<&RawVal>,
-                      _: bool,
-                      idx: (usize, usize)|
-                      -> Result<bool, Error> { Ok(idxs.contains(&idx.0)) },
+                move |_: &str, _: Option<&RawVal>, idx: (usize, usize)| -> Result<bool, Error> {
+                    Ok(idxs.contains(&idx.0))
+                },
             )
         }
 
@@ -450,8 +436,6 @@ mod test {
             ]
             .into_iter(),
         );
-
-        set.add_prefix("+");
 
         // 5
         set.add_opt("--aopt=b")?;
@@ -725,7 +709,7 @@ mod test {
                     &Action::App,
                     &Assoc::Str,
                     None,
-                    Some(vec![("-", "o")]),
+                    Some(vec!["-o"]),
                     false,
                 )?;
                 assert!(idx.deref() == &5 || idx.deref() == &6);
@@ -780,7 +764,7 @@ mod test {
                     &Action::App,
                     &Assoc::Flt,
                     None,
-                    Some(vec![("-", "l")]),
+                    Some(vec!["-l"]),
                     false,
                 )?;
                 assert!(idx.deref() == &4);
@@ -864,7 +848,7 @@ mod test {
                     &Action::App,
                     &Assoc::Int,
                     None,
-                    Some(vec![("--", "iopt-alias1")]),
+                    Some(vec!["--iopt-alias1"]),
                     false,
                 )?;
                 check_opt_val::<i64>(
@@ -907,7 +891,7 @@ mod test {
                     &Action::Set,
                     &Assoc::Bool,
                     None,
-                    Some(vec![("-", "fopt")]),
+                    Some(vec!["-fopt"]),
                     true,
                 )?;
                 check_opt_val(
@@ -921,7 +905,7 @@ mod test {
                     &Action::Set,
                     &Assoc::Bool,
                     None,
-                    Some(vec![("+", "eopt")]),
+                    Some(vec!["+eopt"]),
                     false,
                 )?;
                 check_opt_val(

@@ -97,26 +97,20 @@ impl AOsStrExt for OsStr {
 /// # use aopt::args::ArgParser;
 /// #
 /// # fn main() -> Result<(), Error> {
-///     let prefixs = vec![astr("--"), astr("-")];
-///
 ///     {// parse option with value
-///         let output = RawVal::from("--foo=32").parse_arg(&prefixs)?;
+///         let output = RawVal::from("--foo=32").parse_arg()?;
 ///
-///         assert_eq!(output.prefix, Some(astr("--")));
-///         assert_eq!(output.name, Some(astr("foo")));
+///         assert_eq!(output.name, Some(astr("--foo")));
 ///         assert_eq!(output.value, Some(Arc::new(RawVal::from("32"))));
-///         assert_eq!(output.disable, false);
 ///     }
 ///     {// parse boolean option
-///         let output = RawVal::from("--/bar").parse_arg(&prefixs)?;
+///         let output = RawVal::from("--/bar").parse_arg()?;
 ///
-///         assert_eq!(output.prefix, Some(astr("--")));
-///         assert_eq!(output.name, Some(astr("bar")));
+///         assert_eq!(output.name, Some(astr("--/bar")));
 ///         assert_eq!(output.value, None);
-///         assert_eq!(output.disable, true);
 ///     }
 ///     {// parse other string
-///         let output = RawVal::from("-=bar").parse_arg(&prefixs);
+///         let output = RawVal::from("-=bar").parse_arg();
 ///
 ///         assert!(output.is_err());
 ///     }
@@ -128,10 +122,6 @@ pub struct CLOpt {
     pub name: Option<Str>,
 
     pub value: Option<Arc<RawVal>>,
-
-    pub prefix: Option<Str>,
-
-    pub disable: bool,
 }
 
 impl CLOpt {
@@ -142,19 +132,9 @@ impl CLOpt {
     pub fn value(&self) -> Option<&Arc<RawVal>> {
         self.value.as_ref()
     }
-
-    pub fn prefix(&self) -> Option<&Str> {
-        self.prefix.as_ref()
-    }
-
-    pub fn disable(&self) -> bool {
-        self.disable
-    }
 }
 
 const EQUAL: char = '=';
-
-const DISBALE: &str = "/";
 
 #[cfg(not(feature = "utf8"))]
 impl ArgParser for RawVal {
@@ -162,46 +142,39 @@ impl ArgParser for RawVal {
 
     type Error = Error;
 
-    fn parse_arg(&self, prefixs: &[Str]) -> Result<Self::Output, Self::Error> {
-        for prefix in prefixs {
-            // - remove the prefix from the string
-            if let Some(with_out_pre) = self.strip_prefix(prefix.as_str()) {
-                // - split the string once by delimiter `DISABLE`
-                // - split the string once by delimiter `EQUAL`
-                let (dsb, left) = if let Some(left) = with_out_pre.strip_prefix(DISBALE) {
-                    (true, left)
-                } else {
-                    (false, with_out_pre)
-                };
-                let (name, value) = if let Some((name, value)) = left.split_once(EQUAL) {
-                    (name, Some(value))
-                } else {
-                    (left, None)
-                };
+    fn parse_arg(&self) -> Result<Self::Output, Self::Error> {
+        if let Some((name, value)) = self.split_once(EQUAL) {
+            // - convert the name to &str, the name must be valid utf8
+            let name = name
+                .to_str()
+                .ok_or_else(|| {
+                    Error::arg_missing_name(format!("Name must be valid utf8: {:?}", name))
+                })?
+                .trim();
 
-                // - convert the name to &str, the name must be valid utf8
-                let name = name
-                    .to_str()
-                    .ok_or_else(|| {
-                        Error::arg_missing_name(format!("Name must be valid utf8: {:?}", name))
-                    })?
-                    .trim();
-
-                if name.is_empty() {
-                    return Err(Error::arg_missing_name("Name can not be empty"));
-                }
-                return Ok(Self::Output {
-                    disable: dsb,
-                    name: Some(astr(name)),
-                    value: value.map(|v| Arc::new(v.into())),
-                    prefix: Some(prefix.clone()),
-                });
+            if name.is_empty() {
+                return Err(Error::arg_missing_name("Name can not be empty"));
             }
-        }
-        Err(Error::arg_parsing_failed(format!(
-            "Not a valid option setting string: {:?}",
-            self
-        )))
+            return Ok(Self::Output {
+                name: Some(astr(name)),
+                value: Some(Arc::new(value.into())),
+            });
+        } else {
+            let name = self
+                .to_str()
+                .ok_or_else(|| {
+                    Error::arg_parsing_failed(format!(
+                        "Not a valid option setting string: {:?}",
+                        self
+                    ))
+                })?
+                .trim();
+
+            return Ok(Self::Output {
+                name: Some(Str::from(name)),
+                value: None,
+            });
+        };
     }
 }
 

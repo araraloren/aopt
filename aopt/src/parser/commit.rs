@@ -95,12 +95,6 @@ where
         self
     }
 
-    /// Set the option prefix of commit configuration.
-    pub fn set_prefix<T: Into<Str>>(mut self, prefix: T) -> Self {
-        self.cfg_mut().set_prefix(prefix);
-        self
-    }
-
     /// Set the option type name of commit configuration.
     pub fn set_type<T: Into<Str>>(mut self, type_name: T) -> Self {
         self.cfg_mut().set_type(type_name);
@@ -152,12 +146,6 @@ where
     /// Set the option value validator.
     pub fn set_validator(mut self, validator: ValValidator) -> Self {
         self.cfg_mut().set_validator(Some(validator));
-        self
-    }
-
-    /// Set the option deactivate style of commit configuration.
-    pub fn set_deactivate(mut self, deactivate_style: bool) -> Self {
-        self.cfg_mut().set_deactivate(deactivate_style);
         self
     }
 

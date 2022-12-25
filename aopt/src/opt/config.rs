@@ -8,14 +8,13 @@ use crate::opt::Information;
 use crate::opt::OptParser;
 use crate::opt::ValInitiator;
 use crate::opt::ValValidator;
-use crate::set::Pre;
 use crate::Str;
 
 pub trait Config {
     fn new<Parser>(parser: &Parser, pattern: Str) -> Result<Self, Error>
     where
         Self: Sized,
-        Parser: OptParser + Pre,
+        Parser: OptParser,
         Parser::Output: Information;
 }
 
@@ -29,9 +28,6 @@ pub trait ConfigValue {
     /// The name of option.
     fn name(&self) -> Option<&Str>;
 
-    /// The prefix string of option.
-    fn prefix(&self) -> Option<&Str>;
-
     /// The type name of option.
     fn r#type(&self) -> Option<&Str>;
 
@@ -43,12 +39,6 @@ pub trait ConfigValue {
 
     /// If the option is optional.
     fn optional(&self) -> Option<bool>;
-
-    /// If option support deactivatet style.
-    fn deactivate(&self) -> Option<bool>;
-
-    /// Prefix string using for parsing alias.
-    fn spprefix(&self) -> &Vec<Str>;
 
     /// Associated type of option.
     fn assoc(&self) -> Option<&Assoc>;
@@ -74,15 +64,11 @@ pub trait ConfigValue {
 
     fn has_alias(&self) -> bool;
 
-    fn has_prefix(&self) -> bool;
-
     fn has_optional(&self) -> bool;
 
     fn has_validator(&self) -> bool;
 
     fn has_initiator(&self) -> bool;
-
-    fn has_deactivate(&self) -> bool;
 
     fn set_idx(&mut self, index: Index) -> &mut Self;
 
@@ -100,17 +86,11 @@ pub trait ConfigValue {
 
     fn rem_alias<S: Into<Str>>(&mut self, alias: S) -> &mut Self;
 
-    fn set_prefix<S: Into<Str>>(&mut self, prefix: S) -> &mut Self;
-
     fn set_type<S: Into<Str>>(&mut self, type_name: S) -> &mut Self;
 
     fn set_assoc(&mut self, assoc: Assoc) -> &mut Self;
 
     fn set_action(&mut self, action: Action) -> &mut Self;
-
-    fn set_deactivate(&mut self, deactivate_style: bool) -> &mut Self;
-
-    fn set_spprefix<S: Into<Str>>(&mut self, prefix: Vec<S>) -> &mut Self;
 
     fn set_initiator(&mut self, initiator: Option<ValInitiator>) -> &mut Self;
 
@@ -120,8 +100,6 @@ pub trait ConfigValue {
 
     fn gen_type(&self) -> Result<Str, Error>;
 
-    fn gen_prefix(&self) -> Result<Str, Error>;
-
     fn gen_idx(&self) -> Result<Index, Error>;
 
     fn gen_optional(&self) -> Result<bool, Error>;
@@ -130,21 +108,17 @@ pub trait ConfigValue {
 
     fn gen_action(&self) -> Result<Action, Error>;
 
-    fn gen_deactivate(&self) -> Result<bool, Error>;
-
-    fn gen_alias(&self) -> Result<Vec<(Str, Str)>, Error>;
+    fn gen_alias(&self) -> Result<Vec<Str>, Error>;
 
     fn gen_validator(&self) -> Result<ValValidator, Error>;
 
     fn gen_initiator(&self) -> Result<ValInitiator, Error>;
 
-    fn gen_opt_help(&self, deactivate_style: bool) -> Result<Help, Error>;
+    fn gen_opt_help(&self) -> Result<Help, Error>;
 
     fn take_name(&mut self) -> Option<Str>;
 
     fn take_type(&mut self) -> Option<Str>;
-
-    fn take_prefix(&mut self) -> Option<Str>;
 
     fn take_assoc(&mut self) -> Option<Assoc>;
 
@@ -155,8 +129,6 @@ pub trait ConfigValue {
     fn take_optional(&mut self) -> Option<bool>;
 
     fn take_alias(&mut self) -> Option<Vec<Str>>;
-
-    fn take_deactivate(&mut self) -> Option<bool>;
 
     fn take_opt_help(&mut self) -> Option<Help>;
 
@@ -172,8 +144,6 @@ pub struct OptConfig {
 
     name: Option<Str>,
 
-    pre: Option<Str>,
-
     opt: Option<bool>,
 
     idx: Option<Index>,
@@ -181,8 +151,6 @@ pub struct OptConfig {
     alias: Vec<Str>,
 
     help: Help,
-
-    sp_pre: Vec<Str>,
 
     deact: Option<bool>,
 
@@ -213,11 +181,6 @@ impl OptConfig {
 
     pub fn with_type<S: Into<Str>>(mut self, type_name: S) -> Self {
         self.ty = Some(type_name.into());
-        self
-    }
-
-    pub fn with_prefix<S: Into<Str>>(mut self, prefix: Option<S>) -> Self {
-        self.pre = prefix.map(|v| v.into());
         self
     }
 
@@ -256,11 +219,6 @@ impl OptConfig {
         self
     }
 
-    pub fn with_spprefix<S: Into<Str>>(mut self, support_prefix: Vec<S>) -> Self {
-        self.sp_pre = support_prefix.into_iter().map(|v| v.into()).collect();
-        self
-    }
-
     pub fn raise_missing_error(&self, field: &str) -> Result<Error, Error> {
         Ok(Error::con_missing_field(
             &astr(field),
@@ -278,7 +236,7 @@ impl Config for OptConfig {
     fn new<Parser>(parser: &Parser, pattern: Str) -> Result<Self, Error>
     where
         Self: Sized,
-        Parser: OptParser + Pre,
+        Parser: OptParser,
         Parser::Output: Information,
     {
         let mut output = parser.parse(pattern).map_err(|e| e.into())?;
@@ -286,9 +244,6 @@ impl Config for OptConfig {
 
         if let Some(v) = output.take_name() {
             ret.set_name(v);
-        }
-        if let Some(v) = output.take_pre() {
-            ret.set_prefix(v);
         }
         if let Some(v) = output.take_ty() {
             ret.set_type(v);
@@ -299,12 +254,6 @@ impl Config for OptConfig {
         if let Some(v) = output.take_opt() {
             ret.set_optional(!v);
         }
-        if let Some(v) = output.take_deact() {
-            ret.set_deactivate(v);
-        }
-        // set the prefix, it will use later
-        ret.set_spprefix(parser.prefix().to_vec());
-
         Ok(ret)
     }
 }
@@ -322,10 +271,6 @@ impl ConfigValue for OptConfig {
         self.name.as_ref()
     }
 
-    fn prefix(&self) -> Option<&Str> {
-        self.pre.as_ref()
-    }
-
     fn r#type(&self) -> Option<&Str> {
         self.ty.as_ref()
     }
@@ -340,14 +285,6 @@ impl ConfigValue for OptConfig {
 
     fn optional(&self) -> Option<bool> {
         self.opt
-    }
-
-    fn deactivate(&self) -> Option<bool> {
-        self.deact
-    }
-
-    fn spprefix(&self) -> &Vec<Str> {
-        &self.sp_pre
     }
 
     fn assoc(&self) -> Option<&Assoc> {
@@ -390,10 +327,6 @@ impl ConfigValue for OptConfig {
         !self.alias.is_empty()
     }
 
-    fn has_prefix(&self) -> bool {
-        self.pre.is_some()
-    }
-
     fn has_optional(&self) -> bool {
         self.opt.is_some()
     }
@@ -404,10 +337,6 @@ impl ConfigValue for OptConfig {
 
     fn has_initiator(&self) -> bool {
         self.initiator.is_some()
-    }
-
-    fn has_deactivate(&self) -> bool {
-        self.deact.is_some()
     }
 
     fn set_idx(&mut self, index: Index) -> &mut Self {
@@ -457,11 +386,6 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn set_prefix<S: Into<Str>>(&mut self, prefix: S) -> &mut Self {
-        self.pre = Some(prefix.into());
-        self
-    }
-
     fn set_type<S: Into<Str>>(&mut self, type_name: S) -> &mut Self {
         self.ty = Some(type_name.into());
         self
@@ -474,16 +398,6 @@ impl ConfigValue for OptConfig {
 
     fn set_action(&mut self, action: Action) -> &mut Self {
         self.action = Some(action);
-        self
-    }
-
-    fn set_deactivate(&mut self, deactivate_style: bool) -> &mut Self {
-        self.deact = Some(deactivate_style);
-        self
-    }
-
-    fn set_spprefix<S: Into<Str>>(&mut self, prefix: Vec<S>) -> &mut Self {
-        self.sp_pre = prefix.into_iter().map(|v| v.into()).collect();
         self
     }
 
@@ -509,13 +423,6 @@ impl ConfigValue for OptConfig {
             return Ok(type_name.clone());
         }
         Err(self.raise_missing_error("type name")?)
-    }
-
-    fn gen_prefix(&self) -> Result<Str, Error> {
-        if let Some(prefix) = &self.pre {
-            return Ok(prefix.clone());
-        }
-        Err(self.raise_missing_error("prefix")?)
     }
 
     fn gen_idx(&self) -> Result<Index, Error> {
@@ -546,33 +453,8 @@ impl ConfigValue for OptConfig {
         Err(self.raise_missing_error("action")?)
     }
 
-    fn gen_deactivate(&self) -> Result<bool, Error> {
-        if let Some(deactivate_style) = self.deact {
-            return Ok(deactivate_style);
-        }
-        Err(self.raise_missing_error("deactivate_style")?)
-    }
-
-    fn gen_alias(&self) -> Result<Vec<(Str, Str)>, Error> {
-        let mut ret = vec![];
-
-        for alias in self.alias.iter() {
-            let mut found_prefix = false;
-
-            for prefix in self.sp_pre.iter() {
-                if alias.starts_with(prefix.as_ref()) {
-                    if let Some(name) = alias.get(prefix.len()..) {
-                        ret.push((prefix.clone(), name.into()));
-                        found_prefix = true;
-                        break;
-                    }
-                }
-            }
-            if !found_prefix {
-                return Err(Error::con_invalid_option_alias(alias));
-            }
-        }
-        Ok(ret)
+    fn gen_alias(&self) -> Result<Vec<Str>, Error> {
+        return Ok(self.alias.clone());
     }
 
     fn gen_validator(&self) -> Result<ValValidator, Error> {
@@ -587,38 +469,19 @@ impl ConfigValue for OptConfig {
         ))
     }
 
-    fn gen_opt_help(&self, deactivate_style: bool) -> Result<Help, Error> {
+    fn gen_opt_help(&self) -> Result<Help, Error> {
         let mut ret = self.help.clone();
 
         if ret.hint().is_empty() {
             let mut names = vec![String::default()];
 
-            // add prefix
-            if let Some(prefix) = self.prefix() {
-                names[0] += prefix.as_str();
-            }
-            // add deactivate style
-            if deactivate_style {
-                names[0] += "/";
-            }
             // add name
             names[0] += self.gen_name()?.as_ref();
 
             // add alias
             if let Some(alias_vec) = self.alias() {
                 for alias in alias_vec {
-                    if deactivate_style {
-                        for prefix in self.spprefix() {
-                            if alias.starts_with(prefix.as_str()) {
-                                if let Some(name) = alias.get(prefix.len()..alias.len()) {
-                                    names.push(format!("{}/{}", prefix, name));
-                                    break;
-                                }
-                            }
-                        }
-                    } else {
-                        names.push(format!("{}", alias));
-                    }
+                    names.push(format!("{}", alias));
                 }
             }
             // sort name by len
@@ -648,10 +511,6 @@ impl ConfigValue for OptConfig {
         self.ty.take()
     }
 
-    fn take_prefix(&mut self) -> Option<Str> {
-        self.pre.take()
-    }
-
     fn take_assoc(&mut self) -> Option<Assoc> {
         self.assoc.take()
     }
@@ -670,10 +529,6 @@ impl ConfigValue for OptConfig {
 
     fn take_alias(&mut self) -> Option<Vec<Str>> {
         Some(std::mem::take(&mut self.alias))
-    }
-
-    fn take_deactivate(&mut self) -> Option<bool> {
-        self.deact.take()
     }
 
     fn take_opt_help(&mut self) -> Option<Help> {

@@ -108,8 +108,6 @@ impl Creator<AOpt, OptConfig, Error> {
         let type_name = astr("i");
 
         Self::new(type_name.clone(), false, move |mut config: OptConfig| {
-            let deactivate_style = config.deactivate().unwrap_or(false);
-            let prefix = Some(config.gen_prefix()?);
             let optional = config.take_optional().unwrap_or(true);
             let assoc = config.take_assoc().unwrap_or(Assoc::Int);
             let action = config.take_action().unwrap_or(Action::App);
@@ -130,21 +128,16 @@ impl Creator<AOpt, OptConfig, Error> {
                 !config.has_validator(),
                 "Int option only have default value validator"
             );
-            debug_assert!(
-                !deactivate_style,
-                "Int option not support deactivate style configuration"
-            );
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
             }
             Ok(AOpt::default()
                 .with_type(type_name.clone())
                 .with_name(config.gen_name()?)
-                .with_prefix(prefix)
                 .with_assoc(assoc)
                 .with_action(action)
                 .with_style(vec![Style::Argument])
-                .with_opt_help(config.gen_opt_help(false)?)
+                .with_opt_help(config.gen_opt_help()?)
                 .with_alias(Some(config.gen_alias()?))
                 .with_optional(optional)
                 .with_initiator(initiator)
@@ -156,8 +149,6 @@ impl Creator<AOpt, OptConfig, Error> {
         let type_name = astr("u");
 
         Self::new(type_name.clone(), false, move |mut config: OptConfig| {
-            let deactivate_style = config.deactivate().unwrap_or(false);
-            let prefix = Some(config.gen_prefix()?);
             let optional = config.take_optional().unwrap_or(true);
             let assoc = config.take_assoc().unwrap_or(Assoc::Uint);
             let action = config.take_action().unwrap_or(Action::App);
@@ -178,21 +169,16 @@ impl Creator<AOpt, OptConfig, Error> {
                 !config.has_validator(),
                 "Uint option only have default value validator"
             );
-            debug_assert!(
-                !deactivate_style,
-                "Uint option not support deactivate style configuration"
-            );
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
             }
             Ok(AOpt::default()
                 .with_type(type_name.clone())
                 .with_name(config.gen_name()?)
-                .with_prefix(prefix)
                 .with_assoc(assoc)
                 .with_action(action)
                 .with_style(vec![Style::Argument])
-                .with_opt_help(config.gen_opt_help(false)?)
+                .with_opt_help(config.gen_opt_help()?)
                 .with_alias(Some(config.gen_alias()?))
                 .with_optional(optional)
                 .with_initiator(initiator)
@@ -204,8 +190,6 @@ impl Creator<AOpt, OptConfig, Error> {
         let type_name = astr("f");
 
         Self::new(type_name.clone(), false, move |mut config: OptConfig| {
-            let deactivate_style = config.deactivate().unwrap_or(false);
-            let prefix = Some(config.gen_prefix()?);
             let optional = config.take_optional().unwrap_or(true);
             let assoc = config.take_assoc().unwrap_or(Assoc::Flt);
             let action = config.take_action().unwrap_or(Action::App);
@@ -226,21 +210,16 @@ impl Creator<AOpt, OptConfig, Error> {
                 !config.has_validator(),
                 "Flt option only have default value validator"
             );
-            debug_assert!(
-                !deactivate_style,
-                "Flt option not support deactivate style configuration"
-            );
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
             }
             Ok(AOpt::default()
                 .with_type(type_name.clone())
                 .with_name(config.gen_name()?)
-                .with_prefix(prefix)
                 .with_assoc(assoc)
                 .with_action(action)
                 .with_style(vec![Style::Argument])
-                .with_opt_help(config.gen_opt_help(false)?)
+                .with_opt_help(config.gen_opt_help()?)
                 .with_alias(Some(config.gen_alias()?))
                 .with_optional(optional)
                 .with_initiator(initiator)
@@ -252,8 +231,6 @@ impl Creator<AOpt, OptConfig, Error> {
         let type_name = astr("s");
 
         Self::new(type_name.clone(), false, move |mut config: OptConfig| {
-            let deactivate_style = config.deactivate().unwrap_or(false);
-            let prefix = Some(config.gen_prefix()?);
             let optional = config.take_optional().unwrap_or(true);
             let assoc = config.take_assoc().unwrap_or(Assoc::Str);
             let action = config.take_action().unwrap_or(Action::App);
@@ -274,21 +251,16 @@ impl Creator<AOpt, OptConfig, Error> {
                 !config.has_validator(),
                 "Str option only have default value validator"
             );
-            debug_assert!(
-                !deactivate_style,
-                "Str option not support deactivate style configuration"
-            );
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
             }
             Ok(AOpt::default()
                 .with_type(type_name.clone())
                 .with_name(config.gen_name()?)
-                .with_prefix(prefix)
                 .with_assoc(assoc)
                 .with_action(action)
                 .with_style(vec![Style::Argument])
-                .with_opt_help(config.gen_opt_help(false)?)
+                .with_opt_help(config.gen_opt_help()?)
                 .with_alias(Some(config.gen_alias()?))
                 .with_optional(optional)
                 .with_initiator(initiator)
@@ -300,12 +272,15 @@ impl Creator<AOpt, OptConfig, Error> {
         let type_name = astr("b");
 
         Self::new(type_name.clone(), true, move |mut config: OptConfig| {
-            let deactivate_style = config.deactivate().unwrap_or(false);
-            let prefix = Some(config.gen_prefix()?);
             let optional = config.take_optional().unwrap_or(true);
             let assoc = config.take_assoc().unwrap_or(Assoc::Bool);
             let action = config.take_action().unwrap_or(Action::Set);
-            let value = deactivate_style;
+            let initiator = config
+                .take_initiator()
+                .unwrap_or_else(|| ValInitiator::bool(false));
+            let validator = config
+                .take_validator()
+                .unwrap_or_else(|| ValValidator::bool());
 
             debug_assert_eq!(
                 assoc,
@@ -320,26 +295,20 @@ impl Creator<AOpt, OptConfig, Error> {
                 !config.has_validator(),
                 "Boolean option only have default value validator"
             );
-            debug_assert!(
-                !config.has_initiator(),
-                "Boolean option only have default value initiator"
-            );
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
             }
             Ok(AOpt::default()
                 .with_type(type_name.clone())
                 .with_name(config.gen_name()?)
-                .with_prefix(prefix)
                 .with_assoc(assoc)
                 .with_action(action)
                 .with_style(vec![Style::Boolean, Style::Combined])
-                .with_opt_help(config.gen_opt_help(deactivate_style)?)
+                .with_opt_help(config.gen_opt_help()?)
                 .with_alias(Some(config.gen_alias()?))
                 .with_optional(optional)
-                .with_initiator(ValInitiator::bool(value))
-                .with_validator(ValValidator::bool(deactivate_style))
-                .with_deactivate_style(deactivate_style))
+                .with_initiator(initiator)
+                .with_validator(validator))
         })
     }
 
@@ -347,7 +316,6 @@ impl Creator<AOpt, OptConfig, Error> {
         let type_name = astr("p");
 
         Self::new(type_name.clone(), false, move |mut config: OptConfig| {
-            let deactivate_style = config.deactivate().unwrap_or(false);
             let optional = config.take_optional().unwrap_or(true);
             let assoc = config.take_assoc().unwrap_or(Assoc::Noa);
             let action = config.take_action().unwrap_or(Action::App);
@@ -359,14 +327,6 @@ impl Creator<AOpt, OptConfig, Error> {
             if let Some(v) = config.alias() {
                 debug_assert!(v.is_empty(), "Pos option not support alias configruation")
             }
-            debug_assert!(
-                config.prefix().is_none(),
-                "Pos option not support prefix configruation"
-            );
-            debug_assert!(
-                !deactivate_style,
-                "Pos option not support deactivate style configuration"
-            );
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
             }
@@ -377,7 +337,7 @@ impl Creator<AOpt, OptConfig, Error> {
                 .with_action(action)
                 .with_idx(Some(config.gen_idx()?))
                 .with_style(vec![Style::Pos])
-                .with_opt_help(config.gen_opt_help(deactivate_style)?)
+                .with_opt_help(config.gen_opt_help()?)
                 .with_optional(optional)
                 .with_initiator(initiator)
                 .with_validator(validator)
@@ -389,7 +349,6 @@ impl Creator<AOpt, OptConfig, Error> {
         let type_name = astr("c");
 
         Self::new(type_name.clone(), false, move |mut config: OptConfig| {
-            let deactivate_style = config.deactivate().unwrap_or(false);
             let assoc = config.take_assoc().unwrap_or(Assoc::Noa);
             let action = config.take_action().unwrap_or(Action::Set);
             let initiator = config
@@ -409,14 +368,6 @@ impl Creator<AOpt, OptConfig, Error> {
                 config.idx().is_none(),
                 "Cmd option only have default index configuration"
             );
-            debug_assert!(
-                config.prefix().is_none(),
-                "Cmd option not support prefix configruation"
-            );
-            debug_assert!(
-                !deactivate_style,
-                "Cmd option not support deactivate style configuration"
-            );
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
             }
@@ -427,7 +378,7 @@ impl Creator<AOpt, OptConfig, Error> {
                 .with_action(action)
                 .with_idx(Some(crate::opt::Index::forward(1)))
                 .with_style(vec![Style::Cmd])
-                .with_opt_help(config.gen_opt_help(deactivate_style)?)
+                .with_opt_help(config.gen_opt_help()?)
                 .with_optional(false)
                 .with_initiator(initiator)
                 .with_validator(validator))
@@ -438,7 +389,6 @@ impl Creator<AOpt, OptConfig, Error> {
         let type_name = astr("m");
 
         Self::new(type_name.clone(), false, move |mut config: OptConfig| {
-            let deactivate_style = config.deactivate().unwrap_or(false);
             let assoc = config.take_assoc().unwrap_or(Assoc::Null);
             let action = config.take_action().unwrap_or(Action::Set);
             let initiator = config.take_initiator().unwrap_or_default();
@@ -455,15 +405,6 @@ impl Creator<AOpt, OptConfig, Error> {
                 config.idx().is_none(),
                 "Main option only have default index configuration"
             );
-            debug_assert!(
-                config.prefix().is_none(),
-                "Main option not support prefix configruation: {:?}",
-                config.prefix()
-            );
-            debug_assert!(
-                !deactivate_style,
-                "Main option not support deactivate style configuration"
-            );
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
             }
@@ -474,7 +415,7 @@ impl Creator<AOpt, OptConfig, Error> {
                 .with_action(action)
                 .with_idx(Some(crate::opt::Index::anywhere()))
                 .with_style(vec![Style::Main])
-                .with_opt_help(config.gen_opt_help(deactivate_style)?)
+                .with_opt_help(config.gen_opt_help()?)
                 .with_optional(true)
                 .with_initiator(initiator)
                 .with_validator(validator)

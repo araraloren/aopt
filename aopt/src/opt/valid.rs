@@ -10,23 +10,21 @@ cfg_if::cfg_if! {
                 &mut self,
                 name: &str,
                 value: Option<&RawVal>,
-                disable: bool,
                 index: (usize, usize),
             ) -> Result<bool, Error>;
         }
 
         impl<Func> RawValValidator for Func
         where
-            Func: FnMut(&str, Option<&RawVal>, bool, (usize, usize)) -> Result<bool, Error> + Send + Sync,
+            Func: FnMut(&str, Option<&RawVal>, (usize, usize)) -> Result<bool, Error> + Send + Sync,
         {
             fn check(
                 &mut self,
                 name: &str,
                 value: Option<&RawVal>,
-                disable: bool,
                 index: (usize, usize),
             ) -> Result<bool, Error> {
-                (self)(name, value, disable, index)
+                (self)(name, value, index)
             }
         }
     }
@@ -36,23 +34,21 @@ cfg_if::cfg_if! {
                 &mut self,
                 name: &str,
                 value: Option<&RawVal>,
-                disable: bool,
                 index: (usize, usize),
             ) -> Result<bool, Error>;
         }
 
         impl<Func> RawValValidator for Func
         where
-            Func: FnMut(&str, Option<&RawVal>, bool, (usize, usize)) -> Result<bool, Error>,
+            Func: FnMut(&str, Option<&RawVal>, (usize, usize)) -> Result<bool, Error>,
         {
             fn check(
                 &mut self,
                 name: &str,
                 value: Option<&RawVal>,
-                disable: bool,
                 index: (usize, usize),
             ) -> Result<bool, Error> {
-                (self)(name, value, disable, index)
+                (self)(name, value, index)
             }
         }
     }
@@ -62,12 +58,7 @@ pub struct ValValidator(Box<dyn RawValValidator>);
 
 impl Default for ValValidator {
     fn default() -> Self {
-        fn __default(
-            _: &str,
-            _: Option<&RawVal>,
-            _: bool,
-            _: (usize, usize),
-        ) -> Result<bool, Error> {
+        fn __default(_: &str, _: Option<&RawVal>, _: (usize, usize)) -> Result<bool, Error> {
             Ok(true)
         }
 
@@ -84,10 +75,9 @@ impl ValValidator {
         &mut self,
         name: &str,
         value: Option<&RawVal>,
-        disable: bool,
         index: (usize, usize),
     ) -> Result<bool, Error> {
-        self.0.check(name, value, disable, index)
+        self.0.check(name, value, index)
     }
 
     pub fn into_any(self) -> Box<dyn Any> {
@@ -110,12 +100,7 @@ impl Debug for ValValidator {
 macro_rules! num_validator {
     ($num:ty, $name:ident) => {
         pub fn $name() -> Self {
-            fn _validator(
-                _: &str,
-                val: Option<&RawVal>,
-                _: bool,
-                _: (usize, usize),
-            ) -> Result<bool, Error> {
+            fn _validator(_: &str, val: Option<&RawVal>, _: (usize, usize)) -> Result<bool, Error> {
                 Ok(val
                     .and_then(|v| v.get_str())
                     .and_then(|v| v.parse::<$num>().ok())
@@ -152,17 +137,11 @@ impl ValValidator {
 
     num_validator!(isize, isize);
 
-    pub fn bool(deactivate_style: bool) -> Self {
+    pub fn bool() -> Self {
         Self::new(
-            move |_: &str,
-                  val: Option<&RawVal>,
-                  disable: bool,
-                  _: (usize, usize)|
-                  -> Result<bool, Error> {
+            move |_: &str, val: Option<&RawVal>, _: (usize, usize)| -> Result<bool, Error> {
                 if let Some(val) = val.and_then(|v| v.get_str()) {
-                    if deactivate_style && disable && val == crate::opt::BOOL_FALSE
-                        || !deactivate_style && !disable && val == crate::opt::BOOL_TRUE
-                    {
+                    if val == crate::opt::BOOL_FALSE || val == crate::opt::BOOL_TRUE {
                         return Ok(true);
                     }
                 }
@@ -173,11 +152,7 @@ impl ValValidator {
 
     pub fn str() -> Self {
         Self::new(
-            move |_: &str,
-                  val: Option<&RawVal>,
-                  _: bool,
-                  _: (usize, usize)|
-                  -> Result<bool, Error> {
+            move |_: &str, val: Option<&RawVal>, _: (usize, usize)| -> Result<bool, Error> {
                 Ok(val.map(|v| v.get_str().is_some()).unwrap_or_default())
             },
         )
@@ -185,19 +160,15 @@ impl ValValidator {
 
     pub fn some() -> Self {
         Self::new(
-            move |_: &str,
-                  val: Option<&RawVal>,
-                  _: bool,
-                  _: (usize, usize)|
-                  -> Result<bool, Error> { Ok(val.is_some()) },
+            move |_: &str, val: Option<&RawVal>, _: (usize, usize)| -> Result<bool, Error> {
+                Ok(val.is_some())
+            },
         )
     }
 
     pub fn null() -> Self {
         Self::new(
-            |_: &str, _: Option<&RawVal>, _: bool, _: (usize, usize)| -> Result<bool, Error> {
-                Ok(true)
-            },
+            |_: &str, _: Option<&RawVal>, _: (usize, usize)| -> Result<bool, Error> { Ok(true) },
         )
     }
 
@@ -207,7 +178,6 @@ impl ValValidator {
                 Self::new(
                     move |_: &str,
                           val: Option<&RawVal>,
-                          _: bool,
                           _: (usize, usize)|
                           -> Result<bool, Error> { (f)(val) },
                 )
@@ -217,7 +187,6 @@ impl ValValidator {
                 Self::new(
                     move |_: &str,
                           _: Option<&RawVal>,
-                          _: bool,
                           idx: (usize, usize)|
                           -> Result<bool, Error> { (f)(idx) },
                 )
@@ -228,7 +197,6 @@ impl ValValidator {
                 Self::new(
                     move |_: &str,
                           val: Option<&RawVal>,
-                          _: bool,
                           _: (usize, usize)|
                           -> Result<bool, Error> { (f)(val) },
                 )
@@ -238,7 +206,6 @@ impl ValValidator {
                 Self::new(
                     move |_: &str,
                           _: Option<&RawVal>,
-                          _: bool,
                           idx: (usize, usize)|
                           -> Result<bool, Error> { (f)(idx) },
                 )
@@ -302,13 +269,13 @@ impl ValValidatorExt for () {
 pub trait ValValidatorExt2 {
     type Valid;
 
-    fn val_validator(deactivate_style: bool) -> Self::Valid;
+    fn val_validator() -> Self::Valid;
 }
 
 impl ValValidatorExt2 for bool {
     type Valid = ValValidator;
 
-    fn val_validator(deactivate_style: bool) -> Self::Valid {
-        ValValidator::bool(deactivate_style)
+    fn val_validator() -> Self::Valid {
+        ValValidator::bool()
     }
 }

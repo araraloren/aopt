@@ -49,8 +49,6 @@ pub struct AOpt {
 
     help: Help,
 
-    prefix: Option<Str>,
-
     setted: bool,
 
     optional: bool,
@@ -63,15 +61,13 @@ pub struct AOpt {
 
     ignore_name_mat: bool,
 
-    deactivate_style: bool,
-
     index: Option<Index>,
 
     validator: ValValidator,
 
     initiator: ValInitiator,
 
-    alias: Option<Vec<(Str, Str)>>,
+    alias: Option<Vec<Str>>,
 }
 
 impl AOpt {
@@ -147,14 +143,8 @@ impl AOpt {
         self
     }
 
-    /// Set the prefix of option.
-    pub fn with_prefix(mut self, prefix: Option<Str>) -> Self {
-        self.prefix = prefix;
-        self
-    }
-
     /// Set the alias of option.
-    pub fn with_alias(mut self, alias: Option<Vec<(Str, Str)>>) -> Self {
+    pub fn with_alias(mut self, alias: Option<Vec<Str>>) -> Self {
         self.alias = alias;
         self
     }
@@ -169,12 +159,6 @@ impl AOpt {
     /// Set the value validator of option.
     pub fn with_validator(mut self, validator: ValValidator) -> Self {
         self.validator = validator;
-        self
-    }
-
-    /// If the option support deactivate style such as `--/bool`.
-    pub fn with_deactivate_style(mut self, deactivate_style: bool) -> Self {
-        self.deactivate_style = deactivate_style;
         self
     }
 }
@@ -225,25 +209,16 @@ impl AOpt {
         self
     }
 
-    pub fn set_prefix(&mut self, prefix: Option<Str>) -> &mut Self {
-        self.prefix = prefix;
-        self
-    }
-
-    pub fn add_alias(&mut self, prefix: Str, name: Str) -> &mut Self {
+    pub fn add_alias(&mut self, name: Str) -> &mut Self {
         if let Some(alias) = &mut self.alias {
-            alias.push((prefix, name));
+            alias.push(name);
         }
         self
     }
 
-    pub fn rem_alias(&mut self, prefix: &Str, name: &Str) -> &mut Self {
+    pub fn rem_alias(&mut self, name: &Str) -> &mut Self {
         if let Some(alias) = &mut self.alias {
-            if let Some((i, _)) = alias
-                .iter()
-                .enumerate()
-                .find(|(_, v)| &v.0 == prefix && &v.1 == name)
-            {
+            if let Some((i, _)) = alias.iter().enumerate().find(|(_, v)| v == &name) {
                 alias.remove(i);
             }
         }
@@ -257,11 +232,6 @@ impl AOpt {
 
     pub fn set_validator(&mut self, validator: ValValidator) -> &mut Self {
         self.validator = validator;
-        self
-    }
-
-    pub fn set_deactivate_style(&mut self, deactivate_style: bool) -> &mut Self {
-        self.deactivate_style = deactivate_style;
         self
     }
 }
@@ -311,19 +281,11 @@ impl Opt for AOpt {
         &self.action
     }
 
-    fn is_deactivate(&self) -> bool {
-        self.deactivate_style
-    }
-
-    fn prefix(&self) -> Option<&Str> {
-        self.prefix.as_ref()
-    }
-
     fn idx(&self) -> Option<&Index> {
         self.index.as_ref()
     }
 
-    fn alias(&self) -> Option<&Vec<(Str, Str)>> {
+    fn alias(&self) -> Option<&Vec<Str>> {
         self.alias.as_ref()
     }
 
@@ -351,13 +313,9 @@ impl Opt for AOpt {
         }
     }
 
-    fn mat_prefix(&self, prefix: Option<&Str>) -> bool {
-        self.prefix() == prefix
-    }
-
-    fn mat_alias(&self, prefix: &Str, name: &Str) -> bool {
+    fn mat_alias(&self, name: &Str) -> bool {
         if let Some(alias) = &self.alias {
-            alias.iter().any(|v| &v.0 == prefix && &v.1 == name)
+            alias.iter().any(|v| v == name)
         } else {
             false
         }
@@ -374,15 +332,10 @@ impl Opt for AOpt {
         false
     }
 
-    fn check_val(
-        &mut self,
-        value: Option<&RawVal>,
-        disable: bool,
-        index: (usize, usize),
-    ) -> Result<bool, Error> {
+    fn check_val(&mut self, value: Option<&RawVal>, index: (usize, usize)) -> Result<bool, Error> {
         let name = self.name().clone();
 
-        self.validator.check(name.as_str(), value, disable, index)
+        self.validator.check(name.as_str(), value, index)
     }
 
     fn init(&mut self, ser: &mut Services) -> Result<(), Error> {

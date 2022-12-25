@@ -70,10 +70,8 @@ where
                             .clone()
                             .with_uid(uid) // current uid == uid in matcher
                             .with_name(mat.name().cloned())
-                            .with_prefix(mat.prefix().cloned())
                             .with_style(mat.style())
-                            .with_arg(mat.clone_arg())
-                            .with_disable(mat.disable()),
+                            .with_arg(mat.clone_arg()),
                     });
                 }
             }

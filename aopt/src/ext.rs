@@ -174,8 +174,6 @@ impl APolicyExt<ASet> for ADelayPolicy {
 /// * [`main`](Creator::main)
 pub fn aset_with_default_creators() -> ASet {
     ASet::default()
-        .with_prefix("--")
-        .with_prefix("-")
         .with_creator(Creator::int())
         .with_creator(Creator::bool())
         .with_creator(Creator::uint())

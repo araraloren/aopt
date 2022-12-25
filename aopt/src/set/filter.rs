@@ -26,32 +26,11 @@ where
     fn mat_opt(&self, opt: &T) -> bool {
         let mut ret = true;
 
-        if ret && self.has_deactivate() {
-            ret = ret && (self.deactivate().unwrap() == opt.is_deactivate());
-        }
         if ret && self.has_optional() {
             ret = ret && (self.optional().unwrap() == opt.optional());
         }
         if ret && self.has_type() {
             ret = ret && (self.r#type().unwrap() == &opt.r#type());
-        }
-        if ret && self.has_prefix() {
-            // don't call match prefix
-            let mut matched = opt.prefix() == self.prefix();
-
-            if !matched {
-                let prefix = self.prefix().unwrap();
-
-                if let Some(alias) = opt.alias().as_ref() {
-                    for item in alias.iter() {
-                        if &item.0 == prefix {
-                            matched = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            ret = ret && matched;
         }
         if ret && self.has_name() {
             // don't call match name
@@ -61,7 +40,7 @@ where
             if !matched {
                 if let Some(alias) = opt.alias().as_ref() {
                     for item in alias.iter() {
-                        if &item.1 == name {
+                        if item == name {
                             matched = true;
                             break;
                         }
@@ -121,12 +100,6 @@ where
         self
     }
 
-    /// Set the option prefix of filter configuration.
-    pub fn set_pre<T: Into<Str>>(&mut self, prefix: T) -> &mut Self {
-        self.info.set_prefix(prefix);
-        self
-    }
-
     /// Set the option type name of filter configuration.
     pub fn set_ty<T: Into<Str>>(&mut self, type_name: T) -> &mut Self {
         self.info.set_type(type_name);
@@ -142,12 +115,6 @@ where
     /// Set the option optional of filter configuration.
     pub fn set_opt(&mut self, optional: bool) -> &mut Self {
         self.info.set_optional(optional);
-        self
-    }
-
-    /// Set the option deactivate style of filter configuration.
-    pub fn set_deact(&mut self, deactivate_style: bool) -> &mut Self {
-        self.info.set_deactivate(deactivate_style);
         self
     }
 
@@ -204,12 +171,6 @@ where
         self
     }
 
-    /// Set the option prefix of filter configuration.
-    pub fn set_pre<T: Into<Str>>(&mut self, prefix: T) -> &mut Self {
-        self.info.set_prefix(prefix);
-        self
-    }
-
     /// Set the option type name of filter configuration.
     pub fn set_ty<T: Into<Str>>(&mut self, type_name: T) -> &mut Self {
         self.info.set_type(type_name);
@@ -225,12 +186,6 @@ where
     /// Set the option optional of filter configuration.
     pub fn set_opt(&mut self, optional: bool) -> &mut Self {
         self.info.set_optional(optional);
-        self
-    }
-
-    /// Set the option deactivate style of filter configuration.
-    pub fn set_deact(&mut self, deactivate_style: bool) -> &mut Self {
-        self.info.set_deactivate(deactivate_style);
         self
     }
 

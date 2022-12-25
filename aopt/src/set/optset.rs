@@ -10,7 +10,6 @@ use crate::set::Ctor;
 use crate::set::Filter;
 use crate::set::FilterMatcher;
 use crate::set::FilterMut;
-use crate::set::Pre;
 use crate::set::Set;
 use crate::set::SetIndex;
 use crate::Error;
@@ -126,21 +125,9 @@ where
 
 impl<P, C> OptSet<P, C>
 where
-    C: Ctor,
-    C::Config: Config,
-    P: OptParser + Pre,
-{
-    pub fn with_prefix(mut self, prefix: &str) -> Self {
-        self.add_prefix(prefix);
-        self
-    }
-}
-
-impl<P, C> OptSet<P, C>
-where
     C::Opt: Opt,
     C: Ctor,
-    P: OptParser + Pre,
+    P: OptParser,
     P::Output: Information,
     C::Config: Config + ConfigValue + Default,
 {
@@ -240,7 +227,7 @@ impl<'b, P, C> SetIndex<OptSet<P, C>> for &'b str
 where
     C::Opt: Opt,
     C: Ctor,
-    P: OptParser + Pre,
+    P: OptParser,
     P::Output: Information,
     C::Config: Config + ConfigValue + Default,
 {
@@ -330,7 +317,7 @@ impl<P, C> OptParser for OptSet<P, C>
 where
     C::Opt: Opt,
     C: Ctor,
-    P: OptParser + Pre,
+    P: OptParser,
     P::Output: Information,
     C::Config: Config + ConfigValue + Default,
 {
@@ -340,22 +327,6 @@ where
 
     fn parse(&self, pattern: Str) -> Result<Self::Output, Self::Error> {
         self.parser().parse(pattern)
-    }
-}
-
-impl<P, C> Pre for OptSet<P, C>
-where
-    C: Ctor,
-    C::Config: Config,
-    P: OptParser + Pre,
-{
-    fn add_prefix<S: Into<Str>>(&mut self, prefix: S) -> &mut Self {
-        self.parser_mut().add_prefix(prefix);
-        self
-    }
-
-    fn prefix(&self) -> &[Str] {
-        self.parser().prefix()
     }
 }
 
@@ -433,7 +404,7 @@ mod test {
         assert!(set.find_mut("-floatd=f!")?.is_some());
         assert_eq!(set.find_all("=f")?.count(), 5);
         assert_eq!(set.find_all("=f!")?.count(), 2);
-        assert_eq!(set.filter_mut("=f")?.set_deact(true).find_all().count(), 0);
+        assert_eq!(set.filter_mut("=f")?.find_all().count(), 0);
 
         assert!(set.find("--=i")?.is_some());
         assert!(set.find("--intb")?.is_some());
@@ -443,9 +414,6 @@ mod test {
         assert_eq!(set.find_all_mut("=i!")?.count(), 2);
         assert_eq!(set.filter_mut("=i")?.set_opt(true).find_all().count(), 2);
         assert_eq!(set.filter_mut("=i")?.set_opt(false).find_all().count(), 2);
-
-        set.add_prefix("+");
-        set.add_prefix("/");
 
         assert!(set.add_opt("--stra=s")?.add_alias("/stre").run().is_ok());
         assert!(set.add_opt("--strb=s!")?.add_alias("/strf").run().is_ok());
@@ -477,16 +445,14 @@ mod test {
         assert_eq!(set.find_all("--=u")?.count(), 2);
         assert_eq!(set.find_all("--=u!")?.count(), 1);
 
-        assert_eq!(set.filter("")?.set_pre("+").find_all().count(), 4);
-        assert_eq!(set.filter("")?.set_pre("/").find_all().count(), 4);
+        assert_eq!(set.filter("")?.find_all().count(), 4);
+        assert_eq!(set.filter("")?.find_all().count(), 4);
 
         assert!(set
             .add_opt("")?
             .set_name("foo")
-            .set_prefix("/")
             .set_optional(false)
             .set_type("b")
-            .set_deactivate(true)
             .run()
             .is_ok());
         assert!(set.find("/foo")?.is_some());

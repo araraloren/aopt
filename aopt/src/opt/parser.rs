@@ -2,7 +2,6 @@ use regex::Regex;
 
 use super::{ConstrctInfo, OptParser};
 use crate::opt::Index;
-use crate::set::Pre;
 use crate::Error;
 use crate::Str;
 
@@ -11,30 +10,28 @@ use crate::Str;
 /// The struct of the option string are:
 ///
 /// ```!
-/// [--][option][=][type][/][!][@index]
-///  |     |     |    |   |  |   |
-///  |     |     |    |   |  |   |
-///  |     |     |    |   |  |   |
-///  |     |     |    |   |  |   The index part of option. Here are all the possible string:
-///  |     |     |    |   |  |   @1 means first position
-///  |     |     |    |   |  |   @-1 means last position
-///  |     |     |    |   |  |   @[1, 2, 3] means the position 1, 2 and 3
-///  |     |     |    |   |  |   @-[1, 2] means except the position 1, 2
-///  |     |     |    |   |  |   @>2 means position that bigger than 2
-///  |     |     |    |   |  |   @<3 means position less than 3
-///  |     |     |    |   |  |   @* means all the position
-///  |     |     |    |   |  |
-///  |     |     |    |   |  Indicate the option is force required.
-///  |     |     |    |   |
-///  |     |     |    |   The disable symbol, generally it is using for boolean option.
-///  |     |     |    |
-///  |     |     |    The type name of option.
-///  |     |     |    
-///  |     |     The delimiter of option name and type.
-///  |     |
-///  |     The option name part, it must be provide by user.
-///  |  
-///  The prefix of option.
+/// [--option][=][type][/][!][@index]
+///      |     |    |   |  |   |
+///      |     |    |   |  |   |
+///      |     |    |   |  |   |
+///      |     |    |   |  |   The index part of option. Here are all the possible string:
+///      |     |    |   |  |   @1 means first position
+///      |     |    |   |  |   @-1 means last position
+///      |     |    |   |  |   @[1, 2, 3] means the position 1, 2 and 3
+///      |     |    |   |  |   @-[1, 2] means except the position 1, 2
+///      |     |    |   |  |   @>2 means position that bigger than 2
+///      |     |    |   |  |   @<3 means position less than 3
+///      |     |    |   |  |   @* means all the position
+///      |     |    |   |  |
+///      |     |    |   |  Indicate the option is force required.
+///      |     |    |   |
+///      |     |    |   The disable symbol, generally it is using for boolean option.
+///      |     |    |
+///      |     |    The type name of option.
+///      |     |    
+///      |     The delimiter of option name and type.
+///      |
+///      The option name part, it must be provide by user.
 /// ```
 ///
 /// # Example
@@ -45,7 +42,7 @@ use crate::Str;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<(), Error> {
-///     let parser = StrParser::default().with_pre("--");
+///     let parser = StrParser::default();
 ///     let ret = parser.parse("--aopt=t!/".into())?;
 ///
 ///     assert_eq!(ret.prefix, Some(astr("--")));
@@ -79,36 +76,9 @@ thread_local! {
     static STR_PARSER: Regex = Regex::new(r"^([^=]+)?(=([^=/!@]+))?([!/])?([!/])?(@(.+))?$").unwrap();
 }
 
-impl Pre for StrParser {
-    fn prefix(&self) -> &[Str] {
-        &self.prefix
-    }
-
-    fn add_prefix<S: Into<Str>>(&mut self, prefix: S) -> &mut Self {
-        self.prefix.push(prefix.into());
-        self.prefix.sort_by_key(|b| std::cmp::Reverse(b.len()));
-        self
-    }
-}
-
 impl StrParser {
     pub fn new() -> Self {
         Self { prefix: vec![] }
-    }
-
-    pub fn with_pre(mut self, prefix: &str) -> Self {
-        self.add_prefix(prefix);
-        self
-    }
-
-    pub fn rem_pre(&mut self, prefix: &str) -> &mut Self {
-        for (idx, value) in self.prefix.iter().enumerate() {
-            if *value == prefix {
-                self.prefix.remove(idx);
-                break;
-            }
-        }
-        self
     }
 
     // the index number is small in generally
@@ -3231,7 +3201,7 @@ mod test {
                     )),
                 ),
             ];
-            let parser = StrParser::default().with_pre("--").with_pre("-");
+            let parser = StrParser::default();
 
             for case in test_cases.iter() {
                 try_to_verify_one_task(astr(case.0), &parser, &case.1);

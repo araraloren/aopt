@@ -45,7 +45,6 @@ use crate::ser::Services;
 use crate::set::Commit;
 use crate::set::Ctor;
 use crate::set::Filter;
-use crate::set::Pre;
 use crate::set::Set;
 use crate::set::SetCfg;
 use crate::set::SetOpt;
@@ -472,7 +471,7 @@ where
     P::Set: 'static,
     P: Policy<Error = Error>,
     SetOpt<P::Set>: Opt,
-    P::Set: Pre + Set + OptParser,
+    P::Set: Set + OptParser,
     <P::Set as OptParser>::Output: Information,
     SetCfg<P::Set>: Config + ConfigValue + Default,
 {
@@ -588,7 +587,7 @@ where
 impl<P> Parser<P>
 where
     P: Policy<Error = Error>,
-    P::Set: Pre + Set + OptParser,
+    P::Set: Set + OptParser,
     <P::Set as OptParser>::Output: Information,
     SetCfg<P::Set>: Config + ConfigValue + Default,
 {
