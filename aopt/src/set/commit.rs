@@ -114,8 +114,8 @@ where
     }
 
     /// Set the option optional of commit configuration.
-    pub fn set_optional(mut self, optional: bool) -> Self {
-        self.info.set_optional(optional);
+    pub fn set_force(mut self, force: bool) -> Self {
+        self.info.set_force(force);
         self
     }
 

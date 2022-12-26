@@ -110,9 +110,10 @@ impl AOsStrExt for OsStr {
 ///         assert_eq!(output.value, None);
 ///     }
 ///     {// parse other string
-///         let output = RawVal::from("-=bar").parse_arg();
+///         let output = RawVal::from("-=bar").parse_arg()?;
 ///
-///         assert!(output.is_err());
+///         assert_eq!(output.name, Some(astr("-")));
+///         assert_eq!(output.value, Some(Arc::new(RawVal::from("bar"))));
 ///     }
 /// # Ok(())
 /// # }
@@ -184,40 +185,23 @@ impl ArgParser for RawVal {
 
     type Error = Error;
 
-    fn parse_arg(&self, prefixs: &[Str]) -> Result<Self::Output, Self::Error> {
-        use std::ops::Deref;
+    fn parse_arg(&self) -> Result<Self::Output, Self::Error> {
+        if let Some((name, value)) = self.split_once(EQUAL) {
+            let name = name.trim();
 
-        for prefix in prefixs {
-            let inner = self.deref();
-
-            if let Some(with_out_pre) = inner.strip_prefix(prefix.as_str()) {
-                let (dsb, left) = if let Some(left) = with_out_pre.strip_prefix(DISBALE) {
-                    (true, left)
-                } else {
-                    (false, with_out_pre)
-                };
-                let (name, value) = if let Some((name, value)) = left.split_once(EQUAL) {
-                    (name, Some(value))
-                } else {
-                    (left, None)
-                };
-                let name = name.trim();
-
-                if name.is_empty() {
-                    return Err(Error::arg_missing_name("Name can not be empty"));
-                }
-
-                return Ok(Self::Output {
-                    disable: dsb,
-                    name: Some(astr(name)),
-                    value: value.map(|v| Arc::new(v.into())),
-                    prefix: Some(prefix.clone()),
-                });
+            if name.is_empty() {
+                return Err(Error::arg_missing_name("Name can not be empty"));
             }
+
+            Ok(Self::Output {
+                name: Some(astr(name)),
+                value: Some(Arc::new(value.into())),
+            })
+        } else {
+            Ok(Self::Output {
+                name: Some(astr(self.as_str())),
+                value: None,
+            })
         }
-        Err(Error::arg_parsing_failed(format!(
-            "Not a valid option setting string: {:?}",
-            self
-        )))
     }
 }

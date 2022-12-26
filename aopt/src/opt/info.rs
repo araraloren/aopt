@@ -4,39 +4,27 @@ use crate::Str;
 pub trait Information {
     fn has_name(&self) -> bool;
 
-    fn has_pre(&self) -> bool;
-
-    fn has_opt(&self) -> bool;
+    fn has_force(&self) -> bool;
 
     fn has_ty(&self) -> bool;
 
     fn has_idx(&self) -> bool;
 
-    fn has_deact(&self) -> bool;
-
     fn name(&self) -> Option<&Str>;
 
-    fn pre(&self) -> Option<&Str>;
-
-    fn opt(&self) -> Option<bool>;
+    fn force(&self) -> Option<bool>;
 
     fn ty(&self) -> Option<&Str>;
 
     fn idx(&self) -> Option<&Index>;
 
-    fn deact(&self) -> Option<bool>;
-
     fn take_name(&mut self) -> Option<Str>;
 
-    fn take_pre(&mut self) -> Option<Str>;
-
-    fn take_opt(&mut self) -> Option<bool>;
+    fn take_force(&mut self) -> Option<bool>;
 
     fn take_ty(&mut self) -> Option<Str>;
 
     fn take_idx(&mut self) -> Option<Index>;
-
-    fn take_deact(&mut self) -> Option<bool>;
 }
 
 /// Parsing result of option constructor string.
@@ -44,15 +32,11 @@ pub trait Information {
 pub struct ConstrctInfo {
     pub pattern: Str,
 
-    pub prefix: Option<Str>,
-
     pub name: Option<Str>,
 
     pub type_name: Option<Str>,
 
-    pub deactivate: Option<bool>,
-
-    pub optional: Option<bool>,
+    pub force: Option<bool>,
 
     pub index: Option<Index>,
 }
@@ -60,11 +44,6 @@ pub struct ConstrctInfo {
 impl ConstrctInfo {
     pub fn with_pat(mut self, pattern: Str) -> Self {
         self.pattern = pattern;
-        self
-    }
-
-    pub fn with_pre(mut self, prefix: Option<Str>) -> Self {
-        self.prefix = prefix;
         self
     }
 
@@ -78,13 +57,8 @@ impl ConstrctInfo {
         self
     }
 
-    pub fn with_deact(mut self, deactivate: Option<bool>) -> Self {
-        self.deactivate = deactivate;
-        self
-    }
-
-    pub fn with_opt(mut self, optional: Option<bool>) -> Self {
-        self.optional = optional;
+    pub fn with_force(mut self, force: Option<bool>) -> Self {
+        self.force = force;
         self
     }
 
@@ -99,12 +73,8 @@ impl Information for ConstrctInfo {
         self.name.is_some()
     }
 
-    fn has_pre(&self) -> bool {
-        self.prefix.is_some()
-    }
-
-    fn has_opt(&self) -> bool {
-        self.optional.is_some()
+    fn has_force(&self) -> bool {
+        self.force.is_some()
     }
 
     fn has_ty(&self) -> bool {
@@ -115,20 +85,12 @@ impl Information for ConstrctInfo {
         self.index.is_some()
     }
 
-    fn has_deact(&self) -> bool {
-        self.deactivate.is_some()
-    }
-
     fn name(&self) -> Option<&Str> {
         self.name.as_ref()
     }
 
-    fn pre(&self) -> Option<&Str> {
-        self.prefix.as_ref()
-    }
-
-    fn opt(&self) -> Option<bool> {
-        self.optional
+    fn force(&self) -> Option<bool> {
+        self.force
     }
 
     fn ty(&self) -> Option<&Str> {
@@ -139,20 +101,12 @@ impl Information for ConstrctInfo {
         self.index.as_ref()
     }
 
-    fn deact(&self) -> Option<bool> {
-        self.deactivate
-    }
-
     fn take_name(&mut self) -> Option<Str> {
         self.name.take()
     }
 
-    fn take_pre(&mut self) -> Option<Str> {
-        self.prefix.take()
-    }
-
-    fn take_opt(&mut self) -> Option<bool> {
-        self.optional.take()
+    fn take_force(&mut self) -> Option<bool> {
+        self.force.take()
     }
 
     fn take_ty(&mut self) -> Option<Str> {
@@ -161,9 +115,5 @@ impl Information for ConstrctInfo {
 
     fn take_idx(&mut self) -> Option<Index> {
         self.index.take()
-    }
-
-    fn take_deact(&mut self) -> Option<bool> {
-        self.deactivate.take()
     }
 }

@@ -1,6 +1,14 @@
 
 # Relase note
 
+## 0.8.0
+
+- Removing the prefix of option
+
+- Change the optional to force of option
+
+- Remove the deactivate style '/' from create string
+
 ## 0.7.4
 
 - Moving the index parsing logical from StrParser to Index

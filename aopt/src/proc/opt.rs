@@ -196,6 +196,8 @@ pub struct OptProcess<S> {
     matches: Vec<OptMatch<S>>,
 
     consume_arg: bool,
+
+    any_match: bool,
 }
 
 impl<S> Debug for OptProcess<S> {
@@ -203,6 +205,7 @@ impl<S> Debug for OptProcess<S> {
         f.debug_struct("OptProcess")
             .field("matches", &self.matches)
             .field("consume_arg", &self.consume_arg)
+            .field("any_match", &self.any_match)
             .finish()
     }
 }
@@ -212,7 +215,13 @@ impl<S> OptProcess<S> {
         Self {
             matches,
             consume_arg: false,
+            any_match: false,
         }
+    }
+
+    pub fn set_any_match(&mut self, any_match: bool) -> &mut Self {
+        self.any_match = any_match;
+        self
     }
 }
 
@@ -245,7 +254,11 @@ where
 
     /// Return true if the process successful.
     fn is_mat(&self) -> bool {
-        self.matches.iter().all(|v| v.is_mat())
+        if self.any_match {
+            self.matches.iter().any(|v| v.is_mat())
+        } else {
+            self.matches.iter().all(|v| v.is_mat())
+        }
     }
 
     /// Return true if the process need consume an argument.

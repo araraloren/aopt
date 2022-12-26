@@ -2,6 +2,7 @@ pub(crate) mod commit;
 pub(crate) mod filter;
 pub(crate) mod index;
 pub(crate) mod optset;
+pub(crate) mod optvalid;
 
 pub use self::commit::Commit;
 pub use self::filter::Filter;
@@ -9,6 +10,8 @@ pub use self::filter::FilterMatcher;
 pub use self::filter::FilterMut;
 pub use self::index::SetIndex;
 pub use self::optset::OptSet;
+pub use self::optvalid::OptValidator;
+pub use self::optvalid::PrefixOptValidator;
 
 use std::fmt::Debug;
 use std::slice::Iter;
@@ -38,10 +41,6 @@ cfg_if::cfg_if! {
 
             fn r#type(&self) -> Str {
                 Ctor::r#type(self.as_ref())
-            }
-
-            fn sp_deactivate(&self) -> bool {
-                Ctor::sp_deactivate(self.as_ref())
             }
 
             fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
@@ -74,10 +73,6 @@ cfg_if::cfg_if! {
                 Ctor::r#type(self.as_ref())
             }
 
-            fn sp_deactivate(&self) -> bool {
-                Ctor::sp_deactivate(self.as_ref())
-            }
-
             fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
                 Ctor::new_with(self.as_mut(), config)
             }
@@ -102,9 +97,6 @@ pub trait Ctor {
     type Error: Into<Error>;
 
     fn r#type(&self) -> Str;
-
-    /// Return true if the option type support deactivate style such as `--/bool`.
-    fn sp_deactivate(&self) -> bool;
 
     fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error>;
 }

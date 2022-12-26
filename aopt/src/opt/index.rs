@@ -157,10 +157,19 @@ impl Index {
                                 Some(StrParser::parse_as_usize(pattern, beg.as_str())?),
                                 None,
                             )),
-                            (Some(beg), Some(end)) => Ok(Self::range(
-                                Some(StrParser::parse_as_usize(pattern, beg.as_str())?),
-                                Some(StrParser::parse_as_usize(pattern, end.as_str())?),
-                            )),
+                            (Some(beg), Some(end)) => {
+                                let beg = StrParser::parse_as_usize(pattern, beg.as_str())?;
+                                let end = StrParser::parse_as_usize(pattern, end.as_str())?;
+
+                                if beg <= end {
+                                    Ok(Self::range(Some(beg), Some(end)))
+                                } else {
+                                    return Err(Error::con_invalid_index(
+                                        pattern,
+                                        "invalid index assert!(begin >= end)",
+                                    ));
+                                }
+                            }
                         }
                     } else if let Some(value) = cap.get(IDX_SEQUENCE) {
                         let list = StrParser::parse_as_usize_sequence(pattern, value.as_str())?;

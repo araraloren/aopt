@@ -75,7 +75,7 @@ pub trait Opt: Debug {
     fn setted(&self) -> bool;
 
     /// If the option is optional.
-    fn optional(&self) -> bool;
+    fn force(&self) -> bool;
 
     fn assoc(&self) -> &Assoc;
 
@@ -93,7 +93,7 @@ pub trait Opt: Debug {
 
     fn mat_style(&self, style: Style) -> bool;
 
-    fn mat_optional(&self, optional: bool) -> bool;
+    fn mat_force(&self, force: bool) -> bool;
 
     fn mat_name(&self, name: Option<&Str>) -> bool;
 

@@ -26,8 +26,8 @@ where
     fn mat_opt(&self, opt: &T) -> bool {
         let mut ret = true;
 
-        if ret && self.has_optional() {
-            ret = ret && (self.optional().unwrap() == opt.optional());
+        if ret && self.has_force() {
+            ret = ret && (self.force().unwrap() == opt.force());
         }
         if ret && self.has_type() {
             ret = ret && (self.r#type().unwrap() == &opt.r#type());
@@ -101,7 +101,7 @@ where
     }
 
     /// Set the option type name of filter configuration.
-    pub fn set_ty<T: Into<Str>>(&mut self, type_name: T) -> &mut Self {
+    pub fn set_type<T: Into<Str>>(&mut self, type_name: T) -> &mut Self {
         self.info.set_type(type_name);
         self
     }
@@ -113,8 +113,8 @@ where
     }
 
     /// Set the option optional of filter configuration.
-    pub fn set_opt(&mut self, optional: bool) -> &mut Self {
-        self.info.set_optional(optional);
+    pub fn set_force(&mut self, force: bool) -> &mut Self {
+        self.info.set_force(force);
         self
     }
 
@@ -172,7 +172,7 @@ where
     }
 
     /// Set the option type name of filter configuration.
-    pub fn set_ty<T: Into<Str>>(&mut self, type_name: T) -> &mut Self {
+    pub fn set_type<T: Into<Str>>(&mut self, type_name: T) -> &mut Self {
         self.info.set_type(type_name);
         self
     }
@@ -184,8 +184,8 @@ where
     }
 
     /// Set the option optional of filter configuration.
-    pub fn set_opt(&mut self, optional: bool) -> &mut Self {
-        self.info.set_optional(optional);
+    pub fn set_force(&mut self, force: bool) -> &mut Self {
+        self.info.set_force(force);
         self
     }
 

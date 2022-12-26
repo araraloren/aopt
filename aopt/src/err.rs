@@ -70,8 +70,6 @@ pub enum Error {
 
     ArgMissingValue(ErrorStr),
 
-    ArgMissingPrefix(ErrorStr),
-
     ConParsingFailed(ErrorStr),
 
     ConNoPOSIfCMDExists,
@@ -80,11 +78,11 @@ pub enum Error {
 
     ConDeactivateStyleError(ErrorStr),
 
-    ConMissingPrefix(ErrorStr, ErrorStr),
-
     ConMissingIndex(ErrorStr, ErrorStr),
 
     ConMissingField(ErrorStr, ErrorStr, ErrorStr),
+
+    ConInvalidName(ErrorStr, ErrorStr),
 
     ConInvalidIndex(ErrorStr, ErrorStr),
 
@@ -174,9 +172,9 @@ impl Error {
         Self::ConNoPOSIfCMDExists
     }
 
-    /// Create Error::ConMissingPrefix error
-    pub fn con_missing_prefix<T: Into<ErrorStr>>(t: T, p: T) -> Self {
-        Self::ConMissingPrefix(t.into(), p.into())
+    /// Create Error::ConInvalidName error
+    pub fn con_invalid_name<T: Into<ErrorStr>>(t: T, p: T) -> Self {
+        Self::ConInvalidName(t.into(), p.into())
     }
 
     /// Create Error::ConMissingIndex error
@@ -278,9 +276,6 @@ impl Error {
             Error::ArgMissingValue(opt) => {
                 format!("Syntax error! Missing option value: '{opt}'.")
             }
-            Error::ArgMissingPrefix(opt) => {
-                format!("Syntax error! Missing option prefix: '{opt}'.")
-            }
             Error::ConNoPOSIfCMDExists => {
                 "Can not have force required POS if CMD exists.".to_owned()
             }
@@ -290,8 +285,8 @@ impl Error {
             Error::ConDeactivateStyleError(name) => {
                 format!("Option '{name}' not support deactivate style.")
             }
-            Error::ConMissingPrefix(name, r#type) => {
-                format!("Syntax error! Missing prefix for option '{name}' with type '{type}'.")
+            Error::ConInvalidName(name, msg) => {
+                format!("Invalid name of option '{name}': {msg}")
             }
             Error::ConMissingIndex(name, r#type) => {
                 format!("Syntax error! Missing index for option '{name}' with type '{type}'.")

@@ -37,8 +37,8 @@ pub trait ConfigValue {
     /// The alias name and prefix of option.
     fn alias(&self) -> Option<&Vec<Str>>;
 
-    /// If the option is optional.
-    fn optional(&self) -> Option<bool>;
+    /// If the option is force required.
+    fn force(&self) -> Option<bool>;
 
     /// Associated type of option.
     fn assoc(&self) -> Option<&Assoc>;
@@ -64,7 +64,7 @@ pub trait ConfigValue {
 
     fn has_alias(&self) -> bool;
 
-    fn has_optional(&self) -> bool;
+    fn has_force(&self) -> bool;
 
     fn has_validator(&self) -> bool;
 
@@ -72,7 +72,7 @@ pub trait ConfigValue {
 
     fn set_idx(&mut self, index: Index) -> &mut Self;
 
-    fn set_optional(&mut self, optional: bool) -> &mut Self;
+    fn set_force(&mut self, force: bool) -> &mut Self;
 
     fn set_name<S: Into<Str>>(&mut self, name: S) -> &mut Self;
 
@@ -102,7 +102,7 @@ pub trait ConfigValue {
 
     fn gen_idx(&self) -> Result<Index, Error>;
 
-    fn gen_optional(&self) -> Result<bool, Error>;
+    fn gen_force(&self) -> Result<bool, Error>;
 
     fn gen_assoc(&self) -> Result<Assoc, Error>;
 
@@ -126,7 +126,7 @@ pub trait ConfigValue {
 
     fn take_idx(&mut self) -> Option<Index>;
 
-    fn take_optional(&mut self) -> Option<bool>;
+    fn take_force(&mut self) -> Option<bool>;
 
     fn take_alias(&mut self) -> Option<Vec<Str>>;
 
@@ -144,7 +144,7 @@ pub struct OptConfig {
 
     name: Option<Str>,
 
-    opt: Option<bool>,
+    force: Option<bool>,
 
     idx: Option<Index>,
 
@@ -169,8 +169,8 @@ impl OptConfig {
         self
     }
 
-    pub fn with_optional(mut self, optional: bool) -> Self {
-        self.opt = Some(optional);
+    pub fn with_force(mut self, force: bool) -> Self {
+        self.force = Some(force);
         self
     }
 
@@ -251,8 +251,8 @@ impl Config for OptConfig {
         if let Some(v) = output.take_idx() {
             ret.set_idx(v);
         }
-        if let Some(v) = output.take_opt() {
-            ret.set_optional(!v);
+        if let Some(v) = output.take_force() {
+            ret.set_force(v);
         }
         Ok(ret)
     }
@@ -283,8 +283,8 @@ impl ConfigValue for OptConfig {
         Some(self.alias.as_ref())
     }
 
-    fn optional(&self) -> Option<bool> {
-        self.opt
+    fn force(&self) -> Option<bool> {
+        self.force
     }
 
     fn assoc(&self) -> Option<&Assoc> {
@@ -327,8 +327,8 @@ impl ConfigValue for OptConfig {
         !self.alias.is_empty()
     }
 
-    fn has_optional(&self) -> bool {
-        self.opt.is_some()
+    fn has_force(&self) -> bool {
+        self.force.is_some()
     }
 
     fn has_validator(&self) -> bool {
@@ -344,8 +344,8 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn set_optional(&mut self, optional: bool) -> &mut Self {
-        self.opt = Some(optional);
+    fn set_force(&mut self, force: bool) -> &mut Self {
+        self.force = Some(force);
         self
     }
 
@@ -432,11 +432,11 @@ impl ConfigValue for OptConfig {
         Err(Error::con_missing_index(self.gen_name()?, self.gen_type()?))
     }
 
-    fn gen_optional(&self) -> Result<bool, Error> {
-        if let Some(optional) = self.opt {
-            return Ok(optional);
+    fn gen_force(&self) -> Result<bool, Error> {
+        if let Some(force) = self.force {
+            return Ok(force);
         }
-        Err(self.raise_missing_error("optional")?)
+        Err(self.raise_missing_error("force")?)
     }
 
     fn gen_assoc(&self) -> Result<Assoc, Error> {
@@ -523,8 +523,8 @@ impl ConfigValue for OptConfig {
         self.idx.take()
     }
 
-    fn take_optional(&mut self) -> Option<bool> {
-        self.opt.take()
+    fn take_force(&mut self) -> Option<bool> {
+        self.force.take()
     }
 
     fn take_alias(&mut self) -> Option<Vec<Str>> {

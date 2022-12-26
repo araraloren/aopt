@@ -120,8 +120,8 @@ where
     }
 
     /// Set the option optional of commit configuration.
-    pub fn set_optional(mut self, optional: bool) -> Self {
-        self.cfg_mut().set_optional(optional);
+    pub fn set_force(mut self, force: bool) -> Self {
+        self.cfg_mut().set_force(force);
         self
     }
 

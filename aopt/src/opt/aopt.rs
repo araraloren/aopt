@@ -18,27 +18,27 @@ use crate::Uid;
 ///
 /// The type support by default:
 ///
-/// |  creator   | assoc  | default action |string | ignore name | styles | deactivate style |
+/// |  creator   | assoc  | default action |string | ignore name | styles |
 /// |  ----  | ----  | -- | -- | -- | -- | -- |
-/// | [`bool`](Creator::bool)  | [`Assoc::Bool`] | [`Action::App`] | `b` | false | [`Style::Boolean`],[`Style::Combined`] | yes |
-/// | [`str`](Creator::str)  | [`Assoc::Str`] | [`Action::App`] | `s` | false | [`Style::Argument`] | no |
-/// | [`flt`](Creator::flt)  | [`Assoc::Flt`] | [`Action::App`] | `f` | false | [`Style::Argument`] | no |
-/// | [`int`](Creator::int)  | [`Assoc::Int`] | [`Action::App`] | `i` | false | [`Style::Argument`] | no |
-/// | [`uint`](Creator::uint)  | [`Assoc::Uint`] | [`Action::App`] | `u` | false | [`Style::Argument`] | no |
-/// | [`cmd`](Creator::cmd)  | [`Assoc::Noa`] | [`Action::Set`] | `c` | false | [`Style::Cmd`] | no |
-/// | [`pos`](Creator::pos)  | [`Assoc::Noa`] | [`Action::App`] | `p` | true | [`Style::Pos`] | no |
-/// | [`main`](Creator::main)  | [`Assoc::Null`] | [`Action::Set`] | `m` | true | [`Style::Main`] | no |
+/// | [`bool`](Creator::bool)  | [`Assoc::Bool`] | [`Action::App`] | `b` | false | [`Style::Boolean`],[`Style::Combined`] |
+/// | [`str`](Creator::str)  | [`Assoc::Str`] | [`Action::App`] | `s` | false | [`Style::Argument`] |
+/// | [`flt`](Creator::flt)  | [`Assoc::Flt`] | [`Action::App`] | `f` | false | [`Style::Argument`] |
+/// | [`int`](Creator::int)  | [`Assoc::Int`] | [`Action::App`] | `i` | false | [`Style::Argument`] |
+/// | [`uint`](Creator::uint)  | [`Assoc::Uint`] | [`Action::App`] | `u` | false | [`Style::Argument`] |
+/// | [`cmd`](Creator::cmd)  | [`Assoc::Noa`] | [`Action::Set`] | `c` | false | [`Style::Cmd`] |
+/// | [`pos`](Creator::pos)  | [`Assoc::Noa`] | [`Action::App`] | `p` | true | [`Style::Pos`] |
+/// | [`main`](Creator::main)  | [`Assoc::Null`] | [`Action::Set`] | `m` | true | [`Style::Main`] |
 ///
-/// |  creator   | index support  | optional support | prefix support | alias support | validator |
+/// |  creator   | index support  | optional support | alias support | validator |
 /// |  ----  | ----  | -- | -- | -- | -- |
-/// | [`bool`](Creator::bool)  | no | yes | yes | yes | [`bool`](ValValidator::bool) |
-/// | [`str`](Creator::str)  | no | yes | yes | yes | [`str`](ValValidator::str) |
-/// | [`flt`](Creator::flt)  | no | yes | yes | yes |  [`f64`](ValValidator::f64) |
-/// | [`int`](Creator::int)  | no | yes | yes | yes |  [`i64`](ValValidator::i64) |
-/// | [`uint`](Creator::uint)  | no | yes | yes | yes |  [`u64`](ValValidator::u64) |
-/// | [`cmd`](Creator::cmd)  | [`Forward(1)`](crate::opt::Index::Forward) | `false` | no | no | [`some`](ValValidator::some) |
-/// | [`pos`](Creator::pos)  | yes | yes | no | no |  [`some`](ValValidator::some) |
-/// | [`main`](Creator::main)  | [`AnyWhere`](crate::opt::Index::AnyWhere) | no | no | no | [`null`](ValValidator::null) |
+/// | [`bool`](Creator::bool)  | no | yes | yes | [`bool`](ValValidator::bool) |
+/// | [`str`](Creator::str)  | no | yes | yes | [`str`](ValValidator::str) |
+/// | [`flt`](Creator::flt)  | no | yes | yes |  [`f64`](ValValidator::f64) |
+/// | [`int`](Creator::int)  | no | yes | yes |  [`i64`](ValValidator::i64) |
+/// | [`uint`](Creator::uint)  | no | yes | yes |  [`u64`](ValValidator::u64) |
+/// | [`cmd`](Creator::cmd)  | [`Forward(1)`](crate::opt::Index::Forward) | `false` | no | [`some`](ValValidator::some) |
+/// | [`pos`](Creator::pos)  | yes | yes | no |  [`some`](ValValidator::some) |
+/// | [`main`](Creator::main)  | [`AnyWhere`](crate::opt::Index::AnyWhere) | no | no | [`null`](ValValidator::null) |
 #[derive(Debug, Default)]
 pub struct AOpt {
     uid: Uid,
@@ -51,7 +51,7 @@ pub struct AOpt {
 
     setted: bool,
 
-    optional: bool,
+    force: bool,
 
     assoc: Assoc,
 
@@ -138,8 +138,8 @@ impl AOpt {
     }
 
     /// If the option is force required.
-    pub fn with_optional(mut self, optional: bool) -> Self {
-        self.optional = optional;
+    pub fn with_force(mut self, force: bool) -> Self {
+        self.force = force;
         self
     }
 
@@ -204,8 +204,8 @@ impl AOpt {
         self
     }
 
-    pub fn set_optional(&mut self, optional: bool) -> &mut Self {
-        self.optional = optional;
+    pub fn set_force(&mut self, force: bool) -> &mut Self {
+        self.force = force;
         self
     }
 
@@ -262,15 +262,15 @@ impl Opt for AOpt {
     }
 
     fn valid(&self) -> bool {
-        self.optional() || self.setted()
+        !self.force() || self.setted()
     }
 
     fn setted(&self) -> bool {
         self.setted
     }
 
-    fn optional(&self) -> bool {
-        self.optional
+    fn force(&self) -> bool {
+        self.force
     }
 
     fn assoc(&self) -> &Assoc {
@@ -301,8 +301,8 @@ impl Opt for AOpt {
         self.styles.iter().any(|v| v == &style)
     }
 
-    fn mat_optional(&self, optional: bool) -> bool {
-        self.optional() == optional
+    fn mat_force(&self, force: bool) -> bool {
+        self.force() == force
     }
 
     fn mat_name(&self, name: Option<&Str>) -> bool {

@@ -66,7 +66,7 @@ where
                 if opt.mat_style(Style::Pos) {
                     if let Some(index) = opt.idx() {
                         let index = index.calc_index(MAX_INDEX, 1).unwrap_or(MAX_INDEX);
-                        if index == 1 && !opt.optional() {
+                        if index == 1 && opt.force() {
                             // if we have cmd, can not have force required POS @1
                             return Err(Error::con_can_not_insert_pos());
                         }
