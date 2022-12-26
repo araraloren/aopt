@@ -9,7 +9,7 @@ Add following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-cote = "0.1"
+cote = "0.2"
 ```
 
 ## Enable Features from aopt
@@ -20,7 +20,7 @@ If you want the utils of current crate implement `Send` and `Sync`, you can enab
 
 ```toml
 [dependencies]
-cote = { version = "0.1", features = [ "sync" ] }
+cote = { version = "0.2", features = [ "sync" ] }
 ```
 
 ### Enable `utf8` feature
@@ -29,7 +29,7 @@ By default, the command line parsing support `OsString`, enable `utf8` using `St
 
 ```toml
 [dependencies]
-cote = { version = "0.1", features = [ "utf8" ] }
+cote = { version = "0.2", features = [ "utf8" ] }
 ```
 
 ## Example

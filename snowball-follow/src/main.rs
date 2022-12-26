@@ -25,7 +25,7 @@ async fn main() -> color_eyre::Result<()> {
         .init();
     color_eyre::install()?;
     let parser = parser_command_line(Args::new(std::env::args().skip(1)))?;
-    let debug = *parser.find_val::<bool>("debug")?;
+    let debug = *parser.find_val::<bool>("--debug")?;
     let help = *parser.find_val::<bool>("--help")?;
 
     if help {
@@ -40,9 +40,9 @@ async fn main() -> color_eyre::Result<()> {
             ids.push(stock_id.clone());
         }
         if !ids.is_empty() {
-            let start = *parser.find_val::<i64>("start")?;
-            let count = *parser.find_val::<i64>("count")?;
-            let interval = *parser.find_val::<u64>("interval")?;
+            let start = *parser.find_val::<i64>("--start")?;
+            let count = *parser.find_val::<i64>("--count")?;
+            let interval = *parser.find_val::<u64>("--interval")?;
 
             let snowball = SnowBall::new(debug)?;
 
@@ -161,7 +161,6 @@ fn parser_command_line(args: Args) -> Result<AFwdParser, Error> {
 
     for (optstr, alias, help, value) in [
         ("-d=b", "--debug", "Print debug message", None),
-        ("-h=b", "--help", "Print help message", None),
         (
             "-i=u",
             "--interval",
@@ -198,7 +197,7 @@ fn parser_command_line(args: Args) -> Result<AFwdParser, Error> {
         .set_values(Vec::<String>::new())
         .on(|set: &mut ASet, ser: &mut ASer, val: ctx::Value<String>| {
             let id = convert_line_to_stock_number(val.deref());
-            let debug = *ser.sve_val::<bool>(set["debug"].uid())?;
+            let debug = *ser.sve_val::<bool>(set["--debug"].uid())?;
 
             if debug {
                 if id.is_none() {
@@ -218,7 +217,7 @@ fn parser_command_line(args: Args) -> Result<AFwdParser, Error> {
         .on(
             |set: &mut ASet, ser: &mut ASer, file: ctx::Value<PathBuf>| {
                 let mut ret = Ok(None);
-                let debug = *ser.sve_val::<bool>(set["debug"].uid())?;
+                let debug = *ser.sve_val::<bool>(set["--debug"].uid())?;
 
                 if file.is_file() {
                     let fh = File::open(file.as_path()).map_err(|e| {
@@ -342,7 +341,7 @@ fn display_help<S: Set>(set: &S) -> Result<(), aopt_help::Error> {
                     Cow::from(opt.hint().as_str()),
                     Cow::from(opt.help().as_str()),
                     Cow::from(opt.r#type().to_string()),
-                    opt.optional(),
+                    opt.force(),
                     true,
                 ),
             )?;
@@ -357,7 +356,7 @@ fn display_help<S: Set>(set: &S) -> Result<(), aopt_help::Error> {
                     Cow::from(opt.hint().as_str()),
                     Cow::from(opt.help().as_str()),
                     Cow::from(opt.r#type().to_string()),
-                    opt.optional(),
+                    opt.force(),
                     false,
                 ),
             )?;

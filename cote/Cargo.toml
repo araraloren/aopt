@@ -1,6 +1,6 @@
 [package]
 name = "cote"
-version = "0.1.4"
+version = "0.2.0"
 authors = ["araraloren <araraloren@gmail.com>"]
 edition = "2021"
 license = "MPL-2.0"
@@ -13,7 +13,7 @@ categories = ["command-line-interface"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aopt = { version = "0.7" }
+aopt = { version = "0.8" }
 aopt-help = { version = "0.3" }
 serde = { version = "1.0", features = [ "derive" ] }
 

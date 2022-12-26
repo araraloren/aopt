@@ -2,8 +2,8 @@ use std::borrow::Cow;
 use std::path::Path;
 use std::{ops::Deref, os::windows::prelude::MetadataExt};
 
-use aopt::Error;
 use aopt::ctx::VecStore;
+use aopt::Error;
 use aopt::{getopt, prelude::*};
 use regex::Regex;
 
@@ -93,20 +93,20 @@ fn main() -> color_eyre::Result<()> {
     parser
         .add_opt("--help=b")?
         .add_alias("-h")
-        .set_help("Show the help message");
+        .set_help("Show the help message")
+        .on(|set: &mut ASet, _: &mut ASer| -> Result<Option<()>, Error> {
+            display_help(set).map_err(|e| {
+                Error::raise_error(format!("can not write help to stdout: {:?}", e))
+            })?;
+            std::process::exit(0)
+        })?;
 
     parser
         .add_opt("main=m")?
         .set_help("Main function")
         .fallback(|set: &mut ASet, ser: &mut ASer| {
-            if *ser.sve_val::<bool>(set["--help"].uid())? {
-                display_help(set).map_err(|e| {
-                    Error::raise_error(format!("can not write help to stdout: {:?}", e))
-                })?;
-            } else {
-                for file in ser.sve_vals::<String>(set["directory"].uid())? {
-                    println!("{}", file);
-                }
+            for file in ser.sve_vals::<String>(set["directory"].uid())? {
+                println!("{}", file);
             }
             Ok(None::<()>)
         })?;
@@ -209,7 +209,7 @@ fn display_help<S: Set>(set: &S) -> Result<(), aopt_help::Error> {
                     Cow::from(opt.hint().as_str()),
                     Cow::from(opt.help().as_str()),
                     Cow::from(opt.r#type().to_string()),
-                    opt.optional(),
+                    !opt.force(),
                     true,
                 ),
             )?;
@@ -224,7 +224,7 @@ fn display_help<S: Set>(set: &S) -> Result<(), aopt_help::Error> {
                     Cow::from(opt.hint().as_str()),
                     Cow::from(opt.help().as_str()),
                     Cow::from(opt.r#type().to_string()),
-                    opt.optional(),
+                    !opt.force(),
                     false,
                 ),
             )?;

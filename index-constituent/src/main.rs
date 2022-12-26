@@ -2,10 +2,10 @@ mod spyder;
 
 use std::ops::Deref;
 
-use cote::prelude::*;
 use aopt::prelude::*;
-use aopt::Error;
 use aopt::set::SetCfg;
+use aopt::Error;
+use cote::prelude::*;
 use spyder::cnindex::CNIndex;
 use spyder::csindex::CSIndex;
 use spyder::Spyder;
@@ -24,7 +24,6 @@ async fn main() -> color_eyre::Result<()> {
     let mut cote = Cote::<AFwdPolicy>::default();
 
     for (opt, alias, help, value) in [
-        ("-h=b", "-help", "Print help message", None),
         ("-d=b", "--debug", "Print debug message", None),
         (
             "-n=i",
@@ -34,7 +33,7 @@ async fn main() -> color_eyre::Result<()> {
         ),
         ("-a=b", "--all", "Get all the result", None),
         ("-i=b", "--id-only", "Display only id column", None),
-        ("-r=b/", "--reverse", "Reverse the order of result", None),
+        ("-/r=b", "--/reverse", "Reverse the order of result", None),
     ] {
         let pc = cote.add_opt(opt)?.add_alias(alias).set_help(help);
 
@@ -72,17 +71,14 @@ async fn main() -> color_eyre::Result<()> {
     // add a pos to last, but don't use it
     cote.add_opt("args=p@2")?
         .set_assoc(Assoc::Str)
-        .set_optional(false)
         .set_help("Argument of operate, such as keyword of search");
     Ok(cote
         .run_async_mut(|ret, app| async move {
-            let debug: bool = *app.find_val("--debug")?;
-            let display_help = ret.is_none();
-
-            if display_help {
-                cote_help!(app)?;
-            } else {
-                let data = app.find_val::<String>("args")?;
+            if ret.is_some() {
+                let debug: bool = *app.find_val("--debug")?;
+                let data = app
+                    .find_val::<String>("args")
+                    .expect("Which index do you want to list?");
                 let all = *app.find_val::<bool>("--all")?;
                 let type_ = app.find_val::<String>("--type")?;
                 let page_size = *app.find_val::<i64>("--page-size")?;
@@ -94,7 +90,7 @@ async fn main() -> color_eyre::Result<()> {
                     .with_page_number(page_number as usize);
                 let mut data = vec![];
                 let id_only = *app.find_val::<bool>("--id-only")?;
-                let reverse = *app.find_val::<bool>("--reverse")?;
+                let reverse = *app.find_val::<bool>("--/reverse")?;
 
                 loop {
                     let ret = run_command(&ctx).await?;
@@ -150,7 +146,7 @@ struct SearchCtx<'a, 'b, 'c, P: Policy> {
 impl<'a, 'b, 'c, P: Policy> SearchCtx<'a, 'b, 'c, P>
 where
     P: Policy<Error = Error>,
-    P::Set: Pre + Set + OptParser,
+    P::Set: OptValidator + Set + OptParser,
     <P::Set as OptParser>::Output: Information,
     SetCfg<P::Set>: Config + ConfigValue + Default,
 {
@@ -252,7 +248,7 @@ async fn run_command<'a, 'b, 'c, P: Policy>(
 ) -> Result<SpyderIndexData, Error>
 where
     P: Policy<Error = Error>,
-    P::Set: Pre + Set + OptParser,
+    P::Set: OptValidator + Set + OptParser,
     <P::Set as OptParser>::Output: Information,
     SetCfg<P::Set>: Config + ConfigValue + Default,
 {
@@ -281,7 +277,7 @@ async fn search_keyword<'a, 'b, 'c, P: Policy>(
 ) -> Result<SpyderIndexData, Error>
 where
     P: Policy<Error = Error>,
-    P::Set: Pre + Set + OptParser,
+    P::Set: OptValidator + Set + OptParser,
     <P::Set as OptParser>::Output: Information,
     SetCfg<P::Set>: Config + ConfigValue + Default,
 {
@@ -323,7 +319,7 @@ async fn display_cons_of<'a, 'b, 'c, P: Policy>(
 ) -> Result<SpyderIndexData, Error>
 where
     P: Policy<Error = Error>,
-    P::Set: Pre + Set + OptParser,
+    P::Set: OptValidator + Set + OptParser,
     <P::Set as OptParser>::Output: Information,
     SetCfg<P::Set>: Config + ConfigValue + Default,
 {
