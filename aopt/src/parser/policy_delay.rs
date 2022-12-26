@@ -23,7 +23,7 @@ use crate::opt::OptParser;
 use crate::proc::Process;
 use crate::ser::Services;
 use crate::set::Ctor;
-use crate::set::Pre;
+use crate::set::OptValidator;
 use crate::set::Set;
 use crate::Arc;
 use crate::Error;
@@ -183,7 +183,7 @@ where
 impl<S> Policy for DelayPolicy<S>
 where
     <S::Ctor as Ctor>::Opt: Opt,
-    S: Set + OptParser + Pre + Debug + 'static,
+    S: Set + OptParser + OptValidator + Debug + 'static,
 {
     type Ret = ReturnVal;
 
@@ -219,34 +219,38 @@ where
             let arg = arg.map(|v| Arc::new(v.clone()));
 
             // parsing current argument
-            if let Ok(clopt) = opt.parse_arg(set.prefix()) {
-                for style in opt_styles.iter() {
-                    if let Some(mut proc) = OptGuess::new()
-                        .guess(style, GuessOptCfg::new(idx, args_len, arg.clone(), &clopt))?
-                    {
-                        opt_ctx.set_idx(idx);
-                        let ret = process_opt::<S>(&opt_ctx, set, ser, &mut proc, false)?;
+            if let Ok(clopt) = opt.parse_arg() {
+                if let Some(name) = clopt.name() {
+                    if set.check_name(name.as_str())? {
+                        for style in opt_styles.iter() {
+                            if let Some(mut proc) = OptGuess::new().guess(
+                                style,
+                                GuessOptCfg::new(idx, args_len, arg.clone(), &clopt),
+                            )? {
+                                opt_ctx.set_idx(idx);
+                                let ret = process_opt::<S>(&opt_ctx, set, ser, &mut proc, false)?;
 
-                        if proc.is_mat() {
-                            self.contexts.extend(ret);
-                            matched = true;
+                                if proc.is_mat() {
+                                    self.contexts.extend(ret);
+                                    matched = true;
+                                }
+                                if proc.consume() {
+                                    consume = true;
+                                }
+                                if matched {
+                                    break;
+                                }
+                            }
                         }
-                        if proc.consume() {
-                            consume = true;
-                        }
-                        if matched {
-                            break;
+                        if !matched && self.strict() {
+                            let default_str = astr("");
+
+                            return Err(Error::sp_invalid_option_name(format!(
+                                "{}",
+                                clopt.name().unwrap_or(&default_str)
+                            )));
                         }
                     }
-                }
-                if !matched && self.strict() {
-                    let default_str = astr("");
-
-                    return Err(Error::sp_invalid_option_name(format!(
-                        "{}{}",
-                        clopt.prefix().unwrap_or(&default_str),
-                        clopt.name().unwrap_or(&default_str)
-                    )));
                 }
             }
 
@@ -333,35 +337,27 @@ mod test {
             opt: &AOpt,
             uid: Uid,
             name: &str,
-            prefix: Option<&str>,
             vals: Option<Vec<T>>,
-            optional: bool,
+            force: bool,
             action: &Action,
             assoc: &Assoc,
             index: Option<&Index>,
-            alias: Option<Vec<(&str, &str)>>,
-            deactivate: bool,
+            alias: Option<Vec<&str>>,
         ) -> Result<(), Error> {
             let opt_uid = opt.uid();
 
             assert_eq!(opt_uid, uid);
             assert_eq!(opt.name(), name, "name not equal -{}-", opt_uid);
-            assert_eq!(opt.prefix().map(|v| v.as_str()), prefix);
             assert_eq!(
-                opt.optional(),
-                optional,
-                "optional not equal -{}-: {}",
+                opt.force(),
+                force,
+                "option force required not equal -{}-: {}",
                 opt_uid,
-                optional
+                force
             );
             assert_eq!(opt.action(), action, "action not equal for {}", opt_uid);
             assert_eq!(opt.assoc(), assoc, "assoc not equal for {}", opt_uid);
             assert_eq!(opt.idx(), index, "option index not equal: {:?}", index);
-            assert_eq!(
-                opt.is_deactivate(),
-                deactivate,
-                "deactivate style not matched!"
-            );
             if let Ok(opt_vals) = ser.sve_vals::<T>(opt_uid) {
                 if let Some(vals) = vals {
                     assert_eq!(
@@ -388,12 +384,11 @@ mod test {
             if let Some(opt_alias) = opt.alias() {
                 if let Some(alias) = alias {
                     assert_eq!(opt_alias.len(), alias.len());
-                    for (prefix, name) in alias {
+                    for name in alias {
                         assert!(
-                            opt_alias.iter().any(|(p, n)| p == prefix && n == name),
-                            "alias => {:?} <--> {}, {}",
+                            opt_alias.iter().any(|n| n == name),
+                            "alias => {:?} <--> {}",
                             &opt_alias,
-                            prefix,
                             name,
                         );
                     }
@@ -427,7 +422,8 @@ mod test {
             .into_iter(),
         );
 
-        set.add_prefix("+");
+        set.validator_mut().add_prefix("+");
+
         set.add_opt("set=c")?;
         set.add_opt("filter=c")?;
         let args_uid = set.add_opt("args=p@2..")?.set_assoc(Assoc::Flt).run()?;
@@ -457,28 +453,24 @@ mod test {
                     args,
                     args_uid,
                     "args",
-                    None,
                     Some(vec![42.0, 88.0, 66.0]),
-                    true,
+                    false,
                     &Action::App,
                     &Assoc::Flt,
                     Some(&Index::Range(2, 0)),
                     None,
-                    false,
                 )?;
                 check_opt_val::<Vec<f64>>(
                     ser,
                     bopt,
                     bopt.uid(),
-                    "bigger-than",
-                    Some("--"),
+                    "--bigger-than",
                     Some(vec![vec![8.0, 11.0]]),
-                    true,
+                    false,
                     &Action::App,
                     &Assoc::Flt,
                     None,
                     None,
-                    false,
                 )?;
                 Ok(Some(()))
             });

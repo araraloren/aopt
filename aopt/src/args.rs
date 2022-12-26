@@ -7,7 +7,6 @@ use std::ops::DerefMut;
 
 use crate::Error;
 use crate::RawVal;
-use crate::Str;
 
 pub use self::osstr_ext::AOsStrExt;
 pub use self::osstr_ext::CLOpt;
@@ -16,7 +15,7 @@ pub trait ArgParser {
     type Output;
     type Error: Into<Error>;
 
-    fn parse_arg(&self, prefixs: &[Str]) -> Result<Self::Output, Self::Error>;
+    fn parse_arg(&self) -> Result<Self::Output, Self::Error>;
 }
 
 #[derive(Debug, Clone, Default)]

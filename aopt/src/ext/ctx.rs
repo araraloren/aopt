@@ -14,16 +14,16 @@
 //! let mut set = policy.default_set();
 //! let mut ser = policy.default_ser();
 //!
-//! set.add_opt("--bool=b/")?.run()?;
+//! set.add_opt("--/bool=b")?.run()?;
 //! set.add_opt("set=c")?.run()?;
 //! set.add_opt("pos_2=p@2")?.run()?;
 //! set.add_opt("pos_v=p@3..")?.run()?;
 //! ser.ser_invoke_mut()?
 //!     .entry(0)
-//!     .on(|_: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
+//!     .on(|_: &mut ASet, _: &mut ASer, value: ctx::Value<bool>| {
 //!         assert_eq!(
 //!             &true,
-//!             disable.deref(),
+//!             value.deref(),
 //!             "Value is parsed from argument of Ctx which set in Policy"
 //!         );
 //!         Ok(Some(false))
@@ -120,7 +120,7 @@ impl<S> Extract<S> for Ctx {
 ///   let mut set = policy.default_set();
 ///   let mut ser = policy.default_ser();
 ///
-///   set.add_opt("--bool=b/")?.run()?;
+///   set.add_opt("--/bool=b")?.run()?;
 ///   ser.ser_invoke_mut()?
 ///       .entry(0)
 ///       .on(|_: &mut ASet, _: &mut ASer, ctx_uid: ctx::Uid| {
@@ -200,7 +200,7 @@ impl Display for Uid {
 /// let mut set = policy.default_set();
 /// let mut ser = policy.default_ser();
 ///
-/// set.add_opt("--bool=b/")?.run()?;
+/// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut()?
@@ -309,7 +309,7 @@ impl Display for Index {
 /// let mut set = policy.default_set();
 /// let mut ser = policy.default_ser();
 ///
-/// set.add_opt("--bool=b/")?.run()?;
+/// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut()?
@@ -406,7 +406,7 @@ impl Display for Total {
 /// let mut set = policy.default_set();
 /// let mut ser = policy.default_ser();
 ///
-/// set.add_opt("--bool=b/")?.run()?;
+/// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut()?
@@ -489,18 +489,18 @@ impl<S: Set> Extract<S> for Args {
 /// let mut set = policy.default_set();
 /// let mut ser = policy.default_ser();
 ///
-/// set.add_opt("--bool=b/")?.run()?;
+/// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut()?
 ///     .entry(0)
 ///     .on(|_: &mut ASet, _: &mut ASer, name: Option<ctx::Name>| {
 ///         assert_eq!(
-///             "bool",
+///             "--/bool",
 ///             name.unwrap().deref().as_ref(),
 ///             "Name is the name from Ctx set in Policy"
 ///         );
-///         Ok(Some(false))
+///         Ok(Some(true))
 ///     });
 ///
 /// ser.ser_invoke_mut()?
@@ -529,7 +529,7 @@ impl<S: Set> Extract<S> for Args {
 ///
 /// policy.parse(&mut set, &mut ser, Arc::new(args))?;
 ///
-/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
+/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &true);
 /// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
 /// assert_eq!(ser.ser_val()?.val::<i64>(2)?, &2);
 /// #
@@ -592,104 +592,6 @@ impl Display for Name {
     }
 }
 
-/// The prefix cloned from [`Ctx`] which set in [`Policy`](crate::parser::Policy).
-///
-/// # Examples
-/// ```rust
-/// # use aopt::prelude::*;
-/// # use aopt::Arc;
-/// # use aopt::Error;
-/// # use std::ops::Deref;
-/// #
-/// # fn main() -> Result<(), Error> {
-/// let mut policy = AFwdPolicy::default();
-/// let mut set = policy.default_set();
-/// let mut ser = policy.default_ser();
-///
-/// set.add_opt("--bool=b/")?.run()?;
-/// set.add_opt("set=c")?.run()?;
-/// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut()?
-///     .entry(0)
-///     .on(|_: &mut ASet, _: &mut ASer, prefix: Option<ctx::Prefix>| {
-///         assert_eq!(
-///             "--",
-///             prefix.unwrap().deref().as_ref(),
-///             "Prefix is the prefix from Ctx set in Policy"
-///         );
-///         Ok(Some(false))
-///     });
-///
-/// ser.ser_invoke_mut()?
-///     .entry(1)
-///     .on(|_: &mut ASet, _: &mut ASer, prefix: Option<ctx::Prefix>| {
-///         assert_eq!(None, prefix, "Prefix is the prefix from Ctx set in Policy");
-///         Ok(Some(true))
-///     });
-///
-/// ser.ser_invoke_mut()?
-///     .entry(2)
-///     .on(|_: &mut ASet, _: &mut ASer, prefix: Option<ctx::Prefix>| {
-///         assert_eq!(None, prefix, "Prefix is the prefix from Ctx set in Policy");
-///         Ok(Some(2i64))
-///     });
-///
-/// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
-///
-/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
-///
-/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
-/// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val()?.val::<i64>(2)?, &2);
-/// #
-/// # Ok(())
-/// # }
-/// ```
-#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Prefix(Str);
-
-impl Prefix {
-    pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
-        Ok(Self(
-            ctx.prefix()
-                .ok_or_else(|| {
-                    Error::sp_extract_error(
-                        "consider using Option<Prefix> instead, Prefix may be not exist",
-                    )
-                })?
-                .clone(),
-        ))
-    }
-}
-
-impl<S: Set> Extract<S> for Prefix {
-    type Error = Error;
-
-    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
-        Self::extract_ctx(ctx)
-    }
-}
-
-impl Deref for Prefix {
-    type Target = Str;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for Prefix {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl Display for Prefix {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Prefix({})", self.0)
-    }
-}
-
 /// The style copied from [`Ctx`] which set in [`Policy`](crate::parser::Policy).
 ///
 /// # Examples
@@ -704,7 +606,7 @@ impl Display for Prefix {
 /// let mut set = policy.default_set();
 /// let mut ser = policy.default_ser();
 ///
-/// set.add_opt("--bool=b/")?.run()?;
+/// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut()?
@@ -788,104 +690,6 @@ impl<S: Set> Extract<S> for Style {
     }
 }
 
-/// The disable value copied from [`Ctx`] which set in [`Policy`](crate::parser::Policy).
-///
-/// # Examples
-/// ```rust
-/// # use aopt::prelude::*;
-/// # use aopt::Arc;
-/// # use aopt::Error;
-/// # use std::ops::Deref;
-/// #
-/// # fn main() -> Result<(), Error> {
-/// let mut policy = AFwdPolicy::default();
-/// let mut set = policy.default_set();
-/// let mut ser = policy.default_ser();
-///
-/// set.add_opt("--bool=b/")?.run()?;
-/// set.add_opt("set=c")?.run()?;
-/// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut()?
-///     .entry(0)
-///     .on(|_: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
-///         assert_eq!(
-///             &true,
-///             disable.deref(),
-///             "Disable is the disable value copied from Ctx set in Policy"
-///         );
-///         Ok(Some(false))
-///     });
-///
-/// ser.ser_invoke_mut()?
-///     .entry(1)
-///     .on(|_: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
-///         assert_eq!(
-///             &false,
-///             disable.deref(),
-///             "Disable is the disable value copied from Ctx set in Policy"
-///         );
-///         Ok(Some(true))
-///     });
-///
-/// ser.ser_invoke_mut()?
-///     .entry(2)
-///     .on(|_: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
-///         assert_eq!(
-///             &false,
-///             disable.deref(),
-///             "Disable is the disable value copied from Ctx set in Policy"
-///         );
-///         Ok(Some(2i64))
-///     });
-///
-/// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
-///
-/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
-///
-/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
-/// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val()?.val::<i64>(2)?, &2);
-/// #
-/// # Ok(())
-/// # }
-/// ```
-#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Disable(bool);
-
-impl Disable {
-    pub fn extract_ctx(ctx: &Ctx) -> Self {
-        Self(ctx.disable())
-    }
-}
-
-impl Deref for Disable {
-    type Target = bool;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for Disable {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl Display for Disable {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Disable({})", self.0)
-    }
-}
-
-impl<S: Set> Extract<S> for Disable {
-    type Error = Error;
-
-    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(Self::extract_ctx(ctx))
-    }
-}
-
 /// The raw value cloned from [`Ctx`] which set in [`Policy`](crate::parser::Policy).
 ///
 /// # Examples
@@ -901,16 +705,16 @@ impl<S: Set> Extract<S> for Disable {
 /// let mut set = policy.default_set();
 /// let mut ser = policy.default_ser();
 ///
-/// set.add_opt("--bool=b/")?.run()?;
+/// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut()?
 ///     .entry(0)
 ///     .on(|_: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal| {
 ///         assert_eq!(
-///             &RawVal::from("false"),
+///             &RawVal::from("true"),
 ///             raw_val.deref(),
-///             "Disable is the disable value copied from Ctx set in Policy"
+///             "RawVal is the raw value copied from Ctx set in Policy"
 ///         );
 ///         Ok(Some(false))
 ///     });
@@ -921,7 +725,7 @@ impl<S: Set> Extract<S> for Disable {
 ///         assert_eq!(
 ///             &RawVal::from("set"),
 ///             raw_val.deref(),
-///             "Disable is the disable value copied from Ctx set in Policy"
+///             "RawVal is the raw value copied from Ctx set in Policy"
 ///         );
 ///         Ok(Some(true))
 ///     });
@@ -932,7 +736,7 @@ impl<S: Set> Extract<S> for Disable {
 ///         assert_eq!(
 ///             &RawVal::from("value"),
 ///             raw_val.deref(),
-///             "Disable is the disable value copied from Ctx set in Policy"
+///             "RawVal is the raw value copied from Ctx set in Policy"
 ///         );
 ///         Ok(Some(2i64))
 ///     });
@@ -993,14 +797,14 @@ impl<S: Set> Extract<S> for RawVal {
 /// let mut set = policy.default_set();
 /// let mut ser = policy.default_ser();
 ///
-/// set.add_opt("--bool=b/")?.run()?;
+/// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// ser.ser_invoke_mut()?
 ///     .entry(0)
 ///     .on(|_: &mut ASet,  _: &mut ASer,val: ctx::Value<bool>| {
 ///         assert_eq!(
-///             &false,
+///             &true,
 ///             val.deref(),
 ///             "Value is parsed from argument of Ctx which set in Policy"
 ///         );

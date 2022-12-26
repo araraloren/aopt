@@ -18,27 +18,27 @@ use crate::Uid;
 ///
 /// The type support by default:
 ///
-/// |  creator   | assoc  | default action |string | ignore name | styles | deactivate style |
+/// |  creator   | assoc  | default action |string | ignore name | styles |
 /// |  ----  | ----  | -- | -- | -- | -- | -- |
-/// | [`bool`](Creator::bool)  | [`Assoc::Bool`] | [`Action::App`] | `b` | false | [`Style::Boolean`],[`Style::Combined`] | yes |
-/// | [`str`](Creator::str)  | [`Assoc::Str`] | [`Action::App`] | `s` | false | [`Style::Argument`] | no |
-/// | [`flt`](Creator::flt)  | [`Assoc::Flt`] | [`Action::App`] | `f` | false | [`Style::Argument`] | no |
-/// | [`int`](Creator::int)  | [`Assoc::Int`] | [`Action::App`] | `i` | false | [`Style::Argument`] | no |
-/// | [`uint`](Creator::uint)  | [`Assoc::Uint`] | [`Action::App`] | `u` | false | [`Style::Argument`] | no |
-/// | [`cmd`](Creator::cmd)  | [`Assoc::Noa`] | [`Action::Set`] | `c` | false | [`Style::Cmd`] | no |
-/// | [`pos`](Creator::pos)  | [`Assoc::Noa`] | [`Action::App`] | `p` | true | [`Style::Pos`] | no |
-/// | [`main`](Creator::main)  | [`Assoc::Null`] | [`Action::Set`] | `m` | true | [`Style::Main`] | no |
+/// | [`bool`](Creator::bool)  | [`Assoc::Bool`] | [`Action::App`] | `b` | false | [`Style::Boolean`],[`Style::Combined`] |
+/// | [`str`](Creator::str)  | [`Assoc::Str`] | [`Action::App`] | `s` | false | [`Style::Argument`] |
+/// | [`flt`](Creator::flt)  | [`Assoc::Flt`] | [`Action::App`] | `f` | false | [`Style::Argument`] |
+/// | [`int`](Creator::int)  | [`Assoc::Int`] | [`Action::App`] | `i` | false | [`Style::Argument`] |
+/// | [`uint`](Creator::uint)  | [`Assoc::Uint`] | [`Action::App`] | `u` | false | [`Style::Argument`] |
+/// | [`cmd`](Creator::cmd)  | [`Assoc::Noa`] | [`Action::Set`] | `c` | false | [`Style::Cmd`] |
+/// | [`pos`](Creator::pos)  | [`Assoc::Noa`] | [`Action::App`] | `p` | true | [`Style::Pos`] |
+/// | [`main`](Creator::main)  | [`Assoc::Null`] | [`Action::Set`] | `m` | true | [`Style::Main`] |
 ///
-/// |  creator   | index support  | optional support | prefix support | alias support | validator |
+/// |  creator   | index support  | optional support | alias support | validator |
 /// |  ----  | ----  | -- | -- | -- | -- |
-/// | [`bool`](Creator::bool)  | no | yes | yes | yes | [`bool`](ValValidator::bool) |
-/// | [`str`](Creator::str)  | no | yes | yes | yes | [`str`](ValValidator::str) |
-/// | [`flt`](Creator::flt)  | no | yes | yes | yes |  [`f64`](ValValidator::f64) |
-/// | [`int`](Creator::int)  | no | yes | yes | yes |  [`i64`](ValValidator::i64) |
-/// | [`uint`](Creator::uint)  | no | yes | yes | yes |  [`u64`](ValValidator::u64) |
-/// | [`cmd`](Creator::cmd)  | [`Forward(1)`](crate::opt::Index::Forward) | `false` | no | no | [`some`](ValValidator::some) |
-/// | [`pos`](Creator::pos)  | yes | yes | no | no |  [`some`](ValValidator::some) |
-/// | [`main`](Creator::main)  | [`AnyWhere`](crate::opt::Index::AnyWhere) | no | no | no | [`null`](ValValidator::null) |
+/// | [`bool`](Creator::bool)  | no | yes | yes | [`bool`](ValValidator::bool) |
+/// | [`str`](Creator::str)  | no | yes | yes | [`str`](ValValidator::str) |
+/// | [`flt`](Creator::flt)  | no | yes | yes |  [`f64`](ValValidator::f64) |
+/// | [`int`](Creator::int)  | no | yes | yes |  [`i64`](ValValidator::i64) |
+/// | [`uint`](Creator::uint)  | no | yes | yes |  [`u64`](ValValidator::u64) |
+/// | [`cmd`](Creator::cmd)  | [`Forward(1)`](crate::opt::Index::Forward) | `false` | no | [`some`](ValValidator::some) |
+/// | [`pos`](Creator::pos)  | yes | yes | no |  [`some`](ValValidator::some) |
+/// | [`main`](Creator::main)  | [`AnyWhere`](crate::opt::Index::AnyWhere) | no | no | [`null`](ValValidator::null) |
 #[derive(Debug, Default)]
 pub struct AOpt {
     uid: Uid,
@@ -49,11 +49,9 @@ pub struct AOpt {
 
     help: Help,
 
-    prefix: Option<Str>,
-
     setted: bool,
 
-    optional: bool,
+    force: bool,
 
     assoc: Assoc,
 
@@ -63,15 +61,13 @@ pub struct AOpt {
 
     ignore_name_mat: bool,
 
-    deactivate_style: bool,
-
     index: Option<Index>,
 
     validator: ValValidator,
 
     initiator: ValInitiator,
 
-    alias: Option<Vec<(Str, Str)>>,
+    alias: Option<Vec<Str>>,
 }
 
 impl AOpt {
@@ -142,19 +138,13 @@ impl AOpt {
     }
 
     /// If the option is force required.
-    pub fn with_optional(mut self, optional: bool) -> Self {
-        self.optional = optional;
-        self
-    }
-
-    /// Set the prefix of option.
-    pub fn with_prefix(mut self, prefix: Option<Str>) -> Self {
-        self.prefix = prefix;
+    pub fn with_force(mut self, force: bool) -> Self {
+        self.force = force;
         self
     }
 
     /// Set the alias of option.
-    pub fn with_alias(mut self, alias: Option<Vec<(Str, Str)>>) -> Self {
+    pub fn with_alias(mut self, alias: Option<Vec<Str>>) -> Self {
         self.alias = alias;
         self
     }
@@ -169,12 +159,6 @@ impl AOpt {
     /// Set the value validator of option.
     pub fn with_validator(mut self, validator: ValValidator) -> Self {
         self.validator = validator;
-        self
-    }
-
-    /// If the option support deactivate style such as `--/bool`.
-    pub fn with_deactivate_style(mut self, deactivate_style: bool) -> Self {
-        self.deactivate_style = deactivate_style;
         self
     }
 }
@@ -220,30 +204,21 @@ impl AOpt {
         self
     }
 
-    pub fn set_optional(&mut self, optional: bool) -> &mut Self {
-        self.optional = optional;
+    pub fn set_force(&mut self, force: bool) -> &mut Self {
+        self.force = force;
         self
     }
 
-    pub fn set_prefix(&mut self, prefix: Option<Str>) -> &mut Self {
-        self.prefix = prefix;
-        self
-    }
-
-    pub fn add_alias(&mut self, prefix: Str, name: Str) -> &mut Self {
+    pub fn add_alias(&mut self, name: Str) -> &mut Self {
         if let Some(alias) = &mut self.alias {
-            alias.push((prefix, name));
+            alias.push(name);
         }
         self
     }
 
-    pub fn rem_alias(&mut self, prefix: &Str, name: &Str) -> &mut Self {
+    pub fn rem_alias(&mut self, name: &Str) -> &mut Self {
         if let Some(alias) = &mut self.alias {
-            if let Some((i, _)) = alias
-                .iter()
-                .enumerate()
-                .find(|(_, v)| &v.0 == prefix && &v.1 == name)
-            {
+            if let Some((i, _)) = alias.iter().enumerate().find(|(_, v)| v == &name) {
                 alias.remove(i);
             }
         }
@@ -257,11 +232,6 @@ impl AOpt {
 
     pub fn set_validator(&mut self, validator: ValValidator) -> &mut Self {
         self.validator = validator;
-        self
-    }
-
-    pub fn set_deactivate_style(&mut self, deactivate_style: bool) -> &mut Self {
-        self.deactivate_style = deactivate_style;
         self
     }
 }
@@ -292,15 +262,15 @@ impl Opt for AOpt {
     }
 
     fn valid(&self) -> bool {
-        self.optional() || self.setted()
+        !self.force() || self.setted()
     }
 
     fn setted(&self) -> bool {
         self.setted
     }
 
-    fn optional(&self) -> bool {
-        self.optional
+    fn force(&self) -> bool {
+        self.force
     }
 
     fn assoc(&self) -> &Assoc {
@@ -311,19 +281,11 @@ impl Opt for AOpt {
         &self.action
     }
 
-    fn is_deactivate(&self) -> bool {
-        self.deactivate_style
-    }
-
-    fn prefix(&self) -> Option<&Str> {
-        self.prefix.as_ref()
-    }
-
     fn idx(&self) -> Option<&Index> {
         self.index.as_ref()
     }
 
-    fn alias(&self) -> Option<&Vec<(Str, Str)>> {
+    fn alias(&self) -> Option<&Vec<Str>> {
         self.alias.as_ref()
     }
 
@@ -339,8 +301,8 @@ impl Opt for AOpt {
         self.styles.iter().any(|v| v == &style)
     }
 
-    fn mat_optional(&self, optional: bool) -> bool {
-        self.optional() == optional
+    fn mat_force(&self, force: bool) -> bool {
+        self.force() == force
     }
 
     fn mat_name(&self, name: Option<&Str>) -> bool {
@@ -351,13 +313,9 @@ impl Opt for AOpt {
         }
     }
 
-    fn mat_prefix(&self, prefix: Option<&Str>) -> bool {
-        self.prefix() == prefix
-    }
-
-    fn mat_alias(&self, prefix: &Str, name: &Str) -> bool {
+    fn mat_alias(&self, name: &Str) -> bool {
         if let Some(alias) = &self.alias {
-            alias.iter().any(|v| &v.0 == prefix && &v.1 == name)
+            alias.iter().any(|v| v == name)
         } else {
             false
         }
@@ -374,15 +332,10 @@ impl Opt for AOpt {
         false
     }
 
-    fn check_val(
-        &mut self,
-        value: Option<&RawVal>,
-        disable: bool,
-        index: (usize, usize),
-    ) -> Result<bool, Error> {
+    fn check_val(&mut self, value: Option<&RawVal>, index: (usize, usize)) -> Result<bool, Error> {
         let name = self.name().clone();
 
-        self.validator.check(name.as_str(), value, disable, index)
+        self.validator.check(name.as_str(), value, index)
     }
 
     fn init(&mut self, ser: &mut Services) -> Result<(), Error> {

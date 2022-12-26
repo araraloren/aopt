@@ -14,6 +14,7 @@ use crate::ser::Services;
 use crate::ser::UsrValService;
 use crate::ser::ValService;
 use crate::set::OptSet;
+use crate::set::PrefixOptValidator;
 use crate::set::Set;
 use crate::Error;
 use crate::RawVal;
@@ -109,7 +110,7 @@ pub trait APolicyExt<I: crate::set::Set> {
 
 pub type ACreator = Creator<AOpt, OptConfig, Error>;
 
-pub type ASet = OptSet<StrParser, ACreator>;
+pub type ASet = OptSet<StrParser, ACreator, PrefixOptValidator<'static>>;
 
 pub type ASer = Services;
 
@@ -174,8 +175,6 @@ impl APolicyExt<ASet> for ADelayPolicy {
 /// * [`main`](Creator::main)
 pub fn aset_with_default_creators() -> ASet {
     ASet::default()
-        .with_prefix("--")
-        .with_prefix("-")
         .with_creator(Creator::int())
         .with_creator(Creator::bool())
         .with_creator(Creator::uint())

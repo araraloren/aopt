@@ -189,11 +189,11 @@ cfg_if::cfg_if! {
         ///
         /// ser.ser_usrval_mut()?
         ///     .insert(ser::Value::new(PosList(RefCell::new(vec![]))));
-        /// set.add_opt("--bool=b/")?.run()?;
+        /// set.add_opt("--/bool=b")?.run()?;
         /// set.add_opt("pos_v=p@*")?.run()?;
         /// ser.ser_invoke_mut()?
         ///     .entry(0)
-        ///     .on(|_: &mut ASet, _: &mut ASer, disable: ctx::Disable| {
+        ///     .on(|_: &mut ASet, _: &mut ASer, disable: ctx::Value<bool>| {
         ///         assert_eq!(&true, disable.deref());
         ///         Ok(Some(false))
         ///     });

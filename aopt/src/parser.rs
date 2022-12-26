@@ -45,7 +45,7 @@ use crate::ser::Services;
 use crate::set::Commit;
 use crate::set::Ctor;
 use crate::set::Filter;
-use crate::set::Pre;
+use crate::set::OptValidator;
 use crate::set::Set;
 use crate::set::SetCfg;
 use crate::set::SetOpt;
@@ -472,7 +472,7 @@ where
     P::Set: 'static,
     P: Policy<Error = Error>,
     SetOpt<P::Set>: Opt,
-    P::Set: Pre + Set + OptParser,
+    P::Set: Set + OptParser + OptValidator,
     <P::Set as OptParser>::Output: Information,
     SetCfg<P::Set>: Config + ConfigValue + Default,
 {
@@ -588,14 +588,14 @@ where
 impl<P> Parser<P>
 where
     P: Policy<Error = Error>,
-    P::Set: Pre + Set + OptParser,
+    P::Set: Set + OptParser,
     <P::Set as OptParser>::Output: Information,
     SetCfg<P::Set>: Config + ConfigValue + Default,
 {
-    pub(crate) fn filter_optstr(&self, opt: Str) -> Result<Uid, Error> {
+    pub fn find_uid(&self, opt: &str) -> Result<Uid, Error> {
         let filter = Filter::new(
             &self.optset,
-            SetCfg::<P::Set>::new(&self.optset, opt.clone())?,
+            SetCfg::<P::Set>::new(&self.optset, opt.into())?,
         );
         filter.find().map(|v| v.uid()).ok_or_else(|| {
             Error::raise_error(format!(
@@ -606,18 +606,18 @@ where
     }
 
     pub fn find_val<T: ErasedTy>(&self, opt: &str) -> Result<&T, Error> {
-        self.val(self.filter_optstr(opt.into())?)
+        self.val(self.find_uid(opt)?)
     }
 
     pub fn find_val_mut<T: ErasedTy>(&mut self, opt: &str) -> Result<&mut T, Error> {
-        self.val_mut(self.filter_optstr(opt.into())?)
+        self.val_mut(self.find_uid(opt)?)
     }
 
     pub fn find_vals<T: ErasedTy>(&self, opt: &str) -> Result<&Vec<T>, Error> {
-        self.vals(self.filter_optstr(opt.into())?)
+        self.vals(self.find_uid(opt)?)
     }
 
     pub fn find_vals_mut<T: ErasedTy>(&mut self, opt: &str) -> Result<&mut Vec<T>, Error> {
-        self.vals_mut(self.filter_optstr(opt.into())?)
+        self.vals_mut(self.find_uid(opt)?)
     }
 }

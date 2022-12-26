@@ -20,7 +20,7 @@ use crate::opt::OptParser;
 use crate::proc::Process;
 use crate::ser::Services;
 use crate::set::Ctor;
-use crate::set::Pre;
+use crate::set::OptValidator;
 use crate::set::Set;
 use crate::Arc;
 use crate::Error;
@@ -78,7 +78,7 @@ use crate::Error;
 ///     .on(|set: &mut ASet, ser: &mut ASer, ext: ctx::Value<String>| {
 ///         let mut found = false;
 ///
-///         for name in ["c", "cxx"] {
+///         for name in ["-c", "-cxx"] {
 ///             if let Some(opt) = set.find(name)? {
 ///                 if let Ok(file) = ser.sve_vals::<String>(opt.uid()) {
 ///                     if file.contains(ext.deref()) {
@@ -158,7 +158,7 @@ impl<S> PrePolicy<S> {
 impl<S> Policy for PrePolicy<S>
 where
     <S::Ctor as Ctor>::Opt: Opt,
-    S: Set + OptParser + Pre + Debug + 'static,
+    S: Set + OptParser + OptValidator + Debug + 'static,
 {
     type Ret = ReturnVal;
 
@@ -194,27 +194,35 @@ where
             let mut like_opt = false;
             let arg = arg.map(|v| Arc::new(v.clone()));
 
-            if let Ok(clopt) = opt.parse_arg(set.prefix()) {
-                like_opt = true;
-                for style in opt_styles.iter() {
-                    let ret = Self::ig_failure(
-                        OptGuess::new()
-                            .guess(style, GuessOptCfg::new(idx, args_len, arg.clone(), &clopt)),
-                    )?;
+            if let Ok(clopt) = opt.parse_arg() {
+                if let Some(name) = clopt.name() {
+                    if let Some(valid) = Self::ig_failure(set.check_name(name.as_str()))? {
+                        if valid {
+                            like_opt = true;
+                            for style in opt_styles.iter() {
+                                let ret = Self::ig_failure(OptGuess::new().guess(
+                                    style,
+                                    GuessOptCfg::new(idx, args_len, arg.clone(), &clopt),
+                                ))?;
 
-                    if let Some(Some(mut proc)) = ret {
-                        opt_ctx.set_idx(idx);
-                        if Self::ig_failure(process_opt::<S>(&opt_ctx, set, ser, &mut proc, true))?
-                            .is_some()
-                        {
-                            if proc.is_mat() {
-                                matched = true;
-                            }
-                            if proc.consume() {
-                                consume = true;
-                            }
-                            if matched {
-                                break;
+                                if let Some(Some(mut proc)) = ret {
+                                    opt_ctx.set_idx(idx);
+                                    if Self::ig_failure(process_opt::<S>(
+                                        &opt_ctx, set, ser, &mut proc, true,
+                                    ))?
+                                    .is_some()
+                                    {
+                                        if proc.is_mat() {
+                                            matched = true;
+                                        }
+                                        if proc.consume() {
+                                            consume = true;
+                                        }
+                                        if matched {
+                                            break;
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -305,35 +313,27 @@ mod test {
             opt: &AOpt,
             uid: Uid,
             name: &str,
-            prefix: Option<&str>,
             vals: Option<Vec<T>>,
-            optional: bool,
+            force: bool,
             action: &Action,
             assoc: &Assoc,
             index: Option<&Index>,
-            alias: Option<Vec<(&str, &str)>>,
-            deactivate: bool,
+            alias: Option<Vec<&str>>,
         ) -> Result<(), Error> {
             let opt_uid = opt.uid();
 
             assert_eq!(opt_uid, uid);
             assert_eq!(opt.name(), name, "name not equal -{}-", opt_uid);
-            assert_eq!(opt.prefix().map(|v| v.as_str()), prefix);
             assert_eq!(
-                opt.optional(),
-                optional,
-                "optional not equal -{}-: {}",
+                opt.force(),
+                force,
+                "option force required not equal -{}-: {}",
                 opt_uid,
-                optional
+                force
             );
             assert_eq!(opt.action(), action, "action not equal for {}", opt_uid);
             assert_eq!(opt.assoc(), assoc, "assoc not equal for {}", opt_uid);
             assert_eq!(opt.idx(), index, "option index not equal: {:?}", index);
-            assert_eq!(
-                opt.is_deactivate(),
-                deactivate,
-                "deactivate style not matched!"
-            );
             if let Ok(opt_vals) = ser.sve_vals::<T>(opt_uid) {
                 if let Some(vals) = vals {
                     assert_eq!(
@@ -360,12 +360,11 @@ mod test {
             if let Some(opt_alias) = opt.alias() {
                 if let Some(alias) = alias {
                     assert_eq!(opt_alias.len(), alias.len());
-                    for (prefix, name) in alias {
+                    for name in alias {
                         assert!(
-                            opt_alias.iter().any(|(p, n)| p == prefix && n == name),
-                            "alias => {:?} <--> {}, {}",
+                            opt_alias.iter().any(|n| n == name),
+                            "alias => {:?} <--> {}",
                             &opt_alias,
-                            prefix,
                             name,
                         );
                     }
@@ -378,11 +377,7 @@ mod test {
 
         fn string_collection_validator(vals: Vec<&'static str>) -> ValValidator {
             ValValidator::new(
-                move |_: &str,
-                      val: Option<&RawVal>,
-                      _: bool,
-                      _: (usize, usize)|
-                      -> Result<bool, Error> {
+                move |_: &str, val: Option<&RawVal>, _: (usize, usize)| -> Result<bool, Error> {
                     Ok(val
                         .map(|v| v.get_str())
                         .flatten()
@@ -394,11 +389,9 @@ mod test {
 
         fn index_validator(idxs: Vec<usize>) -> ValValidator {
             ValValidator::new(
-                move |_: &str,
-                      _: Option<&RawVal>,
-                      _: bool,
-                      idx: (usize, usize)|
-                      -> Result<bool, Error> { Ok(idxs.contains(&idx.0)) },
+                move |_: &str, _: Option<&RawVal>, idx: (usize, usize)| -> Result<bool, Error> {
+                    Ok(idxs.contains(&idx.0))
+                },
             )
         }
 
@@ -451,15 +444,15 @@ mod test {
             .into_iter(),
         );
 
-        set.add_prefix("+");
+        set.validator_mut().add_prefix("+");
 
         // 5
         set.add_opt("--aopt=b")?;
-        set.add_opt("--bopt=b/")?.run()?;
+        set.add_opt("--/bopt=b")?.run()?;
         set.add_opt("--copt=b!")?.set_action(Action::Cnt);
-        set.add_opt("--dopt=b!/")?.run()?;
+        set.add_opt("--/dopt=b!")?.run()?;
         set.add_opt("--eopt=b")?.add_alias("+eopt").run()?;
-        set.add_opt("--fopt=b/")?.add_alias("-fopt").run()?;
+        set.add_opt("--/fopt=b")?.add_alias("-/fopt").run()?;
 
         // 8
         set.add_opt("--gopt=i")?.run()?;
@@ -476,7 +469,7 @@ mod test {
             });
 
         // 10
-        set.add_opt("--jopt=u")?.set_optional(false).run()?;
+        set.add_opt("--jopt=u")?.set_force(false).run()?;
         set.add_opt("--kopt=u")?
             .set_action(Action::Set)
             .add_alias("--alias-k")
@@ -535,7 +528,7 @@ mod test {
             .entry(set.add_opt("main=m")?.run()?)
             .on(move |set: &mut ASet, ser: &mut Services, idx: ctx::Index| {
                 let copt = &set["--copt"];
-                let dopt = &set["dopt"];
+                let dopt = &set["--/dopt"];
                 let bpos = &set["bpos"];
                 let cpos = &set[cpos_uid];
                 let dpos = &set[dpos_uid];
@@ -547,84 +540,72 @@ mod test {
                     epos,
                     epos_uid,
                     "epos",
-                    None,
                     Some(vec!["反转".to_owned(), "翻转".to_owned()]),
-                    true,
+                    false,
                     &Action::App,
                     &Assoc::Noa,
                     Some(&Index::Range(7, 9)),
                     None,
-                    false,
                 )?;
                 check_opt_val::<String>(
                     ser,
                     dpos,
                     dpos_uid,
                     "dpos",
-                    None,
                     Some(vec!["program -- software".to_owned()]),
-                    true,
+                    false,
                     &Action::Set,
                     &Assoc::Noa,
                     Some(&Index::Range(0, 7)),
                     None,
-                    false,
                 )?;
                 check_opt_val(
                     ser,
                     cpos,
                     cpos_uid,
                     "cpos",
-                    None,
                     Some(vec![2.31]),
-                    true,
+                    false,
                     &Action::App,
                     &Assoc::Noa,
                     Some(&Index::Range(4, 5)),
                     None,
-                    false,
                 )?;
                 check_opt_val::<u64>(
                     ser,
                     bpos,
                     bpos_uid,
                     "bpos",
-                    None,
                     Some(vec![32, 64]),
-                    true,
+                    false,
                     &Action::App,
                     &Assoc::Uint,
                     Some(&Index::list(vec![2, 3])),
                     None,
-                    false,
                 )?;
                 check_opt_val::<u64>(
                     ser,
                     copt,
                     2,
-                    "copt",
-                    Some("--"),
+                    "--copt",
                     Some(vec![1]),
-                    false,
+                    true,
                     &Action::Cnt,
                     &Assoc::Bool,
                     None,
                     None,
-                    false,
                 )?;
                 check_opt_val(
                     ser,
                     dopt,
                     3,
-                    "dopt",
-                    Some("--"),
-                    Some(vec![false]),
-                    false,
+                    "--/dopt",
+                    Some(vec![true]),
+                    true,
                     &Action::Set,
                     &Assoc::Bool,
                     None,
                     None,
-                    true,
                 )?;
                 Ok(Some(true))
             });
@@ -632,49 +613,43 @@ mod test {
             |set: &mut ASet, ser: &mut ASer, mut val: ctx::Value<String>, idx: ctx::Index| {
                 let ropt = &set["--开关"];
                 let sopt = &set["--值"];
-                let topt = &set["りょう"];
+                let topt = &set["--りょう"];
 
                 check_opt_val::<i64>(
                     ser,
                     topt,
                     19,
-                    "りょう",
-                    Some("--"),
+                    "--りょう",
                     Some(vec![88]),
-                    true,
+                    false,
                     &Action::App,
                     &Assoc::Int,
                     None,
                     None,
-                    false,
                 )?;
                 check_opt_val::<String>(
                     ser,
                     sopt,
                     18,
-                    "值",
-                    Some("--"),
+                    "--值",
                     Some(vec![String::from("恍恍惚惚")]),
-                    true,
+                    false,
                     &Action::App,
                     &Assoc::Str,
                     None,
                     None,
-                    false,
                 )?;
                 check_opt_val(
                     ser,
                     ropt,
                     17,
-                    "开关",
-                    Some("--"),
+                    "--开关",
                     Some(vec![true]),
-                    true,
+                    false,
                     &Action::Set,
                     &Assoc::Bool,
                     None,
                     None,
-                    false,
                 )?;
                 assert!(idx.deref() == &7 || idx.deref() == &8);
                 Ok(Some(val.take()))
@@ -690,43 +665,37 @@ mod test {
                     ser,
                     qopt,
                     16,
-                    "qopt",
-                    Some("--"),
+                    "--qopt",
                     None,
-                    true,
+                    false,
                     &Action::App,
                     &Assoc::Str,
                     None,
                     None,
-                    false,
                 )?;
                 check_opt_val(
                     ser,
                     popt,
                     15,
-                    "popt",
-                    Some("--"),
+                    "--popt",
                     Some(vec![String::from("cpp"), String::from("rust")]),
-                    true,
+                    false,
                     &Action::App,
                     &Assoc::Str,
                     None,
                     None,
-                    false,
                 )?;
                 check_opt_val(
                     ser,
                     oopt,
                     14,
-                    "oopt",
-                    Some("--"),
+                    "--oopt",
                     Some(vec![String::from("lily")]),
-                    false,
+                    true,
                     &Action::App,
                     &Assoc::Str,
                     None,
-                    Some(vec![("-", "o")]),
-                    false,
+                    Some(vec!["-o"]),
                 )?;
                 assert!(idx.deref() == &5 || idx.deref() == &6);
                 match ser.sve_val::<String>(set["dpos"].uid()) {
@@ -745,43 +714,37 @@ mod test {
                     ser,
                     nopt,
                     13,
-                    "nopt",
-                    Some("--"),
+                    "--nopt",
                     Some(vec![3.12]),
-                    true,
+                    false,
                     &Action::Set,
                     &Assoc::Flt,
                     None,
                     None,
-                    false,
                 )?;
                 check_opt_val::<f64>(
                     ser,
                     mopt,
                     12,
-                    "mopt",
-                    Some("--"),
+                    "--mopt",
                     Some(vec![1.02]),
-                    true,
+                    false,
                     &Action::App,
                     &Assoc::Flt,
                     None,
                     None,
-                    false,
                 )?;
                 check_opt_val::<f64>(
                     ser,
                     lopt,
                     11,
-                    "lopt",
-                    Some("--"),
+                    "--lopt",
                     Some(vec![2.79]),
-                    false,
+                    true,
                     &Action::App,
                     &Assoc::Flt,
                     None,
-                    Some(vec![("-", "l")]),
-                    false,
+                    Some(vec!["-l"]),
                 )?;
                 assert!(idx.deref() == &4);
 
@@ -807,29 +770,25 @@ mod test {
                     ser,
                     jopt,
                     9,
-                    "jopt",
-                    Some("--"),
+                    "--jopt",
                     Some(vec![2]),
                     false,
                     &Action::App,
                     &Assoc::Uint,
                     None,
                     None,
-                    false,
                 )?;
                 check_opt_val::<u64>(
                     ser,
                     kopt,
                     10,
-                    "kopt",
-                    Some("--"),
+                    "--kopt",
                     Some(vec![4]),
-                    true,
+                    false,
                     &Action::Set,
                     &Assoc::Uint,
                     None,
                     None,
-                    false,
                 )?;
                 assert!(idx.deref() == &2 || idx.deref() == &3);
                 Ok(Some(
@@ -844,10 +803,10 @@ mod test {
                   name: ctx::Name,
                   mut value: ctx::Value<String>| {
                 let aopt = &set[0];
-                let bopt = &set["--bopt"];
+                let bopt = &set["--/bopt"];
                 let apos = &set[*uid.deref()];
                 let eopt = &set["+eopt"];
-                let fopt = &set["--fopt=b"];
+                let fopt = &set["--/fopt=b"];
                 let gopt = &set["--gopt"];
                 let hopt = &set["--hopt"];
                 let iopt = &set["--iopt"];
@@ -857,100 +816,86 @@ mod test {
                     ser,
                     iopt,
                     8,
-                    "iopt",
-                    Some("--"),
+                    "--iopt",
                     Some(vec![84, -21, 21]),
-                    true,
+                    false,
                     &Action::App,
                     &Assoc::Int,
                     None,
-                    Some(vec![("--", "iopt-alias1")]),
-                    false,
+                    Some(vec!["--iopt-alias1"]),
                 )?;
                 check_opt_val::<i64>(
                     ser,
                     hopt,
                     7,
-                    "hopt",
-                    Some("--"),
+                    "--hopt",
                     Some(vec![48]),
-                    false,
-                    &Action::App,
-                    &Assoc::Int,
-                    None,
-                    None,
-                    false,
-                )?;
-                check_opt_val::<i64>(
-                    ser,
-                    gopt,
-                    6,
-                    "gopt",
-                    Some("--"),
-                    None,
                     true,
                     &Action::App,
                     &Assoc::Int,
                     None,
                     None,
+                )?;
+                check_opt_val::<i64>(
+                    ser,
+                    gopt,
+                    6,
+                    "--gopt",
+                    None,
                     false,
+                    &Action::App,
+                    &Assoc::Int,
+                    None,
+                    None,
                 )?;
 
                 check_opt_val(
                     ser,
                     fopt,
                     5,
-                    "fopt",
-                    Some("--"),
-                    Some(vec![false]),
-                    true,
+                    "--/fopt",
+                    Some(vec![true]),
+                    false,
                     &Action::Set,
                     &Assoc::Bool,
                     None,
-                    Some(vec![("-", "fopt")]),
-                    true,
+                    Some(vec!["-/fopt"]),
                 )?;
                 check_opt_val(
                     ser,
                     eopt,
                     4,
-                    "eopt",
-                    Some("--"),
+                    "--eopt",
                     Some(vec![true]),
-                    true,
+                    false,
                     &Action::Set,
                     &Assoc::Bool,
                     None,
-                    Some(vec![("+", "eopt")]),
-                    false,
+                    Some(vec!["+eopt"]),
                 )?;
                 check_opt_val(
                     ser,
                     bopt,
                     1,
-                    "bopt",
-                    Some("--"),
-                    Some(vec![true]),
-                    true,
+                    "--/bopt",
+                    Some(vec![false]),
+                    false,
                     &Action::Set,
                     &Assoc::Bool,
                     None,
                     None,
-                    true,
                 )?;
                 check_opt_val(
                     ser,
                     aopt,
                     0,
-                    "aopt",
-                    Some("--"),
+                    "--aopt",
                     Some(vec![false]),
-                    true,
+                    false,
                     &Action::Set,
                     &Assoc::Bool,
                     None,
                     None,
-                    false,
                 )?;
                 check_opt_val::<String>(
                     ser,
@@ -958,13 +903,11 @@ mod test {
                     set_uid,
                     "set",
                     None,
-                    None,
-                    false,
+                    true,
                     &Action::Set,
                     &Assoc::Noa,
                     Some(&Index::forward(1)),
                     None,
-                    false,
                 )?;
                 Ok(Some(value.take()))
             },

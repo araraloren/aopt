@@ -104,20 +104,12 @@ impl<S> NOAMatch<S> {
 }
 
 impl<S> NOAMatch<S> {
-    pub fn disable(&self) -> bool {
-        false
-    }
-
     pub fn idx(&self) -> usize {
         self.noa_index
     }
 
     pub fn total(&self) -> usize {
         self.noa_total
-    }
-
-    pub fn prefix(&self) -> Option<&Str> {
-        None
     }
 
     pub fn name(&self) -> Option<&Str> {
@@ -186,14 +178,12 @@ where
 
         if matched {
             matched = matched && opt.mat_name(self.name());
-            matched = matched
-                && opt.mat_prefix(self.prefix())
-                && opt.mat_idx(Some((self.noa_index, self.noa_total)));
+            matched = matched && opt.mat_idx(Some((self.noa_index, self.noa_total)));
             // NOA not support alias, skip alias matching
         }
         if matched {
             // set the value of current option
-            if opt.check_val(self.arg(), false, (self.noa_index, self.noa_total))? {
+            if opt.check_val(self.arg(), (self.noa_index, self.noa_total))? {
                 opt.set_setted(true);
                 self.matched_index = Some(self.noa_index);
                 self.matched_uid = Some(opt.uid());

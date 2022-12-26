@@ -231,7 +231,8 @@ pub mod prelude {
     pub use crate::set::FilterMatcher;
     pub use crate::set::FilterMut;
     pub use crate::set::OptSet;
-    pub use crate::set::Pre;
+    pub use crate::set::OptValidator;
+    pub use crate::set::PrefixOptValidator;
     pub use crate::set::Set;
     pub use crate::set::SetExt;
     pub use crate::Uid;

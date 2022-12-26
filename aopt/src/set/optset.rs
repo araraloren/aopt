@@ -10,13 +10,13 @@ use crate::set::Ctor;
 use crate::set::Filter;
 use crate::set::FilterMatcher;
 use crate::set::FilterMut;
-use crate::set::Pre;
 use crate::set::Set;
 use crate::set::SetIndex;
 use crate::Error;
 use crate::Str;
 use crate::Uid;
 
+use super::OptValidator;
 use super::SetOpt;
 
 /// Simple [`Set`] implementation hold [`Opt`] and [`Ctor`].
@@ -28,80 +28,89 @@ use super::SetOpt;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<()> {
-///  let mut set = OptSet::<StrParser, ACreator>::default();
+///  let mut set = OptSet::<StrParser, ACreator, PrefixOptValidator<'static>>::default();
 ///
 ///  // add prefix for option
-///  set.add_prefix("/");
+///  set.validator_mut().add_prefix("/");
 ///  // add bool creator
 ///  set.register(Creator::bool());
 ///  // create a bool option
 ///  set.add_opt("/foo=b")?.run()?;
 ///  // filter the set option
-///  assert_eq!(set.filter("foo")?.find_all().count(), 1);
+///  assert_eq!(set.filter("/foo")?.find_all().count(), 1);
 ///
 ///  Ok(())
 /// # }
 /// ```
-pub struct OptSet<P, C>
+pub struct OptSet<P, C, V>
 where
     C: Ctor,
     P: OptParser,
+    V: OptValidator,
 {
     parser: P,
+    validator: V,
     opts: Vec<C::Opt>,
     creators: Vec<C>,
 }
 
-impl<P, C> OptSet<P, C>
+impl<P, C, V> OptSet<P, C, V>
 where
     C: Ctor,
     P: OptParser,
+    V: OptValidator,
 {
-    pub fn new(parser: P) -> Self {
+    pub fn new(parser: P, validator: V) -> Self {
         Self {
             parser,
+            validator,
             opts: vec![],
             creators: vec![],
         }
     }
 }
 
-impl<P, C> Debug for OptSet<P, C>
+impl<P, C, V> Debug for OptSet<P, C, V>
 where
     C::Opt: Debug,
     C: Ctor + Debug,
     C::Config: Debug,
     P: OptParser + Debug,
+    V: OptValidator + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("OptSet")
             .field("parser", &self.parser)
+            .field("validator", &self.validator)
             .field("opts", &self.opts)
             .field("creators", &self.creators)
             .finish()
     }
 }
 
-impl<P, C> Default for OptSet<P, C>
+impl<P, C, V> Default for OptSet<P, C, V>
 where
     C: Ctor,
     P: OptParser + Default,
+    V: OptValidator + Default,
 {
     fn default() -> Self {
         Self {
             parser: P::default(),
+            validator: V::default(),
             opts: vec![],
             creators: vec![],
         }
     }
 }
 
-impl<P, C> OptSet<P, C>
+impl<P, C, V> OptSet<P, C, V>
 where
     C::Opt: Opt,
     C: Ctor,
     P: OptParser,
     C::Config: Config,
+    V: OptValidator,
 {
     pub fn with_creator(mut self, creator: C) -> Self {
         self.register(creator);
@@ -109,11 +118,12 @@ where
     }
 }
 
-impl<P, C> OptSet<P, C>
+impl<P, C, V> OptSet<P, C, V>
 where
     C: Ctor,
     P: OptParser,
     C::Config: Config,
+    V: OptValidator,
 {
     pub fn parser(&self) -> &P {
         &self.parser
@@ -124,23 +134,37 @@ where
     }
 }
 
-impl<P, C> OptSet<P, C>
+impl<P, C, V> OptSet<P, C, V>
 where
     C: Ctor,
-    C::Config: Config,
-    P: OptParser + Pre,
+    P: OptParser,
+    V: OptValidator,
 {
-    pub fn with_prefix(mut self, prefix: &str) -> Self {
-        self.add_prefix(prefix);
+    pub fn with_validator(mut self, validator: V) -> Self {
+        self.validator = validator;
         self
+    }
+
+    pub fn set_validator(&mut self, validator: V) -> &mut Self {
+        self.validator = validator;
+        self
+    }
+
+    pub fn validator(&self) -> &V {
+        &self.validator
+    }
+
+    pub fn validator_mut(&mut self) -> &mut V {
+        &mut self.validator
     }
 }
 
-impl<P, C> OptSet<P, C>
+impl<P, C, V> OptSet<P, C, V>
 where
     C::Opt: Opt,
     C: Ctor,
-    P: OptParser + Pre,
+    P: OptParser,
+    V: OptValidator,
     P::Output: Information,
     C::Config: Config + ConfigValue + Default,
 {
@@ -208,11 +232,12 @@ where
     }
 }
 
-impl<P, C, I: SetIndex<OptSet<P, C>>> std::ops::Index<I> for OptSet<P, C>
+impl<P, C, V, I: SetIndex<OptSet<P, C, V>>> std::ops::Index<I> for OptSet<P, C, V>
 where
     C::Opt: Opt,
     C: Ctor,
     P: OptParser,
+    V: OptValidator,
     P::Output: Information,
     C::Config: Config + ConfigValue + Default,
 {
@@ -223,11 +248,12 @@ where
     }
 }
 
-impl<P, C, I: SetIndex<OptSet<P, C>>> std::ops::IndexMut<I> for OptSet<P, C>
+impl<P, C, V, I: SetIndex<OptSet<P, C, V>>> std::ops::IndexMut<I> for OptSet<P, C, V>
 where
     C::Opt: Opt,
     C: Ctor,
     P: OptParser,
+    V: OptValidator,
     P::Output: Information,
     C::Config: Config + ConfigValue + Default,
 {
@@ -236,30 +262,32 @@ where
     }
 }
 
-impl<'b, P, C> SetIndex<OptSet<P, C>> for &'b str
+impl<'b, P, C, V> SetIndex<OptSet<P, C, V>> for &'b str
 where
     C::Opt: Opt,
     C: Ctor,
-    P: OptParser + Pre,
+    P: OptParser,
+    V: OptValidator,
     P::Output: Information,
     C::Config: Config + ConfigValue + Default,
 {
-    fn ref_from<'a>(&self, set: &'a OptSet<P, C>) -> Result<&'a C::Opt, Error> {
+    fn ref_from<'a>(&self, set: &'a OptSet<P, C, V>) -> Result<&'a C::Opt, Error> {
         set.find(*self)?
             .ok_or_else(|| Error::raise_error(format!("Can not find option {}", *self)))
     }
 
-    fn mut_from<'a>(&self, set: &'a mut OptSet<P, C>) -> Result<&'a mut C::Opt, Error> {
+    fn mut_from<'a>(&self, set: &'a mut OptSet<P, C, V>) -> Result<&'a mut C::Opt, Error> {
         set.find_mut(*self)?
             .ok_or_else(|| Error::raise_error(format!("Can not find option {}", *self)))
     }
 }
 
-impl<P, C> Set for OptSet<P, C>
+impl<P, C, V> Set for OptSet<P, C, V>
 where
     C::Opt: Opt,
     C: Ctor,
     P: OptParser,
+    V: OptValidator,
 {
     type Ctor = C;
 
@@ -326,11 +354,12 @@ where
     }
 }
 
-impl<P, C> OptParser for OptSet<P, C>
+impl<P, C, V> OptParser for OptSet<P, C, V>
 where
     C::Opt: Opt,
     C: Ctor,
-    P: OptParser + Pre,
+    P: OptParser,
+    V: OptValidator,
     P::Output: Information,
     C::Config: Config + ConfigValue + Default,
 {
@@ -343,21 +372,16 @@ where
     }
 }
 
-impl<P, C> Pre for OptSet<P, C>
-where
-    C: Ctor,
-    C::Config: Config,
-    P: OptParser + Pre,
-{
-    fn add_prefix<S: Into<Str>>(&mut self, prefix: S) -> &mut Self {
-        self.parser_mut().add_prefix(prefix);
-        self
-    }
-
-    fn prefix(&self) -> &[Str] {
-        self.parser().prefix()
-    }
-}
+impl<P, C, V> OptValidator for OptSet<P, C, V>
+        where
+            C: Ctor,
+            P: OptParser,
+            V: OptValidator,
+        {
+            fn check_name(&mut self, name: &str) -> Result<bool, Error> {
+                self.validator.check_name(name)
+            }
+        }
 
 #[cfg(test)]
 mod test {
@@ -388,8 +412,8 @@ mod test {
         assert!(set.add_opt("-boolc=b")?.run().is_ok());
         assert!(set.add_opt("-boold=b")?.run().is_ok());
         assert!(set.add_opt("--boole=b!")?.run().is_ok());
-        assert!(set.add_opt("--boolf=b/")?.run().is_ok());
-        assert!(set.add_opt("--boolg=b!/")?.run().is_ok());
+        assert!(set.add_opt("--/boolf=b")?.run().is_ok());
+        assert!(set.add_opt("--/boolg=b!")?.run().is_ok());
         assert!(set.add_opt("-boolh=b!")?.run().is_ok());
 
         assert!(set.add_opt("--floatb=f")?.run().is_ok());
@@ -411,7 +435,7 @@ mod test {
         assert_eq!(set.find_all("=p")?.count(), 4);
         assert_eq!(set.find_all_mut("=p")?.count(), 4);
         assert_eq!(set.find_all("=p@4")?.count(), 2);
-        assert!(set.filter("posd")?.set_opt(false).find().is_some());
+        assert!(set.filter("posd")?.set_force(true).find().is_some());
         assert!(set.filter("=p")?.set_name("pose").find().is_none());
 
         assert!(set.find("main")?.is_some());
@@ -419,11 +443,11 @@ mod test {
         assert!(set.find("--boola")?.is_some());
         assert!(set.find("--boolb")?.is_some());
         assert!(set.find_mut("--boole=b!")?.is_some());
-        assert!(set.find_mut("--boolf=b/")?.is_some());
+        assert!(set.find_mut("--/boolf=b")?.is_some());
         assert_eq!(set.find_all("=b")?.count(), 8);
         assert_eq!(set.find_all("=b!")?.count(), 3);
-        assert_eq!(set.filter("=b")?.set_opt(false).find_all().count(), 3);
-        assert!(set.filter("--boolg=b!")?.find().is_some());
+        assert_eq!(set.filter("=b")?.set_force(true).find_all().count(), 3);
+        assert!(set.filter("--/boolg=b!")?.find().is_some());
         assert!(set.filter("-boolg=b!")?.find().is_none());
 
         assert!(set.find("=f")?.is_some());
@@ -433,19 +457,16 @@ mod test {
         assert!(set.find_mut("-floatd=f!")?.is_some());
         assert_eq!(set.find_all("=f")?.count(), 5);
         assert_eq!(set.find_all("=f!")?.count(), 2);
-        assert_eq!(set.filter_mut("=f")?.set_deact(true).find_all().count(), 0);
+        assert_eq!(set.filter_mut("=f")?.find_all().count(), 5);
 
-        assert!(set.find("--=i")?.is_some());
+        assert!(set.find("=i")?.is_some());
         assert!(set.find("--intb")?.is_some());
         assert!(set.find_mut("-inta=i")?.is_none());
         assert!(set.find_mut("--intb=i!")?.is_some());
         assert_eq!(set.find_all_mut("=i")?.count(), 4);
         assert_eq!(set.find_all_mut("=i!")?.count(), 2);
-        assert_eq!(set.filter_mut("=i")?.set_opt(true).find_all().count(), 2);
-        assert_eq!(set.filter_mut("=i")?.set_opt(false).find_all().count(), 2);
-
-        set.add_prefix("+");
-        set.add_prefix("/");
+        assert_eq!(set.filter_mut("=i")?.set_force(true).find_all().count(), 2);
+        assert_eq!(set.filter_mut("=i")?.set_force(false).find_all().count(), 2);
 
         assert!(set.add_opt("--stra=s")?.add_alias("/stre").run().is_ok());
         assert!(set.add_opt("--strb=s!")?.add_alias("/strf").run().is_ok());
@@ -461,35 +482,32 @@ mod test {
         assert!(set.add_opt("/uinte=u")?.run().is_ok());
         assert!(set.add_opt("/uintf=u!")?.run().is_ok());
 
-        assert!(set.find("--=s")?.is_some());
-        assert!(set.find("--=s!")?.is_some());
+        assert!(set.find("=s")?.is_some());
+        assert!(set.find("=s!")?.is_some());
         assert!(set.find("/stre")?.is_some());
         assert!(set.find("/strf")?.is_some());
         assert!(set.find_mut("+strg=s")?.is_some());
         assert!(set.find_mut("+strh=s!")?.is_some());
-        assert_eq!(set.find_all_mut("/=s")?.count(), 2);
-        assert_eq!(set.find_all_mut("+=s!")?.count(), 1);
+        assert_eq!(set.find_all_mut("=s")?.count(), 6);
+        assert_eq!(set.find_all_mut("+strh=s!")?.count(), 1);
 
         assert!(set.find("-uintc")?.is_some());
         assert!(set.find("--uintb")?.is_some());
         assert!(set.find("+uintg")?.is_some());
         assert!(set.find("+uinth")?.is_some());
-        assert_eq!(set.find_all("--=u")?.count(), 2);
-        assert_eq!(set.find_all("--=u!")?.count(), 1);
+        assert_eq!(set.find_all("=u")?.count(), 6);
+        assert_eq!(set.find_all("=u!")?.count(), 3);
 
-        assert_eq!(set.filter("")?.set_pre("+").find_all().count(), 4);
-        assert_eq!(set.filter("")?.set_pre("/").find_all().count(), 4);
+        assert_eq!(set.filter("")?.find_all().count(), 36);
 
         assert!(set
             .add_opt("")?
-            .set_name("foo")
-            .set_prefix("/")
-            .set_optional(false)
+            .set_name("--/foo")
+            .set_force(false)
             .set_type("b")
-            .set_deactivate(true)
             .run()
             .is_ok());
-        assert!(set.find("/foo")?.is_some());
+        assert!(set.find("--/foo")?.is_some());
 
         Ok(())
     }

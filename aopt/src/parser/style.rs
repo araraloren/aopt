@@ -136,6 +136,7 @@ where
         let index = cfg.idx();
         let count = cfg.total();
         let clopt = &cfg.clopt;
+        let mut any_match = false;
 
         match style {
             UserStyle::EqualWithValue => {
@@ -146,9 +147,7 @@ where
                             .with_total(count)
                             .with_arg(clopt.value.clone())
                             .with_style(Style::Argument)
-                            .with_disable(clopt.disable)
-                            .with_name(valueof("name", &clopt.name)?)
-                            .with_prefix(valueof("prefix", &clopt.prefix)?),
+                            .with_name(valueof("name", &clopt.name)?),
                     );
                 }
             }
@@ -161,9 +160,7 @@ where
                             .with_consume(true)
                             .with_arg(cfg.arg().cloned())
                             .with_style(Style::Argument)
-                            .with_disable(clopt.disable)
-                            .with_name(valueof("name", &clopt.name)?)
-                            .with_prefix(valueof("prefix", &clopt.prefix)?),
+                            .with_name(valueof("name", &clopt.name)?),
                     );
                 }
             }
@@ -172,19 +169,28 @@ where
                     if let Some(name) = &clopt.name {
                         // make sure we using `chars.count`, not len()
                         if name.chars().count() >= 2 {
-                            let i = (1..name.len()).find(|v| name.is_char_boundary(*v)).unwrap();
-                            let name_value = name.split_at(i);
+                            let mut i = 1;
 
-                            matches.push(
-                                OptMatch::default()
-                                    .with_idx(index)
-                                    .with_total(count)
-                                    .with_arg(Some(RawVal::from(name_value.1).into()))
-                                    .with_style(Style::Argument)
-                                    .with_disable(clopt.disable)
-                                    .with_name(name_value.0.into())
-                                    .with_prefix(valueof("prefix", &clopt.prefix)?),
-                            );
+                            while i < name.len() {
+                                if let Some(next) =
+                                    (i..name.len()).find(|v| name.is_char_boundary(*v))
+                                {
+                                    let name_value = name.split_at(next);
+
+                                    matches.push(
+                                        OptMatch::default()
+                                            .with_idx(index)
+                                            .with_total(count)
+                                            .with_arg(Some(RawVal::from(name_value.1).into()))
+                                            .with_style(Style::Argument)
+                                            .with_name(name_value.0.into()),
+                                    );
+                                    any_match = true;
+                                    i = next + 1;
+                                } else {
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
@@ -200,9 +206,7 @@ where
                                         .with_total(count)
                                         .with_arg(None)
                                         .with_style(Style::Combined)
-                                        .with_disable(clopt.disable)
-                                        .with_name(format!("{}", char).into())
-                                        .with_prefix(valueof("prefix", &clopt.prefix)?),
+                                        .with_name(format!("{}", char).into()),
                                 );
                             }
                         }
@@ -215,11 +219,9 @@ where
                         OptMatch::default()
                             .with_idx(index)
                             .with_total(count)
-                            .with_arg(Some(OptGuess::<S>::bool2str(!clopt.disable)))
+                            .with_arg(Some(OptGuess::<S>::bool2str(true)))
                             .with_style(Style::Boolean)
-                            .with_disable(clopt.disable)
-                            .with_name(valueof("name", &clopt.name)?)
-                            .with_prefix(valueof("prefix", &clopt.prefix)?),
+                            .with_name(valueof("name", &clopt.name)?),
                     );
                 }
             }
@@ -228,7 +230,12 @@ where
             }
         }
 
-        Ok((!matches.is_empty()).then(|| Self::Process::new(matches)))
+        Ok((!matches.is_empty()).then(|| {
+            let mut process = Self::Process::new(matches);
+
+            process.set_any_match(any_match);
+            process
+        }))
     }
 }
 

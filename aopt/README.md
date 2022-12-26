@@ -8,7 +8,7 @@ Add following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-aopt = "0.7"
+aopt = "0.8"
 ```
 
 ### Enable `sync` feature
@@ -17,7 +17,7 @@ If you want the utils of current crate implement `Send` and `Sync`, you can enab
 
 ```toml
 [dependencies]
-aopt = { version = "0.7", features = [ "sync" ] }
+aopt = { version = "0.8", features = [ "sync" ] }
 ```
 
 ### Enable `utf8` feature
@@ -26,7 +26,7 @@ By default, the command line parsing support `OsString`, enable `utf8` using `St
 
 ```toml
 [dependencies]
-aopt = { version = "0.7", features = [ "utf8" ] }
+aopt = { version = "0.8", features = [ "utf8" ] }
 ```
 
 ## Example
@@ -55,10 +55,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .fallback(|set: &mut ASet, ser: &mut ASer| {
             println!(
                 "invoke list command: debug={:?}, force={:?}, local-only={:?}, source={:?}",
-                ser.sve_val::<bool>(set["debug"].uid())?,
-                ser.sve_val::<bool>(set["force"].uid())?,
-                ser.sve_val::<bool>(set["local-only"].uid())?,
-                ser.sve_val::<String>(set["source"].uid())?,
+                ser.sve_val::<bool>(set["-debug"].uid())?,
+                ser.sve_val::<bool>(set["-force"].uid())?,
+                ser.sve_val::<bool>(set["-local-only"].uid())?,
+                ser.sve_val::<String>(set["-source"].uid())?,
             );
             Ok(None::<()>)
         })?;
@@ -73,9 +73,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .on(|set: &mut ASet, ser: &mut ASer| {
             println!(
                 "invoke update command: debug={:?}, force={:?}, source={:?}",
-                ser.sve_val::<bool>(set["debug"].uid())?,
-                ser.sve_val::<bool>(set["force"].uid())?,
-                ser.sve_val::<String>(set["source"].uid())?,
+                ser.sve_val::<bool>(set["-debug"].uid())?,
+                ser.sve_val::<bool>(set["-force"].uid())?,
+                ser.sve_val::<String>(set["-source"].uid())?,
             );
             Ok(Some(true))
         })?;
@@ -83,16 +83,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     install.add_opt("install=c")?;
     install.add_opt("in=c")?;
     install.add_opt("-debug=b")?;
-    install.add_opt("-override=b/")?.add_alias("-o");
+    install.add_opt("-/override=b")?.add_alias("-/o");
     install.add_opt("-source=s")?.add_alias("-s");
     install.add_opt("name=p!@2")?.on(
         |set: &mut ASet, ser: &mut ASer, mut val: ctx::Value<String>| {
             if val.deref() == "software" {
                 println!(
                     "invoke install command: debug={:?}, override={:?}, source={:?}",
-                    ser.sve_val::<bool>(set["debug"].uid())?,
-                    ser.sve_val::<bool>(set["override"].uid())?,
-                    ser.sve_val::<String>(set["source"].uid())?,
+                    ser.sve_val::<bool>(set["-debug"].uid())?,
+                    ser.sve_val::<bool>(set["-/override"].uid())?,
+                    ser.sve_val::<String>(set["-source"].uid())?,
                 );
                 Ok(Some(val.take()))
             } else {
@@ -113,15 +113,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 * `app.exe ls -source lib.rs -debug` output 
 
-    invoke list command: debug=Bool(true), force=Null, local-only=Null, source=Str("lib.rs")
+    invoke list command: debug=true, force=false, local-only=false, source="lib.rs"
 
 * `app.exe update -force -source=crates.io` output
 
-    invoke update command: debug=Null, force=Bool(true), source=Str("crates.io")
+    invoke update command: debug=false, force=true, source="crates.io"
 
 * `app.exe in software -/o -s crates.io` output
 
-    invoke install command: debug=Null, override=Bool(false), source=Str("crates.io")
+    invoke install command: debug=false, override=true, source=Str("crates.io")
 
 * `app.exe in aopt` output
 

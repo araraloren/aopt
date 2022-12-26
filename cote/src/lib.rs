@@ -20,6 +20,8 @@ use prelude::MetaConfig;
 
 pub mod prelude {
     pub use crate::cote_help;
+    pub use crate::cote_set_help;
+    pub use crate::cote_display_set_help;
     pub use crate::meta::MetaConfig;
     pub use crate::Cote;
     pub use aopt;
@@ -33,6 +35,25 @@ where
     name: String,
 
     parser: Parser<P>,
+
+    auto_help: bool,
+}
+
+impl<P: Policy> Cote<P> {
+    pub fn with_auto_help(mut self, auto_help: bool) -> Self {
+        self.auto_help = auto_help;
+        self
+    }
+
+    pub fn set_auto_help(&mut self, auto_help: bool) -> &mut Self {
+        self.auto_help = auto_help;
+        self
+    }
+
+    /// Add option `/?,-?,-h,--help=b` in default.
+    pub fn auto_help(&mut self) -> bool {
+        self.auto_help
+    }
 }
 
 impl<P> Debug for Cote<P>
@@ -45,6 +66,7 @@ where
         f.debug_struct("Cote")
             .field("name", &self.name)
             .field("parser", &self.parser)
+            .field("auto_help", &self.auto_help)
             .finish()
     }
 }
@@ -58,6 +80,7 @@ where
         Self {
             name: "Cote".to_owned(),
             parser: Parser::default(),
+            auto_help: true,
         }
     }
 }
@@ -85,6 +108,8 @@ where
             name: name.into(),
 
             parser: Parser::new(policy),
+
+            auto_help: true,
         }
     }
 }
@@ -94,7 +119,7 @@ where
     P::Set: 'static,
     P: Policy<Error = Error>,
     SetOpt<P::Set>: Opt,
-    P::Set: Pre + Set + OptParser,
+    P::Set: Set + OptValidator + OptParser,
     <P::Set as OptParser>::Output: Information,
     SetCfg<P::Set>: Config + ConfigValue + Default,
 {
@@ -189,43 +214,23 @@ where
         }
         Ok(pc)
     }
-}
 
-impl<P> Cote<P>
-where
-    P: Policy<Error = Error>,
-{
-    pub fn new_with<S: Into<String>>(
-        name: S,
-        policy: P,
-        optset: P::Set,
-        services: Services,
-    ) -> Self {
-        Self {
-            name: name.into(),
+    pub(crate) fn insert_def_options(&mut self) -> Result<&mut Self, Error> {
+        if self.auto_help() {
+            let name = self.name.clone();
 
-            parser: Parser::new_with(policy, optset, services),
+           self.add_opt("--help=b")?
+                .add_alias("-h")
+                .add_alias("/?")
+                .add_alias("-?")
+                .set_help("Print help message")
+                .on(move |set: &mut P::Set, _: &mut ASer| -> Result<Option<()>, Error> {
+                    cote_set_help!(&name, set)?;
+                    std::process::exit(0)
+                })?;
         }
+        Ok(self)
     }
-
-    pub fn name(&self) -> &String {
-        &self.name
-    }
-
-    pub fn with_name<S: Into<String>>(mut self, name: S) -> Self {
-        self.name = name.into();
-        self
-    }
-
-    pub fn set_name<S: Into<String>>(&mut self, name: S) -> &mut Self {
-        self.name = name.into();
-        self
-    }
-
-    // many apis can access through Deref
-    // pub fn policy(&self) -> &P {
-    //     &self.policy
-    // }
 
     /// Running function after parsing.
     ///
@@ -266,6 +271,9 @@ where
         I: Into<RawVal>,
         F: FnMut(Option<()>, &'b mut Cote<P>) -> Result<R, Error>,
     {
+        // add default options
+        self.insert_def_options()?;
+
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
 
@@ -328,6 +336,9 @@ where
         FUT: Future<Output = Result<R, Error>>,
         F: FnMut(Option<()>, &'b mut Cote<P>) -> FUT,
     {
+        // add default options
+        self.insert_def_options()?;
+
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
         let async_ret;
@@ -396,6 +407,9 @@ where
         I: Into<RawVal>,
         F: FnMut(Option<()>, &'b Cote<P>) -> Result<R, Error>,
     {
+        // add default options
+        self.insert_def_options()?;
+
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
 
@@ -458,6 +472,9 @@ where
         FUT: Future<Output = Result<R, Error>>,
         F: FnMut(Option<()>, &'b Cote<P>) -> FUT,
     {
+        // add default options
+        self.insert_def_options()?;
+
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
         let async_ret;
@@ -486,28 +503,70 @@ where
     {
         self.run_async_with(std::env::args().skip(1), r).await
     }
+}
 
-    pub fn display_help<'a, S: Into<Cow<'a, str>>>(&self, head: S, foot: S) -> Result<(), Error> {
-        self.__display_help(head, foot)
-            .map_err(|e| Error::raise_error(format!("Can not show help message: {:?}", e)))
+impl<P> Cote<P>
+where
+    P: Policy<Error = Error>,
+{
+    pub fn new_with<S: Into<String>>(
+        name: S,
+        policy: P,
+        optset: P::Set,
+        services: Services,
+    ) -> Self {
+        Self {
+            name: name.into(),
+
+            parser: Parser::new_with(policy, optset, services),
+
+            auto_help: true,
+        }
     }
 
-    fn __display_help<'a, S: Into<Cow<'a, str>>>(
-        &self,
+    pub fn name(&self) -> &String {
+        &self.name
+    }
+
+    pub fn with_name<S: Into<String>>(mut self, name: S) -> Self {
+        self.name = name.into();
+        self
+    }
+
+    pub fn set_name<S: Into<String>>(&mut self, name: S) -> &mut Self {
+        self.name = name.into();
+        self
+    }
+
+    // many apis can access through Deref
+    // pub fn policy(&self) -> &P {
+    //     &self.policy
+    // }
+
+    pub fn display_help<'a, S: Into<Cow<'a, str>>>(&self, head: S, foot: S) -> Result<(), Error> {
+        let head = head.into();
+        let foot = foot.into();
+        let name = self.name.as_str();
+
+        cote_display_set_help(self.optset(), name, &head, &foot)
+            .map_err(|e| Error::raise_error(format!("Can not show help message: {:?}", e)))
+    }
+}
+
+pub fn cote_display_set_help<'a, T: Set, S: Into<Cow<'a, str>>>(
+        set: &T,
+        name: S,
         head: S,
         foot: S,
     ) -> Result<(), aopt_help::Error> {
-        let head = head.into();
-        let foot = foot.into();
         let mut app_help = aopt_help::AppHelp::new(
-            self.name.as_str(),
-            &head,
-            &foot,
+            name,
+            head,
+            foot,
             aopt_help::prelude::Style::default(),
             std::io::stdout(),
         );
         let global = app_help.global_mut();
-        let set = self.parser.optset();
 
         global.add_block(Block::new("command", "<COMMAND>", "", "COMMAND:", ""))?;
         global.add_block(Block::new("option", "", "", "OPTION:", ""))?;
@@ -521,7 +580,7 @@ where
                         Cow::from(opt.hint().as_str()),
                         Cow::from(opt.help().as_str()),
                         Cow::from(opt.r#type().to_string()),
-                        opt.optional(),
+                        !opt.force(),
                         true,
                     ),
                 )?;
@@ -533,7 +592,7 @@ where
                         Cow::from(opt.hint().as_str()),
                         Cow::from(opt.help().as_str()),
                         Cow::from(opt.r#type().to_string()),
-                        opt.optional(),
+                        !opt.force(),
                         true,
                     ),
                 )?;
@@ -548,7 +607,7 @@ where
                         Cow::from(opt.hint().as_str()),
                         Cow::from(opt.help().as_str()),
                         Cow::from(opt.r#type().to_string()),
-                        opt.optional(),
+                        !opt.force(),
                         false,
                     ),
                 )?;
@@ -559,7 +618,6 @@ where
 
         Ok(())
     }
-}
 
 /// Display help message of [`Cote`] generate from `Cargo.toml`.
 /// The `head` will be generate from package's description.
@@ -575,5 +633,27 @@ macro_rules! cote_help {
         let head = format!("{}", env!("CARGO_PKG_DESCRIPTION"));
 
         $cote.display_help(head, foot)
+    }};
+}
+
+/// Display help message of [`Cote`] generate from `Cargo.toml`.
+/// The `head` will be generate from package's description.
+/// The `foot` will be generate from package's authors and version.
+#[macro_export]
+macro_rules! cote_set_help {
+    ($name:expr, $set:ident) => {{
+        let foot = format!(
+            "Create by {} v{}",
+            env!("CARGO_PKG_AUTHORS"),
+            env!("CARGO_PKG_VERSION")
+        );
+        let head = format!("{}", env!("CARGO_PKG_DESCRIPTION"));
+
+        fn __check_set<S: aopt::prelude::Set>(a: &S) -> &S { a }
+
+        fn __check_name<T: Into<String>>(a: T) -> String { a.into() }
+
+        $crate::cote_display_set_help(__check_set($set), __check_name($name), head, foot)
+        .map_err(|e| aopt::Error::raise_error(format!("Can not show help message: {:?}", e)))
     }};
 }

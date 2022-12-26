@@ -13,11 +13,7 @@ pub struct Ctx {
 
     name: Option<Str>,
 
-    prefix: Option<Str>,
-
     style: Style,
-
-    disable: bool,
 
     arg: Option<Arc<RawVal>>,
 
@@ -54,18 +50,8 @@ impl Ctx {
         self
     }
 
-    pub fn with_prefix(mut self, prefix: Option<Str>) -> Self {
-        self.prefix = prefix;
-        self
-    }
-
     pub fn with_style(mut self, style: Style) -> Self {
         self.style = style;
-        self
-    }
-
-    pub fn with_disable(mut self, disable: bool) -> Self {
-        self.disable = disable;
         self
     }
 
@@ -106,16 +92,6 @@ impl Ctx {
     /// The copy of [`Args`] when the option matched.
     pub fn args(&self) -> &Arc<Args> {
         &self.args
-    }
-
-    /// The prefix of matched option.
-    pub fn prefix(&self) -> Option<&Str> {
-        self.prefix.as_ref()
-    }
-
-    /// If the option set in deactivate style.
-    pub fn disable(&self) -> bool {
-        self.disable
     }
 
     /// The argument which set in [`guess`](crate::parser::Guess::guess).
@@ -159,18 +135,8 @@ impl Ctx {
         self
     }
 
-    pub fn set_prefix(&mut self, prefix: Option<Str>) -> &mut Self {
-        self.prefix = prefix;
-        self
-    }
-
     pub fn set_style(&mut self, style: Style) -> &mut Self {
         self.style = style;
-        self
-    }
-
-    pub fn set_disable(&mut self, disable: bool) -> &mut Self {
-        self.disable = disable;
         self
     }
 

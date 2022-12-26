@@ -19,8 +19,6 @@ cfg_if::cfg_if! {
         pub struct Creator<O, C, E: Into<Error>> {
             type_name: Str,
 
-            deactivate: bool,
-
             callback: Box<dyn FnMut(C) -> Result<O, E> + Send + Sync + 'static>,
         }
 
@@ -28,7 +26,6 @@ cfg_if::cfg_if! {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 f.debug_struct("Creator")
                     .field("type_name", &self.type_name)
-                    .field("deactivate", &self.deactivate)
                     .field("callback", &"{ ... }")
                     .finish()
             }
@@ -37,12 +34,10 @@ cfg_if::cfg_if! {
         impl<O: Opt, C, E: Into<Error>> Creator<O, C, E> {
             pub fn new(
                 type_name: Str,
-                deactivate: bool,
                 callback: impl FnMut(C) -> Result<O, E> + Send + Sync + 'static,
             ) -> Self {
                 Self {
                     type_name,
-                    deactivate,
                     callback: Box::new(callback),
                 }
             }
@@ -52,8 +47,6 @@ cfg_if::cfg_if! {
         pub struct Creator<O, C, E: Into<Error>> {
             type_name: Str,
 
-            deactivate: bool,
-
             callback: Box<dyn FnMut(C) -> Result<O, E> + 'static>,
         }
 
@@ -61,7 +54,6 @@ cfg_if::cfg_if! {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 f.debug_struct("Creator")
                     .field("type_name", &self.type_name)
-                    .field("deactivate", &self.deactivate)
                     .field("callback", &"{ ... }")
                     .finish()
             }
@@ -70,12 +62,10 @@ cfg_if::cfg_if! {
         impl<O: Opt, C, E: Into<Error>> Creator<O, C, E> {
             pub fn new(
                 type_name: Str,
-                deactivate: bool,
                 callback: impl FnMut(C) -> Result<O, E> + 'static,
             ) -> Self {
                 Self {
                     type_name,
-                    deactivate,
                     callback: Box::new(callback),
                 }
             }
@@ -94,10 +84,6 @@ impl<O: Opt, C, E: Into<Error>> Ctor for Creator<O, C, E> {
         self.type_name.clone()
     }
 
-    fn sp_deactivate(&self) -> bool {
-        self.deactivate
-    }
-
     fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
         (self.callback)(config)
     }
@@ -107,10 +93,8 @@ impl Creator<AOpt, OptConfig, Error> {
     pub fn int() -> Self {
         let type_name = astr("i");
 
-        Self::new(type_name.clone(), false, move |mut config: OptConfig| {
-            let deactivate_style = config.deactivate().unwrap_or(false);
-            let prefix = Some(config.gen_prefix()?);
-            let optional = config.take_optional().unwrap_or(true);
+        Self::new(type_name.clone(), move |mut config: OptConfig| {
+            let force = config.take_force().unwrap_or(false);
             let assoc = config.take_assoc().unwrap_or(Assoc::Int);
             let action = config.take_action().unwrap_or(Action::App);
             let initiator = config
@@ -130,23 +114,18 @@ impl Creator<AOpt, OptConfig, Error> {
                 !config.has_validator(),
                 "Int option only have default value validator"
             );
-            debug_assert!(
-                !deactivate_style,
-                "Int option not support deactivate style configuration"
-            );
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
             }
             Ok(AOpt::default()
                 .with_type(type_name.clone())
                 .with_name(config.gen_name()?)
-                .with_prefix(prefix)
                 .with_assoc(assoc)
                 .with_action(action)
                 .with_style(vec![Style::Argument])
-                .with_opt_help(config.gen_opt_help(false)?)
+                .with_opt_help(config.gen_opt_help()?)
                 .with_alias(Some(config.gen_alias()?))
-                .with_optional(optional)
+                .with_force(force)
                 .with_initiator(initiator)
                 .with_validator(ValValidator::i64()))
         })
@@ -155,10 +134,8 @@ impl Creator<AOpt, OptConfig, Error> {
     pub fn uint() -> Self {
         let type_name = astr("u");
 
-        Self::new(type_name.clone(), false, move |mut config: OptConfig| {
-            let deactivate_style = config.deactivate().unwrap_or(false);
-            let prefix = Some(config.gen_prefix()?);
-            let optional = config.take_optional().unwrap_or(true);
+        Self::new(type_name.clone(), move |mut config: OptConfig| {
+            let force = config.take_force().unwrap_or(false);
             let assoc = config.take_assoc().unwrap_or(Assoc::Uint);
             let action = config.take_action().unwrap_or(Action::App);
             let initiator = config
@@ -178,23 +155,18 @@ impl Creator<AOpt, OptConfig, Error> {
                 !config.has_validator(),
                 "Uint option only have default value validator"
             );
-            debug_assert!(
-                !deactivate_style,
-                "Uint option not support deactivate style configuration"
-            );
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
             }
             Ok(AOpt::default()
                 .with_type(type_name.clone())
                 .with_name(config.gen_name()?)
-                .with_prefix(prefix)
                 .with_assoc(assoc)
                 .with_action(action)
                 .with_style(vec![Style::Argument])
-                .with_opt_help(config.gen_opt_help(false)?)
+                .with_opt_help(config.gen_opt_help()?)
                 .with_alias(Some(config.gen_alias()?))
-                .with_optional(optional)
+                .with_force(force)
                 .with_initiator(initiator)
                 .with_validator(ValValidator::u64()))
         })
@@ -203,10 +175,8 @@ impl Creator<AOpt, OptConfig, Error> {
     pub fn flt() -> Self {
         let type_name = astr("f");
 
-        Self::new(type_name.clone(), false, move |mut config: OptConfig| {
-            let deactivate_style = config.deactivate().unwrap_or(false);
-            let prefix = Some(config.gen_prefix()?);
-            let optional = config.take_optional().unwrap_or(true);
+        Self::new(type_name.clone(), move |mut config: OptConfig| {
+            let force = config.take_force().unwrap_or(false);
             let assoc = config.take_assoc().unwrap_or(Assoc::Flt);
             let action = config.take_action().unwrap_or(Action::App);
             let initiator = config
@@ -226,23 +196,18 @@ impl Creator<AOpt, OptConfig, Error> {
                 !config.has_validator(),
                 "Flt option only have default value validator"
             );
-            debug_assert!(
-                !deactivate_style,
-                "Flt option not support deactivate style configuration"
-            );
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
             }
             Ok(AOpt::default()
                 .with_type(type_name.clone())
                 .with_name(config.gen_name()?)
-                .with_prefix(prefix)
                 .with_assoc(assoc)
                 .with_action(action)
                 .with_style(vec![Style::Argument])
-                .with_opt_help(config.gen_opt_help(false)?)
+                .with_opt_help(config.gen_opt_help()?)
                 .with_alias(Some(config.gen_alias()?))
-                .with_optional(optional)
+                .with_force(force)
                 .with_initiator(initiator)
                 .with_validator(ValValidator::f64()))
         })
@@ -251,10 +216,8 @@ impl Creator<AOpt, OptConfig, Error> {
     pub fn str() -> Self {
         let type_name = astr("s");
 
-        Self::new(type_name.clone(), false, move |mut config: OptConfig| {
-            let deactivate_style = config.deactivate().unwrap_or(false);
-            let prefix = Some(config.gen_prefix()?);
-            let optional = config.take_optional().unwrap_or(true);
+        Self::new(type_name.clone(), move |mut config: OptConfig| {
+            let force = config.take_force().unwrap_or(false);
             let assoc = config.take_assoc().unwrap_or(Assoc::Str);
             let action = config.take_action().unwrap_or(Action::App);
             let initiator = config
@@ -274,23 +237,18 @@ impl Creator<AOpt, OptConfig, Error> {
                 !config.has_validator(),
                 "Str option only have default value validator"
             );
-            debug_assert!(
-                !deactivate_style,
-                "Str option not support deactivate style configuration"
-            );
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
             }
             Ok(AOpt::default()
                 .with_type(type_name.clone())
                 .with_name(config.gen_name()?)
-                .with_prefix(prefix)
                 .with_assoc(assoc)
                 .with_action(action)
                 .with_style(vec![Style::Argument])
-                .with_opt_help(config.gen_opt_help(false)?)
+                .with_opt_help(config.gen_opt_help()?)
                 .with_alias(Some(config.gen_alias()?))
-                .with_optional(optional)
+                .with_force(force)
                 .with_initiator(initiator)
                 .with_validator(ValValidator::str()))
         })
@@ -299,13 +257,16 @@ impl Creator<AOpt, OptConfig, Error> {
     pub fn bool() -> Self {
         let type_name = astr("b");
 
-        Self::new(type_name.clone(), true, move |mut config: OptConfig| {
-            let deactivate_style = config.deactivate().unwrap_or(false);
-            let prefix = Some(config.gen_prefix()?);
-            let optional = config.take_optional().unwrap_or(true);
+        Self::new(type_name.clone(), move |mut config: OptConfig| {
+            let force = config.take_force().unwrap_or(false);
             let assoc = config.take_assoc().unwrap_or(Assoc::Bool);
             let action = config.take_action().unwrap_or(Action::Set);
-            let value = deactivate_style;
+            let initiator = config
+                .take_initiator()
+                .unwrap_or_else(|| ValInitiator::bool(false));
+            let validator = config
+                .take_validator()
+                .unwrap_or_else(|| ValValidator::bool());
 
             debug_assert_eq!(
                 assoc,
@@ -320,35 +281,28 @@ impl Creator<AOpt, OptConfig, Error> {
                 !config.has_validator(),
                 "Boolean option only have default value validator"
             );
-            debug_assert!(
-                !config.has_initiator(),
-                "Boolean option only have default value initiator"
-            );
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
             }
             Ok(AOpt::default()
                 .with_type(type_name.clone())
                 .with_name(config.gen_name()?)
-                .with_prefix(prefix)
                 .with_assoc(assoc)
                 .with_action(action)
                 .with_style(vec![Style::Boolean, Style::Combined])
-                .with_opt_help(config.gen_opt_help(deactivate_style)?)
+                .with_opt_help(config.gen_opt_help()?)
                 .with_alias(Some(config.gen_alias()?))
-                .with_optional(optional)
-                .with_initiator(ValInitiator::bool(value))
-                .with_validator(ValValidator::bool(deactivate_style))
-                .with_deactivate_style(deactivate_style))
+                .with_force(force)
+                .with_initiator(initiator)
+                .with_validator(validator))
         })
     }
 
     pub fn pos() -> Self {
         let type_name = astr("p");
 
-        Self::new(type_name.clone(), false, move |mut config: OptConfig| {
-            let deactivate_style = config.deactivate().unwrap_or(false);
-            let optional = config.take_optional().unwrap_or(true);
+        Self::new(type_name.clone(), move |mut config: OptConfig| {
+            let force = config.take_force().unwrap_or(false);
             let assoc = config.take_assoc().unwrap_or(Assoc::Noa);
             let action = config.take_action().unwrap_or(Action::App);
             let initiator = config
@@ -359,14 +313,6 @@ impl Creator<AOpt, OptConfig, Error> {
             if let Some(v) = config.alias() {
                 debug_assert!(v.is_empty(), "Pos option not support alias configruation")
             }
-            debug_assert!(
-                config.prefix().is_none(),
-                "Pos option not support prefix configruation"
-            );
-            debug_assert!(
-                !deactivate_style,
-                "Pos option not support deactivate style configuration"
-            );
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
             }
@@ -377,8 +323,8 @@ impl Creator<AOpt, OptConfig, Error> {
                 .with_action(action)
                 .with_idx(Some(config.gen_idx()?))
                 .with_style(vec![Style::Pos])
-                .with_opt_help(config.gen_opt_help(deactivate_style)?)
-                .with_optional(optional)
+                .with_opt_help(config.gen_opt_help()?)
+                .with_force(force)
                 .with_initiator(initiator)
                 .with_validator(validator)
                 .with_ignore_name())
@@ -388,8 +334,7 @@ impl Creator<AOpt, OptConfig, Error> {
     pub fn cmd() -> Self {
         let type_name = astr("c");
 
-        Self::new(type_name.clone(), false, move |mut config: OptConfig| {
-            let deactivate_style = config.deactivate().unwrap_or(false);
+        Self::new(type_name.clone(), move |mut config: OptConfig| {
             let assoc = config.take_assoc().unwrap_or(Assoc::Noa);
             let action = config.take_action().unwrap_or(Action::Set);
             let initiator = config
@@ -401,21 +346,12 @@ impl Creator<AOpt, OptConfig, Error> {
                 debug_assert!(v.is_empty(), "Cmd option not support alias configruation")
             }
             debug_assert!(
-                !config.optional().unwrap_or(false),
+                config.force().unwrap_or(true),
                 "Cmd option only have default optional configuration"
             );
-
             debug_assert!(
                 config.idx().is_none(),
                 "Cmd option only have default index configuration"
-            );
-            debug_assert!(
-                config.prefix().is_none(),
-                "Cmd option not support prefix configruation"
-            );
-            debug_assert!(
-                !deactivate_style,
-                "Cmd option not support deactivate style configuration"
             );
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
@@ -427,8 +363,8 @@ impl Creator<AOpt, OptConfig, Error> {
                 .with_action(action)
                 .with_idx(Some(crate::opt::Index::forward(1)))
                 .with_style(vec![Style::Cmd])
-                .with_opt_help(config.gen_opt_help(deactivate_style)?)
-                .with_optional(false)
+                .with_opt_help(config.gen_opt_help()?)
+                .with_force(true)
                 .with_initiator(initiator)
                 .with_validator(validator))
         })
@@ -437,8 +373,7 @@ impl Creator<AOpt, OptConfig, Error> {
     pub fn main() -> Self {
         let type_name = astr("m");
 
-        Self::new(type_name.clone(), false, move |mut config: OptConfig| {
-            let deactivate_style = config.deactivate().unwrap_or(false);
+        Self::new(type_name.clone(), move |mut config: OptConfig| {
             let assoc = config.take_assoc().unwrap_or(Assoc::Null);
             let action = config.take_action().unwrap_or(Action::Set);
             let initiator = config.take_initiator().unwrap_or_default();
@@ -448,21 +383,12 @@ impl Creator<AOpt, OptConfig, Error> {
                 debug_assert!(v.is_empty(), "Main option not support alias configruation")
             }
             debug_assert!(
-                !config.optional().unwrap_or(false),
+                !config.force().unwrap_or(false),
                 "Main option only have default optional configuration"
             );
             debug_assert!(
                 config.idx().is_none(),
                 "Main option only have default index configuration"
-            );
-            debug_assert!(
-                config.prefix().is_none(),
-                "Main option not support prefix configruation: {:?}",
-                config.prefix()
-            );
-            debug_assert!(
-                !deactivate_style,
-                "Main option not support deactivate style configuration"
             );
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
@@ -474,8 +400,8 @@ impl Creator<AOpt, OptConfig, Error> {
                 .with_action(action)
                 .with_idx(Some(crate::opt::Index::anywhere()))
                 .with_style(vec![Style::Main])
-                .with_opt_help(config.gen_opt_help(deactivate_style)?)
-                .with_optional(true)
+                .with_opt_help(config.gen_opt_help()?)
+                .with_force(false)
                 .with_initiator(initiator)
                 .with_validator(validator)
                 .with_ignore_name())
