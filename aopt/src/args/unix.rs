@@ -53,18 +53,14 @@ impl AOsStrExt for OsStr {
 /// The struct of the input option string are:
 ///
 /// ```!
-/// [--][/][option][=][value]
-///   |  |     |    |    |
-///   |  |     |    |    |
-///   |  |     |    |    The value part, it is optional.
-///   |  |     |    |
-///   |  |     |    The delimiter of option name and value.
-///   |  |     |    
-///   |  |     The option name part, it must be provide by user.
-///   |  |
-///   |  The disable symbol, generally it is using for boolean option.
-///   |  
-///   The prefix of option.
+/// [--/option][=][value]
+///        |    |    |
+///        |    |    |
+///        |    |    The value part, it is optional.
+///        |    |
+///        |    The delimiter of option name and value.
+///        |    
+///        The option name part, it must be provide by user.
 /// ```
 ///
 /// # Example
