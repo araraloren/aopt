@@ -110,7 +110,7 @@ pub trait APolicyExt<I: crate::set::Set> {
 
 pub type ACreator = Creator<AOpt, OptConfig, Error>;
 
-pub type ASet = OptSet<StrParser, ACreator, PrefixOptValidator<'static>>;
+pub type ASet = OptSet<StrParser, ACreator, PrefixOptValidator>;
 
 pub type ASer = Services;
 

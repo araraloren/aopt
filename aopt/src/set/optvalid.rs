@@ -20,16 +20,16 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub struct PrefixOptValidator<'a>(Vec<&'a str>);
+pub struct PrefixOptValidator(Vec<String>);
 
-impl<'a> Default for PrefixOptValidator<'a> {
+impl Default for PrefixOptValidator {
     fn default() -> Self {
-        Self::new(vec!["--/", "--", "-/", "-", "/"])
+        Self::new(["--/", "--", "-/", "-", "/"].map(|v|v.to_string()).to_vec())
     }
 }
 
-impl<'a> PrefixOptValidator<'a> {
-    pub fn new(prefix: Vec<&'a str>) -> Self {
+impl PrefixOptValidator {
+    pub fn new(prefix: Vec<String>) -> Self {
         // sort the prefix by length
         let mut _self = Self(prefix);
 
@@ -41,17 +41,17 @@ impl<'a> PrefixOptValidator<'a> {
         self.0.sort_by_key(|b| std::cmp::Reverse(b.len()));
     }
 
-    pub fn add_prefix(&mut self, prefix: &'a str) -> &mut Self {
-        self.0.push(prefix);
+    pub fn add_prefix(&mut self, prefix: &str) -> &mut Self {
+        self.0.push(prefix.to_string());
         self.sort_prefix();
         self
     }
 }
 
-impl<'a> OptValidator for PrefixOptValidator<'a> {
+impl OptValidator for PrefixOptValidator {
     fn check_name(&mut self, name: &str) -> Result<bool, Error> {
         for prefix in self.0.iter() {
-            if name.starts_with(*prefix) {
+            if name.starts_with(prefix) {
                 return Ok(true);
             }
         }
