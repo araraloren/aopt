@@ -1,20 +1,14 @@
 use crate::Error;
 
 pub trait OptValidator {
-    fn check_name(
-        &mut self,
-        name: &str,
-    ) -> Result<bool, Error>;
+    fn check_name(&mut self, name: &str) -> Result<bool, Error>;
 }
 
 impl<Func> OptValidator for Func
 where
     Func: FnMut(&str) -> Result<bool, Error>,
 {
-    fn check_name(
-        &mut self,
-        name: &str,
-    ) -> Result<bool, Error> {
+    fn check_name(&mut self, name: &str) -> Result<bool, Error> {
         (self)(name)
     }
 }
@@ -24,7 +18,11 @@ pub struct PrefixOptValidator(Vec<String>);
 
 impl Default for PrefixOptValidator {
     fn default() -> Self {
-        Self::new(["--/", "--", "-/", "-", "/"].map(|v|v.to_string()).to_vec())
+        Self::new(
+            ["--/", "--", "-/", "-", "/"]
+                .map(|v| v.to_string())
+                .to_vec(),
+        )
     }
 }
 
