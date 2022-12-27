@@ -19,9 +19,9 @@ pub use aopt::Error;
 use prelude::MetaConfig;
 
 pub mod prelude {
+    pub use crate::cote_display_set_help;
     pub use crate::cote_help;
     pub use crate::cote_set_help;
-    pub use crate::cote_display_set_help;
     pub use crate::meta::MetaConfig;
     pub use crate::Cote;
     pub use aopt;
@@ -219,15 +219,17 @@ where
         if self.auto_help() {
             let name = self.name.clone();
 
-           self.add_opt("--help=b")?
+            self.add_opt("--help=b")?
                 .add_alias("-h")
                 .add_alias("/?")
                 .add_alias("-?")
                 .set_help("Print help message")
-                .on(move |set: &mut P::Set, _: &mut ASer| -> Result<Option<()>, Error> {
-                    cote_set_help!(&name, set)?;
-                    std::process::exit(0)
-                })?;
+                .on(
+                    move |set: &mut P::Set, _: &mut ASer| -> Result<Option<()>, Error> {
+                        cote_set_help!(&name, set)?;
+                        std::process::exit(0)
+                    },
+                )?;
         }
         Ok(self)
     }
@@ -554,70 +556,70 @@ where
 }
 
 pub fn cote_display_set_help<'a, T: Set, S: Into<Cow<'a, str>>>(
-        set: &T,
-        name: S,
-        head: S,
-        foot: S,
-    ) -> Result<(), aopt_help::Error> {
-        let mut app_help = aopt_help::AppHelp::new(
-            name,
-            head,
-            foot,
-            aopt_help::prelude::Style::default(),
-            std::io::stdout(),
-        );
-        let global = app_help.global_mut();
+    set: &T,
+    name: S,
+    head: S,
+    foot: S,
+) -> Result<(), aopt_help::Error> {
+    let mut app_help = aopt_help::AppHelp::new(
+        name,
+        head,
+        foot,
+        aopt_help::prelude::Style::default(),
+        std::io::stdout(),
+    );
+    let global = app_help.global_mut();
 
-        global.add_block(Block::new("command", "<COMMAND>", "", "COMMAND:", ""))?;
-        global.add_block(Block::new("option", "", "", "OPTION:", ""))?;
-        global.add_block(Block::new("args", "[ARGS]", "", "ARGS:", ""))?;
-        for opt in set.iter() {
-            if opt.mat_style(Style::Pos) {
-                global.add_store(
-                    "args",
-                    Store::new(
-                        Cow::from(opt.name().as_str()),
-                        Cow::from(opt.hint().as_str()),
-                        Cow::from(opt.help().as_str()),
-                        Cow::from(opt.r#type().to_string()),
-                        !opt.force(),
-                        true,
-                    ),
-                )?;
-            } else if opt.mat_style(Style::Cmd) {
-                global.add_store(
-                    "command",
-                    Store::new(
-                        Cow::from(opt.name().as_str()),
-                        Cow::from(opt.hint().as_str()),
-                        Cow::from(opt.help().as_str()),
-                        Cow::from(opt.r#type().to_string()),
-                        !opt.force(),
-                        true,
-                    ),
-                )?;
-            } else if opt.mat_style(Style::Argument)
-                || opt.mat_style(Style::Boolean)
-                || opt.mat_style(Style::Combined)
-            {
-                global.add_store(
-                    "option",
-                    Store::new(
-                        Cow::from(opt.name().as_str()),
-                        Cow::from(opt.hint().as_str()),
-                        Cow::from(opt.help().as_str()),
-                        Cow::from(opt.r#type().to_string()),
-                        !opt.force(),
-                        false,
-                    ),
-                )?;
-            }
+    global.add_block(Block::new("command", "<COMMAND>", "", "COMMAND:", ""))?;
+    global.add_block(Block::new("option", "", "", "OPTION:", ""))?;
+    global.add_block(Block::new("args", "[ARGS]", "", "ARGS:", ""))?;
+    for opt in set.iter() {
+        if opt.mat_style(Style::Pos) {
+            global.add_store(
+                "args",
+                Store::new(
+                    Cow::from(opt.name().as_str()),
+                    Cow::from(opt.hint().as_str()),
+                    Cow::from(opt.help().as_str()),
+                    Cow::from(opt.r#type().to_string()),
+                    !opt.force(),
+                    true,
+                ),
+            )?;
+        } else if opt.mat_style(Style::Cmd) {
+            global.add_store(
+                "command",
+                Store::new(
+                    Cow::from(opt.name().as_str()),
+                    Cow::from(opt.hint().as_str()),
+                    Cow::from(opt.help().as_str()),
+                    Cow::from(opt.r#type().to_string()),
+                    !opt.force(),
+                    true,
+                ),
+            )?;
+        } else if opt.mat_style(Style::Argument)
+            || opt.mat_style(Style::Boolean)
+            || opt.mat_style(Style::Combined)
+        {
+            global.add_store(
+                "option",
+                Store::new(
+                    Cow::from(opt.name().as_str()),
+                    Cow::from(opt.hint().as_str()),
+                    Cow::from(opt.help().as_str()),
+                    Cow::from(opt.r#type().to_string()),
+                    !opt.force(),
+                    false,
+                ),
+            )?;
         }
-
-        app_help.display(true)?;
-
-        Ok(())
     }
+
+    app_help.display(true)?;
+
+    Ok(())
+}
 
 /// Display help message of [`Cote`] generate from `Cargo.toml`.
 /// The `head` will be generate from package's description.
@@ -649,11 +651,15 @@ macro_rules! cote_set_help {
         );
         let head = format!("{}", env!("CARGO_PKG_DESCRIPTION"));
 
-        fn __check_set<S: aopt::prelude::Set>(a: &S) -> &S { a }
+        fn __check_set<S: aopt::prelude::Set>(a: &S) -> &S {
+            a
+        }
 
-        fn __check_name<T: Into<String>>(a: T) -> String { a.into() }
+        fn __check_name<T: Into<String>>(a: T) -> String {
+            a.into()
+        }
 
         $crate::cote_display_set_help(__check_set($set), __check_name($name), head, foot)
-        .map_err(|e| aopt::Error::raise_error(format!("Can not show help message: {:?}", e)))
+            .map_err(|e| aopt::Error::raise_error(format!("Can not show help message: {:?}", e)))
     }};
 }

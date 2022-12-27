@@ -1,6 +1,6 @@
 use std::borrow::Cow;
+use std::ops::Deref;
 use std::path::Path;
-use std::{ops::Deref, os::windows::prelude::MetadataExt};
 
 use aopt::ctx::VecStore;
 use aopt::Error;
@@ -94,12 +94,14 @@ fn main() -> color_eyre::Result<()> {
         .add_opt("--help=b")?
         .add_alias("-h")
         .set_help("Show the help message")
-        .on(|set: &mut ASet, _: &mut ASer| -> Result<Option<()>, Error> {
-            display_help(set).map_err(|e| {
-                Error::raise_error(format!("can not write help to stdout: {:?}", e))
-            })?;
-            std::process::exit(0)
-        })?;
+        .on(
+            |set: &mut ASet, _: &mut ASer| -> Result<Option<()>, Error> {
+                display_help(set).map_err(|e| {
+                    Error::raise_error(format!("can not write help to stdout: {:?}", e))
+                })?;
+                std::process::exit(0)
+            },
+        )?;
 
     parser
         .add_opt("main=m")?
@@ -165,7 +167,7 @@ impl FilterType {
                 FilterType::Dir => meta.is_dir(),
                 FilterType::Link => meta.file_type().is_symlink(),
                 FilterType::File => meta.is_file(),
-                FilterType::Size(size) => meta.file_size() >= *size,
+                FilterType::Size(size) => meta.len() >= *size,
                 FilterType::Regex(regex_str) => {
                     if let Ok(regex) = Regex::new(regex_str) {
                         regex.is_match(path)
