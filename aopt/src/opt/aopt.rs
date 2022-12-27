@@ -19,7 +19,7 @@ use crate::Uid;
 /// The type support by default:
 ///
 /// |  creator   | assoc  | default action |string | ignore name | styles |
-/// |  ----  | ----  | -- | -- | -- | -- | -- |
+/// |  ----  | ----  | -- | -- | -- | -- |
 /// | [`bool`](Creator::bool)  | [`Assoc::Bool`] | [`Action::App`] | `b` | false | [`Style::Boolean`],[`Style::Combined`] |
 /// | [`str`](Creator::str)  | [`Assoc::Str`] | [`Action::App`] | `s` | false | [`Style::Argument`] |
 /// | [`flt`](Creator::flt)  | [`Assoc::Flt`] | [`Action::App`] | `f` | false | [`Style::Argument`] |
@@ -30,7 +30,7 @@ use crate::Uid;
 /// | [`main`](Creator::main)  | [`Assoc::Null`] | [`Action::Set`] | `m` | true | [`Style::Main`] |
 ///
 /// |  creator   | index support  | optional support | alias support | validator |
-/// |  ----  | ----  | -- | -- | -- | -- |
+/// |  ----  | ----  | -- | -- | -- |
 /// | [`bool`](Creator::bool)  | no | yes | yes | [`bool`](ValValidator::bool) |
 /// | [`str`](Creator::str)  | no | yes | yes | [`str`](ValValidator::str) |
 /// | [`flt`](Creator::flt)  | no | yes | yes |  [`f64`](ValValidator::f64) |
