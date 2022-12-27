@@ -1,4 +1,13 @@
-use aopt::prelude::{Action, Assoc};
+use aopt::prelude::*;
+use aopt::set::SetCfg;
+use aopt::set::SetOpt;
+use aopt::Error;
+
+pub trait InjectConfig<'a, T, P> {
+    type Ret;
+
+    fn inject_opt(&mut self, parser: &'a mut P) -> Result<Self::Ret, Error>;
+}
 
 ///
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -192,5 +201,43 @@ where
             }
         }
         self
+    }
+}
+
+impl<'a, T: ErasedTy + Clone + 'static, P> InjectConfig<'a, T, Parser<P>> for MetaConfig<T>
+where
+    P::Set: 'static,
+    P: Policy<Error = Error>,
+    SetOpt<P::Set>: Opt,
+    P::Set: Set + OptValidator + OptParser,
+    <P::Set as OptParser>::Output: Information,
+    SetCfg<P::Set>: Config + ConfigValue + Default,
+{
+    type Ret = ParserCommit<'a, P::Set>;
+
+    fn inject_opt(&mut self, parser: &'a mut Parser<P>) -> Result<Self::Ret, Error> {
+        let mut pc = parser.add_opt(self.take_option())?;
+
+        if let Some(hint) = self.take_hint() {
+            pc = pc.set_hint(hint);
+        }
+        if let Some(help) = self.take_help() {
+            pc = pc.set_help(help);
+        }
+        if let Some(action) = self.take_action() {
+            pc = pc.set_action(action);
+        }
+        if let Some(assoc) = self.take_assoc() {
+            pc = pc.set_assoc(assoc);
+        }
+        if let Some(value) = self.take_value() {
+            pc = pc.set_initiator(ValInitiator::with(value));
+        }
+        if let Some(alias_) = self.take_alias() {
+            for alias in alias_ {
+                pc = pc.add_alias(alias);
+            }
+        }
+        Ok(pc)
     }
 }
