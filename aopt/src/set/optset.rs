@@ -28,7 +28,7 @@ use super::SetOpt;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<()> {
-///  let mut set = OptSet::<StrParser, ACreator, PrefixOptValidator<'static>>::default();
+///  let mut set = OptSet::<StrParser, ACreator, PrefixOptValidator>::default();
 ///
 ///  // add prefix for option
 ///  set.validator_mut().add_prefix("/");
@@ -373,15 +373,15 @@ where
 }
 
 impl<P, C, V> OptValidator for OptSet<P, C, V>
-        where
-            C: Ctor,
-            P: OptParser,
-            V: OptValidator,
-        {
-            fn check_name(&mut self, name: &str) -> Result<bool, Error> {
-                self.validator.check_name(name)
-            }
-        }
+where
+    C: Ctor,
+    P: OptParser,
+    V: OptValidator,
+{
+    fn check_name(&mut self, name: &str) -> Result<bool, Error> {
+        self.validator.check_name(name)
+    }
+}
 
 #[cfg(test)]
 mod test {

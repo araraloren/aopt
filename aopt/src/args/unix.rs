@@ -121,7 +121,7 @@ impl ArgParser for RawVal {
     type Error = Error;
 
     fn parse_arg(&self) -> Result<Self::Output, Self::Error> {
-        if let Some((name, value)) = left.split_once(EQUAL) {
+        if let Some((name, value)) = self.split_once(EQUAL) {
             let name = name
                 .to_str()
                 .ok_or_else(|| Error::arg_missing_name(format!("Name must be valid utf8")))?
@@ -132,7 +132,7 @@ impl ArgParser for RawVal {
 
             Ok(Self::Output {
                 name: Some(astr(name)),
-                value: value.map(|v| Arc::new(v.to_os_string().into())),
+                value: Some(Arc::new(value.to_os_string().into())),
             })
         } else {
             let name = self
