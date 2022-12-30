@@ -7,6 +7,7 @@ use std::ops::DerefMut;
 
 use crate::Error;
 use crate::RawVal;
+use crate::parser::ReturnVal;
 
 pub use self::osstr_ext::AOsStrExt;
 pub use self::osstr_ext::CLOpt;
@@ -42,6 +43,18 @@ impl Args {
 impl<S: Into<RawVal>, I: Iterator<Item = S>> From<I> for Args {
     fn from(iter: I) -> Self {
         Self::new(iter)
+    }
+}
+
+impl From<ReturnVal> for Args {
+    fn from(value: ReturnVal) -> Self {
+        Self::from(value.into_args().into_iter())
+    }
+}
+
+impl<'a> From<&'a ReturnVal> for Args {
+    fn from(value: &'a ReturnVal) -> Self {
+        Self::from(value.args().iter().cloned())
     }
 }
 
