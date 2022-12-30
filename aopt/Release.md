@@ -1,6 +1,14 @@
 
 # Relase note
 
+## 0.8.3
+
+- Add Into<Args> for ReturnVal
+
+## 0.8.2
+
+- Fix the compile error on linux
+
 ## 0.8.0
 
 - Removing the prefix of option
