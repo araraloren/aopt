@@ -373,7 +373,7 @@ where
         'a: 'b,
         F: FnMut(Option<()>, &'b mut Cote<P>) -> Result<R, Error>,
     {
-        self.run_mut_with(std::env::args(), r)
+        self.run_mut_with(std::env::args().skip(1), r)
     }
 
     /// Running async function after parsing.
