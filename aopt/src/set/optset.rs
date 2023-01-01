@@ -168,6 +168,14 @@ where
     P::Output: Information,
     C::Config: Config + ConfigValue + Default,
 {
+    /// Add an option by configuration into current [`OptSet`].
+    pub fn add_opt_cfg<Cfg: Into<C::Config>>(
+        &mut self,
+        config: Cfg,
+    ) -> Result<Commit<'_, Self>, Error> {
+        Ok(Commit::new(self, config.into()))
+    }
+
     /// Add an option into current [`OptSet`].
     ///
     /// It parsing the given option string `S` using inner [`OptParser`], return an [`Commit`].
