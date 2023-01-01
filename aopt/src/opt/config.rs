@@ -152,8 +152,6 @@ pub struct OptConfig {
 
     help: Help,
 
-    deact: Option<bool>,
-
     action: Option<Action>,
 
     assoc: Option<Assoc>,
@@ -191,11 +189,6 @@ impl OptConfig {
 
     pub fn with_help<S: Into<Str>>(mut self, help: S) -> Self {
         self.help.set_help(help.into());
-        self
-    }
-
-    pub fn with_deact(mut self, deactivate_style: bool) -> Self {
-        self.deact = Some(deactivate_style);
         self
     }
 
