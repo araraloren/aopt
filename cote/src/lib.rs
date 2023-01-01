@@ -5,16 +5,13 @@ use std::fmt::Debug;
 
 pub use crate::inject::ExtractVal;
 pub use crate::inject::ExtractValFor;
+pub use crate::inject::ExtractValForMut;
 pub use crate::inject::ExtractValMut;
-    pub use crate::inject::ExtractValForMut;
-    pub use crate::inject::Inject;
-    pub use crate::inject::InjectFrom;
+pub use crate::inject::Inject;
+pub use crate::inject::InjectFrom;
 pub use crate::null::NullPolicy;
 
-use aopt::{
-    prelude::*,
-    set::{SetCfg, SetOpt},
-};
+use aopt::prelude::*;
 use aopt::{Error, HashMap, RawVal};
 
 pub struct Cote<P: Policy, E: Policy = NullPolicy<ASet>> {
@@ -22,7 +19,7 @@ pub struct Cote<P: Policy, E: Policy = NullPolicy<ASet>> {
 
     auto_help: bool,
 
-    pre_parser: Parser<P>,
+    maj_parser: Parser<P>,
 
     sub_parser: HashMap<String, Parser<E>>,
 
@@ -42,7 +39,7 @@ where
         Self {
             name: "cote".to_owned(),
             auto_help: Default::default(),
-            pre_parser: Default::default(),
+            maj_parser: Default::default(),
             sub_parser: Default::default(),
             parser_map: Default::default(),
             parser_ret: Default::default(),
@@ -63,7 +60,7 @@ where
         f.debug_struct("Cote")
             .field("name", &self.name)
             .field("auto_help", &self.auto_help)
-            .field("pre_parser", &self.pre_parser)
+            .field("maj_parser", &self.maj_parser)
             .field("sub_parser", &self.sub_parser)
             .field("parser_map", &self.parser_map)
             .field("parser_ret", &self.parser_ret)
@@ -72,6 +69,14 @@ where
 }
 
 impl<P: Policy, E: Policy> Cote<P, E> {
+    pub fn maj_parser(&self) -> &Parser<P> {
+        &self.maj_parser
+    }
+
+    pub fn maj_parser_mut(&mut self) -> &mut Parser<P> {
+        &mut self.maj_parser
+    }
+
     pub fn add_sub_parser<S: Into<String>>(&mut self, name: S, parser: Parser<E>) -> &mut Self {
         self.sub_parser.insert(name.into(), parser);
         self
@@ -88,13 +93,13 @@ impl<P: Policy, E: Policy> Cote<P, E> {
         self.parser_map.contains_key(name)
     }
 
-    fn _sub_parser_mut(&mut self, name: &str) -> Result<&mut Parser<E>, Error> {
+    pub fn sub_parser_mut(&mut self, name: &str) -> Result<&mut Parser<E>, Error> {
         self.sub_parser
             .get_mut(name)
             .ok_or_else(|| Error::raise_error(format!("Invalid sub parser name: {}", name)))
     }
 
-    fn _sub_parser(&self, name: &str) -> Result<&Parser<E>, Error> {
+    pub fn sub_parser(&self, name: &str) -> Result<&Parser<E>, Error> {
         println!("--> get sub parser -> {}", name);
         self.sub_parser
             .get(name)
@@ -104,128 +109,109 @@ impl<P: Policy, E: Policy> Cote<P, E> {
 
 impl<P, E> Cote<P, E>
 where
-    E: Policy,
-    P::Set: 'static,
-    P: Policy<Error = Error>,
-    SetOpt<P::Set>: Opt,
-    P::Set: Set + OptValidator + OptParser,
-    <P::Set as OptParser>::Output: Information,
-    SetCfg<P::Set>: Config + ConfigValue + Default,
-{
-    pub fn inject<'a, I: Inject<'a, Parser<P>, Error = Error>>(
-        &'a mut self,
-    ) -> Result<I::Ret, Error> {
-        I::inject(&mut self.pre_parser)
-    }
-
-    pub fn inject_from<'a, I: InjectFrom<'a, Parser<P>, Error = Error>>(
-        &'a mut self,
-        mut meta: I,
-    ) -> Result<I::Ret, Error> {
-        meta.inject_from(&mut self.pre_parser)
-    }
-
-    pub fn extract_val<'a, I: ExtractVal<'a, Parser<P>, Error = Error>>(
-        &'a self,
-    ) -> Result<I, Error> {
-        I::extract_new(&self.pre_parser)
-    }
-
-    pub fn extract_val_for<'a, 'b, I: ExtractValFor<'a, Parser<P>, Error = Error>>(
-        &'a self,
-        val: &'b mut I,
-    ) -> Result<&'b mut I, Error> {
-        val.extract_for(&self.name, &self.pre_parser)
-    }
-
-    pub fn extract_val_mut<'a, I: ExtractValMut<'a, Parser<P>, Error = Error>>(
-        &'a mut self,
-    ) -> Result<I, Error> {
-        I::extract_new_mut(&mut self.pre_parser)
-    }
-
-    pub fn extract_val_for_mut<'a, 'b, I: ExtractValForMut<'a, Parser<P>, Error = Error>>(
-        &'a mut self,
-        val: &'b mut I,
-    ) -> Result<&'b mut I, Error> {
-        val.extract_for_mut(&self.name, &mut self.pre_parser)
-    }
-}
-
-impl<P, E> Cote<P, E>
-where
-    P: Policy,
-    E::Set: 'static,
     E: Policy<Error = Error>,
-    SetOpt<E::Set>: Opt,
-    E::Set: Set + OptValidator + OptParser,
-    <E::Set as OptParser>::Output: Information,
-    SetCfg<E::Set>: Config + ConfigValue + Default,
+    P: Policy<Error = Error>,
 {
-    pub fn inject_sub<'a, I: Inject<'a, Parser<E>, Error = Error>>(
-        &'a mut self,
-        name: &str,
-    ) -> Result<I::Ret, Error> {
-        I::inject(self._sub_parser_mut(name)?)
+    pub fn inject<'a, I: Inject<'a, Self, Error = Error>>(&'a mut self) -> Result<I::Ret, Error> {
+        I::inject(self)
     }
 
-    pub fn inject_sub_from<'a, I: InjectFrom<'a, Parser<E>, Error = Error>>(
+    pub fn inject_from<'a, I: InjectFrom<'a, Self, Error = Error>>(
         &'a mut self,
         mut meta: I,
-        name: &str,
     ) -> Result<I::Ret, Error> {
-        meta.inject_from(self._sub_parser_mut(name)?)
+        meta.inject_from(self)
     }
 
-    pub fn extract_subval<'a, I: ExtractVal<'a, Parser<E>, Error = Error>>(
-        &'a self,
-        name: &str,
-    ) -> Result<I, Error> {
-        I::extract_new(self._sub_parser(name)?)
+    pub fn extract_val<'a, I: ExtractVal<'a, Self, Error = Error>>(&'a self) -> Result<I, Error> {
+        I::extract_new(self)
     }
 
-    pub fn extract_subval_for<'a, 'b, I: ExtractValFor<'a, Parser<E>, Error = Error>>(
+    pub fn extract_val_for<'a, 'b, I: ExtractValFor<'a, Self, Error = Error>>(
         &'a self,
         val: &'b mut I,
-        name: &str,
     ) -> Result<&'b mut I, Error> {
-        val.extract_for(name, self._sub_parser(name)?)
+        val.extract_for(&self.name, self)
     }
 
-    pub fn extract_subval_mut<'a, I: ExtractValMut<'a, Parser<E>, Error = Error>>(
+    pub fn extract_val_mut<'a, I: ExtractValMut<'a, Self, Error = Error>>(
         &'a mut self,
-        name: &str,
     ) -> Result<I, Error> {
-        I::extract_new_mut(self._sub_parser_mut(name)?)
+        I::extract_new_mut(self)
     }
 
-    pub fn extract_subval_for_mut<'a, 'b, I: ExtractValForMut<'a, Parser<E>, Error = Error>>(
+    pub fn extract_val_for_mut<'a, 'b, I: ExtractValForMut<'a, Self, Error = Error>>(
         &'a mut self,
         val: &'b mut I,
-        name: &str,
     ) -> Result<&'b mut I, Error> {
-        val.extract_for_mut(name, self._sub_parser_mut(name)?)
+        let name = self.name.clone();
+
+        val.extract_for_mut(&name, self)
     }
 }
 
+// impl<P, E> Cote<P, E>
+// where
+//     P: Policy,
+//     E::Set: 'static,
+//     E: Policy<Error = Error>,
+//     SetOpt<E::Set>: Opt,
+//     E::Set: Set + OptValidator + OptParser,
+//     <E::Set as OptParser>::Output: Information,
+//     SetCfg<E::Set>: Config + ConfigValue + Default,
+// {
+//     pub fn inject_sub<'a, I: Inject<'a, Parser<E>, Error = Error>>(
+//         &'a mut self,
+//         name: &str,
+//     ) -> Result<I::Ret, Error> {
+//         I::inject(self._sub_parser_mut(name)?)
+//     }
+
+//     pub fn inject_sub_from<'a, I: InjectFrom<'a, Parser<E>, Error = Error>>(
+//         &'a mut self,
+//         mut meta: I,
+//         name: &str,
+//     ) -> Result<I::Ret, Error> {
+//         meta.inject_from(self._sub_parser_mut(name)?)
+//     }
+
+//     pub fn extract_subval<'a, I: ExtractVal<'a, Parser<E>, Error = Error>>(
+//         &'a self,
+//         name: &str,
+//     ) -> Result<I, Error> {
+//         I::extract_new(self._sub_parser(name)?)
+//     }
+
+//     pub fn extract_subval_for<'a, 'b, I: ExtractValFor<'a, Parser<E>, Error = Error>>(
+//         &'a self,
+//         val: &'b mut I,
+//         name: &str,
+//     ) -> Result<&'b mut I, Error> {
+//         val.extract_for(name, self._sub_parser(name)?)
+//     }
+
+//     pub fn extract_subval_mut<'a, I: ExtractValMut<'a, Parser<E>, Error = Error>>(
+//         &'a mut self,
+//         name: &str,
+//     ) -> Result<I, Error> {
+//         I::extract_new_mut(self._sub_parser_mut(name)?)
+//     }
+
+//     pub fn extract_subval_for_mut<'a, 'b, I: ExtractValForMut<'a, Parser<E>, Error = Error>>(
+//         &'a mut self,
+//         val: &'b mut I,
+//         name: &str,
+//     ) -> Result<&'b mut I, Error> {
+//         val.extract_for_mut(name, self._sub_parser_mut(name)?)
+//     }
+// }
+
 impl<P, E> Cote<P, E>
 where
-    P: Policy,
-    E: Policy,
-    P::Set: 'static,
-    E::Set: 'static,
     P::Ret: Into<Args>,
     E::Ret: Into<Args>,
     P: Policy<Error = Error>,
     E: Policy<Error = Error>,
-    SetOpt<P::Set>: Opt,
-    SetOpt<E::Set>: Opt,
-    P::Set: Set + OptValidator + OptParser,
-    E::Set: Set + OptValidator + OptParser,
-    <P::Set as OptParser>::Output: Information,
-    <E::Set as OptParser>::Output: Information,
-    SetCfg<P::Set>: Config + ConfigValue + Default,
-    SetCfg<E::Set>: Config + ConfigValue + Default,
 {
     pub fn run_sub_parser(
         &mut self,
@@ -249,7 +235,7 @@ where
                 sub_parser.init()?;
                 match sub_parser.parse(args.clone()) {
                     Ok(Some(_)) => {
-                        println!("--> running parser ok -> {:?}", &ret);
+                        println!("--> running parser ok -> previous error {:?}", &ret);
                         ret = Ok(Some(parser_name.clone()));
                         break;
                     }
@@ -296,16 +282,16 @@ where
         let mut ret;
 
         // initialize the option value
-        self.pre_parser.init()?;
+        self.maj_parser.init()?;
 
-        let pre_parser_ret = self.pre_parser.parse(aopt::Arc::new(Args::from(args)));
+        let pre_parser_ret = self.maj_parser.parse(aopt::Arc::new(Args::from(args)));
 
         ret = pre_parser_ret.map(|ret| ret.map(|_| self.name.clone()));
         println!("--> pre parser ==> {:?}", &ret);
         if matches!(ret, Ok(Some(_))) {
             // pre parser name
             let mut next_parser = self.name.clone();
-            let mut args = Self::_convert2args(&mut self.pre_parser)?;
+            let mut args = Self::_convert2args(&mut self.maj_parser)?;
 
             loop {
                 println!("--> ready running parser = {}", &next_parser);
@@ -315,7 +301,7 @@ where
                 ret = self.run_sub_parser(args.clone(), &next_parser, true);
                 if let Ok(Some(sub_parser_name)) = &ret {
                     next_parser = sub_parser_name.clone();
-                    args = Self::_convert2args(self._sub_parser_mut(&next_parser)?)?;
+                    args = Self::_convert2args(self.sub_parser_mut(&next_parser)?)?;
                 } else {
                     break;
                 }

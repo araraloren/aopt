@@ -1,15 +1,15 @@
-pub trait Inject<'a, P> {
+pub trait Inject<'a, T> {
     type Ret;
     type Error;
 
-    fn inject(parser: &'a mut P) -> Result<Self::Ret, Self::Error>;
+    fn inject(parser: &'a mut T) -> Result<Self::Ret, Self::Error>;
 }
 
-pub trait InjectFrom<'a, P> {
+pub trait InjectFrom<'a, T> {
     type Ret;
     type Error;
 
-    fn inject_from(&mut self, parser: &'a mut P) -> Result<Self::Ret, Self::Error>;
+    fn inject_from(&mut self, parser: &'a mut T) -> Result<Self::Ret, Self::Error>;
 }
 
 pub trait ExtractVal<'a, P>
