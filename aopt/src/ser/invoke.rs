@@ -198,15 +198,7 @@ where
     /// If there no handler for a option, then default handler will be called.
     /// It will parsing [`RawVal`](crate::RawVal)(using [`RawValParser`]) into associated type, then call the action
     /// of option save the value to [`ValService`](crate::ser::ValService).
-    ///
-    /// * [`Assoc::Bool`] : bool
-    /// * [`Assoc::Int`] : i64
-    /// * [`Assoc::Uint`] : u64
-    /// * [`Assoc::Flt`] : f64
-    /// * [`Assoc::Str`] : String
-    /// * [`Assoc::Noa`] : bool
-    /// * [`Assoc::Path`] : PathBuf
-    /// * [`Assoc::Null`] : nothing stored
+    /// For value type, reference documents of [`Assoc`].
     pub fn fallback(set: &mut S, ser: &mut Services, ctx: &Ctx) -> Result<Option<()>, Error> {
         let uid = ctx.uid();
         let opt = set.get(uid).unwrap();
@@ -223,8 +215,22 @@ where
         match assoc {
             Assoc::Bool => action.process(uid, set, ser, val, bool::parse(opt, val, ctx).ok()),
             Assoc::Int => action.process(uid, set, ser, val, i64::parse(opt, val, ctx).ok()),
+            Assoc::Int128 => action.process(uid, set, ser, val, i128::parse(opt, val, ctx).ok()),
+            Assoc::ISize => action.process(uid, set, ser, val, isize::parse(opt, val, ctx).ok()),
+            Assoc::Int64 => action.process(uid, set, ser, val, i64::parse(opt, val, ctx).ok()),
+            Assoc::Int32 => action.process(uid, set, ser, val, i32::parse(opt, val, ctx).ok()),
+            Assoc::Int16 => action.process(uid, set, ser, val, i16::parse(opt, val, ctx).ok()),
+            Assoc::Int8 => action.process(uid, set, ser, val, i8::parse(opt, val, ctx).ok()),
             Assoc::Uint => action.process(uid, set, ser, val, u64::parse(opt, val, ctx).ok()),
+            Assoc::Uint128 => action.process(uid, set, ser, val, u128::parse(opt, val, ctx).ok()),
+            Assoc::USize => action.process(uid, set, ser, val, usize::parse(opt, val, ctx).ok()),
+            Assoc::Uint64 => action.process(uid, set, ser, val, u64::parse(opt, val, ctx).ok()),
+            Assoc::Uint32 => action.process(uid, set, ser, val, u32::parse(opt, val, ctx).ok()),
+            Assoc::Uint16 => action.process(uid, set, ser, val, u16::parse(opt, val, ctx).ok()),
+            Assoc::Uint8 => action.process(uid, set, ser, val, u8::parse(opt, val, ctx).ok()),
             Assoc::Flt => action.process(uid, set, ser, val, f64::parse(opt, val, ctx).ok()),
+            Assoc::Flt64 => action.process(uid, set, ser, val, f64::parse(opt, val, ctx).ok()),
+            Assoc::Flt32 => action.process(uid, set, ser, val, f32::parse(opt, val, ctx).ok()),
             Assoc::Str => action.process(uid, set, ser, val, String::parse(opt, val, ctx).ok()),
             Assoc::Noa => action.process(uid, set, ser, val, val.map(|_| true)),
             Assoc::Path => action.process(uid, set, ser, val, PathBuf::parse(opt, val, ctx).ok()),
