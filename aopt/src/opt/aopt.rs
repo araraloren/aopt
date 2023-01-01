@@ -20,7 +20,7 @@ use crate::Uid;
 ///
 /// |  creator   | assoc  | default action |string | ignore name | styles |
 /// |  ----  | ----  | -- | -- | -- | -- |
-/// | [`bool`](Creator::bool)  | [`Assoc::Bool`] | [`Action::App`] | `b` | false | [`Style::Boolean`],[`Style::Combined`] |
+/// | [`bool`](Creator::bool)  | [`Assoc::Bool`] | [`Action::Set`] | `b` | false | [`Style::Boolean`],[`Style::Combined`] |
 /// | [`str`](Creator::str)  | [`Assoc::Str`] | [`Action::App`] | `s` | false | [`Style::Argument`] |
 /// | [`flt`](Creator::flt)  | [`Assoc::Flt`] | [`Action::App`] | `f` | false | [`Style::Argument`] |
 /// | [`int`](Creator::int)  | [`Assoc::Int`] | [`Action::App`] | `i` | false | [`Style::Argument`] |

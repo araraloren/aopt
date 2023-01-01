@@ -222,10 +222,10 @@ impl OptConfig {
             &astr(field),
             self.name
                 .as_ref()
-                .ok_or_else(|| Error::raise_error("Option type name can't be empty"))?,
+                .ok_or_else(|| Error::raise_error("Option name can't be empty"))?,
             self.ty
                 .as_ref()
-                .ok_or_else(|| Error::raise_error("Option name can't be empty"))?,
+                .ok_or_else(|| Error::raise_error("Option type name can't be empty"))?,
         ))
     }
 }
