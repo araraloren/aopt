@@ -1,5 +1,6 @@
 mod inject;
 mod null;
+mod infer;
 
 use std::fmt::Debug;
 
@@ -10,6 +11,7 @@ pub use crate::inject::ExtractValMut;
 pub use crate::inject::Inject;
 pub use crate::inject::InjectFrom;
 pub use crate::null::NullPolicy;
+pub use crate::infer::Infer;
 
 use aopt::prelude::*;
 use aopt::{Error, HashMap, RawVal};
