@@ -5,9 +5,9 @@ pub(crate) mod osstr_ext;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
+use crate::parser::ReturnVal;
 use crate::Error;
 use crate::RawVal;
-use crate::parser::ReturnVal;
 
 pub use self::osstr_ext::AOsStrExt;
 pub use self::osstr_ext::CLOpt;
