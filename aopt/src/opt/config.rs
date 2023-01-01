@@ -207,6 +207,11 @@ impl OptConfig {
         self
     }
 
+    pub fn with_initiator(mut self, initiator: Option<ValInitiator>) -> Self {
+        self.initiator = initiator;
+        self
+    }
+
     pub fn with_validator(mut self, validator: Option<ValValidator>) -> Self {
         self.valid = validator;
         self
