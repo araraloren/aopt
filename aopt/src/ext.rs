@@ -173,6 +173,7 @@ impl APolicyExt<ASet> for ADelayPolicy {
 /// * [`cmd`](Creator::cmd)
 /// * [`pos`](Creator::pos)
 /// * [`main`](Creator::main)
+/// * [`any`](Creator::any)
 pub fn aset_with_default_creators() -> ASet {
     ASet::default()
         .with_creator(Creator::int())
@@ -183,6 +184,7 @@ pub fn aset_with_default_creators() -> ASet {
         .with_creator(Creator::cmd())
         .with_creator(Creator::main())
         .with_creator(Creator::pos())
+        .with_creator(Creator::any())
 }
 
 /// Return an [`Services`] with below [`Service`](crate::ser::Service)s:
