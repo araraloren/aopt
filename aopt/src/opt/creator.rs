@@ -407,4 +407,38 @@ impl Creator<AOpt, OptConfig, Error> {
                 .with_ignore_name())
         })
     }
+
+    pub fn any() -> Self {
+        let type_name = astr("a");
+
+        Self::new(type_name.clone(), move |mut config: OptConfig| {
+            let assoc = config.take_assoc().unwrap_or(Assoc::Null);
+            let action = config.take_action().unwrap_or(Action::Null);
+            let initiator = config.take_initiator().unwrap_or_default();
+            let validator = config.take_validator().unwrap_or_else(ValValidator::null);
+
+            if let Some(r#type) = config.r#type() {
+                debug_assert_eq!(r#type, &type_name)
+            }
+            Ok(AOpt::default()
+                .with_type(type_name.clone())
+                .with_name(config.gen_name()?)
+                .with_assoc(assoc)
+                .with_action(action)
+                .with_idx(config.take_idx())
+                .with_style(vec![
+                    Style::Main,
+                    Style::Pos,
+                    Style::Cmd,
+                    Style::Argument,
+                    Style::Combined,
+                    Style::Boolean,
+                    Style::Null,
+                ])
+                .with_opt_help(config.gen_opt_help()?)
+                .with_force(false)
+                .with_initiator(initiator)
+                .with_validator(validator))
+        })
+    }
 }

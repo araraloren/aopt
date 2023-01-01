@@ -561,6 +561,63 @@ where
             self.services.ser_invoke_mut()?,
         ))
     }
+
+    /// Add an option to the [`Set`](Policy::Set), return a [`ParserCommit`].
+    ///
+    /// ```rust
+    /// # use aopt::Error;
+    /// # use aopt::prelude::*;
+    /// # use std::convert::From;
+    /// #
+    /// # fn main() -> Result<(), Error> {
+    ///     pub struct Bool;
+    ///
+    ///     impl From<Bool> for OptConfig {
+    ///         fn from(_: Bool) -> Self {
+    ///             OptConfig::default()
+    ///                 .with_type("a")
+    ///                 .with_action(Some(Action::Set))
+    ///                 .with_assoc(Some(Assoc::Bool))
+    ///                 .with_initiator(Some(ValInitiator::bool(false)))
+    ///         }
+    ///     }
+    ///
+    ///     pub struct Int64;
+    ///
+    ///     impl From<Int64> for OptConfig {
+    ///         fn from(_: Int64) -> Self {
+    ///             OptConfig::default()
+    ///                 .with_type("i")
+    ///                 .with_action(Some(Action::Set))
+    ///                 .with_assoc(Some(Assoc::Int))
+    ///                 .with_initiator(Some(ValInitiator::i64(0)))
+    ///         }
+    ///     }
+    ///
+    ///     let mut parser = AFwdParser::default();
+    ///
+    ///     parser.add_opt_cfg(Bool)?.set_name("--round");
+    ///     parser.add_opt_cfg(Int64)?.set_name("--poll");
+    ///
+    ///     parser.init()?;
+    ///     parser.parse(aopt::Arc::new(Args::from(["--poll", "42"].into_iter())))?;
+    ///
+    ///     assert_eq!(parser.find_val::<bool>("--round")?, &false);
+    ///     assert_eq!(parser.find_val::<i64>("--poll")?, &42);
+    ///
+    /// #    Ok(())
+    /// # }
+    ///```
+    pub fn add_opt_cfg<Cfg: Into<<<P::Set as Set>::Ctor as Ctor>::Config>>(
+        &mut self,
+        config: Cfg,
+    ) -> Result<ParserCommit<'_, P::Set>, Error> {
+        Ok(ParserCommit::new(
+            Commit::new(&mut self.optset, config.into()),
+            self.services.ser_invoke_mut()?,
+        ))
+    }
+
     cfg_if::cfg_if! {
         if #[cfg(feature = "sync")] {
             pub fn entry<A, O, H>(&mut self, uid: Uid) -> Result<HandlerEntry<'_, P::Set, H, A, O>, Error>

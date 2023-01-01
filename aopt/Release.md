@@ -1,6 +1,14 @@
 
 # Relase note
 
+## 0.8.4
+
+- Add `Creator::any` option type.
+
+- Fix the OptConfig with_* functions
+
+- Add `Parser::add_opt_cfg` function add option by configurations.
+
 ## 0.8.3
 
 - Add Into<Args> for ReturnVal

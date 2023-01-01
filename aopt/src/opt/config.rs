@@ -152,8 +152,6 @@ pub struct OptConfig {
 
     help: Help,
 
-    deact: Option<bool>,
-
     action: Option<Action>,
 
     assoc: Option<Assoc>,
@@ -194,11 +192,6 @@ impl OptConfig {
         self
     }
 
-    pub fn with_deact(mut self, deactivate_style: bool) -> Self {
-        self.deact = Some(deactivate_style);
-        self
-    }
-
     pub fn with_alias<S: Into<Str>>(mut self, alias: Vec<S>) -> Self {
         self.alias = alias.into_iter().map(|v| v.into()).collect();
         self
@@ -214,6 +207,11 @@ impl OptConfig {
         self
     }
 
+    pub fn with_initiator(mut self, initiator: Option<ValInitiator>) -> Self {
+        self.initiator = initiator;
+        self
+    }
+
     pub fn with_validator(mut self, validator: Option<ValValidator>) -> Self {
         self.valid = validator;
         self
@@ -224,10 +222,10 @@ impl OptConfig {
             &astr(field),
             self.name
                 .as_ref()
-                .ok_or_else(|| Error::raise_error("Option type name can't be empty"))?,
+                .ok_or_else(|| Error::raise_error("Option name can't be empty"))?,
             self.ty
                 .as_ref()
-                .ok_or_else(|| Error::raise_error("Option name can't be empty"))?,
+                .ok_or_else(|| Error::raise_error("Option type name can't be empty"))?,
         ))
     }
 }

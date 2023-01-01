@@ -20,7 +20,7 @@ use crate::Uid;
 ///
 /// |  creator   | assoc  | default action |string | ignore name | styles |
 /// |  ----  | ----  | -- | -- | -- | -- |
-/// | [`bool`](Creator::bool)  | [`Assoc::Bool`] | [`Action::App`] | `b` | false | [`Style::Boolean`],[`Style::Combined`] |
+/// | [`bool`](Creator::bool)  | [`Assoc::Bool`] | [`Action::Set`] | `b` | false | [`Style::Boolean`],[`Style::Combined`] |
 /// | [`str`](Creator::str)  | [`Assoc::Str`] | [`Action::App`] | `s` | false | [`Style::Argument`] |
 /// | [`flt`](Creator::flt)  | [`Assoc::Flt`] | [`Action::App`] | `f` | false | [`Style::Argument`] |
 /// | [`int`](Creator::int)  | [`Assoc::Int`] | [`Action::App`] | `i` | false | [`Style::Argument`] |
@@ -28,6 +28,7 @@ use crate::Uid;
 /// | [`cmd`](Creator::cmd)  | [`Assoc::Noa`] | [`Action::Set`] | `c` | false | [`Style::Cmd`] |
 /// | [`pos`](Creator::pos)  | [`Assoc::Noa`] | [`Action::App`] | `p` | true | [`Style::Pos`] |
 /// | [`main`](Creator::main)  | [`Assoc::Null`] | [`Action::Set`] | `m` | true | [`Style::Main`] |
+/// | [`any`](Creator::any)  | [`Assoc::Null`] | [`Action::Null`] | `a` | false | except [`Style::Reserve`] |
 ///
 /// |  creator   | index support  | optional support | alias support | validator |
 /// |  ----  | ----  | -- | -- | -- |
@@ -39,6 +40,7 @@ use crate::Uid;
 /// | [`cmd`](Creator::cmd)  | [`Forward(1)`](crate::opt::Index::Forward) | `false` | no | [`some`](ValValidator::some) |
 /// | [`pos`](Creator::pos)  | yes | yes | no |  [`some`](ValValidator::some) |
 /// | [`main`](Creator::main)  | [`AnyWhere`](crate::opt::Index::AnyWhere) | no | no | [`null`](ValValidator::null) |
+/// | [`any`](Creator::any)  | yes | yes |  yes | [`null`](ValValidator::null) |
 #[derive(Debug, Default)]
 pub struct AOpt {
     uid: Uid,
