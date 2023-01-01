@@ -121,6 +121,8 @@ impl ValValidator {
 
     num_validator!(i64, i64);
 
+    num_validator!(i128, i128);
+
     num_validator!(u8, u8);
 
     num_validator!(u16, u16);
@@ -128,6 +130,8 @@ impl ValValidator {
     num_validator!(u32, u32);
 
     num_validator!(u64, u64);
+
+    num_validator!(u128, u128);
 
     num_validator!(f32, f32);
 
@@ -240,6 +244,8 @@ impl_validator_ext_for!(i32, i32);
 
 impl_validator_ext_for!(i64, i64);
 
+impl_validator_ext_for!(i128, i128);
+
 impl_validator_ext_for!(u8, u8);
 
 impl_validator_ext_for!(u16, u16);
@@ -247,6 +253,8 @@ impl_validator_ext_for!(u16, u16);
 impl_validator_ext_for!(u32, u32);
 
 impl_validator_ext_for!(u64, u64);
+
+impl_validator_ext_for!(u128, u128);
 
 impl_validator_ext_for!(f32, f32);
 

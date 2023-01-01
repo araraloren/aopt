@@ -167,11 +167,53 @@ pub enum Assoc {
     /// Raw value will parsed as [`i64`] when using default [`handler`](crate::ser::InvokeService::fallback).
     Int,
 
+    /// Raw value will parsed as [`i128`] when using default [`handler`](crate::ser::InvokeService::fallback).
+    Int128,
+
+    /// Raw value will parsed as [`isize`] when using default [`handler`](crate::ser::InvokeService::fallback).
+    ISize,
+
+    /// Raw value will parsed as [`i64`] when using default [`handler`](crate::ser::InvokeService::fallback).
+    Int64,
+
+    /// Raw value will parsed as [`i32`] when using default [`handler`](crate::ser::InvokeService::fallback).
+    Int32,
+
+    /// Raw value will parsed as [`i16`] when using default [`handler`](crate::ser::InvokeService::fallback).
+    Int16,
+
+    /// Raw value will parsed as [`i8`] when using default [`handler`](crate::ser::InvokeService::fallback).
+    Int8,
+
     /// Raw value will parsed as [`u64`] when using default [`handler`](crate::ser::InvokeService::fallback).
     Uint,
 
+    /// Raw value will parsed as [`u128`] when using default [`handler`](crate::ser::InvokeService::fallback).
+    Uint128,
+
+    /// Raw value will parsed as [`usize`] when using default [`handler`](crate::ser::InvokeService::fallback).
+    USize,
+
+    /// Raw value will parsed as [`u64`] when using default [`handler`](crate::ser::InvokeService::fallback).
+    Uint64,
+
+    /// Raw value will parsed as [`u32`] when using default [`handler`](crate::ser::InvokeService::fallback).
+    Uint32,
+
+    /// Raw value will parsed as [`u16`] when using default [`handler`](crate::ser::InvokeService::fallback).
+    Uint16,
+
+    /// Raw value will parsed as [`u8`] when using default [`handler`](crate::ser::InvokeService::fallback).
+    Uint8,
+
     /// Raw value will parsed as [`f64`] when using default [`handler`](crate::ser::InvokeService::fallback).
     Flt,
+
+    /// Raw value will parsed as [`f64`] when using default [`handler`](crate::ser::InvokeService::fallback).
+    Flt64,
+
+    /// Raw value will parsed as [`f32`] when using default [`handler`](crate::ser::InvokeService::fallback).
+    Flt32,
 
     /// Raw value will parsed as [`String`] when using default [`handler`](crate::ser::InvokeService::fallback).
     Str,
@@ -194,12 +236,68 @@ impl Assoc {
         matches!(self, Self::Int)
     }
 
+    pub fn is_int128(&self) -> bool {
+        matches!(self, Self::Int128)
+    }
+
+    pub fn is_isize(&self) -> bool {
+        matches!(self, Self::ISize)
+    }
+
+    pub fn is_int64(&self) -> bool {
+        matches!(self, Self::Int64)
+    }
+
+    pub fn is_int32(&self) -> bool {
+        matches!(self, Self::Int32)
+    }
+
+    pub fn is_int16(&self) -> bool {
+        matches!(self, Self::Int16)
+    }
+
+    pub fn is_int8(&self) -> bool {
+        matches!(self, Self::Int8)
+    }
+
     pub fn is_uint(&self) -> bool {
         matches!(self, Self::Uint)
     }
 
+    pub fn is_uint128(&self) -> bool {
+        matches!(self, Self::Uint128)
+    }
+
+    pub fn is_usize(&self) -> bool {
+        matches!(self, Self::USize)
+    }
+
+    pub fn is_uint64(&self) -> bool {
+        matches!(self, Self::Uint64)
+    }
+
+    pub fn is_uint32(&self) -> bool {
+        matches!(self, Self::Uint32)
+    }
+
+    pub fn is_uint16(&self) -> bool {
+        matches!(self, Self::Uint16)
+    }
+
+    pub fn is_uint8(&self) -> bool {
+        matches!(self, Self::Uint8)
+    }
+
     pub fn is_flt(&self) -> bool {
         matches!(self, Self::Flt)
+    }
+
+    pub fn is_flt64(&self) -> bool {
+        matches!(self, Self::Flt64)
+    }
+
+    pub fn is_flt32(&self) -> bool {
+        matches!(self, Self::Flt32)
     }
 
     pub fn is_str(&self) -> bool {
@@ -234,11 +332,53 @@ impl std::fmt::Display for Assoc {
             Assoc::Int => {
                 write!(f, "Assoc::Int")
             }
+            Assoc::Int128 => {
+                write!(f, "Assoc::Int128")
+            }
+            Assoc::ISize => {
+                write!(f, "Assoc::ISize")
+            }
+            Assoc::Int64 => {
+                write!(f, "Assoc::Int64")
+            }
+            Assoc::Int32 => {
+                write!(f, "Assoc::Int32")
+            }
+            Assoc::Int16 => {
+                write!(f, "Assoc::Int16")
+            }
+            Assoc::Int8 => {
+                write!(f, "Assoc::Int8")
+            }
             Assoc::Uint => {
                 write!(f, "Assoc::Uint")
             }
+            Assoc::Uint128 => {
+                write!(f, "Assoc::Uint128")
+            }
+            Assoc::USize => {
+                write!(f, "Assoc::USize")
+            }
+            Assoc::Uint64 => {
+                write!(f, "Assoc::Uint64")
+            }
+            Assoc::Uint32 => {
+                write!(f, "Assoc::Uint32")
+            }
+            Assoc::Uint16 => {
+                write!(f, "Assoc::Uint16")
+            }
+            Assoc::Uint8 => {
+                write!(f, "Assoc::Uint8")
+            }
             Assoc::Flt => {
                 write!(f, "Assoc::Flt")
+            }
+            Assoc::Flt64 => {
+                write!(f, "Assoc::Flt64")
+            }
+            Assoc::Flt32 => {
+                write!(f, "Assoc::Flt32")
             }
             Assoc::Str => {
                 write!(f, "Assoc::Str")

@@ -121,6 +121,8 @@ impl ValInitiator {
 
     num_initiator!(i64, i64);
 
+    num_initiator!(i128, i128);
+
     num_initiator!(u8, u8);
 
     num_initiator!(u16, u16);
@@ -129,7 +131,13 @@ impl ValInitiator {
 
     num_initiator!(u64, u64);
 
+    num_initiator!(u128, u128);
+
     num_initiator!(f32, f32);
 
     num_initiator!(f64, f64);
+
+    num_initiator!(isize, isize);
+
+    num_initiator!(usize, usize);
 }

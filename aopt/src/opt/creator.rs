@@ -100,19 +100,13 @@ impl Creator<AOpt, OptConfig, Error> {
             let initiator = config
                 .take_initiator()
                 .unwrap_or_else(ValInitiator::empty::<i64>);
+            let validator = config
+                .take_validator()
+                .unwrap_or_else(|| ValValidator::i64());
 
-            debug_assert_eq!(
-                assoc,
-                Assoc::Int,
-                "The type must be ValType::Int for Int option"
-            );
             debug_assert!(
                 config.idx().is_none(),
                 "Int option not support index configruation"
-            );
-            debug_assert!(
-                !config.has_validator(),
-                "Int option only have default value validator"
             );
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
@@ -127,7 +121,7 @@ impl Creator<AOpt, OptConfig, Error> {
                 .with_alias(Some(config.gen_alias()?))
                 .with_force(force)
                 .with_initiator(initiator)
-                .with_validator(ValValidator::i64()))
+                .with_validator(validator))
         })
     }
 
@@ -141,19 +135,13 @@ impl Creator<AOpt, OptConfig, Error> {
             let initiator = config
                 .take_initiator()
                 .unwrap_or_else(ValInitiator::empty::<u64>);
+            let validator = config
+                .take_validator()
+                .unwrap_or_else(|| ValValidator::u64());
 
-            debug_assert_eq!(
-                assoc,
-                Assoc::Uint,
-                "The type must be ValType::Uint for Uint option"
-            );
             debug_assert!(
                 config.idx().is_none(),
                 "Uint option not support index configruation"
-            );
-            debug_assert!(
-                !config.has_validator(),
-                "Uint option only have default value validator"
             );
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
@@ -168,7 +156,7 @@ impl Creator<AOpt, OptConfig, Error> {
                 .with_alias(Some(config.gen_alias()?))
                 .with_force(force)
                 .with_initiator(initiator)
-                .with_validator(ValValidator::u64()))
+                .with_validator(validator))
         })
     }
 
@@ -182,19 +170,13 @@ impl Creator<AOpt, OptConfig, Error> {
             let initiator = config
                 .take_initiator()
                 .unwrap_or_else(ValInitiator::empty::<f64>);
+            let validator = config
+                .take_validator()
+                .unwrap_or_else(|| ValValidator::f64());
 
-            debug_assert_eq!(
-                assoc,
-                Assoc::Flt,
-                "The type must be ValType::Flt for Flt option"
-            );
             debug_assert!(
                 config.idx().is_none(),
                 "Flt option not support index configruation"
-            );
-            debug_assert!(
-                !config.has_validator(),
-                "Flt option only have default value validator"
             );
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
@@ -209,7 +191,7 @@ impl Creator<AOpt, OptConfig, Error> {
                 .with_alias(Some(config.gen_alias()?))
                 .with_force(force)
                 .with_initiator(initiator)
-                .with_validator(ValValidator::f64()))
+                .with_validator(validator))
         })
     }
 
@@ -223,19 +205,13 @@ impl Creator<AOpt, OptConfig, Error> {
             let initiator = config
                 .take_initiator()
                 .unwrap_or_else(ValInitiator::empty::<String>);
+            let validator = config
+                .take_validator()
+                .unwrap_or_else(|| ValValidator::str());
 
-            debug_assert_eq!(
-                assoc,
-                Assoc::Str,
-                "The type must be ValType::Str for Str option"
-            );
             debug_assert!(
                 config.idx().is_none(),
                 "Str option not support index configruation"
-            );
-            debug_assert!(
-                !config.has_validator(),
-                "Str option only have default value validator"
             );
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
@@ -250,7 +226,7 @@ impl Creator<AOpt, OptConfig, Error> {
                 .with_alias(Some(config.gen_alias()?))
                 .with_force(force)
                 .with_initiator(initiator)
-                .with_validator(ValValidator::str()))
+                .with_validator(validator))
         })
     }
 
@@ -268,18 +244,9 @@ impl Creator<AOpt, OptConfig, Error> {
                 .take_validator()
                 .unwrap_or_else(|| ValValidator::bool());
 
-            debug_assert_eq!(
-                assoc,
-                Assoc::Bool,
-                "The type must be ValType::Bool for Boolean option"
-            );
             debug_assert!(
                 config.idx().is_none(),
                 "Boolean option not support index configruation"
-            );
-            debug_assert!(
-                !config.has_validator(),
-                "Boolean option only have default value validator"
             );
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
