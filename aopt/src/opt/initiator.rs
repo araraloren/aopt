@@ -70,6 +70,7 @@ impl ValInitiator {
         }))
     }
 
+    /// Return an empty vector initializer for type `T`.
     pub fn empty<T: ErasedTy>() -> Self {
         Self(Box::new(move |uid: Uid, ser: &mut Services| {
             ser.ser_val_mut()?.set(uid, Vec::<T>::new());
