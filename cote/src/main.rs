@@ -84,8 +84,13 @@ where
 
         major_parser.add_opt("--debug=b")?;
 
-        cote.add_sub_parser("cp", Parser::<E>::default())
-            .add_sub_parser("ls", Parser::<E>::default());
+        let mut ls_parser = Parser::<E>::default();
+        let mut cp_parser = Parser::<E>::default();
+
+        ls_parser.add_opt("ls=c")?.set_value(false);
+        cp_parser.add_opt("cp=c")?.set_value(false);
+        cote.add_sub_parser("cp", cp_parser)
+            .add_sub_parser("ls", ls_parser);
         cote.link_parser("cote", vec!["ls", "cp"]);
 
         Copied::inject(cote)?;
@@ -114,7 +119,6 @@ where
     fn inject(cote: &'a mut Cote<P, E>) -> Result<Self::Ret, Self::Error> {
         let parser = cote.sub_parser_mut("cp")?;
 
-        parser.add_opt("cp=c")?.set_value(false);
         parser.add_opt("--from")?.set_type("s").set_force(true);
         parser
             .add_opt("to")?
@@ -148,7 +152,6 @@ where
     fn inject(cote: &'a mut Cote<P, E>) -> Result<Self::Ret, Self::Error> {
         let parser = cote.sub_parser_mut("ls")?;
 
-        parser.add_opt("ls=c")?.set_value(false);
         parser.add_opt("--path")?.set_type("s").set_force(true);
         parser.add_opt("--file")?.set_type("b");
         parser.add_opt("--reverse")?.set_type("b");
