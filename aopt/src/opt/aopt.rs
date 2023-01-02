@@ -30,17 +30,17 @@ use crate::Uid;
 /// | [`main`](Creator::main)  | [`Assoc::Null`] | [`Action::Set`] | `m` | true | [`Style::Main`] |
 /// | [`any`](Creator::any)  | [`Assoc::Null`] | [`Action::Null`] | `a` | false | except [`Style::Reserve`] |
 ///
-/// |  creator   | index support  | optional support | alias support | validator |
-/// |  ----  | ----  | -- | -- | -- |
-/// | [`bool`](Creator::bool)  | no | yes | yes | [`bool`](ValValidator::bool) |
-/// | [`str`](Creator::str)  | no | yes | yes | [`str`](ValValidator::str) |
-/// | [`flt`](Creator::flt)  | no | yes | yes |  [`f64`](ValValidator::f64) |
-/// | [`int`](Creator::int)  | no | yes | yes |  [`i64`](ValValidator::i64) |
-/// | [`uint`](Creator::uint)  | no | yes | yes |  [`u64`](ValValidator::u64) |
-/// | [`cmd`](Creator::cmd)  | [`Forward(1)`](crate::opt::Index::Forward) | `false` | no | [`some`](ValValidator::some) |
-/// | [`pos`](Creator::pos)  | yes | yes | no |  [`some`](ValValidator::some) |
-/// | [`main`](Creator::main)  | [`AnyWhere`](crate::opt::Index::AnyWhere) | no | no | [`null`](ValValidator::null) |
-/// | [`any`](Creator::any)  | yes | yes |  yes | [`null`](ValValidator::null) |
+/// |  creator   | index support  | optional support | alias support | validator | initializer |
+/// |  ----  | ----  | -- | -- | -- | -- |
+/// | [`bool`](Creator::bool)  | no | yes | yes | [`bool`](ValValidator::bool) | [`false`](ValValidator::bool) |
+/// | [`str`](Creator::str)  | no | yes | yes | [`str`](ValValidator::str) | [`empty`](ValInitiator::empty) |
+/// | [`flt`](Creator::flt)  | no | yes | yes |  [`f64`](ValValidator::f64) | [`empty`](ValInitiator::empty) |
+/// | [`int`](Creator::int)  | no | yes | yes |  [`i64`](ValValidator::i64) | [`empty`](ValInitiator::empty) |
+/// | [`uint`](Creator::uint)  | no | yes | yes |  [`u64`](ValValidator::u64) | [`empty`](ValInitiator::empty) |
+/// | [`cmd`](Creator::cmd)  | [`Forward(1)`](crate::opt::Index::Forward) | `false` | no | [`some`](ValValidator::some) | [`false`](ValValidator::bool) |
+/// | [`pos`](Creator::pos)  | yes | yes | no |  [`some`](ValValidator::some) | [`empty::<bool>`](ValInitiator::empty) |
+/// | [`main`](Creator::main)  | [`AnyWhere`](crate::opt::Index::AnyWhere) | no | no | [`null`](ValValidator::null) | [`null`](ValInitiator::null)
+/// | [`any`](Creator::any)  | yes | yes |  yes | [`null`](ValValidator::null) |  [`null`](ValInitiator::null) |
 #[derive(Debug, Default)]
 pub struct AOpt {
     uid: Uid,
