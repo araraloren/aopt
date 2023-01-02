@@ -1,9 +1,13 @@
-mod inject;
-mod null;
-mod infer;
+pub mod infer;
+pub mod inject;
+pub mod null;
 
 use std::fmt::Debug;
 
+pub use crate::infer::Cmd;
+pub use crate::infer::Infer;
+pub use crate::infer::InferConfig;
+pub use crate::infer::InferConvert;
 pub use crate::inject::ExtractVal;
 pub use crate::inject::ExtractValFor;
 pub use crate::inject::ExtractValForMut;
@@ -11,7 +15,6 @@ pub use crate::inject::ExtractValMut;
 pub use crate::inject::Inject;
 pub use crate::inject::InjectFrom;
 pub use crate::null::NullPolicy;
-pub use crate::infer::Infer;
 
 use aopt::prelude::*;
 use aopt::{Error, HashMap, RawVal};

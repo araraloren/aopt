@@ -1,11 +1,10 @@
-use cote::Cote;
-
 use aopt::{
     prelude::*,
     set::{SetCfg, SetOpt},
     Error,
 };
-use cote::{ExtractVal, ExtractValFor, Inject, InjectFrom};
+use cote::{Cote, InferConfig};
+use cote::{ExtractVal, Inject};
 
 // acfg(no_alias)
 //
@@ -47,11 +46,11 @@ pub struct Operator<'a> {
 pub struct Copied<'a> {
     from: &'a String,
 
-    to: Option<&'a String>,
-
     force: bool,
 
     reverse: bool,
+
+    to: &'a Vec<String>,
 }
 
 #[derive(Debug)]
@@ -117,7 +116,12 @@ where
 
         parser.add_opt("cp=c")?.set_value(false);
         parser.add_opt("--from")?.set_type("s").set_force(true);
-        parser.add_opt("--to")?.set_type("s");
+        parser
+            .add_opt("to")?
+            .set_type("p")
+            .set_idx(Index::parse("2..")?)
+            .set_assoc(Assoc::Str)
+            .set_initiator(ValInitiator::empty::<String>());
         parser.add_opt("--force")?.set_type("b");
         parser.add_opt("--reverse")?.set_type("b");
         Ok(())
@@ -194,7 +198,7 @@ where
     fn extract_new(cote: &'a Cote<P, E>) -> Result<Self, Self::Error> {
         let parser = cote.sub_parser("cp")?;
         let from = parser.find_val("--from")?;
-        let to = parser.find_val("--to").ok();
+        let to = parser.find_vals("to")?;
         let force = *parser.find_val("--force")?;
         let reverse = *parser.find_val("--reverse")?;
 
