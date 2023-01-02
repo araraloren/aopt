@@ -383,6 +383,7 @@ impl Creator<AOpt, OptConfig, Error> {
             let action = config.take_action().unwrap_or(Action::Null);
             let initiator = config.take_initiator().unwrap_or_default();
             let validator = config.take_validator().unwrap_or_else(ValValidator::null);
+            let force = config.take_force().unwrap_or(false);
 
             if let Some(r#type) = config.r#type() {
                 debug_assert_eq!(r#type, &type_name)
@@ -403,7 +404,7 @@ impl Creator<AOpt, OptConfig, Error> {
                     Style::Null,
                 ])
                 .with_opt_help(config.gen_opt_help()?)
-                .with_force(false)
+                .with_force(force)
                 .with_initiator(initiator)
                 .with_validator(validator))
         })
