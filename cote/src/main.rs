@@ -33,6 +33,16 @@ use cote::{ExtractVal, Inject};
 //     count: Vec<String>,
 // }
 
+fn policy() -> &'static str {
+    "pre"
+}
+
+#[derive(Debug, Clone, Default, cote_derive::Cote)]
+#[cote(policy = policy())]
+pub struct Widget {
+    
+}
+
 #[derive(Debug)]
 pub struct Operator<'a> {
     debug: bool,
