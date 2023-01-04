@@ -1,24 +1,8 @@
-mod parser;
 mod global;
+mod parser;
+mod value;
 
-#[derive(Debug, Clone)]
-enum CfgValue {
-    Literal(Lit),
-
-    Expr(Expr),
-
-    Call(Vec<Expr>),
-
-    Null,
-}
-
-impl Default for CfgValue {
-    fn default() -> Self {
-        Self::Null
-    }
-}
-
-use syn::{DeriveInput, parse_macro_input, Lit, Expr};
+use syn::{parse_macro_input, DeriveInput};
 
 #[proc_macro_derive(Cote, attributes(cote))]
 #[proc_macro_error::proc_macro_error]

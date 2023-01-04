@@ -38,9 +38,9 @@ fn policy() -> &'static str {
 }
 
 #[derive(Debug, Clone, Default, cote_derive::Cote)]
-#[cote(policy = policy())]
+#[cote(policy = "pre")]
 pub struct Widget {
-    
+    copied: std::option::Option<Option<Vec<bool>>>,
 }
 
 #[derive(Debug)]
