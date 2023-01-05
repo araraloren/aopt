@@ -1,6 +1,5 @@
-
 use proc_macro_error::abort;
-use syn::{parse::Parse, punctuated::Punctuated, Token, Lit, Expr, token::Paren, parenthesized};
+use syn::{parenthesized, parse::Parse, punctuated::Punctuated, token::Paren, Expr, Lit, Token};
 
 #[derive(Debug, Clone)]
 pub(crate) enum CfgValue {
@@ -26,20 +25,16 @@ impl Parse for CfgValue {
 
             if input.peek(Lit) {
                 Ok(Self::Literal(input.parse()?))
-            }
-            else {
+            } else {
                 match input.parse::<Expr>() {
-                    Ok(expr) => {
-                        Ok(CfgValue::Expr(expr))
-                    },
-                    Err(e) => abort!{
+                    Ok(expr) => Ok(CfgValue::Expr(expr)),
+                    Err(e) => abort! {
                         assign_token,
                         "excepted `string literal` or `expression` after `=`: {:?}", e
-                    }
+                    },
                 }
             }
-        }
-        else if input.peek(Paren) {
+        } else if input.peek(Paren) {
             // `name(...)` attributes
             let nested;
 
@@ -48,8 +43,7 @@ impl Parse for CfgValue {
             let method_args: Punctuated<_, Token![,]> = nested.parse_terminated(Expr::parse)?;
 
             Ok(Self::Call(Vec::from_iter(method_args)))
-        }
-        else {
+        } else {
             abort!(input.span(), "invalid configuration value")
         }
     }

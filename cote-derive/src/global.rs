@@ -2,7 +2,9 @@ pub(crate) use crate::value::CfgValue;
 
 use proc_macro2::Ident;
 use proc_macro_error::abort;
-use syn::{parse::Parse, punctuated::Punctuated, Attribute, Token, Lit, Expr, token::Paren, parenthesized};
+use syn::{
+    parenthesized, parse::Parse, punctuated::Punctuated, token::Paren, Attribute, Expr, Lit, Token,
+};
 
 #[derive(Debug, Clone)]
 pub enum CfgKind {
@@ -29,7 +31,10 @@ impl Parse for GlobalCfg {
             }
         };
 
-        Ok(GlobalCfg { kind: cfg_kind, value: input.parse()? })
+        Ok(GlobalCfg {
+            kind: cfg_kind,
+            value: input.parse()?,
+        })
     }
 }
 
