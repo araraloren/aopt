@@ -1,15 +1,15 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{
-    parse::Parse, Data::Struct, DataStruct, DeriveInput, Field, Fields, GenericArgument, Path,
-    PathArguments, Type, TypePath, TypeReference,
+    Data::Struct, DataStruct, DeriveInput, Field, Fields, GenericArgument, Path, PathArguments,
+    Type, TypePath, TypeReference,
 };
 
-use crate::global::GlobalCfgs;
+use crate::global::{Configurations, FieldCfg, GlobalCfg};
 
 pub fn derive_parser(input: DeriveInput) -> TokenStream {
     let ident = &input.ident;
-    let cfgs = GlobalCfgs::parse_attrs(&input.attrs);
+    let cfgs = Configurations::<GlobalCfg>::parse_attrs(&input.attrs);
 
     dbg!(&cfgs);
     match input.data {
@@ -23,13 +23,17 @@ pub fn derive_parser(input: DeriveInput) -> TokenStream {
                         "got a field => {:?} mut = {}, ref = {}",
                         field.ident, field.mutable, field.reference
                     );
-                    for path in field.paths {
+                    for (idx, path) in field.paths.iter().enumerate() {
                         eprintln!(
-                            ":: path --> mut = {}, ref = {}, ident = {:?}, path = {:?}",
+                            ":: path @ {idx} --> mut = {}, ref = {}, ident = {:?}, path = {:?}",
                             path.mutable, path.reference, path.ident, path.path
                         );
                     }
                 }
+                println!(
+                    "got configuration::::::: ===> {:?}",
+                    Configurations::<FieldCfg>::parse_attrs(&field.attrs)
+                );
             }
         }
         _ => {}

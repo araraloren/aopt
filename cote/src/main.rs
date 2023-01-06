@@ -40,7 +40,25 @@ fn policy() -> &'static str {
 #[derive(Debug, Clone, Default, cote_derive::Cote)]
 #[cote(policy = "pre")]
 pub struct Widget<'a> {
-    copied: std::option::Option<&'a Option<Vec<bool>>>,
+    a: std::option::Option<&'a bool>,
+
+    b: Vec<bool>,
+
+    c: &'a Vec<Option<String>>,
+
+    dopt: Vec<&'a i32>,
+
+    eopt: Vec<&'a str>,
+
+    #[cote(skip)]
+    fopt: Option<Vec<String>>,
+
+    #[cote(name = "what")]
+    gopt: bool,
+
+    hopt: i32,
+
+    iopt: &'a i64,
 }
 
 #[derive(Debug)]
