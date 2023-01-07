@@ -1,3 +1,4 @@
+pub(crate) mod checker;
 #[cfg_attr(feature = "sync", path = "sync/parser/commit.rs")]
 #[cfg_attr(not(feature = "sync"), path = "parser/commit.rs")]
 pub(crate) mod commit;
@@ -8,6 +9,7 @@ pub(crate) mod process;
 pub(crate) mod returnval;
 pub(crate) mod style;
 
+pub use self::checker::SetChecker;
 pub use self::commit::ParserCommit;
 pub use self::policy_delay::DelayPolicy;
 pub use self::policy_fwd::FwdPolicy;

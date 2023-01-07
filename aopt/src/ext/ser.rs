@@ -12,7 +12,7 @@ use crate::ctx::Extract;
 use crate::ext::ServicesExt;
 use crate::ext::ServicesValExt;
 use crate::map::ErasedTy;
-use crate::prelude::CheckService;
+use crate::prelude::SetChecker;
 use crate::ser::InvokeService;
 use crate::ser::RawValService;
 use crate::ser::Services;
@@ -55,10 +55,6 @@ impl ServicesExt for Services {
 
     fn ser_rawval_mut<T: ErasedTy>(&mut self) -> Result<&mut RawValService<T>, Error> {
         self.service_mut::<RawValService<T>>()
-    }
-
-    fn ser_check<S: Set + 'static>(&self) -> Result<&CheckService<S>, Error> {
-        self.service::<CheckService<S>>()
     }
 }
 

@@ -10,12 +10,12 @@ use super::NOAGuess;
 use super::OptGuess;
 use super::Policy;
 use super::ReturnVal;
+use super::SetChecker;
 use super::UserStyle;
 use crate::args::ArgParser;
 use crate::args::Args;
 use crate::astr;
 use crate::ctx::Ctx;
-use crate::ext::ServicesExt;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::proc::Process;
@@ -103,6 +103,8 @@ use crate::Error;
 pub struct FwdPolicy<S> {
     strict: bool,
 
+    checker: SetChecker<S>,
+
     marker_s: PhantomData<S>,
 }
 
@@ -110,6 +112,7 @@ impl<S> Default for FwdPolicy<S> {
     fn default() -> Self {
         Self {
             strict: true,
+            checker: SetChecker::default(),
             marker_s: PhantomData::default(),
         }
     }
@@ -143,6 +146,10 @@ where
         self.strict
     }
 
+    pub fn checker(&self) -> &SetChecker<S> {
+        &self.checker
+    }
+
     /// Return the NOA index base on 1.
     pub fn noa_idx(idx: usize) -> usize {
         idx + 1
@@ -166,7 +173,7 @@ where
         ser: &mut Services,
         args: Arc<Args>,
     ) -> Result<Option<Self::Ret>, Self::Error> {
-        ser.ser_check()?.pre_check(set)?;
+        self.checker().pre_check(set)?;
 
         let stys = [
             UserStyle::EqualWithValue,
@@ -229,7 +236,7 @@ where
             }
         }
 
-        ser.ser_check()?.opt_check(set)?;
+        self.checker().opt_check(set)?;
 
         let ret = noa_args.clone();
         let noa_args = Arc::new(noa_args);
@@ -248,7 +255,7 @@ where
                 process_non_opt::<S>(&noa_ctx, set, ser, &mut proc)?;
             }
 
-            ser.ser_check()?.cmd_check(set)?;
+            self.checker().cmd_check(set)?;
 
             for idx in 0..noa_len {
                 if let Some(mut proc) = NOAGuess::new().guess(
@@ -260,9 +267,9 @@ where
                 }
             }
         } else {
-            ser.ser_check()?.cmd_check(set)?;
+            self.checker().cmd_check(set)?;
         }
-        ser.ser_check()?.pos_check(set)?;
+        self.checker().pos_check(set)?;
 
         let main_args = noa_args;
         let mut main_ctx = noa_ctx;
@@ -274,7 +281,7 @@ where
             process_non_opt::<S>(&main_ctx, set, ser, &mut proc)?;
         }
 
-        ser.ser_check()?.post_check(set)?;
+        self.checker().post_check(set)?;
 
         Ok(Some(ReturnVal::new(ret.into_inner(), true)))
     }

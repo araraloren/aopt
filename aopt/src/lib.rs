@@ -217,7 +217,6 @@ pub mod prelude {
     pub use crate::proc::OptMatch;
     pub use crate::proc::OptProcess;
     pub use crate::proc::Process;
-    pub use crate::ser::CheckService;
     pub use crate::ser::InvokeService;
     pub use crate::ser::RawValService;
     pub use crate::ser::Service;

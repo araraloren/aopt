@@ -2,8 +2,6 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 use tracing::trace;
 
-use super::Service;
-use crate::astr;
 use crate::opt::Index;
 use crate::opt::Opt;
 use crate::opt::Style;
@@ -14,29 +12,30 @@ use crate::StrJoin;
 use crate::Uid;
 
 /// Service which do option check in [`Policy`](crate::parser::Policy).
-pub struct CheckService<S>(PhantomData<S>);
+#[derive(Clone)]
+pub struct SetChecker<S>(PhantomData<S>);
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "sync")] {
-        unsafe impl<S> Send for CheckService<S> { }
+        unsafe impl<S> Send for SetChecker<S> { }
 
-        unsafe impl<S> Sync for CheckService<S> { }
+        unsafe impl<S> Sync for SetChecker<S> { }
     }
 }
 
-impl<S> Debug for CheckService<S> {
+impl<S> Debug for SetChecker<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CheckService").finish()
     }
 }
 
-impl<S> Default for CheckService<S> {
+impl<S> Default for SetChecker<S> {
     fn default() -> Self {
         Self(PhantomData::default())
     }
 }
 
-impl<S> CheckService<S> {
+impl<S> SetChecker<S> {
     pub fn new() -> Self {
         Self(PhantomData::default())
     }
@@ -44,7 +43,7 @@ impl<S> CheckService<S> {
     pub fn clear(&mut self) {}
 }
 
-impl<S> CheckService<S>
+impl<S> SetChecker<S>
 where
     S: crate::set::Set,
     SetOpt<S>: Opt,
@@ -197,11 +196,5 @@ where
             .iter()
             .filter(|opt| opt.mat_style(Style::Main))
             .all(|opt| opt.valid()))
-    }
-}
-
-impl<S> Service for CheckService<S> {
-    fn service_name() -> crate::Str {
-        astr("CheckService")
     }
 }

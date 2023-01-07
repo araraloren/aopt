@@ -10,11 +10,11 @@ use super::NOAGuess;
 use super::OptGuess;
 use super::Policy;
 use super::ReturnVal;
+use super::SetChecker;
 use super::UserStyle;
 use crate::args::ArgParser;
 use crate::args::Args;
 use crate::ctx::Ctx;
-use crate::ext::ServicesExt;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::proc::Process;
@@ -101,6 +101,8 @@ use crate::Error;
 pub struct PrePolicy<S> {
     strict: bool,
 
+    checker: SetChecker<S>,
+
     marker_s: PhantomData<S>,
 }
 
@@ -108,7 +110,7 @@ impl<S> Default for PrePolicy<S> {
     fn default() -> Self {
         Self {
             strict: false,
-
+            checker: SetChecker::default(),
             marker_s: PhantomData::default(),
         }
     }
@@ -133,6 +135,10 @@ impl<S> PrePolicy<S> {
 
     pub fn get_strict(&self) -> bool {
         self.strict
+    }
+
+    pub fn checker(&self) -> &SetChecker<S> {
+        &self.checker
     }
 
     /// Ignore failure when parsing.
@@ -172,7 +178,7 @@ where
         ser: &mut Services,
         args: Arc<Args>,
     ) -> Result<Option<Self::Ret>, Self::Error> {
-        Self::ig_failure(ser.ser_check()?.pre_check(set))?;
+        Self::ig_failure(self.checker().pre_check(set))?;
 
         let opt_styles = [
             UserStyle::EqualWithValue,
@@ -239,7 +245,7 @@ where
             }
         }
 
-        Self::ig_failure(ser.ser_check()?.opt_check(set))?;
+        Self::ig_failure(self.checker().opt_check(set))?;
 
         let ret = noa_args.clone();
         let noa_args = Arc::new(noa_args);
@@ -257,7 +263,7 @@ where
                 Self::ig_failure(process_non_opt::<S>(&noa_ctx, set, ser, &mut proc))?;
             }
 
-            Self::ig_failure(ser.ser_check()?.cmd_check(set))?;
+            Self::ig_failure(self.checker().cmd_check(set))?;
 
             for idx in 0..noa_len {
                 if let Some(Some(mut proc)) = Self::ig_failure(NOAGuess::new().guess(
@@ -269,10 +275,10 @@ where
                 }
             }
         } else {
-            Self::ig_failure(ser.ser_check()?.cmd_check(set))?;
+            Self::ig_failure(self.checker().cmd_check(set))?;
         }
 
-        Self::ig_failure(ser.ser_check()?.pos_check(set))?;
+        Self::ig_failure(self.checker().pos_check(set))?;
 
         let main_args = noa_args;
         let mut main_ctx = noa_ctx;
@@ -286,7 +292,7 @@ where
             Self::ig_failure(process_non_opt::<S>(&main_ctx, set, ser, &mut proc))?;
         }
 
-        Self::ig_failure(ser.ser_check()?.post_check(set))?;
+        Self::ig_failure(self.checker().post_check(set))?;
 
         Ok(Some(ReturnVal::new(ret.into_inner(), true)))
     }

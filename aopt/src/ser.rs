@@ -1,4 +1,3 @@
-pub(crate) mod check;
 #[cfg_attr(feature = "sync", path = "sync/ser/invoke.rs")]
 #[cfg_attr(not(feature = "sync"), path = "ser/invoke.rs")]
 pub(crate) mod invoke;
@@ -6,7 +5,6 @@ pub(crate) mod rawval;
 pub(crate) mod userval;
 pub(crate) mod value;
 
-pub use self::check::CheckService;
 pub use self::invoke::HandlerEntry;
 pub use self::invoke::InvokeService;
 pub use self::rawval::RawValService;

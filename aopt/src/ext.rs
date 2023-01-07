@@ -7,7 +7,6 @@ use crate::parser::DelayPolicy;
 use crate::parser::FwdPolicy;
 use crate::parser::Parser;
 use crate::parser::PrePolicy;
-use crate::ser::CheckService;
 use crate::ser::InvokeService;
 use crate::ser::RawValService;
 use crate::ser::Services;
@@ -48,9 +47,6 @@ pub trait ServicesExt {
 
     /// Get [`RawValService`] mutable reference.
     fn ser_rawval_mut<T: ErasedTy>(&mut self) -> Result<&mut RawValService<T>, Error>;
-
-    /// Get [`CheckService`] reference.
-    fn ser_check<S: Set + 'static>(&self) -> Result<&CheckService<S>, Error>;
 }
 
 pub trait ServicesValExt {
@@ -196,7 +192,6 @@ pub fn aset_with_default_creators() -> ASet {
 /// * [`ValService`]
 pub fn aser_with_default_service<S: Set + 'static>() -> Services {
     Services::default()
-        .with(CheckService::<S>::new())
         .with(UsrValService::new())
         .with(InvokeService::<S>::new())
         .with(RawValService::<RawVal>::new())
