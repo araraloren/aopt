@@ -12,7 +12,6 @@ use crate::ctx::Extract;
 use crate::ext::ServicesExt;
 use crate::ext::ServicesValExt;
 use crate::map::ErasedTy;
-use crate::prelude::SetChecker;
 use crate::ser::InvokeService;
 use crate::ser::RawValService;
 use crate::ser::Services;
