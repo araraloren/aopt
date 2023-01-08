@@ -1,7 +1,7 @@
 use crate::ctx::Store;
-use crate::ext::ServicesExt;
 use crate::map::ErasedTy;
 use crate::ser::Services;
+use crate::ser::ServicesExt;
 use crate::Error;
 use crate::RawVal;
 use crate::Uid;
@@ -95,13 +95,13 @@ where
         trace!("Store the value of {{{uid}}} ==> {:?}", raw);
         // Set the value if return Some(Value)
         if let Some(val) = val {
-            let raw_ser = ser.ser_rawval_mut()?;
+            let raw_ser = ser.ser_rawval_mut();
 
             if let Some(raw) = raw {
                 raw_ser.push(uid, raw.clone());
             }
 
-            let val_ser = ser.ser_val_mut()?;
+            let val_ser = ser.ser_val_mut();
 
             match self {
                 Action::Set => {

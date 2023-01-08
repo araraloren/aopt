@@ -1,9 +1,9 @@
 use std::fmt::Debug;
 use tracing::trace;
 
-use crate::ext::ServicesExt;
 use crate::map::ErasedTy;
 use crate::ser::Services;
+use crate::ser::ServicesExt;
 use crate::Error;
 use crate::Uid;
 
@@ -65,7 +65,7 @@ impl ValInitiator {
     pub fn new<T: ErasedTy>(mut init: impl ValInitialize<Vec<T>> + 'static) -> Self {
         Self(Box::new(move |uid: Uid, ser: &mut Services| {
             let vals = init.prepare_initialize_val().map_err(|e| e.into())?;
-            ser.ser_val_mut()?.set(uid, vals);
+            ser.ser_val_mut().set(uid, vals);
             Ok(())
         }))
     }
@@ -73,14 +73,14 @@ impl ValInitiator {
     /// Return an empty vector initializer for type `T`.
     pub fn empty<T: ErasedTy>() -> Self {
         Self(Box::new(move |uid: Uid, ser: &mut Services| {
-            ser.ser_val_mut()?.set(uid, Vec::<T>::new());
+            ser.ser_val_mut().set(uid, Vec::<T>::new());
             Ok(())
         }))
     }
 
     pub fn with<T: Clone + ErasedTy + 'static>(initialize_value: Vec<T>) -> Self {
         Self(Box::new(move |uid: Uid, ser: &mut Services| {
-            ser.ser_val_mut()?.set(uid, initialize_value.clone());
+            ser.ser_val_mut().set(uid, initialize_value.clone());
             Ok(())
         }))
     }

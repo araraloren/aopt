@@ -1,16 +1,16 @@
-use crate::astr;
+use std::fmt::Debug;
+
 use crate::map::AnyMap;
 use crate::map::Entry;
 use crate::map::ErasedTy;
-use crate::ser::Service;
 use crate::Error;
 
 #[derive(Default)]
 pub struct UsrValService(AnyMap);
 
-impl Service for UsrValService {
-    fn service_name() -> crate::Str {
-        astr("UsrValService")
+impl Debug for UsrValService {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("UsrValService").field(&self.0).finish()
     }
 }
 

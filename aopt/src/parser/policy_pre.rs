@@ -505,9 +505,9 @@ mod test {
                  val: Option<String>| {
                     if let Some(val) = val {
                         // let's put the value to `popt`
-                        ser.ser_val_mut()?.push(set["--popt"].uid(), val);
+                        ser.ser_val_mut().push(set["--popt"].uid(), val);
                         if let Some(raw) = raw {
-                            ser.ser_rawval_mut()?.push(uid, raw.clone());
+                            ser.ser_rawval_mut().push(uid, raw.clone());
                         }
                         Ok(Some(()))
                     } else {
@@ -535,9 +535,8 @@ mod test {
             .run()?;
         let epos_uid = set.add_opt("epos=p@7..9")?.run()?;
 
-        ser.ser_invoke_mut::<ASet>()?
-            .entry(set.add_opt("main=m")?.run()?)
-            .on(move |set: &mut ASet, ser: &mut Services, idx: ctx::Index| {
+        inv.entry(set.add_opt("main=m")?.run()?).on(
+            move |set: &mut ASet, ser: &mut Services, idx: ctx::Index| {
                 let copt = &set["--copt"];
                 let dopt = &set["--/dopt"];
                 let bpos = &set["bpos"];
@@ -619,7 +618,8 @@ mod test {
                     None,
                 )?;
                 Ok(Some(true))
-            });
+            },
+        );
         inv.entry(epos_uid).on(
             |set: &mut ASet, ser: &mut ASer, mut val: ctx::Value<String>, idx: ctx::Index| {
                 let ropt = &set["--开关"];

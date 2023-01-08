@@ -218,12 +218,13 @@ pub mod prelude {
     pub use crate::proc::OptMatch;
     pub use crate::proc::OptProcess;
     pub use crate::proc::Process;
+    pub use crate::ser::AnyValEntry;
+    pub use crate::ser::AnyValService;
     pub use crate::ser::RawValService;
-    pub use crate::ser::Service;
     pub use crate::ser::Services;
+    pub use crate::ser::ServicesExt;
+    pub use crate::ser::ServicesValExt;
     pub use crate::ser::UsrValService;
-    pub use crate::ser::ValEntry;
-    pub use crate::ser::ValService;
     pub use crate::set::Commit;
     pub use crate::set::Ctor;
     pub use crate::set::Filter;

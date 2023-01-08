@@ -3,7 +3,6 @@ use std::marker::PhantomData;
 use std::path::PathBuf;
 use tracing::trace;
 
-use crate::astr;
 use crate::ctx::wrap_handler;
 use crate::ctx::wrap_handler_action;
 use crate::ctx::wrap_handler_fallback;
@@ -14,14 +13,12 @@ use crate::ctx::Store;
 use crate::opt::Assoc;
 use crate::opt::Opt;
 use crate::opt::RawValParser;
-use crate::ser::Service;
 use crate::ser::Services;
 use crate::set::Ctor;
 use crate::set::Set;
 use crate::set::SetOpt;
 use crate::Error;
 use crate::HashMap;
-use crate::Str;
 use crate::Uid;
 
 /// Keep the variable length arguments handler in [`HashMap`] with key [`Uid`].
@@ -245,12 +242,6 @@ where
         ctx: &Ctx,
     ) -> Result<Option<()>, Error> {
         Self::fallback(set, ser, ctx)
-    }
-}
-
-impl<S: Set> Service for Invoker<S> {
-    fn service_name() -> Str {
-        astr("InvokeService")
     }
 }
 

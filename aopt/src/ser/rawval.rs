@@ -1,7 +1,5 @@
 use std::fmt::Debug;
 
-use super::Service;
-use crate::astr;
 use crate::map::ErasedTy;
 use crate::Error;
 use crate::HashMap;
@@ -115,11 +113,5 @@ impl<T: ErasedTy> RawValService<T> {
     pub fn vals_mut(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error> {
         self.gets_mut(uid)
             .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for RawValService")))
-    }
-}
-
-impl<T: ErasedTy> Service for RawValService<T> {
-    fn service_name() -> crate::Str {
-        astr("RawValService")
     }
 }

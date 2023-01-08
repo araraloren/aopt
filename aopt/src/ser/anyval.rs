@@ -1,10 +1,10 @@
+use std::fmt::Debug;
 use std::marker::PhantomData;
 
-use super::Service;
 use crate::map::AnyMap;
 use crate::map::ErasedTy;
 use crate::Error;
-use crate::{astr, HashMap, Uid};
+use crate::{HashMap, Uid};
 
 /// Keep any type value in [`HashMap`] with key [`Uid`].
 ///
@@ -45,17 +45,19 @@ use crate::{astr, HashMap, Uid};
 /// # }
 /// ```
 #[derive(Default)]
-pub struct ValService {
+pub struct AnyValService {
     inner: HashMap<Uid, AnyMap>,
 }
 
-impl Service for ValService {
-    fn service_name() -> crate::Str {
-        astr("ValService")
+impl Debug for AnyValService {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AnyValService")
+            .field("inner", &self.inner)
+            .finish()
     }
 }
 
-impl ValService {
+impl AnyValService {
     pub fn new() -> Self {
         Self::default()
     }
@@ -114,8 +116,8 @@ impl ValService {
         self.inner.get_mut(&uid).and_then(|v| v.remove::<Vec<T>>())
     }
 
-    pub fn entry<T>(&mut self, uid: Uid) -> ValEntry<'_, Vec<T>> {
-        ValEntry::new(uid, self.inner.entry(uid).or_default())
+    pub fn entry<T>(&mut self, uid: Uid) -> AnyValEntry<'_, Vec<T>> {
+        AnyValEntry::new(uid, self.inner.entry(uid).or_default())
     }
 
     pub fn val<T: ErasedTy>(&self, uid: Uid) -> Result<&T, Error> {
@@ -143,7 +145,7 @@ impl ValService {
     }
 }
 
-pub struct ValEntry<'a, T> {
+pub struct AnyValEntry<'a, T> {
     uid: Uid,
 
     map: &'a mut AnyMap,
@@ -151,7 +153,7 @@ pub struct ValEntry<'a, T> {
     marker: PhantomData<T>,
 }
 
-impl<'a, T> ValEntry<'a, T> {
+impl<'a, T> AnyValEntry<'a, T> {
     pub fn new(uid: Uid, map: &'a mut AnyMap) -> Self {
         Self {
             uid,
@@ -161,7 +163,7 @@ impl<'a, T> ValEntry<'a, T> {
     }
 }
 
-impl<'a, T> ValEntry<'a, T>
+impl<'a, T> AnyValEntry<'a, T>
 where
     T: ErasedTy,
 {

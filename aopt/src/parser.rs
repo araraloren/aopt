@@ -36,14 +36,15 @@ use crate::ctx::Extract;
 use crate::ctx::Handler;
 use crate::ctx::HandlerEntry;
 use crate::ext::APolicyExt;
-use crate::ext::ServicesExt;
 use crate::map::ErasedTy;
 use crate::opt::Config;
 use crate::opt::ConfigValue;
 use crate::opt::Information;
 use crate::opt::Opt;
 use crate::opt::OptParser;
+use crate::prelude::Invoker;
 use crate::ser::Services;
+use crate::ser::ServicesExt;
 use crate::set::Commit;
 use crate::set::Ctor;
 use crate::set::Filter;
@@ -348,18 +349,18 @@ where
     /// [`UsrValService`](crate::ser::UsrValService`), [`RawValService`](crate::ser::RawValService`).
     pub fn clear_all(&mut self) -> Result<&mut Self, Error> {
         self.optset.reset();
-        self.valser.ser_val_mut()?.clear();
-        self.valser.ser_usrval_mut()?.clear();
-        self.valser.ser_rawval_mut::<RawVal>()?.clear();
+        self.valser.ser_val_mut().clear();
+        self.valser.ser_usrval_mut().clear();
+        self.valser.ser_rawval_mut().clear();
         Ok(self)
     }
 
     pub fn usrval<T: ErasedTy>(&self) -> Result<&T, Error> {
-        self.valser.ser_usrval()?.val::<T>()
+        self.valser.ser_usrval().val::<T>()
     }
 
     pub fn usrval_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
-        self.valser.ser_usrval_mut()?.val_mut::<T>()
+        self.valser.ser_usrval_mut().val_mut::<T>()
     }
 
     /// Set the user value that can access in option handler.
@@ -434,39 +435,39 @@ where
     /// # }
     ///```
     pub fn set_usrval<T: ErasedTy>(&mut self, val: T) -> Result<Option<T>, Error> {
-        Ok(self.valser.ser_usrval_mut()?.insert(val))
+        Ok(self.valser.ser_usrval_mut().insert(val))
     }
 
     pub fn val<T: ErasedTy>(&self, uid: Uid) -> Result<&T, Error> {
-        self.valser.ser_val()?.val::<T>(uid)
+        self.valser.ser_val().val::<T>(uid)
     }
 
     pub fn val_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut T, Error> {
-        self.valser.ser_val_mut()?.val_mut::<T>(uid)
+        self.valser.ser_val_mut().val_mut::<T>(uid)
     }
 
     pub fn vals<T: ErasedTy>(&self, uid: Uid) -> Result<&Vec<T>, Error> {
-        self.valser.ser_val()?.vals::<T>(uid)
+        self.valser.ser_val().vals::<T>(uid)
     }
 
     pub fn vals_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error> {
-        self.valser.ser_val_mut()?.vals_mut::<T>(uid)
+        self.valser.ser_val_mut().vals_mut::<T>(uid)
     }
 
     pub fn rawval(&self, uid: Uid) -> Result<&RawVal, Error> {
-        self.valser.ser_rawval()?.val(uid)
+        self.valser.ser_rawval().val(uid)
     }
 
-    pub fn rawval_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut RawVal, Error> {
-        self.valser.ser_rawval_mut()?.val_mut(uid)
+    pub fn rawval_mut(&mut self, uid: Uid) -> Result<&mut RawVal, Error> {
+        self.valser.ser_rawval_mut().val_mut(uid)
     }
 
-    pub fn rawvals<T: ErasedTy>(&self, uid: Uid) -> Result<&Vec<RawVal>, Error> {
-        self.valser.ser_rawval()?.vals(uid)
+    pub fn rawvals(&self, uid: Uid) -> Result<&Vec<RawVal>, Error> {
+        self.valser.ser_rawval().vals(uid)
     }
 
-    pub fn rawvals_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut Vec<RawVal>, Error> {
-        self.valser.ser_rawval_mut()?.vals_mut(uid)
+    pub fn rawvals_mut(&mut self, uid: Uid) -> Result<&mut Vec<RawVal>, Error> {
+        self.valser.ser_rawval_mut().vals_mut(uid)
     }
 }
 
@@ -506,13 +507,12 @@ where
 
 impl<P> Parser<P>
 where
-    P::Set: Set + 'static,
     P::Ser: ServicesExt,
-    P: Policy<Error = Error>,
     SetOpt<P::Set>: Opt,
-    P::Set: Set + OptParser + OptValidator,
     <P::Set as OptParser>::Output: Information,
     SetCfg<P::Set>: Config + ConfigValue + Default,
+    P::Set: Set + OptParser + OptValidator + 'static,
+    P: Policy<Inv = Invoker<<P as Policy>::Set>, Error = Error>,
 {
     /// Add an option to the [`Set`](Policy::Set), return a [`ParserCommit`].
     ///
@@ -596,7 +596,7 @@ where
 
         Ok(ParserCommit::new(
             Commit::new(&mut self.optset, info),
-            self.valser.ser_invoke_mut()?,
+            &mut self.invser,
         ))
     }
 
@@ -652,7 +652,7 @@ where
     ) -> Result<ParserCommit<'_, P::Set>, Error> {
         Ok(ParserCommit::new(
             Commit::new(&mut self.optset, config.into()),
-            self.valser.ser_invoke_mut()?,
+            &mut self.invser,
         ))
     }
 
@@ -674,7 +674,7 @@ where
                 H: Handler<P::Set, A, Output = Option<O>, Error = Error> + 'static,
                 A: Extract<P::Set, Error = Error> + 'static,
             {
-                Ok(HandlerEntry::new(self.valser.ser_invoke_mut()?, uid))
+                Ok(HandlerEntry::new(&mut self.invser, uid))
             }
         }
     }
