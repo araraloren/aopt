@@ -93,35 +93,42 @@ pub struct CtxSaver {
 /// ```
 pub trait Policy {
     type Ret;
-    type Set: Set;
+    type Set;
+    type Inv;
+    type Ser;
     type Error: Into<Error>;
 
     fn parse(
         &mut self,
         set: &mut Self::Set,
-        ser: &mut Services,
+        inv: &mut Self::Inv,
+        ser: &mut Self::Ser,
         args: Arc<Args>,
     ) -> Result<Option<Self::Ret>, Self::Error>;
 }
 
-impl<S, R, E> Policy for Box<dyn Policy<Ret = R, Set = S, Error = E>>
+impl<S, I, O, R, E> Policy for Box<dyn Policy<Ret = R, Set = S, Inv = I, Ser = O, Error = E>>
 where
-    S: Set,
     E: Into<Error>,
 {
     type Ret = R;
 
     type Set = S;
 
+    type Inv = I;
+
+    type Ser = O;
+
     type Error = E;
 
     fn parse(
         &mut self,
         set: &mut Self::Set,
-        ser: &mut Services,
+        inv: &mut Self::Inv,
+        ser: &mut Self::Ser,
         args: Arc<Args>,
     ) -> Result<Option<Self::Ret>, Self::Error> {
-        Policy::parse(self.as_mut(), set, ser, args)
+        Policy::parse(self.as_mut(), set, inv, ser, args)
     }
 }
 
@@ -181,22 +188,24 @@ where
 pub struct Parser<P: Policy> {
     policy: P,
     optset: P::Set,
-    services: Services,
+    invser: P::Inv,
+    valser: P::Ser,
     return_value: Option<P::Ret>,
 }
 
 impl<P: Policy> Default for Parser<P>
 where
-    P::Set: Default + Set,
-    P: Default + Policy + APolicyExt<P::Set>,
+    P::Set: Default,
+    P::Inv: Default,
+    P::Ser: Default,
+    P: Default + Policy,
 {
     fn default() -> Self {
-        let policy = P::default();
-
         Self {
-            optset: policy.default_set(),
-            services: policy.default_ser(),
-            policy,
+            policy: P::default(),
+            optset: Default::default(),
+            invser: Default::default(),
+            valser: Default::default(),
             return_value: None,
         }
     }
@@ -218,35 +227,45 @@ impl<P: Policy> DerefMut for Parser<P> {
 
 impl<P> Parser<P>
 where
-    P: Policy + APolicyExt<P::Set>,
+    P: Policy + APolicyExt<P>,
 {
     pub fn new(policy: P) -> Self {
-        let set = policy.default_set();
-        let services = policy.default_ser();
+        let optset = policy.default_set();
+        let valser = policy.default_ser();
+        let invser = policy.default_inv();
 
         Self {
-            optset: set,
+            optset,
             policy,
-            services,
+            invser,
+            valser,
             return_value: None,
         }
     }
 }
 
+pub type BoxedPolicy<P> = Box<
+    dyn Policy<
+        Ret = <P as Policy>::Ret,
+        Set = <P as Policy>::Set,
+        Inv = <P as Policy>::Inv,
+        Ser = <P as Policy>::Ser,
+        Error = <P as Policy>::Error,
+    >,
+>;
+
 impl<P> Parser<P>
 where
     P: Policy + 'static,
 {
-    pub fn into_boxed(
-        self,
-    ) -> Parser<Box<dyn Policy<Ret = P::Ret, Set = P::Set, Error = P::Error>>> {
-        let policy: Box<dyn Policy<Ret = P::Ret, Set = P::Set, Error = P::Error>> =
-            Box::new(self.policy);
+    pub fn into_boxed(self) -> Parser<BoxedPolicy<P>> {
+        let policy: BoxedPolicy<P> = Box::new(self.policy);
 
         Parser {
-            optset: self.optset,
             policy,
-            services: self.services,
+            optset: self.optset,
+            invser: self.invser,
+            valser: self.valser,
             return_value: self.return_value,
         }
     }
@@ -256,11 +275,12 @@ impl<P> Parser<P>
 where
     P: Policy<Error = Error>,
 {
-    pub fn new_with(policy: P, optset: P::Set, services: Services) -> Self {
+    pub fn new_with(policy: P, optset: P::Set, invser: P::Inv, valser: P::Ser) -> Self {
         Self {
             optset,
             policy,
-            services,
+            invser,
+            valser,
             return_value: None,
         }
     }
@@ -278,16 +298,16 @@ where
         self
     }
 
-    pub fn service(&self) -> &Services {
-        &self.services
+    pub fn service(&self) -> &P::Ser {
+        &self.valser
     }
 
-    pub fn service_mut(&mut self) -> &mut Services {
-        &mut self.services
+    pub fn service_mut(&mut self) -> &mut P::Ser {
+        &mut self.valser
     }
 
-    pub fn set_service(&mut self, services: Services) -> &mut Self {
-        self.services = services;
+    pub fn set_service(&mut self, valser: P::Ser) -> &mut Self {
+        self.valser = valser;
         self
     }
 
@@ -304,16 +324,6 @@ where
         self
     }
 
-    /// Reset the option set, and clear the [`ValService`](crate::ser::ValService`),
-    /// [`UsrValService`](crate::ser::UsrValService`), [`RawValService`](crate::ser::RawValService`).
-    pub fn clear_all(&mut self) -> Result<&mut Self, Error> {
-        self.optset.reset();
-        self.services.ser_val_mut()?.clear();
-        self.services.ser_usrval_mut()?.clear();
-        self.services.ser_rawval_mut::<RawVal>()?.clear();
-        Ok(self)
-    }
-
     pub fn retval(&self) -> Option<&P::Ret> {
         self.return_value.as_ref()
     }
@@ -326,13 +336,30 @@ where
         self.return_value = val;
         self
     }
+}
+
+impl<P> Parser<P>
+where
+    P::Set: Set,
+    P::Ser: ServicesExt,
+    P: Policy<Error = Error>,
+{
+    /// Reset the option set, and clear the [`ValService`](crate::ser::ValService`),
+    /// [`UsrValService`](crate::ser::UsrValService`), [`RawValService`](crate::ser::RawValService`).
+    pub fn clear_all(&mut self) -> Result<&mut Self, Error> {
+        self.optset.reset();
+        self.valser.ser_val_mut()?.clear();
+        self.valser.ser_usrval_mut()?.clear();
+        self.valser.ser_rawval_mut::<RawVal>()?.clear();
+        Ok(self)
+    }
 
     pub fn usrval<T: ErasedTy>(&self) -> Result<&T, Error> {
-        self.services.ser_usrval()?.val::<T>()
+        self.valser.ser_usrval()?.val::<T>()
     }
 
     pub fn usrval_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
-        self.services.ser_usrval_mut()?.val_mut::<T>()
+        self.valser.ser_usrval_mut()?.val_mut::<T>()
     }
 
     /// Set the user value that can access in option handler.
@@ -407,61 +434,69 @@ where
     /// # }
     ///```
     pub fn set_usrval<T: ErasedTy>(&mut self, val: T) -> Result<Option<T>, Error> {
-        Ok(self.services.ser_usrval_mut()?.insert(val))
+        Ok(self.valser.ser_usrval_mut()?.insert(val))
     }
 
     pub fn val<T: ErasedTy>(&self, uid: Uid) -> Result<&T, Error> {
-        self.services.ser_val()?.val::<T>(uid)
+        self.valser.ser_val()?.val::<T>(uid)
     }
 
     pub fn val_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut T, Error> {
-        self.services.ser_val_mut()?.val_mut::<T>(uid)
+        self.valser.ser_val_mut()?.val_mut::<T>(uid)
     }
 
     pub fn vals<T: ErasedTy>(&self, uid: Uid) -> Result<&Vec<T>, Error> {
-        self.services.ser_val()?.vals::<T>(uid)
+        self.valser.ser_val()?.vals::<T>(uid)
     }
 
     pub fn vals_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error> {
-        self.services.ser_val_mut()?.vals_mut::<T>(uid)
+        self.valser.ser_val_mut()?.vals_mut::<T>(uid)
     }
 
     pub fn rawval(&self, uid: Uid) -> Result<&RawVal, Error> {
-        self.services.ser_rawval()?.val(uid)
+        self.valser.ser_rawval()?.val(uid)
     }
 
     pub fn rawval_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut RawVal, Error> {
-        self.services.ser_rawval_mut()?.val_mut(uid)
+        self.valser.ser_rawval_mut()?.val_mut(uid)
     }
 
     pub fn rawvals<T: ErasedTy>(&self, uid: Uid) -> Result<&Vec<RawVal>, Error> {
-        self.services.ser_rawval()?.vals(uid)
+        self.valser.ser_rawval()?.vals(uid)
     }
 
     pub fn rawvals_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut Vec<RawVal>, Error> {
-        self.services.ser_rawval_mut()?.vals_mut(uid)
+        self.valser.ser_rawval_mut()?.vals_mut(uid)
     }
 }
 
 impl<P> Parser<P>
 where
-    P: Policy<Error = Error>,
+    P::Set: Set,
+    P: Policy<Ser = Services, Error = Error>,
 {
     /// Call the [`init`](crate::opt::Opt::init) on [`Services`] initialize the option value.
     pub fn init(&mut self) -> Result<(), P::Error> {
         let optset = &mut self.optset;
-        let services = &mut self.services;
+        let services = &mut self.valser;
 
         for opt in optset.iter_mut() {
             opt.init(services)?;
         }
         Ok(())
     }
+}
 
+impl<P> Parser<P>
+where
+    P::Set: Set,
+    P: Policy<Error = Error>,
+{
     pub fn parse(&mut self, args: Arc<Args>) -> Result<Option<()>, P::Error> {
         let optset = &mut self.optset;
-        let services = &mut self.services;
-        let ret = self.policy.parse(optset, services, args)?;
+        let valser = &mut self.valser;
+        let invser = &mut self.invser;
+        let ret = self.policy.parse(optset, invser, valser, args)?;
         let parser_ret = ret.as_ref().map(|_| ());
 
         self.return_value = ret;
@@ -471,7 +506,8 @@ where
 
 impl<P> Parser<P>
 where
-    P::Set: 'static,
+    P::Set: Set + 'static,
+    P::Ser: ServicesExt,
     P: Policy<Error = Error>,
     SetOpt<P::Set>: Opt,
     P::Set: Set + OptParser + OptValidator,
@@ -560,7 +596,7 @@ where
 
         Ok(ParserCommit::new(
             Commit::new(&mut self.optset, info),
-            self.services.ser_invoke_mut()?,
+            self.valser.ser_invoke_mut()?,
         ))
     }
 
@@ -616,7 +652,7 @@ where
     ) -> Result<ParserCommit<'_, P::Set>, Error> {
         Ok(ParserCommit::new(
             Commit::new(&mut self.optset, config.into()),
-            self.services.ser_invoke_mut()?,
+            self.valser.ser_invoke_mut()?,
         ))
     }
 
@@ -638,7 +674,7 @@ where
                 H: Handler<P::Set, A, Output = Option<O>, Error = Error> + 'static,
                 A: Extract<P::Set, Error = Error> + 'static,
             {
-                Ok(HandlerEntry::new(self.services.ser_invoke_mut()?, uid))
+                Ok(HandlerEntry::new(self.valser.ser_invoke_mut()?, uid))
             }
         }
     }
@@ -646,6 +682,7 @@ where
 
 impl<P> Parser<P>
 where
+    P::Ser: ServicesExt,
     P: Policy<Error = Error>,
     P::Set: Set + OptParser,
     <P::Set as OptParser>::Output: Information,

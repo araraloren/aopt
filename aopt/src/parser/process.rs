@@ -9,48 +9,47 @@ use crate::proc::NOAProcess;
 use crate::proc::OptProcess;
 use crate::proc::Process;
 use crate::ser::Services;
-use crate::set::Ctor;
+use crate::set::Set;
+use crate::set::SetOpt;
 use crate::Error;
 use crate::Uid;
 
-pub fn invoke_callback_opt<Set>(
+pub fn invoke_callback_opt<S>(
     saver: CtxSaver,
-    set: &mut Set,
+    set: &mut S,
+    inv: &mut Invoker<S>,
     ser: &mut Services,
 ) -> Result<Option<()>, Error>
 where
-    <Set::Ctor as Ctor>::Opt: Opt,
-    Set: crate::set::Set + 'static,
+    SetOpt<S>: Opt,
+    S: Set + 'static,
 {
     let uid = saver.uid;
     // Take the service, invoke the handler of option.
     // Catch the result of handler, so we can register it back to Services.
-    let mut inv_ser = ser.take::<Invoker<Set>>()?;
-    let ret = match inv_ser.has(uid) {
+    match inv.has(uid) {
         true => {
             trace!("Invoke callback of Opt{{{uid}}} with {:?}", saver.ctx);
-            inv_ser.invoke(set, ser, &saver.ctx)
+            inv.invoke(set, ser, &saver.ctx)
         }
         false => {
             trace!("Invoke default of Opt{{{uid}}} with {:?}", saver.ctx);
-            inv_ser.invoke_default(set, ser, &saver.ctx)
+            inv.invoke_default(set, ser, &saver.ctx)
         }
-    };
-
-    ser.register(inv_ser);
-    ret
+    }
 }
 
-pub fn process_opt<Set>(
+pub fn process_opt<S>(
     ctx: &Ctx,
-    set: &mut Set,
+    set: &mut S,
+    inv: &mut Invoker<S>,
     ser: &mut Services,
-    proc: &mut OptProcess<Set>,
+    proc: &mut OptProcess<S>,
     invoke: bool,
 ) -> Result<Vec<CtxSaver>, Error>
 where
-    <Set::Ctor as Ctor>::Opt: Opt,
-    Set: crate::set::Set + 'static,
+    SetOpt<S>: Opt,
+    S: Set + 'static,
 {
     // copy the uid of option, avoid borrow the set
     let keys: Vec<Uid> = set.keys();
@@ -85,7 +84,7 @@ where
     if proc.is_mat() && invoke {
         for saver in savers {
             // undo the process if option callback return None
-            if invoke_callback_opt(saver, set, ser)?.is_none() {
+            if invoke_callback_opt(saver, set, inv, ser)?.is_none() {
                 proc.undo(set)?;
                 break;
             }
@@ -98,15 +97,16 @@ where
     }
 }
 
-pub fn process_non_opt<Set>(
+pub fn process_non_opt<S>(
     ctx: &Ctx,
-    set: &mut Set,
+    set: &mut S,
+    inv: &mut Invoker<S>,
     ser: &mut Services,
-    proc: &mut NOAProcess<Set>,
+    proc: &mut NOAProcess<S>,
 ) -> Result<Vec<CtxSaver>, Error>
 where
-    <Set::Ctor as Ctor>::Opt: Opt,
-    Set: crate::set::Set + 'static,
+    SetOpt<S>: Opt,
+    S: Set + 'static,
 {
     // copy the uid of option, avoid borrow the set
     let keys: Vec<Uid> = set.keys().to_vec();
@@ -124,21 +124,18 @@ where
                         .with_name(mat.name().cloned())
                         .with_arg(mat.clone_arg())
                         .with_uid(uid); // current uid == uid in matcher
-                    let mut inv_ser = ser.take::<Invoker<Set>>()?;
-                    let ret = match inv_ser.has(uid) {
+                    let ret = match inv.has(uid) {
                         true => {
                             // callback in InvokeService
                             trace!("Invoke callback of NOA{{{uid}}} with {:?}", &ctx);
-                            inv_ser.invoke(set, ser, &ctx)
+                            inv.invoke(set, ser, &ctx)
                         }
                         false => {
                             // call `invoke_default` if callback not exist
                             trace!("Invoke default of NOA{{{uid}}} with {:?}", &ctx);
-                            inv_ser.invoke_default(set, ser, &ctx)
+                            inv.invoke_default(set, ser, &ctx)
                         }
                     };
-
-                    ser.register(inv_ser);
                     let ret = ret?;
 
                     // return None means NOA not match

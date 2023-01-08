@@ -20,6 +20,7 @@ use crate::astr;
 use crate::ctx::Ctx;
 use crate::opt::Opt;
 use crate::opt::OptParser;
+use crate::prelude::Invoker;
 use crate::proc::Process;
 use crate::ser::Services;
 use crate::set::Ctor;
@@ -174,9 +175,14 @@ where
         &self.checker
     }
 
-    pub fn invoke_opt_callback(&mut self, set: &mut S, ser: &mut Services) -> Result<(), Error> {
+    pub fn invoke_opt_callback(
+        &mut self,
+        set: &mut S,
+        inv: &mut Invoker<S>,
+        ser: &mut Services,
+    ) -> Result<(), Error> {
         for saver in std::mem::take(&mut self.contexts) {
-            invoke_callback_opt(saver, set, ser)?;
+            invoke_callback_opt(saver, set, inv, ser)?;
         }
         Ok(())
     }
@@ -196,12 +202,17 @@ where
 
     type Set = S;
 
+    type Inv = Invoker<S>;
+
+    type Ser = Services;
+
     type Error = Error;
 
     fn parse(
         &mut self,
         set: &mut Self::Set,
-        ser: &mut Services,
+        inv: &mut Self::Inv,
+        ser: &mut Self::Ser,
         args: Arc<Args>,
     ) -> Result<Option<Self::Ret>, Self::Error> {
         self.checker().pre_check(set)?;
@@ -235,7 +246,8 @@ where
                                 GuessOptCfg::new(idx, args_len, arg.clone(), &clopt),
                             )? {
                                 opt_ctx.set_idx(idx);
-                                let ret = process_opt::<S>(&opt_ctx, set, ser, &mut proc, false)?;
+                                let ret =
+                                    process_opt::<S>(&opt_ctx, set, inv, ser, &mut proc, false)?;
 
                                 if proc.is_mat() {
                                     self.contexts.extend(ret);
@@ -283,7 +295,7 @@ where
                 GuessNOACfg::new(noa_args.clone(), Self::noa_idx(0), noa_len),
             )? {
                 noa_ctx.set_idx(Self::noa_idx(0));
-                process_non_opt::<S>(&noa_ctx, set, ser, &mut proc)?;
+                process_non_opt::<S>(&noa_ctx, set, inv, ser, &mut proc)?;
             }
 
             self.checker().cmd_check(set)?;
@@ -294,7 +306,7 @@ where
                     GuessNOACfg::new(noa_args.clone(), Self::noa_idx(idx), noa_len),
                 )? {
                     noa_ctx.set_idx(Self::noa_idx(idx));
-                    process_non_opt::<S>(&noa_ctx, set, ser, &mut proc)?;
+                    process_non_opt::<S>(&noa_ctx, set, inv, ser, &mut proc)?;
                 }
             }
         } else {
@@ -302,7 +314,7 @@ where
         }
 
         // after cmd and pos callback invoked, invoke the callback of option
-        self.invoke_opt_callback(set, ser)?;
+        self.invoke_opt_callback(set, inv, ser)?;
 
         self.checker().opt_check(set)?;
 
@@ -315,7 +327,7 @@ where
         if let Some(mut proc) =
             NOAGuess::new().guess(&UserStyle::Main, GuessNOACfg::new(main_args, 0, noa_len))?
         {
-            process_non_opt::<S>(&main_ctx, set, ser, &mut proc)?;
+            process_non_opt::<S>(&main_ctx, set, inv, ser, &mut proc)?;
         }
 
         self.checker().post_check(set)?;
@@ -408,6 +420,7 @@ mod test {
 
         let mut policy = ADelayPolicy::default();
         let mut ser = policy.default_ser();
+        let mut inv = policy.default_inv();
         let mut set = policy.default_set();
 
         let args = Args::new(
@@ -435,22 +448,19 @@ mod test {
         set.add_opt("filter=c")?;
         let args_uid = set.add_opt("args=p@2..")?.set_assoc(Assoc::Flt).run()?;
 
-        ser.ser_invoke_mut()?
-            .entry(set.add_opt("--positive=b")?.add_alias("+>").run()?)
+        inv.entry(set.add_opt("--positive=b")?.add_alias("+>").run()?)
             .on(|set: &mut ASet, ser: &mut ASer| {
                 ser.sve_filter::<f64>(set["args=p"].uid(), |v: &f64| v <= &0.0)?;
                 Ok(Some(true))
             });
-        ser.ser_invoke_mut()?
-            .entry(set.add_opt("--bigger-than=f")?.add_alias("+>").run()?)
+        inv.entry(set.add_opt("--bigger-than=f")?.add_alias("+>").run()?)
             .on(|set: &mut ASet, ser: &mut ASer, val: ctx::Value<f64>| {
                 // this is a vec![vec![], ..]
                 Ok(Some(
                     ser.sve_filter::<f64>(set["args=p"].uid(), |v: &f64| v <= val.deref())?,
                 ))
             });
-        ser.ser_invoke_mut()?
-            .entry(set.add_opt("main=m")?.run()?)
+        inv.entry(set.add_opt("main=m")?.run()?)
             .on(move |set: &mut ASet, ser: &mut ASer| {
                 let args = &set["args"];
                 let bopt = &set["--bigger-than"];
@@ -487,9 +497,11 @@ mod test {
         for opt in set.iter_mut() {
             opt.init(&mut ser)?;
         }
-        assert!(policy.parse(&mut set, &mut ser, args.clone()).is_err());
+        assert!(policy
+            .parse(&mut set, &mut inv, &mut ser, args.clone())
+            .is_err());
         policy.set_strict(false);
-        policy.parse(&mut set, &mut ser, args)?;
+        policy.parse(&mut set, &mut inv, &mut ser, args)?;
         Ok(())
     }
 }

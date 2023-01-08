@@ -17,6 +17,7 @@ use crate::args::Args;
 use crate::ctx::Ctx;
 use crate::opt::Opt;
 use crate::opt::OptParser;
+use crate::prelude::Invoker;
 use crate::proc::Process;
 use crate::ser::Services;
 use crate::set::Ctor;
@@ -170,12 +171,17 @@ where
 
     type Set = S;
 
+    type Inv = Invoker<S>;
+
+    type Ser = Services;
+
     type Error = Error;
 
     fn parse(
         &mut self,
         set: &mut Self::Set,
-        ser: &mut Services,
+        inv: &mut Self::Inv,
+        ser: &mut Self::Ser,
         args: Arc<Args>,
     ) -> Result<Option<Self::Ret>, Self::Error> {
         Self::ig_failure(self.checker().pre_check(set))?;
@@ -214,7 +220,7 @@ where
                                 if let Some(Some(mut proc)) = ret {
                                     opt_ctx.set_idx(idx);
                                     if Self::ig_failure(process_opt::<S>(
-                                        &opt_ctx, set, ser, &mut proc, true,
+                                        &opt_ctx, set, inv, ser, &mut proc, true,
                                     ))?
                                     .is_some()
                                     {
@@ -260,7 +266,7 @@ where
                 GuessNOACfg::new(noa_args.clone(), Self::noa_idx(0), noa_len),
             ))? {
                 noa_ctx.set_idx(Self::noa_idx(0));
-                Self::ig_failure(process_non_opt::<S>(&noa_ctx, set, ser, &mut proc))?;
+                Self::ig_failure(process_non_opt::<S>(&noa_ctx, set, inv, ser, &mut proc))?;
             }
 
             Self::ig_failure(self.checker().cmd_check(set))?;
@@ -271,7 +277,7 @@ where
                     GuessNOACfg::new(noa_args.clone(), Self::noa_idx(idx), noa_len),
                 ))? {
                     noa_ctx.set_idx(Self::noa_idx(idx));
-                    Self::ig_failure(process_non_opt::<S>(&noa_ctx, set, ser, &mut proc))?;
+                    Self::ig_failure(process_non_opt::<S>(&noa_ctx, set, inv, ser, &mut proc))?;
                 }
             }
         } else {
@@ -289,7 +295,7 @@ where
         if let Some(Some(mut proc)) = Self::ig_failure(
             NOAGuess::new().guess(&UserStyle::Main, GuessNOACfg::new(main_args, 0, noa_len)),
         )? {
-            Self::ig_failure(process_non_opt::<S>(&main_ctx, set, ser, &mut proc))?;
+            Self::ig_failure(process_non_opt::<S>(&main_ctx, set, inv, ser, &mut proc))?;
         }
 
         Self::ig_failure(self.checker().post_check(set))?;
@@ -403,6 +409,7 @@ mod test {
 
         let mut policy = APrePolicy::default();
         let mut set = policy.default_set();
+        let mut inv = policy.default_inv();
         let mut ser = policy.default_ser();
         let args = Args::new(
             [
@@ -463,8 +470,7 @@ mod test {
         // 8
         set.add_opt("--gopt=i")?.run()?;
         set.add_opt("--hopt=i!")?.run()?;
-        ser.ser_invoke_mut()?
-            .entry(set.add_opt("--iopt=i")?.add_alias("--iopt-alias1").run()?)
+        inv.entry(set.add_opt("--iopt=i")?.add_alias("--iopt-alias1").run()?)
             .on(|set: &mut ASet, ser: &mut ASer, val: ctx::Value<i64>| {
                 assert_eq!(
                     ser.sve_val::<i64>(set["--hopt"].uid()).ok(),
@@ -489,8 +495,7 @@ mod test {
         // 16
         set.add_opt("--oopt=s!")?.add_alias("-o");
         set.add_opt("--popt=s")?.run()?;
-        ser.ser_invoke_mut()?
-            .entry(set.add_opt("--qopt=s")?.run()?)
+        inv.entry(set.add_opt("--qopt=s")?.run()?)
             .on(|_: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>| Ok(Some(val.take())))
             .then(
                 |uid: Uid,
@@ -615,7 +620,7 @@ mod test {
                 )?;
                 Ok(Some(true))
             });
-        ser.ser_invoke_mut()?.entry(epos_uid).on(
+        inv.entry(epos_uid).on(
             |set: &mut ASet, ser: &mut ASer, mut val: ctx::Value<String>, idx: ctx::Index| {
                 let ropt = &set["--开关"];
                 let sopt = &set["--值"];
@@ -661,7 +666,7 @@ mod test {
                 Ok(Some(val.take()))
             },
         );
-        ser.ser_invoke_mut()?.entry(dpos_uid).on(
+        inv.entry(dpos_uid).on(
             |set: &mut ASet, ser: &mut ASer, mut val: ctx::Value<String>, idx: ctx::Index| {
                 let oopt = &set["--oopt"];
                 let popt = &set["--popt"];
@@ -710,7 +715,7 @@ mod test {
                 }
             },
         );
-        ser.ser_invoke_mut()?.entry(cpos_uid).on(
+        inv.entry(cpos_uid).on(
             |set: &mut ASet, ser: &mut ASer, val: ctx::Value<String>, idx: ctx::Index| {
                 let lopt = &set["--lopt"];
                 let mopt = &set["--mopt"];
@@ -767,7 +772,7 @@ mod test {
                 }
             },
         );
-        ser.ser_invoke_mut()?.entry(bpos_uid).on(
+        inv.entry(bpos_uid).on(
             |set: &mut ASet, ser: &mut ASer, val: ctx::Value<u64>, idx: ctx::Index| {
                 let jopt = &set["--jopt"];
                 let kopt = &set["--kopt"];
@@ -802,7 +807,7 @@ mod test {
                 ))
             },
         );
-        ser.ser_invoke_mut()?.entry(set_uid).on(
+        inv.entry(set_uid).on(
             move |set: &mut ASet,
                   ser: &mut ASer,
                   uid: ctx::Uid,
@@ -921,7 +926,7 @@ mod test {
         for opt in set.iter_mut() {
             opt.init(&mut ser)?;
         }
-        let ret = policy.parse(&mut set, &mut ser, Arc::new(args))?;
+        let ret = policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
 
         assert!(ret.is_some());
         let ret = ret.unwrap();

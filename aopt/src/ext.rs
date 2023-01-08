@@ -7,6 +7,7 @@ use crate::opt::StrParser;
 use crate::parser::DelayPolicy;
 use crate::parser::FwdPolicy;
 use crate::parser::Parser;
+use crate::parser::Policy;
 use crate::parser::PrePolicy;
 use crate::ser::RawValService;
 use crate::ser::Services;
@@ -98,10 +99,14 @@ pub trait ServicesValExt {
     fn sve_rawvals_mut(&mut self, uid: Uid) -> Result<&mut Vec<RawVal>, Error>;
 }
 
-pub trait APolicyExt<I: crate::set::Set> {
-    fn default_ser(&self) -> ASer;
+pub trait APolicyExt<P: Policy> {
+    fn default_ser(&self) -> P::Ser;
 
-    fn default_set(&self) -> I;
+    fn default_set(&self) -> P::Set;
+
+    fn default_inv(&self) -> P::Inv {
+        todo!()
+    }
 }
 
 pub type ACreator = Creator<AOpt, OptConfig, Error>;
@@ -122,7 +127,7 @@ pub type APreParser = Parser<APrePolicy>;
 
 pub type ADelayParser = Parser<ADelayPolicy>;
 
-impl APolicyExt<ASet> for AFwdPolicy {
+impl APolicyExt<AFwdPolicy> for AFwdPolicy {
     /// Get default [`ASet`] for forward policy.
     fn default_set(&self) -> ASet {
         aset_with_default_creators()
@@ -134,7 +139,7 @@ impl APolicyExt<ASet> for AFwdPolicy {
     }
 }
 
-impl APolicyExt<ASet> for APrePolicy {
+impl APolicyExt<APrePolicy> for APrePolicy {
     /// Get default [`ASet`] for forward policy.
     fn default_set(&self) -> ASet {
         aset_with_default_creators()
@@ -146,7 +151,7 @@ impl APolicyExt<ASet> for APrePolicy {
     }
 }
 
-impl APolicyExt<ASet> for ADelayPolicy {
+impl APolicyExt<ADelayPolicy> for ADelayPolicy {
     /// Get default [`ASet`] for forward policy.
     fn default_set(&self) -> ASet {
         aset_with_default_creators()
