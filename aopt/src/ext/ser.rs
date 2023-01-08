@@ -9,10 +9,10 @@ use std::ops::DerefMut;
 
 use crate::ctx::Ctx;
 use crate::ctx::Extract;
+use crate::ctx::Invoker;
 use crate::ext::ServicesExt;
 use crate::ext::ServicesValExt;
 use crate::map::ErasedTy;
-use crate::ser::InvokeService;
 use crate::ser::RawValService;
 use crate::ser::Services;
 use crate::ser::UsrValService;
@@ -40,12 +40,12 @@ impl ServicesExt for Services {
         self.service_mut::<UsrValService>()
     }
 
-    fn ser_invoke<S: Set + 'static>(&self) -> Result<&InvokeService<S>, Error> {
-        self.service::<InvokeService<S>>()
+    fn ser_invoke<S: Set + 'static>(&self) -> Result<&Invoker<S>, Error> {
+        self.service::<Invoker<S>>()
     }
 
-    fn ser_invoke_mut<S: Set + 'static>(&mut self) -> Result<&mut InvokeService<S>, Error> {
-        self.service_mut::<InvokeService<S>>()
+    fn ser_invoke_mut<S: Set + 'static>(&mut self) -> Result<&mut Invoker<S>, Error> {
+        self.service_mut::<Invoker<S>>()
     }
 
     fn ser_rawval<T: ErasedTy>(&self) -> Result<&RawValService<T>, Error> {

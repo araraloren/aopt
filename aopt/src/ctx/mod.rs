@@ -1,6 +1,9 @@
 pub(crate) mod context;
 pub(crate) mod extract;
 pub(crate) mod handler;
+#[cfg_attr(feature = "sync", path = "sync/ctx/invoke.rs")]
+#[cfg_attr(not(feature = "sync"), path = "invoke.rs")]
+pub(crate) mod invoke;
 #[cfg_attr(feature = "sync", path = "../sync/ctx/store.rs")]
 #[cfg_attr(not(feature = "sync"), path = "store.rs")]
 pub(crate) mod store;
@@ -8,12 +11,14 @@ pub(crate) mod store;
 pub use self::context::Ctx;
 pub use self::extract::Extract;
 pub use self::handler::Handler;
+pub use self::invoke::HandlerEntry;
+pub use self::invoke::InvokeHandler;
+pub use self::invoke::Invoker;
 pub use self::store::NullStore;
 pub use self::store::Store;
 pub use self::store::VecStore;
 
 use crate::opt::Opt;
-use crate::ser::InvokeService;
 use crate::ser::Services;
 use crate::set::Set;
 use crate::set::SetExt;
@@ -48,7 +53,7 @@ cfg_if::cfg_if! {
 
                     act.process(uid, set, ser, arg, val)
                 } else {
-                    InvokeService::fallback(set, ser, ctx)
+                    Invoker::fallback(set, ser, ctx)
                 }
             }
         }
@@ -127,7 +132,7 @@ cfg_if::cfg_if! {
 
                     act.process(uid, set, ser, arg, val)
                 } else {
-                    InvokeService::fallback(set, ser, ctx)
+                    Invoker::fallback(set, ser, ctx)
                 }
             }
         }

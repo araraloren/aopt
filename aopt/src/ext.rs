@@ -1,3 +1,4 @@
+use crate::ctx::Invoker;
 use crate::map::ErasedTy;
 use crate::opt::AOpt;
 use crate::opt::Creator;
@@ -7,7 +8,6 @@ use crate::parser::DelayPolicy;
 use crate::parser::FwdPolicy;
 use crate::parser::Parser;
 use crate::parser::PrePolicy;
-use crate::ser::InvokeService;
 use crate::ser::RawValService;
 use crate::ser::Services;
 use crate::ser::UsrValService;
@@ -37,10 +37,10 @@ pub trait ServicesExt {
     fn ser_usrval_mut(&mut self) -> Result<&mut UsrValService, Error>;
 
     /// Get [`InvokeService`] reference.
-    fn ser_invoke<S: Set + 'static>(&self) -> Result<&InvokeService<S>, Error>;
+    fn ser_invoke<S: Set + 'static>(&self) -> Result<&Invoker<S>, Error>;
 
     /// Get [`InvokeService`] mutable reference.
-    fn ser_invoke_mut<S: Set + 'static>(&mut self) -> Result<&mut InvokeService<S>, Error>;
+    fn ser_invoke_mut<S: Set + 'static>(&mut self) -> Result<&mut Invoker<S>, Error>;
 
     /// Get [`RawValService`] reference.
     fn ser_rawval<T: ErasedTy>(&self) -> Result<&RawValService<T>, Error>;
@@ -193,7 +193,7 @@ pub fn aset_with_default_creators() -> ASet {
 pub fn aser_with_default_service<S: Set + 'static>() -> Services {
     Services::default()
         .with(UsrValService::new())
-        .with(InvokeService::<S>::new())
+        .with(Invoker::<S>::new())
         .with(RawValService::<RawVal>::new())
         .with(ValService::new())
 }

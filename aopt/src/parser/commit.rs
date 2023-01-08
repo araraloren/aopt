@@ -2,6 +2,8 @@ use std::fmt::Debug;
 
 use crate::ctx::Extract;
 use crate::ctx::Handler;
+use crate::ctx::HandlerEntry;
+use crate::ctx::Invoker;
 use crate::opt::Action;
 use crate::opt::Assoc;
 use crate::opt::ConfigValue;
@@ -9,8 +11,6 @@ use crate::opt::Index;
 use crate::opt::Opt;
 use crate::opt::ValInitiator;
 use crate::opt::ValValidator;
-use crate::prelude::InvokeService;
-use crate::ser::invoke::HandlerEntry;
 use crate::set::Commit;
 use crate::set::Set;
 use crate::set::SetCfg;
@@ -29,7 +29,7 @@ where
 {
     inner: Commit<'a, S>,
 
-    inv_ser: Option<&'a mut InvokeService<S>>,
+    inv_ser: Option<&'a mut Invoker<S>>,
 
     drop_commit: bool,
 }
@@ -55,7 +55,7 @@ where
     SetOpt<S>: Opt,
     SetCfg<S>: ConfigValue + Default,
 {
-    pub fn new(inner: Commit<'a, S>, inv_ser: &'a mut InvokeService<S>) -> Self {
+    pub fn new(inner: Commit<'a, S>, inv_ser: &'a mut Invoker<S>) -> Self {
         Self {
             inner,
             inv_ser: Some(inv_ser),

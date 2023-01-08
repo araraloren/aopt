@@ -180,6 +180,7 @@ pub mod prelude {
     pub use crate::ctx::Ctx;
     pub use crate::ctx::Extract;
     pub use crate::ctx::Handler;
+    pub use crate::ctx::Invoker;
     pub use crate::ctx::Store;
     pub use crate::ext::*;
     pub use crate::getopt;
@@ -217,7 +218,6 @@ pub mod prelude {
     pub use crate::proc::OptMatch;
     pub use crate::proc::OptProcess;
     pub use crate::proc::Process;
-    pub use crate::ser::InvokeService;
     pub use crate::ser::RawValService;
     pub use crate::ser::Service;
     pub use crate::ser::Services;

@@ -82,13 +82,13 @@ use crate::Uid;
 /// #   Ok(())
 /// # }
 /// ```
-pub struct InvokeService<S: Set> {
+pub struct Invoker<S: Set> {
     callbacks: HashMap<Uid, InvokeHandler<S, Error>>,
 }
 
 pub type InvokeHandler<S, E> = Box<dyn FnMut(&mut S, &mut Services, &Ctx) -> Result<Option<()>, E>>;
 
-impl<S: Set> Debug for InvokeService<S> {
+impl<S: Set> Debug for Invoker<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("InvokeService")
             .field("callbacks", &"{ ... }")
@@ -96,7 +96,7 @@ impl<S: Set> Debug for InvokeService<S> {
     }
 }
 
-impl<S: Set> Default for InvokeService<S> {
+impl<S: Set> Default for Invoker<S> {
     fn default() -> Self {
         Self {
             callbacks: HashMap::default(),
@@ -104,7 +104,7 @@ impl<S: Set> Default for InvokeService<S> {
     }
 }
 
-impl<S: Set> InvokeService<S> {
+impl<S: Set> Invoker<S> {
     pub fn new() -> Self {
         Self {
             callbacks: HashMap::default(),
@@ -112,7 +112,7 @@ impl<S: Set> InvokeService<S> {
     }
 }
 
-impl<S: Set + 'static> InvokeService<S> {
+impl<S: Set + 'static> Invoker<S> {
     pub fn set_raw<H: FnMut(&mut S, &mut Services, &Ctx) -> Result<Option<()>, Error> + 'static>(
         &mut self,
         uid: Uid,
@@ -179,7 +179,7 @@ impl<S: Set + 'static> InvokeService<S> {
     }
 }
 
-impl<S> InvokeService<S>
+impl<S> Invoker<S>
 where
     S: Set,
     <S::Ctor as Ctor>::Opt: Opt,
@@ -248,7 +248,7 @@ where
     }
 }
 
-impl<S: Set> Service for InvokeService<S> {
+impl<S: Set> Service for Invoker<S> {
     fn service_name() -> Str {
         astr("InvokeService")
     }
@@ -262,7 +262,7 @@ where
     H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
     A: Extract<S, Error = Error> + 'static,
 {
-    ser: &'a mut InvokeService<S>,
+    ser: &'a mut Invoker<S>,
 
     handler: Option<H>,
 
@@ -281,7 +281,7 @@ where
     H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
     A: Extract<S, Error = Error> + 'static,
 {
-    pub fn new(inv_ser: &'a mut InvokeService<S>, uid: Uid) -> Self {
+    pub fn new(inv_ser: &'a mut Invoker<S>, uid: Uid) -> Self {
         Self {
             ser: inv_ser,
             handler: None,

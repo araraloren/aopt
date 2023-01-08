@@ -1,13 +1,13 @@
 use tracing::trace;
 
 use crate::ctx::Ctx;
+use crate::ctx::Invoker;
 use crate::opt::Opt;
 use crate::parser::CtxSaver;
 use crate::proc::Match;
 use crate::proc::NOAProcess;
 use crate::proc::OptProcess;
 use crate::proc::Process;
-use crate::ser::InvokeService;
 use crate::ser::Services;
 use crate::set::Ctor;
 use crate::Error;
@@ -25,7 +25,7 @@ where
     let uid = saver.uid;
     // Take the service, invoke the handler of option.
     // Catch the result of handler, so we can register it back to Services.
-    let mut inv_ser = ser.take::<InvokeService<Set>>()?;
+    let mut inv_ser = ser.take::<Invoker<Set>>()?;
     let ret = match inv_ser.has(uid) {
         true => {
             trace!("Invoke callback of Opt{{{uid}}} with {:?}", saver.ctx);
@@ -124,7 +124,7 @@ where
                         .with_name(mat.name().cloned())
                         .with_arg(mat.clone_arg())
                         .with_uid(uid); // current uid == uid in matcher
-                    let mut inv_ser = ser.take::<InvokeService<Set>>()?;
+                    let mut inv_ser = ser.take::<Invoker<Set>>()?;
                     let ret = match inv_ser.has(uid) {
                         true => {
                             // callback in InvokeService
