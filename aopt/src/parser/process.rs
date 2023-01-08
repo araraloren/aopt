@@ -4,25 +4,25 @@ use crate::ctx::Ctx;
 use crate::ctx::Invoker;
 use crate::opt::Opt;
 use crate::parser::CtxSaver;
+use crate::prelude::ServicesExt;
 use crate::proc::Match;
 use crate::proc::NOAProcess;
 use crate::proc::OptProcess;
 use crate::proc::Process;
-use crate::ser::Services;
-use crate::set::Set;
 use crate::set::SetOpt;
 use crate::Error;
 use crate::Uid;
 
-pub fn invoke_callback_opt<S>(
+pub fn invoke_callback_opt<Set, Ser>(
     saver: CtxSaver,
-    set: &mut S,
-    inv: &mut Invoker<S>,
-    ser: &mut Services,
+    set: &mut Set,
+    inv: &mut Invoker<Set, Ser>,
+    ser: &mut Ser,
 ) -> Result<Option<()>, Error>
 where
-    SetOpt<S>: Opt,
-    S: Set + 'static,
+    SetOpt<Set>: Opt,
+    Ser: ServicesExt + 'static,
+    Set: crate::set::Set + 'static,
 {
     let uid = saver.uid;
     // Take the service, invoke the handler of option.
@@ -39,17 +39,18 @@ where
     }
 }
 
-pub fn process_opt<S>(
+pub fn process_opt<Set, Ser>(
     ctx: &Ctx,
-    set: &mut S,
-    inv: &mut Invoker<S>,
-    ser: &mut Services,
-    proc: &mut OptProcess<S>,
+    set: &mut Set,
+    inv: &mut Invoker<Set, Ser>,
+    ser: &mut Ser,
+    proc: &mut OptProcess<Set>,
     invoke: bool,
 ) -> Result<Vec<CtxSaver>, Error>
 where
-    SetOpt<S>: Opt,
-    S: Set + 'static,
+    SetOpt<Set>: Opt,
+    Ser: ServicesExt + 'static,
+    Set: crate::set::Set + 'static,
 {
     // copy the uid of option, avoid borrow the set
     let keys: Vec<Uid> = set.keys();
@@ -97,16 +98,17 @@ where
     }
 }
 
-pub fn process_non_opt<S>(
+pub fn process_non_opt<Set, Ser>(
     ctx: &Ctx,
-    set: &mut S,
-    inv: &mut Invoker<S>,
-    ser: &mut Services,
-    proc: &mut NOAProcess<S>,
+    set: &mut Set,
+    inv: &mut Invoker<Set, Ser>,
+    ser: &mut Ser,
+    proc: &mut NOAProcess<Set>,
 ) -> Result<Vec<CtxSaver>, Error>
 where
-    SetOpt<S>: Opt,
-    S: Set + 'static,
+    SetOpt<Set>: Opt,
+    Ser: ServicesExt + 'static,
+    Set: crate::set::Set + 'static,
 {
     // copy the uid of option, avoid borrow the set
     let keys: Vec<Uid> = set.keys().to_vec();

@@ -1,6 +1,5 @@
 use crate::ctx::Store;
 use crate::map::ErasedTy;
-use crate::ser::Services;
 use crate::ser::ServicesExt;
 use crate::Error;
 use crate::RawVal;
@@ -74,9 +73,10 @@ impl Default for Action {
 /// * [`Action::Clr`] : Clear all the value from value vector.
 ///
 /// * [`Action::Null`] : Do nothing.
-impl<Set, Val> Store<Set, Val> for Action
+impl<Set, Ser, Val> Store<Set, Ser, Val> for Action
 where
     Val: ErasedTy,
+    Ser: ServicesExt,
 {
     type Ret = ();
 
@@ -86,7 +86,7 @@ where
         &mut self,
         uid: Uid,
         _: &mut Set,
-        ser: &mut Services,
+        ser: &mut Ser,
         raw: Option<&RawVal>,
         val: Option<Val>,
     ) -> Result<Option<Self::Ret>, Self::Error> {

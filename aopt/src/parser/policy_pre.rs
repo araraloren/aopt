@@ -18,11 +18,10 @@ use crate::ctx::Ctx;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::prelude::Invoker;
+use crate::prelude::ServicesExt;
 use crate::proc::Process;
-use crate::ser::Services;
-use crate::set::Ctor;
 use crate::set::OptValidator;
-use crate::set::Set;
+use crate::set::SetOpt;
 use crate::Arc;
 use crate::Error;
 
@@ -99,15 +98,15 @@ use crate::Error;
 /// # }
 /// ```
 #[derive(Debug, Clone)]
-pub struct PrePolicy<S> {
+pub struct PrePolicy<Set, Ser> {
     strict: bool,
 
-    checker: SetChecker<S>,
+    checker: SetChecker<Set>,
 
-    marker_s: PhantomData<S>,
+    marker_s: PhantomData<(Set, Ser)>,
 }
 
-impl<S> Default for PrePolicy<S> {
+impl<Set, Ser> Default for PrePolicy<Set, Ser> {
     fn default() -> Self {
         Self {
             strict: false,
@@ -117,7 +116,7 @@ impl<S> Default for PrePolicy<S> {
     }
 }
 
-impl<S> PrePolicy<S> {
+impl<Set, Ser> PrePolicy<Set, Ser> {
     pub fn new() -> Self {
         Self { ..Self::default() }
     }
@@ -138,7 +137,7 @@ impl<S> PrePolicy<S> {
         self.strict
     }
 
-    pub fn checker(&self) -> &SetChecker<S> {
+    pub fn checker(&self) -> &SetChecker<Set> {
         &self.checker
     }
 
@@ -162,18 +161,19 @@ impl<S> PrePolicy<S> {
     }
 }
 
-impl<S> Policy for PrePolicy<S>
+impl<Set, Ser> Policy for PrePolicy<Set, Ser>
 where
-    <S::Ctor as Ctor>::Opt: Opt,
-    S: Set + OptParser + OptValidator + Debug + 'static,
+    SetOpt<Set>: Opt,
+    Ser: ServicesExt + 'static,
+    Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
 {
     type Ret = ReturnVal;
 
-    type Set = S;
+    type Set = Set;
 
-    type Inv = Invoker<S>;
+    type Inv = Invoker<Set, Ser>;
 
-    type Ser = Services;
+    type Ser = Ser;
 
     type Error = Error;
 
@@ -219,7 +219,7 @@ where
 
                                 if let Some(Some(mut proc)) = ret {
                                     opt_ctx.set_idx(idx);
-                                    if Self::ig_failure(process_opt::<S>(
+                                    if Self::ig_failure(process_opt(
                                         &opt_ctx, set, inv, ser, &mut proc, true,
                                     ))?
                                     .is_some()
@@ -266,7 +266,7 @@ where
                 GuessNOACfg::new(noa_args.clone(), Self::noa_idx(0), noa_len),
             ))? {
                 noa_ctx.set_idx(Self::noa_idx(0));
-                Self::ig_failure(process_non_opt::<S>(&noa_ctx, set, inv, ser, &mut proc))?;
+                Self::ig_failure(process_non_opt(&noa_ctx, set, inv, ser, &mut proc))?;
             }
 
             Self::ig_failure(self.checker().cmd_check(set))?;
@@ -277,7 +277,7 @@ where
                     GuessNOACfg::new(noa_args.clone(), Self::noa_idx(idx), noa_len),
                 ))? {
                     noa_ctx.set_idx(Self::noa_idx(idx));
-                    Self::ig_failure(process_non_opt::<S>(&noa_ctx, set, inv, ser, &mut proc))?;
+                    Self::ig_failure(process_non_opt(&noa_ctx, set, inv, ser, &mut proc))?;
                 }
             }
         } else {
@@ -295,7 +295,7 @@ where
         if let Some(Some(mut proc)) = Self::ig_failure(
             NOAGuess::new().guess(&UserStyle::Main, GuessNOACfg::new(main_args, 0, noa_len)),
         )? {
-            Self::ig_failure(process_non_opt::<S>(&main_ctx, set, inv, ser, &mut proc))?;
+            Self::ig_failure(process_non_opt(&main_ctx, set, inv, ser, &mut proc))?;
         }
 
         Self::ig_failure(self.checker().post_check(set))?;

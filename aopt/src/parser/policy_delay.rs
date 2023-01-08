@@ -21,11 +21,10 @@ use crate::ctx::Ctx;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::prelude::Invoker;
+use crate::prelude::ServicesExt;
 use crate::proc::Process;
-use crate::ser::Services;
-use crate::set::Ctor;
 use crate::set::OptValidator;
-use crate::set::Set;
+use crate::set::SetOpt;
 use crate::Arc;
 use crate::Error;
 
@@ -123,20 +122,17 @@ use crate::Error;
 /// # }
 /// ```
 #[derive(Debug, Clone)]
-pub struct DelayPolicy<S> {
+pub struct DelayPolicy<Set, Ser> {
     strict: bool,
 
     contexts: Vec<CtxSaver>,
 
-    checker: SetChecker<S>,
+    checker: SetChecker<Set>,
 
-    marker_s: PhantomData<S>,
+    marker_s: PhantomData<(Set, Ser)>,
 }
 
-impl<S> Default for DelayPolicy<S>
-where
-    S: Set + OptParser,
-{
+impl<Set, Ser> Default for DelayPolicy<Set, Ser> {
     fn default() -> Self {
         Self {
             strict: true,
@@ -147,10 +143,11 @@ where
     }
 }
 
-impl<S> DelayPolicy<S>
+impl<Set, Ser> DelayPolicy<Set, Ser>
 where
-    <S::Ctor as Ctor>::Opt: Opt,
-    S: Set + OptParser + Debug + 'static,
+    SetOpt<Set>: Opt,
+    Ser: ServicesExt + 'static,
+    Set: crate::set::Set + OptParser + Debug + 'static,
 {
     pub fn new() -> Self {
         Self { ..Self::default() }
@@ -171,15 +168,15 @@ where
         self.strict
     }
 
-    pub fn checker(&self) -> &SetChecker<S> {
+    pub fn checker(&self) -> &SetChecker<Set> {
         &self.checker
     }
 
     pub fn invoke_opt_callback(
         &mut self,
-        set: &mut S,
-        inv: &mut Invoker<S>,
-        ser: &mut Services,
+        set: &mut Set,
+        inv: &mut Invoker<Set, Ser>,
+        ser: &mut Ser,
     ) -> Result<(), Error> {
         for saver in std::mem::take(&mut self.contexts) {
             invoke_callback_opt(saver, set, inv, ser)?;
@@ -193,18 +190,19 @@ where
     }
 }
 
-impl<S> Policy for DelayPolicy<S>
+impl<Set, Ser> Policy for DelayPolicy<Set, Ser>
 where
-    <S::Ctor as Ctor>::Opt: Opt,
-    S: Set + OptParser + OptValidator + Debug + 'static,
+    SetOpt<Set>: Opt,
+    Ser: ServicesExt + 'static,
+    Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
 {
     type Ret = ReturnVal;
 
-    type Set = S;
+    type Set = Set;
 
-    type Inv = Invoker<S>;
+    type Inv = Invoker<Set, Ser>;
 
-    type Ser = Services;
+    type Ser = Ser;
 
     type Error = Error;
 
@@ -246,8 +244,7 @@ where
                                 GuessOptCfg::new(idx, args_len, arg.clone(), &clopt),
                             )? {
                                 opt_ctx.set_idx(idx);
-                                let ret =
-                                    process_opt::<S>(&opt_ctx, set, inv, ser, &mut proc, false)?;
+                                let ret = process_opt(&opt_ctx, set, inv, ser, &mut proc, false)?;
 
                                 if proc.is_mat() {
                                     self.contexts.extend(ret);
@@ -295,7 +292,7 @@ where
                 GuessNOACfg::new(noa_args.clone(), Self::noa_idx(0), noa_len),
             )? {
                 noa_ctx.set_idx(Self::noa_idx(0));
-                process_non_opt::<S>(&noa_ctx, set, inv, ser, &mut proc)?;
+                process_non_opt(&noa_ctx, set, inv, ser, &mut proc)?;
             }
 
             self.checker().cmd_check(set)?;
@@ -306,7 +303,7 @@ where
                     GuessNOACfg::new(noa_args.clone(), Self::noa_idx(idx), noa_len),
                 )? {
                     noa_ctx.set_idx(Self::noa_idx(idx));
-                    process_non_opt::<S>(&noa_ctx, set, inv, ser, &mut proc)?;
+                    process_non_opt(&noa_ctx, set, inv, ser, &mut proc)?;
                 }
             }
         } else {
@@ -327,7 +324,7 @@ where
         if let Some(mut proc) =
             NOAGuess::new().guess(&UserStyle::Main, GuessNOACfg::new(main_args, 0, noa_len))?
         {
-            process_non_opt::<S>(&main_ctx, set, inv, ser, &mut proc)?;
+            process_non_opt(&main_ctx, set, inv, ser, &mut proc)?;
         }
 
         self.checker().post_check(set)?;

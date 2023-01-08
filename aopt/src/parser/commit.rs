@@ -11,8 +11,8 @@ use crate::opt::Index;
 use crate::opt::Opt;
 use crate::opt::ValInitiator;
 use crate::opt::ValValidator;
+use crate::prelude::ServicesExt;
 use crate::set::Commit;
-use crate::set::Set;
 use crate::set::SetCfg;
 use crate::set::SetOpt;
 use crate::Error;
@@ -21,24 +21,26 @@ use crate::Uid;
 
 /// Simple wrapped the option create interface of [`Commit`],
 /// and the handler register interface of [`HandlerEntry`].
-pub struct ParserCommit<'a, S>
+pub struct ParserCommit<'a, Set, Ser>
 where
-    S: Set,
-    SetOpt<S>: Opt,
-    SetCfg<S>: ConfigValue + Default,
+    Set: crate::set::Set,
+    SetOpt<Set>: Opt,
+    Ser: ServicesExt,
+    SetCfg<Set>: ConfigValue + Default,
 {
-    inner: Commit<'a, S>,
+    inner: Commit<'a, Set>,
 
-    inv_ser: Option<&'a mut Invoker<S>>,
+    inv_ser: Option<&'a mut Invoker<Set, Ser>>,
 
     drop_commit: bool,
 }
 
-impl<'a, S> Debug for ParserCommit<'a, S>
+impl<'a, Set, Ser> Debug for ParserCommit<'a, Set, Ser>
 where
-    S: Set + Debug,
-    SetOpt<S>: Opt + Debug,
-    SetCfg<S>: ConfigValue + Default + Debug,
+    Set: crate::set::Set + Debug,
+    SetOpt<Set>: Opt + Debug,
+    Ser: ServicesExt + Debug,
+    SetCfg<Set>: ConfigValue + Default + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ParserCommit")
@@ -49,13 +51,14 @@ where
     }
 }
 
-impl<'a, S> ParserCommit<'a, S>
+impl<'a, Set, Ser> ParserCommit<'a, Set, Ser>
 where
-    S: Set,
-    SetOpt<S>: Opt,
-    SetCfg<S>: ConfigValue + Default,
+    Set: crate::set::Set,
+    SetOpt<Set>: Opt,
+    Ser: ServicesExt,
+    SetCfg<Set>: ConfigValue + Default,
 {
-    pub fn new(inner: Commit<'a, S>, inv_ser: &'a mut Invoker<S>) -> Self {
+    pub fn new(inner: Commit<'a, Set>, inv_ser: &'a mut Invoker<Set, Ser>) -> Self {
         Self {
             inner,
             inv_ser: Some(inv_ser),
@@ -63,11 +66,11 @@ where
         }
     }
 
-    pub fn cfg(&self) -> &SetCfg<S> {
+    pub fn cfg(&self) -> &SetCfg<Set> {
         self.inner.cfg()
     }
 
-    pub fn cfg_mut(&mut self) -> &mut SetCfg<S> {
+    pub fn cfg_mut(&mut self) -> &mut SetCfg<Set> {
         self.inner.cfg_mut()
     }
 
@@ -166,11 +169,11 @@ where
     /// Register the handler which will be called when option is set.
     /// The function will register the option to [`Set`] first,
     /// then pass the unqiue id to [`HandlerEntry`].
-    pub fn on<H, O, A>(mut self, handler: H) -> Result<HandlerEntry<'a, S, H, A, O>, Error>
+    pub fn on<H, O, A>(mut self, handler: H) -> Result<HandlerEntry<'a, Set, Ser, H, A, O>, Error>
     where
         O: 'static,
-        H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
-        A: Extract<S, Error = Error> + 'static,
+        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'static,
+        A: Extract<Set, Ser, Error = Error> + 'static,
     {
         let uid = self.run_and_commit_the_change()?;
         // we don't need &'a mut InvokeServices, so just take it.
@@ -185,11 +188,14 @@ where
     /// the handler return None.
     /// The function will register the option to [`Set`] first,
     /// then pass the unqiue id to [`HandlerEntry`].
-    pub fn fallback<H, O, A>(mut self, handler: H) -> Result<HandlerEntry<'a, S, H, A, O>, Error>
+    pub fn fallback<H, O, A>(
+        mut self,
+        handler: H,
+    ) -> Result<HandlerEntry<'a, Set, Ser, H, A, O>, Error>
     where
         O: 'static,
-        H: Handler<S, A, Output = Option<O>, Error = Error> + 'static,
-        A: Extract<S, Error = Error> + 'static,
+        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'static,
+        A: Extract<Set, Ser, Error = Error> + 'static,
     {
         let uid = self.run_and_commit_the_change()?;
         // we don't need &'a mut InvokeServices, so just take it.
@@ -213,11 +219,12 @@ where
     }
 }
 
-impl<'a, S> Drop for ParserCommit<'a, S>
+impl<'a, Set, Ser> Drop for ParserCommit<'a, Set, Ser>
 where
-    S: crate::set::Set,
-    SetOpt<S>: Opt,
-    SetCfg<S>: ConfigValue + Default,
+    Set: crate::set::Set,
+    SetOpt<Set>: Opt,
+    Ser: ServicesExt,
+    SetCfg<Set>: ConfigValue + Default,
 {
     fn drop(&mut self) {
         if self.drop_commit {

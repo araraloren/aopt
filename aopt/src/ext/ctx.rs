@@ -87,18 +87,16 @@ use std::ops::DerefMut;
 use crate::ctx::Ctx;
 use crate::ctx::Extract;
 use crate::opt::RawValParser;
-use crate::ser::Services;
-use crate::set::Set;
 use crate::set::SetExt;
 use crate::set::SetOpt;
 use crate::Arc;
 use crate::Error;
 use crate::Str;
 
-impl<S> Extract<S> for Ctx {
+impl<Set, Ser> Extract<Set, Ser> for Ctx {
     type Error = Error;
 
-    fn extract(_: &S, _: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn extract(_: &Set, _: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(ctx.clone())
     }
 }
@@ -158,10 +156,10 @@ impl Uid {
     }
 }
 
-impl<S: Set> Extract<S> for Uid {
+impl<Set, Ser> Extract<Set, Ser> for Uid {
     type Error = Error;
 
-    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(Self::extract_ctx(ctx))
     }
 }
@@ -267,10 +265,10 @@ impl Index {
     }
 }
 
-impl<S: Set> Extract<S> for Index {
+impl<Set, Ser> Extract<Set, Ser> for Index {
     type Error = Error;
 
-    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(Self::extract_ctx(ctx))
     }
 }
@@ -364,10 +362,10 @@ impl Total {
     }
 }
 
-impl<S: Set> Extract<S> for Total {
+impl<Set, Ser> Extract<Set, Ser> for Total {
     type Error = Error;
 
-    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(Self::extract_ctx(ctx))
     }
 }
@@ -467,10 +465,10 @@ impl Deref for Args {
     }
 }
 
-impl<S: Set> Extract<S> for Args {
+impl<Set, Ser> Extract<Set, Ser> for Args {
     type Error = Error;
 
-    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(Self::extract_ctx(ctx))
     }
 }
@@ -564,10 +562,10 @@ impl Name {
     }
 }
 
-impl<S: Set> Extract<S> for Name {
+impl<Set, Ser> Extract<Set, Ser> for Name {
     type Error = Error;
 
-    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
         Self::extract_ctx(ctx)
     }
 }
@@ -682,10 +680,10 @@ impl Display for Style {
     }
 }
 
-impl<S: Set> Extract<S> for Style {
+impl<Set, Ser> Extract<Set, Ser> for Style {
     type Error = Error;
 
-    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(Self::extract_ctx(ctx))
     }
 }
@@ -775,10 +773,10 @@ impl Deref for RawVal {
     }
 }
 
-impl<S: Set> Extract<S> for RawVal {
+impl<Set, Ser> Extract<Set, Ser> for RawVal {
     type Error = Error;
 
-    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
         Self::extract_ctx(ctx)
     }
 }
@@ -922,10 +920,10 @@ impl<T> DerefMut for Value<T> {
     }
 }
 
-impl<S: Set, T: RawValParser<SetOpt<S>>> Extract<S> for Value<T> {
+impl<Set: crate::set::Set, Ser, T: RawValParser<SetOpt<Set>>> Extract<Set, Ser> for Value<T> {
     type Error = Error;
 
-    fn extract(set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn extract(set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
         let arg = ctx.arg();
         let arg = arg.as_ref().map(|v| v.as_ref());
         let uid = ctx.uid();

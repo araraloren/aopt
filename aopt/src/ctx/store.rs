@@ -1,5 +1,4 @@
 use crate::opt::Opt;
-use crate::ser::Services;
 use crate::ser::ServicesExt;
 use crate::set::SetOpt;
 use crate::Error;
@@ -8,7 +7,7 @@ use crate::Uid;
 
 /// The [`Store`] processer save the value of given option into
 /// [`ValServices`](crate::ser::ValService) and [`RawValServices`](crate::ser::RawValService).
-pub trait Store<Set, Value> {
+pub trait Store<Set, Ser, Value> {
     type Ret;
     type Error: Into<Error>;
 
@@ -16,22 +15,17 @@ pub trait Store<Set, Value> {
         &mut self,
         uid: Uid,
         set: &mut Set,
-        ser: &mut Services,
+        ser: &mut Ser,
         raw: Option<&RawVal>,
         val: Option<Value>,
     ) -> Result<Option<Self::Ret>, Self::Error>;
 }
 
-impl<Func, Set, Value, Ret, Err> Store<Set, Value> for Func
+impl<Func, Set, Ser, Value, Ret, Err> Store<Set, Ser, Value> for Func
 where
     Err: Into<Error>,
-    Func: FnMut(
-        Uid,
-        &mut Set,
-        &mut Services,
-        Option<&RawVal>,
-        Option<Value>,
-    ) -> Result<Option<Ret>, Err>,
+    Func:
+        FnMut(Uid, &mut Set, &mut Ser, Option<&RawVal>, Option<Value>) -> Result<Option<Ret>, Err>,
 {
     type Ret = Ret;
     type Error = Err;
@@ -40,7 +34,7 @@ where
         &mut self,
         uid: Uid,
         set: &mut Set,
-        ser: &mut Services,
+        ser: &mut Ser,
         raw: Option<&RawVal>,
         val: Option<Value>,
     ) -> Result<Option<Self::Ret>, Self::Error> {
@@ -51,7 +45,7 @@ where
 /// Null store, do nothing. See [`Action`](crate::opt::Action) for default store.
 pub struct NullStore;
 
-impl<Set, Value> Store<Set, Value> for NullStore {
+impl<Set, Ser, Value> Store<Set, Ser, Value> for NullStore {
     type Ret = Value;
 
     type Error = Error;
@@ -60,7 +54,7 @@ impl<Set, Value> Store<Set, Value> for NullStore {
         &mut self,
         _: Uid,
         _: &mut Set,
-        _: &mut Services,
+        _: &mut Ser,
         _: Option<&RawVal>,
         val: Option<Value>,
     ) -> Result<Option<Self::Ret>, Self::Error> {
@@ -73,10 +67,11 @@ impl<Set, Value> Store<Set, Value> for NullStore {
 /// See [`Action`](crate::opt::Action) for default store.
 pub struct VecStore;
 
-impl<Set, Value: 'static> Store<Set, Vec<Value>> for VecStore
+impl<Set, Ser, Value: 'static> Store<Set, Ser, Vec<Value>> for VecStore
 where
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
+    Ser: ServicesExt,
 {
     type Ret = ();
 
@@ -86,7 +81,7 @@ where
         &mut self,
         uid: Uid,
         set: &mut Set,
-        ser: &mut Services,
+        ser: &mut Ser,
         raw: Option<&RawVal>,
         val: Option<Vec<Value>>,
     ) -> Result<Option<Self::Ret>, Self::Error> {

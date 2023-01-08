@@ -31,11 +31,11 @@ pub type ASet = OptSet<StrParser, ACreator, PrefixOptValidator>;
 
 pub type ASer = Services;
 
-pub type AFwdPolicy = FwdPolicy<ASet>;
+pub type AFwdPolicy = FwdPolicy<ASet, ASer>;
 
-pub type APrePolicy = PrePolicy<ASet>;
+pub type APrePolicy = PrePolicy<ASet, ASer>;
 
-pub type ADelayPolicy = DelayPolicy<ASet>;
+pub type ADelayPolicy = DelayPolicy<ASet, ASer>;
 
 pub type AFwdParser = Parser<AFwdPolicy>;
 

@@ -10,9 +10,7 @@ use std::ops::DerefMut;
 use crate::ctx::Ctx;
 use crate::ctx::Extract;
 use crate::map::ErasedTy;
-use crate::ser::Services;
 use crate::ser::ServicesExt;
-use crate::set::Set;
 use crate::Arc;
 use crate::Error;
 
@@ -103,7 +101,7 @@ impl<T> Value<T> {
 }
 
 impl<T: ErasedTy> Value<T> {
-    pub fn extract_ser(ser: &Services) -> Result<Self, Error> {
+    pub fn extract_ser(ser: &impl ServicesExt) -> Result<Self, Error> {
         Ok(ser
             .ser_usrval()
             .val::<Value<T>>()
@@ -141,10 +139,10 @@ impl<T: ?Sized> From<Arc<T>> for Value<T> {
     }
 }
 
-impl<T: ErasedTy, S: Set> Extract<S> for Value<T> {
+impl<T: ErasedTy, Set, Ser: ServicesExt> Extract<Set, Ser> for Value<T> {
     type Error = Error;
 
-    fn extract(_set: &S, ser: &Services, _ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn extract(_set: &Set, ser: &Ser, _ctx: &Ctx) -> Result<Self, Self::Error> {
         Self::extract_ser(ser)
     }
 }

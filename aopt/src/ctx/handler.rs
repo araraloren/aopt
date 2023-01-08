@@ -1,31 +1,30 @@
-use crate::ser::Services;
 use crate::Error;
 
-pub trait Handler<Set, Args> {
+pub trait Handler<Set, Ser, Args> {
     type Output;
     type Error: Into<Error>;
 
     fn invoke(
         &mut self,
         set: &mut Set,
-        ser: &mut Services,
+        ser: &mut Ser,
         args: Args,
     ) -> Result<Self::Output, Self::Error>;
 }
 
 macro_rules! impl_handler_for {
     ($($arg:ident)*) => {
-        impl<Set, Func, Out, Err, $($arg,)*> Handler<Set, ($($arg,)*)> for Func
+        impl<Set, Ser, Func, Out, Err, $($arg,)*> Handler<Set, Ser, ($($arg,)*)> for Func
         where
             Err: Into<Error>,
-            Func: FnMut(&mut Set, &mut Services, $($arg),*) -> Result<Out, Err>,
+            Func: FnMut(&mut Set, &mut Ser, $($arg),*) -> Result<Out, Err>,
         {
             type Output = Out;
             type Error = Err;
 
             #[inline]
             #[allow(non_snake_case)]
-            fn invoke(&mut self, set: &mut Set, ser: &mut Services, ($($arg,)*): ($($arg,)*)) -> Result<Self::Output, Self::Error> {
+            fn invoke(&mut self, set: &mut Set, ser: &mut Ser, ($($arg,)*): ($($arg,)*)) -> Result<Self::Output, Self::Error> {
                 (self)(set, ser, $($arg,)*)
             }
         }

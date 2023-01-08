@@ -512,7 +512,7 @@ where
     <P::Set as OptParser>::Output: Information,
     SetCfg<P::Set>: Config + ConfigValue + Default,
     P::Set: Set + OptParser + OptValidator + 'static,
-    P: Policy<Inv = Invoker<<P as Policy>::Set>, Error = Error>,
+    P: Policy<Inv = Invoker<<P as Policy>::Set, <P as Policy>::Ser>, Error = Error>,
 {
     /// Add an option to the [`Set`](Policy::Set), return a [`ParserCommit`].
     ///
@@ -590,7 +590,10 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    pub fn add_opt<T: Into<Str>>(&mut self, opt: T) -> Result<ParserCommit<'_, P::Set>, Error> {
+    pub fn add_opt<T: Into<Str>>(
+        &mut self,
+        opt: T,
+    ) -> Result<ParserCommit<'_, P::Set, P::Ser>, Error> {
         let info =
             <<<P::Set as Set>::Ctor as Ctor>::Config as Config>::new(&self.optset, opt.into())?;
 
@@ -649,7 +652,7 @@ where
     pub fn add_opt_cfg<Cfg: Into<<<P::Set as Set>::Ctor as Ctor>::Config>>(
         &mut self,
         config: Cfg,
-    ) -> Result<ParserCommit<'_, P::Set>, Error> {
+    ) -> Result<ParserCommit<'_, P::Set, P::Ser>, Error> {
         Ok(ParserCommit::new(
             Commit::new(&mut self.optset, config.into()),
             &mut self.invser,
@@ -661,18 +664,18 @@ where
             pub fn entry<A, O, H>(&mut self, uid: Uid) -> Result<HandlerEntry<'_, P::Set, H, A, O>, Error>
             where
                 O: Send + Sync + 'static,
-                H: Handler<P::Set, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
-                A: Extract<P::Set, Error = Error> + Send + Sync + 'static,
+                H: Handler<P::Set, P::Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
+                A: Extract<P::Set, P::Ser, Error = Error> + Send + Sync + 'static,
             {
                 Ok(HandlerEntry::new(self.services.ser_invoke_mut()?, uid))
             }
         }
         else {
-            pub fn entry<A, O, H>(&mut self, uid: Uid) -> Result<HandlerEntry<'_, P::Set, H, A, O>, Error>
+            pub fn entry<A, O, H>(&mut self, uid: Uid) -> Result<HandlerEntry<'_, P::Set, P::Ser, H, A, O>, Error>
             where
                 O: 'static,
-                H: Handler<P::Set, A, Output = Option<O>, Error = Error> + 'static,
-                A: Extract<P::Set, Error = Error> + 'static,
+                H: Handler<P::Set, P::Ser, A, Output = Option<O>, Error = Error> + 'static,
+                A: Extract<P::Set, P::Ser, Error = Error> + 'static,
             {
                 Ok(HandlerEntry::new(&mut self.invser, uid))
             }
