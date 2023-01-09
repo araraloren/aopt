@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
+use super::process::ProcessCtx;
 use super::process_non_opt;
 use super::process_opt;
 use super::Guess;
@@ -25,7 +26,7 @@ use crate::set::SetOpt;
 use crate::Arc;
 use crate::Error;
 
-/// [`PrePolicy`] matching the command line arguments with [`Opt`] in the [`Set`].
+/// [`PrePolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
 /// [`PrePolicy`] will skip any special [`Error`] during [`parse`](Policy::parse) process.
 /// [`PrePolicy`] will return the left `NOA`s after parsing.
 /// [`PrePolicy`] don't consume the `NOA` when process [`NOAMatch`](crate::proc::NOAMatch).
@@ -101,6 +102,8 @@ use crate::Error;
 pub struct PrePolicy<Set, Ser> {
     strict: bool,
 
+    styles: Vec<UserStyle>,
+
     checker: SetChecker<Set>,
 
     marker_s: PhantomData<(Set, Ser)>,
@@ -110,6 +113,13 @@ impl<Set, Ser> Default for PrePolicy<Set, Ser> {
     fn default() -> Self {
         Self {
             strict: false,
+            styles: vec![
+                UserStyle::EqualWithValue,
+                UserStyle::Argument,
+                UserStyle::Boolean,
+                UserStyle::CombinedOption,
+                UserStyle::EmbeddedValue,
+            ],
             checker: SetChecker::default(),
             marker_s: PhantomData::default(),
         }
@@ -137,6 +147,20 @@ impl<Set, Ser> PrePolicy<Set, Ser> {
         self.strict
     }
 
+    pub fn with_styles(mut self, styles: Vec<UserStyle>) -> Self {
+        self.styles = styles;
+        self
+    }
+
+    pub fn set_styles(&mut self, styles: Vec<UserStyle>) -> &mut Self {
+        self.styles = styles;
+        self
+    }
+
+    pub fn user_styles(&self) -> &[UserStyle] {
+        &self.styles
+    }
+
     pub fn checker(&self) -> &SetChecker<Set> {
         &self.checker
     }
@@ -161,45 +185,29 @@ impl<Set, Ser> PrePolicy<Set, Ser> {
     }
 }
 
-impl<Set, Ser> Policy for PrePolicy<Set, Ser>
+impl<Set, Ser> PrePolicy<Set, Ser>
 where
     SetOpt<Set>: Opt,
     Ser: ServicesExt + 'static,
     Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
 {
-    type Ret = ReturnVal;
-
-    type Set = Set;
-
-    type Inv = Invoker<Set, Ser>;
-
-    type Ser = Ser;
-
-    type Error = Error;
-
-    fn parse(
+    pub(crate) fn parse_impl(
         &mut self,
-        set: &mut Self::Set,
-        inv: &mut Self::Inv,
-        ser: &mut Self::Ser,
-        args: Arc<Args>,
-    ) -> Result<Option<Self::Ret>, Self::Error> {
+        ctx: &mut Ctx,
+        set: &mut <Self as Policy>::Set,
+        inv: &mut <Self as Policy>::Inv,
+        ser: &mut <Self as Policy>::Ser,
+    ) -> Result<(), <Self as Policy>::Error> {
         Self::ig_failure(self.checker().pre_check(set))?;
 
-        let opt_styles = [
-            UserStyle::EqualWithValue,
-            UserStyle::Argument,
-            UserStyle::Boolean,
-            UserStyle::CombinedOption,
-            UserStyle::EmbeddedValue,
-        ];
+        let opt_styles = &self.styles;
+        let args = ctx.orig_args().clone();
         let args_len = args.len();
         let mut noa_args = Args::default();
         let mut iter = args.guess_iter().enumerate();
         let mut opt_ctx = Ctx::default();
 
-        opt_ctx.set_args(args.clone()).set_total(args_len);
-
+        ctx.set_args(args.clone());
         while let Some((idx, (opt, arg))) = iter.next() {
             let mut matched = false;
             let mut consume = false;
@@ -218,9 +226,17 @@ where
                                 ))?;
 
                                 if let Some(Some(mut proc)) = ret {
-                                    opt_ctx.set_idx(idx);
                                     if Self::ig_failure(process_opt(
-                                        &opt_ctx, set, inv, ser, &mut proc, true,
+                                        ProcessCtx {
+                                            idx,
+                                            ctx,
+                                            set,
+                                            inv,
+                                            ser,
+                                            tot: args_len,
+                                        },
+                                        &mut proc,
+                                        true,
                                     ))?
                                     .is_some()
                                     {
@@ -256,17 +272,24 @@ where
         let ret = noa_args.clone();
         let noa_args = Arc::new(noa_args);
         let noa_len = noa_args.len();
-        let mut noa_ctx = Ctx::default();
 
-        noa_ctx.set_args(noa_args.clone()).set_total(noa_args.len());
-
+        ctx.set_args(noa_args.clone());
         if noa_args.len() > 0 {
             if let Some(Some(mut proc)) = Self::ig_failure(NOAGuess::new().guess(
                 &UserStyle::Cmd,
                 GuessNOACfg::new(noa_args.clone(), Self::noa_idx(0), noa_len),
             ))? {
-                noa_ctx.set_idx(Self::noa_idx(0));
-                Self::ig_failure(process_non_opt(&noa_ctx, set, inv, ser, &mut proc))?;
+                Self::ig_failure(process_non_opt(
+                    ProcessCtx {
+                        ctx,
+                        set,
+                        inv,
+                        ser,
+                        tot: noa_len,
+                        idx: Self::noa_idx(0),
+                    },
+                    &mut proc,
+                ))?;
             }
 
             Self::ig_failure(self.checker().cmd_check(set))?;
@@ -276,8 +299,17 @@ where
                     &UserStyle::Pos,
                     GuessNOACfg::new(noa_args.clone(), Self::noa_idx(idx), noa_len),
                 ))? {
-                    noa_ctx.set_idx(Self::noa_idx(idx));
-                    Self::ig_failure(process_non_opt(&noa_ctx, set, inv, ser, &mut proc))?;
+                    Self::ig_failure(process_non_opt(
+                        ProcessCtx {
+                            ctx,
+                            set,
+                            inv,
+                            ser,
+                            tot: noa_len,
+                            idx: Self::noa_idx(idx),
+                        },
+                        &mut proc,
+                    ))?;
                 }
             }
         } else {
@@ -287,20 +319,66 @@ where
         Self::ig_failure(self.checker().pos_check(set))?;
 
         let main_args = noa_args;
-        let mut main_ctx = noa_ctx;
+        let main_len = main_args.len();
 
         // set 0 for Main's index
-        main_ctx.set_idx(0);
-
         if let Some(Some(mut proc)) = Self::ig_failure(
             NOAGuess::new().guess(&UserStyle::Main, GuessNOACfg::new(main_args, 0, noa_len)),
         )? {
-            Self::ig_failure(process_non_opt(&main_ctx, set, inv, ser, &mut proc))?;
+            Self::ig_failure(process_non_opt(
+                ProcessCtx {
+                    ctx,
+                    set,
+                    inv,
+                    ser,
+                    tot: main_len,
+                    idx: 0,
+                },
+                &mut proc,
+            ))?;
         }
 
         Self::ig_failure(self.checker().post_check(set))?;
 
-        Ok(Some(ReturnVal::new(ret.into_inner(), true)))
+        Ok(())
+    }
+}
+
+impl<Set, Ser> Policy for PrePolicy<Set, Ser>
+where
+    SetOpt<Set>: Opt,
+    Ser: ServicesExt + 'static,
+    Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
+{
+    type Ret = ReturnVal;
+
+    type Set = Set;
+
+    type Inv = Invoker<Set, Ser>;
+
+    type Ser = Ser;
+
+    type Error = Error;
+
+    fn parse(
+        &mut self,
+        set: &mut Self::Set,
+        inv: &mut Self::Inv,
+        ser: &mut Self::Ser,
+        args: Arc<Args>,
+    ) -> Result<Self::Ret, Self::Error> {
+        let ctx = Ctx::default().with_orig_args(args.clone()).with_args(args);
+
+        match self.parse_impl(&mut ctx, set, inv, ser) {
+            Ok(ret) => Ok(ReturnVal::new(ctx, true)),
+            Err(e) => {
+                if e.is_failure() {
+                    Ok(ReturnVal::new(ctx, false))
+                } else {
+                    Err(e)
+                }
+            }
+        }
     }
 }
 
@@ -926,9 +1004,9 @@ mod test {
         for opt in set.iter_mut() {
             opt.init(&mut ser)?;
         }
-        let ret = policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
+        let ret = policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args));
 
-        assert!(ret.is_some());
+        assert!(ret.is_ok());
         let ret = ret.unwrap();
 
         for (idx, arg) in [

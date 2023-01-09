@@ -26,7 +26,6 @@ use crate::Uid;
 /// # use aopt::prelude::*;
 /// # use aopt::Error;
 /// # use aopt::Arc;
-/// # use aopt::ext::ServicesExt;
 /// # use aopt::RawVal;
 /// # use std::ops::Deref;
 /// #
@@ -34,21 +33,21 @@ use crate::Uid;
 ///    pub struct Count(usize);
 ///
 ///    // implement Extract for your type
-///    impl Extract<ASet> for Count {
+///    impl Extract<ASet, ASer> for Count {
 ///        type Error = Error;
 ///
-///        fn extract(_set: &ASet, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+///        fn extract(_set: &ASet, _ser: &ASer, ctx: &Ctx) -> Result<Self, Self::Error> {
 ///            Ok(Self(ctx.args().len()))
 ///        }
 ///    }
-///    let mut ser = Services::default().with(UsrValService::default());
-///    let mut is = InvokeService::new();
+///    let mut ser = ASer::default();
+///    let mut is = Invoker::new();
 ///    let mut set = ASet::default();
 ///    let args = Arc::new(Args::new(["--foo", "bar", "doo"].into_iter()));
 ///    let ctx = Ctx::default().with_args(args);
 ///
-///    ser.ser_usrval_mut()?.insert(ser::Value::new(42i64));
-///    // you can register callback into InvokeService
+///    ser.ser_usrval_mut().insert(ser::Value::new(42i64));
+///    // you can register callback into Invoker
 ///    is.entry(0)
 ///      .on(|_set: &mut ASet, _: &mut ASer| -> Result<Option<()>, Error> {
 ///            println!("Calling the handler of {{0}}");
@@ -86,7 +85,7 @@ pub type InvokeHandler<Set, Ser, Error> =
 
 impl<Set, Ser> Debug for Invoker<Set, Ser> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("InvokeService")
+        f.debug_struct("Invoker")
             .field("callbacks", &"{ ... }")
             .finish()
     }
@@ -124,7 +123,7 @@ where
 
     /// Register a callback that will called by [`Policy`](crate::parser::Policy) when option setted.
     ///
-    /// The [`InvokeService`] first call the [`invoke`](crate::ctx::Handler::invoke), then
+    /// The [`Invoker`] first call the [`invoke`](crate::ctx::Handler::invoke), then
     /// call the [`process`](crate::ctx::Store::process) with the return value.
     /// # Note
     /// ```txt
@@ -161,9 +160,10 @@ where
         self.callbacks.contains_key(&uid)
     }
 
-    /// Invoke the handler saved in [`InvokeService`], it will panic if the handler not exist.
+    /// Invoke the handler saved in [`Invoker`], it will panic if the handler not exist.
     pub fn invoke(&mut self, set: &mut Set, ser: &mut Ser, ctx: &Ctx) -> Result<Option<()>, Error> {
-        let uid = ctx.uid();
+        let uid = ctx.uid()?;
+
         if let Some(callback) = self.callbacks.get_mut(&uid) {
             return (callback)(set, ser, ctx);
         }
@@ -193,13 +193,13 @@ where
     ///
     /// If there no handler for a option, then default handler will be called.
     /// It will parsing [`RawVal`](crate::RawVal)(using [`RawValParser`]) into associated type, then call the action
-    /// of option save the value to [`ValService`](crate::ser::ValService).
+    /// of option save the value to [`AnyValService`](crate::ser::AnyValService).
     /// For value type, reference documents of [`Assoc`].
     pub fn fallback(set: &mut Set, ser: &mut Ser, ctx: &Ctx) -> Result<Option<()>, Error> {
-        let uid = ctx.uid();
+        let uid = ctx.uid()?;
         let opt = set.get(uid).unwrap();
         let assoc = opt.assoc();
-        let arg = ctx.arg();
+        let arg = ctx.arg()?;
         let val = arg.as_ref().map(|v| v.as_ref());
         let mut action = *opt.action();
 
@@ -290,7 +290,7 @@ where
     }
 
     /// Register the handler which will be called when option is set.
-    /// And the [`fallback`](crate::ser::InvokeService::fallback) will be called if
+    /// And the [`fallback`](crate::ctx::Invoker::fallback) will be called if
     /// the handler return None.
     pub fn fallback(mut self, handler: H) -> Self {
         if !self.register {

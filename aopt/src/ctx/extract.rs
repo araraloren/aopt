@@ -2,7 +2,7 @@ use super::Ctx;
 
 use crate::Error;
 
-/// Implement the trait if your want use your type in the [`InvokeService`](crate::ser::InvokeService).
+/// Implement the trait if your want use your type in the [`Invoker`](crate::ctx::Invoker).
 /// Return an [`Error::SpExtractError`] if any error occured.
 pub trait Extract<Set, Ser>
 where

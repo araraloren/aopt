@@ -1,7 +1,7 @@
 pub(crate) mod context;
 pub(crate) mod extract;
 pub(crate) mod handler;
-#[cfg_attr(feature = "sync", path = "sync/ctx/invoke.rs")]
+#[cfg_attr(feature = "sync", path = "../sync/ctx/invoke.rs")]
 #[cfg_attr(not(feature = "sync"), path = "invoke.rs")]
 pub(crate) mod invoke;
 #[cfg_attr(feature = "sync", path = "../sync/ctx/store.rs")]
@@ -9,6 +9,7 @@ pub(crate) mod invoke;
 pub(crate) mod store;
 
 pub use self::context::Ctx;
+pub use self::context::InnerCtx;
 pub use self::extract::Extract;
 pub use self::handler::Handler;
 pub use self::invoke::HandlerEntry;
@@ -19,7 +20,7 @@ pub use self::store::Store;
 pub use self::store::VecStore;
 
 use crate::opt::Opt;
-use crate::prelude::ServicesExt;
+use crate::ser::ServicesExt;
 use crate::set::SetExt;
 use crate::set::SetOpt;
 use crate::Error;
@@ -27,27 +28,28 @@ use crate::Error;
 cfg_if::cfg_if! {
     if #[cfg(feature = "sync")] {
         /// Wrap the handler and call the default action of option if return value is `Some()`,
-        /// otherwise call the [`fallback`](crate::ser::InvokeService::fallback).
-        pub fn wrap_handler_fallback<S, A, O, H, E>(
+        /// otherwise call the [`fallback`](crate::ctx::Invoker::fallback).
+        pub fn wrap_handler_fallback<Set, Ser, A, O, H, E>(
             mut handler: H,
-        ) -> impl FnMut(&mut S, &mut Services, &Ctx) -> Result<Option<()>, Error>
+        ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<()>, Error>
         where
             O: Send + Sync + 'static,
-            S: Set,
-            SetOpt<S>: Opt,
+            Set: crate::set::Set,
+            SetOpt<Set>: Opt,
             E: Into<Error>,
-            A: Extract<S, Error = E> + Send + Sync,
-            H: Handler<S, A, Output = Option<O>, Error = E> + Send + Sync + 'static,
+            Ser: ServicesExt,
+            A: Extract<Set, Ser, Error = E> + Send + Sync,
+            H: Handler<Set, Ser, A, Output = Option<O>, Error = E> + Send + Sync + 'static,
         {
-            move |set: &mut S, ser: &mut Services, ctx: &Ctx| {
+            move |set: &mut Set, ser: &mut Ser, ctx: &Ctx| {
                 let val = handler
                     .invoke(set, ser, A::extract(set, ser, ctx).map_err(Into::into)?)
                     .map_err(Into::into)?;
 
                 if val.is_some() {
-                    let arg = ctx.arg();
+                    let arg = ctx.arg()?;
                     let arg = arg.as_ref().map(|v| v.as_ref());
-                    let uid = ctx.uid();
+                    let uid = ctx.uid()?;
                     let mut act = *set.opt(uid)?.action();
 
                     act.process(uid, set, ser, arg, val)
@@ -58,24 +60,25 @@ cfg_if::cfg_if! {
         }
 
         /// Wrap the handler and call the default action of option.
-        pub fn wrap_handler_action<S, A, O, H, E>(
+        pub fn wrap_handler_action<Set, Ser, A, O, H, E>(
             mut handler: H,
-        ) -> impl FnMut(&mut S, &mut Services, &Ctx) -> Result<Option<()>, Error>
+        ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<()>, Error>
         where
             O: Send + Sync + 'static,
-            S: Set,
-            SetOpt<S>: Opt,
+            Set: crate::set::Set,
+            SetOpt<Set>: Opt,
             E: Into<Error>,
-            A: Extract<S, Error = E> + Send + Sync,
-            H: Handler<S, A, Output = Option<O>, Error = E> + Send + Sync + 'static,
+            Ser: ServicesExt,
+            A: Extract<Set, Ser, Error = E> + Send + Sync,
+            H: Handler<Set, Ser, A, Output = Option<O>, Error = E> + Send + Sync + 'static,
         {
-            move |set: &mut S, ser: &mut Services, ctx: &Ctx| {
+            move |set: &mut Set, ser: &mut Ser, ctx: &Ctx| {
                 let val = handler
                     .invoke(set, ser, A::extract(set, ser, ctx).map_err(Into::into)?)
                     .map_err(Into::into)?;
-                let arg = ctx.arg();
+                let arg = ctx.arg()?;
                 let arg = arg.as_ref().map(|v| v.as_ref());
-                let uid = ctx.uid();
+                let uid = ctx.uid()?;
                 let mut act = *set.opt(uid)?.action();
 
                 act.process(uid, set, ser, arg, val)
@@ -83,30 +86,32 @@ cfg_if::cfg_if! {
         }
 
         /// Wrap the handler and call the [`process`](Store::process) of given `store` on return value of `handler`.
-        pub fn wrap_handler<S, A, O, R, H, T, E>(
+        pub fn wrap_handler<Set, Ser, A, O, R, H, T, E>(
             mut handler: H,
             mut store: T,
-        ) -> impl FnMut(&mut S, &mut Services, &Ctx) -> Result<Option<R>, E>
+        ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<R>, Error>
         where
             E: Into<Error>,
-            A: Extract<S, Error = E> + Send + Sync,
-            T: Store<S, O, Ret = R, Error = E> + Send + Sync + 'static,
-            H: Handler<S, A, Output = Option<O>, Error = E> + Send + Sync + 'static,
+            Ser: ServicesExt,
+            A: Extract<Set, Ser, Error = E> + Send + Sync,
+            T: Store<Set, Ser, O, Ret = R, Error = E> + Send + Sync + 'static,
+            H: Handler<Set, Ser, A, Output = Option<O>, Error = E> + Send + Sync + 'static,
         {
-            Box::new(move |set: &mut S, ser: &mut Services, ctx: &Ctx| {
-                let val = handler.invoke(set, ser, A::extract(set, ser, ctx)?)?;
-                let arg = ctx.arg();
+            Box::new(move |set: &mut Set, ser: &mut Ser, ctx: &Ctx| {
+                let ext_args = A::extract(set, ser, ctx).map_err(Into::into)?;
+                let val = handler.invoke(set, ser, ext_args).map_err(Into::into)?;
+                let arg = ctx.arg()?;
                 let arg = arg.as_ref().map(|v| v.as_ref());
-                let uid = ctx.uid();
+                let uid = ctx.uid()?;
 
-                store.process(uid, set, ser, arg, val)
+                store.process(uid, set, ser, arg, val).map_err(Into::into)
             })
         }
 
     }
     else {
         /// Wrap the handler and call the default action of option if return value is `Some()`,
-        /// otherwise call the [`fallback`](crate::ser::InvokeService::fallback).
+        /// otherwise call the [`fallback`](crate::ctx::Invoker::fallback).
         pub fn wrap_handler_fallback<Set, Ser, A, O, H, E>(
             mut handler: H,
         ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<()>, Error>
@@ -125,9 +130,9 @@ cfg_if::cfg_if! {
                     .map_err(Into::into)?;
 
                 if val.is_some() {
-                    let arg = ctx.arg();
+                    let arg = ctx.arg()?;
                     let arg = arg.as_ref().map(|v| v.as_ref());
-                    let uid = ctx.uid();
+                    let uid = ctx.uid()?;
                     let mut act = *set.opt(uid)?.action();
 
                     act.process(uid, set, ser, arg, val)
@@ -154,9 +159,9 @@ cfg_if::cfg_if! {
                 let val = handler
                     .invoke(set, ser, A::extract(set, ser, ctx).map_err(Into::into)?)
                     .map_err(Into::into)?;
-                let arg = ctx.arg();
+                let arg = ctx.arg()?;
                 let arg = arg.as_ref().map(|v| v.as_ref());
-                let uid = ctx.uid();
+                let uid = ctx.uid()?;
                 let mut act = *set.opt(uid)?.action();
 
                 act.process(uid, set, ser, arg, val)
@@ -167,7 +172,7 @@ cfg_if::cfg_if! {
         pub fn wrap_handler<Set, Ser, A, O, R, H, T, E>(
             mut handler: H,
             mut store: T,
-        ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<R>, E>
+        ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<R>, Error>
         where
             E: Into<Error>,
             Ser: ServicesExt,
@@ -176,12 +181,13 @@ cfg_if::cfg_if! {
             H: Handler<Set, Ser, A, Output = Option<O>, Error = E> + 'static,
         {
             Box::new(move |set: &mut Set, ser: &mut Ser, ctx: &Ctx| {
-                let val = handler.invoke(set, ser, A::extract(set, ser, ctx)?)?;
-                let arg = ctx.arg();
+                let ext_args = A::extract(set, ser, ctx).map_err(Into::into)?;
+                let val = handler.invoke(set, ser, ext_args).map_err(Into::into)?;
+                let arg = ctx.arg()?;
                 let arg = arg.as_ref().map(|v| v.as_ref());
-                let uid = ctx.uid();
+                let uid = ctx.uid()?;
 
-                store.process(uid, set, ser, arg, val)
+                store.process(uid, set, ser, arg, val).map_err(Into::into)
             })
         }
 

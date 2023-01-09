@@ -100,9 +100,7 @@ impl Creator<AOpt, OptConfig, Error> {
             let initiator = config
                 .take_initiator()
                 .unwrap_or_else(ValInitiator::empty::<i64>);
-            let validator = config
-                .take_validator()
-                .unwrap_or_else(|| ValValidator::i64());
+            let validator = config.take_validator().unwrap_or_else(ValValidator::i64);
 
             debug_assert!(
                 config.idx().is_none(),
@@ -135,9 +133,7 @@ impl Creator<AOpt, OptConfig, Error> {
             let initiator = config
                 .take_initiator()
                 .unwrap_or_else(ValInitiator::empty::<u64>);
-            let validator = config
-                .take_validator()
-                .unwrap_or_else(|| ValValidator::u64());
+            let validator = config.take_validator().unwrap_or_else(ValValidator::u64);
 
             debug_assert!(
                 config.idx().is_none(),
@@ -170,9 +166,7 @@ impl Creator<AOpt, OptConfig, Error> {
             let initiator = config
                 .take_initiator()
                 .unwrap_or_else(ValInitiator::empty::<f64>);
-            let validator = config
-                .take_validator()
-                .unwrap_or_else(|| ValValidator::f64());
+            let validator = config.take_validator().unwrap_or_else(ValValidator::f64);
 
             debug_assert!(
                 config.idx().is_none(),
@@ -205,9 +199,7 @@ impl Creator<AOpt, OptConfig, Error> {
             let initiator = config
                 .take_initiator()
                 .unwrap_or_else(ValInitiator::empty::<String>);
-            let validator = config
-                .take_validator()
-                .unwrap_or_else(|| ValValidator::str());
+            let validator = config.take_validator().unwrap_or_else(ValValidator::str);
 
             debug_assert!(
                 config.idx().is_none(),
@@ -240,9 +232,7 @@ impl Creator<AOpt, OptConfig, Error> {
             let initiator = config
                 .take_initiator()
                 .unwrap_or_else(|| ValInitiator::bool(false));
-            let validator = config
-                .take_validator()
-                .unwrap_or_else(|| ValValidator::bool());
+            let validator = config.take_validator().unwrap_or_else(ValValidator::bool);
 
             debug_assert!(
                 config.idx().is_none(),

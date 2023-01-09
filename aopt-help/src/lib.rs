@@ -46,6 +46,10 @@ pub struct AppHelp<'a, W> {
     cmds: Vec<Command<'a>>,
 
     global: usize,
+
+    wrap_max_width: usize,
+
+    usage_new_line: usize,
 }
 
 impl<'a> Default for AppHelp<'a, Stdout> {
@@ -56,18 +60,30 @@ impl<'a> Default for AppHelp<'a, Stdout> {
             blocks: Default::default(),
             cmds: Default::default(),
             global: 0,
+            wrap_max_width: 0,
+            usage_new_line: 0,
         }
     }
 }
 
 impl<'a, W: Write> AppHelp<'a, W> {
-    pub fn new<S: Into<Cow<'a, str>>>(name: S, head: S, foot: S, style: Style, writer: W) -> Self {
+    pub fn new<S: Into<Cow<'a, str>>>(
+        name: S,
+        head: S,
+        foot: S,
+        style: Style,
+        writer: W,
+        max_width: usize,
+        usage_new_line: usize,
+    ) -> Self {
         Self {
             writer,
             style,
             blocks: vec![],
             cmds: vec![],
             global: 0,
+            wrap_max_width: max_width,
+            usage_new_line,
         }
         .with_global(name, head, foot)
     }
@@ -99,6 +115,14 @@ impl<'a, W: Write> AppHelp<'a, W> {
 
     pub fn style(&self) -> &Style {
         &self.style
+    }
+
+    pub fn wrap_max_width(&self) -> usize {
+        self.wrap_max_width
+    }
+
+    pub fn usage_new_line(&self) -> usize {
+        self.usage_new_line
     }
 
     pub fn global(&self) -> &Command<'a> {
@@ -259,7 +283,12 @@ impl<'a, W: Write> AppHelp<'a, W> {
     }
 
     pub fn display(&mut self, show_global: bool) -> Result<()> {
-        let policy = DefaultAppPolicy::new(vec![], show_global);
+        let policy = DefaultAppPolicy::new(
+            vec![],
+            self.wrap_max_width,
+            show_global,
+            self.usage_new_line,
+        );
         let help = policy.format(self).ok_or_else(|| {
             Error::raise("Can not format app help with DefaultAppPolicy".to_string())
         })?;
@@ -285,11 +314,22 @@ impl<'a, W: Write> AppHelp<'a, W> {
         S: Into<Cow<'a, str>>,
     {
         let name = cmd.into();
-        let cmd = self.cmds.iter().find(|v| v.name() == name).ok_or_else(|| {
-            Error::raise(format!("Can not format help of {name} with DefaultPolicy"))
-        })?;
-        let policy = DefaultPolicy::new(self.name(), self.style.clone(), vec![], true);
-        let help = policy.format(cmd).ok_or_else(|| todo!())?;
+        let cmd = self
+            .cmds
+            .iter()
+            .find(|v| v.name() == name)
+            .ok_or_else(|| Error::raise(format!("Can not find cmd {name}")))?;
+        let policy = DefaultPolicy::new(
+            self.name(),
+            self.style.clone(),
+            vec![],
+            self.wrap_max_width,
+            true,
+            self.usage_new_line,
+        );
+        let help = policy
+            .format(cmd)
+            .ok_or_else(|| Error::raise("Can not format cmd help with given policy".to_string()))?;
 
         writeln!(&mut self.writer, "{}", help)
             .map_err(|e| Error::raise(format!("Can not write to handler: {:?}", e)))
@@ -301,10 +341,14 @@ impl<'a, W: Write> AppHelp<'a, W> {
         S: Into<Cow<'a, str>>,
     {
         let name = cmd.into();
-        let cmd = self.cmds.iter().find(|v| v.name() == name).ok_or_else(|| {
+        let cmd = self
+            .cmds
+            .iter()
+            .find(|v| v.name() == name)
+            .ok_or_else(|| Error::raise(format!("Can not find cmd {name}")))?;
+        let help = policy.format(cmd).ok_or_else(|| {
             Error::raise(format!("Can not format help of {name} with given policy"))
         })?;
-        let help = policy.format(cmd).ok_or_else(|| todo!())?;
 
         writeln!(&mut self.writer, "{}", help)
             .map_err(|e| Error::raise(format!("Can not write to handler: {:?}", e)))

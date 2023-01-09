@@ -80,15 +80,20 @@ where
         }
     }
 
-    pub fn wrap(&mut self) {
+    pub fn wrap(&mut self, max_width: usize) {
         let data_len = self.data.iter().map(|v| v.len()).max().unwrap_or(0);
         let mut default_style = vec![Style::default(); data_len];
 
         for line in self.data.iter() {
             for (style_mut, col) in default_style.iter_mut().zip(line.iter()) {
                 let width = display_width(col);
+
                 if style_mut.wrap_width < width {
-                    style_mut.wrap_width = width;
+                    style_mut.wrap_width = if max_width != 0 && width > max_width {
+                        max_width
+                    } else {
+                        width
+                    };
                 }
             }
         }
@@ -105,7 +110,7 @@ where
     }
 
     /// Modify wrap_width if wrap_width is 0
-    pub fn wrap_with(&mut self, styles: &[Style]) {
+    pub fn wrap_with(&mut self, styles: &[Style], max_width: usize) {
         let mut styles = styles.to_owned();
         let status: Vec<bool> = styles.iter().map(|v| v.wrap_width == 0).collect();
 
@@ -113,8 +118,13 @@ where
             if *status {
                 for (style_mut, col) in styles.iter_mut().zip(line.iter()) {
                     let width = display_width(col);
+
                     if style_mut.wrap_width < width {
-                        style_mut.wrap_width = width;
+                        style_mut.wrap_width = if max_width != 0 && width > max_width {
+                            max_width
+                        } else {
+                            width
+                        };
                     }
                 }
             }

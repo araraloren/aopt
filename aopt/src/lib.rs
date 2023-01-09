@@ -93,8 +93,8 @@ pub(crate) fn typeid<T: 'static>() -> TypeId {
 ///     );
 /// }
 ///
-/// parser.clear_all()?;
-/// pre_parser.clear_all()?;
+/// parser.reset()?;
+/// pre_parser.reset()?;
 ///
 /// // boxed it
 /// let mut parser = parser.into_boxed();
@@ -153,7 +153,7 @@ macro_rules! getopt {
                     parser.init()?;
                     match parser.parse(args.clone()) {
                         Ok(parse_ret) => {
-                            if let Some(_) = parse_ret {
+                            if parse_ret {
                                 break Ok(Some(parser));
                             }
                             else { ret = Ok(None); }

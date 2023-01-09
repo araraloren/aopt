@@ -1,17 +1,25 @@
 use std::ops::{Deref, DerefMut};
 
-use crate::RawVal;
+use crate::{ctx::Ctx, RawVal};
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Default)]
 pub struct ReturnVal {
     status: bool,
+
+    ctx: Ctx,
 
     args: Vec<RawVal>,
 }
 
 impl ReturnVal {
-    pub fn new(args: Vec<RawVal>, status: bool) -> Self {
-        Self { status, args }
+    pub fn new(ctx: Ctx, status: bool) -> Self {
+        let args = ctx.args().into_inner();
+
+        Self { status, ctx, args }
+    }
+
+    pub fn ctx(&self) -> &Ctx {
+        &self.ctx
     }
 
     pub fn args(&self) -> &Vec<RawVal> {
@@ -20,6 +28,10 @@ impl ReturnVal {
 
     pub fn status(&self) -> bool {
         self.status
+    }
+
+    pub fn take_ctx(&mut self) -> Ctx {
+        std::mem::take(&mut self.ctx)
     }
 
     pub fn take_args(&mut self) -> Vec<RawVal> {

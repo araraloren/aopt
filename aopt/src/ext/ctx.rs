@@ -13,13 +13,13 @@
 //! let mut policy = AFwdPolicy::default();
 //! let mut set = policy.default_set();
 //! let mut ser = policy.default_ser();
+//! let mut inv = policy.default_inv();
 //!
 //! set.add_opt("--/bool=b")?.run()?;
 //! set.add_opt("set=c")?.run()?;
 //! set.add_opt("pos_2=p@2")?.run()?;
 //! set.add_opt("pos_v=p@3..")?.run()?;
-//! ser.ser_invoke_mut()?
-//!     .entry(0)
+//! inv.entry(0)
 //!     .on(|_: &mut ASet, _: &mut ASer, value: ctx::Value<bool>| {
 //!         assert_eq!(
 //!             &true,
@@ -28,8 +28,7 @@
 //!         );
 //!         Ok(Some(false))
 //!     });
-//! ser.ser_invoke_mut()?
-//!     .entry(1)
+//! inv.entry(1)
 //!     .on(|_: &mut ASet, _: &mut ASer, val: ctx::Value<String>| {
 //!         assert_eq!(
 //!             &String::from("set"),
@@ -38,8 +37,7 @@
 //!         );
 //!         Ok(Some(true))
 //!     });
-//! ser.ser_invoke_mut()?
-//!     .entry(2)
+//! inv.entry(2)
 //!     .on(|_: &mut ASet, _: &mut ASer, val: ctx::Value<i64>| {
 //!         assert_eq!(
 //!             &42,
@@ -48,7 +46,7 @@
 //!         );
 //!         Ok(Some(*val.deref()))
 //!     });
-//! ser.ser_invoke_mut()?.entry(3).on(
+//! inv.entry(3).on(
 //!     |_: &mut ASet, _: &mut ASer, index: ctx::Index, raw_val: ctx::RawVal| {
 //!         Ok(Some((*index.deref(), raw_val.deref().clone())))
 //!     },
@@ -56,20 +54,15 @@
 //!
 //! let args = Args::new(["--/bool", "set", "42", "foo", "bar"].into_iter());
 //!
-//! policy.parse(&mut set, &mut ser, Arc::new(args))?;
+//! policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
 //!
-//! assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
-//! assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
-//! assert_eq!(ser.ser_val()?.val::<i64>(2)?, &42);
+//! assert_eq!(ser.ser_val().val::<bool>(0)?, &false);
+//! assert_eq!(ser.ser_val().val::<bool>(1)?, &true);
+//! assert_eq!(ser.ser_val().val::<i64>(2)?, &42);
 //!
 //! let test = vec![(3, RawVal::from("foo")), (4, RawVal::from("bar"))];
 //!
-//! for (idx, val) in ser
-//!     .ser_val()?
-//!     .vals::<(usize, RawVal)>(3)?
-//!     .iter()
-//!     .enumerate()
-//! {
+//! for (idx, val) in ser.ser_val().vals::<(usize, RawVal)>(3)?.iter().enumerate() {
 //!     assert_eq!(val.0, test[idx].0);
 //!     assert_eq!(val.1, test[idx].1);
 //! }
@@ -116,11 +109,11 @@ impl<Set, Ser> Extract<Set, Ser> for Ctx {
 /// # fn main() -> Result<(), Error> {
 ///   let mut policy = AFwdPolicy::default();
 ///   let mut set = policy.default_set();
+///   let mut inv = policy.default_inv();
 ///   let mut ser = policy.default_ser();
 ///
 ///   set.add_opt("--/bool=b")?.run()?;
-///   ser.ser_invoke_mut()?
-///       .entry(0)
+///   inv.entry(0)
 ///       .on(|_: &mut ASet, _: &mut ASer, ctx_uid: ctx::Uid| {
 ///           assert_eq!(&0, ctx_uid.deref(), "The uid in Ctx is same as the uid of matched option");
 ///           Ok(Some(false))
@@ -128,9 +121,9 @@ impl<Set, Ser> Extract<Set, Ser> for Ctx {
 ///
 ///   let args = Args::new(["--/bool", ].into_iter());
 ///
-///   policy.parse(&mut set, &mut ser, Arc::new(args))?;
+///   policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
 ///
-///   assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
+///   assert_eq!(ser.ser_val().val::<bool>(0)?, &false);
 ///
 /// #  Ok(())
 /// #
@@ -151,8 +144,8 @@ impl<Set, Ser> Extract<Set, Ser> for Ctx {
 pub struct Uid(crate::Uid);
 
 impl Uid {
-    pub fn extract_ctx(ctx: &Ctx) -> Self {
-        Self(ctx.uid())
+    pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
+        Ok(Self(ctx.uid()?))
     }
 }
 
@@ -160,7 +153,7 @@ impl<Set, Ser> Extract<Set, Ser> for Uid {
     type Error = Error;
 
     fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(Self::extract_ctx(ctx))
+        Ok(Self::extract_ctx(ctx)?)
     }
 }
 
@@ -196,13 +189,13 @@ impl Display for Uid {
 /// # fn main() -> Result<(), Error> {
 /// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
+/// let mut inv = policy.default_inv();
 /// let mut ser = policy.default_ser();
 ///
 /// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut()?
-///     .entry(0)
+/// inv.entry(0)
 ///     .on(|_: &mut ASet, _: &mut ASer, index: ctx::Index| {
 ///         assert_eq!(
 ///             &0,
@@ -212,8 +205,7 @@ impl Display for Uid {
 ///         Ok(Some(false))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(1)
+/// inv.entry(1)
 ///     .on(|_: &mut ASet, _: &mut ASer, index: ctx::Index| {
 ///         assert_eq!(
 ///             &1,
@@ -223,8 +215,7 @@ impl Display for Uid {
 ///         Ok(Some(true))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(2)
+/// inv.entry(2)
 ///     .on(|_: &mut ASet, _: &mut ASer, index: ctx::Index| {
 ///         assert_eq!(
 ///             &2,
@@ -236,11 +227,11 @@ impl Display for Uid {
 ///
 /// let args = Args::new(["--/bool", "set", "value"].into_iter());
 ///
-/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
 ///
-/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
-/// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val()?.val::<i64>(2)?, &2);
+/// assert_eq!(ser.ser_val().val::<bool>(0)?, &false);
+/// assert_eq!(ser.ser_val().val::<bool>(1)?, &true);
+/// assert_eq!(ser.ser_val().val::<i64>(2)?, &2);
 /// #
 /// # Ok(())
 /// # }
@@ -260,8 +251,8 @@ impl Display for Uid {
 pub struct Index(usize);
 
 impl Index {
-    pub fn extract_ctx(ctx: &Ctx) -> Self {
-        Self(ctx.idx())
+    pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
+        Ok(Self(ctx.idx()?))
     }
 }
 
@@ -269,7 +260,7 @@ impl<Set, Ser> Extract<Set, Ser> for Index {
     type Error = Error;
 
     fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(Self::extract_ctx(ctx))
+        Ok(Self::extract_ctx(ctx)?)
     }
 }
 
@@ -305,27 +296,25 @@ impl Display for Index {
 /// # fn main() -> Result<(), Error> {
 /// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
+/// let mut inv = policy.default_inv();
 /// let mut ser = policy.default_ser();
 ///
 /// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut()?
-///     .entry(0)
+/// inv.entry(0)
 ///     .on(|_: &mut ASet, _: &mut ASer, total: ctx::Total| {
 ///         assert_eq!( &4, total.deref(), "Total is the length of Args");
 ///         Ok(Some(false))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(1)
+/// inv.entry(1)
 ///     .on(|_: &mut ASet, _: &mut ASer, total: ctx::Total| {
 ///         assert_eq!(&3, total.deref(), "Total is the length of Args");
 ///         Ok(Some(true))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(2)
+/// inv.entry(2)
 ///     .on(|_: &mut ASet, _: &mut ASer, total: ctx::Total| {
 ///         assert_eq!(&3, total.deref(), "Total is the length of Args");
 ///         Ok(Some(2i64))
@@ -333,11 +322,11 @@ impl Display for Index {
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
-/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
 ///
-/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
-/// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val()?.val::<i64>(2)?, &2);
+/// assert_eq!(ser.ser_val().val::<bool>(0)?, &false);
+/// assert_eq!(ser.ser_val().val::<bool>(1)?, &true);
+/// assert_eq!(ser.ser_val().val::<i64>(2)?, &2);
 /// #
 /// # Ok(())
 /// # }
@@ -357,8 +346,8 @@ impl Display for Index {
 pub struct Total(usize);
 
 impl Total {
-    pub fn extract_ctx(ctx: &Ctx) -> Self {
-        Self(ctx.total())
+    pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
+        Ok(Self(ctx.total()?))
     }
 }
 
@@ -366,7 +355,7 @@ impl<Set, Ser> Extract<Set, Ser> for Total {
     type Error = Error;
 
     fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(Self::extract_ctx(ctx))
+        Ok(Self::extract_ctx(ctx)?)
     }
 }
 
@@ -402,13 +391,13 @@ impl Display for Total {
 /// # fn main() -> Result<(), Error> {
 /// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
+/// let mut inv = policy.default_inv();
 /// let mut ser = policy.default_ser();
 ///
 /// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut()?
-///     .entry(0)
+/// inv.entry(0)
 ///     .on(|_: &mut ASet, _: &mut ASer, args: ctx::Args| {
 ///         let test = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///         for (idx, arg) in args.deref().deref().iter().enumerate() {
@@ -417,8 +406,7 @@ impl Display for Total {
 ///         Ok(Some(false))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(1)
+/// inv.entry(1)
 ///     .on(|_: &mut ASet, _: &mut ASer, args: ctx::Args| {
 ///         let test = Args::new(["set", "value", "foo"].into_iter());
 ///         for (idx, arg) in args.deref().deref().iter().enumerate() {
@@ -427,8 +415,7 @@ impl Display for Total {
 ///         Ok(Some(true))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(2)
+/// inv.entry(2)
 ///     .on(|_: &mut ASet, _: &mut ASer, args: ctx::Args| {
 ///         let test = Args::new(["set", "value", "foo"].into_iter());
 ///         for (idx, arg) in args.deref().deref().iter().enumerate() {
@@ -439,11 +426,11 @@ impl Display for Total {
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
-/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
 ///
-/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
-/// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val()?.val::<i64>(2)?, &2);
+/// assert_eq!(ser.ser_val().val::<bool>(0)?, &false);
+/// assert_eq!(ser.ser_val().val::<bool>(1)?, &true);
+/// assert_eq!(ser.ser_val().val::<i64>(2)?, &2);
 /// #
 /// # Ok(())
 /// # }
@@ -485,13 +472,13 @@ impl<Set, Ser> Extract<Set, Ser> for Args {
 /// # fn main() -> Result<(), Error> {
 /// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
+/// let mut inv = policy.default_inv();
 /// let mut ser = policy.default_ser();
 ///
 /// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut()?
-///     .entry(0)
+/// inv.entry(0)
 ///     .on(|_: &mut ASet, _: &mut ASer, name: Option<ctx::Name>| {
 ///         assert_eq!(
 ///             "--/bool",
@@ -501,8 +488,7 @@ impl<Set, Ser> Extract<Set, Ser> for Args {
 ///         Ok(Some(true))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(1)
+/// inv.entry(1)
 ///     .on(|_: &mut ASet, _: &mut ASer, name: Option<ctx::Name>| {
 ///         assert_eq!(
 ///             "set",
@@ -512,8 +498,7 @@ impl<Set, Ser> Extract<Set, Ser> for Args {
 ///         Ok(Some(true))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(2)
+/// inv.entry(2)
 ///     .on(|_: &mut ASet, _: &mut ASer, name: Option<ctx::Name>| {
 ///         assert_eq!(
 ///             "value",
@@ -525,11 +510,11 @@ impl<Set, Ser> Extract<Set, Ser> for Args {
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
-/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
 ///
-/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &true);
-/// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val()?.val::<i64>(2)?, &2);
+/// assert_eq!(ser.ser_val().val::<bool>(0)?, &true);
+/// assert_eq!(ser.ser_val().val::<bool>(1)?, &true);
+/// assert_eq!(ser.ser_val().val::<i64>(2)?, &2);
 /// #
 /// # Ok(())
 /// # }
@@ -551,7 +536,7 @@ pub struct Name(Str);
 impl Name {
     pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
         Ok(Self(
-            ctx.name()
+            ctx.name()?
                 .ok_or_else(|| {
                     Error::sp_extract_error(
                         "consider using Option<Name> instead, Name maybe not exist",
@@ -602,13 +587,13 @@ impl Display for Name {
 /// # fn main() -> Result<(), Error> {
 /// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
+/// let mut inv = policy.default_inv();
 /// let mut ser = policy.default_ser();
 ///
 /// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut()?
-///     .entry(0)
+/// inv.entry(0)
 ///     .on(|_: &mut ASet, _: &mut ASer, style: ctx::Style| {
 ///         assert_eq!(
 ///             &Style::Boolean,
@@ -618,8 +603,7 @@ impl Display for Name {
 ///         Ok(Some(false))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(1)
+/// inv.entry(1)
 ///     .on(|_: &mut ASet, _: &mut ASer, style: ctx::Style| {
 ///         assert_eq!(
 ///             &Style::Cmd,
@@ -629,8 +613,7 @@ impl Display for Name {
 ///         Ok(Some(true))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(2)
+/// inv.entry(2)
 ///     .on(|_: &mut ASet, _: &mut ASer, style: ctx::Style| {
 ///         assert_eq!(
 ///             &Style::Pos,
@@ -642,11 +625,11 @@ impl Display for Name {
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
-/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
 ///
-/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
-/// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val()?.val::<i64>(2)?, &2);
+/// assert_eq!(ser.ser_val().val::<bool>(0)?, &false);
+/// assert_eq!(ser.ser_val().val::<bool>(1)?, &true);
+/// assert_eq!(ser.ser_val().val::<i64>(2)?, &2);
 /// #
 /// # Ok(())
 /// # }
@@ -655,8 +638,8 @@ impl Display for Name {
 pub struct Style(crate::opt::Style);
 
 impl Style {
-    pub fn extract_ctx(ctx: &Ctx) -> Self {
-        Self(ctx.style())
+    pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
+        Ok(Self(ctx.style()?))
     }
 }
 
@@ -684,7 +667,7 @@ impl<Set, Ser> Extract<Set, Ser> for Style {
     type Error = Error;
 
     fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(Self::extract_ctx(ctx))
+        Ok(Self::extract_ctx(ctx)?)
     }
 }
 
@@ -701,13 +684,13 @@ impl<Set, Ser> Extract<Set, Ser> for Style {
 /// # fn main() -> Result<(), Error> {
 /// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
+/// let mut inv = policy.default_inv();
 /// let mut ser = policy.default_ser();
 ///
 /// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut()?
-///     .entry(0)
+/// inv.entry(0)
 ///     .on(|_: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal| {
 ///         assert_eq!(
 ///             &RawVal::from("true"),
@@ -717,8 +700,7 @@ impl<Set, Ser> Extract<Set, Ser> for Style {
 ///         Ok(Some(false))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(1)
+/// inv.entry(1)
 ///     .on(|_: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal| {
 ///         assert_eq!(
 ///             &RawVal::from("set"),
@@ -728,8 +710,7 @@ impl<Set, Ser> Extract<Set, Ser> for Style {
 ///         Ok(Some(true))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(2)
+/// inv.entry(2)
 ///     .on(|_: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal| {
 ///         assert_eq!(
 ///             &RawVal::from("value"),
@@ -741,11 +722,11 @@ impl<Set, Ser> Extract<Set, Ser> for Style {
 ///
 /// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
 ///
-/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
 ///
-/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
-/// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val()?.val::<i64>(2)?, &2);
+/// assert_eq!(ser.ser_val().val::<bool>(0)?, &false);
+/// assert_eq!(ser.ser_val().val::<bool>(1)?, &true);
+/// assert_eq!(ser.ser_val().val::<i64>(2)?, &2);
 /// #
 /// # Ok(())
 /// # }
@@ -755,7 +736,7 @@ pub struct RawVal(Arc<crate::RawVal>);
 
 impl RawVal {
     pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
-        Ok(Self(ctx.arg().ok_or_else(|| {
+        Ok(Self(ctx.arg()?.ok_or_else(|| {
             Error::sp_extract_error("consider using Option<RawVal> instead, RawVal maybe not exist")
         })?))
     }
@@ -793,13 +774,13 @@ impl<Set, Ser> Extract<Set, Ser> for RawVal {
 /// # fn main() -> Result<(), Error> {
 /// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
+/// let mut inv = policy.default_inv();
 /// let mut ser = policy.default_ser();
 ///
 /// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut()?
-///     .entry(0)
+/// inv.entry(0)
 ///     .on(|_: &mut ASet,  _: &mut ASer,val: ctx::Value<bool>| {
 ///         assert_eq!(
 ///             &true,
@@ -809,8 +790,7 @@ impl<Set, Ser> Extract<Set, Ser> for RawVal {
 ///         Ok(Some(false))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(1)
+/// inv.entry(1)
 ///     .on(|_: &mut ASet,  _: &mut ASer,val: ctx::Value<String>| {
 ///         assert_eq!(
 ///             &String::from("set"),
@@ -820,8 +800,7 @@ impl<Set, Ser> Extract<Set, Ser> for RawVal {
 ///         Ok(Some(true))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(2)
+/// inv.entry(2)
 ///     .on(|_: &mut ASet,  _: &mut ASer,val: ctx::Value<i64>| {
 ///         assert_eq!(
 ///             &42,
@@ -833,11 +812,11 @@ impl<Set, Ser> Extract<Set, Ser> for RawVal {
 ///
 /// let args = Args::new(["--/bool", "set", "42", "foo"].into_iter());
 ///
-/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
 ///
-/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
-/// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val()?.val::<i64>(2)?, &42);
+/// assert_eq!(ser.ser_val().val::<bool>(0)?, &false);
+/// assert_eq!(ser.ser_val().val::<bool>(1)?, &true);
+/// assert_eq!(ser.ser_val().val::<i64>(2)?, &42);
 /// #
 /// # Ok(())
 /// # }
@@ -924,9 +903,9 @@ impl<Set: crate::set::Set, Ser, T: RawValParser<SetOpt<Set>>> Extract<Set, Ser> 
     type Error = Error;
 
     fn extract(set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
-        let arg = ctx.arg();
+        let arg = ctx.arg()?;
         let arg = arg.as_ref().map(|v| v.as_ref());
-        let uid = ctx.uid();
+        let uid = ctx.uid()?;
 
         Ok(Value(T::parse(set.opt(uid)?, arg, ctx).map_err(|e| {
             Error::sp_extract_error(format!(

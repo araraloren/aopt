@@ -12,69 +12,12 @@ use crate::Error;
 use crate::RawVal;
 use crate::Uid;
 
-/// Services keep different type [`Service`]s in a map.
-///
-/// # Examples
-/// ```rust
-/// # use aopt::Result;
-/// # use aopt::prelude::*;
-/// # use aopt::astr;
-/// # use aopt::Str;
-/// #
-/// # fn main() -> Result<()> {
-///     #[derive(Debug, PartialEq)]
-///     struct MyVec(pub Vec<i32>);
-///
-///     impl Service for MyVec {
-///         fn service_name() -> Str {
-///             astr("VecService")
-///         }
-///     }
-///
-///     #[derive(Debug, PartialEq)]
-///     struct I32(i32);
-///
-///     impl Service for I32 {
-///         fn service_name() -> Str {
-///             astr("I32Service")
-///         }
-///     }
-///
-///     let mut services = Services::new().with(MyVec(vec![42i32]));
-///
-///     // get value from of service
-///     assert_eq!(services.service::<MyVec>()?.0[0], 42);
-///     // modfify the service value
-///     services.service_mut::<MyVec>()?.0.push(18);
-///     // check the value of MyVec
-///     assert_eq!(services.service::<MyVec>()?.0[1], 18);
-///
-///     // register a new service
-///     services.register(I32(42));
-///     assert!(services.contain::<I32>());
-///
-///     // unregister service from
-///     services.remove::<MyVec>();
-///     assert!(!services.contain::<MyVec>());
-///
-///     Ok(())
-/// # }
-/// ```
-#[derive(Debug, Default)]
-pub struct Services {
-    any: AnyValService,
-
-    usr: UsrValService,
-
-    raw: RawValService<RawVal>,
-}
-
-/// Some convenient function access the [`Service`](crate::ser::Service) in [`Services`].
+/// Some convenient function access the [`Services`](crate::ser::Services).
 pub trait ServicesExt {
-    /// Get [`ValService`] reference.
+    /// Get [`AnyValService`] reference.
     fn ser_val(&self) -> &AnyValService;
 
-    /// Get [`ValService`] mutable reference.
+    /// Get [`AnyValService`] mutable reference.
     fn ser_val_mut(&mut self) -> &mut AnyValService;
 
     /// Get [`UsrValService`] reference.
@@ -88,28 +31,34 @@ pub trait ServicesExt {
 
     /// Get [`RawValService`] mutable reference.
     fn ser_rawval_mut(&mut self) -> &mut RawValService<RawVal>;
+
+    /// Clear the [`AnyValService`] and  [`RawValService`].
+    fn reset(&mut self) {
+        self.ser_rawval_mut().clear();
+        self.ser_val_mut().clear();
+    }
 }
 
 pub trait ServicesValExt {
-    /// Get the last value reference of option `uid` from [`ValService`].
+    /// Get the last value reference of option `uid` from [`AnyValService`].
     fn sve_val<T: ErasedTy>(&self, uid: Uid) -> Result<&T, Error>;
 
-    /// Get the last value mutable reference of option `uid` from [`ValService`].
+    /// Get the last value mutable reference of option `uid` from [`AnyValService`].
     fn sve_val_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut T, Error>;
 
-    /// Take last value of option `uid` from [`ValService`].
+    /// Take last value of option `uid` from [`AnyValService`].
     fn sve_take_val<T: ErasedTy>(&mut self, uid: Uid) -> Result<T, Error>;
 
-    /// Get the values reference of option `uid` from [`ValService`].
+    /// Get the values reference of option `uid` from [`AnyValService`].
     fn sve_vals<T: ErasedTy>(&self, uid: Uid) -> Result<&Vec<T>, Error>;
 
-    /// Get the values mutable reference of option `uid` from [`ValService`].
+    /// Get the values mutable reference of option `uid` from [`AnyValService`].
     fn sve_vals_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error>;
 
-    /// Take the values of option `uid` from [`ValService`].
+    /// Take the values of option `uid` from [`AnyValService`].
     fn sve_take_vals<T: ErasedTy>(&mut self, uid: Uid) -> Result<Vec<T>, Error>;
 
-    /// Apply filter on the values of option from [`ValService`].
+    /// Apply filter on the values of option from [`AnyValService`].
     /// The `F` should return true if you want remove the element.
     fn sve_filter<T: ErasedTy>(
         &mut self,
@@ -137,6 +86,81 @@ pub trait ServicesValExt {
 
     /// Get the raw values mutable reference of option `uid` from [`RawValService`].
     fn sve_rawvals_mut(&mut self, uid: Uid) -> Result<&mut Vec<RawVal>, Error>;
+}
+
+/// Services manage the [`AnyValService`], [`RawValService`] and [`UsrValService`].
+///
+/// [`AnyValService`] is use for storing the parsed value of option.
+/// [`RawValService`] is use for storing the raw value of option.
+/// [`UsrValService`] is use for storing any type value can reference in option handler.
+///
+///
+/// # Examples
+/// ```rust
+/// # use aopt::prelude::*;
+/// # use aopt::RawVal;
+/// #
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+///     #[derive(Debug, PartialEq)]
+///     struct MyVec(pub Vec<i32>);
+///
+///     #[derive(Debug, PartialEq)]
+///     struct I32(i32);
+///
+///     let mut services = Services::new();
+///
+///     services.ser_usrval_mut().insert(MyVec(vec![42]));
+///
+///     // get value from of UsrValService
+///     assert_eq!(services.ser_usrval().val::<MyVec>()?.0[0], 42);
+///     // modfify the value of UsrValServices
+///     services.ser_usrval_mut().val_mut::<MyVec>()?.0.push(18);
+///     // check the value of MyVec
+///     assert_eq!(services.ser_usrval().val::<MyVec>()?.0[1], 18);
+///
+///     // push a new value to option 0
+///     services.ser_val_mut().push(0, I32(42));
+///     assert!(services.ser_val().contain(0));
+///     assert!(services.ser_val().contain_type::<I32>(0));
+///
+///     // pop a new value from option 0
+///     let ret: Option<I32> = services.ser_val_mut().pop(0);
+///     assert!(ret.is_some());
+///     assert_eq!(ret, Some(I32(42)));
+///     // left empty vector in AnyValService
+///     assert!(services.ser_val().contain(0));
+///     assert!(services.ser_val().vals::<I32>(0)?.is_empty());
+///
+///     services.ser_rawval_mut().push(0, RawVal::from("value1"));
+///     assert!(services.ser_rawval().contain(0));
+///     assert_eq!(services.ser_rawval().val(0)?, &RawVal::from("value1"));
+///
+///     // pop a new value from option 0
+///     let ret: Option<RawVal> = services.ser_rawval_mut().pop(0);
+///     assert!(ret.is_some());
+///     assert_eq!(ret, Some(RawVal::from("value1")));
+///     // left empty vector in RawValService
+///     assert!(services.ser_rawval().contain(0));
+///     assert!(services.ser_rawval().vals(0)?.is_empty());
+/// #
+/// #    Ok(())
+/// # }
+/// ```
+#[derive(Debug, Default)]
+pub struct Services {
+    any: AnyValService,
+
+    usr: UsrValService,
+
+    raw: RawValService<RawVal>,
+}
+
+impl Services {
+    pub fn new() -> Self {
+        Self {
+            ..Default::default()
+        }
+    }
 }
 
 impl ServicesExt for Services {

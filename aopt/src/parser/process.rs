@@ -1,6 +1,7 @@
 use tracing::trace;
 
 use crate::ctx::Ctx;
+use crate::ctx::InnerCtx;
 use crate::ctx::Invoker;
 use crate::opt::Opt;
 use crate::parser::CtxSaver;
@@ -13,8 +14,23 @@ use crate::set::SetOpt;
 use crate::Error;
 use crate::Uid;
 
+pub struct ProcessCtx<'a, Set, Ser> {
+    pub idx: usize,
+
+    pub tot: usize,
+
+    pub ctx: &'a mut Ctx,
+
+    pub set: &'a mut Set,
+
+    pub inv: &'a mut Invoker<Set, Ser>,
+
+    pub ser: &'a mut Ser,
+}
+
 pub fn invoke_callback_opt<Set, Ser>(
-    saver: CtxSaver,
+    uid: Uid,
+    ctx: &Ctx,
     set: &mut Set,
     inv: &mut Invoker<Set, Ser>,
     ser: &mut Ser,
@@ -24,26 +40,29 @@ where
     Ser: ServicesExt + 'static,
     Set: crate::set::Set + 'static,
 {
-    let uid = saver.uid;
     // Take the service, invoke the handler of option.
     // Catch the result of handler, so we can register it back to Services.
     match inv.has(uid) {
         true => {
-            trace!("Invoke callback of Opt{{{uid}}} with {:?}", saver.ctx);
-            inv.invoke(set, ser, &saver.ctx)
+            trace!("Invoke callback of Opt{{{uid}}} with {:?}", ctx);
+            inv.invoke(set, ser, &ctx)
         }
         false => {
-            trace!("Invoke default of Opt{{{uid}}} with {:?}", saver.ctx);
-            inv.invoke_default(set, ser, &saver.ctx)
+            trace!("Invoke default of Opt{{{uid}}} with {:?}", ctx);
+            inv.invoke_default(set, ser, &ctx)
         }
     }
 }
 
-pub fn process_opt<Set, Ser>(
-    ctx: &Ctx,
-    set: &mut Set,
-    inv: &mut Invoker<Set, Ser>,
-    ser: &mut Ser,
+pub fn process_opt<'a, Set, Ser>(
+    ProcessCtx {
+        idx,
+        tot,
+        ctx,
+        set,
+        inv,
+        ser,
+    }: ProcessCtx<'a, Set, Ser>,
     proc: &mut OptProcess<Set>,
     invoke: bool,
 ) -> Result<Vec<CtxSaver>, Error>
@@ -66,8 +85,9 @@ where
                     savers.push(CtxSaver {
                         uid,
                         idx: index,
-                        ctx: ctx
-                            .clone()
+                        ctx: InnerCtx::default()
+                            .with_idx(idx)
+                            .with_total(tot)
                             .with_uid(uid) // current uid == uid in matcher
                             .with_name(mat.name().cloned())
                             .with_style(mat.style())
@@ -84,8 +104,11 @@ where
     }
     if proc.is_mat() && invoke {
         for saver in savers {
+            let uid = saver.uid;
+
+            ctx.set_inner_ctx(Some(saver.ctx));
             // undo the process if option callback return None
-            if invoke_callback_opt(saver, set, inv, ser)?.is_none() {
+            if invoke_callback_opt(uid, ctx, set, inv, ser)?.is_none() {
                 proc.undo(set)?;
                 break;
             }
@@ -98,11 +121,15 @@ where
     }
 }
 
-pub fn process_non_opt<Set, Ser>(
-    ctx: &Ctx,
-    set: &mut Set,
-    inv: &mut Invoker<Set, Ser>,
-    ser: &mut Ser,
+pub fn process_non_opt<'a, Set, Ser>(
+    ProcessCtx {
+        idx,
+        tot,
+        ctx,
+        set,
+        inv,
+        ser,
+    }: ProcessCtx<'a, Set, Ser>,
     proc: &mut NOAProcess<Set>,
 ) -> Result<Vec<CtxSaver>, Error>
 where
@@ -119,16 +146,19 @@ where
                 if let Some(index) = index {
                     let mat = proc.mat(index).unwrap(); // always true
 
-                    // save the context
-                    let ctx = ctx
-                        .clone()
-                        .with_style(mat.style())
-                        .with_name(mat.name().cloned())
-                        .with_arg(mat.clone_arg())
-                        .with_uid(uid); // current uid == uid in matcher
+                    ctx.set_inner_ctx(Some(
+                        InnerCtx::default()
+                            .with_idx(idx)
+                            .with_total(tot)
+                            .with_style(mat.style())
+                            .with_name(mat.name().cloned())
+                            .with_arg(mat.clone_arg())
+                            .with_uid(uid), // current uid == uid in matcher
+                    ));
+
                     let ret = match inv.has(uid) {
                         true => {
-                            // callback in InvokeService
+                            // callback in Invoker
                             trace!("Invoke callback of NOA{{{uid}}} with {:?}", &ctx);
                             inv.invoke(set, ser, &ctx)
                         }

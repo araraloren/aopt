@@ -1,15 +1,14 @@
-use crate::ext::ServicesExt;
 use crate::map::ErasedTy;
 use crate::opt::Opt;
-use crate::ser::Services;
+use crate::ser::ServicesExt;
 use crate::set::SetOpt;
 use crate::Error;
 use crate::RawVal;
 use crate::Uid;
 
 /// The [`Store`] processer save the value of given option into
-/// [`ValServices`](crate::ser::ValService) and [`RawValServices`](crate::ser::RawValService).
-pub trait Store<Set, Value> {
+/// [`AnyValService`](crate::ser::AnyValService) and [`RawValServices`](crate::ser::RawValService).
+pub trait Store<Set, Ser, Value> {
     type Ret;
     type Error: Into<Error>;
 
@@ -17,22 +16,16 @@ pub trait Store<Set, Value> {
         &mut self,
         uid: Uid,
         set: &mut Set,
-        ser: &mut Services,
+        ser: &mut Ser,
         raw: Option<&RawVal>,
         val: Option<Value>,
     ) -> Result<Option<Self::Ret>, Self::Error>;
 }
 
-impl<Func, Set, Value, Ret, Err> Store<Set, Value> for Func
+impl<Func, Set, Ser, Value, Ret, Err> Store<Set, Ser, Value> for Func
 where
     Err: Into<Error>,
-    Func: FnMut(
-            Uid,
-            &mut Set,
-            &mut Services,
-            Option<&RawVal>,
-            Option<Value>,
-        ) -> Result<Option<Ret>, Err>
+    Func: FnMut(Uid, &mut Set, &mut Ser, Option<&RawVal>, Option<Value>) -> Result<Option<Ret>, Err>
         + Send
         + Sync,
 {
@@ -43,7 +36,7 @@ where
         &mut self,
         uid: Uid,
         set: &mut Set,
-        ser: &mut Services,
+        ser: &mut Ser,
         raw: Option<&RawVal>,
         val: Option<Value>,
     ) -> Result<Option<Self::Ret>, Self::Error> {
@@ -54,7 +47,7 @@ where
 /// Null store, do nothing. See [`Action`](crate::opt::Action) for default store.
 pub struct NullStore;
 
-impl<Set, Value> Store<Set, Value> for NullStore {
+impl<Set, Ser, Value> Store<Set, Ser, Value> for NullStore {
     type Ret = Value;
 
     type Error = Error;
@@ -63,7 +56,7 @@ impl<Set, Value> Store<Set, Value> for NullStore {
         &mut self,
         _: Uid,
         _: &mut Set,
-        _: &mut Services,
+        _: &mut Ser,
         _: Option<&RawVal>,
         val: Option<Value>,
     ) -> Result<Option<Self::Ret>, Self::Error> {
@@ -71,15 +64,16 @@ impl<Set, Value> Store<Set, Value> for NullStore {
     }
 }
 
-/// Vector store, append the value to the [`ValService`](crate::ser::ValService)
+/// Vector store, append the value to the [`AnyValService`](crate::ser::AnyValService)
 /// if option's action is Action::App.
 /// See [`Action`](crate::opt::Action) for default store.
 pub struct VecStore;
 
-impl<Set, Value: ErasedTy> Store<Set, Vec<Value>> for VecStore
+impl<Set, Ser, Value: ErasedTy> Store<Set, Ser, Vec<Value>> for VecStore
 where
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
+    Ser: ServicesExt,
 {
     type Ret = ();
 
@@ -89,7 +83,7 @@ where
         &mut self,
         uid: Uid,
         set: &mut Set,
-        ser: &mut Services,
+        ser: &mut Ser,
         raw: Option<&RawVal>,
         val: Option<Vec<Value>>,
     ) -> Result<Option<Self::Ret>, Self::Error> {
@@ -97,13 +91,13 @@ where
 
         // Set the value if return Some(Value)
         if let Some(val) = val {
-            let raw_ser = ser.ser_rawval_mut()?;
+            let raw_ser = ser.ser_rawval_mut();
 
             if let Some(raw) = raw {
                 raw_ser.push(uid, raw.clone());
             }
 
-            let val_ser = ser.ser_val_mut()?;
+            let val_ser = ser.ser_val_mut();
 
             if let Some(opt) = set.get(uid) {
                 if opt.action().is_app() {

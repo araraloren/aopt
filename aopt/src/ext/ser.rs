@@ -22,8 +22,8 @@ cfg_if::cfg_if! {
         /// Simple wrapper of user value stored in [`UsrValService`](crate::ser::UsrValService).
         ///
         /// Value internally use [Arc](crate::Arc), it is cheap to clone.
-        /// Before used it in `handler` which register in [`InvokeService`](crate::ser::InvokeService),
-        /// you need add it to [`UsrValService`].
+        /// Before used it in `handler` which register in [`Invoker`](crate::ctx::Invoker),
+        /// you need add it to [`UsrValService`](crate::ser::UsrValService).
         ///
         /// # Examples
         /// ```rust
@@ -54,21 +54,20 @@ cfg_if::cfg_if! {
         ///
         /// let mut policy = AFwdPolicy::default();
         /// let mut set = policy.default_set();
+        /// let mut inv = policy.default_inv();
         /// let mut ser = policy.default_ser();
         ///
-        /// ser.ser_usrval_mut()?
+        /// ser.ser_usrval_mut()
         ///     .insert(ser::Value::new(PosList(RefCell::new(vec![]))));
         /// set.add_opt("--/bool=b")?.run()?;
         /// set.add_opt("pos_v=p@*")?.run()?;
-        /// ser.ser_invoke_mut()?
-        ///     .entry(0)
+        /// inv.entry(0)
         ///     .on(|_: &mut ASet, _: &mut ASer, disable: ctx::Value<bool>| {
         ///         assert_eq!(&true, disable.deref());
         ///         Ok(Some(false))
         ///     });
         ///
-        /// ser.ser_invoke_mut()?
-        ///     .entry(1)
+        /// inv.entry(1)
         ///     .on(
         ///         |_: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal, data: ser::Value<PosList>| {
         ///             data.add_pos(raw_val.clone_rawval());
@@ -78,9 +77,9 @@ cfg_if::cfg_if! {
         ///
         /// let args = Args::new(["--/bool", "set", "42", "foo", "bar"].into_iter());
         ///
-        /// policy.parse(&mut set, &mut ser, Arc::new(args))?;
+        /// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
         ///
-        /// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
+        /// assert_eq!(ser.ser_val().val::<bool>(0)?, &false);
         /// ser.sve_usrval::<ser::Value::<PosList>>()?.test_pos(
         ///     ["set", "42", "foo", "bar"]
         ///         .into_iter()

@@ -452,7 +452,7 @@ impl ConfigValue for OptConfig {
     }
 
     fn gen_alias(&self) -> Result<Vec<Str>, Error> {
-        return Ok(self.alias.clone());
+        Ok(self.alias.clone())
     }
 
     fn gen_validator(&self) -> Result<ValValidator, Error> {

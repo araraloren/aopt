@@ -179,9 +179,9 @@ impl OptParser for StrParser {
 
     fn parse(&self, pattern: Str) -> Result<Self::Output, Self::Error> {
         if pattern.trim().is_empty() {
-            return Ok(Self::Output::default());
+            Ok(Self::Output::default())
         } else {
-            self.parse_creator_string(pattern.clone())
+            self.parse_creator_string(pattern)
         }
     }
 }

@@ -17,7 +17,7 @@ use crate::{HashMap, Uid};
 /// #[derive(Debug, PartialEq, Eq)]
 /// pub struct MyData;
 ///
-/// let mut vs = ValService::default();
+/// let mut vs = AnyValService::default();
 ///
 /// vs.push(0, 42i64);
 /// vs.push(0, 36i64);

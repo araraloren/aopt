@@ -23,7 +23,11 @@ pub struct DefaultPolicy<'a, I> {
 
     styles: Vec<Style>,
 
+    max_width: usize,
+
     hiding_pos: bool,
+
+    usage_new_line: usize,
 
     marker: PhantomData<&'a I>,
 }
@@ -34,7 +38,9 @@ impl<'a, I> Default for DefaultPolicy<'a, I> {
             name: Default::default(),
             style: Default::default(),
             styles: Default::default(),
+            max_width: 0,
             hiding_pos: true,
+            usage_new_line: 0,
             marker: Default::default(),
         }
     }
@@ -45,13 +51,17 @@ impl<'a, I> DefaultPolicy<'a, I> {
         name: S,
         style: Style,
         block: Vec<Style>,
+        max_width: usize,
         hiding_pos: bool,
+        usage_new_line: usize,
     ) -> Self {
         Self {
             name: name.into(),
             style,
             styles: block,
+            max_width,
             hiding_pos,
+            usage_new_line,
             marker: PhantomData::default(),
         }
     }
@@ -94,10 +104,19 @@ impl<'a> DefaultPolicy<'a, Command<'a>> {
         let mut block_hint = vec![];
 
         for block in item.block() {
-            let (mut block_usages, mut block_args) = self.get_block_usage(block, item);
+            let (block_usages, mut block_args) = self.get_block_usage(block, item);
 
             if !block_usages.is_empty() {
-                usages.append(&mut block_usages);
+                for mut usage in block_usages {
+                    if self.usage_new_line > 0 {
+                        if (usages.len() + 1) % self.usage_new_line == 0 {
+                            // add more space
+                            // same length as `Usage: `
+                            usage.push_str("\n      ");
+                        }
+                    }
+                    usages.push(usage);
+                }
             }
             // if not omit args, using the args, otherwise using hint of block
             if !block_args.is_empty() {
@@ -184,9 +203,9 @@ impl<'a> DefaultPolicy<'a, Command<'a>> {
         let mut wrapper = Wrapper::new(&data);
 
         if !styles.is_empty() {
-            wrapper.wrap_with(styles);
+            wrapper.wrap_with(styles, self.max_width);
         } else {
-            wrapper.wrap();
+            wrapper.wrap(self.max_width);
         }
         let wrapped = wrapper.get_output();
         let mut wrapped_lines = vec![];
@@ -253,9 +272,13 @@ impl<'a> HelpPolicy<'a, Command<'a>> for DefaultPolicy<'a, Command<'a>> {
 pub struct DefaultAppPolicy<'a, I> {
     styles: Vec<Style>, // style for every block
 
+    max_width: usize,
+
     show_global: bool,
 
     hiding_pos: bool,
+
+    usage_new_line: usize,
 
     marker: PhantomData<&'a I>,
 }
@@ -264,19 +287,28 @@ impl<'a, I> Default for DefaultAppPolicy<'a, I> {
     fn default() -> Self {
         Self {
             styles: Default::default(),
+            max_width: 0,
             show_global: true,
             hiding_pos: true,
+            usage_new_line: 0,
             marker: Default::default(),
         }
     }
 }
 
 impl<'a, I> DefaultAppPolicy<'a, I> {
-    pub fn new(styles: Vec<Style>, show_global: bool) -> Self {
+    pub fn new(
+        styles: Vec<Style>,
+        max_width: usize,
+        show_global: bool,
+        usage_new_line: usize,
+    ) -> Self {
         Self {
             styles,
+            max_width,
             show_global,
             hiding_pos: true,
+            usage_new_line,
             marker: PhantomData::default(),
         }
     }
@@ -320,10 +352,19 @@ impl<'a, W: Write> DefaultAppPolicy<'a, AppHelp<'a, W>> {
         let mut block_hint = vec![];
 
         for block in global.block() {
-            let (mut block_usages, mut block_args) = self.get_block_usage(block, global);
+            let (block_usages, mut block_args) = self.get_block_usage(block, global);
 
             if !block_usages.is_empty() {
-                usages.append(&mut block_usages);
+                for mut usage in block_usages {
+                    if self.usage_new_line > 0 {
+                        if (usages.len() + 1) % self.usage_new_line == 0 {
+                            // add more space
+                            // same length as `Usage: `
+                            usage.push_str("\n      ");
+                        }
+                    }
+                    usages.push(usage);
+                }
             }
             // if not omit args, using the args, otherwise using hint of block
             if !block_args.is_empty() {
@@ -412,9 +453,9 @@ impl<'a, W: Write> DefaultAppPolicy<'a, AppHelp<'a, W>> {
         let mut wrapper = Wrapper::new(&data);
 
         if !styles.is_empty() {
-            wrapper.wrap_with(styles);
+            wrapper.wrap_with(styles, self.max_width);
         } else {
-            wrapper.wrap();
+            wrapper.wrap(self.max_width);
         }
         let wrapped = wrapper.get_output();
         let mut wrapped_lines = vec![];
@@ -501,9 +542,9 @@ impl<'a, W: Write> DefaultAppPolicy<'a, AppHelp<'a, W>> {
         let mut wrapper = Wrapper::new(&data);
 
         if !styles.is_empty() {
-            wrapper.wrap_with(styles);
+            wrapper.wrap_with(styles, self.max_width);
         } else {
-            wrapper.wrap();
+            wrapper.wrap(self.max_width);
         }
         let wrapped = wrapper.get_output();
         let mut wrapped_lines = vec![];

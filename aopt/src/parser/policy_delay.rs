@@ -2,6 +2,7 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use super::invoke_callback_opt;
+use super::process::ProcessCtx;
 use super::process_non_opt;
 use super::process_opt;
 use super::CtxSaver;
@@ -28,7 +29,7 @@ use crate::set::SetOpt;
 use crate::Arc;
 use crate::Error;
 
-/// [`DelayPolicy`] matching the command line arguments with [`Opt`] in the [`Set`].
+/// [`DelayPolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
 /// The option will match failed if any special [`Error`] raised during option processing.
 /// [`DelayPolicy`] will return `Some(true)` if match successful.
 /// [`DelayPolicy`] process the option first, but not invoke the handler of option.
@@ -129,6 +130,8 @@ pub struct DelayPolicy<Set, Ser> {
 
     checker: SetChecker<Set>,
 
+    styles: Vec<UserStyle>,
+
     marker_s: PhantomData<(Set, Ser)>,
 }
 
@@ -138,6 +141,13 @@ impl<Set, Ser> Default for DelayPolicy<Set, Ser> {
             strict: true,
             contexts: vec![],
             checker: SetChecker::default(),
+            styles: vec![
+                UserStyle::EqualWithValue,
+                UserStyle::Argument,
+                UserStyle::Boolean,
+                UserStyle::CombinedOption,
+                UserStyle::EmbeddedValue,
+            ],
             marker_s: PhantomData::default(),
         }
     }
@@ -149,8 +159,12 @@ where
     Ser: ServicesExt + 'static,
     Set: crate::set::Set + OptParser + Debug + 'static,
 {
-    pub fn new() -> Self {
-        Self { ..Self::default() }
+    pub fn new(strict: bool, styles: Vec<UserStyle>) -> Self {
+        Self {
+            strict,
+            styles,
+            ..Self::default()
+        }
     }
 
     /// Enable strict mode, if argument is an option, it must be matched.
@@ -164,6 +178,20 @@ where
         self
     }
 
+    pub fn with_styles(mut self, styles: Vec<UserStyle>) -> Self {
+        self.styles = styles;
+        self
+    }
+
+    pub fn set_styles(&mut self, styles: Vec<UserStyle>) -> &mut Self {
+        self.styles = styles;
+        self
+    }
+
+    pub fn user_styles(&self) -> &[UserStyle] {
+        &self.styles
+    }
+
     pub fn strict(&self) -> bool {
         self.strict
     }
@@ -174,12 +202,16 @@ where
 
     pub fn invoke_opt_callback(
         &mut self,
+        ctx: &mut Ctx,
         set: &mut Set,
         inv: &mut Invoker<Set, Ser>,
         ser: &mut Ser,
     ) -> Result<(), Error> {
         for saver in std::mem::take(&mut self.contexts) {
-            invoke_callback_opt(saver, set, inv, ser)?;
+            let uid = saver.uid;
+
+            ctx.set_inner_ctx(Some(saver.ctx));
+            invoke_callback_opt(uid, ctx, set, inv, ser)?;
         }
         Ok(())
     }
@@ -190,45 +222,30 @@ where
     }
 }
 
-impl<Set, Ser> Policy for DelayPolicy<Set, Ser>
+impl<Set, Ser> DelayPolicy<Set, Ser>
 where
     SetOpt<Set>: Opt,
     Ser: ServicesExt + 'static,
     Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
 {
-    type Ret = ReturnVal;
-
-    type Set = Set;
-
-    type Inv = Invoker<Set, Ser>;
-
-    type Ser = Ser;
-
-    type Error = Error;
-
-    fn parse(
+    pub(crate) fn parse_impl(
         &mut self,
-        set: &mut Self::Set,
-        inv: &mut Self::Inv,
-        ser: &mut Self::Ser,
-        args: Arc<Args>,
-    ) -> Result<Option<Self::Ret>, Self::Error> {
+        ctx: &mut Ctx,
+        set: &mut <Self as Policy>::Set,
+        inv: &mut <Self as Policy>::Inv,
+        ser: &mut <Self as Policy>::Ser,
+    ) -> Result<(), <Self as Policy>::Error> {
         self.checker().pre_check(set)?;
 
         // take the invoke service, avoid borrow the ser
-        let opt_styles = [
-            UserStyle::EqualWithValue,
-            UserStyle::Argument,
-            UserStyle::Boolean,
-            UserStyle::CombinedOption,
-            UserStyle::EmbeddedValue,
-        ];
+        let opt_styles = &self.styles;
+        let args = ctx.orig_args().clone();
         let args_len = args.len();
         let mut noa_args = Args::default();
         let mut iter = args.guess_iter().enumerate();
-        let mut opt_ctx = Ctx::default();
 
-        opt_ctx.set_args(args.clone()).set_total(args_len);
+        // set option args, and args length
+        ctx.set_args(args.clone());
         while let Some((idx, (opt, arg))) = iter.next() {
             let mut matched = false;
             let mut consume = false;
@@ -243,8 +260,18 @@ where
                                 style,
                                 GuessOptCfg::new(idx, args_len, arg.clone(), &clopt),
                             )? {
-                                opt_ctx.set_idx(idx);
-                                let ret = process_opt(&opt_ctx, set, inv, ser, &mut proc, false)?;
+                                let ret = process_opt(
+                                    ProcessCtx {
+                                        idx,
+                                        ctx,
+                                        set,
+                                        inv,
+                                        ser,
+                                        tot: args_len,
+                                    },
+                                    &mut proc,
+                                    false,
+                                )?;
 
                                 if proc.is_mat() {
                                     self.contexts.extend(ret);
@@ -282,17 +309,25 @@ where
         let ret = noa_args.clone();
         let noa_args = Arc::new(noa_args);
         let noa_len = noa_args.len();
-        let mut noa_ctx = Ctx::default();
 
-        noa_ctx.set_args(noa_args.clone()).set_total(noa_args.len());
+        ctx.set_args(noa_args.clone());
         // when style is pos, noa index is [1..=len]
         if noa_args.len() > 0 {
             if let Some(mut proc) = NOAGuess::new().guess(
                 &UserStyle::Cmd,
                 GuessNOACfg::new(noa_args.clone(), Self::noa_idx(0), noa_len),
             )? {
-                noa_ctx.set_idx(Self::noa_idx(0));
-                process_non_opt(&noa_ctx, set, inv, ser, &mut proc)?;
+                process_non_opt(
+                    ProcessCtx {
+                        ctx,
+                        set,
+                        inv,
+                        ser,
+                        tot: noa_len,
+                        idx: Self::noa_idx(0),
+                    },
+                    &mut proc,
+                )?;
             }
 
             self.checker().cmd_check(set)?;
@@ -302,8 +337,17 @@ where
                     &UserStyle::Pos,
                     GuessNOACfg::new(noa_args.clone(), Self::noa_idx(idx), noa_len),
                 )? {
-                    noa_ctx.set_idx(Self::noa_idx(idx));
-                    process_non_opt(&noa_ctx, set, inv, ser, &mut proc)?;
+                    process_non_opt(
+                        ProcessCtx {
+                            ctx,
+                            set,
+                            inv,
+                            ser,
+                            tot: noa_len,
+                            idx: Self::noa_idx(idx),
+                        },
+                        &mut proc,
+                    )?;
                 }
             }
         } else {
@@ -311,25 +355,72 @@ where
         }
 
         // after cmd and pos callback invoked, invoke the callback of option
-        self.invoke_opt_callback(set, inv, ser)?;
+        self.invoke_opt_callback(ctx, set, inv, ser)?;
 
         self.checker().opt_check(set)?;
 
         self.checker().pos_check(set)?;
 
         let main_args = noa_args;
-        let mut main_ctx = noa_ctx;
+        let main_len = main_args.len();
 
-        main_ctx.set_idx(0);
+        ctx.set_args(main_args.clone());
         if let Some(mut proc) =
-            NOAGuess::new().guess(&UserStyle::Main, GuessNOACfg::new(main_args, 0, noa_len))?
+            NOAGuess::new().guess(&UserStyle::Main, GuessNOACfg::new(main_args, 0, main_len))?
         {
-            process_non_opt(&main_ctx, set, inv, ser, &mut proc)?;
+            process_non_opt(
+                ProcessCtx {
+                    ctx,
+                    set,
+                    inv,
+                    ser,
+                    tot: main_len,
+                    idx: 0,
+                },
+                &mut proc,
+            )?;
         }
 
         self.checker().post_check(set)?;
+        Ok(())
+    }
+}
 
-        Ok(Some(ReturnVal::new(ret.into_inner(), true)))
+impl<Set, Ser> Policy for DelayPolicy<Set, Ser>
+where
+    SetOpt<Set>: Opt,
+    Ser: ServicesExt + 'static,
+    Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
+{
+    type Ret = ReturnVal;
+
+    type Set = Set;
+
+    type Inv = Invoker<Set, Ser>;
+
+    type Ser = Ser;
+
+    type Error = Error;
+
+    fn parse(
+        &mut self,
+        set: &mut Self::Set,
+        inv: &mut Self::Inv,
+        ser: &mut Self::Ser,
+        args: Arc<Args>,
+    ) -> Result<Self::Ret, Self::Error> {
+        let ctx = Ctx::default().with_orig_args(args.clone()).with_args(args);
+
+        match self.parse_impl(&mut ctx, set, inv, ser) {
+            Ok(ret) => Ok(ReturnVal::new(ctx, true)),
+            Err(e) => {
+                if e.is_failure() {
+                    Ok(ReturnVal::new(ctx, false))
+                } else {
+                    Err(e)
+                }
+            }
+        }
     }
 }
 

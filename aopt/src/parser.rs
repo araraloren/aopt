@@ -35,6 +35,7 @@ use crate::ctx::Ctx;
 use crate::ctx::Extract;
 use crate::ctx::Handler;
 use crate::ctx::HandlerEntry;
+use crate::ctx::InnerCtx;
 use crate::ext::APolicyExt;
 use crate::map::ErasedTy;
 use crate::opt::Config;
@@ -67,7 +68,7 @@ pub struct CtxSaver {
     pub idx: usize,
 
     /// invoke context
-    pub ctx: Ctx,
+    pub ctx: InnerCtx,
 }
 
 /// [`Policy`] doing real parsing work.
@@ -76,17 +77,21 @@ pub struct CtxSaver {
 /// ```ignore
 ///
 /// #[derive(Debug)]
-/// pub struct EmptyPolicy<S>(PhantomData<S>);
+/// pub struct EmptyPolicy<Set, Ser>(PhantomData<(Set, Ser)>);
 ///
 /// // An empty policy do nothing.
-/// impl<S: Set> Policy for EmptyPolicy<S> {
+/// impl<S: Set, T: Ser> Policy for EmptyPolicy<S, T> {
 ///     type Ret = bool;
 ///
 ///     type Set = S;
 ///
+///     type Inv = Invoker<S>;
+///
+///     type Ser = T;
+///
 ///     type Error = Error;
 ///
-///     fn parse(&mut self, _: &mut S, _: &mut ASer, _: Arc<Args>) -> Result<Option<bool>, Error> {
+///     fn parse(&mut self, _: &mut S, _: &mut T, _: Arc<Args>) -> Result<bool, Error> {
 ///         // ... parsing logical code
 ///         Ok(Some(true))
 ///     }
@@ -105,7 +110,7 @@ pub trait Policy {
         inv: &mut Self::Inv,
         ser: &mut Self::Ser,
         args: Arc<Args>,
-    ) -> Result<Option<Self::Ret>, Self::Error>;
+    ) -> Result<Self::Ret, Self::Error>;
 }
 
 impl<S, I, O, R, E> Policy for Box<dyn Policy<Ret = R, Set = S, Inv = I, Ser = O, Error = E>>
@@ -128,7 +133,7 @@ where
         inv: &mut Self::Inv,
         ser: &mut Self::Ser,
         args: Arc<Args>,
-    ) -> Result<Option<Self::Ret>, Self::Error> {
+    ) -> Result<Self::Ret, Self::Error> {
         Policy::parse(self.as_mut(), set, inv, ser, args)
     }
 }
@@ -189,7 +194,7 @@ where
 pub struct Parser<P: Policy> {
     policy: P,
     optset: P::Set,
-    invser: P::Inv,
+    invoker: P::Inv,
     valser: P::Ser,
     return_value: Option<P::Ret>,
 }
@@ -199,14 +204,15 @@ where
     P::Set: Default,
     P::Inv: Default,
     P::Ser: Default,
-    P: Default + Policy,
+    P: Default + Policy + APolicyExt<P>,
 {
     fn default() -> Self {
+        let policy = P::default();
         Self {
-            policy: P::default(),
-            optset: Default::default(),
-            invser: Default::default(),
-            valser: Default::default(),
+            optset: policy.default_set(),
+            invoker: policy.default_inv(),
+            valser: policy.default_ser(),
+            policy,
             return_value: None,
         }
     }
@@ -238,7 +244,7 @@ where
         Self {
             optset,
             policy,
-            invser,
+            invoker: invser,
             valser,
             return_value: None,
         }
@@ -265,7 +271,7 @@ where
         Parser {
             policy,
             optset: self.optset,
-            invser: self.invser,
+            invoker: self.invoker,
             valser: self.valser,
             return_value: self.return_value,
         }
@@ -280,7 +286,7 @@ where
         Self {
             optset,
             policy,
-            invser,
+            invoker: invser,
             valser,
             return_value: None,
         }
@@ -296,6 +302,19 @@ where
 
     pub fn set_policy(&mut self, policy: P) -> &mut Self {
         self.policy = policy;
+        self
+    }
+
+    pub fn invoker(&self) -> &P::Inv {
+        &self.invoker
+    }
+
+    pub fn invoker_mut(&mut self) -> &mut P::Inv {
+        &mut self.invoker
+    }
+
+    pub fn set_invoker(&mut self, invser: P::Inv) -> &mut Self {
+        self.invoker = invser;
         self
     }
 
@@ -345,13 +364,12 @@ where
     P::Ser: ServicesExt,
     P: Policy<Error = Error>,
 {
-    /// Reset the option set, and clear the [`ValService`](crate::ser::ValService`),
-    /// [`UsrValService`](crate::ser::UsrValService`), [`RawValService`](crate::ser::RawValService`).
-    pub fn clear_all(&mut self) -> Result<&mut Self, Error> {
+    /// Reset the option set, and clear the [`AnyValService`](crate::ser::AnyValService),
+    /// [`RawValService`](crate::ser::RawValService).
+    pub fn reset(&mut self) -> Result<&mut Self, Error> {
         self.optset.reset();
-        self.valser.ser_val_mut().clear();
-        self.valser.ser_usrval_mut().clear();
-        self.valser.ser_rawval_mut().clear();
+        self.valser.reset();
+        // ignore invoker, it is stateless
         Ok(self)
     }
 
@@ -493,15 +511,30 @@ where
     P::Set: Set,
     P: Policy<Error = Error>,
 {
-    pub fn parse(&mut self, args: Arc<Args>) -> Result<Option<()>, P::Error> {
+    /// Call [`parse`](Policy::parse) parsing the given arguments.
+    ///
+    /// Return true if the return value of [`parse`](Policy::parse) is [`Some`].
+    /// Return false if the return error is [`failure`](crate::err::Error::is_failure).
+    /// Call [`retval`](Parser::retval) get the return value of [`parse`](Policy::parse).
+    pub fn parse(&mut self, args: Arc<Args>) -> Result<bool, P::Error> {
         let optset = &mut self.optset;
         let valser = &mut self.valser;
-        let invser = &mut self.invser;
-        let ret = self.policy.parse(optset, invser, valser, args)?;
-        let parser_ret = ret.as_ref().map(|_| ());
+        let invser = &mut self.invoker;
 
-        self.return_value = ret;
-        Ok(parser_ret)
+        match self.policy.parse(optset, invser, valser, args) {
+            Ok(ret) => {
+                self.return_value = ret;
+
+                Ok(self.return_value.is_some())
+            }
+            Err(e) => {
+                if e.is_failure() {
+                    Ok(false)
+                } else {
+                    Err(e)
+                }
+            }
+        }
     }
 }
 
@@ -555,7 +588,7 @@ where
     ///     _: Option<&RawVal>,
     ///     val: Option<bool>,
     /// ) -> Result<Option<()>, Error> {
-    ///     let values = ser.ser_val_mut()?.entry::<u64>(uid).or_insert(vec![0]);
+    ///     let values = ser.ser_val_mut().entry::<u64>(uid).or_insert(vec![0]);
     ///
     ///     if let Some(is_file) = val {
     ///         if is_file {
@@ -567,7 +600,7 @@ where
     /// }
     /// // Add an NOA `file` with type `p`.
     /// // The handler which add by `on` will called when option set.
-    /// // The store will called by `InvokeService` when storing option value.
+    /// // The store will called by `Invoker` when storing option value.
     /// parser1
     ///     .add_opt("file=p@2..")?
     ///     .on(|_: &mut ASet, _: &mut ASer, val: ctx::Value<String>| {
@@ -599,7 +632,7 @@ where
 
         Ok(ParserCommit::new(
             Commit::new(&mut self.optset, info),
-            &mut self.invser,
+            &mut self.invoker,
         ))
     }
 
@@ -655,19 +688,19 @@ where
     ) -> Result<ParserCommit<'_, P::Set, P::Ser>, Error> {
         Ok(ParserCommit::new(
             Commit::new(&mut self.optset, config.into()),
-            &mut self.invser,
+            &mut self.invoker,
         ))
     }
 
     cfg_if::cfg_if! {
         if #[cfg(feature = "sync")] {
-            pub fn entry<A, O, H>(&mut self, uid: Uid) -> Result<HandlerEntry<'_, P::Set, H, A, O>, Error>
+            pub fn entry<A, O, H>(&mut self, uid: Uid) -> Result<HandlerEntry<'_, P::Set, P::Ser, H, A, O>, Error>
             where
                 O: Send + Sync + 'static,
                 H: Handler<P::Set, P::Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
                 A: Extract<P::Set, P::Ser, Error = Error> + Send + Sync + 'static,
             {
-                Ok(HandlerEntry::new(self.services.ser_invoke_mut()?, uid))
+                Ok(HandlerEntry::new(&mut self.invoker, uid))
             }
         }
         else {
@@ -677,7 +710,7 @@ where
                 H: Handler<P::Set, P::Ser, A, Output = Option<O>, Error = Error> + 'static,
                 A: Extract<P::Set, P::Ser, Error = Error> + 'static,
             {
-                Ok(HandlerEntry::new(&mut self.invser, uid))
+                Ok(HandlerEntry::new(&mut self.invoker, uid))
             }
         }
     }

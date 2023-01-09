@@ -167,7 +167,7 @@ where
     }
 
     /// Register the handler which will be called when option is set.
-    /// The function will register the option to [`Set`] first,
+    /// The function will register the option to [`Set`](crate::set::Set) first,
     /// then pass the unqiue id to [`HandlerEntry`].
     pub fn on<H, O, A>(mut self, handler: H) -> Result<HandlerEntry<'a, Set, Ser, H, A, O>, Error>
     where
@@ -176,7 +176,7 @@ where
         A: Extract<Set, Ser, Error = Error> + 'static,
     {
         let uid = self.run_and_commit_the_change()?;
-        // we don't need &'a mut InvokeServices, so just take it.
+        // we don't need &'a mut Invoker, so just take it.
         let ser = std::mem::take(&mut self.inv_ser);
 
         self.drop_commit = false;
@@ -184,9 +184,9 @@ where
     }
 
     /// Register the handler which will be called when option is set.
-    /// And the [`fallback`](crate::ser::InvokeService::fallback) will be called if
+    /// And the [`fallback`](crate::ctx::Invoker::fallback) will be called if
     /// the handler return None.
-    /// The function will register the option to [`Set`] first,
+    /// The function will register the option to [`Set`](crate::set::Set) first,
     /// then pass the unqiue id to [`HandlerEntry`].
     pub fn fallback<H, O, A>(
         mut self,
@@ -198,7 +198,7 @@ where
         A: Extract<Set, Ser, Error = Error> + 'static,
     {
         let uid = self.run_and_commit_the_change()?;
-        // we don't need &'a mut InvokeServices, so just take it.
+        // we don't need &'a mut Invoker, so just take it.
         let ser = std::mem::take(&mut self.inv_ser);
 
         self.drop_commit = false;

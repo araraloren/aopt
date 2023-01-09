@@ -152,10 +152,10 @@ impl ArgParser for RawVal {
             if name.is_empty() {
                 return Err(Error::arg_missing_name("Name can not be empty"));
             }
-            return Ok(Self::Output {
+            Ok(Self::Output {
                 name: Some(astr(name)),
                 value: Some(Arc::new(value.into())),
-            });
+            })
         } else {
             let name = self
                 .to_str()
@@ -167,11 +167,11 @@ impl ArgParser for RawVal {
                 })?
                 .trim();
 
-            return Ok(Self::Output {
+            Ok(Self::Output {
                 name: Some(Str::from(name)),
                 value: None,
-            });
-        };
+            })
+        }
     }
 }
 

@@ -132,6 +132,7 @@ impl Display for Error {
 }
 
 impl Error {
+    /// The error can be moitted if [`is_failure`](Error::is_failure) return true.
     pub fn is_failure(&self) -> bool {
         matches!(
             self,

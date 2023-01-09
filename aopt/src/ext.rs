@@ -7,6 +7,7 @@ use crate::parser::FwdPolicy;
 use crate::parser::Parser;
 use crate::parser::Policy;
 use crate::parser::PrePolicy;
+use crate::prelude::Invoker;
 use crate::ser::Services;
 use crate::set::OptSet;
 use crate::set::PrefixOptValidator;
@@ -20,9 +21,7 @@ pub trait APolicyExt<P: Policy> {
 
     fn default_set(&self) -> P::Set;
 
-    fn default_inv(&self) -> P::Inv {
-        todo!()
-    }
+    fn default_inv(&self) -> P::Inv;
 }
 
 pub type ACreator = Creator<AOpt, OptConfig, Error>;
@@ -44,38 +43,44 @@ pub type APreParser = Parser<APrePolicy>;
 pub type ADelayParser = Parser<ADelayPolicy>;
 
 impl APolicyExt<AFwdPolicy> for AFwdPolicy {
-    /// Get default [`ASet`] for forward policy.
-    fn default_set(&self) -> ASet {
+    fn default_set(&self) -> <AFwdPolicy as Policy>::Set {
         aset_with_default_creators()
     }
 
-    /// Get default [`ASer`] for forward policy.
-    fn default_ser(&self) -> ASer {
-        aser_with_default_service()
+    fn default_ser(&self) -> <AFwdPolicy as Policy>::Ser {
+        ASer::default()
+    }
+
+    fn default_inv(&self) -> <AFwdPolicy as Policy>::Inv {
+        Invoker::<<AFwdPolicy as Policy>::Set, <AFwdPolicy as Policy>::Ser>::default()
     }
 }
 
 impl APolicyExt<APrePolicy> for APrePolicy {
-    /// Get default [`ASet`] for forward policy.
-    fn default_set(&self) -> ASet {
+    fn default_set(&self) -> <AFwdPolicy as Policy>::Set {
         aset_with_default_creators()
     }
 
-    /// Get default [`ASer`] for forward policy.
-    fn default_ser(&self) -> ASer {
-        aser_with_default_service()
+    fn default_ser(&self) -> <AFwdPolicy as Policy>::Ser {
+        ASer::default()
+    }
+
+    fn default_inv(&self) -> <APrePolicy as Policy>::Inv {
+        Invoker::<<APrePolicy as Policy>::Set, <APrePolicy as Policy>::Ser>::default()
     }
 }
 
 impl APolicyExt<ADelayPolicy> for ADelayPolicy {
-    /// Get default [`ASet`] for forward policy.
-    fn default_set(&self) -> ASet {
+    fn default_set(&self) -> <AFwdPolicy as Policy>::Set {
         aset_with_default_creators()
     }
 
-    /// Get default [`ASer`] for forward policy.
-    fn default_ser(&self) -> ASer {
-        aser_with_default_service()
+    fn default_ser(&self) -> <AFwdPolicy as Policy>::Ser {
+        ASer::default()
+    }
+
+    fn default_inv(&self) -> <ADelayPolicy as Policy>::Inv {
+        Invoker::<<ADelayPolicy as Policy>::Set, <ADelayPolicy as Policy>::Ser>::default()
     }
 }
 
@@ -102,15 +107,4 @@ pub fn aset_with_default_creators() -> ASet {
         .with_creator(Creator::main())
         .with_creator(Creator::pos())
         .with_creator(Creator::any())
-}
-
-/// Return an [`Services`] with below [`Service`](crate::ser::Service)s:
-///
-/// * [`CheckService`]
-/// * [`UsrValService`]
-/// * [`InvokeService`]
-/// * [`RawValService`]
-/// * [`ValService`]
-pub fn aser_with_default_service() -> Services {
-    Services::default()
 }
