@@ -17,11 +17,11 @@ use crate::args::ArgParser;
 use crate::args::Args;
 use crate::astr;
 use crate::ctx::Ctx;
+use crate::ctx::Invoker;
 use crate::opt::Opt;
 use crate::opt::OptParser;
-use crate::prelude::Invoker;
-use crate::prelude::ServicesExt;
 use crate::proc::Process;
+use crate::ser::ServicesExt;
 use crate::set::OptValidator;
 use crate::set::SetOpt;
 use crate::Arc;
@@ -29,11 +29,10 @@ use crate::Error;
 
 /// [`FwdPolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
 /// The option will match failed if any special [`Error`] raised during option processing.
-/// [`FwdPolicy`] will return `Some(true)` if match successful.
+/// [`FwdPolicy`] will return Some([`ReturnVal`]) if match successful.
 /// [`FwdPolicy`] process the option before any
 /// NOA([`Cmd`](crate::opt::Style::Cmd), [`Pos`](crate::opt::Style::Pos) and [`Main`](crate::opt::Style::Main)).
-///
-/// You can get the value of any option in the handler of NOA.
+/// During parsing, you can get the value of any option in the handler of NOA.
 ///
 /// # Examples
 /// ```rust
@@ -201,7 +200,6 @@ where
         let args_len = args.len();
         let mut noa_args = Args::default();
         let mut iter = args.guess_iter().enumerate();
-        let mut opt_ctx = Ctx::default();
 
         ctx.set_args(args.clone());
         while let Some((idx, (opt, arg))) = iter.next() {
@@ -217,7 +215,7 @@ where
                                 style,
                                 GuessOptCfg::new(idx, args_len, arg.clone(), &clopt),
                             )? {
-                                let ret = process_opt(
+                                process_opt(
                                     ProcessCtx {
                                         idx,
                                         ctx,
@@ -229,7 +227,6 @@ where
                                     &mut proc,
                                     true,
                                 )?;
-
                                 if proc.is_mat() {
                                     matched = true;
                                 }
@@ -264,7 +261,6 @@ where
 
         self.checker().opt_check(set)?;
 
-        let ret = noa_args.clone();
         let noa_args = Arc::new(noa_args);
         let noa_len = noa_args.len();
 
@@ -362,10 +358,10 @@ where
         ser: &mut Self::Ser,
         args: Arc<Args>,
     ) -> Result<Self::Ret, Self::Error> {
-        let ctx = Ctx::default().with_orig_args(args.clone()).with_args(args);
+        let mut ctx = Ctx::default().with_orig_args(args.clone()).with_args(args);
 
         match self.parse_impl(&mut ctx, set, inv, ser) {
-            Ok(ret) => Ok(ReturnVal::new(ctx, true)),
+            Ok(_) => Ok(ReturnVal::new(ctx, true)),
             Err(e) => {
                 if e.is_failure() {
                     Ok(ReturnVal::new(ctx, false))

@@ -16,11 +16,11 @@ use super::UserStyle;
 use crate::args::ArgParser;
 use crate::args::Args;
 use crate::ctx::Ctx;
+use crate::ctx::Invoker;
 use crate::opt::Opt;
 use crate::opt::OptParser;
-use crate::prelude::Invoker;
-use crate::prelude::ServicesExt;
 use crate::proc::Process;
+use crate::ser::ServicesExt;
 use crate::set::OptValidator;
 use crate::set::SetOpt;
 use crate::Arc;
@@ -28,7 +28,7 @@ use crate::Error;
 
 /// [`PrePolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
 /// [`PrePolicy`] will skip any special [`Error`] during [`parse`](Policy::parse) process.
-/// [`PrePolicy`] will return the left `NOA`s after parsing.
+/// [`PrePolicy`] will return Some([`ReturnVal`]) if match successful.
 /// [`PrePolicy`] don't consume the `NOA` when process [`NOAMatch`](crate::proc::NOAMatch).
 ///
 /// # Example
@@ -70,8 +70,8 @@ use crate::Error;
 ///     },
 /// )?;
 ///
-/// getopt!(["--load", "cxx", "-check", "cc"].into_iter(), &mut cfg_loader)?;
-///
+/// let ret = getopt!(["--load", "cxx", "-check", "cc"].into_iter(), &mut cfg_loader)?;
+/// let next_args = ret.unwrap().ret.clone_args();
 /// let mut parser = cfg_loader.service_mut().sve_take_usrval::<AFwdParser>()?;
 ///
 /// parser
@@ -91,7 +91,7 @@ use crate::Error;
 ///         Ok(Some(found))
 ///     })?;
 ///
-/// getopt!(cfg_loader.take_retval().unwrap().take_args().into_iter(), &mut parser)?;
+/// getopt!(next_args.into_iter(), &mut parser)?;
 ///
 /// assert!(*parser.find_val::<bool>("-check")?);
 /// #
@@ -205,7 +205,6 @@ where
         let args_len = args.len();
         let mut noa_args = Args::default();
         let mut iter = args.guess_iter().enumerate();
-        let mut opt_ctx = Ctx::default();
 
         ctx.set_args(args.clone());
         while let Some((idx, (opt, arg))) = iter.next() {
@@ -269,7 +268,6 @@ where
 
         Self::ig_failure(self.checker().opt_check(set))?;
 
-        let ret = noa_args.clone();
         let noa_args = Arc::new(noa_args);
         let noa_len = noa_args.len();
 
@@ -367,10 +365,10 @@ where
         ser: &mut Self::Ser,
         args: Arc<Args>,
     ) -> Result<Self::Ret, Self::Error> {
-        let ctx = Ctx::default().with_orig_args(args.clone()).with_args(args);
+        let mut ctx = Ctx::default().with_orig_args(args.clone()).with_args(args);
 
         match self.parse_impl(&mut ctx, set, inv, ser) {
-            Ok(ret) => Ok(ReturnVal::new(ctx, true)),
+            Ok(_) => Ok(ReturnVal::new(ctx, true)),
             Err(e) => {
                 if e.is_failure() {
                     Ok(ReturnVal::new(ctx, false))
@@ -1008,6 +1006,7 @@ mod test {
 
         assert!(ret.is_ok());
         let ret = ret.unwrap();
+        let args = ret.args();
 
         for (idx, arg) in [
             "set",
@@ -1028,7 +1027,7 @@ mod test {
         .iter()
         .enumerate()
         {
-            assert_eq!(ret[idx].get_str(), Some(*arg));
+            assert_eq!(args[idx].get_str(), Some(*arg));
         }
         Ok(())
     }

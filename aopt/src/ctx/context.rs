@@ -191,7 +191,7 @@ impl Ctx {
         })
     }
 
-    pub fn inner_ctx_mut(&self) -> Result<&mut InnerCtx, Error> {
+    pub fn inner_ctx_mut(&mut self) -> Result<&mut InnerCtx, Error> {
         self.inner_ctx
             .as_mut()
             .ok_or_else(|| Error::raise_error("InnerCtx(mutable) not exist, try create a new one"))
@@ -208,6 +208,14 @@ impl Ctx {
         Ok((idx > 0)
             .then(|| self.orig_args().get(idx.saturating_sub(1)))
             .flatten())
+    }
+
+    pub fn take_args(&mut self) -> Arc<Args> {
+        std::mem::take(&mut self.args)
+    }
+
+    pub fn take_orig_args(&mut self) -> Arc<Args> {
+        std::mem::take(&mut self.orig_args)
     }
 }
 
@@ -258,15 +266,22 @@ impl Ctx {
         self.inner_ctx = inner_ctx;
         self
     }
-
-    pub(crate) fn start_inner_ctx(&mut self) -> &mut Self {
-        self.inner_ctx = Some(InnerCtx::default());
-        self
-    }
 }
 
 impl From<ReturnVal> for Ctx {
-    fn from(value: ReturnVal) -> Self {
+    fn from(mut value: ReturnVal) -> Self {
+        value.take_ctx()
+    }
+}
+
+impl<'a> From<&'a ReturnVal> for Ctx {
+    fn from(value: &'a ReturnVal) -> Self {
+        value.ctx().clone()
+    }
+}
+
+impl<'a> From<&'a mut ReturnVal> for Ctx {
+    fn from(value: &'a mut ReturnVal) -> Self {
         value.take_ctx()
     }
 }

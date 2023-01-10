@@ -44,7 +44,7 @@ use crate::Uid;
 ///    let mut is = Invoker::new();
 ///    let mut set = ASet::default();
 ///    let args = Arc::new(Args::new(["--foo", "bar", "doo"].into_iter()));
-///    let ctx = Ctx::default().with_args(args);
+///    let mut ctx = Ctx::default().with_args(args);
 ///
 ///    ser.ser_usrval_mut().insert(ser::Value::new(42i64));
 ///    // you can register callback into Invoker
@@ -69,8 +69,13 @@ use crate::Uid;
 ///        },
 ///    ).then(Action::Null);
 ///
+///    ctx.set_inner_ctx(Some(InnerCtx::default().with_uid(0)));
 ///    is.invoke(&mut set, &mut ser, &ctx)?;
+///
+///    ctx.set_inner_ctx(Some(InnerCtx::default().with_uid(1)));
 ///    is.invoke(&mut set, &mut ser, &ctx)?;
+///
+///    ctx.set_inner_ctx(Some(InnerCtx::default().with_uid(2)));
 ///    is.invoke(&mut set, &mut ser, &ctx)?;
 /// #
 /// #   Ok(())
@@ -164,7 +169,8 @@ where
 
     /// Invoke the handler saved in [`Invoker`], it will panic if the handler not exist.
     pub fn invoke(&mut self, set: &mut Set, ser: &mut Ser, ctx: &Ctx) -> Result<Option<()>, Error> {
-        let uid = ctx.uid();
+        let uid = ctx.uid()?;
+
         if let Some(callback) = self.callbacks.get_mut(&uid) {
             return (callback)(set, ser, ctx);
         }
@@ -197,10 +203,10 @@ where
     /// of option save the value to [`AnyValService`](crate::ser::AnyValService).
     /// For value type, reference documents of [`Assoc`].
     pub fn fallback(set: &mut Set, ser: &mut Ser, ctx: &Ctx) -> Result<Option<()>, Error> {
-        let uid = ctx.uid();
+        let uid = ctx.uid()?;
         let opt = set.get(uid).unwrap();
         let assoc = opt.assoc();
-        let arg = ctx.arg();
+        let arg = ctx.arg()?;
         let val = arg.as_ref().map(|v| v.as_ref());
         let mut action = *opt.action();
 

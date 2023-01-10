@@ -11,7 +11,7 @@ use crate::opt::Index;
 use crate::opt::Opt;
 use crate::opt::ValInitiator;
 use crate::opt::ValValidator;
-use crate::prelude::ServicesExt;
+use crate::ser::ServicesExt;
 use crate::set::Commit;
 use crate::set::SetCfg;
 use crate::set::SetOpt;

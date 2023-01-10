@@ -31,11 +31,11 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 
 use crate::args::Args;
-use crate::ctx::Ctx;
 use crate::ctx::Extract;
 use crate::ctx::Handler;
 use crate::ctx::HandlerEntry;
 use crate::ctx::InnerCtx;
+use crate::ctx::Invoker;
 use crate::ext::APolicyExt;
 use crate::map::ErasedTy;
 use crate::opt::Config;
@@ -43,7 +43,6 @@ use crate::opt::ConfigValue;
 use crate::opt::Information;
 use crate::opt::Opt;
 use crate::opt::OptParser;
-use crate::prelude::Invoker;
 use crate::ser::Services;
 use crate::ser::ServicesExt;
 use crate::set::Commit;
@@ -178,8 +177,10 @@ where
 /// )?;
 ///
 /// assert!(ret.is_some());
+/// let ret = ret.unwrap();
+/// let parser = ret.parser;
 /// assert_eq!(
-///     ret.unwrap()[0].name(),
+///     parser[0].name(),
 ///     "Where",
 ///     "Parser with `Where` cmd matched"
 /// );
@@ -196,7 +197,6 @@ pub struct Parser<P: Policy> {
     optset: P::Set,
     invoker: P::Inv,
     valser: P::Ser,
-    return_value: Option<P::Ret>,
 }
 
 impl<P: Policy> Default for Parser<P>
@@ -213,7 +213,6 @@ where
             invoker: policy.default_inv(),
             valser: policy.default_ser(),
             policy,
-            return_value: None,
         }
     }
 }
@@ -239,14 +238,13 @@ where
     pub fn new(policy: P) -> Self {
         let optset = policy.default_set();
         let valser = policy.default_ser();
-        let invser = policy.default_inv();
+        let invoker = policy.default_inv();
 
         Self {
             optset,
             policy,
-            invoker: invser,
+            invoker,
             valser,
-            return_value: None,
         }
     }
 }
@@ -273,7 +271,6 @@ where
             optset: self.optset,
             invoker: self.invoker,
             valser: self.valser,
-            return_value: self.return_value,
         }
     }
 }
@@ -282,13 +279,12 @@ impl<P> Parser<P>
 where
     P: Policy<Error = Error>,
 {
-    pub fn new_with(policy: P, optset: P::Set, invser: P::Inv, valser: P::Ser) -> Self {
+    pub fn new_with(policy: P, optset: P::Set, invoker: P::Inv, valser: P::Ser) -> Self {
         Self {
             optset,
             policy,
-            invoker: invser,
+            invoker,
             valser,
-            return_value: None,
         }
     }
 
@@ -341,19 +337,6 @@ where
 
     pub fn set_optset(&mut self, optset: P::Set) -> &mut Self {
         self.optset = optset;
-        self
-    }
-
-    pub fn retval(&self) -> Option<&P::Ret> {
-        self.return_value.as_ref()
-    }
-
-    pub fn take_retval(&mut self) -> Option<P::Ret> {
-        self.return_value.take()
-    }
-
-    pub fn set_retval(&mut self, val: Option<P::Ret>) -> &mut Self {
-        self.return_value = val;
         self
     }
 }
@@ -513,28 +496,27 @@ where
 {
     /// Call [`parse`](Policy::parse) parsing the given arguments.
     ///
-    /// Return true if the return value of [`parse`](Policy::parse) is [`Some`].
-    /// Return false if the return error is [`failure`](crate::err::Error::is_failure).
-    /// Call [`retval`](Parser::retval) get the return value of [`parse`](Policy::parse).
-    pub fn parse(&mut self, args: Arc<Args>) -> Result<bool, P::Error> {
+    /// The [`status`](ReturnVal::status) is true if parsing successes
+    /// otherwise it will be false if any [`failure`](Error::is_failure) raised.
+    pub fn parse(&mut self, args: Arc<Args>) -> Result<P::Ret, P::Error> {
         let optset = &mut self.optset;
         let valser = &mut self.valser;
         let invser = &mut self.invoker;
 
-        match self.policy.parse(optset, invser, valser, args) {
-            Ok(ret) => {
-                self.return_value = ret;
+        self.policy.parse(optset, invser, valser, args)
+    }
 
-                Ok(self.return_value.is_some())
-            }
-            Err(e) => {
-                if e.is_failure() {
-                    Ok(false)
-                } else {
-                    Err(e)
-                }
-            }
-        }
+    /// Call [`parse`](Parser::parse) parsing the [`args_os`](std::env::args_os).
+    ///
+    /// The [`status`](ReturnVal::status) is true if parsing successes
+    /// otherwise it will be false if any [`failure`](Error::is_failure) raised.
+    pub fn parse_from_env(&mut self) -> Result<P::Ret, P::Error> {
+        let optset = &mut self.optset;
+        let valser = &mut self.valser;
+        let invser = &mut self.invoker;
+        let args = crate::Arc::new(std::env::args_os().skip(1).into());
+
+        self.policy.parse(optset, invser, valser, args)
     }
 }
 

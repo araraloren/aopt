@@ -5,7 +5,11 @@
 
 - Moving invoke service from ser/ to ctx/
 
-- Change the interface of Policy
+- Change the interface of `Policy`
+
+- Remove return value of `Parser`
+
+- Don't remove first command line argument, pass it to `Main`.
 
 ## 0.8.4
 

@@ -13,7 +13,7 @@ use crate::ctx::Store;
 use crate::opt::Assoc;
 use crate::opt::Opt;
 use crate::opt::RawValParser;
-use crate::prelude::ServicesExt;
+use crate::ser::ServicesExt;
 use crate::set::SetOpt;
 use crate::Error;
 use crate::HashMap;
@@ -44,7 +44,7 @@ use crate::Uid;
 ///    let mut is = Invoker::new();
 ///    let mut set = ASet::default();
 ///    let args = Arc::new(Args::new(["--foo", "bar", "doo"].into_iter()));
-///    let ctx = Ctx::default().with_args(args);
+///    let mut ctx = Ctx::default().with_args(args);
 ///
 ///    ser.ser_usrval_mut().insert(ser::Value::new(42i64));
 ///    // you can register callback into Invoker
@@ -69,8 +69,13 @@ use crate::Uid;
 ///        },
 ///    ).then(Action::Null);
 ///
+///    ctx.set_inner_ctx(Some(InnerCtx::default().with_uid(0)));
 ///    is.invoke(&mut set, &mut ser, &ctx)?;
+///
+///    ctx.set_inner_ctx(Some(InnerCtx::default().with_uid(1)));
 ///    is.invoke(&mut set, &mut ser, &ctx)?;
+///
+///    ctx.set_inner_ctx(Some(InnerCtx::default().with_uid(2)));
 ///    is.invoke(&mut set, &mut ser, &ctx)?;
 /// #
 /// #   Ok(())

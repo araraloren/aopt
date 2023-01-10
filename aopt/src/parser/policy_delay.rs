@@ -19,11 +19,11 @@ use crate::args::ArgParser;
 use crate::args::Args;
 use crate::astr;
 use crate::ctx::Ctx;
+use crate::ctx::Invoker;
 use crate::opt::Opt;
 use crate::opt::OptParser;
-use crate::prelude::Invoker;
-use crate::prelude::ServicesExt;
 use crate::proc::Process;
+use crate::ser::ServicesExt;
 use crate::set::OptValidator;
 use crate::set::SetOpt;
 use crate::Arc;
@@ -31,10 +31,11 @@ use crate::Error;
 
 /// [`DelayPolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
 /// The option will match failed if any special [`Error`] raised during option processing.
-/// [`DelayPolicy`] will return `Some(true)` if match successful.
+/// [`DelayPolicy`] will return Some([`ReturnVal`]) if match successful.
 /// [`DelayPolicy`] process the option first, but not invoke the handler of option.
 /// The handler will be called after [`Cmd`](crate::opt::Style::Cmd) NOA and [`Pos`](crate::opt::Style::Pos) NOA processed.
 /// In last, [`DelayPolicy`] will process [`Main`](crate::opt::Style::Main) NOA.
+/// During parsing, you can't get the value of any option in the handler of NOA.
 ///
 /// # Example
 /// ```rust
@@ -306,7 +307,6 @@ where
             }
         }
 
-        let ret = noa_args.clone();
         let noa_args = Arc::new(noa_args);
         let noa_len = noa_args.len();
 
@@ -409,10 +409,10 @@ where
         ser: &mut Self::Ser,
         args: Arc<Args>,
     ) -> Result<Self::Ret, Self::Error> {
-        let ctx = Ctx::default().with_orig_args(args.clone()).with_args(args);
+        let mut ctx = Ctx::default().with_orig_args(args.clone()).with_args(args);
 
         match self.parse_impl(&mut ctx, set, inv, ser) {
-            Ok(ret) => Ok(ReturnVal::new(ctx, true)),
+            Ok(_) => Ok(ReturnVal::new(ctx, true)),
             Err(e) => {
                 if e.is_failure() {
                     Ok(ReturnVal::new(ctx, false))
@@ -585,11 +585,11 @@ mod test {
         for opt in set.iter_mut() {
             opt.init(&mut ser)?;
         }
-        assert!(policy
-            .parse(&mut set, &mut inv, &mut ser, args.clone())
-            .is_err());
+        assert!(!policy
+            .parse(&mut set, &mut inv, &mut ser, args.clone())?
+            .status());
         policy.set_strict(false);
-        policy.parse(&mut set, &mut inv, &mut ser, args)?;
+        assert!(policy.parse(&mut set, &mut inv, &mut ser, args)?.status());
         Ok(())
     }
 }

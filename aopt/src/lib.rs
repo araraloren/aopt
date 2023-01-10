@@ -31,9 +31,20 @@ pub use crate::str::Str;
 pub use crate::str::StrJoin;
 
 use std::any::TypeId;
+
 /// Get the [`TypeId`](std::any::TypeId) of type `T`.
 pub(crate) fn typeid<T: 'static>() -> TypeId {
     TypeId::of::<T>()
+}
+
+use parser::Parser;
+use parser::Policy;
+use parser::ReturnVal;
+
+pub struct GetoptRes<'a, P: Policy> {
+    pub ret: ReturnVal,
+
+    pub parser: &'a mut Parser<P>,
 }
 
 /// Parse the given string sequence, return the first matched [`Parser`](crate::parser::Parser): `getopt!($args, $($parser),+)`.
@@ -66,6 +77,7 @@ pub(crate) fn typeid<T: 'static>() -> TypeId {
 ///
 ///     assert!(ret.is_some());
 ///     let ret = ret.unwrap();
+///     let ret = ret.parser;
 ///
 ///     assert_eq!(ret.find_val::<bool>("-a")?, &true);
 ///     assert_eq!(ret.find_val::<i64>("--bopt")?, &42i64);
@@ -81,16 +93,15 @@ pub(crate) fn typeid<T: 'static>() -> TypeId {
 ///
 ///     assert!(ret.is_some());
 ///     let ret = ret.unwrap();
+///     let args = ret.ret.clone_args();
+///     let ret = ret.parser;
 ///
 ///     assert_eq!(
 ///         ret.find_vals::<String>("-d")?,
 ///         &vec!["bar".to_owned(), "foo".to_owned()],
 ///     );
 ///     assert_eq!(ret.find_val::<String>("--eopt")?, &String::from("pre"));
-///     assert_eq!(
-///         ret.take_retval().unwrap().take_args(),
-///         vec![RawVal::from("foo")]
-///     );
+///     assert_eq!(args, vec![RawVal::from("foo")] );
 /// }
 ///
 /// parser.reset()?;
@@ -109,6 +120,7 @@ pub(crate) fn typeid<T: 'static>() -> TypeId {
 ///
 ///     assert!(ret.is_some());
 ///     let ret = ret.unwrap();
+///     let ret = ret.parser;
 ///
 ///     assert_eq!(ret.find_val::<bool>("-a")?, &true);
 ///     assert_eq!(ret.find_val::<i64>("--bopt")?, &42i64);
@@ -122,16 +134,15 @@ pub(crate) fn typeid<T: 'static>() -> TypeId {
 ///
 ///     assert!(ret.is_some());
 ///     let ret = ret.unwrap();
+///     let args = ret.ret.clone_args();
+///     let ret = ret.parser;
 ///
 ///     assert_eq!(
 ///         ret.find_vals::<String>("-d")?,
 ///         &vec!["bar".to_owned(), "foo".to_owned()],
 ///     );
 ///     assert_eq!(ret.find_val::<String>("--eopt")?, &String::from("pre"));
-///     assert_eq!(
-///         ret.take_retval().unwrap().take_args(),
-///         vec![RawVal::from("foo")]
-///     );
+///     assert_eq!(args, vec![RawVal::from("foo")]);
 /// }
 /// # Ok(())
 /// # }
@@ -141,7 +152,9 @@ macro_rules! getopt {
     ($args:expr, $($parser_left:expr),+) => {
         {
             fn __check_p<P: $crate::prelude::Policy<Error = $crate::Error>>
-                (p: &mut $crate::prelude::Parser<P>) -> &mut $crate::prelude::Parser<P> { p }
+                (p: &mut $crate::prelude::Parser<P>) -> &mut $crate::prelude::Parser<P>
+                where P::Ret: AsRef<bool>
+                { p }
 
             let mut ret = Ok(None);
             let args = $crate::Arc::new($crate::prelude::Args::new($args));
@@ -152,17 +165,24 @@ macro_rules! getopt {
 
                     parser.init()?;
                     match parser.parse(args.clone()) {
-                        Ok(parse_ret) => {
-                            if parse_ret {
-                                break Ok(Some(parser));
+                        Ok(parser_ret) => {
+                            if *parser_ret.as_ref() {
+                                break Ok(Some($crate::GetoptRes {
+                                    ret: parser_ret,
+                                    parser,
+                                }));
                             }
-                            else { ret = Ok(None); }
+                            else {
+                                ret = Ok(None);
+                            }
                         }
                         Err(e) => {
                             if ! e.is_failure() {
                                 break Err(e);
                             }
-                            else { ret = Err(e); }
+                            else {
+                                ret = Err(e);
+                            }
                         }
                     }
                 )+
@@ -180,8 +200,11 @@ pub mod prelude {
     pub use crate::ctx::Ctx;
     pub use crate::ctx::Extract;
     pub use crate::ctx::Handler;
+    pub use crate::ctx::InnerCtx;
     pub use crate::ctx::Invoker;
     pub use crate::ctx::Store;
+    pub use crate::ctx::NullStore;
+    pub use crate::ctx::VecStore;
     pub use crate::ext::*;
     pub use crate::getopt;
     pub use crate::map::ErasedTy;
@@ -206,12 +229,18 @@ pub mod prelude {
     pub use crate::opt::ValInitialize;
     pub use crate::opt::ValInitiator;
     pub use crate::opt::ValValidator;
+    pub use crate::opt::ValValidatorExt;
+    pub use crate::opt::ValValidatorExt2;
     pub use crate::parser::DelayPolicy;
     pub use crate::parser::FwdPolicy;
     pub use crate::parser::Parser;
     pub use crate::parser::ParserCommit;
     pub use crate::parser::Policy;
     pub use crate::parser::PrePolicy;
+    pub use crate::parser::BoxedPolicy;
+    pub use crate::parser::ReturnVal;
+    pub use crate::parser::SetChecker;
+    pub use crate::parser::UserStyle;
     pub use crate::proc::Match;
     pub use crate::proc::NOAMatch;
     pub use crate::proc::NOAProcess;
@@ -235,5 +264,7 @@ pub mod prelude {
     pub use crate::set::PrefixOptValidator;
     pub use crate::set::Set;
     pub use crate::set::SetExt;
+    pub use crate::set::SetCfg;
+    pub use crate::set::SetOpt;
     pub use crate::Uid;
 }

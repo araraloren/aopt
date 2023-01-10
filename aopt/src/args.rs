@@ -48,13 +48,19 @@ impl<S: Into<RawVal>, I: Iterator<Item = S>> From<I> for Args {
 
 impl From<ReturnVal> for Args {
     fn from(value: ReturnVal) -> Self {
-        Self::from(value.into_args().into_iter())
+        Self::from(value.clone_args().into_iter())
     }
 }
 
 impl<'a> From<&'a ReturnVal> for Args {
     fn from(value: &'a ReturnVal) -> Self {
         Self::from(value.args().iter().cloned())
+    }
+}
+
+impl<'a> From<&'a mut ReturnVal> for Args {
+    fn from(value: &'a mut ReturnVal) -> Self {
+        Self::from(value.clone_args().into_iter())
     }
 }
 

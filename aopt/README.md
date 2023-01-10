@@ -1,6 +1,43 @@
 # aopt
 
-A flexible and typed getopt like command line tools for rust.
+A flexible and typed getopt like command line framwork for rust.
+
+## Features
+
+- Option support
+
+    - Prefixed option support, such as `-f`, `--flag`, `-flag` or `--/flag`.
+
+    - Option value support, such as `-f 42`, `--flag 3.14` or `--flag=foo`.
+
+    - Multiple style option support, such as `-f 42`, `-f=42` or `-f42`.
+
+    - Combing style support, such as `-abc` is same as `-a` `-b` `-c`.
+
+    - Positional arguments support, see [`Index`](crate::opt::Index).
+
+    - Type support, you can validator the value of option during parsing.
+
+    See the built-in option type [`AOpt`](crate::opt::AOpt)
+
+- Non UTF8 arguments support
+
+- Callback support
+
+    Can set callback which will called during parsing,
+    see [`Parser`](crate::parser::Parser) and [`Invoker`](crate::ctx::Invoker).
+
+- Value store support
+
+    By default aopt will store the raw value and parsed value into given [`Services`](crate::ser::Services).
+
+- Policy support
+
+    - [`DelayPolicy`](crate::parser::DelayPolicy) process positional arguments before any other option.
+
+    - [`FwdPolicy`](crate::parser::FwdPolicy) process options before positional arguments.
+
+    - [`PrePolicy`](crate::parser::PrePolicy) can help you process the options partial.
 
 ## Setup
 
@@ -8,32 +45,63 @@ Add following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-aopt = "0.8"
+aopt = "0.9"
 ```
 
-### Enable `sync` feature
+### `sync` feature
 
 If you want the utils of current crate implement `Send` and `Sync`, you can enable `sync` feature.
 
-```toml
-[dependencies]
-aopt = { version = "0.8", features = [ "sync" ] }
-```
-
-### Enable `utf8` feature
+### `utf8` feature
 
 By default, the command line parsing support `OsString`, enable `utf8` using `String` instead.
 
-```toml
-[dependencies]
-aopt = { version = "0.8", features = [ "utf8" ] }
-```
-
 ## Example
 
-With `getopt!` and `Parser`, you can match and process every command easily.
+- Using [`AFwdParser`](crate::ext::AFwdParser) parsing process the command line.
 
-```ignore
+```rust
+use aopt::prelude::*;
+use std::ops::Deref;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut parser = AFwdParser::default();
+
+    parser.validator_mut().add_prefix("+");
+    parser.add_opt("--depth=i")?.set_value(0i64); // int option
+    parser.add_opt("-/r=b")?; // boolean flag
+    parser
+        .add_opt("--source=s!")? // ! means the option is force required
+        .add_alias("+S")
+        .on(
+            |set: &mut ASet, ser: &mut ASer, mut val: ctx::Value<String>| {
+                let depth: &i64 = ser.sve_val(set["--depth"].uid())?;
+                println!("Adding location({}) with depth({})", val.deref(), depth);
+                Ok(Some(val.take()))
+            },
+        )?;
+    parser.add_opt("destination=p@-1")?.on(
+        |_: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>| {
+            println!("Save destination location({})", val.deref());
+            Ok(Some(val.take()))
+        },
+    )?;
+    parser.add_opt("main=m")?.on(
+        |set: &mut ASet, ser: &mut ASer| {
+            println!("Save destination location({})", val.deref());
+            Ok(Some(val.take()))
+        },
+    )?;
+    parser.init()?;
+    parser.parse_from_env()?;
+
+    Ok(())
+}
+```
+
+- Using [`getopt!`](crate::getopt) parsing multiple sub command.
+
+```rust
 use aopt::prelude::*;
 use aopt::Error;
 use std::ops::Deref;

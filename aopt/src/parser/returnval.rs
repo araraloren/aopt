@@ -7,23 +7,19 @@ pub struct ReturnVal {
     status: bool,
 
     ctx: Ctx,
-
-    args: Vec<RawVal>,
 }
 
 impl ReturnVal {
     pub fn new(ctx: Ctx, status: bool) -> Self {
-        let args = ctx.args().into_inner();
-
-        Self { status, ctx, args }
+        Self { status, ctx }
     }
 
     pub fn ctx(&self) -> &Ctx {
         &self.ctx
     }
 
-    pub fn args(&self) -> &Vec<RawVal> {
-        &self.args
+    pub fn args(&self) -> &[RawVal] {
+        self.ctx.args().as_slice()
     }
 
     pub fn status(&self) -> bool {
@@ -34,25 +30,47 @@ impl ReturnVal {
         std::mem::take(&mut self.ctx)
     }
 
-    pub fn take_args(&mut self) -> Vec<RawVal> {
-        std::mem::take(&mut self.args)
-    }
+    pub fn clone_args(&self) -> Vec<RawVal> {
+        let args = self.ctx.args().as_ref();
 
-    pub fn into_args(mut self) -> Vec<RawVal> {
-        self.take_args()
+        args.clone().into_inner()
     }
 }
 
 impl Deref for ReturnVal {
-    type Target = Vec<RawVal>;
+    type Target = Ctx;
 
     fn deref(&self) -> &Self::Target {
-        &self.args
+        &self.ctx
     }
 }
 
 impl DerefMut for ReturnVal {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.args
+        &mut self.ctx
+    }
+}
+
+impl From<ReturnVal> for bool {
+    fn from(value: ReturnVal) -> Self {
+        value.status()
+    }
+}
+
+impl<'a> From<&'a ReturnVal> for bool {
+    fn from(value: &'a ReturnVal) -> Self {
+        value.status()
+    }
+}
+
+impl<'a> From<&'a mut ReturnVal> for bool {
+    fn from(value: &'a mut ReturnVal) -> Self {
+        value.status()
+    }
+}
+
+impl AsRef<bool> for ReturnVal {
+    fn as_ref(&self) -> &bool {
+        &self.status
     }
 }

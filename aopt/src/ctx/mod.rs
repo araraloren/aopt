@@ -33,10 +33,10 @@ cfg_if::cfg_if! {
             mut handler: H,
         ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<()>, Error>
         where
+            E: Into<Error>,
             O: Send + Sync + 'static,
             Set: crate::set::Set,
             SetOpt<Set>: Opt,
-            E: Into<Error>,
             Ser: ServicesExt,
             A: Extract<Set, Ser, Error = E> + Send + Sync,
             H: Handler<Set, Ser, A, Output = Option<O>, Error = E> + Send + Sync + 'static,
@@ -64,10 +64,10 @@ cfg_if::cfg_if! {
             mut handler: H,
         ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<()>, Error>
         where
+            E: Into<Error>,
             O: Send + Sync + 'static,
             Set: crate::set::Set,
             SetOpt<Set>: Opt,
-            E: Into<Error>,
             Ser: ServicesExt,
             A: Extract<Set, Ser, Error = E> + Send + Sync,
             H: Handler<Set, Ser, A, Output = Option<O>, Error = E> + Send + Sync + 'static,
