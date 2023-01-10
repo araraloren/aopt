@@ -202,8 +202,8 @@ pub mod prelude {
     pub use crate::ctx::Handler;
     pub use crate::ctx::InnerCtx;
     pub use crate::ctx::Invoker;
-    pub use crate::ctx::Store;
     pub use crate::ctx::NullStore;
+    pub use crate::ctx::Store;
     pub use crate::ctx::VecStore;
     pub use crate::ext::*;
     pub use crate::getopt;
@@ -231,13 +231,13 @@ pub mod prelude {
     pub use crate::opt::ValValidator;
     pub use crate::opt::ValValidatorExt;
     pub use crate::opt::ValValidatorExt2;
+    pub use crate::parser::BoxedPolicy;
     pub use crate::parser::DelayPolicy;
     pub use crate::parser::FwdPolicy;
     pub use crate::parser::Parser;
     pub use crate::parser::ParserCommit;
     pub use crate::parser::Policy;
     pub use crate::parser::PrePolicy;
-    pub use crate::parser::BoxedPolicy;
     pub use crate::parser::ReturnVal;
     pub use crate::parser::SetChecker;
     pub use crate::parser::UserStyle;
@@ -263,8 +263,8 @@ pub mod prelude {
     pub use crate::set::OptValidator;
     pub use crate::set::PrefixOptValidator;
     pub use crate::set::Set;
-    pub use crate::set::SetExt;
     pub use crate::set::SetCfg;
+    pub use crate::set::SetExt;
     pub use crate::set::SetOpt;
     pub use crate::Uid;
 }

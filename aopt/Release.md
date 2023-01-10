@@ -11,6 +11,8 @@
 
 - Don't remove first command line argument, pass it to `Main`.
 
+- Add more setting on option style
+
 ## 0.8.4
 
 - Add `Creator::any` option type.

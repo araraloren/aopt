@@ -118,7 +118,7 @@ use crate::Error;
 ///         Ok(Some(true))
 ///     })?;
 ///
-/// getopt!(std::env::args().skip(1), &mut parser)?;
+/// getopt!(std::env::args(), &mut parser)?;
 /// #
 /// # Ok(())
 /// # }
@@ -218,8 +218,16 @@ where
     }
 
     /// Return the NOA index base on 1.
-    pub fn noa_idx(idx: usize) -> usize {
-        idx + 1
+    pub fn noa_cmd() -> usize {
+        1
+    }
+
+    pub fn noa_main() -> usize {
+        0
+    }
+
+    pub fn noa_pos(idx: usize) -> usize {
+        idx
     }
 }
 
@@ -315,7 +323,7 @@ where
         if noa_args.len() > 0 {
             if let Some(mut proc) = NOAGuess::new().guess(
                 &UserStyle::Cmd,
-                GuessNOACfg::new(noa_args.clone(), Self::noa_idx(0), noa_len),
+                GuessNOACfg::new(noa_args.clone(), Self::noa_cmd(), noa_len),
             )? {
                 process_non_opt(
                     ProcessCtx {
@@ -324,7 +332,7 @@ where
                         inv,
                         ser,
                         tot: noa_len,
-                        idx: Self::noa_idx(0),
+                        idx: Self::noa_cmd(),
                     },
                     &mut proc,
                 )?;
@@ -332,10 +340,10 @@ where
 
             self.checker().cmd_check(set)?;
 
-            for idx in 0..noa_len {
+            for idx in 1..noa_len {
                 if let Some(mut proc) = NOAGuess::new().guess(
                     &UserStyle::Pos,
-                    GuessNOACfg::new(noa_args.clone(), Self::noa_idx(idx), noa_len),
+                    GuessNOACfg::new(noa_args.clone(), Self::noa_pos(idx), noa_len),
                 )? {
                     process_non_opt(
                         ProcessCtx {
@@ -344,7 +352,7 @@ where
                             inv,
                             ser,
                             tot: noa_len,
-                            idx: Self::noa_idx(idx),
+                            idx: Self::noa_pos(idx),
                         },
                         &mut proc,
                     )?;
@@ -365,9 +373,10 @@ where
         let main_len = main_args.len();
 
         ctx.set_args(main_args.clone());
-        if let Some(mut proc) =
-            NOAGuess::new().guess(&UserStyle::Main, GuessNOACfg::new(main_args, 0, main_len))?
-        {
+        if let Some(mut proc) = NOAGuess::new().guess(
+            &UserStyle::Main,
+            GuessNOACfg::new(main_args, Self::noa_main(), main_len),
+        )? {
             process_non_opt(
                 ProcessCtx {
                     ctx,
@@ -375,7 +384,7 @@ where
                     inv,
                     ser,
                     tot: main_len,
-                    idx: 0,
+                    idx: Self::noa_main(),
                 },
                 &mut proc,
             )?;
@@ -513,6 +522,7 @@ mod test {
 
         let args = Args::new(
             [
+                "app",
                 "filter",
                 "+>",
                 "foo",

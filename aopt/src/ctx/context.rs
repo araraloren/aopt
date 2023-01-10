@@ -205,9 +205,7 @@ impl Ctx {
     /// The current argument indexed by `self.idx()`.
     pub fn curr_arg(&self) -> Result<Option<&RawVal>, Error> {
         let idx = self.idx()?;
-        Ok((idx > 0)
-            .then(|| self.orig_args().get(idx.saturating_sub(1)))
-            .flatten())
+        Ok((idx > 0).then(|| self.orig_args().get(idx)).flatten())
     }
 
     pub fn take_args(&mut self) -> Arc<Args> {

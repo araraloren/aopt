@@ -291,11 +291,7 @@ where
         let args = cfg.args.clone();
         let pos = cfg.idx();
         let count = cfg.total();
-        let name = (pos > 0)
-            .then(|| args.get(pos.saturating_sub(1)))
-            .flatten()
-            .and_then(|v| v.get_str())
-            .map(Str::from);
+        let name = args.get(pos).and_then(|v| v.get_str()).map(Str::from);
 
         match style {
             UserStyle::Main => {

@@ -31,6 +31,21 @@ impl Args {
         }
     }
 
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "utf8")] {
+            /// Create from [`args_os`](std::env::args_os()).
+            pub fn from_env() -> Self {
+                Self::new(std::env::args_os())
+            }
+        }
+        else {
+            /// Create from [`args`](std::env::args()).
+            pub fn from_env() -> Self {
+                Self::new(std::env::args())
+            }
+        }
+    }
+
     pub fn guess_iter(&self) -> Iter<'_> {
         Iter::new(&self.inner)
     }
