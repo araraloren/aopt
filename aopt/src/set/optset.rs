@@ -386,8 +386,14 @@ where
     P: OptParser,
     V: OptValidator,
 {
-    fn check_name(&mut self, name: &str) -> Result<bool, Error> {
-        self.validator.check_name(name)
+    type Error = Error;
+
+    fn check(&mut self, name: &str) -> Result<bool, Self::Error> {
+        OptValidator::check(&mut self.validator, name).map_err(Into::into)
+    }
+
+    fn split<'a>(&self, name: &'a str) -> Result<(&'a str, &'a str), Self::Error> {
+        OptValidator::split(&self.validator, name).map_err(Into::into)
     }
 }
 

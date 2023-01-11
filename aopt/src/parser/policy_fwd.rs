@@ -9,10 +9,12 @@ use super::GuessNOACfg;
 use super::GuessOptCfg;
 use super::NOAGuess;
 use super::OptGuess;
+use super::OptStyleManager;
 use super::Policy;
 use super::ReturnVal;
 use super::SetChecker;
 use super::UserStyle;
+use super::UserStyleMange;
 use crate::args::ArgParser;
 use crate::args::Args;
 use crate::astr;
@@ -105,7 +107,7 @@ pub struct FwdPolicy<Set, Ser> {
 
     checker: SetChecker<Set>,
 
-    styles: Vec<UserStyle>,
+    style_manager: OptStyleManager,
 
     marker_s: PhantomData<(Set, Ser)>,
 }
@@ -114,28 +116,18 @@ impl<Set, Ser> Default for FwdPolicy<Set, Ser> {
     fn default() -> Self {
         Self {
             strict: true,
-            styles: vec![
-                UserStyle::EqualWithValue,
-                UserStyle::Argument,
-                UserStyle::Boolean,
-                UserStyle::CombinedOption,
-                UserStyle::EmbeddedValue,
-            ],
+            style_manager: OptStyleManager::default(),
             checker: SetChecker::default(),
             marker_s: PhantomData::default(),
         }
     }
 }
 
-impl<Set, Ser> FwdPolicy<Set, Ser>
-where
-    SetOpt<Set>: Opt,
-    Ser: ServicesExt,
-    Set: crate::set::Set + OptParser + Debug + 'static,
-{
-    pub fn new(strict: bool) -> Self {
+impl<Set, Ser> FwdPolicy<Set, Ser> {
+    pub fn new(strict: bool, style: OptStyleManager) -> Self {
         Self {
             strict,
+            style_manager: style,
             ..Default::default()
         }
     }
@@ -147,26 +139,22 @@ where
         self
     }
 
+    pub fn with_styles(mut self, styles: Vec<UserStyle>) -> Self {
+        self.style_manager.set(styles);
+        self
+    }
+
     pub fn set_strict(&mut self, strict: bool) -> &mut Self {
         self.strict = strict;
         self
     }
 
-    pub fn with_styles(mut self, styles: Vec<UserStyle>) -> Self {
-        self.styles = styles;
-        self
-    }
-
     pub fn set_styles(&mut self, styles: Vec<UserStyle>) -> &mut Self {
-        self.styles = styles;
+        self.style_manager.set(styles);
         self
     }
 
-    pub fn user_styles(&self) -> &[UserStyle] {
-        &self.styles
-    }
-
-    pub fn get_strict(&self) -> bool {
+    pub fn strict(&self) -> bool {
         self.strict
     }
 
@@ -174,16 +162,26 @@ where
         &self.checker
     }
 
-    pub fn noa_cmd() -> usize {
+    pub(crate) fn noa_cmd() -> usize {
         1
     }
 
-    pub fn noa_main() -> usize {
+    pub(crate) fn noa_main() -> usize {
         0
     }
 
-    pub fn noa_pos(idx: usize) -> usize {
+    pub(crate) fn noa_pos(idx: usize) -> usize {
         idx
+    }
+}
+
+impl<Set, Ser> UserStyleMange for FwdPolicy<Set, Ser> {
+    fn style_manager(&self) -> &OptStyleManager {
+        &self.style_manager
+    }
+
+    fn style_manager_mut(&mut self) -> &mut OptStyleManager {
+        &mut self.style_manager
     }
 }
 
@@ -202,7 +200,7 @@ where
     ) -> Result<(), <Self as Policy>::Error> {
         self.checker().pre_check(set)?;
 
-        let opt_styles = &self.styles;
+        let opt_styles = &self.style_manager;
         let args = ctx.orig_args().clone();
         let args_len = args.len();
         let mut noa_args = Args::default();
@@ -216,11 +214,11 @@ where
 
             if let Ok(clopt) = opt.parse_arg() {
                 if let Some(name) = clopt.name() {
-                    if set.check_name(name.as_str())? {
+                    if set.check(name.as_str()).map_err(Into::into)? {
                         for style in opt_styles.iter() {
                             if let Some(mut proc) = OptGuess::new().guess(
                                 style,
-                                GuessOptCfg::new(idx, args_len, arg.clone(), &clopt),
+                                GuessOptCfg::new(idx, args_len, arg.clone(), &clopt, set),
                             )? {
                                 process_opt(
                                     ProcessCtx {
@@ -245,7 +243,7 @@ where
                                 }
                             }
                         }
-                        if !matched && self.get_strict() {
+                        if !matched && self.strict() {
                             let default_str = astr("");
 
                             return Err(Error::sp_invalid_option_name(format!(

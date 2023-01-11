@@ -9,10 +9,12 @@ use super::GuessNOACfg;
 use super::GuessOptCfg;
 use super::NOAGuess;
 use super::OptGuess;
+use super::OptStyleManager;
 use super::Policy;
 use super::ReturnVal;
 use super::SetChecker;
 use super::UserStyle;
+use super::UserStyleMange;
 use crate::args::ArgParser;
 use crate::args::Args;
 use crate::ctx::Ctx;
@@ -102,7 +104,7 @@ use crate::Error;
 pub struct PrePolicy<Set, Ser> {
     strict: bool,
 
-    styles: Vec<UserStyle>,
+    style_manager: OptStyleManager,
 
     checker: SetChecker<Set>,
 
@@ -113,13 +115,7 @@ impl<Set, Ser> Default for PrePolicy<Set, Ser> {
     fn default() -> Self {
         Self {
             strict: false,
-            styles: vec![
-                UserStyle::EqualWithValue,
-                UserStyle::Argument,
-                UserStyle::Boolean,
-                UserStyle::CombinedOption,
-                UserStyle::EmbeddedValue,
-            ],
+            style_manager: OptStyleManager::default(),
             checker: SetChecker::default(),
             marker_s: PhantomData::default(),
         }
@@ -127,8 +123,12 @@ impl<Set, Ser> Default for PrePolicy<Set, Ser> {
 }
 
 impl<Set, Ser> PrePolicy<Set, Ser> {
-    pub fn new() -> Self {
-        Self { ..Self::default() }
+    pub fn new(strict: bool, styles: OptStyleManager) -> Self {
+        Self {
+            strict,
+            style_manager: styles,
+            ..Self::default()
+        }
     }
 
     /// In strict mode, if an argument looks like an option (it matched any option prefix),
@@ -138,27 +138,23 @@ impl<Set, Ser> PrePolicy<Set, Ser> {
         self
     }
 
+    pub fn with_styles(mut self, styles: Vec<UserStyle>) -> Self {
+        self.style_manager.set(styles);
+        self
+    }
+
     pub fn set_strict(&mut self, strict: bool) -> &mut Self {
         self.strict = strict;
         self
     }
 
-    pub fn get_strict(&self) -> bool {
-        self.strict
-    }
-
-    pub fn with_styles(mut self, styles: Vec<UserStyle>) -> Self {
-        self.styles = styles;
-        self
-    }
-
     pub fn set_styles(&mut self, styles: Vec<UserStyle>) -> &mut Self {
-        self.styles = styles;
+        self.style_manager.set(styles);
         self
     }
 
-    pub fn user_styles(&self) -> &[UserStyle] {
-        &self.styles
+    pub fn strict(&self) -> bool {
+        self.strict
     }
 
     pub fn checker(&self) -> &SetChecker<Set> {
@@ -179,16 +175,26 @@ impl<Set, Ser> PrePolicy<Set, Ser> {
         }
     }
 
-    pub fn noa_cmd() -> usize {
+    pub(crate) fn noa_cmd() -> usize {
         1
     }
 
-    pub fn noa_main() -> usize {
+    pub(crate) fn noa_main() -> usize {
         0
     }
 
-    pub fn noa_pos(idx: usize) -> usize {
+    pub(crate) fn noa_pos(idx: usize) -> usize {
         idx
+    }
+}
+
+impl<Set, Ser> UserStyleMange for PrePolicy<Set, Ser> {
+    fn style_manager(&self) -> &OptStyleManager {
+        &self.style_manager
+    }
+
+    fn style_manager_mut(&mut self) -> &mut OptStyleManager {
+        &mut self.style_manager
     }
 }
 
@@ -207,7 +213,7 @@ where
     ) -> Result<(), <Self as Policy>::Error> {
         Self::ig_failure(self.checker().pre_check(set))?;
 
-        let opt_styles = &self.styles;
+        let opt_styles = &self.style_manager;
         let args = ctx.orig_args().clone();
         let args_len = args.len();
         let mut noa_args = Args::default();
@@ -222,13 +228,15 @@ where
 
             if let Ok(clopt) = opt.parse_arg() {
                 if let Some(name) = clopt.name() {
-                    if let Some(valid) = Self::ig_failure(set.check_name(name.as_str()))? {
+                    if let Some(valid) =
+                        Self::ig_failure(set.check(name.as_str()).map_err(Into::into))?
+                    {
                         if valid {
                             like_opt = true;
                             for style in opt_styles.iter() {
                                 let ret = Self::ig_failure(OptGuess::new().guess(
                                     style,
-                                    GuessOptCfg::new(idx, args_len, arg.clone(), &clopt),
+                                    GuessOptCfg::new(idx, args_len, arg.clone(), &clopt, set),
                                 ))?;
 
                                 if let Some(Some(mut proc)) = ret {
@@ -266,7 +274,7 @@ where
             // if consume the argument, skip it
             if matched && consume {
                 iter.next();
-            } else if !matched && !self.get_strict() || !like_opt {
+            } else if !matched && !self.strict() || !like_opt {
                 // add it to NOA if current argument not matched
                 // and not in strict mode or the argument not like an option
                 noa_args.push(args[idx].clone());

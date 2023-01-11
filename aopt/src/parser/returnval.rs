@@ -44,13 +44,12 @@ impl ReturnVal {
         self.error.is_null()
     }
 
-    /// Check the error, return [`Ctx`] if error is null.
-    pub fn ok_ctx(&self) -> Result<&Ctx, Error> {
-        if !self.error.is_null() {
-            Err(self.error.clone())
+    pub fn unwrap(self) -> Ctx {
+        Result::unwrap(if self.error.is_null() {
+            Ok(self.ctx)
         } else {
-            Ok(&self.ctx)
-        }
+            Err(self.error)
+        })
     }
 
     pub fn take_ctx(&mut self) -> Ctx {

@@ -9,19 +9,19 @@
 
 - Remove return value of `Parser`
 
-- Add more setting on option style
+- Add a style manager manage the `UserStyle`.
 
-- Change the NOA index base on 0, pass first command line argument to `Main`.
+- Change the NOA index base on 0, pass first command line argument to `Main`
 
 - Improve the api of ReturnVal, fix the `getopt!` return value
 
 ## 0.8.4
 
-- Add `Creator::any` option type.
+- Add `Creator::any` option type
 
 - Fix the OptConfig with_* functions
 
-- Add `Parser::add_opt_cfg` function add option by configurations.
+- Add `Parser::add_opt_cfg` function add option by configurations
 
 ## 0.8.3
 

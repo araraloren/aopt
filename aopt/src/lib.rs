@@ -229,6 +229,7 @@ pub mod prelude {
     pub use crate::parser::BoxedPolicy;
     pub use crate::parser::DelayPolicy;
     pub use crate::parser::FwdPolicy;
+    pub use crate::parser::OptStyleManager;
     pub use crate::parser::Parser;
     pub use crate::parser::ParserCommit;
     pub use crate::parser::Policy;
@@ -236,6 +237,7 @@ pub mod prelude {
     pub use crate::parser::ReturnVal;
     pub use crate::parser::SetChecker;
     pub use crate::parser::UserStyle;
+    pub use crate::parser::UserStyleMange;
     pub use crate::proc::Match;
     pub use crate::proc::NOAMatch;
     pub use crate::proc::NOAProcess;

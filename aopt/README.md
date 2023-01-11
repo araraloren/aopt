@@ -102,7 +102,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
     )?;
     parser.init()?;
-    parser.parse_env()?.ok_ctx()?;
+    parser.parse_env()?.unwrap();
 
     Ok(())
 }

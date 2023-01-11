@@ -11,10 +11,12 @@ use super::GuessNOACfg;
 use super::GuessOptCfg;
 use super::NOAGuess;
 use super::OptGuess;
+use super::OptStyleManager;
 use super::Policy;
 use super::ReturnVal;
 use super::SetChecker;
 use super::UserStyle;
+use super::UserStyleMange;
 use crate::args::ArgParser;
 use crate::args::Args;
 use crate::astr;
@@ -131,7 +133,7 @@ pub struct DelayPolicy<Set, Ser> {
 
     checker: SetChecker<Set>,
 
-    styles: Vec<UserStyle>,
+    style_manager: OptStyleManager,
 
     marker_s: PhantomData<(Set, Ser)>,
 }
@@ -142,28 +144,17 @@ impl<Set, Ser> Default for DelayPolicy<Set, Ser> {
             strict: true,
             contexts: vec![],
             checker: SetChecker::default(),
-            styles: vec![
-                UserStyle::EqualWithValue,
-                UserStyle::Argument,
-                UserStyle::Boolean,
-                UserStyle::CombinedOption,
-                UserStyle::EmbeddedValue,
-            ],
+            style_manager: OptStyleManager::default(),
             marker_s: PhantomData::default(),
         }
     }
 }
 
-impl<Set, Ser> DelayPolicy<Set, Ser>
-where
-    SetOpt<Set>: Opt,
-    Ser: ServicesExt + 'static,
-    Set: crate::set::Set + OptParser + Debug + 'static,
-{
-    pub fn new(strict: bool, styles: Vec<UserStyle>) -> Self {
+impl<Set, Ser> DelayPolicy<Set, Ser> {
+    pub fn new(strict: bool, styles: OptStyleManager) -> Self {
         Self {
             strict,
-            styles,
+            style_manager: styles,
             ..Self::default()
         }
     }
@@ -174,23 +165,19 @@ where
         self
     }
 
+    pub fn with_styles(mut self, styles: Vec<UserStyle>) -> Self {
+        self.style_manager.set(styles);
+        self
+    }
+
     pub fn set_strict(&mut self, strict: bool) -> &mut Self {
         self.strict = strict;
         self
     }
 
-    pub fn with_styles(mut self, styles: Vec<UserStyle>) -> Self {
-        self.styles = styles;
-        self
-    }
-
     pub fn set_styles(&mut self, styles: Vec<UserStyle>) -> &mut Self {
-        self.styles = styles;
+        self.style_manager.set(styles);
         self
-    }
-
-    pub fn user_styles(&self) -> &[UserStyle] {
-        &self.styles
     }
 
     pub fn strict(&self) -> bool {
@@ -201,6 +188,35 @@ where
         &self.checker
     }
 
+    pub(crate) fn noa_cmd() -> usize {
+        1
+    }
+
+    pub(crate) fn noa_main() -> usize {
+        0
+    }
+
+    pub(crate) fn noa_pos(idx: usize) -> usize {
+        idx
+    }
+}
+
+impl<Set, Ser> UserStyleMange for DelayPolicy<Set, Ser> {
+    fn style_manager(&self) -> &OptStyleManager {
+        &self.style_manager
+    }
+
+    fn style_manager_mut(&mut self) -> &mut OptStyleManager {
+        &mut self.style_manager
+    }
+}
+
+impl<Set, Ser> DelayPolicy<Set, Ser>
+where
+    SetOpt<Set>: Opt,
+    Ser: ServicesExt + 'static,
+    Set: crate::set::Set + OptParser + Debug + 'static,
+{
     pub fn invoke_opt_callback(
         &mut self,
         ctx: &mut Ctx,
@@ -215,18 +231,6 @@ where
             invoke_callback_opt(uid, ctx, set, inv, ser)?;
         }
         Ok(())
-    }
-
-    pub fn noa_cmd() -> usize {
-        1
-    }
-
-    pub fn noa_main() -> usize {
-        0
-    }
-
-    pub fn noa_pos(idx: usize) -> usize {
-        idx
     }
 }
 
@@ -246,7 +250,7 @@ where
         self.checker().pre_check(set)?;
 
         // take the invoke service, avoid borrow the ser
-        let opt_styles = &self.styles;
+        let opt_styles = &self.style_manager;
         let args = ctx.orig_args().clone();
         let args_len = args.len();
         let mut noa_args = Args::default();
@@ -262,11 +266,11 @@ where
             // parsing current argument
             if let Ok(clopt) = opt.parse_arg() {
                 if let Some(name) = clopt.name() {
-                    if set.check_name(name.as_str())? {
+                    if set.check(name.as_str()).map_err(Into::into)? {
                         for style in opt_styles.iter() {
                             if let Some(mut proc) = OptGuess::new().guess(
                                 style,
-                                GuessOptCfg::new(idx, args_len, arg.clone(), &clopt),
+                                GuessOptCfg::new(idx, args_len, arg.clone(), &clopt, set),
                             )? {
                                 let ret = process_opt(
                                     ProcessCtx {

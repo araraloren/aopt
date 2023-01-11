@@ -20,7 +20,9 @@ pub use self::style::GuessNOACfg;
 pub use self::style::GuessOptCfg;
 pub use self::style::NOAGuess;
 pub use self::style::OptGuess;
+pub use self::style::OptStyleManager;
 pub use self::style::UserStyle;
+pub use self::style::UserStyleMange;
 
 pub(crate) use self::process::invoke_callback_opt;
 pub(crate) use self::process::process_non_opt;
@@ -275,10 +277,7 @@ where
     }
 }
 
-impl<P> Parser<P>
-where
-    P: Policy<Error = Error>,
-{
+impl<P: Policy> Parser<P> {
     pub fn new_with(policy: P, optset: P::Set, invoker: P::Inv, valser: P::Ser) -> Self {
         Self {
             optset,
@@ -733,5 +732,39 @@ where
 
     pub fn find_vals_mut<T: ErasedTy>(&mut self, opt: &str) -> Result<&mut Vec<T>, Error> {
         self.vals_mut(self.find_uid(opt)?)
+    }
+}
+
+impl<P> UserStyleMange for Parser<P>
+where
+    P: Policy + UserStyleMange,
+{
+    fn style_manager(&self) -> &OptStyleManager {
+        self.policy().style_manager()
+    }
+
+    fn style_manager_mut(&mut self) -> &mut OptStyleManager {
+        self.policy_mut().style_manager_mut()
+    }
+}
+
+impl<P> Parser<P>
+where
+    P: Policy + UserStyleMange,
+{
+    /// Enable [`CombinedOption`](UserStyle::CombinedOption) option set style.
+    /// This can support option style like `-abc` which set `-a`, `-b` and `-c` both.
+    pub fn enable_combined(&mut self) -> &mut Self {
+        self.style_manager_mut().push(UserStyle::CombinedOption);
+        self
+    }
+
+    /// Enable [`EmbeddedValuePlus`](UserStyle::EmbeddedValuePlus) option set style.
+    /// This can support option style like `--opt42` which set `--opt` value to 42.
+    /// In default the [`EmbeddedValue`](UserStyle::EmbeddedValue) style only support
+    /// one letter option such as `-i`.
+    pub fn enable_embedded_plus(&mut self) -> &mut Self {
+        self.style_manager_mut().push(UserStyle::EmbeddedValuePlus);
+        self
     }
 }
