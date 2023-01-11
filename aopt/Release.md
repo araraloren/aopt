@@ -9,6 +9,10 @@
 
 - Add `Parser::add_opt_cfg` function add option by configurations.
 
+- Fix the prefix issue of `EmbeddedValue` style and `CombinedOption` style
+
+- Add `EmbeddedValue` support option set like `--opt42`
+
 ## 0.8.3
 
 - Add Into<Args> for ReturnVal

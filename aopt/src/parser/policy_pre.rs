@@ -196,13 +196,15 @@ where
 
             if let Ok(clopt) = opt.parse_arg() {
                 if let Some(name) = clopt.name() {
-                    if let Some(valid) = Self::ig_failure(set.check_name(name.as_str()))? {
+                    if let Some(valid) =
+                        Self::ig_failure(set.check(name.as_str()).map_err(Into::into))?
+                    {
                         if valid {
                             like_opt = true;
                             for style in opt_styles.iter() {
                                 let ret = Self::ig_failure(OptGuess::new().guess(
                                     style,
-                                    GuessOptCfg::new(idx, args_len, arg.clone(), &clopt),
+                                    GuessOptCfg::new(idx, args_len, arg.clone(), &clopt, set),
                                 ))?;
 
                                 if let Some(Some(mut proc)) = ret {

@@ -221,11 +221,11 @@ where
             // parsing current argument
             if let Ok(clopt) = opt.parse_arg() {
                 if let Some(name) = clopt.name() {
-                    if set.check_name(name.as_str())? {
+                    if set.check(name.as_str()).map_err(Into::into)? {
                         for style in opt_styles.iter() {
                             if let Some(mut proc) = OptGuess::new().guess(
                                 style,
-                                GuessOptCfg::new(idx, args_len, arg.clone(), &clopt),
+                                GuessOptCfg::new(idx, args_len, arg.clone(), &clopt, set),
                             )? {
                                 opt_ctx.set_idx(idx);
                                 let ret = process_opt::<S>(&opt_ctx, set, ser, &mut proc, false)?;
