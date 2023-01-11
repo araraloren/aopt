@@ -57,6 +57,7 @@ impl Display for ErrorStr {
     }
 }
 
+#[derive(Clone)]
 pub enum Error {
     Null,
 
@@ -109,6 +110,12 @@ pub enum Error {
     InvokeError(ErrorStr),
 }
 
+impl Default for Error {
+    fn default() -> Self {
+        Self::Null
+    }
+}
+
 impl std::fmt::Debug for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.display())
@@ -133,6 +140,7 @@ impl Display for Error {
 
 impl Error {
     /// The error can be moitted if [`is_failure`](Error::is_failure) return true.
+    ///
     pub fn is_failure(&self) -> bool {
         matches!(
             self,
@@ -146,6 +154,10 @@ impl Error {
                 | Error::SpExtractError(_)
                 | Error::InvokeError(_)
         )
+    }
+
+    pub fn is_null(&self) -> bool {
+        matches!(self, Error::Null)
     }
 
     /// Create Error::CustomError error

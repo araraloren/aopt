@@ -9,9 +9,11 @@
 
 - Remove return value of `Parser`
 
-- Don't remove first command line argument, pass it to `Main`.
-
 - Add more setting on option style
+
+- Change the NOA index base on 0, pass first command line argument to `Main`.
+
+- Improve the api of ReturnVal, fix the `getopt!` return value
 
 ## 0.8.4
 

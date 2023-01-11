@@ -7,7 +7,7 @@
 pub enum Style {
     Null,
 
-    /// The style indicate the `NOA` are set base on position(base on `1` !!!).
+    /// The style indicate the `NOA` are set base on position.
     Pos,
 
     /// The style indicate the `NOA` are set in first position(`@1`).

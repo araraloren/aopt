@@ -118,7 +118,7 @@ use crate::Error;
 ///         Ok(Some(true))
 ///     })?;
 ///
-/// getopt!(std::env::args(), &mut parser)?;
+/// getopt!(Args::from_env(), &mut parser)?;
 /// #
 /// # Ok(())
 /// # }
@@ -217,7 +217,6 @@ where
         Ok(())
     }
 
-    /// Return the NOA index base on 1.
     pub fn noa_cmd() -> usize {
         1
     }
@@ -421,10 +420,10 @@ where
         let mut ctx = Ctx::default().with_orig_args(args.clone()).with_args(args);
 
         match self.parse_impl(&mut ctx, set, inv, ser) {
-            Ok(_) => Ok(ReturnVal::new(ctx, true)),
+            Ok(_) => Ok(ReturnVal::new(ctx)),
             Err(e) => {
                 if e.is_failure() {
-                    Ok(ReturnVal::new(ctx, false))
+                    Ok(ReturnVal::new(ctx).with_error(e))
                 } else {
                     Err(e)
                 }
@@ -520,25 +519,22 @@ mod test {
         let mut inv = policy.default_inv();
         let mut set = policy.default_set();
 
-        let args = Args::new(
-            [
-                "app",
-                "filter",
-                "+>",
-                "foo",
-                "bar",
-                "8",
-                "42",
-                "--option-ignored",
-                "88",
-                "+>",
-                "12.5",
-                "lily",
-                "66",
-                "11",
-            ]
-            .into_iter(),
-        );
+        let args = Args::from_array([
+            "app",
+            "filter",
+            "+>",
+            "foo",
+            "bar",
+            "8",
+            "42",
+            "--option-ignored",
+            "88",
+            "+>",
+            "12.5",
+            "lily",
+            "66",
+            "11",
+        ]);
 
         set.validator_mut().add_prefix("+");
 
@@ -558,11 +554,12 @@ mod test {
                     ser.sve_filter::<f64>(set["args=p"].uid(), |v: &f64| v <= val.deref())?,
                 ))
             });
-        inv.entry(set.add_opt("main=m")?.run()?)
-            .on(move |set: &mut ASet, ser: &mut ASer| {
+        inv.entry(set.add_opt("main=m")?.run()?).on(
+            move |set: &mut ASet, ser: &mut ASer, app: ctx::Value<String>| {
                 let args = &set["args"];
                 let bopt = &set["--bigger-than"];
 
+                assert_eq!(app.deref(), "app");
                 check_opt_val::<f64>(
                     ser,
                     args,
@@ -572,7 +569,7 @@ mod test {
                     false,
                     &Action::App,
                     &Assoc::Flt,
-                    Some(&Index::Range(2, 0)),
+                    Some(&Index::Range(2, None)),
                     None,
                 )?;
                 check_opt_val::<Vec<f64>>(
@@ -588,7 +585,8 @@ mod test {
                     None,
                 )?;
                 Ok(Some(()))
-            });
+            },
+        );
 
         let args = Arc::new(args);
 

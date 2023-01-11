@@ -1,6 +1,5 @@
 use crate::Error;
 use crate::RawVal;
-use std::any::Any;
 use std::fmt::Debug;
 
 cfg_if::cfg_if! {
@@ -78,10 +77,6 @@ impl ValValidator {
         index: (usize, usize),
     ) -> Result<bool, Error> {
         self.0.check(name, value, index)
-    }
-
-    pub fn into_any(self) -> Box<dyn Any> {
-        Box::new(self)
     }
 }
 

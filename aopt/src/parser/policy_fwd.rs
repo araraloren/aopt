@@ -70,7 +70,7 @@ use crate::Error;
 ///         },
 ///     );
 ///
-/// let args = Args::new(["set", "42", "foo", "bar"].into_iter());
+/// let args = Args::from_array(["app", "set", "42", "foo", "bar"]);
 ///
 /// for opt in set.iter_mut() {
 ///     opt.init(&mut ser)?;
@@ -82,7 +82,7 @@ use crate::Error;
 /// assert_eq!(values[0], "set");
 /// assert_eq!(values[1], "42");
 ///
-/// let args = Args::new(["--/filter", "set", "42", "foo", "bar"].into_iter());
+/// let args = Args::from_array(["app", "--/filter", "set", "42", "foo", "bar"]);
 ///
 /// for opt in set.iter_mut() {
 ///     opt.init(&mut ser)?;
@@ -174,9 +174,16 @@ where
         &self.checker
     }
 
-    /// Return the NOA index base on 1.
-    pub fn noa_idx(idx: usize) -> usize {
-        idx + 1
+    pub fn noa_cmd() -> usize {
+        1
+    }
+
+    pub fn noa_main() -> usize {
+        0
+    }
+
+    pub fn noa_pos(idx: usize) -> usize {
+        idx
     }
 }
 
@@ -269,7 +276,7 @@ where
         if noa_args.len() > 0 {
             if let Some(mut proc) = NOAGuess::new().guess(
                 &UserStyle::Cmd,
-                GuessNOACfg::new(noa_args.clone(), Self::noa_idx(0), noa_len),
+                GuessNOACfg::new(noa_args.clone(), Self::noa_cmd(), noa_len),
             )? {
                 process_non_opt(
                     ProcessCtx {
@@ -278,7 +285,7 @@ where
                         inv,
                         ser,
                         tot: noa_len,
-                        idx: Self::noa_idx(0),
+                        idx: Self::noa_cmd(),
                     },
                     &mut proc,
                 )?;
@@ -286,10 +293,10 @@ where
 
             self.checker().cmd_check(set)?;
 
-            for idx in 0..noa_len {
+            for idx in 1..noa_len {
                 if let Some(mut proc) = NOAGuess::new().guess(
                     &UserStyle::Pos,
-                    GuessNOACfg::new(noa_args.clone(), Self::noa_idx(idx), noa_len),
+                    GuessNOACfg::new(noa_args.clone(), Self::noa_pos(idx), noa_len),
                 )? {
                     process_non_opt(
                         ProcessCtx {
@@ -298,7 +305,7 @@ where
                             inv,
                             ser,
                             tot: noa_len,
-                            idx: Self::noa_idx(idx),
+                            idx: Self::noa_pos(idx),
                         },
                         &mut proc,
                     )?;
@@ -313,9 +320,10 @@ where
         let main_len = main_args.len();
 
         ctx.set_args(main_args.clone());
-        if let Some(mut proc) =
-            NOAGuess::new().guess(&UserStyle::Main, GuessNOACfg::new(main_args, 0, noa_len))?
-        {
+        if let Some(mut proc) = NOAGuess::new().guess(
+            &UserStyle::Main,
+            GuessNOACfg::new(main_args, Self::noa_main(), noa_len),
+        )? {
             process_non_opt(
                 ProcessCtx {
                     ctx,
@@ -323,7 +331,7 @@ where
                     inv,
                     ser,
                     tot: main_len,
-                    idx: 0,
+                    idx: Self::noa_main(),
                 },
                 &mut proc,
             )?;
@@ -361,10 +369,10 @@ where
         let mut ctx = Ctx::default().with_orig_args(args.clone()).with_args(args);
 
         match self.parse_impl(&mut ctx, set, inv, ser) {
-            Ok(_) => Ok(ReturnVal::new(ctx, true)),
+            Ok(_) => Ok(ReturnVal::new(ctx)),
             Err(e) => {
                 if e.is_failure() {
-                    Ok(ReturnVal::new(ctx, false))
+                    Ok(ReturnVal::new(ctx).with_error(e))
                 } else {
                     Err(e)
                 }
@@ -480,45 +488,43 @@ mod test {
         let mut set = policy.default_set();
         let mut inv = policy.default_inv();
         let mut ser = policy.default_ser();
-        let args = Args::new(
-            [
-                "--copt",
-                "--iopt=63",
-                "--/dopt",
-                "set", // 1
-                "--iopt",
-                "-42",
-                "+eopt",
-                "-/fopt",
-                "8",       // 2
-                "16",      // 3
-                "average", // 4
-                "--りょう",
-                "88",
-                "--jopt",
-                "2",
-                "--iopt-alias1",
-                "0",
-                "--nopt=8.99",
-                "--hopt",
-                "48",
-                "--qopt=cpp",
-                "--alias-k=4",
-                "-l2.79",
-                "--nopt",
-                "3.12",
-                "--开关",
-                "-olily",
-                "program",  // 5
-                "software", // 6
-                "反转",   //7
-                "--值=恍恍惚惚",
-                "--qopt",
-                "rust",
-                "翻转", // 8
-            ]
-            .into_iter(),
-        );
+        let args = Args::from_array([
+            "app",
+            "--copt",
+            "--iopt=63",
+            "--/dopt",
+            "set", // 1
+            "--iopt",
+            "-42",
+            "+eopt",
+            "-/fopt",
+            "8",       // 2
+            "16",      // 3
+            "average", // 4
+            "--りょう",
+            "88",
+            "--jopt",
+            "2",
+            "--iopt-alias1",
+            "0",
+            "--nopt=8.99",
+            "--hopt",
+            "48",
+            "--qopt=cpp",
+            "--alias-k=4",
+            "-l2.79",
+            "--nopt",
+            "3.12",
+            "--开关",
+            "-olily",
+            "program",  // 5
+            "software", // 6
+            "反转",   //7
+            "--值=恍恍惚惚",
+            "--qopt",
+            "rust",
+            "翻转", // 8
+        ]);
 
         // add '+' to the prefix validator
         set.validator_mut().add_prefix("+");
@@ -599,7 +605,7 @@ mod test {
         let epos_uid = set.add_opt("epos=p@7..")?.run()?;
 
         inv.entry(set.add_opt("main=m")?.run()?).on(
-            move |set: &mut ASet, ser: &mut Services, idx: ctx::Index| {
+            move |set: &mut ASet, ser: &mut Services, idx: ctx::Index, name: ctx::Name| {
                 let copt = &set["--copt"];
                 let dopt = &set["--/dopt"];
                 let bpos = &set["bpos"];
@@ -608,6 +614,7 @@ mod test {
                 let epos = &set["epos"];
 
                 assert_eq!(idx.deref(), &0);
+                assert_eq!(name.deref(), "app");
                 check_opt_val::<String>(
                     ser,
                     epos,
@@ -617,7 +624,7 @@ mod test {
                     false,
                     &Action::App,
                     &Assoc::Noa,
-                    Some(&Index::Range(7, 0)),
+                    Some(&Index::Range(7, None)),
                     None,
                 )?;
                 check_opt_val::<String>(
@@ -629,7 +636,7 @@ mod test {
                     false,
                     &Action::Set,
                     &Assoc::Noa,
-                    Some(&Index::Range(0, 7)),
+                    Some(&Index::Range(0, Some(7))),
                     None,
                 )?;
                 check_opt_val(
@@ -641,7 +648,7 @@ mod test {
                     false,
                     &Action::App,
                     &Assoc::Noa,
-                    Some(&Index::Range(4, 5)),
+                    Some(&Index::Range(4, Some(5))),
                     None,
                 )?;
                 check_opt_val::<u64>(

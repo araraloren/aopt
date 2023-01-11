@@ -46,6 +46,18 @@ impl Args {
         }
     }
 
+    pub fn from_vec(raw: Vec<RawVal>) -> Self {
+        Self::new(raw.into_iter())
+    }
+
+    pub fn clone_from_slice(raw: &[RawVal]) -> Self {
+        Self::new(raw.iter().cloned())
+    }
+
+    pub fn from_array<const N: usize, T: Into<RawVal>>(raw: [T; N]) -> Self {
+        Self::new(raw.into_iter().map(|v| v.into()))
+    }
+
     pub fn guess_iter(&self) -> Iter<'_> {
         Iter::new(&self.inner)
     }
@@ -145,7 +157,7 @@ mod test {
 
     #[test]
     fn test_args() {
-        let args = Args::new(["--opt", "value", "--bool", "pos"].into_iter());
+        let args = Args::from_array(["--opt", "value", "--bool", "pos"]);
         let mut iter = args.guess_iter().enumerate();
 
         if let Some((idx, (opt, arg))) = iter.next() {

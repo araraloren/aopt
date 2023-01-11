@@ -72,7 +72,7 @@ pub trait Opt: Debug {
 
     fn valid(&self) -> bool;
 
-    fn setted(&self) -> bool;
+    fn matched(&self) -> bool;
 
     /// If the option is optional.
     fn force(&self) -> bool;
@@ -89,7 +89,7 @@ pub trait Opt: Debug {
 
     fn set_uid(&mut self, uid: Uid);
 
-    fn set_setted(&mut self, setted: bool);
+    fn set_matched(&mut self, matched: bool);
 
     fn mat_style(&self, style: Style) -> bool;
 

@@ -51,7 +51,7 @@ pub struct AOpt {
 
     help: Help,
 
-    setted: bool,
+    matched: bool,
 
     force: bool,
 
@@ -240,7 +240,7 @@ impl AOpt {
 
 impl Opt for AOpt {
     fn reset(&mut self) {
-        self.set_setted(false);
+        self.set_matched(false);
     }
 
     fn uid(&self) -> Uid {
@@ -264,11 +264,11 @@ impl Opt for AOpt {
     }
 
     fn valid(&self) -> bool {
-        !self.force() || self.setted()
+        !self.force() || self.matched()
     }
 
-    fn setted(&self) -> bool {
-        self.setted
+    fn matched(&self) -> bool {
+        self.matched
     }
 
     fn force(&self) -> bool {
@@ -295,8 +295,8 @@ impl Opt for AOpt {
         self.uid = uid;
     }
 
-    fn set_setted(&mut self, setted: bool) {
-        self.setted = setted;
+    fn set_matched(&mut self, matched: bool) {
+        self.matched = matched;
     }
 
     fn mat_style(&self, style: Style) -> bool {

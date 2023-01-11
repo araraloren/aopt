@@ -159,14 +159,14 @@ where
         &mut self,
         opt: &mut <<Self::Set as Set>::Ctor as Ctor>::Opt,
     ) -> Result<(), Self::Error> {
-        opt.set_setted(false);
+        opt.set_matched(false);
         self.reset();
         Ok(())
     }
 
     /// Match the [`Opt`]'s name, prefix and style, index.
     /// Then call the [`check_val`](Opt::check_val) check the argument.
-    /// If matched, set the setted of [`Opt`] and return true.
+    /// If matched, set the matched of [`Opt`] and return true.
     fn process(
         &mut self,
         opt: &mut <<Self::Set as Set>::Ctor as Ctor>::Opt,
@@ -181,7 +181,7 @@ where
         if matched {
             // set the value of current option
             if opt.check_val(self.arg(), (self.noa_index, self.noa_total))? {
-                opt.set_setted(true);
+                opt.set_matched(true);
                 self.matched_index = Some(self.noa_index);
                 self.matched_uid = Some(opt.uid());
             } else {

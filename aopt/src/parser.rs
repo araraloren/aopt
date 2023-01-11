@@ -171,7 +171,7 @@ where
 /// }
 ///
 /// let ret = getopt!(
-///     ["Where", "are", "you", "from", "?"].into_iter(),
+///     Args::from_array(["app", "Where", "are", "you", "from", "?"]),
 ///     &mut parser1,
 ///     &mut parser2
 /// )?;
@@ -394,7 +394,7 @@ where
     ///   },
     /// )?;
     ///
-    /// getopt!(["--guess", "42"].into_iter(), &mut parser)?;
+    /// getopt!(Args::from_array(["--guess", "42"]), &mut parser)?;
     /// #
     /// # Ok(())
     /// # }
@@ -430,7 +430,7 @@ where
     ///   },
     /// )?;
     ///
-    /// getopt!(["--guess", "42"].into_iter(), &mut parser)?;
+    /// getopt!(Args::from_array(["--guess", "42"]), &mut parser)?;
     /// #
     /// # Ok(())
     /// # }
@@ -506,15 +506,15 @@ where
         self.policy.parse(optset, invser, valser, args)
     }
 
-    /// Call [`parse`](Parser::parse) parsing the [`args_os`](std::env::args_os).
+    /// Call [`parse`](Parser::parse) parsing the [`Args`](Args::from_env).
     ///
     /// The [`status`](ReturnVal::status) is true if parsing successes
     /// otherwise it will be false if any [`failure`](Error::is_failure) raised.
-    pub fn parse_from_env(&mut self) -> Result<P::Ret, P::Error> {
+    pub fn parse_env(&mut self) -> Result<P::Ret, P::Error> {
         let optset = &mut self.optset;
         let valser = &mut self.valser;
         let invser = &mut self.invoker;
-        let args = crate::Arc::new(std::env::args_os().skip(1).into());
+        let args = crate::Arc::new(Args::from_env());
 
         self.policy.parse(optset, invser, valser, args)
     }
@@ -598,7 +598,7 @@ where
     ///     })?
     ///     .then(file_count_storer);
     ///
-    /// getopt!(["foo", "bar"].into_iter(), &mut parser1)?;
+    /// getopt!(Args::from_array(["app", "foo", "bar"]), &mut parser1)?;
     ///
     /// dbg!(parser1.find_val::<u64>("file=p")?);
     /// #

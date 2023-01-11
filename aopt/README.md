@@ -60,7 +60,7 @@ By default, the command line parsing support `OsString`, enable `utf8` using `St
 
 - Using [`AFwdParser`](crate::ext::AFwdParser) parsing process the command line.
 
-```rust
+```no_run
 use aopt::prelude::*;
 use std::ops::Deref;
 
@@ -80,20 +80,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Ok(Some(val.take()))
             },
         )?;
-    parser.add_opt("destination=p@-1")?.on(
+    parser.add_opt("destination=p@-0")?.on(
         |_: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>| {
             println!("Save destination location({})", val.deref());
             Ok(Some(val.take()))
         },
     )?;
     parser.add_opt("main=m")?.on(
-        |set: &mut ASet, ser: &mut ASer| {
-            println!("Save destination location({})", val.deref());
+        |set: &mut ASet, ser: &mut ASer, mut val: ctx::Value<String>| {
+            let src = ser.sve_vals::<(String, i64)>(set["--source"].uid())?;
+            let dest: &String = ser.sve_val(set["destination"].uid())?;
+
+            for (item, depth) in src {
+                println!(
+                    "Application {} will copy location({item}, depth={depth}) to destination({})",
+                    val.deref(),
+                    dest
+                );
+            }
             Ok(Some(val.take()))
         },
     )?;
     parser.init()?;
-    parser.parse_from_env()?;
+    parser.parse_env()?.ok_ctx()?;
 
     Ok(())
 }
@@ -101,7 +110,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 - Using [`getopt!`](crate::getopt) parsing multiple sub command.
 
-```rust
+```no_run
 use aopt::prelude::*;
 use aopt::Error;
 use std::ops::Deref;
@@ -170,7 +179,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     getopt!(
-        std::env::args().skip(1),
+        Args::from_env(),
         &mut list,
         &mut update,
         &mut install

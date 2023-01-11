@@ -43,7 +43,7 @@ use crate::Uid;
 ///    let mut ser = ASer::default();
 ///    let mut is = Invoker::new();
 ///    let mut set = ASet::default();
-///    let args = Arc::new(Args::new(["--foo", "bar", "doo"].into_iter()));
+///    let args = Arc::new(Args::from_array(["--foo", "bar", "doo"]));
 ///    let mut ctx = Ctx::default().with_args(args);
 ///
 ///    ser.ser_usrval_mut().insert(ser::Value::new(42i64));
@@ -126,7 +126,7 @@ where
         self
     }
 
-    /// Register a callback that will called by [`Policy`](crate::parser::Policy) when option setted.
+    /// Register a callback that will called by [`Policy`](crate::parser::Policy) when option set.
     ///
     /// The [`Invoker`] first call the [`invoke`](crate::ctx::Handler::invoke), then
     /// call the [`process`](crate::ctx::Store::process) with the return value.

@@ -75,7 +75,7 @@ cfg_if::cfg_if! {
         ///         },
         ///     );
         ///
-        /// let args = Args::new(["--/bool", "set", "42", "foo", "bar"].into_iter());
+        /// let args = Args::from_array(["app", "--/bool", "set", "42", "foo", "bar"]);
         ///
         /// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
         ///

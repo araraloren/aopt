@@ -48,7 +48,7 @@ where
     S: crate::set::Set,
     SetOpt<S>: Opt,
 {
-    pub fn opt<'a>(set: &'a S, id: &Uid) -> &'a dyn Opt {
+    pub fn opt<'a>(set: &'a S, id: &Uid) -> &'a SetOpt<S> {
         set.get(*id).unwrap()
     }
 
@@ -64,7 +64,8 @@ where
             for opt in set.iter() {
                 if opt.mat_style(Style::Pos) {
                     if let Some(index) = opt.idx() {
-                        let index = index.calc_index(MAX_INDEX, 1).unwrap_or(MAX_INDEX);
+                        let index = index.calc_index(1, MAX_INDEX).unwrap_or(MAX_INDEX);
+
                         if index == 1 && opt.force() {
                             // if we have cmd, can not have force required POS @1
                             return Err(Error::con_can_not_insert_pos());
@@ -90,28 +91,26 @@ where
         Ok(true)
     }
 
-    /// Check if the POS is valid.
-    /// For which POS is have certainty position, POS has same position are replaceble even it is force reuqired.
-    /// For which POS is have uncertainty position, it must be set if it is force reuqired.
+    /// Check if the [`Pos`](crate::opt::Creator::pos) is valid.
+    ///
+    /// For which [`Pos`](crate::opt::Creator::pos) is have fixed position,
+    /// [`Pos`](crate::opt::Creator::pos) has same position are replaceble even it is force reuqired.
+    ///
+    /// For which [`Pos`](crate::opt::Creator::pos) is have floating position, it must be set if it is force reuqired.
     pub fn pos_check(&self, set: &mut S) -> Result<bool, Error> {
         // for POS has certainty position, POS has same position are replaceble even it is force reuqired.
         let mut index_map = HashMap::<usize, Vec<Uid>>::default();
         // for POS has uncertainty position, it must be set if it is force reuqired
         let mut float_vec: Vec<Uid> = vec![];
 
+        const MAX_INDEX: usize = usize::MAX;
+
         for opt in set.iter() {
             if opt.mat_style(Style::Pos) {
                 if let Some(index) = opt.idx() {
                     match index {
                         Index::Forward(cnt) => {
-                            if let Some(index) = index.calc_index(usize::MAX, *cnt) {
-                                let entry = index_map.entry(index).or_default();
-                                entry.push(opt.uid());
-                            }
-                        }
-                        Index::Backward(cnt) => {
-                            // check the backward with cnt + 1, there not a good way to check it!?
-                            if let Some(index) = index.calc_index(usize::MAX, *cnt + 1) {
+                            if let Some(index) = index.calc_index(*cnt, MAX_INDEX) {
                                 let entry = index_map.entry(index).or_default();
                                 entry.push(opt.uid());
                             }
@@ -122,7 +121,16 @@ where
                                 entry.push(opt.uid());
                             }
                         }
-                        Index::Except(_) | Index::Range(_, _) | Index::AnyWhere => {
+                        Index::Range(start, Some(end)) => {
+                            for index in *start..*end {
+                                let entry = index_map.entry(index).or_default();
+                                entry.push(opt.uid());
+                            }
+                        }
+                        Index::Backward(_)
+                        | Index::Except(_)
+                        | Index::Range(_, _)
+                        | Index::AnyWhere => {
                             float_vec.push(opt.uid());
                         }
                         Index::Null => {}

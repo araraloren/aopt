@@ -15,8 +15,8 @@ use crate::Str;
 ///      |     |    |   |   |
 ///      |     |    |   |   |
 ///      |     |    |   |   The index part of option. Here are all the possible string:
-///      |     |    |   |   @1 means first position
-///      |     |    |   |   @-1 means last position
+///      |     |    |   |   @0 means first position
+///      |     |    |   |   @-0 means last position
 ///      |     |    |   |   @[1, 2, 3] means the position 1, 2 and 3
 ///      |     |    |   |   @-[1, 2] means except the position 1, 2
 ///      |     |    |   |   @>2 means position that bigger than 2

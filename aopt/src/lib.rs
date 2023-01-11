@@ -66,14 +66,14 @@ pub struct GetoptRes<'a, P: Policy> {
 /// {
 ///     parser.add_opt("-a=b!")?;
 ///     parser.add_opt("--bopt=i")?;
-///     parser.add_opt("c=p@-1")?.on(
+///     parser.add_opt("c=p@-0")?.on(
 ///         |_: &mut ASet, _: &mut ASer, args: ctx::Args, mut val: ctx::Value<String>| {
 ///             assert_eq!(args[0], RawVal::from("foo"));
 ///             Ok(Some(val.take()))
 ///         },
 ///     )?;
 ///
-///     let ret = getopt!(["-a", "--bopt=42", "foo"].into_iter(), &mut parser)?;
+///     let ret = getopt!(Args::from_array(["-a", "--bopt=42", "foo"]), &mut parser)?;
 ///
 ///     assert!(ret.is_some());
 ///     let ret = ret.unwrap();
@@ -87,7 +87,7 @@ pub struct GetoptRes<'a, P: Policy> {
 ///     pre_parser.add_opt("--eopt=s")?;
 ///
 ///     let ret = getopt!(
-///         ["-dbar", "-d", "foo", "--eopt=pre", "foo"].into_iter(),
+///         Args::from_array(["-dbar", "-d", "foo", "--eopt=pre", "foo"]),
 ///         &mut pre_parser
 ///     )?;
 ///
@@ -113,7 +113,7 @@ pub struct GetoptRes<'a, P: Policy> {
 ///
 /// {
 ///     let ret = getopt!(
-///         ["-a", "--bopt=42", "foo"].into_iter(),
+///         Args::from_array(["-a", "--bopt=42", "foo"]),
 ///         &mut parser,
 ///         &mut pre_parser
 ///     )?;
@@ -127,7 +127,7 @@ pub struct GetoptRes<'a, P: Policy> {
 /// }
 /// {
 ///     let ret = getopt!(
-///         ["-dbar", "-d", "foo", "--eopt=pre", "foo"].into_iter(),
+///         Args::from_array(["-dbar", "-d", "foo", "--eopt=pre", "foo"]),
 ///         &mut parser,
 ///         &mut pre_parser
 ///     )?;
@@ -153,11 +153,11 @@ macro_rules! getopt {
         {
             fn __check_p<P: $crate::prelude::Policy<Error = $crate::Error>>
                 (p: &mut $crate::prelude::Parser<P>) -> &mut $crate::prelude::Parser<P>
-                where P::Ret: AsRef<bool>
                 { p }
+            fn __check_a(a: $crate::prelude::Args) -> $crate::prelude::Args { a }
 
             let mut ret = Ok(None);
-            let args = $crate::Arc::new($crate::prelude::Args::new($args));
+            let args = $crate::Arc::new(__check_a($args));
 
             loop {
                 $(
@@ -165,24 +165,19 @@ macro_rules! getopt {
 
                     parser.init()?;
                     match parser.parse(args.clone()) {
-                        Ok(parser_ret) => {
-                            if *parser_ret.as_ref() {
+                        Ok(mut parser_ret) => {
+                            if parser_ret.status() {
                                 break Ok(Some($crate::GetoptRes {
                                     ret: parser_ret,
                                     parser,
                                 }));
                             }
                             else {
-                                ret = Ok(None);
+                                ret = Err(parser_ret.take_error());
                             }
                         }
                         Err(e) => {
-                            if ! e.is_failure() {
-                                break Err(e);
-                            }
-                            else {
-                                ret = Err(e);
-                            }
+                            ret = Err(e);
                         }
                     }
                 )+
