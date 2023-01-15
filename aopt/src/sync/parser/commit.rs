@@ -149,7 +149,6 @@ where
         // we don't need &'a mut InvokeServices, so just take it.
         let ser = std::mem::take(&mut self.inv_ser);
 
-        self.inner.drop_commit = false;
         Ok(HandlerEntry::new(ser.unwrap(), uid).on(handler))
     }
 

@@ -166,6 +166,7 @@ where
     pub fn invoke(&mut self, set: &mut Set, ser: &mut Ser, ctx: &Ctx) -> Result<bool, Error> {
         let uid = ctx.uid()?;
 
+        trace_log!("Invoking callback of {}({:?})", uid, ctx);
         if let Some(callback) = self.callbacks.get_mut(&uid) {
             return (callback)(set, ser, ctx);
         }
