@@ -23,6 +23,8 @@
 
 - Make serde optional
 
+- Remove type from parser, add alias and help message
+
 ## 0.8.4
 
 - Add `Creator::any` option type
