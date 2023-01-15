@@ -1,35 +1,39 @@
 use std::fmt::Debug;
-use tracing::trace;
 
 use crate::map::ErasedTy;
 use crate::opt::Action;
-use crate::opt::Assoc;
 use crate::opt::ConfigValue;
 use crate::opt::Index;
-use crate::opt::ValInitiator;
-use crate::opt::ValValidator;
+use crate::opt::Infer;
 use crate::set::Ctor;
 use crate::set::Set;
 use crate::set::SetCfg;
 use crate::set::SetExt;
+use crate::value::ValAccessor;
+use crate::value::ValInitializer;
+use crate::value::ValValidator;
 use crate::Error;
 use crate::Str;
 use crate::Uid;
 
 /// Create option using given configurations.
-pub struct Commit<'a, S>
+pub struct Commit<'a, S, U>
 where
     S: Set,
+    U: Infer,
     SetCfg<S>: ConfigValue + Default,
 {
     info: SetCfg<S>,
     set: &'a mut S,
     commited: Option<Uid>,
-    drop_commit: bool,
+    pub(crate) drop_commit: bool,
+    pub(crate) validator: Option<ValValidator<U::Val>>,
+    pub(crate) initializer: Option<ValInitializer>,
 }
 
-impl<'a, S> Debug for Commit<'a, S>
+impl<'a, S, U> Debug for Commit<'a, S, U>
 where
+    U: Infer,
     S: Set + Debug,
     SetCfg<S>: ConfigValue + Default + Debug,
 {
@@ -39,22 +43,47 @@ where
             .field("set", &self.set)
             .field("commited", &self.commited)
             .field("drop_commit", &self.drop_commit)
+            .field("validator", &self.validator)
+            .field("initializer", &self.initializer)
             .finish()
     }
 }
 
-impl<'a, S> Commit<'a, S>
+impl<'a, S, U> Commit<'a, S, U>
 where
     S: Set,
+    U: Infer,
     SetCfg<S>: ConfigValue + Default,
 {
     pub fn new(set: &'a mut S, info: SetCfg<S>) -> Self {
+        let initializer = U::infer_initializer();
+        let validator = U::infer_validator();
+        let info = Self::fill_infer_data(info);
+
         Self {
             set,
             info,
             commited: None,
             drop_commit: true,
+            validator: validator,
+            initializer: initializer,
         }
+    }
+
+    pub(crate) fn fill_infer_data(mut info: SetCfg<S>) -> SetCfg<S> {
+        let act = U::infer_act();
+        let styles = U::infer_style();
+        let ignore_name = U::infer_ignore_name();
+        let ignore_index = U::infer_ignore_index();
+        let ignore_alias = U::infer_ignore_alias();
+
+        info.set_type::<U::Val>();
+        info.set_action(act);
+        info.set_style(styles);
+        info.set_ignore_name(ignore_name);
+        info.set_ignore_index(ignore_index);
+        info.set_ignore_alias(ignore_alias);
+        info
     }
 
     pub fn cfg(&self) -> &SetCfg<S> {
@@ -71,12 +100,6 @@ where
         self
     }
 
-    /// Set the option value assoc type.
-    pub fn set_assoc(mut self, assoc: Assoc) -> Self {
-        self.info.set_assoc(assoc);
-        self
-    }
-
     /// Set the option value action.
     pub fn set_action(mut self, action: Action) -> Self {
         self.info.set_action(action);
@@ -90,8 +113,8 @@ where
     }
 
     /// Set the option type name of commit configuration.
-    pub fn set_type<T: Into<Str>>(mut self, type_name: T) -> Self {
-        self.info.set_type(type_name);
+    pub fn set_type<T: ErasedTy>(mut self) -> Self {
+        self.info.set_type::<T>();
         self
     }
 
@@ -132,27 +155,8 @@ where
     }
 
     /// Set the option value initiator.
-    pub fn set_initiator(mut self, initiator: ValInitiator) -> Self {
-        self.info.set_initiator(Some(initiator));
-        self
-    }
-
-    /// Set the option value validator.
-    pub fn set_validator(mut self, validator: ValValidator) -> Self {
-        self.info.set_validator(Some(validator));
-        self
-    }
-
-    /// Set the option default value.
-    pub fn set_value<T: Clone + ErasedTy>(mut self, value: T) -> Self {
-        self.info
-            .set_initiator(Some(ValInitiator::with(vec![value])));
-        self
-    }
-
-    /// Set the option default value.
-    pub fn set_values<T: Clone + ErasedTy>(mut self, value: Vec<T>) -> Self {
-        self.info.set_initiator(Some(ValInitiator::with(value)));
+    pub fn set_initializer(mut self, initializer: ValInitializer) -> Self {
+        self.initializer = Some(initializer);
         self
     }
 
@@ -160,17 +164,20 @@ where
         if let Some(commited) = self.commited {
             Ok(commited)
         } else {
+            self.drop_commit = false;
+            self.info.set_accessor(Some(ValAccessor::from_option(
+                self.initializer.take(),
+                self.validator.take(),
+            )));
             let info = std::mem::take(&mut self.info);
-            let type_name = info.gen_type()?;
-            let name = info.name().cloned();
             let opt = self
                 .set
-                .ctor_mut(&type_name)?
+                .ctor_mut::<U::Val>()?
                 .new_with(info)
                 .map_err(|e| e.into())?;
             let uid = self.set.insert(opt);
 
-            trace!("Register a opt {:?} --> {}", name, uid);
+            crate::trace_log!("Register a opt {:?} --> {}", info.name().cloned(), uid);
             self.commited = Some(uid);
             Ok(uid)
         }
@@ -186,9 +193,53 @@ where
     }
 }
 
-impl<'a, S> Drop for Commit<'a, S>
+impl<'a, S, U> Commit<'a, S, U>
 where
     S: Set,
+    U: Infer,
+    SetCfg<S>: ConfigValue + Default,
+{
+    /// Set the option value validator.
+    pub fn set_validator(mut self, validator: ValValidator<U::Val>) -> Self {
+        self.validator = Some(validator);
+        self
+    }
+}
+
+impl<'a, S, U> Commit<'a, S, U>
+where
+    S: Set,
+    U: Infer,
+    U::Val: Copy,
+    SetCfg<S>: ConfigValue + Default,
+{
+    /// Set the option default value.
+    pub fn set_value(self, value: U::Val) -> Self {
+        self.set_initializer(ValInitializer::with(value))
+    }
+}
+impl<'a, S, U> Commit<'a, S, U>
+where
+    S: Set,
+    U: Infer,
+    U::Val: Clone,
+    SetCfg<S>: ConfigValue + Default,
+{
+    /// Set the option default value.
+    pub fn set_value_clone(self, value: U::Val) -> Self {
+        self.set_initializer(ValInitializer::with_clone(value))
+    }
+
+    /// Set the option default value.
+    pub fn set_values(self, value: Vec<U::Val>) -> Self {
+        self.set_initializer(ValInitializer::with_vec(value))
+    }
+}
+
+impl<'a, S, U> Drop for Commit<'a, S, U>
+where
+    S: Set,
+    U: Infer,
     SetCfg<S>: ConfigValue + Default,
 {
     fn drop(&mut self) {

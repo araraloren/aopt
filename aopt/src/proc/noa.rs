@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
-use tracing::trace;
 
 use crate::args::Args;
 use crate::opt::Opt;
@@ -165,7 +164,6 @@ where
     }
 
     /// Match the [`Opt`]'s name, prefix and style, index.
-    /// Then call the [`check_val`](Opt::check_val) check the argument.
     /// If matched, set the matched of [`Opt`] and return true.
     fn process(
         &mut self,
@@ -176,26 +174,22 @@ where
         if matched {
             matched = matched && opt.mat_name(self.name());
             matched = matched && opt.mat_idx(Some((self.noa_index, self.noa_total)));
-            // NOA not support alias, skip alias matching
-        }
-        if matched {
-            // set the value of current option
-            if opt.check_val(self.arg(), (self.noa_index, self.noa_total))? {
-                opt.set_matched(true);
-                self.matched_index = Some(self.noa_index);
-                self.matched_uid = Some(opt.uid());
-            } else {
-                matched = false;
+            if let Some(name) = &self.name {
+                matched = matched && opt.mat_alias(name);
             }
         }
-        trace!(
+        if matched {
+            self.matched_index = Some(self.noa_index);
+            self.matched_uid = Some(opt.uid());
+        }
+        crate::trace_log!(
             "Matching {{name: {:?}, index: {:?} style: {}, arg: {:?}}} with NOA{{{}}}: {:?}",
             self.name(),
             self.idx(),
             self.style(),
             self.arg(),
             opt.hint(),
-            self.matched_uid,
+            self.matched_uid
         );
         Ok(matched)
     }
@@ -304,7 +298,7 @@ where
                 || opt.mat_style(Style::Pos);
 
             if style_check {
-                trace!(
+                crate::trace_log!(
                     "Start process NOA{{{}}} eg. {}@{:?}",
                     opt.uid(),
                     opt.hint(),

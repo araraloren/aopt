@@ -4,6 +4,7 @@ use crate::opt::Config;
 use crate::opt::ConfigValue;
 use crate::opt::Index;
 use crate::opt::Opt;
+use crate::prelude::ErasedTy;
 use crate::set::Ctor;
 use crate::set::Set;
 use crate::set::SetCfg;
@@ -30,7 +31,7 @@ where
             ret = ret && (self.force().unwrap() == opt.force());
         }
         if ret && self.has_type() {
-            ret = ret && (self.r#type().unwrap() == &opt.r#type());
+            ret = ret && (self.r#type().unwrap() == opt.r#type());
         }
         if ret && self.has_name() {
             // don't call match name
@@ -101,8 +102,8 @@ where
     }
 
     /// Set the option type name of filter configuration.
-    pub fn set_type<T: Into<Str>>(&mut self, type_name: T) -> &mut Self {
-        self.info.set_type(type_name);
+    pub fn set_type<U: ErasedTy>(&mut self) -> &mut Self {
+        self.info.set_type::<U>();
         self
     }
 
@@ -172,8 +173,8 @@ where
     }
 
     /// Set the option type name of filter configuration.
-    pub fn set_type<T: Into<Str>>(&mut self, type_name: T) -> &mut Self {
-        self.info.set_type(type_name);
+    pub fn set_type<U: ErasedTy>(&mut self) -> &mut Self {
+        self.info.set_type::<U>();
         self
     }
 

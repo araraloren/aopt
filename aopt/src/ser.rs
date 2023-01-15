@@ -1,91 +1,30 @@
-pub(crate) mod anyval;
-pub(crate) mod rawval;
-pub(crate) mod userval;
+use std::any::type_name;
+use std::fmt::Debug;
 
-pub use self::anyval::AnyValEntry;
-pub use self::anyval::AnyValService;
-pub use self::rawval::RawValService;
-pub use self::userval::UsrValService;
-
+use crate::map::AnyMap;
+use crate::map::Entry;
 use crate::map::ErasedTy;
 use crate::Error;
-use crate::RawVal;
-use crate::Uid;
 
-/// Some convenient function access the [`Services`](crate::ser::Services).
+/// Some convenient function access the [`AppServices`](crate::ser::AppServices).
 pub trait ServicesExt {
-    /// Get [`AnyValService`] reference.
-    fn ser_val(&self) -> &AnyValService;
+    fn ser_app(&self) -> &AppServices;
 
-    /// Get [`AnyValService`] mutable reference.
-    fn ser_val_mut(&mut self) -> &mut AnyValService;
-
-    /// Get [`UsrValService`] reference.
-    fn ser_usrval(&self) -> &UsrValService;
-
-    /// Get [`UsrValService`] mutable reference.
-    fn ser_usrval_mut(&mut self) -> &mut UsrValService;
-
-    /// Get [`RawValService`] reference.
-    fn ser_rawval(&self) -> &RawValService<RawVal>;
-
-    /// Get [`RawValService`] mutable reference.
-    fn ser_rawval_mut(&mut self) -> &mut RawValService<RawVal>;
-
-    /// Clear the [`AnyValService`] and  [`RawValService`].
-    fn reset(&mut self) {
-        self.ser_rawval_mut().clear();
-        self.ser_val_mut().clear();
-    }
+    fn ser_app_mut(&mut self) -> &mut AppServices;
 }
 
 pub trait ServicesValExt {
-    /// Get the last value reference of option `uid` from [`AnyValService`].
-    fn sve_val<T: ErasedTy>(&self, uid: Uid) -> Result<&T, Error>;
+    /// Get the user value reference of option `uid` from [`AppServices`].
+    fn sve_insert<T: ErasedTy>(&mut self, val: T) -> Option<T>;
 
-    /// Get the last value mutable reference of option `uid` from [`AnyValService`].
-    fn sve_val_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut T, Error>;
+    /// Get the user value reference of option `uid` from [`AppServices`].
+    fn sve_val<T: ErasedTy>(&self) -> Result<&T, Error>;
 
-    /// Take last value of option `uid` from [`AnyValService`].
-    fn sve_take_val<T: ErasedTy>(&mut self, uid: Uid) -> Result<T, Error>;
+    /// Get the user value mutable reference of option `uid` from [`AppServices`].
+    fn sve_val_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error>;
 
-    /// Get the values reference of option `uid` from [`AnyValService`].
-    fn sve_vals<T: ErasedTy>(&self, uid: Uid) -> Result<&Vec<T>, Error>;
-
-    /// Get the values mutable reference of option `uid` from [`AnyValService`].
-    fn sve_vals_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error>;
-
-    /// Take the values of option `uid` from [`AnyValService`].
-    fn sve_take_vals<T: ErasedTy>(&mut self, uid: Uid) -> Result<Vec<T>, Error>;
-
-    /// Apply filter on the values of option from [`AnyValService`].
-    /// The `F` should return true if you want remove the element.
-    fn sve_filter<T: ErasedTy>(
-        &mut self,
-        uid: Uid,
-        f: impl FnMut(&T) -> bool,
-    ) -> Result<Vec<T>, Error>;
-
-    /// Get the user value reference of option `uid` from [`UsrValService`].
-    fn sve_usrval<T: ErasedTy>(&self) -> Result<&T, Error>;
-
-    /// Get the user value mutable reference of option `uid` from [`UsrValService`].
-    fn sve_usrval_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error>;
-
-    /// Take the user value of option `uid` from [`UsrValService`].
-    fn sve_take_usrval<T: ErasedTy>(&mut self) -> Result<T, Error>;
-
-    /// Get the raw value reference of option `uid` from [`RawValService`].
-    fn sve_rawval(&self, uid: Uid) -> Result<&RawVal, Error>;
-
-    /// Get the raw value mutable reference of option `uid` from [`RawValService`].
-    fn sve_rawval_mut(&mut self, uid: Uid) -> Result<&mut RawVal, Error>;
-
-    /// Get the raw values reference of option `uid` from [`RawValService`].
-    fn sve_rawvals(&self, uid: Uid) -> Result<&Vec<RawVal>, Error>;
-
-    /// Get the raw values mutable reference of option `uid` from [`RawValService`].
-    fn sve_rawvals_mut(&mut self, uid: Uid) -> Result<&mut Vec<RawVal>, Error>;
+    /// Take the user value of option `uid` from [`AppServices`].
+    fn sve_take_val<T: ErasedTy>(&mut self) -> Result<T, Error>;
 }
 
 /// Services manage the [`AnyValService`], [`RawValService`] and [`UsrValService`].
@@ -147,15 +86,9 @@ pub trait ServicesValExt {
 /// # }
 /// ```
 #[derive(Debug, Default)]
-pub struct Services {
-    any: AnyValService,
+pub struct AppServices(UsrValService);
 
-    usr: UsrValService,
-
-    raw: RawValService<RawVal>,
-}
-
-impl Services {
+impl AppServices {
     pub fn new() -> Self {
         Self {
             ..Default::default()
@@ -163,111 +96,104 @@ impl Services {
     }
 }
 
-impl ServicesExt for Services {
-    fn ser_val(&self) -> &AnyValService {
-        &self.any
+impl ServicesExt for AppServices {
+    fn ser_app(&self) -> &AppServices {
+        self
     }
 
-    fn ser_val_mut(&mut self) -> &mut AnyValService {
-        &mut self.any
-    }
-
-    fn ser_usrval(&self) -> &UsrValService {
-        &self.usr
-    }
-
-    fn ser_usrval_mut(&mut self) -> &mut UsrValService {
-        &mut self.usr
-    }
-
-    fn ser_rawval(&self) -> &RawValService<RawVal> {
-        &self.raw
-    }
-
-    fn ser_rawval_mut(&mut self) -> &mut RawValService<RawVal> {
-        &mut self.raw
+    fn ser_app_mut(&mut self) -> &mut AppServices {
+        self
     }
 }
 
-impl ServicesValExt for Services {
-    fn sve_val<T: ErasedTy>(&self, uid: Uid) -> Result<&T, Error> {
-        self.ser_val().val(uid)
+impl ServicesValExt for AppServices {
+    fn sve_insert<T: ErasedTy>(&mut self, val: T) -> Option<T> {
+        self.0.insert(val)
     }
 
-    fn sve_val_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut T, Error> {
-        self.ser_val_mut().val_mut(uid)
+    fn sve_val<T: ErasedTy>(&self) -> Result<&T, Error> {
+        self.0.val::<T>()
     }
 
-    fn sve_take_val<T: ErasedTy>(&mut self, uid: Uid) -> Result<T, Error> {
-        self.ser_val_mut()
-            .pop(uid)
-            .ok_or_else(|| Error::raise_error("Can not take value from ValService"))
+    fn sve_val_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
+        self.0.val_mut::<T>()
     }
 
-    fn sve_vals<T: ErasedTy>(&self, uid: Uid) -> Result<&Vec<T>, Error> {
-        self.ser_val().vals(uid)
+    fn sve_take_val<T: ErasedTy>(&mut self) -> Result<T, Error> {
+        self.0.remove::<T>().ok_or_else(|| {
+            Error::raise_error(format!(
+                "Can not take value type {} from AppServices",
+                type_name::<T>()
+            ))
+        })
+    }
+}
+
+#[derive(Default)]
+pub struct UsrValService(AnyMap);
+
+impl Debug for UsrValService {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("UsrValService").field(&self.0).finish()
+    }
+}
+
+impl UsrValService {
+    pub fn new() -> Self {
+        Self(AnyMap::default())
     }
 
-    fn sve_vals_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error> {
-        self.ser_val_mut().vals_mut(uid)
+    pub fn len(&self) -> usize {
+        self.0.len()
     }
 
-    fn sve_take_vals<T: ErasedTy>(&mut self, uid: Uid) -> Result<Vec<T>, Error> {
-        self.ser_val_mut()
-            .remove(uid)
-            .ok_or_else(|| Error::raise_error("Can not take values from ValService"))
+    pub fn clear(&mut self) {
+        self.0.clear()
     }
 
-    fn sve_filter<T: ErasedTy>(
-        &mut self,
-        uid: Uid,
-        mut f: impl FnMut(&T) -> bool,
-    ) -> Result<Vec<T>, Error> {
-        let vals = self.sve_vals_mut::<T>(uid)?;
-        let mut i = 0;
-        let mut removed = vec![];
-
-        while i < vals.len() {
-            if (f)(&vals[i]) {
-                removed.push(vals.remove(i));
-            } else {
-                i += 1;
-            }
-        }
-        Ok(removed)
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 
-    fn sve_usrval<T: ErasedTy>(&self) -> Result<&T, Error> {
-        self.ser_usrval().val::<T>()
+    pub fn contain<T: ErasedTy>(&self) -> bool {
+        self.0.contain::<T>()
     }
 
-    fn sve_usrval_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
-        self.ser_usrval_mut().val_mut::<T>()
+    pub fn insert<T: ErasedTy>(&mut self, value: T) -> Option<T> {
+        self.0.insert(value)
     }
 
-    fn sve_take_usrval<T: ErasedTy>(&mut self) -> Result<T, Error> {
-        self.ser_usrval_mut()
-            .remove::<T>()
-            .ok_or_else(|| Error::raise_error("Can not take value from UsrValService"))
+    pub fn remove<T: ErasedTy>(&mut self) -> Option<T> {
+        self.0.remove::<T>()
     }
 
-    /// Get the raw value reference of option `uid` from [`RawValService`].
-    fn sve_rawval(&self, uid: Uid) -> Result<&RawVal, Error> {
-        self.ser_rawval().val(uid)
+    pub fn get<T: ErasedTy>(&self) -> Option<&T> {
+        self.0.value::<T>()
     }
 
-    /// Get the raw value mutable reference of option `uid` from [`RawValService`].
-    fn sve_rawval_mut(&mut self, uid: Uid) -> Result<&mut RawVal, Error> {
-        self.ser_rawval_mut().val_mut(uid)
+    pub fn get_mut<T: ErasedTy>(&mut self) -> Option<&mut T> {
+        self.0.value_mut::<T>()
     }
 
-    /// Get the raw values reference of option `uid` from [`RawValService`].
-    fn sve_rawvals(&self, uid: Uid) -> Result<&Vec<RawVal>, Error> {
-        self.ser_rawval().vals(uid)
+    pub fn val<T: ErasedTy>(&self) -> Result<&T, Error> {
+        self.get::<T>().ok_or_else(|| {
+            Error::raise_error(format!(
+                "Can not find reference for type {{{:?}}} in UsrValService",
+                type_name::<T>()
+            ))
+        })
     }
 
-    /// Get the raw values mutable reference of option `uid` from [`RawValService`].
-    fn sve_rawvals_mut(&mut self, uid: Uid) -> Result<&mut Vec<RawVal>, Error> {
-        self.ser_rawval_mut().vals_mut(uid)
+    pub fn val_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
+        self.get_mut::<T>().ok_or_else(|| {
+            Error::raise_error(format!(
+                "Can not find mutable reference for type {{{:?}}} in UsrValService",
+                type_name::<T>()
+            ))
+        })
+    }
+
+    pub fn entry<T: ErasedTy>(&mut self) -> Entry<'_, T> {
+        self.0.entry::<T>()
     }
 }

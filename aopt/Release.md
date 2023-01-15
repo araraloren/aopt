@@ -15,6 +15,10 @@
 
 - Improve the api of ReturnVal, fix the `getopt!` return value
 
+- Improve the option creator implemetation
+
+- Let option callback return `bool` instead of `Option`
+
 ## 0.8.4
 
 - Add `Creator::any` option type

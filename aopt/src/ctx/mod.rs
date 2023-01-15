@@ -20,7 +20,6 @@ pub use self::store::Store;
 pub use self::store::VecStore;
 
 use crate::opt::Opt;
-use crate::ser::ServicesExt;
 use crate::set::SetExt;
 use crate::set::SetOpt;
 use crate::Error;
@@ -31,13 +30,12 @@ cfg_if::cfg_if! {
         /// otherwise call the [`fallback`](crate::ctx::Invoker::fallback).
         pub fn wrap_handler_fallback<Set, Ser, A, O, H, E>(
             mut handler: H,
-        ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<()>, Error>
+        ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error>
         where
             E: Into<Error>,
             O: Send + Sync + 'static,
             Set: crate::set::Set,
             SetOpt<Set>: Opt,
-            Ser: ServicesExt,
             A: Extract<Set, Ser, Error = E> + Send + Sync,
             H: Handler<Set, Ser, A, Output = Option<O>, Error = E> + Send + Sync + 'static,
         {
@@ -114,13 +112,12 @@ cfg_if::cfg_if! {
         /// otherwise call the [`fallback`](crate::ctx::Invoker::fallback).
         pub fn wrap_handler_fallback<Set, Ser, A, O, H, E>(
             mut handler: H,
-        ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<()>, Error>
+        ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error>
         where
             O: 'static,
             Set: crate::set::Set,
             SetOpt<Set>: Opt,
             E: Into<Error>,
-            Ser: ServicesExt,
             A: Extract<Set, Ser, Error = E>,
             H: Handler<Set, Ser, A, Output = Option<O>, Error = E> + 'static,
         {
@@ -145,13 +142,12 @@ cfg_if::cfg_if! {
         /// Wrap the handler and call the default action of option.
         pub fn wrap_handler_action<Set, Ser, A, O, H, E>(
             mut handler: H,
-        ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<()>, Error>
+        ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error>
         where
             O: 'static,
             Set: crate::set::Set,
             SetOpt<Set>: Opt,
             E: Into<Error>,
-            Ser: ServicesExt,
             A: Extract<Set, Ser, Error = E>,
             H: Handler<Set, Ser, A, Output = Option<O>, Error = E> + 'static,
         {
@@ -169,15 +165,14 @@ cfg_if::cfg_if! {
         }
 
         /// Wrap the handler and call the [`process`](Store::process) of given `store` on return value of `handler`.
-        pub fn wrap_handler<Set, Ser, A, O, R, H, T, E>(
+        pub fn wrap_handler<Set, Ser, A, O, H, T, E>(
             mut handler: H,
             mut store: T,
-        ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<R>, Error>
+        ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error>
         where
             E: Into<Error>,
-            Ser: ServicesExt,
             A: Extract<Set, Ser, Error = E>,
-            T: Store<Set, Ser, O, Ret = R, Error = E> + 'static,
+            T: Store<Set, Ser, O, Ret = bool, Error = E> + 'static,
             H: Handler<Set, Ser, A, Output = Option<O>, Error = E> + 'static,
         {
             Box::new(move |set: &mut Set, ser: &mut Ser, ctx: &Ctx| {

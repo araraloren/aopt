@@ -8,7 +8,7 @@ use crate::parser::FwdPolicy;
 use crate::parser::Parser;
 use crate::parser::Policy;
 use crate::parser::PrePolicy;
-use crate::ser::Services;
+use crate::ser::AppServices;
 use crate::set::OptSet;
 use crate::set::PrefixOptValidator;
 use crate::Error;
@@ -28,7 +28,7 @@ pub type ACreator = Creator<AOpt, OptConfig, Error>;
 
 pub type ASet = OptSet<StrParser, ACreator, PrefixOptValidator>;
 
-pub type ASer = Services;
+pub type ASer = AppServices;
 
 pub type AFwdPolicy = FwdPolicy<ASet, ASer>;
 
@@ -97,14 +97,5 @@ impl APolicyExt<ADelayPolicy> for ADelayPolicy {
 /// * [`main`](Creator::main)
 /// * [`any`](Creator::any)
 pub fn aset_with_default_creators() -> ASet {
-    ASet::default()
-        .with_creator(Creator::int())
-        .with_creator(Creator::bool())
-        .with_creator(Creator::uint())
-        .with_creator(Creator::flt())
-        .with_creator(Creator::str())
-        .with_creator(Creator::cmd())
-        .with_creator(Creator::main())
-        .with_creator(Creator::pos())
-        .with_creator(Creator::any())
+    ASet::default().with_creator(Creator::fallback())
 }

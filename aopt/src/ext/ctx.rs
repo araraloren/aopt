@@ -79,9 +79,7 @@ use std::ops::DerefMut;
 
 use crate::ctx::Ctx;
 use crate::ctx::Extract;
-use crate::opt::RawValParser;
-use crate::set::SetExt;
-use crate::set::SetOpt;
+use crate::value::RawValParser;
 use crate::Arc;
 use crate::Error;
 use crate::Str;
@@ -899,7 +897,7 @@ impl<T> DerefMut for Value<T> {
     }
 }
 
-impl<Set: crate::set::Set, Ser, T: RawValParser<SetOpt<Set>>> Extract<Set, Ser> for Value<T> {
+impl<Set: crate::set::Set, Ser, T: RawValParser> Extract<Set, Ser> for Value<T> {
     type Error = Error;
 
     fn extract(set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
@@ -907,7 +905,7 @@ impl<Set: crate::set::Set, Ser, T: RawValParser<SetOpt<Set>>> Extract<Set, Ser> 
         let arg = arg.as_ref().map(|v| v.as_ref());
         let uid = ctx.uid()?;
 
-        Ok(Value(T::parse(set.opt(uid)?, arg, ctx).map_err(|e| {
+        Ok(Value(T::parse(arg, ctx).map_err(|e| {
             Error::sp_extract_error(format!(
                 "failed parsing raw value of {{{}}}: {}",
                 uid,

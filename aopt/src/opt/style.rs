@@ -24,9 +24,6 @@ pub enum Style {
 
     /// The style indicate option support set multiple option in one string, such as `-ade` means set `-a`, `-d` and `-e`.
     Combined,
-
-    /// Reserve using for user define style option.
-    Reserve(u64),
 }
 
 impl Default for Style {
@@ -58,9 +55,6 @@ impl std::fmt::Display for Style {
             }
             Style::Combined => {
                 write!(f, "Style::Combined")
-            }
-            Style::Reserve(val) => {
-                write!(f, "Style::Reserve({val})")
             }
         }
     }

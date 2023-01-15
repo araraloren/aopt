@@ -5,64 +5,60 @@ use crate::ctx::Handler;
 use crate::ctx::HandlerEntry;
 use crate::ctx::Invoker;
 use crate::opt::Action;
-use crate::opt::Assoc;
 use crate::opt::ConfigValue;
 use crate::opt::Index;
+use crate::opt::Infer;
 use crate::opt::Opt;
-use crate::opt::ValInitiator;
-use crate::opt::ValValidator;
-use crate::ser::ServicesExt;
 use crate::set::Commit;
 use crate::set::SetCfg;
 use crate::set::SetOpt;
+use crate::value::ValInitializer;
+use crate::value::ValValidator;
 use crate::Error;
 use crate::Str;
 use crate::Uid;
 
 /// Simple wrapped the option create interface of [`Commit`],
 /// and the handler register interface of [`HandlerEntry`].
-pub struct ParserCommit<'a, Set, Ser>
+pub struct ParserCommit<'a, Set, Ser, U>
 where
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
-    Ser: ServicesExt,
+    U: Infer,
     SetCfg<Set>: ConfigValue + Default,
 {
-    inner: Commit<'a, Set>,
+    inner: Commit<'a, Set, U>,
 
     inv_ser: Option<&'a mut Invoker<Set, Ser>>,
-
-    drop_commit: bool,
 }
 
-impl<'a, Set, Ser> Debug for ParserCommit<'a, Set, Ser>
+impl<'a, Set, Ser, U> Debug for ParserCommit<'a, Set, Ser, U>
 where
     Set: crate::set::Set + Debug,
     SetOpt<Set>: Opt + Debug,
-    Ser: ServicesExt + Debug,
+    Ser: Debug,
+    U: Infer,
     SetCfg<Set>: ConfigValue + Default + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ParserCommit")
             .field("inner", &self.inner)
             .field("inv_ser", &self.inv_ser)
-            .field("drop_commit", &self.drop_commit)
             .finish()
     }
 }
 
-impl<'a, Set, Ser> ParserCommit<'a, Set, Ser>
+impl<'a, Set, Ser, U> ParserCommit<'a, Set, Ser, U>
 where
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
-    Ser: ServicesExt,
+    U: Infer,
     SetCfg<Set>: ConfigValue + Default,
 {
-    pub fn new(inner: Commit<'a, Set>, inv_ser: &'a mut Invoker<Set, Ser>) -> Self {
+    pub fn new(inner: Commit<'a, Set, U>, inv_ser: &'a mut Invoker<Set, Ser>) -> Self {
         Self {
             inner,
             inv_ser: Some(inv_ser),
-            drop_commit: false,
         }
     }
 
@@ -80,12 +76,6 @@ where
         self
     }
 
-    /// Set the option value assoc type.
-    pub fn set_assoc(mut self, assoc: Assoc) -> Self {
-        self.cfg_mut().set_assoc(assoc);
-        self
-    }
-
     /// Set the option value action.
     pub fn set_action(mut self, action: Action) -> Self {
         self.cfg_mut().set_action(action);
@@ -99,8 +89,8 @@ where
     }
 
     /// Set the option type name of commit configuration.
-    pub fn set_type<T: Into<Str>>(mut self, type_name: T) -> Self {
-        self.cfg_mut().set_type(type_name);
+    pub fn set_type(mut self) -> Self {
+        self.cfg_mut().set_type::<U::Val>();
         self
     }
 
@@ -141,28 +131,8 @@ where
     }
 
     /// Set the option value initiator.
-    pub fn set_initiator(mut self, initiator: ValInitiator) -> Self {
-        self.cfg_mut().set_initiator(Some(initiator));
-        self
-    }
-
-    /// Set the option value validator.
-    pub fn set_validator(mut self, validator: ValValidator) -> Self {
-        self.cfg_mut().set_validator(Some(validator));
-        self
-    }
-
-    /// Set the option default value.
-    pub fn set_value<T: Clone + 'static>(mut self, value: T) -> Self {
-        self.cfg_mut()
-            .set_initiator(Some(ValInitiator::with(vec![value])));
-        self
-    }
-
-    /// Set the option default value.
-    pub fn set_values<T: Clone + 'static>(mut self, value: Vec<T>) -> Self {
-        self.cfg_mut()
-            .set_initiator(Some(ValInitiator::with(value)));
+    pub fn set_initializer(mut self, initializer: ValInitializer) -> Self {
+        self.inner.initializer = Some(initializer);
         self
     }
 
@@ -179,7 +149,6 @@ where
         // we don't need &'a mut Invoker, so just take it.
         let ser = std::mem::take(&mut self.inv_ser);
 
-        self.drop_commit = false;
         Ok(HandlerEntry::new(ser.unwrap(), uid).on(handler))
     }
 
@@ -201,12 +170,10 @@ where
         // we don't need &'a mut Invoker, so just take it.
         let ser = std::mem::take(&mut self.inv_ser);
 
-        self.drop_commit = false;
         Ok(HandlerEntry::new(ser.unwrap(), uid).fallback(handler))
     }
 
     pub(crate) fn run_and_commit_the_change(&mut self) -> Result<Uid, Error> {
-        self.drop_commit = false;
         self.inner.run_and_commit_the_change()
     }
 
@@ -219,15 +186,62 @@ where
     }
 }
 
-impl<'a, Set, Ser> Drop for ParserCommit<'a, Set, Ser>
+impl<'a, Set, Ser, U> ParserCommit<'a, Set, Ser, U>
+where
+    U: Infer,
+    Set: crate::set::Set,
+    SetOpt<Set>: Opt,
+    SetCfg<Set>: ConfigValue + Default,
+{
+    /// Set the option value validator.
+    pub fn set_validator(mut self, validator: ValValidator<U::Val>) -> Self {
+        self.inner.validator = Some(validator);
+        self
+    }
+}
+
+impl<'a, Set, Ser, U> ParserCommit<'a, Set, Ser, U>
+where
+    U: Infer,
+    U::Val: Copy,
+    Set: crate::set::Set,
+    SetOpt<Set>: Opt,
+    SetCfg<Set>: ConfigValue + Default,
+{
+    /// Set the option default value.
+    pub fn set_value(self, value: U::Val) -> Self {
+        self.set_initializer(ValInitializer::with(value))
+    }
+}
+
+impl<'a, Set, Ser, U> ParserCommit<'a, Set, Ser, U>
+where
+    U: Infer,
+    U::Val: Clone,
+    Set: crate::set::Set,
+    SetOpt<Set>: Opt,
+    SetCfg<Set>: ConfigValue + Default,
+{
+    /// Set the option default value.
+    pub fn set_value_clone(self, value: U::Val) -> Self {
+        self.set_initializer(ValInitializer::with_clone(value))
+    }
+
+    /// Set the option default value.
+    pub fn set_values(self, value: Vec<U::Val>) -> Self {
+        self.set_initializer(ValInitializer::with_vec(value))
+    }
+}
+
+impl<'a, Set, Ser, U> Drop for ParserCommit<'a, Set, Ser, U>
 where
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
-    Ser: ServicesExt,
+    U: Infer,
     SetCfg<Set>: ConfigValue + Default,
 {
     fn drop(&mut self) {
-        if self.drop_commit {
+        if self.inner.drop_commit {
             let error =
                 "Error when commit the option in ParserCommit::Drop, call `run` get the Result";
 

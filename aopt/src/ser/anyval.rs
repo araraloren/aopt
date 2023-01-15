@@ -82,13 +82,13 @@ impl AnyValService {
     }
 
     pub fn gets<T: ErasedTy>(&self, uid: Uid) -> Option<&Vec<T>> {
-        self.inner.get(&uid).and_then(|map| map.get::<Vec<T>>())
+        self.inner.get(&uid).and_then(|map| map.value::<Vec<T>>())
     }
 
     pub fn gets_mut<T: ErasedTy>(&mut self, uid: Uid) -> Option<&mut Vec<T>> {
         self.inner
             .get_mut(&uid)
-            .and_then(|map| map.get_mut::<Vec<T>>())
+            .and_then(|map| map.value_mut::<Vec<T>>())
     }
 
     pub fn push<T: ErasedTy>(&mut self, uid: Uid, val: T) -> &mut Self {
@@ -104,7 +104,7 @@ impl AnyValService {
     pub fn pop<T: ErasedTy>(&mut self, uid: Uid) -> Option<T> {
         self.inner
             .get_mut(&uid)
-            .and_then(|v| v.get_mut::<Vec<T>>())
+            .and_then(|v| v.value_mut::<Vec<T>>())
             .and_then(|v| v.pop())
     }
 
@@ -196,5 +196,14 @@ where
     {
         self.map.entry::<T>().and_modify(|v| f(v));
         self
+    }
+}
+
+impl<'a, T> AnyValEntry<'a, T>
+where
+    T: ErasedTy + Default,
+{
+    pub fn or_default(self) -> &'a mut T {
+        self.or_insert(T::default())
     }
 }

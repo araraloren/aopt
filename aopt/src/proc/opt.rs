@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
-use tracing::trace;
 
 use crate::opt::Opt;
 use crate::opt::Style;
@@ -172,20 +171,16 @@ where
             if self.consume() && self.argument.is_none() {
                 return Err(Error::sp_missing_argument(opt.hint()));
             }
-            if opt.check_val(self.arg(), (self.index, self.total))? {
-                opt.set_matched(true);
-                self.matched_uid = Some(opt.uid());
-            } else {
-                matched = false;
-            }
+            opt.set_matched(true);
+            self.matched_uid = Some(opt.uid());
         }
-        trace!(
+        crate::trace_log!(
             "Matching {{name: {:?}, style: {}, arg: {:?}}} with Opt{{{}}}: {}",
             self.name(),
             self.style(),
             self.arg(),
             opt.hint(),
-            matched,
+            matched
         );
         Ok(matched)
     }
@@ -299,12 +294,11 @@ where
                 || opt.mat_style(Style::Combined);
 
             if style_check {
-                trace!(
-                    "Start process OPT{{{}}} eg. {} with type: {}, action: {}",
+                crate::trace_log!(
+                    "Start process OPT{{{}}} eg. {} action: {}",
                     opt.uid(),
                     opt.hint(),
-                    opt.assoc(),
-                    opt.action(),
+                    opt.action()
                 );
                 for (index, mat) in self.matches.iter_mut().enumerate() {
                     if !mat.is_mat() && mat.process(opt)? {

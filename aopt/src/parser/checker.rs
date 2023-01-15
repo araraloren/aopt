@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
-use tracing::trace;
 
 use crate::opt::Index;
 use crate::opt::Opt;
@@ -59,7 +58,7 @@ where
 
         const MAX_INDEX: usize = usize::MAX;
 
-        trace!("Pre Check {{has_cmd: {}}}", has_cmd);
+        crate::trace_log!("Pre Check {{has_cmd: {}}}", has_cmd);
         if has_cmd {
             for opt in set.iter() {
                 if opt.mat_style(Style::Pos) {
@@ -78,7 +77,7 @@ where
     }
 
     pub fn opt_check(&self, set: &mut S) -> Result<bool, Error> {
-        trace!("Opt Check, call valid on all Opt ...");
+        crate::trace_log!("Opt Check, call valid on all Opt ...");
         for opt in set.iter().filter(|opt| {
             opt.mat_style(Style::Argument)
                 || opt.mat_style(Style::Boolean)
@@ -140,7 +139,7 @@ where
         }
         let mut names = vec![];
 
-        trace!(
+        crate::trace_log!(
             "Pos Check, index: {{{:?}}}, float: {{{:?}}}",
             index_map,
             float_vec
@@ -191,7 +190,7 @@ where
                 }
             }
         }
-        trace!("Cmd Check, any one of the cmd matched: {}", valid);
+        crate::trace_log!("Cmd Check, any one of the cmd matched: {}", valid);
         if !valid && !names.is_empty() {
             return Err(Error::sp_cmd_force_require(names.join(" | ")));
         }
@@ -199,7 +198,7 @@ where
     }
 
     pub fn post_check(&self, set: &mut S) -> Result<bool, Error> {
-        trace!("Post Check, call valid on Main ...");
+        crate::trace_log!("Post Check, call valid on Main ...");
         Ok(set
             .iter()
             .filter(|opt| opt.mat_style(Style::Main))

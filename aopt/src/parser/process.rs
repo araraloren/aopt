@@ -1,5 +1,3 @@
-use tracing::trace;
-
 use crate::ctx::Ctx;
 use crate::ctx::InnerCtx;
 use crate::ctx::Invoker;
@@ -34,7 +32,7 @@ pub fn invoke_callback_opt<Set, Ser>(
     set: &mut Set,
     inv: &mut Invoker<Set, Ser>,
     ser: &mut Ser,
-) -> Result<Option<()>, Error>
+) -> Result<bool, Error>
 where
     SetOpt<Set>: Opt,
     Ser: ServicesExt + 'static,
@@ -44,11 +42,11 @@ where
     // Catch the result of handler, so we can register it back to Services.
     match inv.has(uid) {
         true => {
-            trace!("Invoke callback of Opt{{{uid}}} with {:?}", ctx);
+            crate::trace_log!("Invoke callback of Opt{{{uid}}} with {:?}", ctx);
             inv.invoke(set, ser, &ctx)
         }
         false => {
-            trace!("Invoke default of Opt{{{uid}}} with {:?}", ctx);
+            crate::trace_log!("Invoke default of Opt{{{uid}}} with {:?}", ctx);
             inv.invoke_default(set, ser, &ctx)
         }
     }
@@ -108,7 +106,7 @@ where
 
             ctx.set_inner_ctx(Some(saver.ctx));
             // undo the process if option callback return None
-            if invoke_callback_opt(uid, ctx, set, inv, ser)?.is_none() {
+            if !invoke_callback_opt(uid, ctx, set, inv, ser)? {
                 proc.undo(set)?;
                 break;
             }
@@ -159,19 +157,17 @@ where
                     let ret = match inv.has(uid) {
                         true => {
                             // callback in Invoker
-                            trace!("Invoke callback of NOA{{{uid}}} with {:?}", &ctx);
-                            inv.invoke(set, ser, &ctx)
+                            crate::trace_log!("Invoke callback of NOA{{{uid}}} with {:?}", &ctx);
+                            inv.invoke(set, ser, &ctx)?
                         }
                         false => {
                             // call `invoke_default` if callback not exist
-                            trace!("Invoke default of NOA{{{uid}}} with {:?}", &ctx);
-                            inv.invoke_default(set, ser, &ctx)
+                            crate::trace_log!("Invoke default of NOA{{{uid}}} with {:?}", &ctx);
+                            inv.invoke_default(set, ser, &ctx)?
                         }
                     };
-                    let ret = ret?;
-
                     // return None means NOA not match
-                    if ret.is_none() {
+                    if !ret {
                         proc.undo(set)?;
                     }
                     proc.reset();

@@ -42,10 +42,15 @@ use crate::ext::APolicyExt;
 use crate::map::ErasedTy;
 use crate::opt::Config;
 use crate::opt::ConfigValue;
+use crate::opt::Infer;
 use crate::opt::Information;
 use crate::opt::Opt;
 use crate::opt::OptParser;
-use crate::ser::Services;
+use crate::opt::OptValueExt;
+use crate::prelude::FilterMut;
+use crate::prelude::ServicesValExt;
+use crate::prelude::SetExt;
+use crate::ser::AppServices;
 use crate::ser::ServicesExt;
 use crate::set::Commit;
 use crate::set::Ctor;
@@ -56,7 +61,6 @@ use crate::set::SetCfg;
 use crate::set::SetOpt;
 use crate::Arc;
 use crate::Error;
-use crate::RawVal;
 use crate::Str;
 use crate::Uid;
 
@@ -198,7 +202,7 @@ pub struct Parser<P: Policy> {
     policy: P,
     optset: P::Set,
     invoker: P::Inv,
-    valser: P::Ser,
+    appser: P::Ser,
 }
 
 impl<P: Policy> Default for Parser<P>
@@ -213,7 +217,7 @@ where
         Self {
             optset: policy.default_set(),
             invoker: policy.default_inv(),
-            valser: policy.default_ser(),
+            appser: policy.default_ser(),
             policy,
         }
     }
@@ -246,7 +250,7 @@ where
             optset,
             policy,
             invoker,
-            valser,
+            appser: valser,
         }
     }
 }
@@ -272,7 +276,7 @@ where
             policy,
             optset: self.optset,
             invoker: self.invoker,
-            valser: self.valser,
+            appser: self.appser,
         }
     }
 }
@@ -283,7 +287,7 @@ impl<P: Policy> Parser<P> {
             optset,
             policy,
             invoker,
-            valser,
+            appser: valser,
         }
     }
 
@@ -314,15 +318,15 @@ impl<P: Policy> Parser<P> {
     }
 
     pub fn service(&self) -> &P::Ser {
-        &self.valser
+        &self.appser
     }
 
     pub fn service_mut(&mut self) -> &mut P::Ser {
-        &mut self.valser
+        &mut self.appser
     }
 
     pub fn set_service(&mut self, valser: P::Ser) -> &mut Self {
-        self.valser = valser;
+        self.appser = valser;
         self
     }
 
@@ -343,24 +347,22 @@ impl<P: Policy> Parser<P> {
 impl<P> Parser<P>
 where
     P::Set: Set,
-    P::Ser: ServicesExt,
+    P::Ser: ServicesValExt,
     P: Policy<Error = Error>,
 {
-    /// Reset the option set, and clear the [`AnyValService`](crate::ser::AnyValService),
-    /// [`RawValService`](crate::ser::RawValService).
+    /// Reset the option set.
     pub fn reset(&mut self) -> Result<&mut Self, Error> {
         self.optset.reset();
-        self.valser.reset();
         // ignore invoker, it is stateless
         Ok(self)
     }
 
-    pub fn usrval<T: ErasedTy>(&self) -> Result<&T, Error> {
-        self.valser.ser_usrval().val::<T>()
+    pub fn app_data<T: ErasedTy>(&self) -> Result<&T, Error> {
+        self.appser.sve_val()
     }
 
-    pub fn usrval_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
-        self.valser.ser_usrval_mut().val_mut::<T>()
+    pub fn app_data_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
+        self.appser.sve_val_mut()
     }
 
     /// Set the user value that can access in option handler.
@@ -434,55 +436,22 @@ where
     /// # Ok(())
     /// # }
     ///```
-    pub fn set_usrval<T: ErasedTy>(&mut self, val: T) -> Result<Option<T>, Error> {
-        Ok(self.valser.ser_usrval_mut().insert(val))
-    }
-
-    pub fn val<T: ErasedTy>(&self, uid: Uid) -> Result<&T, Error> {
-        self.valser.ser_val().val::<T>(uid)
-    }
-
-    pub fn val_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut T, Error> {
-        self.valser.ser_val_mut().val_mut::<T>(uid)
-    }
-
-    pub fn vals<T: ErasedTy>(&self, uid: Uid) -> Result<&Vec<T>, Error> {
-        self.valser.ser_val().vals::<T>(uid)
-    }
-
-    pub fn vals_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error> {
-        self.valser.ser_val_mut().vals_mut::<T>(uid)
-    }
-
-    pub fn rawval(&self, uid: Uid) -> Result<&RawVal, Error> {
-        self.valser.ser_rawval().val(uid)
-    }
-
-    pub fn rawval_mut(&mut self, uid: Uid) -> Result<&mut RawVal, Error> {
-        self.valser.ser_rawval_mut().val_mut(uid)
-    }
-
-    pub fn rawvals(&self, uid: Uid) -> Result<&Vec<RawVal>, Error> {
-        self.valser.ser_rawval().vals(uid)
-    }
-
-    pub fn rawvals_mut(&mut self, uid: Uid) -> Result<&mut Vec<RawVal>, Error> {
-        self.valser.ser_rawval_mut().vals_mut(uid)
+    pub fn set_app_data<T: ErasedTy>(&mut self, val: T) -> Result<Option<T>, Error> {
+        Ok(self.appser.sve_insert(val))
     }
 }
 
 impl<P> Parser<P>
 where
     P::Set: Set,
-    P: Policy<Ser = Services, Error = Error>,
+    P: Policy<Error = Error>,
 {
     /// Call the [`init`](crate::opt::Opt::init) on [`Services`] initialize the option value.
     pub fn init(&mut self) -> Result<(), P::Error> {
         let optset = &mut self.optset;
-        let services = &mut self.valser;
 
         for opt in optset.iter_mut() {
-            opt.init(services)?;
+            opt.init()?;
         }
         Ok(())
     }
@@ -499,7 +468,7 @@ where
     /// otherwise it will be false if any [`failure`](Error::is_failure) raised.
     pub fn parse(&mut self, args: Arc<Args>) -> Result<P::Ret, P::Error> {
         let optset = &mut self.optset;
-        let valser = &mut self.valser;
+        let valser = &mut self.appser;
         let invser = &mut self.invoker;
 
         self.policy.parse(optset, invser, valser, args)
@@ -511,7 +480,7 @@ where
     /// otherwise it will be false if any [`failure`](Error::is_failure) raised.
     pub fn parse_env(&mut self) -> Result<P::Ret, P::Error> {
         let optset = &mut self.optset;
-        let valser = &mut self.valser;
+        let valser = &mut self.appser;
         let invser = &mut self.invoker;
         let args = crate::Arc::new(Args::from_env());
 
@@ -604,10 +573,10 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    pub fn add_opt<T: Into<Str>>(
+    pub fn add_opt<U: Infer>(
         &mut self,
-        opt: T,
-    ) -> Result<ParserCommit<'_, P::Set, P::Ser>, Error> {
+        opt: impl Into<Str>,
+    ) -> Result<ParserCommit<'_, P::Set, P::Ser, U>, Error> {
         let info =
             <<<P::Set as Set>::Ctor as Ctor>::Config as Config>::new(&self.optset, opt.into())?;
 
@@ -663,10 +632,10 @@ where
     /// #    Ok(())
     /// # }
     ///```
-    pub fn add_opt_cfg<Cfg: Into<<<P::Set as Set>::Ctor as Ctor>::Config>>(
+    pub fn add_opt_cfg<U: Infer, Cfg: Into<<<P::Set as Set>::Ctor as Ctor>::Config>>(
         &mut self,
         config: Cfg,
-    ) -> Result<ParserCommit<'_, P::Set, P::Ser>, Error> {
+    ) -> Result<ParserCommit<'_, P::Set, P::Ser, U>, Error> {
         Ok(ParserCommit::new(
             Commit::new(&mut self.optset, config.into()),
             &mut self.invoker,
@@ -719,19 +688,23 @@ where
     }
 
     pub fn find_val<T: ErasedTy>(&self, opt: &str) -> Result<&T, Error> {
-        self.val(self.find_uid(opt)?)
+        self.opt(self.find_uid(opt)?)?.val()
     }
 
     pub fn find_val_mut<T: ErasedTy>(&mut self, opt: &str) -> Result<&mut T, Error> {
-        self.val_mut(self.find_uid(opt)?)
+        let uid = self.find_uid(opt)?;
+
+        self.opt_mut(uid)?.val_mut()
     }
 
     pub fn find_vals<T: ErasedTy>(&self, opt: &str) -> Result<&Vec<T>, Error> {
-        self.vals(self.find_uid(opt)?)
+        self.opt(self.find_uid(opt)?)?.vals()
     }
 
     pub fn find_vals_mut<T: ErasedTy>(&mut self, opt: &str) -> Result<&mut Vec<T>, Error> {
-        self.vals_mut(self.find_uid(opt)?)
+        let uid = self.find_uid(opt)?;
+
+        self.opt_mut(uid)?.vals_mut()
     }
 }
 

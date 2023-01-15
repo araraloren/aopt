@@ -11,6 +11,7 @@ pub mod raw;
 pub mod ser;
 pub mod set;
 pub mod str;
+pub mod value;
 
 pub type Uid = u64;
 pub type HashMap<K, V> = ahash::HashMap<K, V>;
@@ -21,6 +22,20 @@ cfg_if::cfg_if! {
     }
     else {
         pub type Arc<T> = std::rc::Rc<T>;
+    }
+}
+
+#[cfg(feature = "log")]
+#[macro_use]
+pub(crate) mod log {
+    pub(crate) use tracing::trace as trace_log;
+}
+#[cfg(not(feature = "log"))]
+#[macro_use]
+pub(crate) mod log {
+    #[macro_export]
+    macro_rules! trace_log {
+        ($($_:stmt),+) => {};
     }
 }
 
@@ -205,7 +220,6 @@ pub mod prelude {
     pub use crate::map::ErasedTy;
     pub use crate::opt::AOpt;
     pub use crate::opt::Action;
-    pub use crate::opt::Assoc;
     pub use crate::opt::Config;
     pub use crate::opt::ConfigValue;
     pub use crate::opt::ConstrctInfo;
@@ -216,16 +230,9 @@ pub mod prelude {
     pub use crate::opt::Opt;
     pub use crate::opt::OptConfig;
     pub use crate::opt::OptParser;
-    pub use crate::opt::RawValParser;
-    pub use crate::opt::RawValValidator;
     pub use crate::opt::Serde;
     pub use crate::opt::StrParser;
     pub use crate::opt::Style;
-    pub use crate::opt::ValInitialize;
-    pub use crate::opt::ValInitiator;
-    pub use crate::opt::ValValidator;
-    pub use crate::opt::ValValidatorExt;
-    pub use crate::opt::ValValidatorExt2;
     pub use crate::parser::BoxedPolicy;
     pub use crate::parser::DelayPolicy;
     pub use crate::parser::FwdPolicy;
@@ -244,10 +251,7 @@ pub mod prelude {
     pub use crate::proc::OptMatch;
     pub use crate::proc::OptProcess;
     pub use crate::proc::Process;
-    pub use crate::ser::AnyValEntry;
-    pub use crate::ser::AnyValService;
-    pub use crate::ser::RawValService;
-    pub use crate::ser::Services;
+    pub use crate::ser::AppServices;
     pub use crate::ser::ServicesExt;
     pub use crate::ser::ServicesValExt;
     pub use crate::ser::UsrValService;
@@ -263,5 +267,6 @@ pub mod prelude {
     pub use crate::set::SetCfg;
     pub use crate::set::SetExt;
     pub use crate::set::SetOpt;
+    pub use crate::value::RawValParser;
     pub use crate::Uid;
 }

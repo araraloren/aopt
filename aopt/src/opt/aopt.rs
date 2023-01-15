@@ -1,16 +1,15 @@
+use std::any::TypeId;
+
 use crate::opt::Action;
-use crate::opt::Assoc;
 #[allow(unused)]
 use crate::opt::Creator;
 use crate::opt::Help;
 use crate::opt::Index;
 use crate::opt::Opt;
 use crate::opt::Style;
-use crate::opt::ValInitiator;
-use crate::opt::ValValidator;
-use crate::ser::Services;
+use crate::value::ErasedValHandler;
+use crate::value::ValAccessor;
 use crate::Error;
-use crate::RawVal;
 use crate::Str;
 use crate::Uid;
 
@@ -41,13 +40,13 @@ use crate::Uid;
 /// | [`pos`](Creator::pos)  | yes | yes | no |  [`some`](ValValidator::some) | [`empty::<bool>`](ValInitiator::empty) |
 /// | [`main`](Creator::main)  | [`AnyWhere`](crate::opt::Index::AnyWhere) | no | no | [`null`](ValValidator::null) | [`null`](ValInitiator::null)
 /// | [`any`](Creator::any)  | yes | yes |  yes | [`null`](ValValidator::null) |  [`null`](ValInitiator::null) |
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct AOpt {
     uid: Uid,
 
     name: Str,
 
-    r#type: Str,
+    r#type: TypeId,
 
     help: Help,
 
@@ -55,24 +54,43 @@ pub struct AOpt {
 
     force: bool,
 
-    assoc: Assoc,
-
     action: Action,
 
     styles: Vec<Style>,
 
-    ignore_name_mat: bool,
+    ignore_name: bool,
+
+    ignore_alias: bool,
+
+    ignore_index: bool,
 
     index: Option<Index>,
 
-    validator: ValValidator,
-
-    initiator: ValInitiator,
+    accessor: ValAccessor,
 
     alias: Option<Vec<Str>>,
 }
 
 impl AOpt {
+    pub fn new(name: Str, type_id: TypeId, accessor: ValAccessor) -> Self {
+        Self {
+            uid: 0,
+            name,
+            r#type: type_id,
+            help: Default::default(),
+            matched: false,
+            force: false,
+            action: Default::default(),
+            styles: vec![],
+            ignore_name: false,
+            ignore_alias: false,
+            ignore_index: true,
+            index: None,
+            accessor,
+            alias: None,
+        }
+    }
+
     /// Set the unique identifier of option.
     pub fn with_uid(mut self, uid: Uid) -> Self {
         self.uid = uid;
@@ -86,14 +104,26 @@ impl AOpt {
     }
 
     /// Set the type of option, see [`Ctor`](crate::set::Ctor).
-    pub fn with_type(mut self, r#type: Str) -> Self {
+    pub fn with_type(mut self, r#type: TypeId) -> Self {
         self.r#type = r#type;
         self
     }
 
     /// If the option will matching the name.
-    pub fn with_ignore_name(mut self) -> Self {
-        self.ignore_name_mat = true;
+    pub fn with_ignore_name(mut self, value: bool) -> Self {
+        self.ignore_name = value;
+        self
+    }
+
+    /// If the option will matching the name.
+    pub fn with_ignore_alias(mut self, value: bool) -> Self {
+        self.ignore_alias = value;
+        self
+    }
+
+    /// If the option will matching the name.
+    pub fn with_ignore_index(mut self, value: bool) -> Self {
+        self.ignore_index = value;
         self
     }
 
@@ -106,12 +136,6 @@ impl AOpt {
     /// Set the help message of option.
     pub fn with_help(mut self, help: Str) -> Self {
         self.help.set_help(help);
-        self
-    }
-
-    /// Set the associated type of option.
-    pub fn with_assoc(mut self, assoc: Assoc) -> Self {
-        self.assoc = assoc;
         self
     }
 
@@ -151,16 +175,9 @@ impl AOpt {
         self
     }
 
-    /// Set the value initiator of option, it will called by [`Policy`](crate::parser::Policy)
-    /// initialize the option value.
-    pub fn with_initiator(mut self, initiator: ValInitiator) -> Self {
-        self.initiator = initiator;
-        self
-    }
-
-    /// Set the value validator of option.
-    pub fn with_validator(mut self, validator: ValValidator) -> Self {
-        self.validator = validator;
+    /// Set the value accessor of option, it will used by [`Policy`](crate::parser::Policy);
+    pub fn with_value(mut self, value: ValAccessor) -> Self {
+        self.accessor = value;
         self
     }
 }
@@ -171,8 +188,13 @@ impl AOpt {
         self
     }
 
-    pub fn set_type(&mut self, r#type: Str) -> &mut Self {
+    pub fn set_type(&mut self, r#type: TypeId) -> &mut Self {
         self.r#type = r#type;
+        self
+    }
+
+    pub fn set_value(&mut self, value: ValAccessor) -> &mut Self {
+        self.accessor = value;
         self
     }
 
@@ -183,11 +205,6 @@ impl AOpt {
 
     pub fn set_help(&mut self, help: Str) -> &mut Self {
         self.help.set_help(help);
-        self
-    }
-
-    pub fn set_assoc(&mut self, assoc: Assoc) -> &mut Self {
-        self.assoc = assoc;
         self
     }
 
@@ -226,16 +243,6 @@ impl AOpt {
         }
         self
     }
-
-    pub fn set_initiator(&mut self, initiator: ValInitiator) -> &mut Self {
-        self.initiator = initiator;
-        self
-    }
-
-    pub fn set_validator(&mut self, validator: ValValidator) -> &mut Self {
-        self.validator = validator;
-        self
-    }
 }
 
 impl Opt for AOpt {
@@ -251,8 +258,8 @@ impl Opt for AOpt {
         &self.name
     }
 
-    fn r#type(&self) -> Str {
-        self.r#type.clone()
+    fn r#type(&self) -> &TypeId {
+        &self.r#type
     }
 
     fn hint(&self) -> &Str {
@@ -273,10 +280,6 @@ impl Opt for AOpt {
 
     fn force(&self) -> bool {
         self.force
-    }
-
-    fn assoc(&self) -> &Assoc {
-        &self.assoc
     }
 
     fn action(&self) -> &Action {
@@ -308,7 +311,7 @@ impl Opt for AOpt {
     }
 
     fn mat_name(&self, name: Option<&Str>) -> bool {
-        if self.ignore_name_mat {
+        if self.ignore_name {
             true
         } else {
             name.iter().all(|&v| v == self.name())
@@ -316,7 +319,9 @@ impl Opt for AOpt {
     }
 
     fn mat_alias(&self, name: &Str) -> bool {
-        if let Some(alias) = &self.alias {
+        if self.ignore_alias {
+            true
+        } else if let Some(alias) = &self.alias {
             alias.iter().any(|v| v == name)
         } else {
             false
@@ -324,7 +329,9 @@ impl Opt for AOpt {
     }
 
     fn mat_idx(&self, index: Option<(usize, usize)>) -> bool {
-        if let Some((index, total)) = index {
+        if self.ignore_index {
+            return true;
+        } else if let Some((index, total)) = index {
             if let Some(realindex) = self.idx() {
                 if let Some(realindex) = realindex.calc_index(index, total) {
                     return realindex == index;
@@ -334,13 +341,15 @@ impl Opt for AOpt {
         false
     }
 
-    fn check_val(&mut self, value: Option<&RawVal>, index: (usize, usize)) -> Result<bool, Error> {
-        let name = self.name().clone();
-
-        self.validator.check(name.as_str(), value, index)
+    fn init(&mut self) -> Result<(), Error> {
+        self.accessor.initialize()
     }
 
-    fn init(&mut self, ser: &mut Services) -> Result<(), Error> {
-        self.initiator.do_initialize(self.uid, ser)
+    fn accessor(&self) -> &ValAccessor {
+        &self.accessor
+    }
+
+    fn accessor_mut(&mut self) -> &mut ValAccessor {
+        &mut self.accessor
     }
 }

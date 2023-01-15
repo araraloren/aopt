@@ -1,5 +1,4 @@
 use crate::opt::Opt;
-use crate::ser::ServicesExt;
 use crate::set::SetOpt;
 use crate::Error;
 use crate::RawVal;
@@ -18,14 +17,13 @@ pub trait Store<Set, Ser, Value> {
         ser: &mut Ser,
         raw: Option<&RawVal>,
         val: Option<Value>,
-    ) -> Result<Option<Self::Ret>, Self::Error>;
+    ) -> Result<Self::Ret, Self::Error>;
 }
 
 impl<Func, Set, Ser, Value, Ret, Err> Store<Set, Ser, Value> for Func
 where
     Err: Into<Error>,
-    Func:
-        FnMut(Uid, &mut Set, &mut Ser, Option<&RawVal>, Option<Value>) -> Result<Option<Ret>, Err>,
+    Func: FnMut(Uid, &mut Set, &mut Ser, Option<&RawVal>, Option<Value>) -> Result<Ret, Err>,
 {
     type Ret = Ret;
     type Error = Err;
@@ -37,7 +35,7 @@ where
         ser: &mut Ser,
         raw: Option<&RawVal>,
         val: Option<Value>,
-    ) -> Result<Option<Self::Ret>, Self::Error> {
+    ) -> Result<Self::Ret, Self::Error> {
         (self)(uid, set, ser, raw, val)
     }
 }
@@ -46,7 +44,7 @@ where
 pub struct NullStore;
 
 impl<Set, Ser, Value> Store<Set, Ser, Value> for NullStore {
-    type Ret = Value;
+    type Ret = bool;
 
     type Error = Error;
 
@@ -56,9 +54,9 @@ impl<Set, Ser, Value> Store<Set, Ser, Value> for NullStore {
         _: &mut Set,
         _: &mut Ser,
         _: Option<&RawVal>,
-        val: Option<Value>,
-    ) -> Result<Option<Self::Ret>, Self::Error> {
-        Ok(val)
+        _: Option<Value>,
+    ) -> Result<Self::Ret, Self::Error> {
+        Ok(true)
     }
 }
 
@@ -71,9 +69,8 @@ impl<Set, Ser, Value: 'static> Store<Set, Ser, Vec<Value>> for VecStore
 where
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
-    Ser: ServicesExt,
 {
-    type Ret = ();
+    type Ret = bool;
 
     type Error = Error;
 
@@ -81,31 +78,31 @@ where
         &mut self,
         uid: Uid,
         set: &mut Set,
-        ser: &mut Ser,
+        _: &mut Ser,
         raw: Option<&RawVal>,
         val: Option<Vec<Value>>,
-    ) -> Result<Option<Self::Ret>, Self::Error> {
+    ) -> Result<Self::Ret, Self::Error> {
         let has_value = val.is_some();
 
         // Set the value if return Some(Value)
         if let Some(val) = val {
-            let raw_ser = ser.ser_rawval_mut();
+            if let Some(opt) = set.get_mut(uid) {
+                let act = *opt.action();
+                let (raw_handler, handler) = opt.accessor_mut().handlers();
 
-            if let Some(raw) = raw {
-                raw_ser.push(uid, raw.clone());
-            }
-
-            let val_ser = ser.ser_val_mut();
-
-            if let Some(opt) = set.get(uid) {
-                if opt.action().is_app() {
-                    for value in val {
-                        val_ser.push(uid, value);
+                if act.is_app() {
+                    if let Some(raw) = raw {
+                        raw_handler.push(raw.clone());
                     }
+                    for value in val {
+                        handler.push(value);
+                    }
+                } else {
+                    panic!("Option action is not App, but set a vector vector")
                 }
             }
         }
 
-        Ok(has_value.then_some(()))
+        Ok(has_value)
     }
 }

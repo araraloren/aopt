@@ -4,16 +4,14 @@ pub(crate) mod config;
 pub(crate) mod creator;
 pub(crate) mod help;
 pub(crate) mod index;
+pub(crate) mod infer;
 pub(crate) mod info;
-pub(crate) mod initiator;
 pub(crate) mod parser;
 pub(crate) mod serde;
 pub(crate) mod style;
-pub(crate) mod valid;
 pub(crate) mod value;
 
 pub use self::action::Action;
-pub use self::action::Assoc;
 pub use self::aopt::AOpt;
 pub use self::config::Config;
 pub use self::config::ConfigValue;
@@ -21,26 +19,21 @@ pub use self::config::OptConfig;
 pub use self::creator::Creator;
 pub use self::help::Help;
 pub use self::index::Index;
+pub use self::infer::Infer;
 pub use self::info::ConstrctInfo;
 pub use self::info::Information;
-pub use self::initiator::ValInitialize;
-pub use self::initiator::ValInitiator;
 pub use self::parser::StrParser;
 pub use self::serde::Deserialize;
 pub use self::serde::Serde;
 pub use self::serde::Serialize;
 pub use self::style::Style;
-pub use self::valid::RawValValidator;
-pub use self::valid::ValValidator;
-pub use self::valid::ValValidatorExt;
-pub use self::valid::ValValidatorExt2;
-pub use self::value::RawValParser;
+pub use self::value::OptValueExt;
 
+use std::any::TypeId;
 use std::fmt::Debug;
 
-use crate::ser::Services;
+use crate::value::ValAccessor;
 use crate::Error;
-use crate::RawVal;
 use crate::Str;
 use crate::Uid;
 
@@ -64,7 +57,7 @@ pub trait Opt: Debug {
     /// The name of option.
     fn name(&self) -> &Str;
 
-    fn r#type(&self) -> Str;
+    fn r#type(&self) -> &TypeId;
 
     fn hint(&self) -> &Str;
 
@@ -77,8 +70,6 @@ pub trait Opt: Debug {
     /// If the option is optional.
     fn force(&self) -> bool;
 
-    fn assoc(&self) -> &Assoc;
-
     fn action(&self) -> &Action;
 
     /// The index of option.
@@ -86,6 +77,10 @@ pub trait Opt: Debug {
 
     /// The alias the option.
     fn alias(&self) -> Option<&Vec<Str>>;
+
+    fn accessor(&self) -> &ValAccessor;
+
+    fn accessor_mut(&mut self) -> &mut ValAccessor;
 
     fn set_uid(&mut self, uid: Uid);
 
@@ -101,7 +96,5 @@ pub trait Opt: Debug {
 
     fn mat_idx(&self, index: Option<(usize, usize)>) -> bool;
 
-    fn init(&mut self, ser: &mut Services) -> Result<(), Error>;
-
-    fn check_val(&mut self, val: Option<&RawVal>, index: (usize, usize)) -> Result<bool, Error>;
+    fn init(&mut self) -> Result<(), Error>;
 }

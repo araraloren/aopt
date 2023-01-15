@@ -1,4 +1,3 @@
-use std::any::type_name;
 use std::any::Any;
 use std::any::TypeId;
 use std::collections::hash_map::Entry as MapEntry;
@@ -6,7 +5,6 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use crate::typeid;
-use crate::Error;
 use crate::HashMap;
 
 cfg_if::cfg_if! {
@@ -39,7 +37,7 @@ impl Debug for AnyMap {
 }
 
 impl AnyMap {
-    pub fn with<T: ErasedTy>(mut self, value: T) -> Self {
+    pub fn with_value<T: ErasedTy>(mut self, value: T) -> Self {
         self.0.insert(typeid::<T>(), Box::new(value));
         self
     }
@@ -66,6 +64,10 @@ impl AnyMap {
         self.0.contains_key(&typeid::<T>())
     }
 
+    pub fn entry<T: ErasedTy>(&mut self) -> Entry<'_, T> {
+        Entry::new(self.0.entry(typeid::<T>()))
+    }
+
     pub fn insert<T: ErasedTy>(&mut self, value: T) -> Option<T> {
         self.0
             .insert(typeid::<T>(), Box::new(value))
@@ -78,36 +80,14 @@ impl AnyMap {
             .and_then(|v| v.downcast().ok().map(|v| *v))
     }
 
-    pub fn get<T: ErasedTy>(&self) -> Option<&T> {
+    pub fn value<T: ErasedTy>(&self) -> Option<&T> {
         self.0.get(&typeid::<T>()).and_then(|v| v.downcast_ref())
     }
 
-    pub fn get_mut<T: ErasedTy>(&mut self) -> Option<&mut T> {
+    pub fn value_mut<T: ErasedTy>(&mut self) -> Option<&mut T> {
         self.0
             .get_mut(&typeid::<T>())
             .and_then(|v| v.downcast_mut())
-    }
-
-    pub fn ty<T: ErasedTy>(&self) -> Result<&T, Error> {
-        self.get::<T>().ok_or_else(|| {
-            Error::raise_error(format!(
-                "Can not find type {{{:?}}} in AnyMap",
-                type_name::<T>()
-            ))
-        })
-    }
-
-    pub fn ty_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
-        self.get_mut::<T>().ok_or_else(|| {
-            Error::raise_error(format!(
-                "Can not find type {{{:?}}} in AnyMap",
-                type_name::<T>()
-            ))
-        })
-    }
-
-    pub fn entry<T: ErasedTy>(&mut self) -> Entry<'_, T> {
-        Entry::new(self.0.entry(typeid::<T>()))
     }
 }
 
