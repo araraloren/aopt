@@ -10,14 +10,13 @@ use super::AnyValue;
 use super::RawValParser;
 use super::ValValidator;
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        pub type StoreHandler<T> = Box<dyn FnMut(Option<&RawVal>, &Ctx, &Action, &mut T) -> Result<(), Error> + Send + Sync>;
-    }
-    else {
-        pub type StoreHandler<T> = Box<dyn FnMut(Option<&RawVal>, &Ctx, &Action, &mut T) -> Result<(), Error>>;
-    }
-}
+#[cfg(feature = "sync")]
+pub type StoreHandler<T> =
+    Box<dyn FnMut(Option<&RawVal>, &Ctx, &Action, &mut T) -> Result<(), Error> + Send + Sync>;
+
+#[cfg(not(feature = "sync"))]
+pub type StoreHandler<T> =
+    Box<dyn FnMut(Option<&RawVal>, &Ctx, &Action, &mut T) -> Result<(), Error>>;
 
 pub struct ValStorer(StoreHandler<AnyValue>);
 

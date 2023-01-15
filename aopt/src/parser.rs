@@ -640,27 +640,30 @@ where
         ))
     }
 
-    cfg_if::cfg_if! {
-        if #[cfg(feature = "sync")] {
-            pub fn entry<A, O, H>(&mut self, uid: Uid) -> Result<HandlerEntry<'_, P::Set, P::Ser, H, A, O>, Error>
-            where
-                O: Send + Sync + 'static,
-                H: Handler<P::Set, P::Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
-                A: Extract<P::Set, P::Ser, Error = Error> + Send + Sync + 'static,
-            {
-                Ok(HandlerEntry::new(&mut self.invoker, uid))
-            }
-        }
-        else {
-            pub fn entry<A, O, H>(&mut self, uid: Uid) -> Result<HandlerEntry<'_, P::Set, P::Ser, H, A, O>, Error>
-            where
-                O: 'static,
-                H: Handler<P::Set, P::Ser, A, Output = Option<O>, Error = Error> + 'static,
-                A: Extract<P::Set, P::Ser, Error = Error> + 'static,
-            {
-                Ok(HandlerEntry::new(&mut self.invoker, uid))
-            }
-        }
+    #[cfg(feature = "sync")]
+    pub fn entry<A, O, H>(
+        &mut self,
+        uid: Uid,
+    ) -> Result<HandlerEntry<'_, P::Set, P::Ser, H, A, O>, Error>
+    where
+        O: Send + Sync + 'static,
+        H: Handler<P::Set, P::Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
+        A: Extract<P::Set, P::Ser, Error = Error> + Send + Sync + 'static,
+    {
+        Ok(HandlerEntry::new(&mut self.invoker, uid))
+    }
+
+    #[cfg(not(feature = "sync"))]
+    pub fn entry<A, O, H>(
+        &mut self,
+        uid: Uid,
+    ) -> Result<HandlerEntry<'_, P::Set, P::Ser, H, A, O>, Error>
+    where
+        O: 'static,
+        H: Handler<P::Set, P::Ser, A, Output = Option<O>, Error = Error> + 'static,
+        A: Extract<P::Set, P::Ser, Error = Error> + 'static,
+    {
+        Ok(HandlerEntry::new(&mut self.invoker, uid))
     }
 }
 

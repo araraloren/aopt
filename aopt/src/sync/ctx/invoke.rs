@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
-use std::path::PathBuf;
 
 use crate::ctx::wrap_handler;
 use crate::ctx::wrap_handler_action;
@@ -9,10 +8,7 @@ use crate::ctx::Ctx;
 use crate::ctx::Extract;
 use crate::ctx::Handler;
 use crate::ctx::Store;
-use crate::opt::Assoc;
 use crate::opt::Opt;
-use crate::opt::RawValParser;
-use crate::ser::ServicesExt;
 use crate::set::SetOpt;
 use crate::Error;
 use crate::HashMap;
@@ -85,7 +81,7 @@ pub struct Invoker<Set, Ser> {
 }
 
 pub type InvokeHandler<Set, Ser, Error> =
-    Box<dyn FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<()>, Error> + Send + Sync>;
+    Box<dyn FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error> + Send + Sync>;
 
 impl<Set, Ser> Debug for Invoker<Set, Ser> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -113,11 +109,11 @@ impl<Set, Ser> Invoker<Set, Ser> {
 
 impl<Set, Ser> Invoker<Set, Ser>
 where
+    Ser: 'static,
     Set: crate::set::Set + 'static,
-    Ser: ServicesExt + 'static,
 {
     pub fn set_raw<
-        H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<()>, Error> + Send + Sync + 'static,
+        H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error> + Send + Sync + 'static,
     >(
         &mut self,
         uid: Uid,
@@ -134,7 +130,7 @@ where
     /// # Note
     /// ```txt
     /// |   handler: |&mut Set, &mut Ser, { Other Args }| -> Result<Option<Value>, Error>
-    /// |   storer: |&mut Set, &mut Ser, Option<&RawVal>, Option<Value>| -> Result<Option<()>, Error>
+    /// |   storer: |&mut Set, &mut Ser, Option<&RawVal>, Option<Value>| -> Result<bool, Error>
     ///         |
     ///      wrapped
     ///         |
@@ -149,13 +145,13 @@ where
     /// |           call Args::extract(&Set, &Ser, &Ctx) -> Args
     /// |           -> Result<Option<Value>, Error>
     /// |       -> call Store::process(&Set, Option<&RawVal>, Option<Value>)
-    /// |           -> Result<Option<()>, Error>
+    /// |           -> Result<bool, Error>
     /// ```
     pub fn set_handler<A, O, H, T>(&mut self, uid: Uid, handler: H, store: T) -> &mut Self
     where
         O: Send + Sync + 'static,
         A: Extract<Set, Ser, Error = Error> + Send + Sync + 'static,
-        T: Store<Set, Ser, O, Ret = (), Error = Error> + Send + Sync + 'static,
+        T: Store<Set, Ser, O, Ret = bool, Error = Error> + Send + Sync + 'static,
         H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
     {
         self.set_raw(uid, wrap_handler(handler, store));
@@ -167,7 +163,7 @@ where
     }
 
     /// Invoke the handler saved in [`Invoker`], it will panic if the handler not exist.
-    pub fn invoke(&mut self, set: &mut Set, ser: &mut Ser, ctx: &Ctx) -> Result<Option<()>, Error> {
+    pub fn invoke(&mut self, set: &mut Set, ser: &mut Ser, ctx: &Ctx) -> Result<bool, Error> {
         let uid = ctx.uid()?;
 
         if let Some(callback) = self.callbacks.get_mut(&uid) {
@@ -182,7 +178,6 @@ where
 
 impl<Set, Ser> Invoker<Set, Ser>
 where
-    Ser: ServicesExt,
     SetOpt<Set>: Opt,
     Set: crate::set::Set,
 {
@@ -201,43 +196,18 @@ where
     /// It will parsing [`RawVal`](crate::RawVal)(using [`RawValParser`]) into associated type, then call the action
     /// of option save the value to [`AnyValService`](crate::ser::AnyValService).
     /// For value type, reference documents of [`Assoc`].
-    pub fn fallback(set: &mut Set, ser: &mut Ser, ctx: &Ctx) -> Result<Option<()>, Error> {
+    pub fn fallback(set: &mut Set, _: &mut Ser, ctx: &Ctx) -> Result<bool, Error> {
         let uid = ctx.uid()?;
-        let opt = set.get(uid).unwrap();
-        let assoc = opt.assoc();
+        let opt = set.get_mut(uid).unwrap();
         let arg = ctx.arg()?;
-        let val = arg.as_ref().map(|v| v.as_ref());
-        let mut action = *opt.action();
+        let raw = arg.as_ref().map(|v| v.as_ref());
+        let act = *opt.action();
 
         crate::trace_log!(
-            "Invoke default handler for {{{uid}}}, ctx{{{ctx:?}}} action{{{}}} & assoc{{{}}}",
-            action,
-            assoc
+            "Invoke fallback for {}({action}), ctx{{{ctx:?}}}",
+            opt.name()
         );
-        match assoc {
-            Assoc::Bool => action.process(uid, set, ser, val, bool::parse(opt, val, ctx).ok()),
-            Assoc::Int => action.process(uid, set, ser, val, i64::parse(opt, val, ctx).ok()),
-            Assoc::Int128 => action.process(uid, set, ser, val, i128::parse(opt, val, ctx).ok()),
-            Assoc::ISize => action.process(uid, set, ser, val, isize::parse(opt, val, ctx).ok()),
-            Assoc::Int64 => action.process(uid, set, ser, val, i64::parse(opt, val, ctx).ok()),
-            Assoc::Int32 => action.process(uid, set, ser, val, i32::parse(opt, val, ctx).ok()),
-            Assoc::Int16 => action.process(uid, set, ser, val, i16::parse(opt, val, ctx).ok()),
-            Assoc::Int8 => action.process(uid, set, ser, val, i8::parse(opt, val, ctx).ok()),
-            Assoc::Uint => action.process(uid, set, ser, val, u64::parse(opt, val, ctx).ok()),
-            Assoc::Uint128 => action.process(uid, set, ser, val, u128::parse(opt, val, ctx).ok()),
-            Assoc::USize => action.process(uid, set, ser, val, usize::parse(opt, val, ctx).ok()),
-            Assoc::Uint64 => action.process(uid, set, ser, val, u64::parse(opt, val, ctx).ok()),
-            Assoc::Uint32 => action.process(uid, set, ser, val, u32::parse(opt, val, ctx).ok()),
-            Assoc::Uint16 => action.process(uid, set, ser, val, u16::parse(opt, val, ctx).ok()),
-            Assoc::Uint8 => action.process(uid, set, ser, val, u8::parse(opt, val, ctx).ok()),
-            Assoc::Flt => action.process(uid, set, ser, val, f64::parse(opt, val, ctx).ok()),
-            Assoc::Flt64 => action.process(uid, set, ser, val, f64::parse(opt, val, ctx).ok()),
-            Assoc::Flt32 => action.process(uid, set, ser, val, f32::parse(opt, val, ctx).ok()),
-            Assoc::Str => action.process(uid, set, ser, val, String::parse(opt, val, ctx).ok()),
-            Assoc::Noa => action.process(uid, set, ser, val, val.map(|_| true)),
-            Assoc::Path => action.process(uid, set, ser, val, PathBuf::parse(opt, val, ctx).ok()),
-            Assoc::Null => Ok(Some(())),
-        }
+        opt.accessor_mut().store_all(raw, ctx, &act)
     }
 
     pub fn invoke_default(
@@ -245,17 +215,17 @@ where
         set: &mut Set,
         ser: &mut Ser,
         ctx: &Ctx,
-    ) -> Result<Option<()>, Error> {
+    ) -> Result<bool, Error> {
         Self::fallback(set, ser, ctx)
     }
 }
 
 pub struct HandlerEntry<'a, Set, Ser, H, A, O>
 where
+    Ser: 'static,
     O: Send + Sync + 'static,
     Set: crate::set::Set + 'static,
     SetOpt<Set>: Opt,
-    Ser: ServicesExt + 'static,
     H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
     A: Extract<Set, Ser, Error = Error> + Send + Sync + 'static,
 {
@@ -272,10 +242,10 @@ where
 
 impl<'a, Set, Ser, H, A, O> HandlerEntry<'a, Set, Ser, H, A, O>
 where
+    Ser: 'static,
     O: Send + Sync + 'static,
     Set: crate::set::Set + 'static,
     SetOpt<Set>: Opt,
-    Ser: ServicesExt + 'static,
     H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
     A: Extract<Set, Ser, Error = Error> + Send + Sync + 'static,
 {
@@ -310,7 +280,7 @@ where
     /// The store will be used save the return value of option handler.
     pub fn then(
         mut self,
-        store: impl Store<Set, Ser, O, Ret = (), Error = Error> + Send + Sync + 'static,
+        store: impl Store<Set, Ser, O, Ret = bool, Error = Error> + Send + Sync + 'static,
     ) -> Self {
         if !self.register {
             if let Some(handler) = self.handler.take() {
@@ -334,10 +304,10 @@ where
 
 impl<'a, Set, Ser, H, A, O> Drop for HandlerEntry<'a, Set, Ser, H, A, O>
 where
+    Ser: 'static,
     O: Send + Sync + 'static,
     Set: crate::set::Set + 'static,
     SetOpt<Set>: Opt,
-    Ser: ServicesExt + 'static,
     H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
     A: Extract<Set, Ser, Error = Error> + Send + Sync + 'static,
 {

@@ -1,13 +1,10 @@
 use crate::map::ErasedTy;
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        pub type ValidatorHandler<T> = Box<dyn Fn(&T) -> bool + Send + Sync>;
-    }
-    else {
-        pub type ValidatorHandler<T> = Box<dyn Fn(&T) -> bool>;
-    }
-}
+#[cfg(feature = "sync")]
+pub type ValidatorHandler<T> = Box<dyn Fn(&T) -> bool + Send + Sync>;
+
+#[cfg(not(feature = "sync"))]
+pub type ValidatorHandler<T> = Box<dyn Fn(&T) -> bool>;
 
 pub struct ValValidator<T>(ValidatorHandler<T>);
 
@@ -22,6 +19,12 @@ impl<T: ErasedTy> ValValidator<T> {
         (self.0)(val)
     }
 
+    #[cfg(feature = "sync")]
+    pub fn from(func: impl Fn(&T) -> bool + Send + Sync + 'static) -> Self {
+        Self(Box::new(move |val| func(val)))
+    }
+
+    #[cfg(not(feature = "sync"))]
     pub fn from(func: impl Fn(&T) -> bool + 'static) -> Self {
         Self(Box::new(move |val| func(val)))
     }

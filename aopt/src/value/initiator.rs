@@ -5,50 +5,60 @@ use crate::Error;
 
 use super::AnyValue;
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        pub trait InitializeValue<T: ErasedTy>: Send + Sync {
-            type Error: Into<Error>;
+#[cfg(feature = "sync")]
+mod __initializer {
 
-            fn prepare_value(&mut self) -> Result<T, Self::Error>;
-        }
+    use super::*;
 
-        impl<Func, Err, T: ErasedTy> InitializeValue<T> for Func
-        where
-            Err: Into<Error>,
-            Func: FnMut() -> Result<T, Err> + Send + Sync,
-        {
-            type Error = Err;
+    pub trait InitializeValue<T: ErasedTy>: Send + Sync {
+        type Error: Into<Error>;
 
-            fn prepare_value(&mut self) -> Result<T, Self::Error> {
-                (self)()
-            }
-        }
-
-        pub type InitHandler<T> = Box<dyn FnMut(&mut T) -> Result<(), Error> + Send + Sync>;
+        fn prepare_value(&mut self) -> Result<T, Self::Error>;
     }
-    else {
-        pub trait InitializeValue<T: ErasedTy> {
-            type Error: Into<Error>;
 
-            fn prepare_value(&mut self) -> Result<T, Self::Error>;
+    impl<Func, Err, T: ErasedTy> InitializeValue<T> for Func
+    where
+        Err: Into<Error>,
+        Func: FnMut() -> Result<T, Err> + Send + Sync,
+    {
+        type Error = Err;
+
+        fn prepare_value(&mut self) -> Result<T, Self::Error> {
+            (self)()
         }
-
-        impl<Func, Err, T: ErasedTy> InitializeValue<T> for Func
-        where
-            Err: Into<Error>,
-            Func: FnMut() -> Result<T, Err>,
-        {
-            type Error = Err;
-
-            fn prepare_value(&mut self) -> Result<T, Self::Error> {
-                (self)()
-            }
-        }
-
-        pub type InitHandler<T> = Box<dyn FnMut(&mut T) -> Result<(), Error>>;
     }
+
+    pub type InitHandler<T> = Box<dyn FnMut(&mut T) -> Result<(), Error> + Send + Sync>;
 }
+
+#[cfg(not(feature = "sync"))]
+mod __initializer {
+
+    use super::*;
+
+    pub trait InitializeValue<T: ErasedTy> {
+        type Error: Into<Error>;
+
+        fn prepare_value(&mut self) -> Result<T, Self::Error>;
+    }
+
+    impl<Func, Err, T: ErasedTy> InitializeValue<T> for Func
+    where
+        Err: Into<Error>,
+        Func: FnMut() -> Result<T, Err>,
+    {
+        type Error = Err;
+
+        fn prepare_value(&mut self) -> Result<T, Self::Error> {
+            (self)()
+        }
+    }
+
+    pub type InitHandler<T> = Box<dyn FnMut(&mut T) -> Result<(), Error>>;
+}
+
+pub use __initializer::InitHandler;
+pub use __initializer::InitializeValue;
 
 pub struct ValInitializer(InitHandler<AnyValue>);
 

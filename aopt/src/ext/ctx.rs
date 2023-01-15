@@ -873,30 +873,28 @@ impl<Set: crate::set::Set, Ser, T: RawValParser> Extract<Set, Ser> for Value<T> 
     }
 }
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "serde")] {
-        impl<T> serde::Serialize for Value<T>
-        where
-            T: serde::Serialize,
-        {
-            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-            where
-                S: serde::Serializer,
-            {
-                self.0.serialize(serializer)
-            }
-        }
+#[cfg(feature = "serde")]
+impl<T> serde::Serialize for Value<T>
+where
+    T: serde::Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
 
-        impl<'de, T> serde::Deserialize<'de> for Value<T>
-        where
-            T: serde::Deserialize<'de>,
-        {
-            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-            where
-                D: serde::Deserializer<'de>,
-            {
-                Ok(Self(T::deserialize(deserializer)?))
-            }
-        }
+#[cfg(feature = "serde")]
+impl<'de, T> serde::Deserialize<'de> for Value<T>
+where
+    T: serde::Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(Self(T::deserialize(deserializer)?))
     }
 }

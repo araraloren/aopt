@@ -16,14 +16,11 @@ pub mod value;
 pub type Uid = u64;
 pub type HashMap<K, V> = ahash::HashMap<K, V>;
 pub type RawVal = raw::RawVal;
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        pub type Arc<T> = std::sync::Arc<T>;
-    }
-    else {
-        pub type Arc<T> = std::rc::Rc<T>;
-    }
-}
+
+#[cfg(feature = "sync")]
+pub type Arc<T> = std::sync::Arc<T>;
+#[cfg(not(feature = "sync"))]
+pub type Arc<T> = std::rc::Rc<T>;
 
 #[cfg(feature = "log")]
 pub(crate) use tracing::trace as trace_log;

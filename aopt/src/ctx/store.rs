@@ -1,4 +1,5 @@
 use crate::opt::Opt;
+use crate::prelude::ErasedTy;
 use crate::set::SetOpt;
 use crate::Error;
 use crate::RawVal;
@@ -20,10 +21,33 @@ pub trait Store<Set, Ser, Value> {
     ) -> Result<Self::Ret, Self::Error>;
 }
 
+#[cfg(not(feature = "sync"))]
 impl<Func, Set, Ser, Value, Ret, Err> Store<Set, Ser, Value> for Func
 where
     Err: Into<Error>,
     Func: FnMut(Uid, &mut Set, &mut Ser, Option<&RawVal>, Option<Value>) -> Result<Ret, Err>,
+{
+    type Ret = Ret;
+    type Error = Err;
+
+    fn process(
+        &mut self,
+        uid: Uid,
+        set: &mut Set,
+        ser: &mut Ser,
+        raw: Option<&RawVal>,
+        val: Option<Value>,
+    ) -> Result<Self::Ret, Self::Error> {
+        (self)(uid, set, ser, raw, val)
+    }
+}
+#[cfg(feature = "sync")]
+impl<Func, Set, Ser, Value, Ret, Err> Store<Set, Ser, Value> for Func
+where
+    Err: Into<Error>,
+    Func: FnMut(Uid, &mut Set, &mut Ser, Option<&RawVal>, Option<Value>) -> Result<Ret, Err>
+        + Send
+        + Sync,
 {
     type Ret = Ret;
     type Error = Err;
@@ -65,7 +89,7 @@ impl<Set, Ser, Value> Store<Set, Ser, Value> for NullStore {
 /// See [`Action`](crate::opt::Action) for default store.
 pub struct VecStore;
 
-impl<Set, Ser, Value: 'static> Store<Set, Ser, Vec<Value>> for VecStore
+impl<Set, Ser, Value: ErasedTy> Store<Set, Ser, Vec<Value>> for VecStore
 where
     Set: crate::set::Set,
     SetOpt<Set>: Opt,

@@ -103,58 +103,58 @@ impl PartialEq<String> for Str {
     }
 }
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "serde")] {
-        impl serde::Serialize for Str {
-            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-            where
-                S: serde::Serializer,
-            {
-                serializer.serialize_str(self.as_str())
-            }
-        }
+#[cfg(feature = "serde")]
+impl serde::Serialize for Str {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
 
-        struct StrVisitor;
+#[cfg(feature = "serde")]
+struct StrVisitor;
 
-        impl<'de>  serde::de::Visitor<'de> for StrVisitor {
-            type Value = Str;
+#[cfg(feature = "serde")]
+impl<'de> serde::de::Visitor<'de> for StrVisitor {
+    type Value = Str;
 
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("Str")
-            }
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("Str")
+    }
 
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                Ok(Self::Value::from(v))
-            }
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(Self::Value::from(v))
+    }
 
-            fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                Ok(Self::Value::from(String::from_utf8(v.to_vec()).map_err(
-                    |e| serde::de::Error::custom(format!("Invalid utf8 string for Str: {}", e)),
-                )?))
-            }
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(Self::Value::from(String::from_utf8(v.to_vec()).map_err(
+            |e| serde::de::Error::custom(format!("Invalid utf8 string for Str: {}", e)),
+        )?))
+    }
 
-            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                Ok(Self::Value::from(v))
-            }
-        }
+    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(Self::Value::from(v))
+    }
+}
 
-        impl<'de>  serde::Deserialize<'de> for Str {
-            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-            where
-                D: serde::Deserializer<'de>,
-            {
-                deserializer.deserialize_str(StrVisitor)
-            }
-        }
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for Str {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_str(StrVisitor)
     }
 }
 

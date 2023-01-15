@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::any::TypeId;
 use std::collections::hash_map::Entry as MapEntry;
 use std::fmt::Debug;
@@ -7,28 +6,41 @@ use std::marker::PhantomData;
 use crate::typeid;
 use crate::HashMap;
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        pub trait ErasedTy: Any + Sync + Send + 'static { }
+#[cfg(feature = "sync")]
+mod __erased_ty {
+    use crate::HashMap;
+    use std::any::Any;
+    use std::any::TypeId;
 
-        impl<T:  Any + Sync + Send + 'static> ErasedTy for T { }
+    pub trait ErasedTy: Any + Sync + Send + 'static {}
 
-        type BoxedAny = Box<dyn Any + Send + Sync>;
+    impl<T: Any + Sync + Send + 'static> ErasedTy for T {}
 
-        #[derive(Default)]
-        pub struct AnyMap(HashMap<TypeId, BoxedAny>);
-    }
-    else {
-        pub trait ErasedTy: Any + 'static { }
+    pub type BoxedAny = Box<dyn Any + Send + Sync>;
 
-        impl<T: Any + 'static> ErasedTy for T { }
-
-        type BoxedAny = Box<dyn Any>;
-
-        #[derive(Default)]
-        pub struct AnyMap(HashMap<TypeId, BoxedAny>);
-    }
+    #[derive(Default)]
+    pub struct AnyMap(pub(crate) HashMap<TypeId, BoxedAny>);
 }
+
+#[cfg(not(feature = "sync"))]
+mod __erased_ty {
+    use crate::HashMap;
+    use std::any::Any;
+    use std::any::TypeId;
+
+    pub trait ErasedTy: Any + 'static {}
+
+    impl<T: Any + 'static> ErasedTy for T {}
+
+    pub type BoxedAny = Box<dyn Any>;
+
+    #[derive(Default)]
+    pub struct AnyMap(pub(crate) HashMap<TypeId, BoxedAny>);
+}
+
+pub use __erased_ty::AnyMap;
+pub use __erased_ty::BoxedAny;
+pub use __erased_ty::ErasedTy;
 
 impl Debug for AnyMap {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -91,21 +103,10 @@ impl AnyMap {
     }
 }
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        pub struct Entry<'a, T> {
-            inner: MapEntry<'a, TypeId, BoxedAny>,
+pub struct Entry<'a, T> {
+    inner: MapEntry<'a, TypeId, BoxedAny>,
 
-            marker: PhantomData<T>,
-        }
-    }
-    else {
-        pub struct Entry<'a, T> {
-            inner: MapEntry<'a, TypeId, BoxedAny>,
-
-            marker: PhantomData<T>,
-        }
-    }
+    marker: PhantomData<T>,
 }
 
 impl<'a, T> Entry<'a, T>

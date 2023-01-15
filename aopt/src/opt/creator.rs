@@ -8,54 +8,57 @@ use crate::opt::OptConfig;
 use crate::set::Ctor;
 use crate::Error;
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        pub struct Creator<O, C, E: Into<Error>> {
-            callback: Box<dyn FnMut(C) -> Result<O, E> + Send + Sync + 'static>,
-        }
+#[cfg(feature = "sync")]
+mod __creator {
+    use super::*;
 
-        impl<O: Opt, C, E: Into<Error>> Debug for Creator<O, C, E> {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                f.debug_struct("Creator")
-                    .field("callback", &"{ ... }")
-                    .finish()
-            }
-        }
+    pub struct Creator<O, C, E: Into<Error>> {
+        pub(crate) callback: Box<dyn FnMut(C) -> Result<O, E> + Send + Sync + 'static>,
+    }
 
-        impl<O: Opt, C, E: Into<Error>> Creator<O, C, E> {
-            pub fn new(
-                callback: impl FnMut(C) -> Result<O, E> + Send + Sync + 'static,
-            ) -> Self {
-                Self {
-                    callback: Box::new(callback),
-                }
-            }
+    impl<O: Opt, C, E: Into<Error>> Debug for Creator<O, C, E> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("Creator")
+                .field("callback", &"{ ... }")
+                .finish()
         }
     }
-    else {
-        pub struct Creator<O, C, E: Into<Error>> {
-            callback: Box<dyn FnMut(C) -> Result<O, E> + 'static>,
-        }
 
-        impl<O: Opt, C, E: Into<Error>> Debug for Creator<O, C, E> {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                f.debug_struct("Creator")
-                    .field("callback", &"{ ... }")
-                    .finish()
-            }
-        }
-
-        impl<O: Opt, C, E: Into<Error>> Creator<O, C, E> {
-            pub fn new(
-                callback: impl FnMut(C) -> Result<O, E> + 'static,
-            ) -> Self {
-                Self {
-                    callback: Box::new(callback),
-                }
+    impl<O: Opt, C, E: Into<Error>> Creator<O, C, E> {
+        pub fn new(callback: impl FnMut(C) -> Result<O, E> + Send + Sync + 'static) -> Self {
+            Self {
+                callback: Box::new(callback),
             }
         }
     }
 }
+
+#[cfg(not(feature = "sync"))]
+mod __creator {
+    use super::*;
+
+    pub struct Creator<O, C, E: Into<Error>> {
+        pub(crate) callback: Box<dyn FnMut(C) -> Result<O, E> + 'static>,
+    }
+
+    impl<O: Opt, C, E: Into<Error>> Debug for Creator<O, C, E> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("Creator")
+                .field("callback", &"{ ... }")
+                .finish()
+        }
+    }
+
+    impl<O: Opt, C, E: Into<Error>> Creator<O, C, E> {
+        pub fn new(callback: impl FnMut(C) -> Result<O, E> + 'static) -> Self {
+            Self {
+                callback: Box::new(callback),
+            }
+        }
+    }
+}
+
+pub use __creator::Creator;
 
 impl<O: Opt, C, E: Into<Error>> Ctor for Creator<O, C, E> {
     type Opt = O;

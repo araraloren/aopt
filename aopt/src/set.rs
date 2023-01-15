@@ -30,57 +30,53 @@ pub type SetOpt<I> = <<I as Set>::Ctor as Ctor>::Opt;
 /// An type alias for `<<I as Set>::Ctor as Ctor>::Config`
 pub type SetCfg<I> = <<I as Set>::Ctor as Ctor>::Config;
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        /// Implement [`Ctor`] for `Box<dyn Ctor>`.
-        impl<Opt: crate::opt::Opt, Config: Send + Sync, Err: Into<Error>> Ctor
-        for Box<dyn Ctor<Opt = Opt, Config = Config, Error = Err> + Send + Sync>
-        {
-            type Opt = Opt;
+#[cfg(feature = "sync")]
+/// Implement [`Ctor`] for `Box<dyn Ctor>`.
+impl<Opt: crate::opt::Opt, Config: Send + Sync, Err: Into<Error>> Ctor
+    for Box<dyn Ctor<Opt = Opt, Config = Config, Error = Err> + Send + Sync>
+{
+    type Opt = Opt;
 
-            type Config = Config;
+    type Config = Config;
 
-            type Error = Err;
+    type Error = Err;
 
-            fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
-                Ctor::new_with(self.as_mut(), config)
-            }
-        }
-
-        impl<Opt: crate::opt::Opt, Config: Send + Sync, Err: Into<Error>> Debug
-        for Box<dyn Ctor<Opt = Opt, Config = Config, Error = Err> + Send + Sync>
-        {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                f.debug_tuple("Ctor")
-                    .field(&format!("{{{}}}", self.r#type()))
-                    .finish()
-            }
-        }
+    fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
+        Ctor::new_with(self.as_mut(), config)
     }
-    else {
-        /// Implement [`Ctor`] for `Box<dyn Ctor>`.
-        impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Ctor
-        for Box<dyn Ctor<Opt = Opt, Config = Config, Error = Err>>
-        {
-            type Opt = Opt;
+}
 
-            type Config = Config;
+#[cfg(feature = "sync")]
+impl<Opt: crate::opt::Opt, Config: Send + Sync, Err: Into<Error>> Debug
+    for Box<dyn Ctor<Opt = Opt, Config = Config, Error = Err> + Send + Sync>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Ctor").finish()
+    }
+}
 
-            type Error = Err;
+#[cfg(not(feature = "sync"))]
+/// Implement [`Ctor`] for `Box<dyn Ctor>`.
+impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Ctor
+    for Box<dyn Ctor<Opt = Opt, Config = Config, Error = Err>>
+{
+    type Opt = Opt;
 
-            fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
-                Ctor::new_with(self.as_mut(), config)
-            }
-        }
+    type Config = Config;
 
-        impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Debug
-        for Box<dyn Ctor<Opt = Opt, Config = Config, Error = Err>>
-        {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                f.debug_tuple("Ctor")
-                    .finish()
-            }
-        }
+    type Error = Err;
+
+    fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
+        Ctor::new_with(self.as_mut(), config)
+    }
+}
+
+#[cfg(not(feature = "sync"))]
+impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Debug
+    for Box<dyn Ctor<Opt = Opt, Config = Config, Error = Err>>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Ctor").finish()
     }
 }
 

@@ -15,13 +15,11 @@ use crate::Uid;
 #[derive(Clone)]
 pub struct SetChecker<S>(PhantomData<S>);
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        unsafe impl<S> Send for SetChecker<S> { }
+#[cfg(feature = "sync")]
+unsafe impl<S> Send for SetChecker<S> {}
 
-        unsafe impl<S> Sync for SetChecker<S> { }
-    }
-}
+#[cfg(feature = "sync")]
+unsafe impl<S> Sync for SetChecker<S> {}
 
 impl<S> Debug for SetChecker<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
