@@ -223,10 +223,12 @@ pub mod prelude {
     pub use crate::opt::Creator;
     pub use crate::opt::Help;
     pub use crate::opt::Index;
+    pub use crate::opt::Infer;
     pub use crate::opt::Information;
     pub use crate::opt::Opt;
     pub use crate::opt::OptConfig;
     pub use crate::opt::OptParser;
+    pub use crate::opt::OptValueExt;
     #[cfg(feature = "serde")]
     pub use crate::opt::Serde;
     pub use crate::opt::StrParser;
@@ -265,6 +267,13 @@ pub mod prelude {
     pub use crate::set::SetCfg;
     pub use crate::set::SetExt;
     pub use crate::set::SetOpt;
+    pub use crate::value::AnyValue;
+    pub use crate::value::ErasedValHandler;
+    pub use crate::value::InitializeValue;
     pub use crate::value::RawValParser;
+    pub use crate::value::ValAccessor;
+    pub use crate::value::ValInitializer;
+    pub use crate::value::ValStorer;
+    pub use crate::value::ValValidator;
     pub use crate::Uid;
 }
