@@ -11,6 +11,7 @@ use crate::ctx::Store;
 use crate::opt::Opt;
 use crate::prelude::SetExt;
 use crate::set::SetOpt;
+use crate::trace_log;
 use crate::Error;
 use crate::HashMap;
 use crate::Uid;
@@ -165,6 +166,7 @@ where
     pub fn invoke(&mut self, set: &mut Set, ser: &mut Ser, ctx: &Ctx) -> Result<bool, Error> {
         let uid = ctx.uid()?;
 
+        trace_log!("Invoking callback of {}({:?})", uid, ctx);
         if let Some(callback) = self.callbacks.get_mut(&uid) {
             return (callback)(set, ser, ctx);
         }
@@ -202,10 +204,7 @@ where
         let raw = arg.as_ref().map(|v| v.as_ref());
         let act = *opt.action();
 
-        crate::trace_log!(
-            "Invoke fallback for {}({action}), ctx{{{ctx:?}}}",
-            opt.name()
-        );
+        trace_log!("Invoke fallback for {}({act}) {{{ctx:?}}}", opt.name());
         opt.accessor_mut().store_all(raw, ctx, &act)
     }
 

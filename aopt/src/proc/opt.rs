@@ -175,10 +175,8 @@ where
             self.matched_uid = Some(opt.uid());
         }
         crate::trace_log!(
-            "Matching {{name: {:?}, style: {}, arg: {:?}}} with Opt{{{}}}: {}",
-            self.name(),
-            self.style(),
-            self.arg(),
+            "Matching {{{:?}}} with Opt{{{}}}: {}",
+            self,
             opt.hint(),
             matched
         );

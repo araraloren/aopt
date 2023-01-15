@@ -9,6 +9,7 @@ use crate::proc::OptProcess;
 use crate::proc::Process;
 use crate::ser::ServicesExt;
 use crate::set::SetOpt;
+use crate::trace_log;
 use crate::Error;
 use crate::Uid;
 
@@ -42,11 +43,11 @@ where
     // Catch the result of handler, so we can register it back to Services.
     match inv.has(uid) {
         true => {
-            crate::trace_log!("Invoke callback of Opt{{{uid}}} with {:?}", ctx);
+            trace_log!("Invoke callback of {}", uid);
             inv.invoke(set, ser, &ctx)
         }
         false => {
-            crate::trace_log!("Invoke default of Opt{{{uid}}} with {:?}", ctx);
+            trace_log!("Invoke default callback of {}", uid);
             inv.invoke_default(set, ser, &ctx)
         }
     }
@@ -157,12 +158,12 @@ where
                     let ret = match inv.has(uid) {
                         true => {
                             // callback in Invoker
-                            crate::trace_log!("Invoke callback of NOA{{{uid}}} with {:?}", &ctx);
+                            trace_log!("Invoke callback of NOA{{{uid}}}");
                             inv.invoke(set, ser, &ctx)?
                         }
                         false => {
                             // call `invoke_default` if callback not exist
-                            crate::trace_log!("Invoke default of NOA{{{uid}}} with {:?}", &ctx);
+                            trace_log!("Invoke default callback of NOA{{{uid}}}");
                             inv.invoke_default(set, ser, &ctx)?
                         }
                     };

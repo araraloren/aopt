@@ -5,6 +5,7 @@ use crate::opt::Index;
 use crate::opt::Opt;
 use crate::opt::Style;
 use crate::set::SetOpt;
+use crate::trace_log;
 use crate::Error;
 use crate::HashMap;
 use crate::StrJoin;
@@ -58,7 +59,7 @@ where
 
         const MAX_INDEX: usize = usize::MAX;
 
-        crate::trace_log!("Pre Check {{has_cmd: {}}}", has_cmd);
+        trace_log!("Pre Check {{has_cmd: {}}}", has_cmd);
         if has_cmd {
             for opt in set.iter() {
                 if opt.mat_style(Style::Pos) {
@@ -77,7 +78,7 @@ where
     }
 
     pub fn opt_check(&self, set: &mut S) -> Result<bool, Error> {
-        crate::trace_log!("Opt Check, call valid on all Opt ...");
+        trace_log!("Opt Check, call valid on all Opt ...");
         for opt in set.iter().filter(|opt| {
             opt.mat_style(Style::Argument)
                 || opt.mat_style(Style::Boolean)
@@ -139,11 +140,7 @@ where
         }
         let mut names = vec![];
 
-        crate::trace_log!(
-            "Pos Check, index: {{{:?}}}, float: {{{:?}}}",
-            index_map,
-            float_vec
-        );
+        trace_log!("Pos Check, index: {{{index_map:?}}}, float: {{{float_vec:?}}}");
         for (_, uids) in index_map.iter() {
             // if any of POS is force required, then it must set by user
             let mut pos_valid = true;
@@ -190,7 +187,7 @@ where
                 }
             }
         }
-        crate::trace_log!("Cmd Check, any one of the cmd matched: {}", valid);
+        trace_log!("Cmd Check, any one of the cmd matched: {}", valid);
         if !valid && !names.is_empty() {
             return Err(Error::sp_cmd_force_require(names.join(" | ")));
         }
@@ -198,7 +195,7 @@ where
     }
 
     pub fn post_check(&self, set: &mut S) -> Result<bool, Error> {
-        crate::trace_log!("Post Check, call valid on Main ...");
+        trace_log!("Post Check, call valid on Main ...");
         Ok(set
             .iter()
             .filter(|opt| opt.mat_style(Style::Main))

@@ -8,6 +8,7 @@ use crate::proc::Match;
 use crate::proc::Process;
 use crate::set::Ctor;
 use crate::set::Set;
+use crate::trace_log;
 use crate::Arc;
 use crate::Error;
 use crate::RawVal;
@@ -182,12 +183,9 @@ where
             self.matched_index = Some(self.noa_index);
             self.matched_uid = Some(opt.uid());
         }
-        crate::trace_log!(
-            "Matching {{name: {:?}, index: {:?} style: {}, arg: {:?}}} with NOA{{{}}}: {:?}",
-            self.name(),
-            self.idx(),
-            self.style(),
-            self.arg(),
+        trace_log!(
+            "Matching {{{:?}}} with NOA{{{}}}: {:?}",
+            self,
             opt.hint(),
             self.matched_uid
         );

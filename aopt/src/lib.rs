@@ -26,10 +26,7 @@ cfg_if::cfg_if! {
 }
 
 #[cfg(feature = "log")]
-#[macro_use]
-pub(crate) mod log {
-    pub(crate) use tracing::trace as trace_log;
-}
+pub(crate) use tracing::trace as trace_log;
 #[cfg(not(feature = "log"))]
 #[macro_use]
 pub(crate) mod log {

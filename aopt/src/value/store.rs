@@ -43,6 +43,7 @@ impl ValStorer {
         act: &Action,
         arg: &mut AnyValue,
     ) -> Result<(), Error> {
+        crate::trace_log!("Saving raw value({:?}) for {}", raw, ctx.uid()?);
         (self.0)(raw, ctx, act, arg)
     }
 

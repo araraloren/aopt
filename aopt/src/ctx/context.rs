@@ -261,6 +261,7 @@ impl Ctx {
     }
 
     pub fn set_inner_ctx(&mut self, inner_ctx: Option<InnerCtx>) -> &mut Self {
+        crate::trace_log!("Switching InnerCtx to {:?}", inner_ctx);
         self.inner_ctx = inner_ctx;
         self
     }

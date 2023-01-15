@@ -170,6 +170,7 @@ where
                 self.validator.take(),
             )));
             let info = std::mem::take(&mut self.info);
+            let _name = info.name().cloned();
             let opt = self
                 .set
                 .ctor_mut::<U::Val>()?
@@ -177,7 +178,7 @@ where
                 .map_err(|e| e.into())?;
             let uid = self.set.insert(opt);
 
-            crate::trace_log!("Register a opt {:?} --> {}", info.name().cloned(), uid);
+            crate::trace_log!("Register a opt {:?} --> {}", _name, uid);
             self.commited = Some(uid);
             Ok(uid)
         }

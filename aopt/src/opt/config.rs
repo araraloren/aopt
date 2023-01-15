@@ -1,6 +1,5 @@
 use std::any::TypeId;
 
-use crate::astr;
 use crate::err::Error;
 use crate::map::ErasedTy;
 use crate::opt::Action;
@@ -178,25 +177,6 @@ impl OptConfig {
     pub fn with_accessor(mut self, accessor: Option<ValAccessor>) -> Self {
         self.accessor = accessor;
         self
-    }
-
-    fn type_str(&self) -> Result<String, Error> {
-        Ok(format!(
-            "{:?}",
-            self.ty
-                .as_ref()
-                .ok_or_else(|| Error::raise_error("Option type name can't be empty"))?
-        ))
-    }
-
-    pub fn raise_missing_error(&self, field: &str) -> Result<Error, Error> {
-        Ok(Error::con_missing_field(
-            &astr(field),
-            self.name
-                .as_ref()
-                .ok_or_else(|| Error::raise_error("Option name can't be empty"))?,
-            &Str::from(self.type_str()?),
-        ))
     }
 
     pub fn take_alias(&mut self) -> Vec<Str> {
