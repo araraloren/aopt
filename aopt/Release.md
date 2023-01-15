@@ -19,6 +19,10 @@
 
 - Let option callback return `bool` instead of `Option`
 
+- Make tracing log optional
+
+- Make serde optional
+
 ## 0.8.4
 
 - Add `Creator::any` option type

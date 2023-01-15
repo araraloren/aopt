@@ -7,6 +7,7 @@ pub(crate) mod index;
 pub(crate) mod infer;
 pub(crate) mod info;
 pub(crate) mod parser;
+#[cfg(feature = "serde")]
 pub(crate) mod serde;
 pub(crate) mod style;
 pub(crate) mod value;
@@ -23,8 +24,11 @@ pub use self::infer::Infer;
 pub use self::info::ConstrctInfo;
 pub use self::info::Information;
 pub use self::parser::StrParser;
+#[cfg(feature = "serde")]
 pub use self::serde::Deserialize;
+#[cfg(feature = "serde")]
 pub use self::serde::Serde;
+#[cfg(feature = "serde")]
 pub use self::serde::Serialize;
 pub use self::style::Style;
 pub use self::value::OptValueExt;

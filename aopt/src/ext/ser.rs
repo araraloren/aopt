@@ -1,7 +1,5 @@
 //! The structs hold the data collect from [`Services`](crate::ser::Services).
 //! They are all implemented [`Extract`].
-use serde::Deserialize;
-use serde::Serialize;
 use std::fmt::Debug;
 use std::fmt::Display;
 use std::ops::Deref;
@@ -174,26 +172,30 @@ impl<T> DerefMut for Value<T> {
     }
 }
 
-impl<T> Serialize for Value<T>
-where
-    T: Serialize,
-{
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.0.serialize(serializer)
-    }
-}
+cfg_if::cfg_if! {
+    if #[cfg(feature = "serde")] {
+        impl<T> serde::Serialize for Value<T>
+        where
+            T: serde::Serialize,
+        {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                self.0.serialize(serializer)
+            }
+        }
 
-impl<'de, T> Deserialize<'de> for Value<T>
-where
-    Arc<T>: Deserialize<'de>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        Ok(Self(Arc::<T>::deserialize(deserializer)?))
+        impl<'de, T> serde::Deserialize<'de> for Value<T>
+        where
+            Arc<T>: serde::Deserialize<'de>,
+        {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                Ok(Self(Arc::<T>::deserialize(deserializer)?))
+            }
+        }
     }
 }

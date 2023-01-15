@@ -11,6 +11,7 @@ pub use self::accessor::ValAccessor;
 pub use self::initiator::InitHandler;
 pub use self::initiator::InitializeValue;
 pub use self::initiator::ValInitializer;
+#[cfg(feature = "serde")]
 pub(crate) use self::parser::convert_raw_to_utf8;
 pub use self::parser::RawValParser;
 pub use self::store::StoreHandler;

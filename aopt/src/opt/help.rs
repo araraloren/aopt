@@ -1,8 +1,8 @@
 use crate::Str;
 
 /// The help information of option.
-///
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Default)]
 pub struct Help {
     /// The option hint is used in `usage`.
     hint: Str,

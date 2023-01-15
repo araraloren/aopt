@@ -25,8 +25,8 @@ use super::StrParser;
 /// ```
 ///
 /// For option check, see [`SetChecker`](crate::parser::SetChecker) for more information.
-///
-#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Index {
     /// The forward index of NOA, fixed position.
     ///

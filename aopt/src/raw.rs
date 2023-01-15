@@ -9,6 +9,7 @@ cfg_if::cfg_if! {
 
         /// Raw value used when parsing command line argument,
         /// it is wrapper of [`String`] if feature `utf8` enabled.
+        #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
         #[derive(
             Debug,
             Clone,
@@ -17,9 +18,7 @@ cfg_if::cfg_if! {
             Eq,
             PartialOrd,
             Ord,
-            Hash,
-            serde::Serialize,
-            serde::Deserialize,
+            Hash
         )]
         pub struct RawVal(String);
 
@@ -106,6 +105,7 @@ cfg_if::cfg_if! {
 
         /// Raw value used when parsing command line argument,
         /// it is wrapper of [`OsString`] in default.
+        #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
         #[derive(
             Debug,
             Clone,
@@ -115,8 +115,6 @@ cfg_if::cfg_if! {
             PartialOrd,
             Ord,
             Hash,
-            serde::Serialize,
-            serde::Deserialize,
         )]
         pub struct RawVal(OsString);
 

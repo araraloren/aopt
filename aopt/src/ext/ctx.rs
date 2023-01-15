@@ -69,8 +69,6 @@
 //! # Ok(())
 //! # }
 //!```
-use serde::Deserialize;
-use serde::Serialize;
 use std::fmt::Debug;
 use std::fmt::Display;
 use std::hash::Hash;
@@ -127,18 +125,8 @@ impl<Set, Ser> Extract<Set, Ser> for Ctx {
 /// #
 /// # }
 /// ```
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    serde::Serialize,
-    serde::Deserialize,
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Uid(crate::Uid);
 
 impl Uid {
@@ -234,18 +222,8 @@ impl Display for Uid {
 /// # Ok(())
 /// # }
 /// ```
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    serde::Serialize,
-    serde::Deserialize,
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Index(usize);
 
 impl Index {
@@ -329,18 +307,8 @@ impl Display for Index {
 /// # Ok(())
 /// # }
 /// ```
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    serde::Serialize,
-    serde::Deserialize,
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Total(usize);
 
 impl Total {
@@ -517,18 +485,8 @@ impl<Set, Ser> Extract<Set, Ser> for Args {
 /// # Ok(())
 /// # }
 /// ```
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    serde::Serialize,
-    serde::Deserialize,
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Name(Str);
 
 impl Name {
@@ -900,7 +858,7 @@ impl<T> DerefMut for Value<T> {
 impl<Set: crate::set::Set, Ser, T: RawValParser> Extract<Set, Ser> for Value<T> {
     type Error = Error;
 
-    fn extract(set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn extract(_: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
         let arg = ctx.arg()?;
         let arg = arg.as_ref().map(|v| v.as_ref());
         let uid = ctx.uid()?;
@@ -915,26 +873,30 @@ impl<Set: crate::set::Set, Ser, T: RawValParser> Extract<Set, Ser> for Value<T> 
     }
 }
 
-impl<T> Serialize for Value<T>
-where
-    T: Serialize,
-{
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.0.serialize(serializer)
-    }
-}
+cfg_if::cfg_if! {
+    if #[cfg(feature = "serde")] {
+        impl<T> serde::Serialize for Value<T>
+        where
+            T: serde::Serialize,
+        {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                self.0.serialize(serializer)
+            }
+        }
 
-impl<'de, T> Deserialize<'de> for Value<T>
-where
-    T: Deserialize<'de>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        Ok(Self(T::deserialize(deserializer)?))
+        impl<'de, T> serde::Deserialize<'de> for Value<T>
+        where
+            T: serde::Deserialize<'de>,
+        {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                Ok(Self(T::deserialize(deserializer)?))
+            }
+        }
     }
 }
