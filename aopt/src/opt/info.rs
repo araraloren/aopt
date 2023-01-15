@@ -6,25 +6,31 @@ pub trait Information {
 
     fn has_force(&self) -> bool;
 
-    fn has_ty(&self) -> bool;
+    fn has_alias(&self) -> bool;
 
     fn has_idx(&self) -> bool;
+
+    fn has_help(&self) -> bool;
 
     fn name(&self) -> Option<&Str>;
 
     fn force(&self) -> Option<bool>;
 
-    fn ty(&self) -> Option<&Str>;
+    fn alias(&self) -> Option<&Vec<Str>>;
 
     fn idx(&self) -> Option<&Index>;
+
+    fn help(&self) -> Option<&Str>;
 
     fn take_name(&mut self) -> Option<Str>;
 
     fn take_force(&mut self) -> Option<bool>;
 
-    fn take_ty(&mut self) -> Option<Str>;
+    fn take_alias(&mut self) -> Option<Vec<Str>>;
 
     fn take_idx(&mut self) -> Option<Index>;
+
+    fn take_help(&mut self) -> Option<Str>;
 }
 
 /// Parsing result of option constructor string.
@@ -34,11 +40,13 @@ pub struct ConstrctInfo {
 
     pub name: Option<Str>,
 
-    pub type_name: Option<Str>,
+    pub alias: Option<Vec<Str>>,
 
     pub force: Option<bool>,
 
     pub index: Option<Index>,
+
+    pub help: Option<Str>,
 }
 
 impl ConstrctInfo {
@@ -52,8 +60,13 @@ impl ConstrctInfo {
         self
     }
 
-    pub fn with_ty(mut self, type_name: Option<Str>) -> Self {
-        self.type_name = type_name;
+    pub fn with_help(mut self, help: Option<Str>) -> Self {
+        self.help = help;
+        self
+    }
+
+    pub fn with_alias(mut self, alias: Option<Vec<Str>>) -> Self {
+        self.alias = alias;
         self
     }
 
@@ -77,10 +90,6 @@ impl Information for ConstrctInfo {
         self.force.is_some()
     }
 
-    fn has_ty(&self) -> bool {
-        self.type_name.is_some()
-    }
-
     fn has_idx(&self) -> bool {
         self.index.is_some()
     }
@@ -91,10 +100,6 @@ impl Information for ConstrctInfo {
 
     fn force(&self) -> Option<bool> {
         self.force
-    }
-
-    fn ty(&self) -> Option<&Str> {
-        self.type_name.as_ref()
     }
 
     fn idx(&self) -> Option<&Index> {
@@ -109,11 +114,31 @@ impl Information for ConstrctInfo {
         self.force.take()
     }
 
-    fn take_ty(&mut self) -> Option<Str> {
-        self.type_name.take()
-    }
-
     fn take_idx(&mut self) -> Option<Index> {
         self.index.take()
+    }
+
+    fn has_alias(&self) -> bool {
+        self.alias.is_some()
+    }
+
+    fn has_help(&self) -> bool {
+        self.help.is_some()
+    }
+
+    fn alias(&self) -> Option<&Vec<Str>> {
+        self.alias.as_ref()
+    }
+
+    fn help(&self) -> Option<&Str> {
+        self.help.as_ref()
+    }
+
+    fn take_alias(&mut self) -> Option<Vec<Str>> {
+        self.alias.take()
+    }
+
+    fn take_help(&mut self) -> Option<Str> {
+        self.help.take()
     }
 }

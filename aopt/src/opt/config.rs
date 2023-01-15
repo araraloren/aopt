@@ -263,6 +263,14 @@ impl Config for OptConfig {
         if let Some(v) = output.take_force() {
             ret.set_force(v);
         }
+        if let Some(v) = output.take_help() {
+            ret.set_help(v);
+        }
+        if let Some(v) = output.take_alias() {
+            for item in v {
+                ret.add_alias(item);
+            }
+        }
         Ok(ret)
     }
 }
