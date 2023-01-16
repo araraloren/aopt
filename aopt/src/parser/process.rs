@@ -7,7 +7,6 @@ use crate::proc::Match;
 use crate::proc::NOAProcess;
 use crate::proc::OptProcess;
 use crate::proc::Process;
-use crate::ser::ServicesExt;
 use crate::set::SetOpt;
 use crate::trace_log;
 use crate::Error;
@@ -36,7 +35,7 @@ pub fn invoke_callback_opt<Set, Ser>(
 ) -> Result<bool, Error>
 where
     SetOpt<Set>: Opt,
-    Ser: ServicesExt + 'static,
+    Ser: 'static,
     Set: crate::set::Set + 'static,
 {
     // Take the service, invoke the handler of option.
@@ -67,7 +66,7 @@ pub fn process_opt<'a, Set, Ser>(
 ) -> Result<Vec<CtxSaver>, Error>
 where
     SetOpt<Set>: Opt,
-    Ser: ServicesExt + 'static,
+    Ser: 'static,
     Set: crate::set::Set + 'static,
 {
     // copy the uid of option, avoid borrow the set
@@ -133,7 +132,7 @@ pub fn process_non_opt<'a, Set, Ser>(
 ) -> Result<Vec<CtxSaver>, Error>
 where
     SetOpt<Set>: Opt,
-    Ser: ServicesExt + 'static,
+    Ser: 'static,
     Set: crate::set::Set + 'static,
 {
     // copy the uid of option, avoid borrow the set

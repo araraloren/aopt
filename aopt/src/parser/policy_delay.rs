@@ -25,7 +25,6 @@ use crate::ctx::Invoker;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::proc::Process;
-use crate::ser::ServicesExt;
 use crate::set::OptValidator;
 use crate::set::SetOpt;
 use crate::Arc;
@@ -214,7 +213,7 @@ impl<Set, Ser> UserStyleMange for DelayPolicy<Set, Ser> {
 impl<Set, Ser> DelayPolicy<Set, Ser>
 where
     SetOpt<Set>: Opt,
-    Ser: ServicesExt + 'static,
+    Ser: 'static,
     Set: crate::set::Set + OptParser + Debug + 'static,
 {
     pub fn invoke_opt_callback(
@@ -237,7 +236,7 @@ where
 impl<Set, Ser> DelayPolicy<Set, Ser>
 where
     SetOpt<Set>: Opt,
-    Ser: ServicesExt + 'static,
+    Ser: 'static,
     Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
 {
     pub(crate) fn parse_impl(
@@ -401,7 +400,7 @@ where
 impl<Set, Ser> Policy for DelayPolicy<Set, Ser>
 where
     SetOpt<Set>: Opt,
-    Ser: ServicesExt + 'static,
+    Ser: 'static,
     Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
 {
     type Ret = ReturnVal;

@@ -8,8 +8,9 @@ use crate::ctx::Ctx;
 use crate::ctx::Extract;
 use crate::ctx::Handler;
 use crate::ctx::Store;
+use crate::map::ErasedTy;
 use crate::opt::Opt;
-use crate::prelude::SetExt;
+use crate::set::SetExt;
 use crate::set::SetOpt;
 use crate::trace_log;
 use crate::Error;
@@ -184,7 +185,7 @@ where
 {
     pub fn entry<A, O, H>(&mut self, uid: Uid) -> HandlerEntry<'_, Set, Ser, H, A, O>
     where
-        O: 'static,
+        O: ErasedTy,
         H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'static,
         A: Extract<Set, Ser, Error = Error> + 'static,
     {
@@ -220,7 +221,7 @@ where
 
 pub struct HandlerEntry<'a, Set, Ser, H, A, O>
 where
-    O: 'static,
+    O: ErasedTy,
     Ser: 'static,
     Set: crate::set::Set + 'static,
     SetOpt<Set>: Opt,
@@ -240,7 +241,7 @@ where
 
 impl<'a, Set, Ser, H, A, O> HandlerEntry<'a, Set, Ser, H, A, O>
 where
-    O: 'static,
+    O: ErasedTy,
     Ser: 'static,
     Set: crate::set::Set + 'static,
     SetOpt<Set>: Opt,
@@ -302,7 +303,7 @@ where
 
 impl<'a, Set, Ser, H, A, O> Drop for HandlerEntry<'a, Set, Ser, H, A, O>
 where
-    O: 'static,
+    O: ErasedTy,
     Ser: 'static,
     Set: crate::set::Set + 'static,
     SetOpt<Set>: Opt,

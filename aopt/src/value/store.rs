@@ -3,6 +3,7 @@ use std::fmt::Debug;
 use crate::ctx::Ctx;
 use crate::map::ErasedTy;
 use crate::opt::Action;
+use crate::trace_log;
 use crate::Error;
 use crate::RawVal;
 
@@ -53,6 +54,7 @@ impl ValStorer {
             move |raw: Option<&RawVal>, ctx: &Ctx, act: &Action, handler: &mut AnyValue| {
                 let val = U::parse(raw, ctx).map_err(Into::into)?;
 
+                trace_log!("Validator value storer, parsing {:?} -> {:?}", raw, val);
                 if validator.invoke(&val) {
                     Err(Error::raise_failure(format!(
                         "Value check failed for option {:?}",
@@ -69,7 +71,10 @@ impl ValStorer {
     pub fn fallback<U: ErasedTy + RawValParser>() -> StoreHandler<AnyValue> {
         Box::new(
             |raw: Option<&RawVal>, ctx: &Ctx, act: &Action, handler: &mut AnyValue| {
-                act.store1(Some(U::parse(raw, ctx).map_err(Into::into)?), handler);
+                let val = U::parse(raw, ctx).map_err(Into::into)?;
+
+                trace_log!("Fallback value storer, parsing {:?} -> {:?}", raw, val);
+                act.store1(Some(val), handler);
                 Ok(())
             },
         )

@@ -214,18 +214,21 @@ pub mod prelude {
     pub use crate::map::ErasedTy;
     pub use crate::opt::AOpt;
     pub use crate::opt::Action;
+    pub use crate::opt::Cmd;
     pub use crate::opt::Config;
     pub use crate::opt::ConfigValue;
     pub use crate::opt::ConstrctInfo;
     pub use crate::opt::Creator;
     pub use crate::opt::Help;
     pub use crate::opt::Index;
-    pub use crate::opt::Infer;
     pub use crate::opt::Information;
+    pub use crate::opt::Main;
+    pub use crate::opt::Noa;
     pub use crate::opt::Opt;
     pub use crate::opt::OptConfig;
     pub use crate::opt::OptParser;
     pub use crate::opt::OptValueExt;
+    pub use crate::opt::Pos;
     #[cfg(feature = "serde")]
     pub use crate::opt::Serde;
     pub use crate::opt::StrParser;
@@ -266,6 +269,7 @@ pub mod prelude {
     pub use crate::set::SetOpt;
     pub use crate::value::AnyValue;
     pub use crate::value::ErasedValHandler;
+    pub use crate::value::Infer;
     pub use crate::value::InitializeValue;
     pub use crate::value::RawValParser;
     pub use crate::value::ValAccessor;

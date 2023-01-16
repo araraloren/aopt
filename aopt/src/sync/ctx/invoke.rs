@@ -109,7 +109,6 @@ impl<Set, Ser> Invoker<Set, Ser> {
 
 impl<Set, Ser> Invoker<Set, Ser>
 where
-    Ser: 'static,
     Set: crate::set::Set + 'static,
 {
     pub fn set_raw<
@@ -149,7 +148,7 @@ where
     /// ```
     pub fn set_handler<A, O, H, T>(&mut self, uid: Uid, handler: H, store: T) -> &mut Self
     where
-        O: Send + Sync + 'static,
+        O: ErasedTy,
         A: Extract<Set, Ser, Error = Error> + Send + Sync + 'static,
         T: Store<Set, Ser, O, Ret = bool, Error = Error> + Send + Sync + 'static,
         H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
@@ -184,7 +183,7 @@ where
 {
     pub fn entry<A, O, H>(&mut self, uid: Uid) -> HandlerEntry<'_, Set, Ser, H, A, O>
     where
-        O: Send + Sync + 'static,
+        O: ErasedTy,
         H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
         A: Extract<Set, Ser, Error = Error> + Send + Sync + 'static,
     {
@@ -223,8 +222,8 @@ where
 
 pub struct HandlerEntry<'a, Set, Ser, H, A, O>
 where
-    Ser: 'static,
-    O: Send + Sync + 'static,
+    O: ErasedTy,
+
     Set: crate::set::Set + 'static,
     SetOpt<Set>: Opt,
     H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
@@ -243,8 +242,8 @@ where
 
 impl<'a, Set, Ser, H, A, O> HandlerEntry<'a, Set, Ser, H, A, O>
 where
-    Ser: 'static,
-    O: Send + Sync + 'static,
+    O: ErasedTy,
+
     Set: crate::set::Set + 'static,
     SetOpt<Set>: Opt,
     H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
@@ -305,8 +304,8 @@ where
 
 impl<'a, Set, Ser, H, A, O> Drop for HandlerEntry<'a, Set, Ser, H, A, O>
 where
-    Ser: 'static,
-    O: Send + Sync + 'static,
+    O: ErasedTy,
+
     Set: crate::set::Set + 'static,
     SetOpt<Set>: Opt,
     H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,

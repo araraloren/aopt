@@ -8,7 +8,7 @@ use std::ops::DerefMut;
 use crate::ctx::Ctx;
 use crate::ctx::Extract;
 use crate::map::ErasedTy;
-use crate::prelude::ServicesValExt;
+use crate::ser::ServicesValExt;
 use crate::Arc;
 use crate::Error;
 

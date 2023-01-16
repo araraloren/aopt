@@ -36,17 +36,17 @@ pub trait Information {
 /// Parsing result of option constructor string.
 #[derive(Debug, Default)]
 pub struct ConstrctInfo {
-    pub pattern: Str,
+    pub(crate) pattern: Str,
 
-    pub name: Option<Str>,
+    pub(crate) name: Option<Str>,
 
-    pub alias: Option<Vec<Str>>,
+    pub(crate) alias: Option<Vec<Str>>,
 
-    pub force: Option<bool>,
+    pub(crate) force: Option<bool>,
 
-    pub index: Option<Index>,
+    pub(crate) index: Option<Index>,
 
-    pub help: Option<Str>,
+    pub(crate) help: Option<Str>,
 }
 
 impl ConstrctInfo {

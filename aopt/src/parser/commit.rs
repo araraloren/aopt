@@ -4,14 +4,16 @@ use crate::ctx::Extract;
 use crate::ctx::Handler;
 use crate::ctx::HandlerEntry;
 use crate::ctx::Invoker;
+use crate::map::ErasedTy;
 use crate::opt::Action;
 use crate::opt::ConfigValue;
 use crate::opt::Index;
-use crate::opt::Infer;
 use crate::opt::Opt;
 use crate::set::Commit;
 use crate::set::SetCfg;
 use crate::set::SetOpt;
+use crate::value::Infer;
+use crate::value::RawValParser;
 use crate::value::ValInitializer;
 use crate::value::ValValidator;
 use crate::Error;
@@ -25,6 +27,7 @@ where
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
     U: Infer,
+    U::Val: RawValParser,
     SetCfg<Set>: ConfigValue + Default,
 {
     inner: Commit<'a, Set, U>,
@@ -38,6 +41,7 @@ where
     SetOpt<Set>: Opt + Debug,
     Ser: Debug,
     U: Infer,
+    U::Val: RawValParser,
     SetCfg<Set>: ConfigValue + Default + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -53,6 +57,7 @@ where
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
     U: Infer,
+    U::Val: RawValParser,
     SetCfg<Set>: ConfigValue + Default,
 {
     pub fn new(inner: Commit<'a, Set, U>, inv_ser: &'a mut Invoker<Set, Ser>) -> Self {
@@ -141,7 +146,7 @@ where
     /// then pass the unqiue id to [`HandlerEntry`].
     pub fn on<H, O, A>(mut self, handler: H) -> Result<HandlerEntry<'a, Set, Ser, H, A, O>, Error>
     where
-        O: 'static,
+        O: ErasedTy,
         H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'static,
         A: Extract<Set, Ser, Error = Error> + 'static,
     {
@@ -162,7 +167,7 @@ where
         handler: H,
     ) -> Result<HandlerEntry<'a, Set, Ser, H, A, O>, Error>
     where
-        O: 'static,
+        O: ErasedTy,
         H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'static,
         A: Extract<Set, Ser, Error = Error> + 'static,
     {
@@ -191,6 +196,7 @@ where
     U: Infer,
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
+    U::Val: RawValParser,
     SetCfg<Set>: ConfigValue + Default,
 {
     /// Set the option value validator.
@@ -203,7 +209,7 @@ where
 impl<'a, Set, Ser, U> ParserCommit<'a, Set, Ser, U>
 where
     U: Infer,
-    U::Val: Copy,
+    U::Val: Copy + RawValParser,
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
     SetCfg<Set>: ConfigValue + Default,
@@ -217,7 +223,7 @@ where
 impl<'a, Set, Ser, U> ParserCommit<'a, Set, Ser, U>
 where
     U: Infer,
-    U::Val: Clone,
+    U::Val: Clone + RawValParser,
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
     SetCfg<Set>: ConfigValue + Default,
@@ -238,6 +244,7 @@ where
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
     U: Infer,
+    U::Val: RawValParser,
     SetCfg<Set>: ConfigValue + Default,
 {
     fn drop(&mut self) {

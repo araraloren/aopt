@@ -1,13 +1,15 @@
-mod accessor;
-mod initiator;
-mod parser;
-mod store;
-mod validator;
+pub(crate) mod accessor;
+pub(crate) mod infer;
+pub(crate) mod initiator;
+pub(crate) mod parser;
+pub(crate) mod store;
+pub(crate) mod validator;
 
 use std::any::type_name;
 use std::fmt::Debug;
 
 pub use self::accessor::ValAccessor;
+pub use self::infer::Infer;
 pub use self::initiator::InitHandler;
 pub use self::initiator::InitializeValue;
 pub use self::initiator::ValInitializer;
@@ -95,14 +97,9 @@ impl AnyValue {
     }
 
     pub fn set<T: ErasedTy>(&mut self, vals: Vec<T>) -> Option<Vec<T>> {
-        if self.contain_type::<Vec<T>>() {
-            let ret = self.remove();
-
-            self.entry().or_insert(vals);
-            ret
-        } else {
-            None
-        }
+        let ret = self.remove();
+        self.entry().or_insert(vals);
+        ret
     }
 
     pub fn remove<T: ErasedTy>(&mut self) -> Option<Vec<T>> {

@@ -2,10 +2,16 @@ use std::any::TypeId;
 
 use crate::opt::Action;
 #[allow(unused)]
+use crate::opt::Cmd;
+#[allow(unused)]
 use crate::opt::Creator;
 use crate::opt::Help;
 use crate::opt::Index;
+#[allow(unused)]
+use crate::opt::Main;
 use crate::opt::Opt;
+#[allow(unused)]
+use crate::opt::Pos;
 use crate::opt::Style;
 use crate::value::ErasedValHandler;
 use crate::value::ValAccessor;
@@ -15,31 +21,24 @@ use crate::Uid;
 
 /// A multiple features option type.
 ///
-/// The type support by default:
+/// Some types support by default, see [`Infer`](crate::value::Infer):
 ///
-/// |  creator   | assoc  | default action |string | ignore name | styles |
-/// |  ----  | ----  | -- | -- | -- | -- |
-/// | [`bool`](Creator::bool)  | [`Assoc::Bool`] | [`Action::Set`] | `b` | false | [`Style::Boolean`],[`Style::Combined`] |
-/// | [`str`](Creator::str)  | [`Assoc::Str`] | [`Action::App`] | `s` | false | [`Style::Argument`] |
-/// | [`flt`](Creator::flt)  | [`Assoc::Flt`] | [`Action::App`] | `f` | false | [`Style::Argument`] |
-/// | [`int`](Creator::int)  | [`Assoc::Int`] | [`Action::App`] | `i` | false | [`Style::Argument`] |
-/// | [`uint`](Creator::uint)  | [`Assoc::Uint`] | [`Action::App`] | `u` | false | [`Style::Argument`] |
-/// | [`cmd`](Creator::cmd)  | [`Assoc::Noa`] | [`Action::Set`] | `c` | false | [`Style::Cmd`] |
-/// | [`pos`](Creator::pos)  | [`Assoc::Noa`] | [`Action::App`] | `p` | true | [`Style::Pos`] |
-/// | [`main`](Creator::main)  | [`Assoc::Null`] | [`Action::Set`] | `m` | true | [`Style::Main`] |
-/// | [`any`](Creator::any)  | [`Assoc::Null`] | [`Action::Null`] | `a` | false | except [`Style::Reserve`] |
-///
-/// |  creator   | index support  | optional support | alias support | validator | initializer |
-/// |  ----  | ----  | -- | -- | -- | -- |
-/// | [`bool`](Creator::bool)  | no | yes | yes | [`bool`](ValValidator::bool) | [`false`](ValValidator::bool) |
-/// | [`str`](Creator::str)  | no | yes | yes | [`str`](ValValidator::str) | [`empty`](ValInitiator::empty) |
-/// | [`flt`](Creator::flt)  | no | yes | yes |  [`f64`](ValValidator::f64) | [`empty`](ValInitiator::empty) |
-/// | [`int`](Creator::int)  | no | yes | yes |  [`i64`](ValValidator::i64) | [`empty`](ValInitiator::empty) |
-/// | [`uint`](Creator::uint)  | no | yes | yes |  [`u64`](ValValidator::u64) | [`empty`](ValInitiator::empty) |
-/// | [`cmd`](Creator::cmd)  | [`Forward(1)`](crate::opt::Index::Forward) | `false` | no | [`some`](ValValidator::some) | [`false`](ValValidator::bool) |
-/// | [`pos`](Creator::pos)  | yes | yes | no |  [`some`](ValValidator::some) | [`empty::<bool>`](ValInitiator::empty) |
-/// | [`main`](Creator::main)  | [`AnyWhere`](crate::opt::Index::AnyWhere) | no | no | [`null`](ValValidator::null) | [`null`](ValInitiator::null)
-/// | [`any`](Creator::any)  | yes | yes |  yes | [`null`](ValValidator::null) |  [`null`](ValInitiator::null) |
+/// | type | action | ignore name | styles | index support | default force required | alias | default value |
+/// | --   |   --   |    --       |   --   |        --        |       --       |   --  |  -- |
+/// | [`bool`] | [`Action::Set`] | [`false`] | [`Style::Combined`] [`Style::Boolean`] | no | false | true | false |
+/// | [`i32`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
+/// | [`i64`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
+/// | [`u32`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
+/// | [`u64`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
+/// | [`f32`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
+/// | [`f64`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
+/// | [`usize`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
+/// | [`isize`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
+/// | [`String`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
+/// | [`Cmd`] | [`Action::Set`] | [`false`] | [`Style::Cmd`] | [`Forward(1)`](Index::Forward) | true | true | false |
+/// | [`Pos`] | [`Action::App`] | [`true`] | [`Style::Pos`] | yes | false | false | None |
+/// | [`Main`] | [`Action::Null`] | [`true`] | [`Style::Main`] | [`AnyWhere`](Index::AnyWhere) | false | false | None |
+/// | [`Stdin`](std::io::Stdin) | [`Action::Set`] | [`true`] | [`Style::Pos`] | [`AnyWhere`](Index::AnyWhere) | false | true | None |
 #[derive(Debug)]
 pub struct AOpt {
     uid: Uid,
@@ -60,10 +59,6 @@ pub struct AOpt {
 
     ignore_name: bool,
 
-    ignore_alias: bool,
-
-    ignore_index: bool,
-
     index: Option<Index>,
 
     accessor: ValAccessor,
@@ -83,8 +78,6 @@ impl AOpt {
             action: Default::default(),
             styles: vec![],
             ignore_name: false,
-            ignore_alias: false,
-            ignore_index: true,
             index: None,
             accessor,
             alias: None,
@@ -112,18 +105,6 @@ impl AOpt {
     /// If the option will matching the name.
     pub fn with_ignore_name(mut self, value: bool) -> Self {
         self.ignore_name = value;
-        self
-    }
-
-    /// If the option will matching the name.
-    pub fn with_ignore_alias(mut self, value: bool) -> Self {
-        self.ignore_alias = value;
-        self
-    }
-
-    /// If the option will matching the name.
-    pub fn with_ignore_index(mut self, value: bool) -> Self {
-        self.ignore_index = value;
         self
     }
 
@@ -176,7 +157,7 @@ impl AOpt {
     }
 
     /// Set the value accessor of option, it will used by [`Policy`](crate::parser::Policy);
-    pub fn with_value(mut self, value: ValAccessor) -> Self {
+    pub fn with_accessor(mut self, value: ValAccessor) -> Self {
         self.accessor = value;
         self
     }
@@ -318,20 +299,17 @@ impl Opt for AOpt {
         }
     }
 
+    /// If don't have alias, then it's not support alias, will return true.
     fn mat_alias(&self, name: &Str) -> bool {
-        if self.ignore_alias {
-            true
-        } else if let Some(alias) = &self.alias {
+        if let Some(alias) = &self.alias {
             alias.iter().any(|v| v == name)
         } else {
-            false
+            true
         }
     }
 
     fn mat_idx(&self, index: Option<(usize, usize)>) -> bool {
-        if self.ignore_index {
-            return true;
-        } else if let Some((index, total)) = index {
+        if let Some((index, total)) = index {
             if let Some(realindex) = self.idx() {
                 if let Some(realindex) = realindex.calc_index(index, total) {
                     return realindex == index;

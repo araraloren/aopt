@@ -4,11 +4,12 @@ use crate::map::ErasedTy;
 use crate::opt::Action;
 use crate::opt::ConfigValue;
 use crate::opt::Index;
-use crate::opt::Infer;
 use crate::set::Ctor;
 use crate::set::Set;
 use crate::set::SetCfg;
 use crate::set::SetExt;
+use crate::value::Infer;
+use crate::value::RawValParser;
 use crate::value::ValAccessor;
 use crate::value::ValInitializer;
 use crate::value::ValValidator;
@@ -21,6 +22,7 @@ pub struct Commit<'a, S, U>
 where
     S: Set,
     U: Infer,
+    U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
     info: SetCfg<S>,
@@ -35,6 +37,7 @@ impl<'a, S, U> Debug for Commit<'a, S, U>
 where
     U: Infer,
     S: Set + Debug,
+    U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -53,6 +56,7 @@ impl<'a, S, U> Commit<'a, S, U>
 where
     S: Set,
     U: Infer,
+    U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
     pub fn new(set: &'a mut S, info: SetCfg<S>) -> Self {
@@ -73,16 +77,22 @@ where
     pub(crate) fn fill_infer_data(mut info: SetCfg<S>) -> SetCfg<S> {
         let act = U::infer_act();
         let styles = U::infer_style();
+        let index = U::infer_index();
         let ignore_name = U::infer_ignore_name();
-        let ignore_index = U::infer_ignore_index();
-        let ignore_alias = U::infer_ignore_alias();
+        let support_alias = U::infer_support_alias();
+        let positional = U::infer_positional();
+        let force = U::infer_force();
 
+        if let Some(index) = index {
+            info.set_idx(index);
+        }
         info.set_type::<U::Val>();
         info.set_action(act);
         info.set_style(styles);
+        info.set_force(force);
         info.set_ignore_name(ignore_name);
-        info.set_ignore_index(ignore_index);
-        info.set_ignore_alias(ignore_alias);
+        info.set_support_alias(support_alias);
+        info.set_postional(positional);
         info
     }
 
@@ -165,10 +175,10 @@ where
             Ok(commited)
         } else {
             self.drop_commit = false;
-            self.info.set_accessor(Some(ValAccessor::from_option(
+            self.info.set_accessor(ValAccessor::from_option(
                 self.initializer.take(),
                 self.validator.take(),
-            )));
+            ));
             let info = std::mem::take(&mut self.info);
             let _name = info.name().cloned();
             let opt = self
@@ -198,6 +208,7 @@ impl<'a, S, U> Commit<'a, S, U>
 where
     S: Set,
     U: Infer,
+    U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
     /// Set the option value validator.
@@ -211,7 +222,7 @@ impl<'a, S, U> Commit<'a, S, U>
 where
     S: Set,
     U: Infer,
-    U::Val: Copy,
+    U::Val: Copy + RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
     /// Set the option default value.
@@ -223,7 +234,7 @@ impl<'a, S, U> Commit<'a, S, U>
 where
     S: Set,
     U: Infer,
-    U::Val: Clone,
+    U::Val: Clone + RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
     /// Set the option default value.
@@ -241,6 +252,7 @@ impl<'a, S, U> Drop for Commit<'a, S, U>
 where
     S: Set,
     U: Infer,
+    U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
     fn drop(&mut self) {

@@ -54,9 +54,9 @@ pub trait ConfigValue {
 
     fn ignore_name(&self) -> bool;
 
-    fn ignore_alias(&self) -> bool;
+    fn support_alias(&self) -> bool;
 
-    fn ignore_index(&self) -> bool;
+    fn positional(&self) -> bool;
 
     fn has_idx(&self) -> bool;
 
@@ -76,9 +76,9 @@ pub trait ConfigValue {
 
     fn set_ignore_name(&mut self, ignore_name: bool) -> &mut Self;
 
-    fn set_ignore_alias(&mut self, ignore_alias: bool) -> &mut Self;
+    fn set_support_alias(&mut self, support_alias: bool) -> &mut Self;
 
-    fn set_ignore_index(&mut self, ignore_index: bool) -> &mut Self;
+    fn set_postional(&mut self, positional: bool) -> &mut Self;
 
     fn set_idx(&mut self, index: Index) -> &mut Self;
 
@@ -102,7 +102,7 @@ pub trait ConfigValue {
 
     fn set_action(&mut self, action: Action) -> &mut Self;
 
-    fn set_accessor(&mut self, accessor: Option<ValAccessor>) -> &mut Self;
+    fn set_accessor(&mut self, accessor: ValAccessor) -> &mut Self;
 }
 
 /// Contain the information used for create option instance.
@@ -126,9 +126,9 @@ pub struct OptConfig {
 
     ignore_name: bool,
 
-    ignore_alias: bool,
+    support_alias: bool,
 
-    ignore_index: bool,
+    postional: bool,
 
     styles: Option<Vec<Style>>,
 }
@@ -320,12 +320,12 @@ impl ConfigValue for OptConfig {
         self.ignore_name
     }
 
-    fn ignore_alias(&self) -> bool {
-        self.ignore_alias
+    fn support_alias(&self) -> bool {
+        self.support_alias
     }
 
-    fn ignore_index(&self) -> bool {
-        self.ignore_index
+    fn positional(&self) -> bool {
+        self.postional
     }
 
     fn has_idx(&self) -> bool {
@@ -365,13 +365,13 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn set_ignore_alias(&mut self, ignore_alias: bool) -> &mut Self {
-        self.ignore_alias = ignore_alias;
+    fn set_support_alias(&mut self, ignore_alias: bool) -> &mut Self {
+        self.support_alias = ignore_alias;
         self
     }
 
-    fn set_ignore_index(&mut self, ignore_index: bool) -> &mut Self {
-        self.ignore_index = ignore_index;
+    fn set_postional(&mut self, ignore_index: bool) -> &mut Self {
+        self.postional = ignore_index;
         self
     }
 
@@ -437,8 +437,8 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn set_accessor(&mut self, accessor: Option<ValAccessor>) -> &mut Self {
-        self.accessor = accessor;
+    fn set_accessor(&mut self, accessor: ValAccessor) -> &mut Self {
+        self.accessor = Some(accessor);
         self
     }
 }

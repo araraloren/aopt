@@ -6,7 +6,7 @@ use std::marker::PhantomData;
 use crate::typeid;
 use crate::HashMap;
 
-#[cfg(feature = "sync")]
+#[cfg(all(feature = "sync", not(feature = "log")))]
 mod __erased_ty {
     use crate::HashMap;
     use std::any::Any;
@@ -22,7 +22,24 @@ mod __erased_ty {
     pub struct AnyMap(pub(crate) HashMap<TypeId, BoxedAny>);
 }
 
-#[cfg(not(feature = "sync"))]
+#[cfg(all(feature = "sync", feature = "log"))]
+mod __erased_ty {
+    use crate::HashMap;
+    use std::any::Any;
+    use std::any::TypeId;
+    use std::fmt::Debug;
+
+    pub trait ErasedTy: Any + Debug + Sync + Send + 'static {}
+
+    impl<T: Any + Debug + Sync + Send + 'static> ErasedTy for T {}
+
+    pub type BoxedAny = Box<dyn Any + Send + Sync>;
+
+    #[derive(Default)]
+    pub struct AnyMap(pub(crate) HashMap<TypeId, BoxedAny>);
+}
+
+#[cfg(all(not(feature = "sync"), not(feature = "log")))]
 mod __erased_ty {
     use crate::HashMap;
     use std::any::Any;
@@ -38,13 +55,38 @@ mod __erased_ty {
     pub struct AnyMap(pub(crate) HashMap<TypeId, BoxedAny>);
 }
 
+#[cfg(all(not(feature = "sync"), feature = "log"))]
+mod __erased_ty {
+    use crate::HashMap;
+    use std::any::Any;
+    use std::any::TypeId;
+    use std::fmt::Debug;
+
+    pub trait ErasedTy: Any + Debug + 'static {}
+
+    impl<T: Any + Debug + 'static> ErasedTy for T {}
+
+    pub type BoxedAny = Box<dyn Any>;
+
+    #[derive(Default)]
+    pub struct AnyMap(pub(crate) HashMap<TypeId, BoxedAny>);
+}
+
 pub use __erased_ty::AnyMap;
 pub use __erased_ty::BoxedAny;
 pub use __erased_ty::ErasedTy;
 
 impl Debug for AnyMap {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("AnyMap").field(&"{...}").finish()
+        let field_ids = self
+            .0
+            .iter()
+            .map(|v| format!("{:?}", v.0))
+            .collect::<Vec<String>>()
+            .join(", ");
+        f.debug_tuple("AnyMap")
+            .field(&format!("[{field_ids}]",))
+            .finish()
     }
 }
 

@@ -1,3 +1,4 @@
+use std::io::Stdin;
 use std::path::PathBuf;
 
 use crate::ctx::Ctx;
@@ -84,5 +85,23 @@ impl RawValParser for PathBuf {
 
     fn parse(raw: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(PathBuf::from(convert_raw_to_utf8(raw)?))
+    }
+}
+
+impl RawValParser for Stdin {
+    type Error = Error;
+
+    fn parse(raw: Option<&RawVal>, _: &Ctx) -> Result<Self, Self::Error> {
+        const STDIN: &'static str = "-";
+
+        if let Some(raw) = raw {
+            if raw.get_str() == Some(STDIN) {
+                return Ok(std::io::stdin());
+            }
+        }
+        Err(Error::raise_failure(format!(
+            "Stdin value only support value `-`: {:?}",
+            raw
+        )))
     }
 }

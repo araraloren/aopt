@@ -141,7 +141,7 @@ where
     /// then pass the unqiue id to [`HandlerEntry`].
     pub fn on<H, O, A>(mut self, handler: H) -> Result<HandlerEntry<'a, Set, Ser, H, A, O>, Error>
     where
-        O: Send + Sync + 'static,
+        O: ErasedTy,
         H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
         A: Extract<Set, Ser, Error = Error> + Send + Sync + 'static,
     {
@@ -162,7 +162,7 @@ where
         handler: H,
     ) -> Result<HandlerEntry<'a, Set, Ser, H, A, O>, Error>
     where
-        O: Send + Sync + 'static,
+        O: ErasedTy,
         H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
         A: Extract<Set, Ser, Error = Error> + Send + Sync + 'static,
     {

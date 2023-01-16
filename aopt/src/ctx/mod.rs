@@ -28,8 +28,8 @@ pub use __wrapper::wrap_handler_fallback;
 
 #[cfg(feature = "sync")]
 mod __wrapper {
-
     use super::*;
+    use crate::map::ErasedTy;
 
     /// Wrap the handler and call the default action of option if return value is `Some()`,
     /// otherwise call the [`fallback`](crate::ctx::Invoker::fallback).
@@ -37,8 +37,8 @@ mod __wrapper {
         mut handler: H,
     ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error>
     where
+        O: ErasedTy,
         E: Into<Error>,
-        O: Send + Sync + 'static,
         Set: crate::set::Set,
         SetOpt<Set>: Opt,
         A: Extract<Set, Ser, Error = E> + Send + Sync,
@@ -67,8 +67,8 @@ mod __wrapper {
         mut handler: H,
     ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error>
     where
+        O: ErasedTy,
         E: Into<Error>,
-        O: Send + Sync + 'static,
         Set: crate::set::Set,
         SetOpt<Set>: Opt,
         A: Extract<Set, Ser, Error = E> + Send + Sync,
@@ -113,6 +113,7 @@ mod __wrapper {
 #[cfg(not(feature = "sync"))]
 mod __wrapper {
     use super::*;
+    use crate::map::ErasedTy;
 
     /// Wrap the handler and call the default action of option if return value is `Some()`,
     /// otherwise call the [`fallback`](crate::ctx::Invoker::fallback).
@@ -120,7 +121,7 @@ mod __wrapper {
         mut handler: H,
     ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error>
     where
-        O: 'static,
+        O: ErasedTy,
         Set: crate::set::Set,
         SetOpt<Set>: Opt,
         E: Into<Error>,
@@ -150,7 +151,7 @@ mod __wrapper {
         mut handler: H,
     ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error>
     where
-        O: 'static,
+        O: ErasedTy,
         Set: crate::set::Set,
         SetOpt<Set>: Opt,
         E: Into<Error>,

@@ -19,8 +19,8 @@ use std::fmt::Debug;
 use std::slice::Iter;
 use std::slice::IterMut;
 
+use crate::map::ErasedTy;
 use crate::opt::Opt;
-use crate::prelude::ErasedTy;
 use crate::typeid;
 use crate::Error;
 use crate::Uid;

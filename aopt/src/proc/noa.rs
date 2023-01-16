@@ -46,7 +46,6 @@ impl<S> Debug for NOAMatch<S> {
             .field("noa_total", &self.noa_total)
             .field("matched_uid", &self.matched_uid)
             .field("matched_index", &self.matched_index)
-            .field("marker", &self.marker)
             .finish()
     }
 }

@@ -1,5 +1,5 @@
+use crate::map::ErasedTy;
 use crate::opt::Opt;
-use crate::prelude::ErasedTy;
 use crate::set::SetOpt;
 use crate::Error;
 use crate::RawVal;

@@ -1,7 +1,7 @@
 use crate::ctx::Store;
 use crate::map::ErasedTy;
-use crate::prelude::SetExt;
-use crate::prelude::SetOpt;
+use crate::set::SetExt;
+use crate::set::SetOpt;
 use crate::value::AnyValue;
 use crate::Error;
 use crate::RawVal;
@@ -53,6 +53,12 @@ impl Action {
     }
 
     pub fn store1<U: ErasedTy>(&self, val: Option<U>, handler: &mut AnyValue) -> bool {
+        crate::trace_log!(
+            "Saving value {:?}({:?}) [ty = {:?}] in store1",
+            val,
+            self,
+            crate::typeid::<Vec<U>>()
+        );
         if let Some(val) = val {
             match self {
                 Action::Set => {
@@ -74,6 +80,7 @@ impl Action {
                     // NOTHING
                 }
             }
+            crate::trace_log!("After saving handler: {:?}", handler);
             true
         } else {
             false

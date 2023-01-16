@@ -42,21 +42,22 @@ use crate::ext::APolicyExt;
 use crate::map::ErasedTy;
 use crate::opt::Config;
 use crate::opt::ConfigValue;
-use crate::opt::Infer;
 use crate::opt::Information;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::opt::OptValueExt;
-use crate::prelude::ServicesValExt;
-use crate::prelude::SetExt;
 use crate::ser::ServicesExt;
+use crate::ser::ServicesValExt;
 use crate::set::Commit;
 use crate::set::Ctor;
 use crate::set::Filter;
 use crate::set::OptValidator;
 use crate::set::Set;
 use crate::set::SetCfg;
+use crate::set::SetExt;
 use crate::set::SetOpt;
+use crate::value::Infer;
+use crate::value::RawValParser;
 use crate::Arc;
 use crate::Error;
 use crate::Str;
@@ -571,10 +572,14 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    pub fn add_opt<U: Infer>(
+    pub fn add_opt<U>(
         &mut self,
         opt: impl Into<Str>,
-    ) -> Result<ParserCommit<'_, P::Set, P::Ser, U>, Error> {
+    ) -> Result<ParserCommit<'_, P::Set, P::Ser, U>, Error>
+    where
+        U: Infer,
+        U::Val: RawValParser,
+    {
         let info =
             <<<P::Set as Set>::Ctor as Ctor>::Config as Config>::new(&self.optset, opt.into())?;
 
@@ -630,10 +635,14 @@ where
     /// #    Ok(())
     /// # }
     ///```
-    pub fn add_opt_cfg<U: Infer, Cfg: Into<<<P::Set as Set>::Ctor as Ctor>::Config>>(
+    pub fn add_opt_cfg<U: Infer, Cfg: Into<SetCfg<P::Set>>>(
         &mut self,
         config: Cfg,
-    ) -> Result<ParserCommit<'_, P::Set, P::Ser, U>, Error> {
+    ) -> Result<ParserCommit<'_, P::Set, P::Ser, U>, Error>
+    where
+        U: Infer,
+        U::Val: RawValParser,
+    {
         Ok(ParserCommit::new(
             Commit::new(&mut self.optset, config.into()),
             &mut self.invoker,
@@ -646,7 +655,7 @@ where
         uid: Uid,
     ) -> Result<HandlerEntry<'_, P::Set, P::Ser, H, A, O>, Error>
     where
-        O: Send + Sync + 'static,
+        O: ErasedTy,
         H: Handler<P::Set, P::Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
         A: Extract<P::Set, P::Ser, Error = Error> + Send + Sync + 'static,
     {
@@ -659,7 +668,7 @@ where
         uid: Uid,
     ) -> Result<HandlerEntry<'_, P::Set, P::Ser, H, A, O>, Error>
     where
-        O: 'static,
+        O: ErasedTy,
         H: Handler<P::Set, P::Ser, A, Output = Option<O>, Error = Error> + 'static,
         A: Extract<P::Set, P::Ser, Error = Error> + 'static,
     {
@@ -688,24 +697,62 @@ where
         })
     }
 
-    pub fn find_val<T: ErasedTy>(&self, opt: &str) -> Result<&T, Error> {
+    pub fn find_val_infer<U: Infer>(&self, opt: &str) -> Result<&U::Val, Error> {
         self.opt(self.find_uid(opt)?)?.val()
     }
 
-    pub fn find_val_mut<T: ErasedTy>(&mut self, opt: &str) -> Result<&mut T, Error> {
+    pub fn find_val_infer_mut<U: Infer>(&mut self, opt: &str) -> Result<&mut U::Val, Error> {
         let uid = self.find_uid(opt)?;
 
         self.opt_mut(uid)?.val_mut()
     }
 
-    pub fn find_vals<T: ErasedTy>(&self, opt: &str) -> Result<&Vec<T>, Error> {
+    pub fn find_vals_infer<U: Infer>(&self, opt: &str) -> Result<&Vec<U::Val>, Error> {
         self.opt(self.find_uid(opt)?)?.vals()
     }
 
-    pub fn find_vals_mut<T: ErasedTy>(&mut self, opt: &str) -> Result<&mut Vec<T>, Error> {
+    pub fn find_vals_infer_mut<U: Infer>(&mut self, opt: &str) -> Result<&mut Vec<U::Val>, Error> {
         let uid = self.find_uid(opt)?;
 
         self.opt_mut(uid)?.vals_mut()
+    }
+
+    pub fn take_val_infer<U: Infer>(&mut self, opt: &str) -> Result<U::Val, Error> {
+        let opt = self.find_uid(opt)?;
+        let vals = self.opt_mut(opt)?.vals_mut::<U::Val>()?;
+
+        vals.pop().ok_or_else(|| {
+            Error::raise_error(format!("Not enough value can take from option {}", opt))
+        })
+    }
+
+    pub fn find_val<U: ErasedTy>(&self, opt: &str) -> Result<&U, Error> {
+        self.opt(self.find_uid(opt)?)?.val()
+    }
+
+    pub fn find_val_mut<U: ErasedTy>(&mut self, opt: &str) -> Result<&mut U, Error> {
+        let uid = self.find_uid(opt)?;
+
+        self.opt_mut(uid)?.val_mut()
+    }
+
+    pub fn find_vals<U: ErasedTy>(&self, opt: &str) -> Result<&Vec<U>, Error> {
+        self.opt(self.find_uid(opt)?)?.vals()
+    }
+
+    pub fn find_vals_mut<U: ErasedTy>(&mut self, opt: &str) -> Result<&mut Vec<U>, Error> {
+        let uid = self.find_uid(opt)?;
+
+        self.opt_mut(uid)?.vals_mut()
+    }
+
+    pub fn take_val<U: ErasedTy>(&mut self, opt: &str) -> Result<U, Error> {
+        let opt = self.find_uid(opt)?;
+        let vals = self.opt_mut(opt)?.vals_mut::<U>()?;
+
+        vals.pop().ok_or_else(|| {
+            Error::raise_error(format!("Not enough value can take from option {}", opt))
+        })
     }
 }
 

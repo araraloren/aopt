@@ -79,8 +79,8 @@ impl Creator<AOpt, OptConfig, Error> {
             let action = *config.action().unwrap_or(&Action::App);
             let value = config.gen_accessor()?;
             let ignore_name = config.ignore_name();
-            let ignore_alias = config.ignore_alias();
-            let ignore_index = config.ignore_index();
+            let support_alias = config.support_alias();
+            let positional = config.positional();
             let styles = config.gen_styles()?;
             let name = config.gen_name()?;
             let help = config.gen_opt_help()?;
@@ -89,6 +89,26 @@ impl Creator<AOpt, OptConfig, Error> {
             let alias = config.take_alias();
             let alias = if alias.is_empty() { None } else { Some(alias) };
 
+            if !support_alias {
+                if let Some(alias) = &alias {
+                    debug_assert!(
+                        !alias.is_empty(),
+                        "Option {} not support alias: {:?}",
+                        name,
+                        alias
+                    );
+                }
+            }
+            if !positional {
+                if let Some(index) = &index {
+                    debug_assert!(
+                        !index.is_null(),
+                        "Option {} not support position parameters: {:?}",
+                        name,
+                        index
+                    );
+                }
+            }
             // do some check ?
             Ok(AOpt::new(name, r#type, value)
                 .with_force(force)
@@ -97,9 +117,7 @@ impl Creator<AOpt, OptConfig, Error> {
                 .with_alias(alias)
                 .with_style(styles)
                 .with_opt_help(help)
-                .with_ignore_name(ignore_name)
-                .with_ignore_alias(ignore_alias)
-                .with_ignore_index(ignore_index))
+                .with_ignore_name(ignore_name))
         })
     }
 }

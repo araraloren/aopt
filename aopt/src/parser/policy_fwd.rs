@@ -23,7 +23,6 @@ use crate::ctx::Invoker;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::proc::Process;
-use crate::ser::ServicesExt;
 use crate::set::OptValidator;
 use crate::set::SetOpt;
 use crate::Arc;
@@ -188,7 +187,7 @@ impl<Set, Ser> UserStyleMange for FwdPolicy<Set, Ser> {
 impl<Set, Ser> FwdPolicy<Set, Ser>
 where
     SetOpt<Set>: Opt,
-    Ser: ServicesExt + 'static,
+    Ser: 'static,
     Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
 {
     pub(crate) fn parse_impl(
@@ -344,7 +343,7 @@ where
 impl<Set, Ser> Policy for FwdPolicy<Set, Ser>
 where
     SetOpt<Set>: Opt,
-    Ser: ServicesExt + 'static,
+    Ser: 'static,
     Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
 {
     type Ret = ReturnVal;

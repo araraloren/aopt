@@ -4,7 +4,6 @@ pub(crate) mod config;
 pub(crate) mod creator;
 pub(crate) mod help;
 pub(crate) mod index;
-pub(crate) mod infer;
 pub(crate) mod info;
 pub(crate) mod parser;
 #[cfg(feature = "serde")]
@@ -20,7 +19,6 @@ pub use self::config::OptConfig;
 pub use self::creator::Creator;
 pub use self::help::Help;
 pub use self::index::Index;
-pub use self::infer::Infer;
 pub use self::info::ConstrctInfo;
 pub use self::info::Information;
 pub use self::parser::StrParser;
@@ -35,6 +33,8 @@ pub use self::value::OptValueExt;
 
 use std::any::TypeId;
 use std::fmt::Debug;
+use std::ops::Deref;
+use std::ops::DerefMut;
 
 use crate::value::ValAccessor;
 use crate::Error;
@@ -44,6 +44,36 @@ use crate::Uid;
 pub const BOOL_TRUE: &str = "true";
 
 pub const BOOL_FALSE: &str = "false";
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Cmd;
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Pos;
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Main;
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Noa(bool);
+
+impl Deref for Noa {
+    type Target = bool;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Noa {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 /// Option parser using for parsing option constructor string.
 pub trait OptParser {
