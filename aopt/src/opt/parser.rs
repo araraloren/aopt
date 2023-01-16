@@ -67,7 +67,7 @@ use crate::Str;
 pub struct StrParser;
 
 thread_local! {
-    static STR_PARSER: Regex = Regex::new(r"^([^=!@;:]+)((?:;[^=!@;:]+)+)?(!)?(@([^@:]+))?(?::(.+))?$").unwrap();
+    static STR_PARSER: Regex = Regex::new(r"^([^=!@;:]+)((?:;[^=!@;:]+)+)?(?:=([a-zA-Z])+)?(!)?(@([^@:]+))?(?::(.+))?$").unwrap();
 }
 
 impl StrParser {
@@ -179,6 +179,7 @@ impl StrParser {
                         .with_pat(pattern_clone)
                         .with_name(cap.get(IDX_NAME).map(|v| Str::from(v.as_str().trim())))
                         .with_help(cap.get(IDX_HELP).map(|v| Str::from(v.as_str().trim())))
+                        .with_type(cap.get(IDX_TYPE).map(|v| Str::from(v.as_str().trim())))
                         .with_alias(alias))
                 } else {
                     Err(Error::con_parsing_failed(pattern_clone))
@@ -190,9 +191,10 @@ impl StrParser {
 
 const IDX_NAME: usize = 1;
 const IDX_ALIAS: usize = 2;
-const IDX_FORCE: usize = 3;
-const IDX_INDEX: usize = 5;
-const IDX_HELP: usize = 6;
+const IDX_TYPE: usize = 3;
+const IDX_FORCE: usize = 4;
+const IDX_INDEX: usize = 6;
+const IDX_HELP: usize = 7;
 
 impl OptParser for StrParser {
     type Output = ConstrctInfo;
@@ -227,20 +229,40 @@ mod test {
             "-b;bool",
             "-/b;--/bool",
             "-/b;bool",
+            "-b=i",
+            "--bool=u",
+            "bool=s",
+            "-b;--bool=b",
+            "-?;-h;--help=p",
+            "--bool;-b=c",
+            "b;bool=m",
+            "-b;bool=f",
+            "-/b;--/bool=i",
+            "-/b;bool=a",
             "",
         ];
         let options_test = [
-            (Some(astr("-b")), None),
-            (Some(astr("--bool")), None),
-            (Some(astr("bool")), None),
-            (Some(astr("-b")), Some(vec![astr("--bool")])),
-            (Some(astr("-?")), Some(vec![astr("-h"), astr("--help")])),
-            (Some(astr("--bool")), Some(vec![astr("-b")])),
-            (Some(astr("b")), Some(vec![astr("bool")])),
-            (Some(astr("-b")), Some(vec![astr("bool")])),
-            (Some(astr("-/b")), Some(vec![astr("--/bool")])),
-            (Some(astr("-/b")), Some(vec![astr("bool")])),
-            (None, None),
+            (Some(astr("-b")), None, None),
+            (Some(astr("--bool")), None, None),
+            (Some(astr("bool")), None, None),
+            (Some(astr("-b")), Some(vec![astr("--bool")]), None),
+            (Some(astr("-?")), Some(vec![astr("-h"), astr("--help")]), None),
+            (Some(astr("--bool")), Some(vec![astr("-b")]), None),
+            (Some(astr("b")), Some(vec![astr("bool")]), None),
+            (Some(astr("-b")), Some(vec![astr("bool")]), None),
+            (Some(astr("-/b")), Some(vec![astr("--/bool")]), None),
+            (Some(astr("-/b")), Some(vec![astr("bool")]), None),
+            (Some(astr("-b")), None, Some(astr("i"))),
+            (Some(astr("--bool")), None, Some(astr("u"))),
+            (Some(astr("bool")), None, Some(astr("s"))),
+            (Some(astr("-b")), Some(vec![astr("--bool")]), Some(astr("b"))),
+            (Some(astr("-?")), Some(vec![astr("-h"), astr("--help")]), Some(astr("p"))),
+            (Some(astr("--bool")), Some(vec![astr("-b")]), Some(astr("c"))),
+            (Some(astr("b")), Some(vec![astr("bool")]), Some(astr("m"))),
+            (Some(astr("-b")), Some(vec![astr("bool")]), Some(astr("f"))),
+            (Some(astr("-/b")), Some(vec![astr("--/bool")]), Some(astr("i"))),
+            (Some(astr("-/b")), Some(vec![astr("bool")]), Some(astr("a"))),
+            (None, None, None),
         ];
         let helps = [": This is an option help message", ""];
         let helps_test = [Some(astr("This is an option help message")), None];
@@ -288,6 +310,7 @@ mod test {
                             assert_eq!(help_test.as_ref(), cap.help());
                             assert_eq!(force_test, &cap.force());
                             assert_eq!(position_test.as_ref(), cap.idx());
+                            assert_eq!(option_test.2.as_ref(), cap.r#type());
                         } else {
                             assert!(option_test.0.is_none());
                             assert!(option_test.1.is_none());

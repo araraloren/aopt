@@ -157,39 +157,17 @@ impl SnowBall {
 fn parser_command_line(args: Args) -> Result<AFwdParser, Error> {
     let mut parser = AFwdParser::default();
 
-    parser.policy_mut().set_strict(true);
+    parser.add_opt::<bool>("-d;--debug: Print debug message")?;
+    parser
+        .add_opt::<u32>("-i;--interval: Set access interval")?
+        .set_value(1000);
+    parser
+        .add_opt::<i32>("-s;--start: Set start parameter of request")?
+        .set_value(0);
+    parser
+        .add_opt::<i32>("-c;--count: Set count parameter of request")?
+        .set_value(14);
 
-    for (optstr, alias, help, value) in [
-        ("-d=b", "--debug", "Print debug message", None),
-        (
-            "-i=u",
-            "--interval",
-            "Set access interval",
-            Some(ValInitiator::u64(1000u64)),
-        ),
-        (
-            "-s=i",
-            "--start",
-            "Set start parameter of request",
-            Some(ValInitiator::i64(0i64)),
-        ),
-        (
-            "-c=i",
-            "--count",
-            "Set count parameter of request",
-            Some(ValInitiator::i64(14i64)),
-        ),
-    ] {
-        if let Some(initiator) = value {
-            parser
-                .add_opt(optstr)?
-                .set_initiator(initiator)
-                .add_alias(alias)
-                .set_help(help);
-        } else {
-            parser.add_opt(optstr)?.add_alias(alias).set_help(help);
-        }
-    }
     // process single stock id
     parser
         .add_opt("stock_id=p@*")?
