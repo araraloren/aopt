@@ -11,6 +11,7 @@ use crate::opt::Pos;
 use crate::opt::Style;
 use crate::value::ValInitializer;
 use crate::value::ValValidator;
+use crate::Str;
 
 pub trait Infer {
     type Val: ErasedTy + 'static;
@@ -41,6 +42,10 @@ pub trait Infer {
 
     fn infer_support_alias() -> bool {
         true
+    }
+
+    fn infer_creator() -> Str {
+        Str::from(crate::set::CTOR_DEFAULT)
     }
 
     fn infer_validator() -> Option<ValValidator<Self::Val>> {

@@ -139,7 +139,7 @@ impl<Set, Ser> Extract<Set, Ser> for Uid {
     type Error = Error;
 
     fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(Self::extract_ctx(ctx)?)
+        Self::extract_ctx(ctx)
     }
 }
 
@@ -236,7 +236,7 @@ impl<Set, Ser> Extract<Set, Ser> for Index {
     type Error = Error;
 
     fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(Self::extract_ctx(ctx)?)
+        Self::extract_ctx(ctx)
     }
 }
 
@@ -321,7 +321,7 @@ impl<Set, Ser> Extract<Set, Ser> for Total {
     type Error = Error;
 
     fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(Self::extract_ctx(ctx)?)
+        Self::extract_ctx(ctx)
     }
 }
 
@@ -623,7 +623,7 @@ impl<Set, Ser> Extract<Set, Ser> for Style {
     type Error = Error;
 
     fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(Self::extract_ctx(ctx)?)
+        Self::extract_ctx(ctx)
     }
 }
 

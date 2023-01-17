@@ -84,7 +84,7 @@ impl AnyValue {
     }
 
     pub fn pop<T: ErasedTy>(&mut self) -> Option<T> {
-        self.inner_mut().map(|v| v.pop()).flatten()
+        self.inner_mut().and_then(|v| v.pop())
     }
 
     pub fn entry<T: ErasedTy>(&mut self) -> Entry<'_, Vec<T>> {
@@ -92,7 +92,7 @@ impl AnyValue {
     }
 
     pub fn push<T: ErasedTy>(&mut self, val: T) -> &mut Self {
-        self.entry::<T>().or_insert(Vec::<T>::new()).push(val);
+        self.entry::<T>().or_default().push(val);
         self
     }
 
@@ -107,7 +107,7 @@ impl AnyValue {
     }
 
     pub fn val<T: ErasedTy>(&self) -> Result<&T, Error> {
-        self.inner().map(|v| v.last()).flatten().ok_or_else(|| {
+        self.inner().and_then(|v| v.last()).ok_or_else(|| {
             Error::raise_error(format!(
                 "Can not find value for type {{{:?}}} in ErasedVal(val)",
                 type_name::<T>()
@@ -116,15 +116,12 @@ impl AnyValue {
     }
 
     pub fn val_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
-        self.inner_mut()
-            .map(|v| v.last_mut())
-            .flatten()
-            .ok_or_else(|| {
-                Error::raise_error(format!(
-                    "Can not find value for type {{{:?}}} in ErasedVal(val_mut)",
-                    type_name::<T>()
-                ))
-            })
+        self.inner_mut().and_then(|v| v.last_mut()).ok_or_else(|| {
+            Error::raise_error(format!(
+                "Can not find value for type {{{:?}}} in ErasedVal(val_mut)",
+                type_name::<T>()
+            ))
+        })
     }
 
     pub fn vals<T: ErasedTy>(&self) -> Result<&Vec<T>, Error> {

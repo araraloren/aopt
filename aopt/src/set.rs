@@ -13,16 +13,13 @@ pub use self::optset::OptSet;
 pub use self::optvalid::OptValidator;
 pub use self::optvalid::PrefixOptValidator;
 
-use std::any::type_name;
-use std::any::TypeId;
 use std::fmt::Debug;
 use std::slice::Iter;
 use std::slice::IterMut;
 
-use crate::map::ErasedTy;
 use crate::opt::Opt;
-use crate::typeid;
 use crate::Error;
+use crate::Str;
 use crate::Uid;
 
 /// An type alias for `<<I as Set>::Ctor as Ctor>::Opt`
@@ -40,6 +37,10 @@ impl<Opt: crate::opt::Opt, Config: Send + Sync, Err: Into<Error>> Ctor
     type Config = Config;
 
     type Error = Err;
+
+    fn name(&self) -> &Str {
+        Ctor::name(self.as_ref())
+    }
 
     fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
         Ctor::new_with(self.as_mut(), config)
@@ -66,6 +67,10 @@ impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Ctor
 
     type Error = Err;
 
+    fn name(&self) -> &Str {
+        Ctor::name(self.as_ref())
+    }
+
     fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
         Ctor::new_with(self.as_mut(), config)
     }
@@ -80,15 +85,15 @@ impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Debug
     }
 }
 
+pub const CTOR_DEFAULT: &str = "default_ctor";
+
 /// Create [`Opt`](crate::set::Ctor::Opt) with given [`Config`](crate::set::Ctor::Config).
 pub trait Ctor {
     type Opt: Opt;
     type Config;
     type Error: Into<Error>;
 
-    fn accept(&self, _: &TypeId) -> bool {
-        true
-    }
+    fn name(&self) -> &Str;
 
     fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error>;
 }
@@ -104,19 +109,16 @@ pub trait Set {
 
     fn ctor_iter_mut(&mut self) -> IterMut<'_, Self::Ctor>;
 
-    fn contain_ctor<T: ErasedTy>(&self) -> bool {
-        let type_id = typeid::<T>();
-        self.ctor_iter().any(|v| v.accept(&type_id))
+    fn contain_ctor(&self, name: &Str) -> bool {
+        self.ctor_iter().any(|v| v.name() == name)
     }
 
-    fn get_ctor<T: ErasedTy>(&self) -> Option<&Self::Ctor> {
-        let type_id = typeid::<T>();
-        self.ctor_iter().find(|v| v.accept(&type_id))
+    fn get_ctor(&self, name: &Str) -> Option<&Self::Ctor> {
+        self.ctor_iter().find(|v| v.name() == name)
     }
 
-    fn get_ctor_mut<T: ErasedTy>(&mut self) -> Option<&mut Self::Ctor> {
-        let type_id = typeid::<T>();
-        self.ctor_iter_mut().find(|v| v.accept(&type_id))
+    fn get_ctor_mut(&mut self, name: &Str) -> Option<&mut Self::Ctor> {
+        self.ctor_iter_mut().find(|v| v.name() == name)
     }
 
     fn reset(&mut self);
@@ -157,9 +159,9 @@ pub trait SetExt<C: Ctor> {
 
     fn opt_mut(&mut self, id: Uid) -> Result<&mut C::Opt, Error>;
 
-    fn ctor<T: ErasedTy>(&self) -> Result<&C, Error>;
+    fn ctor(&self, name: &Str) -> Result<&C, Error>;
 
-    fn ctor_mut<T: ErasedTy>(&mut self) -> Result<&mut C, Error>;
+    fn ctor_mut(&mut self, name: &Str) -> Result<&mut C, Error>;
 }
 
 impl<S: Set> SetExt<S::Ctor> for S {
@@ -173,13 +175,13 @@ impl<S: Set> SetExt<S::Ctor> for S {
             .ok_or_else(|| Error::raise_error(format!("Invalid uid {id} for Set")))
     }
 
-    fn ctor<T: ErasedTy>(&self) -> Result<&S::Ctor, Error> {
-        self.get_ctor::<T>()
-            .ok_or_else(|| Error::con_unsupport_option_type(type_name::<T>()))
+    fn ctor(&self, name: &Str) -> Result<&S::Ctor, Error> {
+        self.get_ctor(name)
+            .ok_or_else(|| Error::con_unsupport_option_type(name))
     }
 
-    fn ctor_mut<T: ErasedTy>(&mut self) -> Result<&mut S::Ctor, Error> {
-        self.get_ctor_mut::<T>()
-            .ok_or_else(|| Error::con_unsupport_option_type(type_name::<T>()))
+    fn ctor_mut(&mut self, name: &Str) -> Result<&mut S::Ctor, Error> {
+        self.get_ctor_mut(name)
+            .ok_or_else(|| Error::con_unsupport_option_type(name))
     }
 }

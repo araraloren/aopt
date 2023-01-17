@@ -69,27 +69,26 @@ where
             info,
             commited: None,
             drop_commit: true,
-            validator: validator,
-            initializer: initializer,
+            validator,
+            initializer,
         }
     }
 
     pub(crate) fn fill_infer_data(mut info: SetCfg<S>) -> SetCfg<S> {
         let act = U::infer_act();
-        let styles = U::infer_style();
+        let style = U::infer_style();
         let index = U::infer_index();
         let ignore_name = U::infer_ignore_name();
         let support_alias = U::infer_support_alias();
         let positional = U::infer_positional();
         let force = U::infer_force();
 
-        if let Some(index) = index {
-            info.set_idx(index);
-        }
-        info.set_type::<U::Val>();
-        info.set_action(act);
-        info.set_style(styles);
-        info.set_force(force);
+        (!info.has_idx()).then(|| index.map(|idx| info.set_idx(idx)));
+        (!info.has_type()).then(|| info.set_type::<U::Val>());
+        (!info.has_action()).then(|| info.set_action(act));
+        (!info.has_style()).then(|| info.set_style(style));
+        (!info.has_force()).then(|| info.set_force(force));
+        (!info.has_action()).then(|| info.set_action(act));
         info.set_ignore_name(ignore_name);
         info.set_support_alias(support_alias);
         info.set_postional(positional);
@@ -183,7 +182,7 @@ where
             let _name = info.name().cloned();
             let opt = self
                 .set
-                .ctor_mut::<U::Val>()?
+                .ctor_mut(&U::infer_creator())?
                 .new_with(info)
                 .map_err(|e| e.into())?;
             let uid = self.set.insert(opt);

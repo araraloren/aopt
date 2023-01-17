@@ -196,3 +196,13 @@ where
         self
     }
 }
+
+impl<'a, T> Entry<'a, T>
+where
+    T: ErasedTy + Default,
+{
+    #[allow(clippy::or_fun_call)]
+    pub fn or_default(self) -> &'a mut T {
+        self.or_insert(T::default())
+    }
+}

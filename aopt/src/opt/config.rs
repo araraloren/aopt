@@ -72,6 +72,10 @@ pub trait ConfigValue {
 
     fn has_force(&self) -> bool;
 
+    fn has_style(&self) -> bool;
+
+    fn has_action(&self) -> bool;
+
     fn has_accessor(&self) -> bool;
 
     fn set_ignore_name(&mut self, ignore_name: bool) -> &mut Self;
@@ -356,6 +360,10 @@ impl ConfigValue for OptConfig {
         self.force.is_some()
     }
 
+    fn has_action(&self) -> bool {
+        self.action.is_some()
+    }
+
     fn has_accessor(&self) -> bool {
         self.accessor.is_some()
     }
@@ -440,5 +448,9 @@ impl ConfigValue for OptConfig {
     fn set_accessor(&mut self, accessor: ValAccessor) -> &mut Self {
         self.accessor = Some(accessor);
         self
+    }
+
+    fn has_style(&self) -> bool {
+        self.styles.is_some()
     }
 }

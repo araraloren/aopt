@@ -650,6 +650,7 @@ where
     }
 
     #[cfg(feature = "sync")]
+    #[allow(clippy::type_complexity)]
     pub fn entry<A, O, H>(
         &mut self,
         uid: Uid,
@@ -663,6 +664,7 @@ where
     }
 
     #[cfg(not(feature = "sync"))]
+    #[allow(clippy::type_complexity)]
     pub fn entry<A, O, H>(
         &mut self,
         uid: Uid,
@@ -694,35 +696,6 @@ where
                 "Can not find option: invalid option string {}",
                 opt
             ))
-        })
-    }
-
-    pub fn find_val_infer<U: Infer>(&self, opt: &str) -> Result<&U::Val, Error> {
-        self.opt(self.find_uid(opt)?)?.val()
-    }
-
-    pub fn find_val_infer_mut<U: Infer>(&mut self, opt: &str) -> Result<&mut U::Val, Error> {
-        let uid = self.find_uid(opt)?;
-
-        self.opt_mut(uid)?.val_mut()
-    }
-
-    pub fn find_vals_infer<U: Infer>(&self, opt: &str) -> Result<&Vec<U::Val>, Error> {
-        self.opt(self.find_uid(opt)?)?.vals()
-    }
-
-    pub fn find_vals_infer_mut<U: Infer>(&mut self, opt: &str) -> Result<&mut Vec<U::Val>, Error> {
-        let uid = self.find_uid(opt)?;
-
-        self.opt_mut(uid)?.vals_mut()
-    }
-
-    pub fn take_val_infer<U: Infer>(&mut self, opt: &str) -> Result<U::Val, Error> {
-        let opt = self.find_uid(opt)?;
-        let vals = self.opt_mut(opt)?.vals_mut::<U::Val>()?;
-
-        vals.pop().ok_or_else(|| {
-            Error::raise_error(format!("Not enough value can take from option {}", opt))
         })
     }
 

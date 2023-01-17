@@ -43,16 +43,16 @@ where
     match inv.has(uid) {
         true => {
             trace_log!("Invoke callback of {}", uid);
-            inv.invoke(set, ser, &ctx)
+            inv.invoke(set, ser, ctx)
         }
         false => {
             trace_log!("Invoke default callback of {}", uid);
-            inv.invoke_default(set, ser, &ctx)
+            inv.invoke_default(set, ser, ctx)
         }
     }
 }
 
-pub fn process_opt<'a, Set, Ser>(
+pub fn process_opt<Set, Ser>(
     ProcessCtx {
         idx,
         tot,
@@ -60,7 +60,7 @@ pub fn process_opt<'a, Set, Ser>(
         set,
         inv,
         ser,
-    }: ProcessCtx<'a, Set, Ser>,
+    }: ProcessCtx<Set, Ser>,
     proc: &mut OptProcess<Set>,
     invoke: bool,
 ) -> Result<Vec<CtxSaver>, Error>
@@ -119,7 +119,7 @@ where
     }
 }
 
-pub fn process_non_opt<'a, Set, Ser>(
+pub fn process_non_opt<Set, Ser>(
     ProcessCtx {
         idx,
         tot,
@@ -127,7 +127,7 @@ pub fn process_non_opt<'a, Set, Ser>(
         set,
         inv,
         ser,
-    }: ProcessCtx<'a, Set, Ser>,
+    }: ProcessCtx<Set, Ser>,
     proc: &mut NOAProcess<Set>,
 ) -> Result<Vec<CtxSaver>, Error>
 where
@@ -158,12 +158,12 @@ where
                         true => {
                             // callback in Invoker
                             trace_log!("Invoke callback of NOA{{{uid}}}");
-                            inv.invoke(set, ser, &ctx)?
+                            inv.invoke(set, ser, ctx)?
                         }
                         false => {
                             // call `invoke_default` if callback not exist
                             trace_log!("Invoke default callback of NOA{{{uid}}}");
-                            inv.invoke_default(set, ser, &ctx)?
+                            inv.invoke_default(set, ser, ctx)?
                         }
                     };
                     // return None means NOA not match

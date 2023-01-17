@@ -161,7 +161,7 @@ impl StrParser {
                         }
                     }
                     if let Some(mat) = cap.get(IDX_ALIAS) {
-                        let splited = mat.as_str().split(";");
+                        let splited = mat.as_str().split(';');
 
                         alias = Some(
                             splited
@@ -246,7 +246,11 @@ mod test {
             (Some(astr("--bool")), None, None),
             (Some(astr("bool")), None, None),
             (Some(astr("-b")), Some(vec![astr("--bool")]), None),
-            (Some(astr("-?")), Some(vec![astr("-h"), astr("--help")]), None),
+            (
+                Some(astr("-?")),
+                Some(vec![astr("-h"), astr("--help")]),
+                None,
+            ),
             (Some(astr("--bool")), Some(vec![astr("-b")]), None),
             (Some(astr("b")), Some(vec![astr("bool")]), None),
             (Some(astr("-b")), Some(vec![astr("bool")]), None),
@@ -255,12 +259,28 @@ mod test {
             (Some(astr("-b")), None, Some(astr("i"))),
             (Some(astr("--bool")), None, Some(astr("u"))),
             (Some(astr("bool")), None, Some(astr("s"))),
-            (Some(astr("-b")), Some(vec![astr("--bool")]), Some(astr("b"))),
-            (Some(astr("-?")), Some(vec![astr("-h"), astr("--help")]), Some(astr("p"))),
-            (Some(astr("--bool")), Some(vec![astr("-b")]), Some(astr("c"))),
+            (
+                Some(astr("-b")),
+                Some(vec![astr("--bool")]),
+                Some(astr("b")),
+            ),
+            (
+                Some(astr("-?")),
+                Some(vec![astr("-h"), astr("--help")]),
+                Some(astr("p")),
+            ),
+            (
+                Some(astr("--bool")),
+                Some(vec![astr("-b")]),
+                Some(astr("c")),
+            ),
             (Some(astr("b")), Some(vec![astr("bool")]), Some(astr("m"))),
             (Some(astr("-b")), Some(vec![astr("bool")]), Some(astr("f"))),
-            (Some(astr("-/b")), Some(vec![astr("--/bool")]), Some(astr("i"))),
+            (
+                Some(astr("-/b")),
+                Some(vec![astr("--/bool")]),
+                Some(astr("i")),
+            ),
             (Some(astr("-/b")), Some(vec![astr("bool")]), Some(astr("a"))),
             (None, None, None),
         ];

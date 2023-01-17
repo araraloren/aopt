@@ -44,7 +44,7 @@ impl ValAccessor {
         initializer: Option<ValInitializer>,
         validator: Option<ValValidator<U>>,
     ) -> Self {
-        let initializer = initializer.unwrap_or(ValInitializer::fallback());
+        let initializer = initializer.unwrap_or_else(ValInitializer::fallback);
         let storer = if let Some(validator) = validator {
             ValStorer::new_validator(validator)
         } else {

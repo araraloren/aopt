@@ -72,7 +72,7 @@ impl RawValParser for bool {
         match val {
             crate::opt::BOOL_TRUE => Ok(true),
             crate::opt::BOOL_FALSE => Ok(false),
-            _ => Err(Error::raise_failure(&format!(
+            _ => Err(Error::raise_failure(format!(
                 "Except true or false, found value: {}",
                 val
             ))),
@@ -92,7 +92,7 @@ impl RawValParser for Stdin {
     type Error = Error;
 
     fn parse(raw: Option<&RawVal>, _: &Ctx) -> Result<Self, Self::Error> {
-        const STDIN: &'static str = "-";
+        const STDIN: &str = "-";
 
         if let Some(raw) = raw {
             if raw.get_str() == Some(STDIN) {

@@ -165,5 +165,5 @@ impl Information for ConstrctInfo {
 
     fn take_type(&mut self) -> Option<Str> {
         self.r#type.take()
-    }   
+    }
 }
