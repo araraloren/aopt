@@ -31,6 +31,9 @@ pub trait ConfigValue {
     /// The style support by current option.
     fn style(&self) -> Option<&Vec<Style>>;
 
+    /// The creator name of option.
+    fn ctor(&self) -> Option<&Str>;
+
     /// The name of option.
     fn name(&self) -> Option<&Str>;
 
@@ -60,6 +63,8 @@ pub trait ConfigValue {
 
     fn has_idx(&self) -> bool;
 
+    fn has_ctor(&self) -> bool;
+
     fn has_name(&self) -> bool;
 
     fn has_type(&self) -> bool;
@@ -88,6 +93,8 @@ pub trait ConfigValue {
 
     fn set_force(&mut self, force: bool) -> &mut Self;
 
+    fn set_ctor<S: Into<Str>>(&mut self, ctor: S) -> &mut Self;
+
     fn set_name<S: Into<Str>>(&mut self, name: S) -> &mut Self;
 
     fn set_hint<S: Into<Str>>(&mut self, hint: S) -> &mut Self;
@@ -112,6 +119,8 @@ pub trait ConfigValue {
 /// Contain the information used for create option instance.
 #[derive(Debug, Default)]
 pub struct OptConfig {
+    ctor: Option<Str>,
+
     ty: Option<TypeId>,
 
     name: Option<Str>,
@@ -292,6 +301,10 @@ impl ConfigValue for OptConfig {
         self.styles.as_ref()
     }
 
+    fn ctor(&self) -> Option<&Str> {
+        self.ctor.as_ref()
+    }
+
     fn name(&self) -> Option<&Str> {
         self.name.as_ref()
     }
@@ -336,6 +349,10 @@ impl ConfigValue for OptConfig {
         self.idx.is_some()
     }
 
+    fn has_ctor(&self) -> bool {
+        self.ctor.is_some()
+    }
+
     fn has_name(&self) -> bool {
         self.name.is_some()
     }
@@ -358,6 +375,10 @@ impl ConfigValue for OptConfig {
 
     fn has_force(&self) -> bool {
         self.force.is_some()
+    }
+
+    fn has_style(&self) -> bool {
+        self.styles.is_some()
     }
 
     fn has_action(&self) -> bool {
@@ -390,6 +411,11 @@ impl ConfigValue for OptConfig {
 
     fn set_force(&mut self, force: bool) -> &mut Self {
         self.force = Some(force);
+        self
+    }
+
+    fn set_ctor<S: Into<Str>>(&mut self, ctor: S) -> &mut Self {
+        self.ctor = Some(ctor.into());
         self
     }
 
@@ -448,9 +474,5 @@ impl ConfigValue for OptConfig {
     fn set_accessor(&mut self, accessor: ValAccessor) -> &mut Self {
         self.accessor = Some(accessor);
         self
-    }
-
-    fn has_style(&self) -> bool {
-        self.styles.is_some()
     }
 }

@@ -8,6 +8,7 @@ pub(crate) mod policy_pre;
 pub(crate) mod process;
 pub(crate) mod returnval;
 pub(crate) mod style;
+pub(crate) mod ucommit;
 
 pub use self::checker::SetChecker;
 pub use self::commit::ParserCommit;
@@ -23,6 +24,7 @@ pub use self::style::OptGuess;
 pub use self::style::OptStyleManager;
 pub use self::style::UserStyle;
 pub use self::style::UserStyleMange;
+pub use self::ucommit::UParserCommit;
 
 pub(crate) use self::process::invoke_callback_opt;
 pub(crate) use self::process::process_non_opt;
@@ -56,6 +58,7 @@ use crate::set::Set;
 use crate::set::SetCfg;
 use crate::set::SetExt;
 use crate::set::SetOpt;
+use crate::set::UCommit;
 use crate::value::Infer;
 use crate::value::RawValParser;
 use crate::Arc;
@@ -572,10 +575,23 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    pub fn add_opt<U>(
+    pub fn add_opt(
         &mut self,
         opt: impl Into<Str>,
-    ) -> Result<ParserCommit<'_, P::Set, P::Ser, U>, Error>
+    ) -> Result<ParserCommit<'_, P::Set, P::Ser>, Error> {
+        let info =
+            <<<P::Set as Set>::Ctor as Ctor>::Config as Config>::new(&self.optset, opt.into())?;
+
+        Ok(ParserCommit::new(
+            Commit::new(&mut self.optset, info),
+            &mut self.invoker,
+        ))
+    }
+
+    pub fn add_opt_i<U>(
+        &mut self,
+        opt: impl Into<Str>,
+    ) -> Result<UParserCommit<'_, P::Set, P::Ser, U>, Error>
     where
         U: Infer,
         U::Val: RawValParser,
@@ -583,8 +599,8 @@ where
         let info =
             <<<P::Set as Set>::Ctor as Ctor>::Config as Config>::new(&self.optset, opt.into())?;
 
-        Ok(ParserCommit::new(
-            Commit::new(&mut self.optset, info),
+        Ok(UParserCommit::new(
+            UCommit::new(&mut self.optset, info),
             &mut self.invoker,
         ))
     }
@@ -635,16 +651,26 @@ where
     /// #    Ok(())
     /// # }
     ///```
-    pub fn add_opt_cfg<U: Infer, Cfg: Into<SetCfg<P::Set>>>(
+    pub fn add_opt_cfg<Cfg: Into<SetCfg<P::Set>>>(
         &mut self,
         config: Cfg,
-    ) -> Result<ParserCommit<'_, P::Set, P::Ser, U>, Error>
+    ) -> Result<ParserCommit<'_, P::Set, P::Ser>, Error> {
+        Ok(ParserCommit::new(
+            Commit::new(&mut self.optset, config.into()),
+            &mut self.invoker,
+        ))
+    }
+
+    pub fn add_opt_cfg_i<U: Infer, Cfg: Into<SetCfg<P::Set>>>(
+        &mut self,
+        config: Cfg,
+    ) -> Result<UParserCommit<'_, P::Set, P::Ser, U>, Error>
     where
         U: Infer,
         U::Val: RawValParser,
     {
-        Ok(ParserCommit::new(
-            Commit::new(&mut self.optset, config.into()),
+        Ok(UParserCommit::new(
+            UCommit::new(&mut self.optset, config.into()),
             &mut self.invoker,
         ))
     }

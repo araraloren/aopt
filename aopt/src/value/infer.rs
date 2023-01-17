@@ -24,6 +24,10 @@ pub trait Infer {
         false
     }
 
+    fn infer_ctor() -> Str {
+        crate::set::ctor_default_name()
+    }
+
     fn infer_positional() -> bool {
         false
     }
@@ -42,10 +46,6 @@ pub trait Infer {
 
     fn infer_support_alias() -> bool {
         true
-    }
-
-    fn infer_creator() -> Str {
-        Str::from(crate::set::CTOR_DEFAULT)
     }
 
     fn infer_validator() -> Option<ValValidator<Self::Val>> {

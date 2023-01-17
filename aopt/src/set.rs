@@ -3,6 +3,7 @@ pub(crate) mod filter;
 pub(crate) mod index;
 pub(crate) mod optset;
 pub(crate) mod optvalid;
+pub(crate) mod ucommit;
 
 pub use self::commit::Commit;
 pub use self::filter::Filter;
@@ -12,6 +13,7 @@ pub use self::index::SetIndex;
 pub use self::optset::OptSet;
 pub use self::optvalid::OptValidator;
 pub use self::optvalid::PrefixOptValidator;
+pub use self::ucommit::UCommit;
 
 use std::fmt::Debug;
 use std::slice::Iter;
@@ -86,6 +88,10 @@ impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Debug
 }
 
 pub const CTOR_DEFAULT: &str = "default_ctor";
+
+pub fn ctor_default_name() -> Str {
+    Str::from(CTOR_DEFAULT)
+}
 
 /// Create [`Opt`](crate::set::Ctor::Opt) with given [`Config`](crate::set::Ctor::Config).
 pub trait Ctor {

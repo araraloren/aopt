@@ -20,6 +20,14 @@ pub(crate) fn convert_raw_to_utf8(raw: Option<&RawVal>) -> Result<&str, Error> {
         .ok_or_else(|| Error::raise_failure("Can't convert value to &str: invalid utf8"))
 }
 
+impl RawValParser for () {
+    type Error = Error;
+
+    fn parse(_: Option<&RawVal>, _: &Ctx) -> Result<Self, Self::Error> {
+        Ok(())
+    }
+}
+
 macro_rules! impl_raw_val_parser {
     ($int:ty) => {
         impl RawValParser for $int {

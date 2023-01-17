@@ -9,10 +9,9 @@ use crate::opt::Action;
 use crate::opt::ConfigValue;
 use crate::opt::Index;
 use crate::opt::Opt;
-use crate::parser::UParserCommit;
-use crate::set::Commit;
 use crate::set::SetCfg;
 use crate::set::SetOpt;
+use crate::set::UCommit;
 use crate::value::Infer;
 use crate::value::RawValParser;
 use crate::value::ValInitializer;
@@ -21,24 +20,28 @@ use crate::Error;
 use crate::Str;
 use crate::Uid;
 
-/// Simple wrapped the option create interface of [`Commit`],
+/// Simple wrapped the option create interface of [`TyCommit`],
 /// and the handler register interface of [`HandlerEntry`].
-pub struct ParserCommit<'a, Set, Ser>
+pub struct UParserCommit<'a, Set, Ser, U>
 where
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
+    U: Infer,
+    U::Val: RawValParser,
     SetCfg<Set>: ConfigValue + Default,
 {
-    inner: Option<Commit<'a, Set>>,
+    inner: UCommit<'a, Set, U>,
 
     inv_ser: Option<&'a mut Invoker<Set, Ser>>,
 }
 
-impl<'a, Set, Ser> Debug for ParserCommit<'a, Set, Ser>
+impl<'a, Set, Ser, U> Debug for UParserCommit<'a, Set, Ser, U>
 where
     Set: crate::set::Set + Debug,
     SetOpt<Set>: Opt + Debug,
     Ser: Debug,
+    U: Infer,
+    U::Val: RawValParser,
     SetCfg<Set>: ConfigValue + Default + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -49,41 +52,27 @@ where
     }
 }
 
-impl<'a, Set, Ser> ParserCommit<'a, Set, Ser>
+impl<'a, Set, Ser, U> UParserCommit<'a, Set, Ser, U>
 where
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
+    U: Infer,
+    U::Val: RawValParser,
     SetCfg<Set>: ConfigValue + Default,
 {
-    pub fn new(inner: Commit<'a, Set>, inv_ser: &'a mut Invoker<Set, Ser>) -> Self {
+    pub fn new(inner: UCommit<'a, Set, U>, inv_ser: &'a mut Invoker<Set, Ser>) -> Self {
         Self {
-            inner: Some(inner),
+            inner,
             inv_ser: Some(inv_ser),
         }
     }
 
-    pub(crate) fn convert2infer<U: Infer>(mut self) -> UParserCommit<'a, Set, Ser, U>
-    where
-        U::Val: RawValParser,
-    {
-        self.inner.as_mut().map(|v| v.drop_commit = false);
-
-        let inner = self.inner.take().unwrap();
-        let inv_ser = self.inv_ser.take().unwrap();
-
-        UParserCommit::new(inner.convert2infer::<U>(), inv_ser)
-    }
-
-    pub fn inner_mut(&mut self) -> &mut Commit<'a, Set> {
-        self.inner.as_mut().unwrap()
-    }
-
     pub fn cfg(&self) -> &SetCfg<Set> {
-        self.inner.as_ref().unwrap().cfg()
+        self.inner.cfg()
     }
 
     pub fn cfg_mut(&mut self) -> &mut SetCfg<Set> {
-        self.inner.as_mut().unwrap().cfg_mut()
+        self.inner.cfg_mut()
     }
 
     /// Set the option index of commit configuration.
@@ -105,11 +94,9 @@ where
     }
 
     /// Set the option type name of commit configuration.
-    pub fn set_type<U: Infer>(mut self) -> UParserCommit<'a, Set, Ser, U>
-    where
-        U::Val: RawValParser,
-    {
-        self.convert2infer::<U>()
+    pub fn set_type(mut self) -> Self {
+        self.cfg_mut().set_type::<U::Val>();
+        self
     }
 
     /// Clear all the alias of commit configuration.
@@ -150,43 +137,8 @@ where
 
     /// Set the option value initiator.
     pub fn set_initializer(mut self, initializer: ValInitializer) -> Self {
-        self.inner_mut().initializer = Some(initializer);
+        self.inner.initializer = Some(initializer);
         self
-    }
-
-    /// Set the option value validator.
-    pub fn set_validator<U: Infer>(
-        mut self,
-        validator: ValValidator<U::Val>,
-    ) -> UParserCommit<'a, Set, Ser, U>
-    where
-        U::Val: RawValParser,
-    {
-        self.convert2infer::<U>().set_validator(validator)
-    }
-
-    /// Set the option default value.
-    pub fn set_value<U: Infer>(self, value: U::Val) -> UParserCommit<'a, Set, Ser, U>
-    where
-        U::Val: Copy + RawValParser,
-    {
-        self.convert2infer::<U>().set_value(value)
-    }
-
-    /// Set the option default value.
-    pub fn set_value_clone<U: Infer>(self, value: U::Val) -> UParserCommit<'a, Set, Ser, U>
-    where
-        U::Val: Clone + RawValParser,
-    {
-        self.convert2infer::<U>().set_value_clone(value)
-    }
-
-    /// Set the option default value.
-    pub fn set_values<U: Infer>(self, value: Vec<U::Val>) -> UParserCommit<'a, Set, Ser, U>
-    where
-        U::Val: Clone + RawValParser,
-    {
-        self.convert2infer::<U>().set_values(value)
     }
 
     /// Register the handler which will be called when option is set.
@@ -227,7 +179,7 @@ where
     }
 
     pub(crate) fn run_and_commit_the_change(&mut self) -> Result<Uid, Error> {
-        self.inner_mut().run_and_commit_the_change()
+        self.inner.run_and_commit_the_change()
     }
 
     /// Run the commit.
@@ -239,14 +191,64 @@ where
     }
 }
 
-impl<'a, Set, Ser> Drop for ParserCommit<'a, Set, Ser>
+impl<'a, Set, Ser, U> UParserCommit<'a, Set, Ser, U>
 where
+    U: Infer,
+    Set: crate::set::Set,
+    SetOpt<Set>: Opt,
+    U::Val: RawValParser,
+    SetCfg<Set>: ConfigValue + Default,
+{
+    /// Set the option value validator.
+    pub fn set_validator(mut self, validator: ValValidator<U::Val>) -> Self {
+        self.inner.validator = Some(validator);
+        self
+    }
+}
+
+impl<'a, Set, Ser, U> UParserCommit<'a, Set, Ser, U>
+where
+    U: Infer,
+    U::Val: Copy + RawValParser,
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
     SetCfg<Set>: ConfigValue + Default,
 {
+    /// Set the option default value.
+    pub fn set_value(self, value: U::Val) -> Self {
+        self.set_initializer(ValInitializer::with(value))
+    }
+}
+
+impl<'a, Set, Ser, U> UParserCommit<'a, Set, Ser, U>
+where
+    U: Infer,
+    U::Val: Clone + RawValParser,
+    Set: crate::set::Set,
+    SetOpt<Set>: Opt,
+    SetCfg<Set>: ConfigValue + Default,
+{
+    /// Set the option default value.
+    pub fn set_value_clone(self, value: U::Val) -> Self {
+        self.set_initializer(ValInitializer::with_clone(value))
+    }
+
+    /// Set the option default value.
+    pub fn set_values(self, value: Vec<U::Val>) -> Self {
+        self.set_initializer(ValInitializer::with_vec(value))
+    }
+}
+
+impl<'a, Set, Ser, U> Drop for UParserCommit<'a, Set, Ser, U>
+where
+    Set: crate::set::Set,
+    SetOpt<Set>: Opt,
+    U: Infer,
+    U::Val: RawValParser,
+    SetCfg<Set>: ConfigValue + Default,
+{
     fn drop(&mut self) {
-        if self.inner_mut().drop_commit {
+        if self.inner.drop_commit {
             let error =
                 "Error when commit the option in ParserCommit::Drop, call `run` get the Result";
 
