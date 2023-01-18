@@ -103,8 +103,14 @@ where
         self
     }
 
-    /// Set the option type name of commit configuration.
-    pub fn set_type<U: Infer>(self) -> UCommit<'a, S, U>
+    /// Set the option creator of commit configuration.
+    pub fn set_ctor<T: Into<Str>>(mut self, ctor: T) -> Self {
+        self.cfg_mut().set_ctor(ctor);
+        self
+    }
+
+    /// Convert into [`UCommit`]
+    pub fn into_type<U: Infer>(self) -> UCommit<'a, S, U>
     where
         U::Val: RawValParser,
     {

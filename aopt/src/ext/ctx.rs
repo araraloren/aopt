@@ -5,11 +5,10 @@
 //! ```rust
 //! # use aopt::prelude::*;
 //! # use aopt::Arc;
-//! # use aopt::Error;
 //! # use aopt::RawVal;
 //! # use std::ops::Deref;
 //! #
-//! # fn main() -> Result<(), Error> {
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let mut policy = AFwdPolicy::default();
 //! let mut set = policy.default_set();
 //! let mut ser = policy.default_ser();
@@ -54,15 +53,17 @@
 //!
 //! let args = Args::from_array(["app", "--/bool", "set", "42", "foo", "bar"]);
 //!
-//! policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
+//! policy
+//!     .parse(&mut set, &mut inv, &mut ser, Arc::new(args))?
+//!     .unwrap();
 //!
-//! assert_eq!(ser.ser_val().val::<bool>(0)?, &false);
-//! assert_eq!(ser.ser_val().val::<bool>(1)?, &true);
-//! assert_eq!(ser.ser_val().val::<i64>(2)?, &42);
+//! assert_eq!(set.find_val::<bool>("--/bool")?, &false);
+//! assert_eq!(set.find_val::<bool>("set")?, &true);
+//! assert_eq!(set.find_val::<i64>("pos_2")?, &42);
 //!
 //! let test = vec![(3, RawVal::from("foo")), (4, RawVal::from("bar"))];
 //!
-//! for (idx, val) in ser.ser_val().vals::<(usize, RawVal)>(3)?.iter().enumerate() {
+//! for (idx, val) in set[3].vals::<(usize, RawVal)>()?.iter().enumerate() {
 //!     assert_eq!(val.0, test[idx].0);
 //!     assert_eq!(val.1, test[idx].1);
 //! }
@@ -115,11 +116,11 @@ impl<Set, Ser> Extract<Set, Ser> for Ctx {
 ///           Ok(Some(false))
 ///       });
 ///
-///   let args = Args::from_array(["--/bool", ]);
+///   let args = Args::from_array(["app", "--/bool", ]);
 ///
-///   policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
+///   policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?.unwrap();
 ///
-///   assert_eq!(ser.ser_val().val::<bool>(0)?, &false);
+///   assert_eq!(set[0].val::<bool>()?, &false);
 ///
 /// #  Ok(())
 /// #
@@ -213,11 +214,11 @@ impl Display for Uid {
 ///
 /// let args = Args::from_array(["app", "--/bool", "set", "value"]);
 ///
-/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?.unwrap();
 ///
-/// assert_eq!(ser.ser_val().val::<bool>(0)?, &false);
-/// assert_eq!(ser.ser_val().val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val().val::<i64>(2)?, &2);
+/// assert_eq!(set.find_val::<bool>("--/bool")?, &false);
+/// assert_eq!(set[1].val::<bool>()?, &true);
+/// assert_eq!(set[2].val::<i64>()?, &2);
 /// #
 /// # Ok(())
 /// # }
@@ -298,11 +299,11 @@ impl Display for Index {
 ///
 /// let args = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
 ///
-/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?.unwrap();
 ///
-/// assert_eq!(ser.ser_val().val::<bool>(0)?, &false);
-/// assert_eq!(ser.ser_val().val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val().val::<i64>(2)?, &2);
+/// assert_eq!(set[0].val::<bool>()?, &false);
+/// assert_eq!(set[1].val::<bool>()?, &true);
+/// assert_eq!(set[2].val::<i64>()?, &2);
 /// #
 /// # Ok(())
 /// # }
@@ -392,11 +393,11 @@ impl Display for Total {
 ///
 /// let args = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
 ///
-/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?.unwrap();
 ///
-/// assert_eq!(ser.ser_val().val::<bool>(0)?, &false);
-/// assert_eq!(ser.ser_val().val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val().val::<i64>(2)?, &2);
+/// assert_eq!(set[0].val::<bool>()?, &false);
+/// assert_eq!(set[1].val::<bool>()?, &true);
+/// assert_eq!(set[2].val::<i64>()?, &2);
 /// #
 /// # Ok(())
 /// # }
@@ -476,11 +477,11 @@ impl<Set, Ser> Extract<Set, Ser> for Args {
 ///
 /// let args = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
 ///
-/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?.unwrap();
 ///
-/// assert_eq!(ser.ser_val().val::<bool>(0)?, &true);
-/// assert_eq!(ser.ser_val().val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val().val::<i64>(2)?, &2);
+/// assert_eq!(set[0].val::<bool>()?, &true);
+/// assert_eq!(set[1].val::<bool>()?, &true);
+/// assert_eq!(set[2].val::<i64>()?, &2);
 /// #
 /// # Ok(())
 /// # }
@@ -581,11 +582,11 @@ impl Display for Name {
 ///
 /// let args = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
 ///
-/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?.unwrap();
 ///
-/// assert_eq!(ser.ser_val().val::<bool>(0)?, &false);
-/// assert_eq!(ser.ser_val().val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val().val::<i64>(2)?, &2);
+/// assert_eq!(set.find_val::<bool>("--/bool")?, &false);
+/// assert_eq!(set.find_val::<bool>("set")?, &true);
+/// assert_eq!(set.find_val::<i64>("pos_2")?, &2);
 /// #
 /// # Ok(())
 /// # }
@@ -678,11 +679,11 @@ impl<Set, Ser> Extract<Set, Ser> for Style {
 ///
 /// let args = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
 ///
-/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?.unwrap();
 ///
-/// assert_eq!(ser.ser_val().val::<bool>(0)?, &false);
-/// assert_eq!(ser.ser_val().val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val().val::<i64>(2)?, &2);
+/// assert_eq!(set[0].val::<bool>()?, &false);
+/// assert_eq!(set[1].val::<bool>()?, &true);
+/// assert_eq!(set[2].val::<i64>()?, &2);
 /// #
 /// # Ok(())
 /// # }
@@ -768,11 +769,11 @@ impl<Set, Ser> Extract<Set, Ser> for RawVal {
 ///
 /// let args = Args::from_array(["app", "--/bool", "set", "42", "foo"]);
 ///
-/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?.unwrap();
 ///
-/// assert_eq!(ser.ser_val().val::<bool>(0)?, &false);
-/// assert_eq!(ser.ser_val().val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val().val::<i64>(2)?, &42);
+/// assert_eq!(set.find_val::<bool>("--/bool")?, &false);
+/// assert_eq!(set.find_val::<bool>("set")?, &true);
+/// assert_eq!(set.find_val::<i64>("pos_2")?, &42);
 /// #
 /// # Ok(())
 /// # }

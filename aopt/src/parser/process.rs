@@ -73,6 +73,7 @@ where
     let keys: Vec<Uid> = set.keys();
     let mut savers = vec![];
 
+    crate::trace_log!("Opt process {:?}", proc);
     for uid in keys {
         match proc.process(uid, set) {
             Ok(index) => {
@@ -138,6 +139,7 @@ where
     // copy the uid of option, avoid borrow the set
     let keys: Vec<Uid> = set.keys().to_vec();
 
+    crate::trace_log!("NOA process {:?}", proc);
     for uid in keys {
         match proc.process(uid, set) {
             Ok(index) => {

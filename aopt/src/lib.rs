@@ -267,6 +267,7 @@ pub mod prelude {
     pub use crate::set::SetCfg;
     pub use crate::set::SetExt;
     pub use crate::set::SetOpt;
+    pub use crate::set::SetValueFindExt;
     pub use crate::value::AnyValue;
     pub use crate::value::ErasedValHandler;
     pub use crate::value::Infer;

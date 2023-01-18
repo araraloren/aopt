@@ -179,6 +179,7 @@ where
             }
         }
         if matched {
+            opt.set_matched(true);
             self.matched_index = Some(self.noa_index);
             self.matched_uid = Some(opt.uid());
         }

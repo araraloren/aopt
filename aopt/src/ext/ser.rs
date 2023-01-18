@@ -54,8 +54,7 @@ pub struct Value<T: ?Sized>(Arc<T>);
 /// let mut inv = policy.default_inv();
 /// let mut ser = policy.default_ser();
 ///
-/// ser.ser_usrval_mut()
-///     .insert(ser::Value::new(PosList(RefCell::new(vec![]))));
+/// ser.sve_insert(ser::Value::new(PosList(RefCell::new(vec![]))));
 /// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("pos_v=p@*")?.run()?;
 /// inv.entry(0)
@@ -74,10 +73,10 @@ pub struct Value<T: ?Sized>(Arc<T>);
 ///
 /// let args = Args::from_array(["app", "--/bool", "set", "42", "foo", "bar"]);
 ///
-/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?.unwrap();
 ///
-/// assert_eq!(ser.ser_val().val::<bool>(0)?, &false);
-/// ser.sve_usrval::<ser::Value::<PosList>>()?.test_pos(
+/// assert_eq!(set[0].val::<bool>()?, &false);
+/// ser.sve_val::<ser::Value::<PosList>>()?.test_pos(
 ///     ["set", "42", "foo", "bar"]
 ///         .into_iter()
 ///         .map(RawVal::from)

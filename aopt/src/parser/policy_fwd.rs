@@ -270,7 +270,7 @@ where
 
         ctx.set_args(noa_args.clone());
         // when style is pos, noa index is [1..=len]
-        if noa_args.len() > 0 {
+        if noa_len > 0 {
             if let Some(mut proc) = NOAGuess::new().guess(
                 &UserStyle::Cmd,
                 GuessNOACfg::new(noa_args.clone(), Self::noa_cmd(), noa_len),
