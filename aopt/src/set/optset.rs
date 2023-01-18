@@ -20,6 +20,7 @@ use crate::Uid;
 
 use super::OptValidator;
 use super::SetOpt;
+use super::SetValueFindExt;
 use super::UCommit;
 
 /// Simple [`Set`] implementation hold [`Opt`] and [`Ctor`].
@@ -265,6 +266,27 @@ where
     ) -> Result<impl Iterator<Item = &mut C::Opt>, Error> {
         let info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
         Ok(self.iter_mut().filter(move |opt| info.mat_opt(*opt)))
+    }
+}
+
+impl<P, C, V> SetValueFindExt for OptSet<P, C, V>
+where
+    C::Opt: Opt,
+    C: Ctor,
+    P: OptParser,
+    V: OptValidator,
+    P::Output: Information,
+    C::Config: Config + ConfigValue + Default,
+{
+    fn find_uid<S: Into<Str>>(&self, opt: S) -> Result<Uid, Error> {
+        let opt: Str = opt.into();
+
+        self.find(opt.clone())?.map(|v| v.uid()).ok_or_else(|| {
+            Error::raise_error(format!(
+                "Can not find option: invalid option string {}",
+                opt
+            ))
+        })
     }
 }
 

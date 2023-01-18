@@ -179,7 +179,7 @@ impl StrParser {
                         .with_pat(pattern_clone)
                         .with_name(cap.get(IDX_NAME).map(|v| Str::from(v.as_str().trim())))
                         .with_help(cap.get(IDX_HELP).map(|v| Str::from(v.as_str().trim())))
-                        .with_type(cap.get(IDX_TYPE).map(|v| Str::from(v.as_str().trim())))
+                        .with_ctor(cap.get(IDX_CTOR).map(|v| Str::from(v.as_str().trim())))
                         .with_alias(alias))
                 } else {
                     Err(Error::con_parsing_failed(pattern_clone))
@@ -191,7 +191,7 @@ impl StrParser {
 
 const IDX_NAME: usize = 1;
 const IDX_ALIAS: usize = 2;
-const IDX_TYPE: usize = 3;
+const IDX_CTOR: usize = 3;
 const IDX_FORCE: usize = 4;
 const IDX_INDEX: usize = 6;
 const IDX_HELP: usize = 7;
@@ -330,7 +330,7 @@ mod test {
                             assert_eq!(help_test.as_ref(), cap.help());
                             assert_eq!(force_test, &cap.force());
                             assert_eq!(position_test.as_ref(), cap.idx());
-                            assert_eq!(option_test.2.as_ref(), cap.r#type());
+                            assert_eq!(option_test.2.as_ref(), cap.ctor());
                         } else {
                             assert!(option_test.0.is_none());
                             assert!(option_test.1.is_none());

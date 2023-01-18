@@ -66,8 +66,9 @@ where
     where
         U::Val: RawValParser,
     {
-        self.inner.as_mut().map(|v| v.drop_commit = false);
-
+        if let Some(inner) = self.inner.as_mut() {
+            inner.drop_commit = false;
+        }
         let inner = self.inner.take().unwrap();
         let inv_ser = self.inv_ser.take().unwrap();
 
@@ -105,7 +106,7 @@ where
     }
 
     /// Set the option type name of commit configuration.
-    pub fn set_type<U: Infer>(mut self) -> UParserCommit<'a, Set, Ser, U>
+    pub fn set_type<U: Infer>(self) -> UParserCommit<'a, Set, Ser, U>
     where
         U::Val: RawValParser,
     {
@@ -156,7 +157,7 @@ where
 
     /// Set the option value validator.
     pub fn set_validator<U: Infer>(
-        mut self,
+        self,
         validator: ValValidator<U::Val>,
     ) -> UParserCommit<'a, Set, Ser, U>
     where
@@ -189,6 +190,7 @@ where
         self.convert2infer::<U>().set_values(value)
     }
 
+    #[cfg(not(feature = "sync"))]
     /// Register the handler which will be called when option is set.
     /// The function will register the option to [`Set`](crate::set::Set) first,
     /// then pass the unqiue id to [`HandlerEntry`].
@@ -205,6 +207,24 @@ where
         Ok(HandlerEntry::new(ser.unwrap(), uid).on(handler))
     }
 
+    #[cfg(feature = "sync")]
+    /// Register the handler which will be called when option is set.
+    /// The function will register the option to [`Set`](crate::set::Set) first,
+    /// then pass the unqiue id to [`HandlerEntry`].
+    pub fn on<H, O, A>(mut self, handler: H) -> Result<HandlerEntry<'a, Set, Ser, H, A, O>, Error>
+    where
+        O: ErasedTy,
+        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
+        A: Extract<Set, Ser, Error = Error> + Send + Sync + 'static,
+    {
+        let uid = self.run_and_commit_the_change()?;
+        // we don't need &'a mut InvokeServices, so just take it.
+        let ser = std::mem::take(&mut self.inv_ser);
+
+        Ok(HandlerEntry::new(ser.unwrap(), uid).on(handler))
+    }
+
+    #[cfg(not(feature = "sync"))]
     /// Register the handler which will be called when option is set.
     /// And the [`fallback`](crate::ctx::Invoker::fallback) will be called if
     /// the handler return None.
@@ -223,6 +243,29 @@ where
         // we don't need &'a mut Invoker, so just take it.
         let ser = std::mem::take(&mut self.inv_ser);
 
+        Ok(HandlerEntry::new(ser.unwrap(), uid).fallback(handler))
+    }
+
+    #[cfg(feature = "sync")]
+    /// Register the handler which will be called when option is set.
+    /// And the [`fallback`](crate::ctx::Invoker::fallback) will be called if
+    /// the handler return None.
+    /// The function will register the option to [`Set`](crate::set::Set) first,
+    /// then pass the unqiue id to [`HandlerEntry`].
+    pub fn fallback<H, O, A>(
+        mut self,
+        handler: H,
+    ) -> Result<HandlerEntry<'a, Set, Ser, H, A, O>, Error>
+    where
+        O: ErasedTy,
+        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
+        A: Extract<Set, Ser, Error = Error> + Send + Sync + 'static,
+    {
+        let uid = self.run_and_commit_the_change()?;
+        // we don't need &'a mut InvokeServices, so just take it.
+        let ser = std::mem::take(&mut self.inv_ser);
+
+        //self.drop_commit = false;
         Ok(HandlerEntry::new(ser.unwrap(), uid).fallback(handler))
     }
 
@@ -246,11 +289,13 @@ where
     SetCfg<Set>: ConfigValue + Default,
 {
     fn drop(&mut self) {
-        if self.inner_mut().drop_commit {
-            let error =
-                "Error when commit the option in ParserCommit::Drop, call `run` get the Result";
+        if let Some(inner) = self.inner.as_ref() {
+            if inner.drop_commit {
+                let error =
+                    "Error when commit the option in ParserCommit::Drop, call `run` get the Result";
 
-            self.run_and_commit_the_change().expect(error);
+                self.run_and_commit_the_change().expect(error);
+            }
         }
     }
 }

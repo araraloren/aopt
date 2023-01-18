@@ -141,6 +141,7 @@ where
         self
     }
 
+    #[cfg(not(feature = "sync"))]
     /// Register the handler which will be called when option is set.
     /// The function will register the option to [`Set`](crate::set::Set) first,
     /// then pass the unqiue id to [`HandlerEntry`].
@@ -157,6 +158,24 @@ where
         Ok(HandlerEntry::new(ser.unwrap(), uid).on(handler))
     }
 
+    #[cfg(feature = "sync")]
+    /// Register the handler which will be called when option is set.
+    /// The function will register the option to [`Set`](crate::set::Set) first,
+    /// then pass the unqiue id to [`HandlerEntry`].
+    pub fn on<H, O, A>(mut self, handler: H) -> Result<HandlerEntry<'a, Set, Ser, H, A, O>, Error>
+    where
+        O: ErasedTy,
+        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
+        A: Extract<Set, Ser, Error = Error> + Send + Sync + 'static,
+    {
+        let uid = self.run_and_commit_the_change()?;
+        // we don't need &'a mut InvokeServices, so just take it.
+        let ser = std::mem::take(&mut self.inv_ser);
+
+        Ok(HandlerEntry::new(ser.unwrap(), uid).on(handler))
+    }
+
+    #[cfg(not(feature = "sync"))]
     /// Register the handler which will be called when option is set.
     /// And the [`fallback`](crate::ctx::Invoker::fallback) will be called if
     /// the handler return None.
@@ -175,6 +194,29 @@ where
         // we don't need &'a mut Invoker, so just take it.
         let ser = std::mem::take(&mut self.inv_ser);
 
+        Ok(HandlerEntry::new(ser.unwrap(), uid).fallback(handler))
+    }
+
+    #[cfg(feature = "sync")]
+    /// Register the handler which will be called when option is set.
+    /// And the [`fallback`](crate::ctx::Invoker::fallback) will be called if
+    /// the handler return None.
+    /// The function will register the option to [`Set`](crate::set::Set) first,
+    /// then pass the unqiue id to [`HandlerEntry`].
+    pub fn fallback<H, O, A>(
+        mut self,
+        handler: H,
+    ) -> Result<HandlerEntry<'a, Set, Ser, H, A, O>, Error>
+    where
+        O: ErasedTy,
+        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
+        A: Extract<Set, Ser, Error = Error> + Send + Sync + 'static,
+    {
+        let uid = self.run_and_commit_the_change()?;
+        // we don't need &'a mut InvokeServices, so just take it.
+        let ser = std::mem::take(&mut self.inv_ser);
+
+        //self.drop_commit = false;
         Ok(HandlerEntry::new(ser.unwrap(), uid).fallback(handler))
     }
 

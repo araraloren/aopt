@@ -1,4 +1,5 @@
 use crate::ctx::Invoker;
+use crate::opt::creator::BuiltInCtor;
 use crate::opt::AOpt;
 use crate::opt::Creator;
 use crate::opt::OptConfig;
@@ -97,5 +98,15 @@ impl APolicyExt<ADelayPolicy> for ADelayPolicy {
 /// * [`main`](Creator::main)
 /// * [`any`](Creator::any)
 pub fn aset_with_default_creators() -> ASet {
-    ASet::default().with_creator(Creator::fallback())
+    ASet::default()
+        .with_creator(Creator::fallback())
+        .with_creator(Creator::new_type_ctor(BuiltInCtor::Int))
+        .with_creator(Creator::new_type_ctor(BuiltInCtor::Bool))
+        .with_creator(Creator::new_type_ctor(BuiltInCtor::Flt))
+        .with_creator(Creator::new_type_ctor(BuiltInCtor::Str))
+        .with_creator(Creator::new_type_ctor(BuiltInCtor::Uint))
+        .with_creator(Creator::new_type_ctor(BuiltInCtor::Cmd))
+        .with_creator(Creator::new_type_ctor(BuiltInCtor::Pos))
+        .with_creator(Creator::new_type_ctor(BuiltInCtor::Main))
+        .with_creator(Creator::new_type_ctor(BuiltInCtor::Any))
 }

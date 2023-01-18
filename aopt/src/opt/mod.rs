@@ -61,6 +61,12 @@ pub struct Main;
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Noa(bool);
 
+impl Noa {
+    pub fn new(value: bool) -> Self {
+        Self(value)
+    }
+}
+
 impl Deref for Noa {
     type Target = bool;
 

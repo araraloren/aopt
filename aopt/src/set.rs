@@ -19,7 +19,9 @@ use std::fmt::Debug;
 use std::slice::Iter;
 use std::slice::IterMut;
 
+use crate::map::ErasedTy;
 use crate::opt::Opt;
+use crate::opt::OptValueExt;
 use crate::Error;
 use crate::Str;
 use crate::Uid;
@@ -189,5 +191,37 @@ impl<S: Set> SetExt<S::Ctor> for S {
     fn ctor_mut(&mut self, name: &Str) -> Result<&mut S::Ctor, Error> {
         self.get_ctor_mut(name)
             .ok_or_else(|| Error::con_unsupport_option_type(name))
+    }
+}
+
+pub trait SetValueFindExt
+where
+    Self: Set + Sized,
+{
+    fn find_uid<S: Into<Str>>(&self, opt: S) -> Result<Uid, Error>;
+
+    fn find_val<U: ErasedTy>(&self, opt: impl Into<Str>) -> Result<&U, Error> {
+        self.opt(self.find_uid(opt)?)?.val::<U>()
+    }
+
+    fn find_val_mut<U: ErasedTy>(&mut self, opt: impl Into<Str>) -> Result<&mut U, Error> {
+        self.opt_mut(self.find_uid(opt)?)?.val_mut()
+    }
+
+    fn find_vals<U: ErasedTy>(&self, opt: impl Into<Str>) -> Result<&Vec<U>, Error> {
+        self.opt(self.find_uid(opt)?)?.vals()
+    }
+
+    fn find_vals_mut<U: ErasedTy>(&mut self, opt: impl Into<Str>) -> Result<&mut Vec<U>, Error> {
+        self.opt_mut(self.find_uid(opt)?)?.vals_mut()
+    }
+
+    fn take_val<U: ErasedTy>(&mut self, opt: impl Into<Str>) -> Result<U, Error> {
+        let opt = self.find_uid(opt)?;
+        let vals = self.opt_mut(opt)?.vals_mut::<U>()?;
+
+        vals.pop().ok_or_else(|| {
+            Error::raise_error(format!("Not enough value can take from option {}", opt))
+        })
     }
 }

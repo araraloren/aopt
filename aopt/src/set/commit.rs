@@ -196,7 +196,7 @@ where
 
             // Note !!
             // can't get type here, set the ValAccessor with fake type
-            // fix it in option creator handler
+            // fix it in option creator handler if `Config` has no typeid
             info.set_accessor(ValAccessor::from_option::<()>(
                 self.initializer.take(),
                 None,

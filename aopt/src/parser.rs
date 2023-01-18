@@ -1,6 +1,4 @@
 pub(crate) mod checker;
-#[cfg_attr(feature = "sync", path = "sync/parser/commit.rs")]
-#[cfg_attr(not(feature = "sync"), path = "parser/commit.rs")]
 pub(crate) mod commit;
 pub(crate) mod policy_delay;
 pub(crate) mod policy_fwd;
@@ -47,16 +45,12 @@ use crate::opt::ConfigValue;
 use crate::opt::Information;
 use crate::opt::Opt;
 use crate::opt::OptParser;
-use crate::opt::OptValueExt;
-use crate::ser::ServicesExt;
 use crate::ser::ServicesValExt;
 use crate::set::Commit;
 use crate::set::Ctor;
-use crate::set::Filter;
 use crate::set::OptValidator;
 use crate::set::Set;
 use crate::set::SetCfg;
-use crate::set::SetExt;
 use crate::set::SetOpt;
 use crate::set::UCommit;
 use crate::value::Infer;
@@ -492,7 +486,6 @@ where
 
 impl<P> Parser<P>
 where
-    P::Ser: ServicesExt,
     SetOpt<P::Set>: Opt,
     <P::Set as OptParser>::Output: Information,
     SetCfg<P::Set>: Config + ConfigValue + Default,
@@ -701,57 +694,6 @@ where
         A: Extract<P::Set, P::Ser, Error = Error> + 'static,
     {
         Ok(HandlerEntry::new(&mut self.invoker, uid))
-    }
-}
-
-impl<P> Parser<P>
-where
-    P::Ser: ServicesExt,
-    P: Policy<Error = Error>,
-    P::Set: Set + OptParser,
-    <P::Set as OptParser>::Output: Information,
-    SetCfg<P::Set>: Config + ConfigValue + Default,
-{
-    pub fn find_uid(&self, opt: &str) -> Result<Uid, Error> {
-        let filter = Filter::new(
-            &self.optset,
-            SetCfg::<P::Set>::new(&self.optset, opt.into())?,
-        );
-        filter.find().map(|v| v.uid()).ok_or_else(|| {
-            Error::raise_error(format!(
-                "Can not find option: invalid option string {}",
-                opt
-            ))
-        })
-    }
-
-    pub fn find_val<U: ErasedTy>(&self, opt: &str) -> Result<&U, Error> {
-        self.opt(self.find_uid(opt)?)?.val()
-    }
-
-    pub fn find_val_mut<U: ErasedTy>(&mut self, opt: &str) -> Result<&mut U, Error> {
-        let uid = self.find_uid(opt)?;
-
-        self.opt_mut(uid)?.val_mut()
-    }
-
-    pub fn find_vals<U: ErasedTy>(&self, opt: &str) -> Result<&Vec<U>, Error> {
-        self.opt(self.find_uid(opt)?)?.vals()
-    }
-
-    pub fn find_vals_mut<U: ErasedTy>(&mut self, opt: &str) -> Result<&mut Vec<U>, Error> {
-        let uid = self.find_uid(opt)?;
-
-        self.opt_mut(uid)?.vals_mut()
-    }
-
-    pub fn take_val<U: ErasedTy>(&mut self, opt: &str) -> Result<U, Error> {
-        let opt = self.find_uid(opt)?;
-        let vals = self.opt_mut(opt)?.vals_mut::<U>()?;
-
-        vals.pop().ok_or_else(|| {
-            Error::raise_error(format!("Not enough value can take from option {}", opt))
-        })
     }
 }
 

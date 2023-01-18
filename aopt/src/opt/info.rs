@@ -12,7 +12,7 @@ pub trait Information {
 
     fn has_help(&self) -> bool;
 
-    fn has_type(&self) -> bool;
+    fn has_ctor(&self) -> bool;
 
     fn name(&self) -> Option<&Str>;
 
@@ -24,7 +24,7 @@ pub trait Information {
 
     fn help(&self) -> Option<&Str>;
 
-    fn r#type(&self) -> Option<&Str>;
+    fn ctor(&self) -> Option<&Str>;
 
     fn take_name(&mut self) -> Option<Str>;
 
@@ -36,7 +36,7 @@ pub trait Information {
 
     fn take_help(&mut self) -> Option<Str>;
 
-    fn take_type(&mut self) -> Option<Str>;
+    fn take_ctor(&mut self) -> Option<Str>;
 }
 
 /// Parsing result of option constructor string.
@@ -54,7 +54,7 @@ pub struct ConstrctInfo {
 
     pub(crate) help: Option<Str>,
 
-    pub(crate) r#type: Option<Str>,
+    pub(crate) ctor: Option<Str>,
 }
 
 impl ConstrctInfo {
@@ -88,8 +88,8 @@ impl ConstrctInfo {
         self
     }
 
-    pub fn with_type(mut self, r#type: Option<Str>) -> Self {
-        self.r#type = r#type;
+    pub fn with_ctor(mut self, ctor: Option<Str>) -> Self {
+        self.ctor = ctor;
         self
     }
 }
@@ -115,8 +115,8 @@ impl Information for ConstrctInfo {
         self.help.is_some()
     }
 
-    fn has_type(&self) -> bool {
-        self.r#type.is_some()
+    fn has_ctor(&self) -> bool {
+        self.ctor.is_some()
     }
 
     fn name(&self) -> Option<&Str> {
@@ -139,8 +139,8 @@ impl Information for ConstrctInfo {
         self.help.as_ref()
     }
 
-    fn r#type(&self) -> Option<&Str> {
-        self.r#type.as_ref()
+    fn ctor(&self) -> Option<&Str> {
+        self.ctor.as_ref()
     }
 
     fn take_name(&mut self) -> Option<Str> {
@@ -163,7 +163,7 @@ impl Information for ConstrctInfo {
         self.help.take()
     }
 
-    fn take_type(&mut self) -> Option<Str> {
-        self.r#type.take()
+    fn take_ctor(&mut self) -> Option<Str> {
+        self.ctor.take()
     }
 }

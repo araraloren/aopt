@@ -97,7 +97,7 @@ impl Infer for Cmd {
     }
 
     fn infer_initializer() -> Option<ValInitializer> {
-        Some(ValInitializer::with(false))
+        Some(ValInitializer::with(Noa::new(false)))
     }
 }
 

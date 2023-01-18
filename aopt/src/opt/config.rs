@@ -196,6 +196,10 @@ impl OptConfig {
         std::mem::take(&mut self.alias)
     }
 
+    pub fn take_accessor(&mut self) -> Option<ValAccessor> {
+        self.accessor.take()
+    }
+
     pub fn gen_name(&self) -> Result<Str, Error> {
         Ok(self
             .name
@@ -278,6 +282,9 @@ impl Config for OptConfig {
         }
         if let Some(v) = output.take_help() {
             ret.set_help(v);
+        }
+        if let Some(v) = output.take_ctor() {
+            ret.set_ctor(v);
         }
         if let Some(v) = output.take_alias() {
             for item in v {
