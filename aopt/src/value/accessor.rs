@@ -40,7 +40,23 @@ impl ValAccessor {
         }
     }
 
-    pub(crate) fn from_option<U: ErasedTy + RawValParser>(
+    pub(crate) fn from_storer<U: ErasedTy + RawValParser>(
+        initializer: Option<ValInitializer>,
+        storer: Option<ValStorer>,
+    ) -> Self {
+        let initializer = initializer.unwrap_or_else(ValInitializer::fallback);
+        let storer = storer.unwrap_or_else(ValStorer::new::<U>);
+
+        Self {
+            any_value: AnyValue::default(),
+            rawval: vec![],
+            storer,
+            initializer,
+        }
+    }
+
+    #[allow(unused)]
+    pub(crate) fn from_validator<U: ErasedTy + RawValParser>(
         initializer: Option<ValInitializer>,
         validator: Option<ValValidator<U>>,
     ) -> Self {

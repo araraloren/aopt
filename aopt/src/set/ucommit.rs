@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::marker::PhantomData;
 
 use crate::map::ErasedTy;
 use crate::opt::Action;
@@ -12,6 +13,7 @@ use crate::value::Infer;
 use crate::value::RawValParser;
 use crate::value::ValAccessor;
 use crate::value::ValInitializer;
+use crate::value::ValStorer;
 use crate::value::ValValidator;
 use crate::Error;
 use crate::Str;
@@ -29,8 +31,9 @@ where
     set: &'a mut S,
     commited: Option<Uid>,
     pub(crate) drop_commit: bool,
-    pub(crate) validator: Option<ValValidator<U::Val>>,
+    pub(crate) storer: Option<ValStorer>,
     pub(crate) initializer: Option<ValInitializer>,
+    marker: PhantomData<U>,
 }
 
 impl<'a, S, U> Debug for UCommit<'a, S, U>
@@ -46,7 +49,7 @@ where
             .field("set", &self.set)
             .field("commited", &self.commited)
             .field("drop_commit", &self.drop_commit)
-            .field("validator", &self.validator)
+            .field("storer", &self.storer)
             .field("initializer", &self.initializer)
             .finish()
     }
@@ -61,7 +64,11 @@ where
 {
     pub fn new(set: &'a mut S, info: SetCfg<S>) -> Self {
         let initializer = U::infer_initializer();
-        let validator = U::infer_validator();
+        let storer = if let Some(validator) = U::infer_validator() {
+            Some(ValStorer::from(validator))
+        } else {
+            None
+        };
         let info = Self::fill_infer_data(info);
 
         Self {
@@ -69,8 +76,9 @@ where
             info,
             commited: None,
             drop_commit: true,
-            validator,
+            storer,
             initializer,
+            marker: PhantomData::default(),
         }
     }
 
@@ -123,9 +131,9 @@ where
         self
     }
 
-    /// Set the option type name of commit configuration.
-    pub fn set_type<T: ErasedTy>(mut self) -> Self {
-        self.info.set_type::<T>();
+    /// Set the option creator of commit configuration.
+    pub fn set_ctor<T: Into<Str>>(mut self, ctor: T) -> Self {
+        self.cfg_mut().set_ctor(ctor);
         self
     }
 
@@ -176,9 +184,9 @@ where
             Ok(commited)
         } else {
             self.drop_commit = false;
-            self.info.set_accessor(ValAccessor::from_option(
+            self.info.set_accessor(ValAccessor::from_storer::<U::Val>(
                 self.initializer.take(),
-                self.validator.take(),
+                self.storer.take(),
             ));
             let default_ctor = crate::set::ctor_default_name();
             let info = std::mem::take(&mut self.info);
@@ -216,7 +224,16 @@ where
 {
     /// Set the option value validator.
     pub fn set_validator(mut self, validator: ValValidator<U::Val>) -> Self {
-        self.validator = Some(validator);
+        self.storer = Some(ValStorer::from(validator));
+        self
+    }
+
+    /// Set the option value validator.
+    pub fn set_validator_t<T: ErasedTy + RawValParser>(
+        mut self,
+        validator: ValValidator<T>,
+    ) -> Self {
+        self.storer = Some(ValStorer::from(validator));
         self
     }
 }
@@ -230,6 +247,11 @@ where
 {
     /// Set the option default value.
     pub fn set_value(self, value: U::Val) -> Self {
+        self.set_initializer(ValInitializer::with(value))
+    }
+
+    /// Set the option default value.
+    pub fn set_value_t<T: ErasedTy + Copy>(self, value: T) -> Self {
         self.set_initializer(ValInitializer::with(value))
     }
 }
@@ -247,6 +269,16 @@ where
 
     /// Set the option default value.
     pub fn set_values(self, value: Vec<U::Val>) -> Self {
+        self.set_initializer(ValInitializer::with_vec(value))
+    }
+
+    /// Set the option default value.
+    pub fn set_value_clone_t<T: ErasedTy + Clone>(self, value: T) -> Self {
+        self.set_initializer(ValInitializer::with_clone(value))
+    }
+
+    /// Set the option default value.
+    pub fn set_values_t<T: ErasedTy + Clone>(self, value: Vec<T>) -> Self {
         self.set_initializer(ValInitializer::with_vec(value))
     }
 }

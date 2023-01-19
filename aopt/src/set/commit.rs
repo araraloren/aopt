@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 
+use crate::map::ErasedTy;
 use crate::opt::Action;
 use crate::opt::ConfigValue;
 use crate::opt::Index;
@@ -12,6 +13,7 @@ use crate::value::Infer;
 use crate::value::RawValParser;
 use crate::value::ValAccessor;
 use crate::value::ValInitializer;
+use crate::value::ValStorer;
 use crate::value::ValValidator;
 use crate::Error;
 use crate::Str;
@@ -27,6 +29,7 @@ where
     set: Option<&'a mut S>,
     commited: Option<Uid>,
     pub(crate) drop_commit: bool,
+    pub(crate) storer: Option<ValStorer>,
     pub(crate) initializer: Option<ValInitializer>,
 }
 
@@ -41,6 +44,7 @@ where
             .field("set", &self.set)
             .field("commited", &self.commited)
             .field("drop_commit", &self.drop_commit)
+            .field("storer", &self.storer)
             .field("initializer", &self.initializer)
             .finish()
     }
@@ -57,24 +61,9 @@ where
             info: Some(info),
             commited: None,
             drop_commit: true,
+            storer: None,
             initializer: None,
         }
-    }
-
-    pub(crate) fn convert2infer<U: Infer>(mut self) -> UCommit<'a, S, U>
-    where
-        U::Val: RawValParser,
-    {
-        self.drop_commit = false;
-
-        let set = self.set.take();
-        let info = self.info.take();
-        let initializer = self.initializer.take();
-
-        let mut uc = UCommit::new(set.unwrap(), info.unwrap());
-
-        uc.initializer = initializer;
-        uc
     }
 
     pub fn cfg(&self) -> &SetCfg<S> {
@@ -110,11 +99,25 @@ where
     }
 
     /// Convert into [`UCommit`]
-    pub fn into_type<U: Infer>(self) -> UCommit<'a, S, U>
+    pub fn into_type<U: Infer>(mut self) -> UCommit<'a, S, U>
     where
         U::Val: RawValParser,
     {
-        self.convert2infer::<U>()
+        self.drop_commit = false;
+
+        let set = self.set.take();
+        let info = self.info.take();
+
+        let mut uc = UCommit::new(set.unwrap(), info.unwrap());
+
+        // !! If we have value, set it, or keep the value from Infer
+        if let Some(initializer) = self.initializer.take() {
+            uc.initializer = Some(initializer);
+        }
+        if let Some(storer) = self.storer.take() {
+            uc.storer = Some(storer);
+        }
+        uc
     }
 
     /// Clear all the alias of commit configuration.
@@ -160,35 +163,24 @@ where
     }
 
     /// Set the option value validator.
-    pub fn set_validator<U: Infer>(self, validator: ValValidator<U::Val>) -> UCommit<'a, S, U>
-    where
-        U::Val: RawValParser,
-    {
-        self.convert2infer::<U>().set_validator(validator)
+    pub fn set_validator<T: ErasedTy + RawValParser>(mut self, validator: ValValidator<T>) -> Self {
+        self.storer = Some(ValStorer::new_validator(validator));
+        self
     }
 
     /// Set the option default value.
-    pub fn set_value<U: Infer>(self, value: U::Val) -> UCommit<'a, S, U>
-    where
-        U::Val: Copy + RawValParser,
-    {
-        self.convert2infer::<U>().set_value(value)
+    pub fn set_value<T: ErasedTy + Copy>(self, value: T) -> Self {
+        self.set_initializer(ValInitializer::with(value))
     }
 
     /// Set the option default value.
-    pub fn set_value_clone<U: Infer>(self, value: U::Val) -> UCommit<'a, S, U>
-    where
-        U::Val: Clone + RawValParser,
-    {
-        self.convert2infer::<U>().set_value_clone(value)
+    pub fn set_value_clone<T: ErasedTy + Clone>(self, value: T) -> Self {
+        self.set_initializer(ValInitializer::with_clone(value))
     }
 
     /// Set the option default value.
-    pub fn set_values<U: Infer>(self, value: Vec<U::Val>) -> UCommit<'a, S, U>
-    where
-        U::Val: Clone + RawValParser,
-    {
-        self.convert2infer::<U>().set_values(value)
+    pub fn set_values<T: ErasedTy + Clone>(self, value: Vec<T>) -> Self {
+        self.set_initializer(ValInitializer::with_vec(value))
     }
 
     pub(crate) fn run_and_commit_the_change(&mut self) -> Result<Uid, Error> {
@@ -201,11 +193,12 @@ where
             let set = self.set.as_mut().unwrap();
 
             // Note !!
-            // can't get type here, set the ValAccessor with fake type
-            // fix it in option creator handler if `Config` has no typeid
-            info.set_accessor(ValAccessor::from_option::<()>(
+            // here we don't have value type here, set the ValAccessor with fake type
+            // fix it in option creator handler if `Config` set `fix_infer`
+            info.set_fix_infer(self.storer.is_none());
+            info.set_accessor(ValAccessor::from_storer::<()>(
                 self.initializer.take(),
-                None,
+                self.storer.take(),
             ));
 
             let default_ctor = crate::set::ctor_default_name();

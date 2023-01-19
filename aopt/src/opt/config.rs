@@ -61,6 +61,8 @@ pub trait ConfigValue {
 
     fn positional(&self) -> bool;
 
+    fn fix_infer(&self) -> bool;
+
     fn has_idx(&self) -> bool;
 
     fn has_ctor(&self) -> bool;
@@ -88,6 +90,8 @@ pub trait ConfigValue {
     fn set_support_alias(&mut self, support_alias: bool) -> &mut Self;
 
     fn set_postional(&mut self, positional: bool) -> &mut Self;
+
+    fn set_fix_infer(&mut self, fix_infer: bool) -> &mut Self;
 
     fn set_idx(&mut self, index: Index) -> &mut Self;
 
@@ -142,6 +146,8 @@ pub struct OptConfig {
     support_alias: bool,
 
     postional: bool,
+
+    fix_infer: bool,
 
     styles: Option<Vec<Style>>,
 }
@@ -352,6 +358,10 @@ impl ConfigValue for OptConfig {
         self.postional
     }
 
+    fn fix_infer(&self) -> bool {
+        self.fix_infer
+    }
+
     fn has_idx(&self) -> bool {
         self.idx.is_some()
     }
@@ -408,6 +418,11 @@ impl ConfigValue for OptConfig {
 
     fn set_postional(&mut self, ignore_index: bool) -> &mut Self {
         self.postional = ignore_index;
+        self
+    }
+
+    fn set_fix_infer(&mut self, fix_infer: bool) -> &mut Self {
+        self.fix_infer = fix_infer;
         self
     }
 

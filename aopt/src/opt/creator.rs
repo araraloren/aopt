@@ -210,16 +210,16 @@ impl Creator<AOpt, OptConfig, Error> {
 
         (!info.has_ctor()).then(|| info.set_ctor(ctor));
         (!info.has_idx()).then(|| index.map(|idx| info.set_idx(idx)));
-        (!info.has_type()).then(|| {
-            info.set_type::<U::Val>();
-            if let Some(accessor) = info.take_accessor() {
-                info.set_accessor(accessor.with_storer(ValStorer::new::<U::Val>()));
-            }
-        });
+        (!info.has_type()).then(|| info.set_type::<U::Val>());
         (!info.has_action()).then(|| info.set_action(act));
         (!info.has_style()).then(|| info.set_style(style));
         (!info.has_force()).then(|| info.set_force(force));
         (!info.has_action()).then(|| info.set_action(act));
+        if info.fix_infer() {
+            if let Some(accessor) = info.take_accessor() {
+                info.set_accessor(accessor.with_storer(ValStorer::new::<U::Val>()));
+            }
+        }
         info.set_ignore_name(ignore_name);
         info.set_support_alias(support_alias);
         info.set_postional(positional);

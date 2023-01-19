@@ -15,6 +15,7 @@ use crate::set::UCommit;
 use crate::value::Infer;
 use crate::value::RawValParser;
 use crate::value::ValInitializer;
+use crate::value::ValStorer;
 use crate::value::ValValidator;
 use crate::Error;
 use crate::Str;
@@ -93,9 +94,9 @@ where
         self
     }
 
-    /// Set the option type name of commit configuration.
-    pub fn set_type(mut self) -> Self {
-        self.cfg_mut().set_type::<U::Val>();
+    /// Set the option creator of commit configuration.
+    pub fn set_ctor<T: Into<Str>>(mut self, ctor: T) -> Self {
+        self.cfg_mut().set_ctor(ctor);
         self
     }
 
@@ -243,7 +244,16 @@ where
 {
     /// Set the option value validator.
     pub fn set_validator(mut self, validator: ValValidator<U::Val>) -> Self {
-        self.inner.validator = Some(validator);
+        self.inner.storer = Some(ValStorer::from(validator));
+        self
+    }
+
+    /// Set the option value validator.
+    pub fn set_validator_t<T: ErasedTy + RawValParser>(
+        mut self,
+        validator: ValValidator<T>,
+    ) -> Self {
+        self.inner.storer = Some(ValStorer::from(validator));
         self
     }
 }
@@ -258,6 +268,11 @@ where
 {
     /// Set the option default value.
     pub fn set_value(self, value: U::Val) -> Self {
+        self.set_initializer(ValInitializer::with(value))
+    }
+
+    /// Set the option default value.
+    pub fn set_value_t<T: ErasedTy + Copy>(self, value: T) -> Self {
         self.set_initializer(ValInitializer::with(value))
     }
 }
@@ -277,6 +292,16 @@ where
 
     /// Set the option default value.
     pub fn set_values(self, value: Vec<U::Val>) -> Self {
+        self.set_initializer(ValInitializer::with_vec(value))
+    }
+
+    /// Set the option default value.
+    pub fn set_value_clone_t<T: ErasedTy + Clone>(self, value: T) -> Self {
+        self.set_initializer(ValInitializer::with_clone(value))
+    }
+
+    /// Set the option default value.
+    pub fn set_values_t<T: ErasedTy + Clone>(self, value: Vec<T>) -> Self {
         self.set_initializer(ValInitializer::with_vec(value))
     }
 }

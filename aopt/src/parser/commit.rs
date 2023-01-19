@@ -16,6 +16,7 @@ use crate::set::SetOpt;
 use crate::value::Infer;
 use crate::value::RawValParser;
 use crate::value::ValInitializer;
+use crate::value::ValStorer;
 use crate::value::ValValidator;
 use crate::Error;
 use crate::Str;
@@ -62,19 +63,6 @@ where
         }
     }
 
-    pub(crate) fn convert2infer<U: Infer>(mut self) -> UParserCommit<'a, Set, Ser, U>
-    where
-        U::Val: RawValParser,
-    {
-        if let Some(inner) = self.inner.as_mut() {
-            inner.drop_commit = false;
-        }
-        let inner = self.inner.take().unwrap();
-        let inv_ser = self.inv_ser.take().unwrap();
-
-        UParserCommit::new(inner.convert2infer::<U>(), inv_ser)
-    }
-
     pub fn inner_mut(&mut self) -> &mut Commit<'a, Set> {
         self.inner.as_mut().unwrap()
     }
@@ -105,12 +93,24 @@ where
         self
     }
 
+    /// Set the option creator of commit configuration.
+    pub fn set_ctor<T: Into<Str>>(mut self, ctor: T) -> Self {
+        self.cfg_mut().set_ctor(ctor);
+        self
+    }
+
     /// Set the option type name of commit configuration.
-    pub fn set_type<U: Infer>(self) -> UParserCommit<'a, Set, Ser, U>
+    pub fn into_type<U: Infer>(mut self) -> UParserCommit<'a, Set, Ser, U>
     where
         U::Val: RawValParser,
     {
-        self.convert2infer::<U>()
+        if let Some(inner) = self.inner.as_mut() {
+            inner.drop_commit = false;
+        }
+        let inner = self.inner.take().unwrap();
+        let inv_ser = self.inv_ser.take().unwrap();
+
+        UParserCommit::new(inner.into_type::<U>(), inv_ser)
     }
 
     /// Clear all the alias of commit configuration.
@@ -156,38 +156,24 @@ where
     }
 
     /// Set the option value validator.
-    pub fn set_validator<U: Infer>(
-        self,
-        validator: ValValidator<U::Val>,
-    ) -> UParserCommit<'a, Set, Ser, U>
-    where
-        U::Val: RawValParser,
-    {
-        self.convert2infer::<U>().set_validator(validator)
+    pub fn set_validator<T: ErasedTy + RawValParser>(mut self, validator: ValValidator<T>) -> Self {
+        self.inner_mut().storer = Some(ValStorer::from(validator));
+        self
     }
 
     /// Set the option default value.
-    pub fn set_value<U: Infer>(self, value: U::Val) -> UParserCommit<'a, Set, Ser, U>
-    where
-        U::Val: Copy + RawValParser,
-    {
-        self.convert2infer::<U>().set_value(value)
+    pub fn set_value<T: Copy + ErasedTy>(self, value: T) -> Self {
+        self.set_initializer(ValInitializer::with(value))
     }
 
     /// Set the option default value.
-    pub fn set_value_clone<U: Infer>(self, value: U::Val) -> UParserCommit<'a, Set, Ser, U>
-    where
-        U::Val: Clone + RawValParser,
-    {
-        self.convert2infer::<U>().set_value_clone(value)
+    pub fn set_value_clone<T: Clone + ErasedTy>(self, value: T) -> Self {
+        self.set_initializer(ValInitializer::with_clone(value))
     }
 
     /// Set the option default value.
-    pub fn set_values<U: Infer>(self, value: Vec<U::Val>) -> UParserCommit<'a, Set, Ser, U>
-    where
-        U::Val: Clone + RawValParser,
-    {
-        self.convert2infer::<U>().set_values(value)
+    pub fn set_values<T: Clone + ErasedTy>(self, value: Vec<T>) -> Self {
+        self.set_initializer(ValInitializer::with_vec(value))
     }
 
     #[cfg(not(feature = "sync"))]

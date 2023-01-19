@@ -22,10 +22,7 @@ pub trait OptValueExt {
 
     fn rawvals_mut(&mut self) -> Result<&mut Vec<RawVal>, Error>;
 
-    fn filter<T: ErasedTy>(
-        &mut self,
-        f: impl FnMut(&T) -> bool,
-    ) -> Result<Vec<T>, Error>;
+    fn filter<T: ErasedTy>(&mut self, f: impl FnMut(&T) -> bool) -> Result<Vec<T>, Error>;
 }
 
 impl<O: Opt> OptValueExt for O {
@@ -61,10 +58,7 @@ impl<O: Opt> OptValueExt for O {
         self.accessor_mut().rawvals_mut()
     }
 
-    fn filter<T: ErasedTy>(
-        &mut self,
-        mut f: impl FnMut(&T) -> bool,
-    ) -> Result<Vec<T>, Error> {
+    fn filter<T: ErasedTy>(&mut self, mut f: impl FnMut(&T) -> bool) -> Result<Vec<T>, Error> {
         let vals = self.vals_mut::<T>()?;
         let mut i = 0;
         let mut removed = vec![];

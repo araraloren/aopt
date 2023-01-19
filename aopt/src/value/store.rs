@@ -80,3 +80,19 @@ impl ValStorer {
         )
     }
 }
+
+impl<U: ErasedTy + RawValParser> From<ValValidator<U>> for ValStorer {
+    fn from(validator: ValValidator<U>) -> Self {
+        Self::new_validator(validator)
+    }
+}
+
+impl<U: ErasedTy + RawValParser> From<Option<ValValidator<U>>> for ValStorer {
+    fn from(validator: Option<ValValidator<U>>) -> Self {
+        if let Some(validator) = validator {
+            Self::new_validator(validator)
+        } else {
+            Self::new::<U>()
+        }
+    }
+}
