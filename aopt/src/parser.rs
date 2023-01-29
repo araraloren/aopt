@@ -1,15 +1,16 @@
 pub(crate) mod checker;
 pub(crate) mod commit;
+pub(crate) mod infered;
 pub(crate) mod policy_delay;
 pub(crate) mod policy_fwd;
 pub(crate) mod policy_pre;
 pub(crate) mod process;
 pub(crate) mod returnval;
 pub(crate) mod style;
-pub(crate) mod ucommit;
 
 pub use self::checker::SetChecker;
 pub use self::commit::ParserCommit;
+pub use self::infered::ParserCommitInfered;
 pub use self::policy_delay::DelayPolicy;
 pub use self::policy_fwd::FwdPolicy;
 pub use self::policy_pre::PrePolicy;
@@ -22,7 +23,6 @@ pub use self::style::OptGuess;
 pub use self::style::OptStyleManager;
 pub use self::style::UserStyle;
 pub use self::style::UserStyleMange;
-pub use self::ucommit::UParserCommit;
 
 pub(crate) use self::process::invoke_callback_opt;
 pub(crate) use self::process::process_non_opt;
@@ -46,13 +46,13 @@ use crate::opt::Information;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::ser::ServicesValExt;
-use crate::set::Commit;
 use crate::set::Ctor;
 use crate::set::OptValidator;
 use crate::set::Set;
 use crate::set::SetCfg;
+use crate::set::SetCommit;
+use crate::set::SetCommitInfered;
 use crate::set::SetOpt;
-use crate::set::UCommit;
 use crate::value::Infer;
 use crate::value::RawValParser;
 use crate::Arc;
@@ -576,7 +576,7 @@ where
             <<<P::Set as Set>::Ctor as Ctor>::Config as Config>::new(&self.optset, opt.into())?;
 
         Ok(ParserCommit::new(
-            Commit::new(&mut self.optset, info),
+            SetCommit::new(&mut self.optset, info),
             &mut self.invoker,
         ))
     }
@@ -584,7 +584,7 @@ where
     pub fn add_opt_i<U>(
         &mut self,
         opt: impl Into<Str>,
-    ) -> Result<UParserCommit<'_, P::Set, P::Ser, U>, Error>
+    ) -> Result<ParserCommitInfered<'_, P::Set, P::Ser, U>, Error>
     where
         U: Infer,
         U::Val: RawValParser,
@@ -592,8 +592,8 @@ where
         let info =
             <<<P::Set as Set>::Ctor as Ctor>::Config as Config>::new(&self.optset, opt.into())?;
 
-        Ok(UParserCommit::new(
-            UCommit::new(&mut self.optset, info),
+        Ok(ParserCommitInfered::new(
+            SetCommitInfered::new(&mut self.optset, info),
             &mut self.invoker,
         ))
     }
@@ -649,7 +649,7 @@ where
         config: Cfg,
     ) -> Result<ParserCommit<'_, P::Set, P::Ser>, Error> {
         Ok(ParserCommit::new(
-            Commit::new(&mut self.optset, config.into()),
+            SetCommit::new(&mut self.optset, config.into()),
             &mut self.invoker,
         ))
     }
@@ -657,13 +657,13 @@ where
     pub fn add_opt_cfg_i<U: Infer, Cfg: Into<SetCfg<P::Set>>>(
         &mut self,
         config: Cfg,
-    ) -> Result<UParserCommit<'_, P::Set, P::Ser, U>, Error>
+    ) -> Result<ParserCommitInfered<'_, P::Set, P::Ser, U>, Error>
     where
         U: Infer,
         U::Val: RawValParser,
     {
-        Ok(UParserCommit::new(
-            UCommit::new(&mut self.optset, config.into()),
+        Ok(ParserCommitInfered::new(
+            SetCommitInfered::new(&mut self.optset, config.into()),
             &mut self.invoker,
         ))
     }

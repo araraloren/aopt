@@ -8,7 +8,10 @@ use crate::opt::Index;
 use crate::opt::Information;
 use crate::opt::OptParser;
 use crate::typeid;
-use crate::value::ValAccessor;
+use crate::value::Infer;
+use crate::value::RawValParser;
+use crate::value::ValInitializer;
+use crate::value::ValStorer;
 use crate::Str;
 
 use super::Style;
@@ -53,7 +56,9 @@ pub trait ConfigValue {
     fn action(&self) -> Option<&Action>;
 
     /// Value validator for option.
-    fn accessor(&self) -> Option<&ValAccessor>;
+    fn storer(&self) -> Option<&ValStorer>;
+
+    fn initializer(&self) -> Option<&ValInitializer>;
 
     fn ignore_name(&self) -> bool;
 
@@ -83,7 +88,9 @@ pub trait ConfigValue {
 
     fn has_action(&self) -> bool;
 
-    fn has_accessor(&self) -> bool;
+    fn has_storer(&self) -> bool;
+
+    fn has_initializer(&self) -> bool;
 
     fn set_ignore_name(&mut self, ignore_name: bool) -> &mut Self;
 
@@ -117,7 +124,9 @@ pub trait ConfigValue {
 
     fn set_action(&mut self, action: Action) -> &mut Self;
 
-    fn set_accessor(&mut self, accessor: ValAccessor) -> &mut Self;
+    fn set_storer(&mut self, storer: ValStorer) -> &mut Self;
+
+    fn set_initializer(&mut self, initializer: ValInitializer) -> &mut Self;
 }
 
 /// Contain the information used for create option instance.
@@ -139,7 +148,9 @@ pub struct OptConfig {
 
     action: Option<Action>,
 
-    accessor: Option<ValAccessor>,
+    storer: Option<ValStorer>,
+
+    initializer: Option<ValInitializer>,
 
     ignore_name: bool,
 
@@ -193,8 +204,13 @@ impl OptConfig {
         self
     }
 
-    pub fn with_accessor(mut self, accessor: Option<ValAccessor>) -> Self {
-        self.accessor = accessor;
+    pub fn with_storer(mut self, storer: Option<ValStorer>) -> Self {
+        self.storer = storer;
+        self
+    }
+
+    pub fn with_initializer(mut self, initializer: Option<ValInitializer>) -> Self {
+        self.initializer = initializer;
         self
     }
 
@@ -202,8 +218,12 @@ impl OptConfig {
         std::mem::take(&mut self.alias)
     }
 
-    pub fn take_accessor(&mut self) -> Option<ValAccessor> {
-        self.accessor.take()
+    pub fn take_storer(&mut self) -> Option<ValStorer> {
+        self.storer.take()
+    }
+
+    pub fn take_initializer(&mut self) -> Option<ValInitializer> {
+        self.initializer.take()
     }
 
     pub fn gen_name(&self) -> Result<Str, Error> {
@@ -220,9 +240,15 @@ impl OptConfig {
             .ok_or_else(|| Error::raise_error("Incomplete option configuration: missing Type"))
     }
 
-    pub fn gen_accessor(&mut self) -> Result<ValAccessor, Error> {
-        self.accessor.take().ok_or_else(|| {
-            Error::raise_error("Incomplete option configuration: missing ValAccessor")
+    pub fn gen_storer(&mut self) -> Result<ValStorer, Error> {
+        self.storer
+            .take()
+            .ok_or_else(|| Error::raise_error("Incomplete option configuration: missing ValStorer"))
+    }
+
+    pub fn gen_initializer(&mut self) -> Result<ValInitializer, Error> {
+        self.initializer.take().ok_or_else(|| {
+            Error::raise_error("Incomplete option configuration: missing ValInitializer")
         })
     }
 
@@ -342,8 +368,12 @@ impl ConfigValue for OptConfig {
         self.action.as_ref()
     }
 
-    fn accessor(&self) -> Option<&ValAccessor> {
-        self.accessor.as_ref()
+    fn storer(&self) -> Option<&ValStorer> {
+        self.storer.as_ref()
+    }
+
+    fn initializer(&self) -> Option<&ValInitializer> {
+        self.initializer.as_ref()
     }
 
     fn ignore_name(&self) -> bool {
@@ -402,8 +432,12 @@ impl ConfigValue for OptConfig {
         self.action.is_some()
     }
 
-    fn has_accessor(&self) -> bool {
-        self.accessor.is_some()
+    fn has_storer(&self) -> bool {
+        self.storer.is_some()
+    }
+
+    fn has_initializer(&self) -> bool {
+        self.initializer.is_some()
     }
 
     fn set_ignore_name(&mut self, ignore_name: bool) -> &mut Self {
@@ -493,8 +527,93 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn set_accessor(&mut self, accessor: ValAccessor) -> &mut Self {
-        self.accessor = Some(accessor);
+    fn set_storer(&mut self, storer: ValStorer) -> &mut Self {
+        self.storer = Some(storer);
         self
     }
+
+    fn set_initializer(&mut self, initializer: ValInitializer) -> &mut Self {
+        self.initializer = Some(initializer);
+        self
+    }
+}
+
+pub(crate) fn fill_cfg<U, C>(info: &mut C)
+where
+    U: Infer,
+    U::Val: RawValParser,
+    C: ConfigValue + Default,
+{
+    let act = U::infer_act();
+    let style = U::infer_style();
+    let index = U::infer_index();
+    let ignore_name = U::infer_ignore_name();
+    let support_alias = U::infer_support_alias();
+    let positional = U::infer_positional();
+    let force = U::infer_force();
+    let ctor = U::infer_ctor();
+    let initializer = U::infer_initializer();
+    let storer = if let Some(validator) = U::infer_validator() {
+        Some(ValStorer::from(validator))
+    } else {
+        None
+    };
+
+    (!info.has_ctor()).then(|| info.set_ctor(ctor));
+    (!info.has_idx()).then(|| index.map(|idx| info.set_idx(idx)));
+    (!info.has_type()).then(|| info.set_type::<U::Val>());
+    (!info.has_action()).then(|| info.set_action(act));
+    (!info.has_style()).then(|| info.set_style(style));
+    (!info.has_force()).then(|| info.set_force(force));
+    (!info.has_action()).then(|| info.set_action(act));
+    if let Some(storer) = storer {
+        (!info.has_storer()).then(|| info.set_storer(storer));
+    }
+    if let Some(initializer) = initializer {
+        (!info.has_initializer()).then(|| info.set_initializer(initializer));
+    }
+    info.set_ignore_name(ignore_name);
+    info.set_support_alias(support_alias);
+    info.set_postional(positional);
+}
+
+pub(crate) fn fill_cfg_infered<U, C>(info: &mut C)
+where
+    U: Infer,
+    U::Val: RawValParser,
+    C: ConfigValue + Default,
+{
+    let act = U::infer_act();
+    let style = U::infer_style();
+    let index = U::infer_index();
+    let ignore_name = U::infer_ignore_name();
+    let support_alias = U::infer_support_alias();
+    let positional = U::infer_positional();
+    let force = U::infer_force();
+    let ctor = U::infer_ctor();
+    let initializer = U::infer_initializer();
+    let storer = if let Some(validator) = U::infer_validator() {
+        Some(ValStorer::from(validator))
+    } else {
+        None
+    };
+
+    (!info.has_ctor()).then(|| info.set_ctor(ctor));
+    (!info.has_idx()).then(|| index.map(|idx| info.set_idx(idx)));
+    (!info.has_type()).then(|| info.set_type::<U::Val>());
+    (!info.has_action()).then(|| info.set_action(act));
+    (!info.has_style()).then(|| info.set_style(style));
+    (!info.has_force()).then(|| info.set_force(force));
+    (!info.has_action()).then(|| info.set_action(act));
+    if info.fix_infer() {
+        if let Some(storer) = storer {
+            (!info.has_storer()).then(|| info.set_storer(storer));
+        }
+        if let Some(initializer) = initializer {
+            (!info.has_initializer()).then(|| info.set_initializer(initializer));
+        }
+    }
+    info.set_ignore_name(ignore_name);
+    info.set_support_alias(support_alias);
+    info.set_postional(positional);
 }

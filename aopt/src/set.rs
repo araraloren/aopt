@@ -1,27 +1,32 @@
 pub(crate) mod commit;
 pub(crate) mod filter;
 pub(crate) mod index;
+pub(crate) mod infered;
 pub(crate) mod optset;
 pub(crate) mod optvalid;
-pub(crate) mod ucommit;
 
-pub use self::commit::Commit;
+pub use self::commit::SetCommit;
 pub use self::filter::Filter;
 pub use self::filter::FilterMatcher;
 pub use self::filter::FilterMut;
 pub use self::index::SetIndex;
+pub use self::infered::SetCommitInfered;
 pub use self::optset::OptSet;
 pub use self::optvalid::OptValidator;
 pub use self::optvalid::PrefixOptValidator;
-pub use self::ucommit::UCommit;
 
 use std::fmt::Debug;
 use std::slice::Iter;
 use std::slice::IterMut;
 
 use crate::map::ErasedTy;
+use crate::opt::Action;
+use crate::opt::ConfigValue;
+use crate::opt::Index;
 use crate::opt::Opt;
 use crate::opt::OptValueExt;
+use crate::value::ValInitializer;
+use crate::value::ValStorer;
 use crate::Error;
 use crate::Str;
 use crate::Uid;
@@ -223,5 +228,75 @@ where
         vals.pop().ok_or_else(|| {
             Error::raise_error(format!("Not enough value can take from option {}", opt))
         })
+    }
+}
+
+pub trait Commit<S: Set>
+where
+    Self: Sized,
+    SetCfg<S>: ConfigValue + Default,
+{
+    fn cfg(&self) -> &SetCfg<S>;
+
+    fn cfg_mut(&mut self) -> &mut SetCfg<S>;
+
+    fn set_idx(mut self, index: Index) -> Self {
+        self.cfg_mut().set_idx(index);
+        self
+    }
+
+    fn set_action(mut self, action: Action) -> Self {
+        self.cfg_mut().set_action(action);
+        self
+    }
+
+    fn set_name<T: Into<Str>>(mut self, name: T) -> Self {
+        self.cfg_mut().set_name(name);
+        self
+    }
+
+    fn set_ctor<T: Into<Str>>(mut self, ctor: T) -> Self {
+        self.cfg_mut().set_ctor(ctor);
+        self
+    }
+
+    fn clr_alias(mut self) -> Self {
+        self.cfg_mut().clr_alias();
+        self
+    }
+
+    fn rem_alias<T: Into<Str>>(mut self, alias: T) -> Self {
+        self.cfg_mut().rem_alias(alias);
+        self
+    }
+
+    fn add_alias<T: Into<Str>>(mut self, alias: T) -> Self {
+        self.cfg_mut().add_alias(alias);
+        self
+    }
+
+    fn set_force(mut self, force: bool) -> Self {
+        self.cfg_mut().set_force(force);
+        self
+    }
+
+    fn set_hint<T: Into<Str>>(mut self, hint: T) -> Self {
+        self.cfg_mut().set_hint(hint);
+        self
+    }
+
+    fn set_help<T: Into<Str>>(mut self, help: T) -> Self {
+        self.cfg_mut().set_help(help);
+        self
+    }
+
+    fn set_storer(mut self, storer: ValStorer) -> Self {
+        self.cfg_mut().set_storer(storer);
+        self
+    }
+
+    fn set_initializer(mut self, initializer: ValInitializer) -> Self {
+        self.cfg_mut().set_initializer(initializer);
+        self
     }
 }

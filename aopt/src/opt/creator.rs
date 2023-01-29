@@ -10,9 +10,7 @@ use crate::opt::OptConfig;
 use crate::opt::Pos;
 use crate::set::Ctor;
 use crate::trace_log;
-use crate::value::Infer;
-use crate::value::RawValParser;
-use crate::value::ValStorer;
+use crate::value::ValAccessor;
 use crate::Error;
 use crate::Str;
 
@@ -78,6 +76,8 @@ mod __creator {
 }
 
 pub use __creator::Creator;
+
+use super::config::fill_cfg_infered;
 
 impl<O: Opt, C, E: Into<Error>> Ctor for Creator<O, C, E> {
     type Opt = O;
@@ -151,7 +151,8 @@ impl Creator<AOpt, OptConfig, Error> {
 
                 let force = config.force().unwrap_or(false);
                 let action = *config.action().unwrap_or(&Action::App);
-                let value = config.gen_accessor()?;
+                let storer = config.gen_storer()?;
+                let initializer = config.gen_initializer()?;
                 let ignore_name = config.ignore_name();
                 let support_alias = config.support_alias();
                 let positional = config.positional();
@@ -183,58 +184,30 @@ impl Creator<AOpt, OptConfig, Error> {
                         );
                     }
                 }
-                Ok(AOpt::new(name, r#type, value)
-                    .with_force(force)
-                    .with_idx(index)
-                    .with_action(action)
-                    .with_alias(alias)
-                    .with_style(styles)
-                    .with_opt_help(help)
-                    .with_ignore_name(ignore_name))
+                Ok(
+                    AOpt::new(name, r#type, ValAccessor::new(storer, initializer))
+                        .with_force(force)
+                        .with_idx(index)
+                        .with_action(action)
+                        .with_alias(alias)
+                        .with_style(styles)
+                        .with_opt_help(help)
+                        .with_ignore_name(ignore_name),
+                )
             },
         )
     }
 
-    pub(crate) fn fill_infer_data<U: Infer>(info: &mut OptConfig)
-    where
-        U::Val: RawValParser,
-    {
-        let act = U::infer_act();
-        let style = U::infer_style();
-        let index = U::infer_index();
-        let ignore_name = U::infer_ignore_name();
-        let support_alias = U::infer_support_alias();
-        let positional = U::infer_positional();
-        let force = U::infer_force();
-        let ctor = U::infer_ctor();
-
-        (!info.has_ctor()).then(|| info.set_ctor(ctor));
-        (!info.has_idx()).then(|| index.map(|idx| info.set_idx(idx)));
-        (!info.has_type()).then(|| info.set_type::<U::Val>());
-        (!info.has_action()).then(|| info.set_action(act));
-        (!info.has_style()).then(|| info.set_style(style));
-        (!info.has_force()).then(|| info.set_force(force));
-        (!info.has_action()).then(|| info.set_action(act));
-        if info.fix_infer() {
-            if let Some(accessor) = info.take_accessor() {
-                info.set_accessor(accessor.with_storer(ValStorer::new::<U::Val>()));
-            }
-        }
-        info.set_ignore_name(ignore_name);
-        info.set_support_alias(support_alias);
-        info.set_postional(positional);
-    }
-
     pub(crate) fn guess_default_infer(ctor: BuiltInCtor, info: &mut OptConfig) {
         match ctor {
-            BuiltInCtor::Int => Self::fill_infer_data::<i64>(info),
-            BuiltInCtor::Str => Self::fill_infer_data::<String>(info),
-            BuiltInCtor::Flt => Self::fill_infer_data::<f64>(info),
-            BuiltInCtor::Uint => Self::fill_infer_data::<u64>(info),
-            BuiltInCtor::Bool => Self::fill_infer_data::<bool>(info),
-            BuiltInCtor::Cmd => Self::fill_infer_data::<Cmd>(info),
-            BuiltInCtor::Pos => Self::fill_infer_data::<Pos>(info),
-            BuiltInCtor::Main => Self::fill_infer_data::<Main>(info),
+            BuiltInCtor::Int => fill_cfg_infered::<i64, OptConfig>(info),
+            BuiltInCtor::Str => fill_cfg_infered::<String, OptConfig>(info),
+            BuiltInCtor::Flt => fill_cfg_infered::<f64, OptConfig>(info),
+            BuiltInCtor::Uint => fill_cfg_infered::<u64, OptConfig>(info),
+            BuiltInCtor::Bool => fill_cfg_infered::<bool, OptConfig>(info),
+            BuiltInCtor::Cmd => fill_cfg_infered::<Cmd, OptConfig>(info),
+            BuiltInCtor::Pos => fill_cfg_infered::<Pos, OptConfig>(info),
+            BuiltInCtor::Main => fill_cfg_infered::<Main, OptConfig>(info),
             BuiltInCtor::Any => {}
         }
     }
@@ -251,7 +224,8 @@ impl Creator<AOpt, OptConfig, Error> {
 
             let force = config.force().unwrap_or(false);
             let action = *config.action().unwrap_or(&Action::App);
-            let value = config.gen_accessor()?;
+            let storer = config.gen_storer()?;
+            let initializer = config.gen_initializer()?;
             let ignore_name = config.ignore_name();
             let support_alias = config.support_alias();
             let positional = config.positional();
@@ -283,14 +257,16 @@ impl Creator<AOpt, OptConfig, Error> {
                     );
                 }
             }
-            Ok(AOpt::new(name, r#type, value)
-                .with_force(force)
-                .with_idx(index)
-                .with_action(action)
-                .with_alias(alias)
-                .with_style(styles)
-                .with_opt_help(help)
-                .with_ignore_name(ignore_name))
+            Ok(
+                AOpt::new(name, r#type, ValAccessor::new(storer, initializer))
+                    .with_force(force)
+                    .with_idx(index)
+                    .with_action(action)
+                    .with_alias(alias)
+                    .with_style(styles)
+                    .with_opt_help(help)
+                    .with_ignore_name(ignore_name),
+            )
         })
     }
 }

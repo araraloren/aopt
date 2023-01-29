@@ -105,11 +105,11 @@ where
         info
     }
 
-    pub fn cfg(&self) -> &SetCfg<S> {
+    pub fn set_cfg(&self) -> &SetCfg<S> {
         &self.info
     }
 
-    pub fn cfg_mut(&mut self) -> &mut SetCfg<S> {
+    pub fn set_cfg_mut(&mut self) -> &mut SetCfg<S> {
         &mut self.info
     }
 
@@ -184,7 +184,7 @@ where
             Ok(commited)
         } else {
             self.drop_commit = false;
-            self.info.set_accessor(ValAccessor::from_storer::<U::Val>(
+            self.info.set_storer(ValAccessor::from_storer::<U::Val>(
                 self.initializer.take(),
                 self.storer.take(),
             ));

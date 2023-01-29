@@ -61,7 +61,6 @@ pub use __initializer::InitHandler;
 pub use __initializer::InitializeValue;
 
 pub struct ValInitializer(InitHandler<AnyValue>);
-
 impl Debug for ValInitializer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("ValInitializer").field(&"{...}").finish()

@@ -10,8 +10,8 @@ use crate::opt::ConfigValue;
 use crate::opt::Index;
 use crate::opt::Opt;
 use crate::set::SetCfg;
+use crate::set::SetCommitInfered;
 use crate::set::SetOpt;
-use crate::set::UCommit;
 use crate::value::Infer;
 use crate::value::RawValParser;
 use crate::value::ValInitializer;
@@ -31,7 +31,7 @@ where
     U::Val: RawValParser,
     SetCfg<Set>: ConfigValue + Default,
 {
-    inner: UCommit<'a, Set, U>,
+    inner: SetCommitInfered<'a, Set, U>,
 
     inv_ser: Option<&'a mut Invoker<Set, Ser>>,
 }
@@ -61,7 +61,7 @@ where
     U::Val: RawValParser,
     SetCfg<Set>: ConfigValue + Default,
 {
-    pub fn new(inner: UCommit<'a, Set, U>, inv_ser: &'a mut Invoker<Set, Ser>) -> Self {
+    pub fn new(inner: SetCommitInfered<'a, Set, U>, inv_ser: &'a mut Invoker<Set, Ser>) -> Self {
         Self {
             inner,
             inv_ser: Some(inv_ser),
@@ -69,11 +69,13 @@ where
     }
 
     pub fn cfg(&self) -> &SetCfg<Set> {
-        self.inner.cfg()
+        //self.inner.cfg()
+        todo!()
     }
 
     pub fn cfg_mut(&mut self) -> &mut SetCfg<Set> {
-        self.inner.cfg_mut()
+        //self.inner.cfg_mut()
+        todo!()
     }
 
     /// Set the option index of commit configuration.
@@ -138,8 +140,9 @@ where
 
     /// Set the option value initiator.
     pub fn set_initializer(mut self, initializer: ValInitializer) -> Self {
-        self.inner.initializer = Some(initializer);
-        self
+        // self.inner.initializer = Some(initializer);
+        // self
+        todo!()
     }
 
     #[cfg(not(feature = "sync"))]
@@ -244,8 +247,9 @@ where
 {
     /// Set the option value validator.
     pub fn set_validator(mut self, validator: ValValidator<U::Val>) -> Self {
-        self.inner.storer = Some(ValStorer::from(validator));
-        self
+        // self.inner.storer = Some(ValStorer::from(validator));
+        // self
+        todo!()
     }
 
     /// Set the option value validator.
@@ -253,8 +257,9 @@ where
         mut self,
         validator: ValValidator<T>,
     ) -> Self {
-        self.inner.storer = Some(ValStorer::from(validator));
-        self
+        // self.inner.storer = Some(ValStorer::from(validator));
+        // self
+        todo!()
     }
 }
 

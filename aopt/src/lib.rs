@@ -255,7 +255,6 @@ pub mod prelude {
     pub use crate::ser::ServicesExt;
     pub use crate::ser::ServicesValExt;
     pub use crate::ser::UsrValService;
-    pub use crate::set::Commit;
     pub use crate::set::Ctor;
     pub use crate::set::Filter;
     pub use crate::set::FilterMatcher;
@@ -265,6 +264,7 @@ pub mod prelude {
     pub use crate::set::PrefixOptValidator;
     pub use crate::set::Set;
     pub use crate::set::SetCfg;
+    pub use crate::set::SetCommit;
     pub use crate::set::SetExt;
     pub use crate::set::SetOpt;
     pub use crate::set::SetValueFindExt;
