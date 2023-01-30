@@ -264,7 +264,8 @@ pub mod prelude {
     pub use crate::set::PrefixOptValidator;
     pub use crate::set::Set;
     pub use crate::set::SetCfg;
-    pub use crate::set::SetCommit;
+    pub use crate::set::SetCommitW;
+    pub use crate::set::SetCommitWT;
     pub use crate::set::SetExt;
     pub use crate::set::SetOpt;
     pub use crate::set::SetValueFindExt;

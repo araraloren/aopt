@@ -1,16 +1,15 @@
 pub(crate) mod commit;
 pub(crate) mod filter;
 pub(crate) mod index;
-pub(crate) mod infered;
 pub(crate) mod optset;
 pub(crate) mod optvalid;
 
-pub use self::commit::SetCommit;
+pub use self::commit::SetCommitW;
+pub use self::commit::SetCommitWT;
 pub use self::filter::Filter;
 pub use self::filter::FilterMatcher;
 pub use self::filter::FilterMut;
 pub use self::index::SetIndex;
-pub use self::infered::SetCommitInfered;
 pub use self::optset::OptSet;
 pub use self::optvalid::OptValidator;
 pub use self::optvalid::PrefixOptValidator;

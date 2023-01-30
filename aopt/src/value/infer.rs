@@ -251,3 +251,10 @@ impl Infer for Stdin {
         true
     }
 }
+
+#[derive(Debug, Clone, Copy)]
+pub struct Placeholder;
+
+impl Infer for Placeholder {
+    type Val = ();
+}
