@@ -85,18 +85,17 @@ impl APolicyExt<ADelayPolicy> for ADelayPolicy {
     }
 }
 
-/// Return an [`Set`](crate::set::Set) with default prefix `-` and `--`,
-/// and below creators:
+/// Return an [`ASet`](crate::ext::ASet) with below creators:
 ///
-/// * [`int`](Creator::int)
-/// * [`bool`](Creator::bool)
-/// * [`uint`](Creator::uint)
-/// * [`str`](Creator::str)
-/// * [`flt`](Creator::flt)
-/// * [`cmd`](Creator::cmd)
-/// * [`pos`](Creator::pos)
-/// * [`main`](Creator::main)
-/// * [`any`](Creator::any)
+/// * [`Int`](BuiltInCtor::Int)
+/// * [`Bool`](BuiltInCtor::Bool)
+/// * [`Flt`](BuiltInCtor::Flt)
+/// * [`Str`](BuiltInCtor::Str)
+/// * [`Uint`](BuiltInCtor::Uint)
+/// * [`Cmd`](BuiltInCtor::Cmd)
+/// * [`Pos`](BuiltInCtor::Pos)
+/// * [`Main`](BuiltInCtor::Main)
+/// * [`Any`](BuiltInCtor::Any)
 pub fn aset_with_default_creators() -> ASet {
     ASet::default()
         .with_creator(Creator::fallback())

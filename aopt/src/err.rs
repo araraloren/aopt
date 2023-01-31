@@ -106,8 +106,6 @@ pub enum Error {
     SpInvalidOptionValue(ErrorStr, ErrorStr),
 
     SpDeactivateStyleError(ErrorStr, bool),
-
-    InvokeError(ErrorStr),
 }
 
 impl Default for Error {
@@ -152,7 +150,6 @@ impl Error {
                 | Error::SpInvalidOptionValue(_, _)
                 | Error::SpDeactivateStyleError(_, _)
                 | Error::SpExtractError(_)
-                | Error::InvokeError(_)
         )
     }
 
@@ -270,11 +267,6 @@ impl Error {
         Self::SpExtractError(t.into())
     }
 
-    /// Create Error::InvokeError error
-    pub fn invoke_error<T: Into<ErrorStr>>(t: T) -> Self {
-        Self::InvokeError(t.into())
-    }
-
     pub fn display(&self) -> String {
         match self {
             Error::Null => "Null".to_owned(),
@@ -345,7 +337,6 @@ impl Error {
             Error::SpExtractError(msg) => {
                 format!("Extract error: {}", msg)
             }
-            Error::InvokeError(msg) => msg.to_string(),
             Error::ConInvalidIndex(pattern, msg) => {
                 format!("Syntax error, invalid index of '{pattern}': {msg}")
             }

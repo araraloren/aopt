@@ -27,8 +27,6 @@
 
 - Support create option from type and string both
 
-- Remove Any(`a`) type option
-
 ## 0.8.4
 
 - Add `Creator::any` option type
