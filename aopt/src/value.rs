@@ -2,7 +2,7 @@ pub(crate) mod accessor;
 pub(crate) mod infer;
 pub(crate) mod initiator;
 pub(crate) mod parser;
-pub(crate) mod store;
+pub(crate) mod storer;
 pub(crate) mod validator;
 
 use std::any::type_name;
@@ -17,8 +17,8 @@ pub use self::initiator::ValInitializer;
 #[cfg(feature = "serde")]
 pub(crate) use self::parser::convert_raw_to_utf8;
 pub use self::parser::RawValParser;
-pub use self::store::StoreHandler;
-pub use self::store::ValStorer;
+pub use self::storer::StoreHandler;
+pub use self::storer::ValStorer;
 pub use self::validator::ValValidator;
 pub use self::validator::ValidatorHandler;
 

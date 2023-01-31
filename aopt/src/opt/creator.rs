@@ -2,6 +2,7 @@ use std::fmt::Debug;
 
 use crate::opt::AOpt;
 use crate::opt::Action;
+use crate::opt::Any;
 use crate::opt::Cmd;
 use crate::opt::ConfigValue;
 use crate::opt::Main;
@@ -77,7 +78,7 @@ mod __creator {
 
 pub use __creator::Creator;
 
-use super::config::fill_cfg_infered;
+use super::config::fill_cfg_if_no_infer;
 
 impl<O: Opt, C, E: Into<Error>> Ctor for Creator<O, C, E> {
     type Opt = O;
@@ -154,17 +155,17 @@ impl Creator<AOpt, OptConfig, Error> {
                 let storer = config.gen_storer()?;
                 let initializer = config.gen_initializer()?;
                 let ignore_name = config.ignore_name();
-                let support_alias = config.support_alias();
-                let positional = config.positional();
+                let ignore_alias = config.ignore_alias();
+                let ignore_index = config.ignore_index();
                 let styles = config.gen_styles()?;
                 let name = config.gen_name()?;
                 let help = config.gen_opt_help()?;
-                let r#type = config.gen_type()?;
-                let index = config.idx().cloned();
+                let value_type = config.gen_value_type()?;
+                let index = config.index().cloned();
                 let alias = config.take_alias();
                 let alias = if alias.is_empty() { None } else { Some(alias) };
 
-                if !support_alias {
+                if ignore_alias {
                     if let Some(alias) = &alias {
                         debug_assert!(
                             !alias.is_empty(),
@@ -174,7 +175,7 @@ impl Creator<AOpt, OptConfig, Error> {
                         );
                     }
                 }
-                if !positional {
+                if ignore_index {
                     if let Some(index) = &index {
                         debug_assert!(
                             !index.is_null(),
@@ -185,14 +186,16 @@ impl Creator<AOpt, OptConfig, Error> {
                     }
                 }
                 Ok(
-                    AOpt::new(name, r#type, ValAccessor::new(storer, initializer))
+                    AOpt::new(name, value_type, ValAccessor::new(storer, initializer))
                         .with_force(force)
                         .with_idx(index)
                         .with_action(action)
                         .with_alias(alias)
                         .with_style(styles)
                         .with_opt_help(help)
-                        .with_ignore_name(ignore_name),
+                        .with_ignore_name(ignore_name)
+                        .with_ignore_alias(ignore_alias)
+                        .with_ignore_index(ignore_index),
                 )
             },
         )
@@ -200,15 +203,15 @@ impl Creator<AOpt, OptConfig, Error> {
 
     pub(crate) fn guess_default_infer(ctor: BuiltInCtor, info: &mut OptConfig) {
         match ctor {
-            BuiltInCtor::Int => fill_cfg_infered::<i64, OptConfig>(info),
-            BuiltInCtor::Str => fill_cfg_infered::<String, OptConfig>(info),
-            BuiltInCtor::Flt => fill_cfg_infered::<f64, OptConfig>(info),
-            BuiltInCtor::Uint => fill_cfg_infered::<u64, OptConfig>(info),
-            BuiltInCtor::Bool => fill_cfg_infered::<bool, OptConfig>(info),
-            BuiltInCtor::Cmd => fill_cfg_infered::<Cmd, OptConfig>(info),
-            BuiltInCtor::Pos => fill_cfg_infered::<Pos, OptConfig>(info),
-            BuiltInCtor::Main => fill_cfg_infered::<Main, OptConfig>(info),
-            BuiltInCtor::Any => {}
+            BuiltInCtor::Int => fill_cfg_if_no_infer::<i64, OptConfig>(info),
+            BuiltInCtor::Str => fill_cfg_if_no_infer::<String, OptConfig>(info),
+            BuiltInCtor::Flt => fill_cfg_if_no_infer::<f64, OptConfig>(info),
+            BuiltInCtor::Uint => fill_cfg_if_no_infer::<u64, OptConfig>(info),
+            BuiltInCtor::Bool => fill_cfg_if_no_infer::<bool, OptConfig>(info),
+            BuiltInCtor::Cmd => fill_cfg_if_no_infer::<Cmd, OptConfig>(info),
+            BuiltInCtor::Pos => fill_cfg_if_no_infer::<Pos, OptConfig>(info),
+            BuiltInCtor::Main => fill_cfg_if_no_infer::<Main, OptConfig>(info),
+            BuiltInCtor::Any => fill_cfg_if_no_infer::<Any, OptConfig>(info),
         }
     }
 
@@ -227,17 +230,17 @@ impl Creator<AOpt, OptConfig, Error> {
             let storer = config.gen_storer()?;
             let initializer = config.gen_initializer()?;
             let ignore_name = config.ignore_name();
-            let support_alias = config.support_alias();
-            let positional = config.positional();
+            let ignore_alias = config.ignore_alias();
+            let ignore_index = config.ignore_index();
             let styles = config.gen_styles()?;
             let name = config.gen_name()?;
             let help = config.gen_opt_help()?;
-            let r#type = config.gen_type()?;
-            let index = config.idx().cloned();
+            let value_type = config.gen_value_type()?;
+            let index = config.index().cloned();
             let alias = config.take_alias();
             let alias = if alias.is_empty() { None } else { Some(alias) };
 
-            if !support_alias {
+            if ignore_alias {
                 if let Some(alias) = &alias {
                     debug_assert!(
                         !alias.is_empty(),
@@ -247,7 +250,7 @@ impl Creator<AOpt, OptConfig, Error> {
                     );
                 }
             }
-            if !positional {
+            if ignore_index {
                 if let Some(index) = &index {
                     debug_assert!(
                         !index.is_null(),
@@ -258,14 +261,16 @@ impl Creator<AOpt, OptConfig, Error> {
                 }
             }
             Ok(
-                AOpt::new(name, r#type, ValAccessor::new(storer, initializer))
+                AOpt::new(name, value_type, ValAccessor::new(storer, initializer))
                     .with_force(force)
                     .with_idx(index)
                     .with_action(action)
                     .with_alias(alias)
                     .with_style(styles)
                     .with_opt_help(help)
-                    .with_ignore_name(ignore_name),
+                    .with_ignore_name(ignore_name)
+                    .with_ignore_alias(ignore_alias)
+                    .with_ignore_index(ignore_index),
             )
         })
     }

@@ -329,7 +329,7 @@ mod test {
                             assert_eq!(option_test.1.as_ref(), cap.alias());
                             assert_eq!(help_test.as_ref(), cap.help());
                             assert_eq!(force_test, &cap.force());
-                            assert_eq!(position_test.as_ref(), cap.idx());
+                            assert_eq!(position_test.as_ref(), cap.index());
                             assert_eq!(option_test.2.as_ref(), cap.ctor());
                         } else {
                             assert!(option_test.0.is_none());

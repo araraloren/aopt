@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 use crate::map::ErasedTy;
 use crate::opt::Action;
+use crate::opt::Any;
 use crate::opt::Cmd;
 use crate::opt::Index;
 use crate::opt::Main;
@@ -28,10 +29,6 @@ pub trait Infer {
         crate::set::ctor_default_name()
     }
 
-    fn infer_positional() -> bool {
-        false
-    }
-
     fn infer_index() -> Option<Index> {
         None
     }
@@ -44,7 +41,11 @@ pub trait Infer {
         false
     }
 
-    fn infer_support_alias() -> bool {
+    fn infer_ignore_alias() -> bool {
+        false
+    }
+
+    fn infer_ignore_index() -> bool {
         true
     }
 
@@ -84,16 +85,16 @@ impl Infer for Cmd {
         true
     }
 
-    fn infer_positional() -> bool {
-        true
-    }
-
     fn infer_index() -> Option<Index> {
         Some(Index::forward(1))
     }
 
     fn infer_style() -> Vec<Style> {
         vec![Style::Cmd]
+    }
+
+    fn infer_ignore_index() -> bool {
+        false
     }
 
     fn infer_initializer() -> Option<ValInitializer> {
@@ -104,20 +105,20 @@ impl Infer for Cmd {
 impl Infer for Pos {
     type Val = Noa;
 
-    fn infer_positional() -> bool {
-        true
+    fn infer_style() -> Vec<Style> {
+        vec![Style::Pos]
     }
 
     fn infer_ignore_name() -> bool {
         true
     }
 
-    fn infer_support_alias() -> bool {
-        false
+    fn infer_ignore_alias() -> bool {
+        true
     }
 
-    fn infer_style() -> Vec<Style> {
-        vec![Style::Pos]
+    fn infer_ignore_index() -> bool {
+        false
     }
 }
 
@@ -128,24 +129,47 @@ impl Infer for Main {
         Action::Null
     }
 
-    fn infer_positional() -> bool {
-        true
-    }
-
-    fn infer_support_alias() -> bool {
-        false
-    }
-
-    fn infer_ignore_name() -> bool {
-        true
-    }
-
     fn infer_index() -> Option<Index> {
         Some(Index::anywhere())
     }
 
     fn infer_style() -> Vec<Style> {
         vec![Style::Main]
+    }
+
+    fn infer_ignore_name() -> bool {
+        true
+    }
+
+    fn infer_ignore_alias() -> bool {
+        true
+    }
+
+    fn infer_ignore_index() -> bool {
+        false
+    }
+}
+
+impl Infer for Any {
+    type Val = ();
+
+    fn infer_act() -> Action {
+        Action::Null
+    }
+
+    fn infer_style() -> Vec<Style> {
+        vec![
+            Style::Argument,
+            Style::Boolean,
+            Style::Combined,
+            Style::Pos,
+            Style::Cmd,
+            Style::Main,
+        ]
+    }
+
+    fn infer_ignore_index() -> bool {
+        false
     }
 }
 
@@ -235,10 +259,6 @@ impl Infer for Stdin {
         Action::Set
     }
 
-    fn infer_positional() -> bool {
-        true
-    }
-
     fn infer_index() -> Option<Index> {
         Some(Index::anywhere())
     }
@@ -249,6 +269,10 @@ impl Infer for Stdin {
 
     fn infer_ignore_name() -> bool {
         true
+    }
+
+    fn infer_ignore_index() -> bool {
+        false
     }
 }
 

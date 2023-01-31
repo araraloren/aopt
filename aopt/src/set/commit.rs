@@ -20,7 +20,7 @@ use crate::Uid;
 use super::Commit;
 
 /// Create option using given configurations.
-pub struct SetCommitW<'a, S, U>
+pub struct SetCommit<'a, S, U>
 where
     S: Set,
     U: Infer,
@@ -31,11 +31,10 @@ where
     set: Option<&'a mut S>,
     uid: Option<Uid>,
     pub(crate) drop: bool,
-    pub(crate) infer: bool,
     marker: PhantomData<U>,
 }
 
-impl<'a, S, U> Debug for SetCommitW<'a, S, U>
+impl<'a, S, U> Debug for SetCommit<'a, S, U>
 where
     S: Set + Debug,
     U: Infer,
@@ -48,13 +47,12 @@ where
             .field("set", &self.set)
             .field("uid", &self.uid)
             .field("drop", &self.drop)
-            .field("infer", &self.infer)
             .field("marker", &self.marker)
             .finish()
     }
 }
 
-impl<'a, S> SetCommitW<'a, S, Placeholder>
+impl<'a, S> SetCommit<'a, S, Placeholder>
 where
     S: Set,
     SetCfg<S>: ConfigValue + Default,
@@ -65,13 +63,12 @@ where
             info: Some(info),
             uid: None,
             drop: true,
-            infer: true,
             marker: PhantomData::default(),
         }
     }
 }
 
-impl<'a, S, U> SetCommitW<'a, S, U>
+impl<'a, S, U> SetCommit<'a, S, U>
 where
     S: Set,
     U: Infer,
@@ -85,13 +82,12 @@ where
             info: Some(info),
             uid: None,
             drop: true,
-            infer: false,
             marker: PhantomData::default(),
         }
     }
 
     /// Set the type of option.
-    pub fn set_type<O: Infer>(mut self) -> SetCommitW<'a, S, O>
+    pub fn set_type<O: Infer>(mut self) -> SetCommit<'a, S, O>
     where
         O::Val: RawValParser,
     {
@@ -100,29 +96,29 @@ where
         let set = self.set.take();
         let info = self.info.take();
 
-        SetCommitW::new(set.unwrap(), info.unwrap())
+        SetCommit::new(set.unwrap(), info.unwrap())
     }
 
-    pub(crate) fn run_and_commit_the_change(&mut self) -> Result<Uid, Error> {
-        if let Some(commited) = self.uid {
-            Ok(commited)
+    pub(crate) fn commit_change(&mut self) -> Result<Uid, Error> {
+        if let Some(uid) = self.uid {
+            Ok(uid)
         } else {
             self.drop = false;
 
             let info = std::mem::take(&mut self.info);
-            let mut info = info.unwrap();
+            let info = info.unwrap();
             let set = self.set.as_mut().unwrap();
+            let ctor = info
+                .ctor()
+                .ok_or_else(|| Error::raise_error("Invalid configuration: missing creator name!"))?
+                .clone();
 
-            info.set_fix_infer(self.infer);
+            crate::trace_log!("Register a opt {:?} with creator({})", info.name(), ctor);
 
-            let _name = info.name().cloned();
-            let ctor = info.ctor().ok_or_else(|| {
-                Error::raise_error("Invalid configuration: missing creator name!")
-            })?;
-            let opt = set.ctor_mut(ctor)?.new_with(info).map_err(|e| e.into())?;
+            let opt = set.ctor_mut(&ctor)?.new_with(info).map_err(|e| e.into())?;
             let uid = set.insert(opt);
 
-            crate::trace_log!("Register a opt {:?} --> {}", _name, uid);
+            crate::trace_log!("--> register okay: {uid}");
             self.uid = Some(uid);
             Ok(uid)
         }
@@ -133,12 +129,11 @@ where
     /// It create an option using given type [`Ctor`].
     /// And add it to referenced [`Set`](Set), return the new option [`Uid`].
     pub fn run(mut self) -> Result<Uid, Error> {
-        self.drop = false;
-        self.run_and_commit_the_change()
+        self.commit_change()
     }
 }
 
-impl<'a, S, U> SetCommitW<'a, S, U>
+impl<'a, S, U> SetCommit<'a, S, U>
 where
     S: Set,
     U: Infer,
@@ -146,40 +141,41 @@ where
     SetCfg<S>: ConfigValue + Default,
 {
     /// Set the type of option.
-    pub fn set_value_type<T: ErasedTy>(mut self) -> SetCommitWT<'a, S, U, T> {
-        self.drop = false;
-
-        let set = self.set.take();
-        let info = self.info.take();
-
-        SetCommitWT::new(set.unwrap(), info.unwrap())
+    pub(crate) fn set_value_type<T: ErasedTy>(self) -> SetCommitWithValue<'a, S, U, T> {
+        SetCommitWithValue::new(self)
     }
 
     /// Set the option value validator.
     pub fn set_validator_t<T: ErasedTy + RawValParser>(
         self,
         validator: ValValidator<T>,
-    ) -> SetCommitWT<'a, S, U, T> {
+    ) -> SetCommitWithValue<'a, S, U, T> {
         self.set_value_type::<T>().set_validator_t(validator)
     }
 
     /// Set the option default value.
-    pub fn set_value_t<T: ErasedTy + Copy>(self, value: T) -> SetCommitWT<'a, S, U, T> {
+    pub fn set_value_t<T: ErasedTy + Copy>(self, value: T) -> SetCommitWithValue<'a, S, U, T> {
         self.set_value_type::<T>().set_value_t(value)
     }
 
     /// Set the option default value.
-    pub fn set_value_clone_t<T: ErasedTy + Clone>(self, value: T) -> SetCommitWT<'a, S, U, T> {
+    pub fn set_value_clone_t<T: ErasedTy + Clone>(
+        self,
+        value: T,
+    ) -> SetCommitWithValue<'a, S, U, T> {
         self.set_value_type::<T>().set_value_clone_t(value)
     }
 
     /// Set the option default value.
-    pub fn set_values_t<T: ErasedTy + Clone>(self, value: Vec<T>) -> SetCommitWT<'a, S, U, T> {
+    pub fn set_values_t<T: ErasedTy + Clone>(
+        self,
+        value: Vec<T>,
+    ) -> SetCommitWithValue<'a, S, U, T> {
         self.set_value_type::<T>().set_values_t(value)
     }
 }
 
-impl<'a, S, U> SetCommitW<'a, S, U>
+impl<'a, S, U> SetCommit<'a, S, U>
 where
     S: Set,
     U: Infer,
@@ -192,7 +188,7 @@ where
     }
 }
 
-impl<'a, S, U> SetCommitW<'a, S, U>
+impl<'a, S, U> SetCommit<'a, S, U>
 where
     S: Set,
     U: Infer,
@@ -205,7 +201,7 @@ where
     }
 }
 
-impl<'a, S, U> SetCommitW<'a, S, U>
+impl<'a, S, U> SetCommit<'a, S, U>
 where
     S: Set,
     U: Infer,
@@ -223,7 +219,7 @@ where
     }
 }
 
-impl<'a, S, U> Commit<S> for SetCommitW<'a, S, U>
+impl<'a, S, U> Commit<S> for SetCommit<'a, S, U>
 where
     S: Set,
     U: Infer,
@@ -239,7 +235,7 @@ where
     }
 }
 
-impl<'a, S, U> Drop for SetCommitW<'a, S, U>
+impl<'a, S, U> Drop for SetCommit<'a, S, U>
 where
     S: Set,
     U: Infer,
@@ -247,16 +243,16 @@ where
     SetCfg<S>: ConfigValue + Default,
 {
     fn drop(&mut self) {
-        if self.drop && self.uid.is_none() {
+        if self.drop {
             let error = "Error when commit the option in Commit::Drop, call `run` get the Result";
 
-            self.run_and_commit_the_change().expect(error);
+            self.commit_change().expect(error);
         }
     }
 }
 
 /// Create option using given configurations.
-pub struct SetCommitWT<'a, S, U, T>
+pub struct SetCommitWithValue<'a, S, U, T>
 where
     S: Set,
     U: Infer,
@@ -264,33 +260,28 @@ where
     U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
-    info: Option<SetCfg<S>>,
-    set: Option<&'a mut S>,
-    uid: Option<Uid>,
-    pub(crate) drop: bool,
-    pub(crate) infer: bool,
-    marker: PhantomData<(U, T)>,
+    inner: Option<SetCommit<'a, S, U>>,
+
+    marker: PhantomData<T>,
 }
 
-impl<'a, S, T> SetCommitWT<'a, S, Placeholder, T>
+impl<'a, S, U, T> Debug for SetCommitWithValue<'a, S, U, T>
 where
-    S: Set,
+    U: Infer,
     T: ErasedTy,
-    SetCfg<S>: ConfigValue + Default,
+    S: Set + Debug,
+    U::Val: RawValParser,
+    SetCfg<S>: ConfigValue + Default + Debug,
 {
-    pub fn new_placeholder(set: &'a mut S, info: SetCfg<S>) -> Self {
-        Self {
-            set: Some(set),
-            info: Some(info),
-            uid: None,
-            drop: true,
-            infer: true,
-            marker: PhantomData::default(),
-        }
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SetCommitWithValue")
+            .field("inner", &self.inner)
+            .field("marker", &self.marker)
+            .finish()
     }
 }
 
-impl<'a, S, U, T> SetCommitWT<'a, S, U, T>
+impl<'a, S, U, T> SetCommitWithValue<'a, S, U, T>
 where
     S: Set,
     U: Infer,
@@ -298,53 +289,35 @@ where
     U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
-    pub fn new(set: &'a mut S, info: SetCfg<S>) -> Self {
+    pub fn new(inner: SetCommit<'a, S, U>) -> Self {
         Self {
-            set: Some(set),
-            info: Some(info),
-            uid: None,
-            drop: true,
-            infer: false,
+            inner: Some(inner),
             marker: PhantomData::default(),
         }
+    }
+
+    pub fn inner(&self) -> Result<&SetCommit<'a, S, U>, Error> {
+        self.inner
+            .as_ref()
+            .ok_or_else(|| Error::raise_error("Must set inner data of SetCommitWithValue(ref)"))
+    }
+
+    pub fn inner_mut(&mut self) -> Result<&mut SetCommit<'a, S, U>, Error> {
+        self.inner
+            .as_mut()
+            .ok_or_else(|| Error::raise_error("Must set inner data of SetCommitWithValue(mut)"))
     }
 
     /// Set the type of option.
-    pub fn set_type<O: Infer>(mut self) -> SetCommitWT<'a, S, O, T>
+    pub fn set_type<O: Infer>(mut self) -> SetCommitWithValue<'a, S, O, T>
     where
         O::Val: RawValParser,
     {
-        self.drop = false;
-
-        let set = self.set.take();
-        let info = self.info.take();
-
-        SetCommitWT::new(set.unwrap(), info.unwrap())
+        SetCommitWithValue::new(self.inner.take().unwrap().set_type::<O>())
     }
 
-    pub(crate) fn run_and_commit_the_change(&mut self) -> Result<Uid, Error> {
-        if let Some(commited) = self.uid {
-            Ok(commited)
-        } else {
-            self.drop = false;
-
-            let info = std::mem::take(&mut self.info);
-            let mut info = info.unwrap();
-            let set = self.set.as_mut().unwrap();
-
-            info.set_fix_infer(self.infer);
-
-            let _name = info.name().cloned();
-            let ctor = info.ctor().ok_or_else(|| {
-                Error::raise_error("Invalid configuration: missing creator name!")
-            })?;
-            let opt = set.ctor_mut(ctor)?.new_with(info).map_err(|e| e.into())?;
-            let uid = set.insert(opt);
-
-            crate::trace_log!("Register a opt {:?} --> {}", _name, uid);
-            self.uid = Some(uid);
-            Ok(uid)
-        }
+    pub(crate) fn commit_inner_change(&mut self) -> Result<Uid, Error> {
+        self.inner_mut()?.commit_change()
     }
 
     /// Run the commit.
@@ -352,12 +325,11 @@ where
     /// It create an option using given type [`Ctor`].
     /// And add it to referenced [`Set`](Set), return the new option [`Uid`].
     pub fn run(mut self) -> Result<Uid, Error> {
-        self.drop = false;
-        self.run_and_commit_the_change()
+        self.commit_inner_change()
     }
 }
 
-impl<'a, S, U, T> SetCommitWT<'a, S, U, T>
+impl<'a, S, U, T> SetCommitWithValue<'a, S, U, T>
 where
     S: Set,
     U: Infer,
@@ -373,7 +345,7 @@ where
     }
 }
 
-impl<'a, S, U, T> SetCommitWT<'a, S, U, T>
+impl<'a, S, U, T> SetCommitWithValue<'a, S, U, T>
 where
     S: Set,
     T: ErasedTy + Copy,
@@ -386,7 +358,7 @@ where
         self.set_initializer(ValInitializer::with(value))
     }
 }
-impl<'a, S, U, T> SetCommitWT<'a, S, U, T>
+impl<'a, S, U, T> SetCommitWithValue<'a, S, U, T>
 where
     S: Set,
     T: ErasedTy + Clone,
@@ -405,7 +377,7 @@ where
     }
 }
 
-impl<'a, S, U, T> SetCommitWT<'a, S, U, T>
+impl<'a, S, U, T> SetCommitWithValue<'a, S, U, T>
 where
     S: Set,
     T: ErasedTy,
@@ -419,7 +391,7 @@ where
     }
 }
 
-impl<'a, S, U, T> SetCommitWT<'a, S, U, T>
+impl<'a, S, U, T> SetCommitWithValue<'a, S, U, T>
 where
     S: Set,
     T: ErasedTy,
@@ -433,7 +405,7 @@ where
     }
 }
 
-impl<'a, S, U, T> SetCommitWT<'a, S, U, T>
+impl<'a, S, U, T> SetCommitWithValue<'a, S, U, T>
 where
     S: Set,
     T: ErasedTy,
@@ -452,7 +424,7 @@ where
     }
 }
 
-impl<'a, S, U, T> Commit<S> for SetCommitWT<'a, S, U, T>
+impl<'a, S, U, T> Commit<S> for SetCommitWithValue<'a, S, U, T>
 where
     S: Set,
     T: ErasedTy,
@@ -461,27 +433,10 @@ where
     SetCfg<S>: ConfigValue + Default,
 {
     fn cfg(&self) -> &SetCfg<S> {
-        self.info.as_ref().unwrap()
+        self.inner().unwrap().cfg()
     }
 
     fn cfg_mut(&mut self) -> &mut SetCfg<S> {
-        self.info.as_mut().unwrap()
-    }
-}
-
-impl<'a, S, U, T> Drop for SetCommitWT<'a, S, U, T>
-where
-    S: Set,
-    U: Infer,
-    T: ErasedTy,
-    U::Val: RawValParser,
-    SetCfg<S>: ConfigValue + Default,
-{
-    fn drop(&mut self) {
-        if self.drop && self.uid.is_none() {
-            let error = "Error when commit the option in Commit::Drop, call `run` get the Result";
-
-            self.run_and_commit_the_change().expect(error);
-        }
+        self.inner_mut().unwrap().cfg_mut()
     }
 }

@@ -172,10 +172,16 @@ where
         let mut matched = opt.mat_style(self.style);
 
         if matched {
-            matched = matched && opt.mat_name(self.name());
-            matched = matched && opt.mat_idx(Some((self.noa_index, self.noa_total)));
-            if let Some(name) = &self.name {
-                matched = matched && opt.mat_alias(name);
+            if !opt.ignore_name() {
+                matched = matched && opt.mat_name(self.name());
+            }
+            if !opt.ignore_alias() {
+                if let Some(name) = &self.name {
+                    matched = matched && opt.mat_alias(name);
+                }
+            }
+            if !opt.ignore_index() {
+                matched = matched && opt.mat_index(Some((self.noa_index, self.noa_total)));
             }
         }
         if matched {

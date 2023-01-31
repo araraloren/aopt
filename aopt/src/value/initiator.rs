@@ -104,3 +104,19 @@ impl ValInitializer {
         (self.0)(arg)
     }
 }
+
+#[cfg(not(feature = "sync"))]
+impl<T: FnMut(&mut AnyValue) -> Result<(), Error> + 'static> From<T> for ValInitializer {
+    fn from(value: T) -> Self {
+        Self(Box::new(value))
+    }
+}
+
+#[cfg(feature = "sync")]
+impl<T: FnMut(&mut AnyValue) -> Result<(), Error> + Send + Sync + 'static> From<T>
+    for ValInitializer
+{
+    fn from(value: T) -> Self {
+        Self(Box::new(value))
+    }
+}

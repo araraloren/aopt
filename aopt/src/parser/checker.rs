@@ -61,7 +61,7 @@ where
         if has_cmd {
             for opt in set.iter() {
                 if opt.mat_style(Style::Pos) {
-                    if let Some(index) = opt.idx() {
+                    if let Some(index) = opt.index() {
                         let index = index.calc_index(1, MAX_INDEX).unwrap_or(MAX_INDEX);
 
                         if index == 1 && opt.force() {
@@ -105,7 +105,7 @@ where
 
         for opt in set.iter() {
             if opt.mat_style(Style::Pos) {
-                if let Some(index) = opt.idx() {
+                if let Some(index) = opt.index() {
                     match index {
                         Index::Forward(cnt) => {
                             if let Some(index) = index.calc_index(*cnt, MAX_INDEX) {

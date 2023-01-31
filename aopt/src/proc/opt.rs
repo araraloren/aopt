@@ -164,8 +164,15 @@ where
         let mut matched = opt.mat_style(self.style);
 
         if matched {
-            matched = opt.mat_name(self.name());
-            matched = matched || opt.mat_alias(&self.name);
+            if !opt.ignore_name() {
+                matched = opt.mat_name(self.name());
+            }
+            if !opt.ignore_alias() {
+                matched = matched || opt.mat_alias(&self.name)
+            }
+            if !opt.ignore_index() {
+                matched = matched && opt.mat_index(Some((self.index, self.total)));
+            }
         }
         if matched {
             if self.consume() && self.argument.is_none() {

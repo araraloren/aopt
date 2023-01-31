@@ -41,10 +41,10 @@ pub trait ConfigValue {
     fn name(&self) -> Option<&Str>;
 
     /// The type name of option.
-    fn r#type(&self) -> Option<&TypeId>;
+    fn value_type(&self) -> Option<&TypeId>;
 
     /// The index configuration of option.
-    fn idx(&self) -> Option<&Index>;
+    fn index(&self) -> Option<&Index>;
 
     /// The alias name and prefix of option.
     fn alias(&self) -> Option<&Vec<Str>>;
@@ -62,19 +62,19 @@ pub trait ConfigValue {
 
     fn ignore_name(&self) -> bool;
 
-    fn support_alias(&self) -> bool;
+    fn ignore_alias(&self) -> bool;
 
-    fn positional(&self) -> bool;
+    fn ignore_index(&self) -> bool;
 
-    fn fix_infer(&self) -> bool;
+    fn has_infer(&self) -> bool;
 
-    fn has_idx(&self) -> bool;
+    fn has_index(&self) -> bool;
 
     fn has_ctor(&self) -> bool;
 
     fn has_name(&self) -> bool;
 
-    fn has_type(&self) -> bool;
+    fn has_value_type(&self) -> bool;
 
     fn has_hint(&self) -> bool;
 
@@ -94,13 +94,13 @@ pub trait ConfigValue {
 
     fn set_ignore_name(&mut self, ignore_name: bool) -> &mut Self;
 
-    fn set_support_alias(&mut self, support_alias: bool) -> &mut Self;
+    fn set_ignore_alias(&mut self, ignore_alias: bool) -> &mut Self;
 
-    fn set_postional(&mut self, positional: bool) -> &mut Self;
+    fn set_ignore_index(&mut self, ignore_index: bool) -> &mut Self;
 
-    fn set_fix_infer(&mut self, fix_infer: bool) -> &mut Self;
+    fn set_infer(&mut self, infered: bool) -> &mut Self;
 
-    fn set_idx(&mut self, index: Index) -> &mut Self;
+    fn set_index(&mut self, index: Index) -> &mut Self;
 
     fn set_force(&mut self, force: bool) -> &mut Self;
 
@@ -120,7 +120,7 @@ pub trait ConfigValue {
 
     fn rem_alias<S: Into<Str>>(&mut self, alias: S) -> &mut Self;
 
-    fn set_type<T: ErasedTy>(&mut self) -> &mut Self;
+    fn set_value_type<T: ErasedTy>(&mut self) -> &mut Self;
 
     fn set_action(&mut self, action: Action) -> &mut Self;
 
@@ -134,13 +134,13 @@ pub trait ConfigValue {
 pub struct OptConfig {
     ctor: Option<Str>,
 
-    ty: Option<TypeId>,
+    value_type: Option<TypeId>,
 
     name: Option<Str>,
 
     force: Option<bool>,
 
-    idx: Option<Index>,
+    index: Option<Index>,
 
     alias: Vec<Str>,
 
@@ -154,18 +154,18 @@ pub struct OptConfig {
 
     ignore_name: bool,
 
-    support_alias: bool,
+    ignore_alias: bool,
 
-    postional: bool,
+    ignore_index: bool,
 
-    fix_infer: bool,
+    infered: bool,
 
     styles: Option<Vec<Style>>,
 }
 
 impl OptConfig {
-    pub fn with_idx(mut self, index: Index) -> Self {
-        self.idx = Some(index);
+    pub fn with_index(mut self, index: Index) -> Self {
+        self.index = Some(index);
         self
     }
 
@@ -179,8 +179,8 @@ impl OptConfig {
         self
     }
 
-    pub fn with_type<T: ErasedTy>(mut self) -> Self {
-        self.ty = Some(typeid::<T>());
+    pub fn with_value_type<T: ErasedTy>(mut self) -> Self {
+        self.value_type = Some(typeid::<T>());
         self
     }
 
@@ -234,10 +234,10 @@ impl OptConfig {
             .clone())
     }
 
-    pub fn gen_type(&mut self) -> Result<TypeId, Error> {
-        self.ty
-            .take()
-            .ok_or_else(|| Error::raise_error("Incomplete option configuration: missing Type"))
+    pub fn gen_value_type(&mut self) -> Result<TypeId, Error> {
+        self.value_type.take().ok_or_else(|| {
+            Error::raise_error("Incomplete option configuration: missing value type")
+        })
     }
 
     pub fn gen_storer(&mut self) -> Result<ValStorer, Error> {
@@ -276,7 +276,7 @@ impl OptConfig {
             // sort name by len
             names.sort_by_key(|v| v.len());
 
-            if let Some(index) = &self.idx {
+            if let Some(index) = &self.index {
                 let index_string = index.to_help();
 
                 // add index string
@@ -306,8 +306,8 @@ impl Config for OptConfig {
         if let Some(v) = output.take_name() {
             ret.set_name(v);
         }
-        if let Some(v) = output.take_idx() {
-            ret.set_idx(v);
+        if let Some(v) = output.take_index() {
+            ret.set_index(v);
         }
         if let Some(v) = output.take_force() {
             ret.set_force(v);
@@ -348,12 +348,12 @@ impl ConfigValue for OptConfig {
         self.name.as_ref()
     }
 
-    fn r#type(&self) -> Option<&TypeId> {
-        self.ty.as_ref()
+    fn value_type(&self) -> Option<&TypeId> {
+        self.value_type.as_ref()
     }
 
-    fn idx(&self) -> Option<&Index> {
-        self.idx.as_ref()
+    fn index(&self) -> Option<&Index> {
+        self.index.as_ref()
     }
 
     fn alias(&self) -> Option<&Vec<Str>> {
@@ -380,20 +380,20 @@ impl ConfigValue for OptConfig {
         self.ignore_name
     }
 
-    fn support_alias(&self) -> bool {
-        self.support_alias
+    fn ignore_alias(&self) -> bool {
+        self.ignore_alias
     }
 
-    fn positional(&self) -> bool {
-        self.postional
+    fn ignore_index(&self) -> bool {
+        self.ignore_index
     }
 
-    fn fix_infer(&self) -> bool {
-        self.fix_infer
+    fn has_infer(&self) -> bool {
+        self.infered
     }
 
-    fn has_idx(&self) -> bool {
-        self.idx.is_some()
+    fn has_index(&self) -> bool {
+        self.index.is_some()
     }
 
     fn has_ctor(&self) -> bool {
@@ -404,8 +404,8 @@ impl ConfigValue for OptConfig {
         self.name.is_some()
     }
 
-    fn has_type(&self) -> bool {
-        self.ty.is_some()
+    fn has_value_type(&self) -> bool {
+        self.value_type.is_some()
     }
 
     fn has_hint(&self) -> bool {
@@ -445,23 +445,23 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn set_support_alias(&mut self, ignore_alias: bool) -> &mut Self {
-        self.support_alias = ignore_alias;
+    fn set_ignore_alias(&mut self, ignore_alias: bool) -> &mut Self {
+        self.ignore_alias = ignore_alias;
         self
     }
 
-    fn set_postional(&mut self, ignore_index: bool) -> &mut Self {
-        self.postional = ignore_index;
+    fn set_ignore_index(&mut self, ignore_index: bool) -> &mut Self {
+        self.ignore_index = ignore_index;
         self
     }
 
-    fn set_fix_infer(&mut self, fix_infer: bool) -> &mut Self {
-        self.fix_infer = fix_infer;
+    fn set_infer(&mut self, fix_infer: bool) -> &mut Self {
+        self.infered = fix_infer;
         self
     }
 
-    fn set_idx(&mut self, index: Index) -> &mut Self {
-        self.idx = Some(index);
+    fn set_index(&mut self, index: Index) -> &mut Self {
+        self.index = Some(index);
         self
     }
 
@@ -517,8 +517,8 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn set_type<T: ErasedTy>(&mut self) -> &mut Self {
-        self.ty = Some(typeid::<T>());
+    fn set_value_type<T: ErasedTy>(&mut self) -> &mut Self {
+        self.value_type = Some(typeid::<T>());
         self
     }
 
@@ -548,20 +548,21 @@ where
     let style = U::infer_style();
     let index = U::infer_index();
     let ignore_name = U::infer_ignore_name();
-    let support_alias = U::infer_support_alias();
-    let positional = U::infer_positional();
+    let ignore_alias = U::infer_ignore_alias();
+    let ignore_index = U::infer_ignore_index();
     let force = U::infer_force();
     let ctor = U::infer_ctor();
     let initializer = U::infer_initializer();
     let storer = if let Some(validator) = U::infer_validator() {
         Some(ValStorer::from(validator))
     } else {
-        None
+        Some(ValStorer::new::<U::Val>())
     };
 
+    info.set_infer(true);
     (!info.has_ctor()).then(|| info.set_ctor(ctor));
-    (!info.has_idx()).then(|| index.map(|idx| info.set_idx(idx)));
-    (!info.has_type()).then(|| info.set_type::<U::Val>());
+    (!info.has_index()).then(|| index.map(|idx| info.set_index(idx)));
+    (!info.has_value_type()).then(|| info.set_value_type::<U::Val>());
     (!info.has_action()).then(|| info.set_action(act));
     (!info.has_style()).then(|| info.set_style(style));
     (!info.has_force()).then(|| info.set_force(force));
@@ -573,11 +574,11 @@ where
         (!info.has_initializer()).then(|| info.set_initializer(initializer));
     }
     info.set_ignore_name(ignore_name);
-    info.set_support_alias(support_alias);
-    info.set_postional(positional);
+    info.set_ignore_alias(ignore_alias);
+    info.set_ignore_index(ignore_index);
 }
 
-pub(crate) fn fill_cfg_infered<U, C>(info: &mut C)
+pub(crate) fn fill_cfg_if_no_infer<U, C>(info: &mut C)
 where
     U: Infer,
     U::Val: RawValParser,
@@ -587,25 +588,26 @@ where
     let style = U::infer_style();
     let index = U::infer_index();
     let ignore_name = U::infer_ignore_name();
-    let support_alias = U::infer_support_alias();
-    let positional = U::infer_positional();
+    let ignore_alias = U::infer_ignore_alias();
+    let ignore_index = U::infer_ignore_index();
     let force = U::infer_force();
     let ctor = U::infer_ctor();
     let initializer = U::infer_initializer();
     let storer = if let Some(validator) = U::infer_validator() {
         Some(ValStorer::from(validator))
     } else {
-        None
+        Some(ValStorer::new::<U::Val>())
     };
 
     (!info.has_ctor()).then(|| info.set_ctor(ctor));
-    (!info.has_idx()).then(|| index.map(|idx| info.set_idx(idx)));
-    (!info.has_type()).then(|| info.set_type::<U::Val>());
+    (!info.has_index()).then(|| index.map(|idx| info.set_index(idx)));
+    (!info.has_value_type()).then(|| info.set_value_type::<U::Val>());
     (!info.has_action()).then(|| info.set_action(act));
     (!info.has_style()).then(|| info.set_style(style));
     (!info.has_force()).then(|| info.set_force(force));
     (!info.has_action()).then(|| info.set_action(act));
-    if info.fix_infer() {
+    if !info.has_infer() {
+        info.set_infer(true);
         if let Some(storer) = storer {
             (!info.has_storer()).then(|| info.set_storer(storer));
         }
@@ -614,6 +616,6 @@ where
         }
     }
     info.set_ignore_name(ignore_name);
-    info.set_support_alias(support_alias);
-    info.set_postional(positional);
+    info.set_ignore_alias(ignore_alias);
+    info.set_ignore_index(ignore_index);
 }

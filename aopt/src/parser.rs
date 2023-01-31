@@ -9,7 +9,7 @@ pub(crate) mod style;
 
 pub use self::checker::SetChecker;
 pub use self::commit::ParserCommit;
-use self::commit::ParserCommitInfered;
+pub use self::commit::ParserCommitWithValue;
 pub use self::policy_delay::DelayPolicy;
 pub use self::policy_fwd::FwdPolicy;
 pub use self::policy_pre::PrePolicy;
@@ -44,7 +44,7 @@ use crate::opt::ConfigValue;
 use crate::opt::Information;
 use crate::opt::Opt;
 use crate::opt::OptParser;
-use crate::prelude::SetCommitW;
+use crate::prelude::SetCommit;
 use crate::ser::ServicesValExt;
 use crate::set::Ctor;
 use crate::set::OptValidator;
@@ -574,8 +574,8 @@ where
         let info =
             <<<P::Set as Set>::Ctor as Ctor>::Config as Config>::new(&self.optset, opt.into())?;
 
-        Ok(ParserCommit::new_placeholder(
-            SetCommitW::new_placeholder(&mut self.optset, info),
+        Ok(ParserCommit::new(
+            SetCommit::new_placeholder(&mut self.optset, info),
             &mut self.invoker,
         ))
     }
@@ -592,7 +592,7 @@ where
             <<<P::Set as Set>::Ctor as Ctor>::Config as Config>::new(&self.optset, opt.into())?;
 
         Ok(ParserCommit::new(
-            SetCommitW::new(&mut self.optset, info),
+            SetCommit::new(&mut self.optset, info),
             &mut self.invoker,
         ))
     }
@@ -643,26 +643,26 @@ where
     /// #    Ok(())
     /// # }
     ///```
-    pub fn add_opt_cfg<Cfg: Into<SetCfg<P::Set>>>(
+    pub fn add_opt_cfg(
         &mut self,
-        config: Cfg,
+        config: impl Into<SetCfg<P::Set>>,
     ) -> Result<ParserCommit<'_, P::Set, P::Ser, Placeholder>, Error> {
         Ok(ParserCommit::new(
-            SetCommitW::new(&mut self.optset, config.into()),
+            SetCommit::new_placeholder(&mut self.optset, config.into()),
             &mut self.invoker,
         ))
     }
 
-    pub fn add_opt_cfg_i<U: Infer, Cfg: Into<SetCfg<P::Set>>>(
+    pub fn add_opt_cfg_i<U: Infer>(
         &mut self,
-        config: Cfg,
+        config: impl Into<SetCfg<P::Set>>,
     ) -> Result<ParserCommit<'_, P::Set, P::Ser, U>, Error>
     where
         U: Infer,
         U::Val: RawValParser,
     {
         Ok(ParserCommit::new(
-            SetCommitW::new(&mut self.optset, config.into()),
+            SetCommit::new(&mut self.optset, config.into()),
             &mut self.invoker,
         ))
     }

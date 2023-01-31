@@ -4,8 +4,8 @@ pub(crate) mod index;
 pub(crate) mod optset;
 pub(crate) mod optvalid;
 
-pub use self::commit::SetCommitW;
-pub use self::commit::SetCommitWT;
+pub use self::commit::SetCommit;
+pub use self::commit::SetCommitWithValue;
 pub use self::filter::Filter;
 pub use self::filter::FilterMatcher;
 pub use self::filter::FilterMut;
@@ -240,7 +240,7 @@ where
     fn cfg_mut(&mut self) -> &mut SetCfg<S>;
 
     fn set_idx(mut self, index: Index) -> Self {
-        self.cfg_mut().set_idx(index);
+        self.cfg_mut().set_index(index);
         self
     }
 
@@ -294,8 +294,8 @@ where
         self
     }
 
-    fn set_initializer(mut self, initializer: ValInitializer) -> Self {
-        self.cfg_mut().set_initializer(initializer);
+    fn set_initializer<T: Into<ValInitializer>>(mut self, initializer: T) -> Self {
+        self.cfg_mut().set_initializer(initializer.into());
         self
     }
 }

@@ -10,8 +10,7 @@ use crate::set::Filter;
 use crate::set::FilterMatcher;
 use crate::set::FilterMut;
 use crate::set::Set;
-use crate::set::SetCommitW;
-use crate::set::SetCommitWT;
+use crate::set::SetCommit;
 use crate::set::SetIndex;
 use crate::value::Infer;
 use crate::value::Placeholder;
@@ -174,35 +173,34 @@ where
     C::Config: Config + ConfigValue + Default,
 {
     /// Add an option by configuration into current [`OptSet`].
-    pub fn add_opt_cfg<Cfg>(
+    pub fn add_opt_cfg(
         &mut self,
-        config: Cfg,
-    ) -> Result<SetCommitW<'_, Self, Placeholder>, Error>
-    where
-        Cfg: Into<C::Config>,
-    {
-        Ok(SetCommitW::new_placeholder(self, config.into()))
+        config: impl Into<C::Config>,
+    ) -> Result<SetCommit<'_, Self, Placeholder>, Error> {
+        Ok(SetCommit::new_placeholder(self, config.into()))
     }
 
     /// Add an option by configuration into current [`OptSet`].
-    pub fn add_opt_cfg_i<U, Cfg>(&mut self, config: Cfg) -> Result<SetCommitW<'_, Self, U>, Error>
+    pub fn add_opt_cfg_i<U>(
+        &mut self,
+        config: impl Into<C::Config>,
+    ) -> Result<SetCommit<'_, Self, U>, Error>
     where
         U: Infer,
         U::Val: RawValParser,
-        Cfg: Into<C::Config>,
     {
-        Ok(SetCommitW::new(self, config.into()))
+        Ok(SetCommit::new(self, config.into()))
     }
 
     /// Add an option into current [`OptSet`].
     ///
     /// It parsing the given option string `S` using inner [`OptParser`], return an [`Commit`].
     /// For option string, reference [`StrParser`](crate::opt::StrParser).
-    pub fn add_opt<S: Into<Str>>(
+    pub fn add_opt(
         &mut self,
-        opt_str: S,
-    ) -> Result<SetCommitW<'_, Self, Placeholder>, Error> {
-        Ok(SetCommitW::new_placeholder(
+        opt_str: impl Into<Str>,
+    ) -> Result<SetCommit<'_, Self, Placeholder>, Error> {
+        Ok(SetCommit::new_placeholder(
             self,
             <C::Config as Config>::new(self.parser(), opt_str.into())?,
         ))
@@ -212,15 +210,12 @@ where
     ///
     /// It parsing the given option string `S` using inner [`OptParser`], return an [`Commit`].
     /// For option string, reference [`StrParser`](crate::opt::StrParser).
-    pub fn add_opt_i<U, S: Into<Str>>(
-        &mut self,
-        opt_str: S,
-    ) -> Result<SetCommitW<'_, Self, U>, Error>
+    pub fn add_opt_i<U>(&mut self, opt_str: impl Into<Str>) -> Result<SetCommit<'_, Self, U>, Error>
     where
         U: Infer,
         U::Val: RawValParser,
     {
-        Ok(SetCommitW::new(
+        Ok(SetCommit::new(
             self,
             <C::Config as Config>::new(self.parser(), opt_str.into())?,
         ))

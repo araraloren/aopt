@@ -30,8 +30,8 @@ where
         if ret && self.has_force() {
             ret = ret && (self.force().unwrap() == opt.force());
         }
-        if ret && self.has_type() {
-            ret = ret && (self.r#type().unwrap() == opt.r#type());
+        if ret && self.has_value_type() {
+            ret = ret && (self.value_type().unwrap() == opt.value_type());
         }
         if ret && self.has_name() {
             // don't call match name
@@ -50,9 +50,9 @@ where
             }
             ret = ret && matched;
         }
-        if ret && self.has_idx() {
-            if let Some(index) = opt.idx() {
-                ret = ret && (self.idx().unwrap() == index);
+        if ret && self.has_index() {
+            if let Some(index) = opt.index() {
+                ret = ret && (self.index().unwrap() == index);
             }
         }
         ret
@@ -103,13 +103,13 @@ where
 
     /// Set the option type name of filter configuration.
     pub fn set_type<U: ErasedTy>(&mut self) -> &mut Self {
-        self.info.set_type::<U>();
+        self.info.set_value_type::<U>();
         self
     }
 
     /// Set the option index of filter configuration.
     pub fn set_idx(&mut self, index: Index) -> &mut Self {
-        self.info.set_idx(index);
+        self.info.set_index(index);
         self
     }
 
@@ -174,13 +174,13 @@ where
 
     /// Set the option type name of filter configuration.
     pub fn set_type<U: ErasedTy>(&mut self) -> &mut Self {
-        self.info.set_type::<U>();
+        self.info.set_value_type::<U>();
         self
     }
 
     /// Set the option index of filter configuration.
     pub fn set_idx(&mut self, index: Index) -> &mut Self {
-        self.info.set_idx(index);
+        self.info.set_index(index);
         self
     }
 

@@ -45,25 +45,29 @@ pub struct AOpt {
 
     name: Str,
 
-    r#type: TypeId,
+    value_type: TypeId,
 
     help: Help,
 
-    matched: bool,
-
-    force: bool,
-
-    action: Action,
-
     styles: Vec<Style>,
-
-    ignore_name: bool,
 
     index: Option<Index>,
 
     accessor: ValAccessor,
 
     alias: Option<Vec<Str>>,
+
+    action: Action,
+
+    matched: bool,
+
+    force: bool,
+
+    ignore_name: bool,
+
+    ignore_alias: bool,
+
+    ignore_index: bool,
 }
 
 impl AOpt {
@@ -71,16 +75,18 @@ impl AOpt {
         Self {
             uid: 0,
             name,
-            r#type: type_id,
+            value_type: type_id,
             help: Default::default(),
             matched: false,
             force: false,
             action: Default::default(),
             styles: vec![],
-            ignore_name: false,
             index: None,
             accessor,
             alias: None,
+            ignore_name: false,
+            ignore_alias: false,
+            ignore_index: false,
         }
     }
 
@@ -97,14 +103,26 @@ impl AOpt {
     }
 
     /// Set the type of option, see [`Ctor`](crate::set::Ctor).
-    pub fn with_type(mut self, r#type: TypeId) -> Self {
-        self.r#type = r#type;
+    pub fn with_value_type(mut self, value_type: TypeId) -> Self {
+        self.value_type = value_type;
         self
     }
 
     /// If the option will matching the name.
-    pub fn with_ignore_name(mut self, value: bool) -> Self {
-        self.ignore_name = value;
+    pub fn with_ignore_name(mut self, ignore_name: bool) -> Self {
+        self.ignore_name = ignore_name;
+        self
+    }
+
+    /// If the option will matching the alias.
+    pub fn with_ignore_alias(mut self, ignore_alias: bool) -> Self {
+        self.ignore_alias = ignore_alias;
+        self
+    }
+
+    /// If the option will matching the alias.
+    pub fn with_ignore_index(mut self, ignore_index: bool) -> Self {
+        self.ignore_index = ignore_index;
         self
     }
 
@@ -169,8 +187,8 @@ impl AOpt {
         self
     }
 
-    pub fn set_type(&mut self, r#type: TypeId) -> &mut Self {
-        self.r#type = r#type;
+    pub fn set_value_type(&mut self, value_type: TypeId) -> &mut Self {
+        self.value_type = value_type;
         self
     }
 
@@ -239,8 +257,8 @@ impl Opt for AOpt {
         &self.name
     }
 
-    fn r#type(&self) -> &TypeId {
-        &self.r#type
+    fn value_type(&self) -> &TypeId {
+        &self.value_type
     }
 
     fn hint(&self) -> &Str {
@@ -267,12 +285,32 @@ impl Opt for AOpt {
         &self.action
     }
 
-    fn idx(&self) -> Option<&Index> {
+    fn index(&self) -> Option<&Index> {
         self.index.as_ref()
     }
 
     fn alias(&self) -> Option<&Vec<Str>> {
         self.alias.as_ref()
+    }
+
+    fn accessor(&self) -> &ValAccessor {
+        &self.accessor
+    }
+
+    fn accessor_mut(&mut self) -> &mut ValAccessor {
+        &mut self.accessor
+    }
+
+    fn ignore_alias(&self) -> bool {
+        self.ignore_alias
+    }
+
+    fn ignore_name(&self) -> bool {
+        self.ignore_name
+    }
+
+    fn ignore_index(&self) -> bool {
+        self.ignore_index
     }
 
     fn set_uid(&mut self, uid: Uid) {
@@ -292,25 +330,20 @@ impl Opt for AOpt {
     }
 
     fn mat_name(&self, name: Option<&Str>) -> bool {
-        if self.ignore_name {
-            true
-        } else {
-            name.iter().all(|&v| v == self.name())
-        }
+        name.iter().all(|&v| v == self.name())
     }
 
-    /// If don't have alias, then it's not support alias, will return true.
     fn mat_alias(&self, name: &Str) -> bool {
         if let Some(alias) = &self.alias {
             alias.iter().any(|v| v == name)
         } else {
-            true
+            false
         }
     }
 
-    fn mat_idx(&self, index: Option<(usize, usize)>) -> bool {
+    fn mat_index(&self, index: Option<(usize, usize)>) -> bool {
         if let Some((index, total)) = index {
-            if let Some(realindex) = self.idx() {
+            if let Some(realindex) = self.index() {
                 if let Some(realindex) = realindex.calc_index(index, total) {
                     return realindex == index;
                 }
@@ -321,13 +354,5 @@ impl Opt for AOpt {
 
     fn init(&mut self) -> Result<(), Error> {
         self.accessor.initialize()
-    }
-
-    fn accessor(&self) -> &ValAccessor {
-        &self.accessor
-    }
-
-    fn accessor_mut(&mut self) -> &mut ValAccessor {
-        &mut self.accessor
     }
 }

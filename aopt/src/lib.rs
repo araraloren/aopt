@@ -214,7 +214,6 @@ pub mod prelude {
     pub use crate::map::ErasedTy;
     pub use crate::opt::AOpt;
     pub use crate::opt::Action;
-    pub use crate::opt::Cmd;
     pub use crate::opt::Config;
     pub use crate::opt::ConfigValue;
     pub use crate::opt::ConstrctInfo;
@@ -222,13 +221,11 @@ pub mod prelude {
     pub use crate::opt::Help;
     pub use crate::opt::Index;
     pub use crate::opt::Information;
-    pub use crate::opt::Main;
     pub use crate::opt::Noa;
     pub use crate::opt::Opt;
     pub use crate::opt::OptConfig;
     pub use crate::opt::OptParser;
     pub use crate::opt::OptValueExt;
-    pub use crate::opt::Pos;
     #[cfg(feature = "serde")]
     pub use crate::opt::Serde;
     pub use crate::opt::StrParser;
@@ -239,6 +236,7 @@ pub mod prelude {
     pub use crate::parser::OptStyleManager;
     pub use crate::parser::Parser;
     pub use crate::parser::ParserCommit;
+    pub use crate::parser::ParserCommitWithValue;
     pub use crate::parser::Policy;
     pub use crate::parser::PrePolicy;
     pub use crate::parser::ReturnVal;
@@ -255,6 +253,8 @@ pub mod prelude {
     pub use crate::ser::ServicesExt;
     pub use crate::ser::ServicesValExt;
     pub use crate::ser::UsrValService;
+    pub use crate::set::ctor_default_name;
+    pub use crate::set::Commit;
     pub use crate::set::Ctor;
     pub use crate::set::Filter;
     pub use crate::set::FilterMatcher;
@@ -264,8 +264,8 @@ pub mod prelude {
     pub use crate::set::PrefixOptValidator;
     pub use crate::set::Set;
     pub use crate::set::SetCfg;
-    pub use crate::set::SetCommitW;
-    pub use crate::set::SetCommitWT;
+    pub use crate::set::SetCommit;
+    pub use crate::set::SetCommitWithValue;
     pub use crate::set::SetExt;
     pub use crate::set::SetOpt;
     pub use crate::set::SetValueFindExt;

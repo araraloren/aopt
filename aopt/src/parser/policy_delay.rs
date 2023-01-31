@@ -458,7 +458,7 @@ where
 //             vals: Option<Vec<T>>,
 //             force: bool,
 //             action: &Action,
-//             r#type: &TypeId,
+//             value_type: &TypeId,
 //             index: Option<&Index>,
 //             alias: Option<Vec<&str>>,
 //         ) -> Result<(), Error> {
@@ -474,7 +474,7 @@ where
 //                 force
 //             );
 //             assert_eq!(opt.action(), action, "action not equal for {}", opt_uid);
-//             assert_eq!(opt.r#type(), r#type, "type id not equal for {}", opt_uid);
+//             assert_eq!(opt.value_type(), value_type, "type id not equal for {}", opt_uid);
 //             assert_eq!(opt.idx(), index, "option index not equal: {:?}", index);
 //             if let Ok(opt_vals) = opt.vals::<T>() {
 //                 if let Some(vals) = vals {

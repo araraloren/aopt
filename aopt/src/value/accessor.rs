@@ -40,6 +40,7 @@ impl ValAccessor {
         }
     }
 
+    #[allow(unused)]
     pub(crate) fn from_storer<U: ErasedTy + RawValParser>(
         initializer: Option<ValInitializer>,
         storer: Option<ValStorer>,

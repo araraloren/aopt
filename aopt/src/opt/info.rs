@@ -8,7 +8,7 @@ pub trait Information {
 
     fn has_alias(&self) -> bool;
 
-    fn has_idx(&self) -> bool;
+    fn has_index(&self) -> bool;
 
     fn has_help(&self) -> bool;
 
@@ -20,7 +20,7 @@ pub trait Information {
 
     fn alias(&self) -> Option<&Vec<Str>>;
 
-    fn idx(&self) -> Option<&Index>;
+    fn index(&self) -> Option<&Index>;
 
     fn help(&self) -> Option<&Str>;
 
@@ -32,7 +32,7 @@ pub trait Information {
 
     fn take_alias(&mut self) -> Option<Vec<Str>>;
 
-    fn take_idx(&mut self) -> Option<Index>;
+    fn take_index(&mut self) -> Option<Index>;
 
     fn take_help(&mut self) -> Option<Str>;
 
@@ -107,7 +107,7 @@ impl Information for ConstrctInfo {
         self.alias.is_some()
     }
 
-    fn has_idx(&self) -> bool {
+    fn has_index(&self) -> bool {
         self.index.is_some()
     }
 
@@ -131,7 +131,7 @@ impl Information for ConstrctInfo {
         self.alias.as_ref()
     }
 
-    fn idx(&self) -> Option<&Index> {
+    fn index(&self) -> Option<&Index> {
         self.index.as_ref()
     }
 
@@ -155,7 +155,7 @@ impl Information for ConstrctInfo {
         self.alias.take()
     }
 
-    fn take_idx(&mut self) -> Option<Index> {
+    fn take_index(&mut self) -> Option<Index> {
         self.index.take()
     }
 

@@ -61,6 +61,10 @@ pub struct Main;
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Noa(bool);
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Any;
+
 impl Noa {
     pub fn new(value: bool) -> Self {
         Self(value)
@@ -97,7 +101,7 @@ pub trait Opt: Debug {
     /// The name of option.
     fn name(&self) -> &Str;
 
-    fn r#type(&self) -> &TypeId;
+    fn value_type(&self) -> &TypeId;
 
     fn hint(&self) -> &Str;
 
@@ -113,7 +117,7 @@ pub trait Opt: Debug {
     fn action(&self) -> &Action;
 
     /// The index of option.
-    fn idx(&self) -> Option<&Index>;
+    fn index(&self) -> Option<&Index>;
 
     /// The alias the option.
     fn alias(&self) -> Option<&Vec<Str>>;
@@ -121,6 +125,12 @@ pub trait Opt: Debug {
     fn accessor(&self) -> &ValAccessor;
 
     fn accessor_mut(&mut self) -> &mut ValAccessor;
+
+    fn ignore_alias(&self) -> bool;
+
+    fn ignore_name(&self) -> bool;
+
+    fn ignore_index(&self) -> bool;
 
     fn set_uid(&mut self, uid: Uid);
 
@@ -134,7 +144,7 @@ pub trait Opt: Debug {
 
     fn mat_alias(&self, name: &Str) -> bool;
 
-    fn mat_idx(&self, index: Option<(usize, usize)>) -> bool;
+    fn mat_index(&self, index: Option<(usize, usize)>) -> bool;
 
     fn init(&mut self) -> Result<(), Error>;
 }
