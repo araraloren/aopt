@@ -54,7 +54,7 @@ pub trait Infer {
     }
 
     fn infer_initializer() -> Option<ValInitializer> {
-        None
+        Some(ValInitializer::fallback())
     }
 }
 

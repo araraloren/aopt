@@ -256,7 +256,7 @@ where
     SetCfg<S>: ConfigValue + Default,
 {
     /// Set the type of option.
-    pub(crate) fn set_value_type<T: ErasedTy>(mut self) -> ParserCommitWithValue<'a, S, Ser, U, T> {
+    pub fn set_value_type<T: ErasedTy>(mut self) -> ParserCommitWithValue<'a, S, Ser, U, T> {
         let inner = self.inner.take().unwrap();
         let inv_ser = self.inv_ser.take().unwrap();
 
@@ -544,6 +544,10 @@ where
             .set_storer(ValStorer::new_validator(validator));
         self
     }
+
+    pub fn add_default_storer(self) -> Self {
+        self.set_storer(ValStorer::new::<T>())
+    }
 }
 
 impl<'a, S, Ser, U, T> ParserCommitWithValue<'a, S, Ser, U, T>
@@ -578,5 +582,9 @@ where
     /// Set the option default value.
     pub fn set_values_t(self, value: Vec<T>) -> Self {
         self.set_initializer(ValInitializer::with_vec(value))
+    }
+
+    pub fn add_default_initializer(self) -> Self {
+        self.set_initializer(ValInitializer::with_vec::<T>(vec![]))
     }
 }

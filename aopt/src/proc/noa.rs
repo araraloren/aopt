@@ -176,12 +176,20 @@ where
                 matched = matched && opt.mat_name(self.name());
             }
             if !opt.ignore_alias() {
-                if let Some(name) = &self.name {
-                    matched = matched && opt.mat_alias(name);
+                if opt.alias().is_some() {
+                    if let Some(name) = &self.name {
+                        matched = matched || opt.mat_alias(name);
+                    }
                 }
             }
             if !opt.ignore_index() {
-                matched = matched && opt.mat_index(Some((self.noa_index, self.noa_total)));
+                matched = matched && {
+                    if opt.index().is_some() {
+                        opt.mat_index(Some((self.noa_index, self.noa_total)))
+                    } else {
+                        false
+                    }
+                };
             }
         }
         if matched {
@@ -306,7 +314,7 @@ where
                     "Start process NOA{{{}}} eg. {}@{:?}",
                     opt.uid(),
                     opt.hint(),
-                    opt.idx()
+                    opt.index()
                 );
                 if let Some(mat) = self.matches.as_mut() {
                     if !mat.is_mat() && mat.process(opt)? {

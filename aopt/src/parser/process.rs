@@ -26,6 +26,7 @@ pub struct ProcessCtx<'a, Set, Ser> {
     pub ser: &'a mut Ser,
 }
 
+/// Invoke the callback of option, map failure to false
 pub fn invoke_callback_opt<Set, Ser>(
     uid: Uid,
     ctx: &Ctx,
@@ -38,9 +39,7 @@ where
     Ser: 'static,
     Set: crate::set::Set + 'static,
 {
-    // Take the service, invoke the handler of option.
-    // Catch the result of handler, so we can register it back to Services.
-    match inv.has(uid) {
+    let ret = match inv.has(uid) {
         true => {
             trace_log!("Invoke callback of {}", uid);
             inv.invoke(set, ser, ctx)
@@ -48,6 +47,17 @@ where
         false => {
             trace_log!("Invoke default callback of {}", uid);
             inv.invoke_default(set, ser, ctx)
+        }
+    };
+
+    match ret {
+        Ok(ret) => Ok(ret),
+        Err(e) => {
+            if e.is_failure() {
+                Ok(false)
+            } else {
+                Err(e)
+            }
         }
     }
 }
@@ -156,19 +166,9 @@ where
                             .with_uid(uid), // current uid == uid in matcher
                     ));
 
-                    let ret = match inv.has(uid) {
-                        true => {
-                            // callback in Invoker
-                            trace_log!("Invoke callback of NOA{{{uid}}}");
-                            inv.invoke(set, ser, ctx)?
-                        }
-                        false => {
-                            // call `invoke_default` if callback not exist
-                            trace_log!("Invoke default callback of NOA{{{uid}}}");
-                            inv.invoke_default(set, ser, ctx)?
-                        }
-                    };
-                    // return None means NOA not match
+                    let ret = invoke_callback_opt(uid, ctx, set, inv, ser)?;
+
+                    // return false means NOA not match
                     if !ret {
                         proc.undo(set)?;
                     }

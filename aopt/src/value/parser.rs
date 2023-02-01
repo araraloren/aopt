@@ -17,7 +17,12 @@ where
 pub(crate) fn convert_raw_to_utf8(raw: Option<&RawVal>) -> Result<&str, Error> {
     raw.ok_or_else(|| Error::raise_failure("unexcepted empty value"))?
         .get_str()
-        .ok_or_else(|| Error::raise_failure("Can't convert value to &str: invalid utf8"))
+        .ok_or_else(|| {
+            Error::raise_failure(format!(
+                "Can't convert value `{:?}` to &str: invalid utf8",
+                raw
+            ))
+        })
 }
 
 impl RawValParser for () {
@@ -38,7 +43,8 @@ macro_rules! impl_raw_val_parser {
 
                 val.parse::<$int>().map_err(|e| {
                     Error::raise_failure(format!(
-                        "Can not convert value to {}: {:?}",
+                        "Can not convert value `{:?}` to {}: {:?}",
+                        raw,
                         stringify!($int),
                         e
                     ))

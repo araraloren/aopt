@@ -24,9 +24,11 @@ use crate::ctx::Ctx;
 use crate::ctx::Invoker;
 use crate::opt::Opt;
 use crate::opt::OptParser;
+use crate::prelude::SetExt;
 use crate::proc::Process;
 use crate::set::OptValidator;
 use crate::set::SetOpt;
+use crate::trace_log;
 use crate::Arc;
 use crate::Error;
 
@@ -227,7 +229,9 @@ where
             let uid = saver.uid;
 
             ctx.set_inner_ctx(Some(saver.ctx));
-            invoke_callback_opt(uid, ctx, set, inv, ser)?;
+            if !invoke_callback_opt(uid, ctx, set, inv, ser)? {
+                set.opt_mut(uid)?.set_matched(false);
+            }
         }
         Ok(())
     }
@@ -255,6 +259,7 @@ where
         let mut noa_args = Args::default();
         let mut iter = args.guess_iter().enumerate();
 
+        trace_log!("Parsing {ctx:?} using delay policy");
         // set option args, and args length
         ctx.set_args(args.clone());
         while let Some((idx, (opt, arg))) = iter.next() {
@@ -435,173 +440,186 @@ where
     }
 }
 
-// #[cfg(test)]
-// mod test {
+#[cfg(test)]
+mod test {
 
-//     use std::any::TypeId;
-//     use std::ops::Deref;
+    use std::any::TypeId;
+    use std::ops::Deref;
 
-//     use crate::prelude::*;
-//     use crate::Arc;
-//     use crate::Error;
+    use crate::prelude::*;
+    use crate::Arc;
+    use crate::Error;
 
-//     #[test]
-//     fn testing_1() {
-//         assert!(testing_1_main().is_ok());
-//     }
+    #[test]
+    fn testing_1() {
+        assert!(testing_1_main().is_ok());
+    }
 
-//     fn testing_1_main() -> Result<(), Error> {
-//         fn check_opt_val<T: std::fmt::Debug + PartialEq + ErasedTy + 'static>(
-//             opt: &AOpt,
-//             uid: Uid,
-//             name: &str,
-//             vals: Option<Vec<T>>,
-//             force: bool,
-//             action: &Action,
-//             value_type: &TypeId,
-//             index: Option<&Index>,
-//             alias: Option<Vec<&str>>,
-//         ) -> Result<(), Error> {
-//             let opt_uid = opt.uid();
+    fn testing_1_main() -> Result<(), Error> {
+        fn check_opt_val<T: std::fmt::Debug + PartialEq + ErasedTy + 'static>(
+            opt: &AOpt,
+            uid: Uid,
+            name: &str,
+            vals: Option<Vec<T>>,
+            force: bool,
+            action: &Action,
+            value_type: &TypeId,
+            index: Option<&Index>,
+            alias: Option<Vec<&str>>,
+        ) -> Result<(), Error> {
+            let opt_uid = opt.uid();
 
-//             assert_eq!(opt_uid, uid);
-//             assert_eq!(opt.name(), name, "name not equal -{}-", opt_uid);
-//             assert_eq!(
-//                 opt.force(),
-//                 force,
-//                 "option force required not equal -{}-: {}",
-//                 opt_uid,
-//                 force
-//             );
-//             assert_eq!(opt.action(), action, "action not equal for {}", opt_uid);
-//             assert_eq!(opt.value_type(), value_type, "type id not equal for {}", opt_uid);
-//             assert_eq!(opt.idx(), index, "option index not equal: {:?}", index);
-//             if let Ok(opt_vals) = opt.vals::<T>() {
-//                 if let Some(vals) = vals {
-//                     assert_eq!(
-//                         opt_vals.len(),
-//                         vals.len(),
-//                         "value length not equal for {}",
-//                         opt_uid
-//                     );
-//                     for (l, r) in opt_vals.iter().zip(vals.iter()) {
-//                         assert_eq!(
-//                             l, r,
-//                             "option value not equal -{}- : {:?} != {:?}",
-//                             opt_uid, l, r
-//                         );
-//                     }
-//                 }
-//             } else {
-//                 assert!(
-//                     vals.is_none(),
-//                     "found none, option value not equal: {:?}",
-//                     vals
-//                 );
-//             }
-//             if let Some(opt_alias) = opt.alias() {
-//                 if let Some(alias) = alias {
-//                     assert_eq!(opt_alias.len(), alias.len());
-//                     for name in alias {
-//                         assert!(
-//                             opt_alias.iter().any(|n| n == name),
-//                             "alias => {:?} <--> {}",
-//                             &opt_alias,
-//                             name,
-//                         );
-//                     }
-//                 }
-//             } else {
-//                 assert!(alias.is_none());
-//             }
-//             Ok(())
-//         }
+            assert_eq!(opt_uid, uid);
+            assert_eq!(opt.name(), name, "name not equal -{}-", opt_uid);
+            assert_eq!(
+                opt.force(),
+                force,
+                "option force required not equal -{}-: {}",
+                opt_uid,
+                force
+            );
+            assert_eq!(opt.action(), action, "action not equal for {}", opt_uid);
+            assert_eq!(
+                opt.value_type(),
+                value_type,
+                "type id not equal for {}",
+                opt_uid
+            );
+            assert_eq!(opt.index(), index, "option index not equal: {:?}", index);
+            if let Ok(opt_vals) = opt.vals::<T>() {
+                if let Some(vals) = vals {
+                    assert_eq!(
+                        opt_vals.len(),
+                        vals.len(),
+                        "value length not equal for -{}- : {:?} != {:?}",
+                        opt_uid,
+                        opt_vals,
+                        vals,
+                    );
+                    for (l, r) in opt_vals.iter().zip(vals.iter()) {
+                        assert_eq!(
+                            l, r,
+                            "option value not equal -{}- : {:?} != {:?}",
+                            opt_uid, l, r
+                        );
+                    }
+                }
+            } else {
+                assert!(
+                    vals.is_none(),
+                    "found none, option value not equal: {:?}",
+                    vals
+                );
+            }
+            if let Some(opt_alias) = opt.alias() {
+                if let Some(alias) = alias {
+                    assert_eq!(opt_alias.len(), alias.len());
+                    for name in alias {
+                        assert!(
+                            opt_alias.iter().any(|n| n == name),
+                            "alias => {:?} <--> {}",
+                            &opt_alias,
+                            name,
+                        );
+                    }
+                }
+            } else {
+                assert!(alias.is_none());
+            }
+            Ok(())
+        }
 
-//         let mut policy = ADelayPolicy::default();
-//         let mut ser = policy.default_ser();
-//         let mut inv = policy.default_inv();
-//         let mut set = policy.default_set();
+        let mut policy = ADelayPolicy::default();
+        let mut ser = policy.default_ser();
+        let mut inv = policy.default_inv();
+        let mut set = policy.default_set();
 
-//         let args = Args::from_array([
-//             "app",
-//             "filter",
-//             "+>",
-//             "foo",
-//             "bar",
-//             "8",
-//             "42",
-//             "--option-ignored",
-//             "88",
-//             "+>",
-//             "12.5",
-//             "lily",
-//             "66",
-//             "11",
-//         ]);
+        let args = Args::from_array([
+            "app",
+            "filter",
+            "+>",
+            "foo",
+            "bar",
+            "8",
+            "42",
+            "--option-ignored",
+            "88",
+            "+>",
+            "12.5",
+            "lily",
+            "66",
+            "11",
+        ]);
 
-//         set.validator_mut().add_prefix("+");
+        set.validator_mut().add_prefix("+");
 
-//         set.add_opt("set=c")?;
-//         set.add_opt("filter=c")?;
+        set.add_opt("set=c")?;
+        set.add_opt("filter=c")?;
 
-//         let args_uid = set.add_opt("args=p@2..")?.set_type::<f64>().run()?;
+        let args_uid = set
+            .add_opt("args=p@2..")?
+            .set_value_type::<f64>()
+            .add_default_initializer()
+            .add_default_storer()
+            .run()?;
 
-//         inv.entry(set.add_opt("--positive=b")?.add_alias("+>").run()?)
-//             .on(|set: &mut ASet, ser: &mut ASer| {
-//                 ser["args=p"].filter::<f64>(|v: &f64| v <= &0.0)?;
-//                 Ok(Some(true))
-//             });
-//         inv.entry(set.add_opt("--bigger-than=f")?.add_alias("+>").run()?)
-//             .on(|set: &mut ASet, ser: &mut ASer, val: ctx::Value<f64>| {
-//                 // this is a vec![vec![], ..]
-//                 Ok(Some(
-//                     ser.sve_filter::<f64>(set["args=p"].uid(), |v: &f64| v <= val.deref())?,
-//                 ))
-//             });
-//         inv.entry(set.add_opt("main=m")?.run()?).on(
-//             move |set: &mut ASet, ser: &mut ASer, app: ctx::Value<String>| {
-//                 let args = &set["args"];
-//                 let bopt = &set["--bigger-than"];
+        inv.entry(set.add_opt("--positive=b")?.add_alias("+>").run()?)
+            .on(|set: &mut ASet, _: &mut ASer| {
+                set["args=p"].filter::<f64>(|v: &f64| v <= &0.0)?;
+                Ok(Some(true))
+            });
+        inv.entry(set.add_opt("--bigger-than=f")?.add_alias("+>").run()?)
+            .on(|set: &mut ASet, _: &mut ASer, val: ctx::Value<f64>| {
+                // this is a vec![vec![], ..]
+                Ok(Some(
+                    set["args=p"].filter::<f64>(|v: &f64| v <= val.deref())?,
+                ))
+            });
+        inv.entry(set.add_opt("main=m")?.run()?).on(
+            move |set: &mut ASet, _: &mut ASer, app: ctx::Value<String>| {
+                let args = &set["args"];
+                let bopt = &set["--bigger-than"];
 
-//                 assert_eq!(app.deref(), "app");
-//                 check_opt_val::<f64>(
-//                     ser,
-//                     args,
-//                     args_uid,
-//                     "args",
-//                     Some(vec![42.0, 88.0, 66.0]),
-//                     false,
-//                     &Action::App,
-//                     &Assoc::Flt,
-//                     Some(&Index::Range(2, None)),
-//                     None,
-//                 )?;
-//                 check_opt_val::<Vec<f64>>(
-//                     ser,
-//                     bopt,
-//                     bopt.uid(),
-//                     "--bigger-than",
-//                     Some(vec![vec![8.0, 11.0]]),
-//                     false,
-//                     &Action::App,
-//                     &Assoc::Flt,
-//                     None,
-//                     None,
-//                 )?;
-//                 Ok(Some(()))
-//             },
-//         );
+                assert_eq!(app.deref(), "app");
+                check_opt_val::<f64>(
+                    args,
+                    args_uid,
+                    "args",
+                    Some(vec![42.0, 88.0, 66.0]),
+                    false,
+                    &Action::App,
+                    &TypeId::of::<<crate::opt::Pos as Infer>::Val>(),
+                    Some(&Index::Range(2, None)),
+                    None,
+                )?;
+                check_opt_val::<Vec<f64>>(
+                    bopt,
+                    bopt.uid(),
+                    "--bigger-than",
+                    Some(vec![vec![8.0, 11.0]]),
+                    false,
+                    &Action::App,
+                    &TypeId::of::<<Vec<f64> as Infer>::Val>(),
+                    None,
+                    None,
+                )?;
+                Ok(Some(()))
+            },
+        );
 
-//         let args = Arc::new(args);
+        let args = Arc::new(args);
 
-//         for opt in set.iter_mut() {
-//             opt.init(&mut ser)?;
-//         }
-//         assert!(!policy
-//             .parse(&mut set, &mut inv, &mut ser, args.clone())?
-//             .status());
-//         policy.set_strict(false);
-//         assert!(policy.parse(&mut set, &mut inv, &mut ser, args)?.status());
-//         Ok(())
-//     }
-// }
+        for opt in set.iter_mut() {
+            opt.init()?;
+        }
+        assert!(!policy
+            .parse(&mut set, &mut inv, &mut ser, args.clone())?
+            .status());
+        policy.set_strict(false);
+        for opt in set.iter_mut() {
+            opt.init()?;
+        }
+        assert!(policy.parse(&mut set, &mut inv, &mut ser, args)?.status());
+        Ok(())
+    }
+}

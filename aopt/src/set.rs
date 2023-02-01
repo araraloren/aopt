@@ -142,7 +142,7 @@ pub trait Set {
         self.len() == 0
     }
 
-    /// Return all the unique id of option set.
+    /// Return all the unique uid of option set.
     fn keys(&self) -> Vec<Uid> {
         self.iter().map(|v| v.uid()).collect()
     }
@@ -157,19 +157,19 @@ pub trait Set {
 
     fn insert(&mut self, opt: SetOpt<Self>) -> Uid;
 
-    fn get(&self, id: Uid) -> Option<&SetOpt<Self>> {
-        self.iter().find(|v| v.uid() == id)
+    fn get(&self, uid: Uid) -> Option<&SetOpt<Self>> {
+        self.iter().find(|v| v.uid() == uid)
     }
 
-    fn get_mut(&mut self, id: Uid) -> Option<&mut SetOpt<Self>> {
-        self.iter_mut().find(|v| v.uid() == id)
+    fn get_mut(&mut self, uid: Uid) -> Option<&mut SetOpt<Self>> {
+        self.iter_mut().find(|v| v.uid() == uid)
     }
 }
 
 pub trait SetExt<C: Ctor> {
-    fn opt(&self, id: Uid) -> Result<&C::Opt, Error>;
+    fn opt(&self, uid: Uid) -> Result<&C::Opt, Error>;
 
-    fn opt_mut(&mut self, id: Uid) -> Result<&mut C::Opt, Error>;
+    fn opt_mut(&mut self, uid: Uid) -> Result<&mut C::Opt, Error>;
 
     fn ctor(&self, name: &Str) -> Result<&C, Error>;
 
@@ -177,14 +177,14 @@ pub trait SetExt<C: Ctor> {
 }
 
 impl<S: Set> SetExt<S::Ctor> for S {
-    fn opt(&self, id: Uid) -> Result<&<S::Ctor as Ctor>::Opt, Error> {
-        self.get(id)
-            .ok_or_else(|| Error::raise_error(format!("Invalid uid {id} for Set")))
+    fn opt(&self, uid: Uid) -> Result<&<S::Ctor as Ctor>::Opt, Error> {
+        self.get(uid)
+            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for Set")))
     }
 
-    fn opt_mut(&mut self, id: Uid) -> Result<&mut <S::Ctor as Ctor>::Opt, Error> {
-        self.get_mut(id)
-            .ok_or_else(|| Error::raise_error(format!("Invalid uid {id} for Set")))
+    fn opt_mut(&mut self, uid: Uid) -> Result<&mut <S::Ctor as Ctor>::Opt, Error> {
+        self.get_mut(uid)
+            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for Set")))
     }
 
     fn ctor(&self, name: &Str) -> Result<&S::Ctor, Error> {

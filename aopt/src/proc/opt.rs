@@ -168,10 +168,18 @@ where
                 matched = opt.mat_name(self.name());
             }
             if !opt.ignore_alias() {
-                matched = matched || opt.mat_alias(&self.name)
+                if opt.alias().is_some() {
+                    matched = matched || opt.mat_alias(&self.name)
+                }
             }
             if !opt.ignore_index() {
-                matched = matched && opt.mat_index(Some((self.index, self.total)));
+                matched = matched && {
+                    if opt.index().is_some() {
+                        opt.mat_index(Some((self.index, self.total)))
+                    } else {
+                        false
+                    }
+                };
             }
         }
         if matched {

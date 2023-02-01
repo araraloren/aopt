@@ -141,7 +141,7 @@ where
     SetCfg<S>: ConfigValue + Default,
 {
     /// Set the type of option.
-    pub(crate) fn set_value_type<T: ErasedTy>(self) -> SetCommitWithValue<'a, S, U, T> {
+    pub fn set_value_type<T: ErasedTy>(self) -> SetCommitWithValue<'a, S, U, T> {
         SetCommitWithValue::new(self)
     }
 
@@ -338,10 +338,12 @@ where
     SetCfg<S>: ConfigValue + Default,
 {
     /// Set the option value validator.
-    pub fn set_validator_t(mut self, validator: ValValidator<T>) -> Self {
-        self.cfg_mut()
-            .set_storer(ValStorer::new_validator(validator));
-        self
+    pub fn set_validator_t(self, validator: ValValidator<T>) -> Self {
+        self.set_storer(ValStorer::new_validator(validator))
+    }
+
+    pub fn add_default_storer(self) -> Self {
+        self.set_storer(ValStorer::new::<T>())
     }
 }
 
@@ -374,6 +376,10 @@ where
     /// Set the option default value.
     pub fn set_values_t(self, value: Vec<T>) -> Self {
         self.set_initializer(ValInitializer::with_vec(value))
+    }
+
+    pub fn add_default_initializer(self) -> Self {
+        self.set_initializer(ValInitializer::with_vec::<T>(vec![]))
     }
 }
 
