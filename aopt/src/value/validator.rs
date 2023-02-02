@@ -20,12 +20,12 @@ impl<T: ErasedTy> ValValidator<T> {
     }
 
     #[cfg(feature = "sync")]
-    pub fn from(func: impl Fn(&T) -> bool + Send + Sync + 'static) -> Self {
+    pub fn from_fn(func: impl Fn(&T) -> bool + Send + Sync + 'static) -> Self {
         Self(Box::new(move |val| func(val)))
     }
 
     #[cfg(not(feature = "sync"))]
-    pub fn from(func: impl Fn(&T) -> bool + 'static) -> Self {
+    pub fn from_fn(func: impl Fn(&T) -> bool + 'static) -> Self {
         Self(Box::new(move |val| func(val)))
     }
 }
@@ -35,8 +35,26 @@ impl<T: ErasedTy + PartialEq> ValValidator<T> {
         Self(Box::new(move |inner_val| inner_val == &val))
     }
 
-    pub fn equals(vals: Vec<T>) -> Self {
+    pub fn contains(vals: Vec<T>) -> Self {
         Self(Box::new(move |inner_val| vals.contains(inner_val)))
+    }
+}
+
+impl<T: ErasedTy> ValValidator<T> {
+    pub fn equal2<K>(val: K) -> Self
+    where
+        K: ErasedTy + for<'a> PartialEq<&'a T>,
+    {
+        Self(Box::new(move |inner_val| val == inner_val))
+    }
+
+    pub fn contains2<K>(vals: Vec<K>) -> Self
+    where
+        K: ErasedTy + for<'a> PartialEq<&'a T>,
+    {
+        Self(Box::new(move |inner_val| {
+            vals.iter().any(|v| PartialEq::eq(v, &inner_val))
+        }))
     }
 }
 

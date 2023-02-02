@@ -45,34 +45,12 @@ use crate::Error;
 /// # use aopt::getopt;
 /// # use aopt::prelude::*;
 /// # use aopt::Error;
-/// # use aopt::RawVal;
 /// # use std::path::PathBuf;
 /// #
 /// # fn main() -> Result<(), Error> {
-/// fn path_storer(
-///     uid: Uid,
-///     set: &mut ASet,
-///     ser: &mut ASer,
-///     raw: Option<&RawVal>,
-///     vals: Option<Vec<PathBuf>>,
-/// ) -> Result<Option<()>, Error> {
-///     if let Some(vals) = vals {
-///         let mut action = set[uid].action().clone();
-///
-///         for val in vals {
-///             action.process(uid, set, ser, raw, Some(val))?;
-///         }
-///         Ok(Some(()))
-///     } else {
-///         Ok(None)
-///     }
-/// }
-///
 /// let filter = |f: fn(&PathBuf) -> bool| {
-///     move |set: &mut ASet, ser: &mut ASer| {
-///         let uid = set["directory"].uid();
-///
-///         ser.sve_filter::<PathBuf>(uid, f)?;
+///     move |set: &mut ASet, _: &mut ASer| {
+///         set["directory"].filter::<PathBuf>(f)?;
 ///         Ok(Some(true))
 ///     }
 /// };
@@ -82,7 +60,7 @@ use crate::Error;
 /// // POS will be process first, get the items under given directory
 /// parser
 ///     .add_opt("directory=p@1")?
-///     .set_values(Vec::<PathBuf>::new())
+///     .set_type_de::<PathBuf>()
 ///     .on(|_: &mut ASet, _: &mut ASer, path: ctx::Value<PathBuf>| {
 ///         Ok(Some(
 ///             path.read_dir()
@@ -93,7 +71,7 @@ use crate::Error;
 ///                 .collect::<Vec<PathBuf>>(),
 ///         ))
 ///     })?
-///     .then(path_storer);
+///     .then(VecStore);
 ///
 /// // filter the item if any option set
 /// parser
@@ -112,8 +90,8 @@ use crate::Error;
 /// // Main will be process latest, display the items
 /// parser
 ///     .add_opt("main=m")?
-///     .on(move |set: &mut ASet, ser: &mut ASer| {
-///         if let Ok(vals) = ser.sve_vals::<PathBuf>(set["directory"].uid()) {
+///     .on(move |set: &mut ASet, _: &mut ASer| {
+///         if let Ok(vals) = set["directory"].vals::<PathBuf>() {
 ///             for val in vals {
 ///                 println!("{:?}", val);
 ///             }
@@ -556,12 +534,7 @@ mod test {
         set.add_opt("set=c")?;
         set.add_opt("filter=c")?;
 
-        let args_uid = set
-            .add_opt("args=p@2..")?
-            .set_value_type::<f64>()
-            .add_default_initializer()
-            .add_default_storer()
-            .run()?;
+        let args_uid = set.add_opt("args=p@2..")?.set_type_de::<f64>().run()?;
 
         inv.entry(set.add_opt("--positive=b")?.add_alias("+>").run()?)
             .on(|set: &mut ASet, _: &mut ASer| {

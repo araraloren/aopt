@@ -86,8 +86,8 @@ where
         }
     }
 
-    /// Set the type of option.
-    pub fn set_type<O: Infer>(mut self) -> SetCommit<'a, S, O>
+    /// Set the infer type of option.
+    pub fn set_infer<O: Infer>(mut self) -> SetCommit<'a, S, O>
     where
         O::Val: RawValParser,
     {
@@ -140,9 +140,18 @@ where
     U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
-    /// Set the type of option.
-    pub fn set_value_type<T: ErasedTy>(self) -> SetCommitWithValue<'a, S, U, T> {
+    /// Set the value type of option.
+    pub fn set_type<T: ErasedTy>(self) -> SetCommitWithValue<'a, S, U, T> {
         SetCommitWithValue::new(self)
+    }
+
+    /// Set the type of option, add default initializer and default storer.
+    pub fn set_type_de<T: ErasedTy + RawValParser + Clone>(
+        self,
+    ) -> SetCommitWithValue<'a, S, U, T> {
+        SetCommitWithValue::new(self)
+            .add_default_initializer_t()
+            .add_default_storer_t()
     }
 
     /// Set the option value validator.
@@ -150,12 +159,12 @@ where
         self,
         validator: ValValidator<T>,
     ) -> SetCommitWithValue<'a, S, U, T> {
-        self.set_value_type::<T>().set_validator_t(validator)
+        self.set_type::<T>().set_validator_t(validator)
     }
 
     /// Set the option default value.
     pub fn set_value_t<T: ErasedTy + Copy>(self, value: T) -> SetCommitWithValue<'a, S, U, T> {
-        self.set_value_type::<T>().set_value_t(value)
+        self.set_type::<T>().set_value_t(value)
     }
 
     /// Set the option default value.
@@ -163,7 +172,7 @@ where
         self,
         value: T,
     ) -> SetCommitWithValue<'a, S, U, T> {
-        self.set_value_type::<T>().set_value_clone_t(value)
+        self.set_type::<T>().set_value_clone_t(value)
     }
 
     /// Set the option default value.
@@ -171,7 +180,7 @@ where
         self,
         value: Vec<T>,
     ) -> SetCommitWithValue<'a, S, U, T> {
-        self.set_value_type::<T>().set_values_t(value)
+        self.set_type::<T>().set_values_t(value)
     }
 }
 
@@ -308,12 +317,12 @@ where
             .ok_or_else(|| Error::raise_error("Must set inner data of SetCommitWithValue(mut)"))
     }
 
-    /// Set the type of option.
-    pub fn set_type<O: Infer>(mut self) -> SetCommitWithValue<'a, S, O, T>
+    /// Set the infer type of option.
+    pub fn set_infer<O: Infer>(mut self) -> SetCommitWithValue<'a, S, O, T>
     where
         O::Val: RawValParser,
     {
-        SetCommitWithValue::new(self.inner.take().unwrap().set_type::<O>())
+        SetCommitWithValue::new(self.inner.take().unwrap().set_infer::<O>())
     }
 
     pub(crate) fn commit_inner_change(&mut self) -> Result<Uid, Error> {
@@ -342,7 +351,7 @@ where
         self.set_storer(ValStorer::new_validator(validator))
     }
 
-    pub fn add_default_storer(self) -> Self {
+    pub fn add_default_storer_t(self) -> Self {
         self.set_storer(ValStorer::new::<T>())
     }
 }
@@ -378,7 +387,7 @@ where
         self.set_initializer(ValInitializer::with_vec(value))
     }
 
-    pub fn add_default_initializer(self) -> Self {
+    pub fn add_default_initializer_t(self) -> Self {
         self.set_initializer(ValInitializer::with_vec::<T>(vec![]))
     }
 }

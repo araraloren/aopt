@@ -37,6 +37,7 @@ use crate::Error;
 ///
 /// # Examples
 /// ```rust
+
 /// # use aopt::prelude::*;
 /// # use aopt::Arc;
 /// # use aopt::Error;
@@ -46,39 +47,34 @@ use crate::Error;
 /// let mut set = policy.default_set();
 /// let mut inv = policy.default_inv();
 /// let mut ser = policy.default_ser();
-///
-/// ser.ser_usrval_mut()
-///     .insert(ser::Value::new(vec!["foo", "bar"]));
-///
 /// let filter_id = set.add_opt("--/filter=b")?.run()?;
-/// let pos_id = set
-///     .add_opt("pos=p@*")?
-///     .set_initiator(ValInitiator::empty::<String>())
-///     .run()?;
-/// inv.entry(pos_id)
-///     .on(move |_: &mut ASet,
-///                 ser: &mut ASer,
-///                 filter: ser::Value<Vec<&str>>,
-///                 mut value: ctx::Value<String>| {
-///             let not_filter = ser.sve_val::<bool>(filter_id)?;
-///             let valid = if !*not_filter {
-///                 !filter.iter().any(|&v| v == value.as_str())
-///             } else {
-///                 true
-///             };
+/// let pos_id = set.add_opt("pos=p@*")?.set_type_de::<String>().run()?;
 ///
-///             Ok(valid.then(|| value.take()))
-///         },
-///     );
+/// inv.entry(pos_id).on(
+///     move |set: &mut ASet,
+///             _: &mut ASer,
+///             filter: ser::Value<Vec<&str>>,
+///             mut value: ctx::Value<String>| {
+///         let not_filter = set[filter_id].val::<bool>()?;
+///         let valid = if !*not_filter {
+///             !filter.iter().any(|&v| v == value.as_str())
+///         } else {
+///             true
+///         };
+///
+///         Ok(valid.then(|| value.take()))
+///     },
+/// );
 ///
 /// let args = Args::from_array(["app", "set", "42", "foo", "bar"]);
 ///
 /// for opt in set.iter_mut() {
-///     opt.init(&mut ser)?;
+///     opt.init()?;
 /// }
+/// ser.sve_insert(ser::Value::new(vec!["foo", "bar"]));
 /// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
 ///
-/// let values = ser.sve_vals::<String>(pos_id)?;
+/// let values = set[pos_id].vals::<String>()?;
 ///
 /// assert_eq!(values[0], "set");
 /// assert_eq!(values[1], "42");
@@ -86,11 +82,11 @@ use crate::Error;
 /// let args = Args::from_array(["app", "--/filter", "set", "42", "foo", "bar"]);
 ///
 /// for opt in set.iter_mut() {
-///     opt.init(&mut ser)?;
+///     opt.init()?;
 /// }
-/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
 ///
-/// let values = ser.sve_vals::<String>(pos_id)?;
+/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
+/// let values = set[pos_id].vals::<String>()?;
 ///
 /// assert_eq!(values[0], "set");
 /// assert_eq!(values[1], "42");
