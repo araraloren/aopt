@@ -21,7 +21,7 @@ pub use self::style::NOAGuess;
 pub use self::style::OptGuess;
 pub use self::style::OptStyleManager;
 pub use self::style::UserStyle;
-pub use self::style::UserStyleMange;
+pub use self::style::UserStyleManager;
 
 pub(crate) use self::process::invoke_callback_opt;
 pub(crate) use self::process::process_non_opt;
@@ -696,9 +696,9 @@ where
     }
 }
 
-impl<P> UserStyleMange for Parser<P>
+impl<P> UserStyleManager for Parser<P>
 where
-    P: Policy + UserStyleMange,
+    P: Policy + UserStyleManager,
 {
     fn style_manager(&self) -> &OptStyleManager {
         self.policy().style_manager()
@@ -711,7 +711,7 @@ where
 
 impl<P> Parser<P>
 where
-    P: Policy + UserStyleMange,
+    P: Policy + UserStyleManager,
 {
     /// Enable [`CombinedOption`](UserStyle::CombinedOption) option set style.
     /// This can support option style like `-abc` which set `-a`, `-b` and `-c` both.

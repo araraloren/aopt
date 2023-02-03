@@ -242,7 +242,7 @@ pub mod prelude {
     pub use crate::parser::ReturnVal;
     pub use crate::parser::SetChecker;
     pub use crate::parser::UserStyle;
-    pub use crate::parser::UserStyleMange;
+    pub use crate::parser::UserStyleManager;
     pub use crate::proc::Match;
     pub use crate::proc::NOAMatch;
     pub use crate::proc::NOAProcess;

@@ -75,21 +75,14 @@ impl ValInitializer {
         }))
     }
 
-    pub fn with<U: Copy + ErasedTy>(val: U) -> Self {
-        Self(Box::new(move |erased_val| {
-            erased_val.set(vec![val]);
-            Ok(())
-        }))
-    }
-
-    pub fn with_clone<U: Clone + ErasedTy>(val: U) -> Self {
+    pub fn with_value<U: Clone + ErasedTy>(val: U) -> Self {
         Self(Box::new(move |erased_val| {
             erased_val.set(vec![val.clone()]);
             Ok(())
         }))
     }
 
-    pub fn with_vec<U: Clone + ErasedTy>(vals: Vec<U>) -> Self {
+    pub fn with_values<U: Clone + ErasedTy>(vals: Vec<U>) -> Self {
         Self(Box::new(move |erased_val| {
             erased_val.set(vals.clone());
             Ok(())

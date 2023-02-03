@@ -68,28 +68,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut parser = AFwdParser::default();
 
     parser.validator_mut().add_prefix("+");
-    parser.add_opt("--depth=i")?.set_value(0i64); // int option
+    parser.add_opt("--depth=i")?.set_value_t(0i64); // int option
     parser.add_opt("-/r=b")?; // boolean flag
     parser
         .add_opt("--source=s!")? // ! means the option is force required
         .add_alias("+S")
         .on(
-            |set: &mut ASet, ser: &mut ASer, mut val: ctx::Value<String>| {
-                let depth: &i64 = ser.sve_val(set["--depth"].uid())?;
+            |set: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>| {
+                let depth: &i64 = set["--depth"].val()?;
                 println!("Adding location({}) with depth({})", val.deref(), depth);
-                Ok(Some(val.take()))
+                Ok(Some((val.take(), *depth)))
             },
         )?;
-    parser.add_opt("destination=p@-0")?.on(
+    parser.add_opt("destination=p!@-0")?.on(
         |_: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>| {
             println!("Save destination location({})", val.deref());
             Ok(Some(val.take()))
         },
     )?;
     parser.add_opt("main=m")?.on(
-        |set: &mut ASet, ser: &mut ASer, mut val: ctx::Value<String>| {
-            let src = ser.sve_vals::<(String, i64)>(set["--source"].uid())?;
-            let dest: &String = ser.sve_val(set["destination"].uid())?;
+        |set: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>| {
+            let src = set["--source"].vals::<(String, i64)>()?;
+            let dest: &String = set["destination"].val()?;
 
             for (item, depth) in src {
                 println!(
@@ -125,17 +125,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     list.add_opt("-debug=b")?;
     list.add_opt("-force=b")?.add_alias("-f");
     list.add_opt("-local-only=b")?.add_alias("-l");
-    list.add_opt("-source=s")?
+    list.add_opt_i::<String>("-source")?
         .add_alias("-s")
         .set_value(String::from("lib.rs"));
     list.add_opt("main=m")?
-        .fallback(|set: &mut ASet, ser: &mut ASer| {
+        .fallback(|set: &mut ASet, _: &mut ASer| {
             println!(
                 "invoke list command: debug={:?}, force={:?}, local-only={:?}, source={:?}",
-                ser.sve_val::<bool>(set["-debug"].uid())?,
-                ser.sve_val::<bool>(set["-force"].uid())?,
-                ser.sve_val::<bool>(set["-local-only"].uid())?,
-                ser.sve_val::<String>(set["-source"].uid())?,
+                set["-debug"].val::<bool>()?,
+                set["-force"].val::<bool>()?,
+                set["-local-only"].val::<bool>()?,
+                set["-source"].val::<String>()?,
             );
             Ok(None::<()>)
         })?;
@@ -147,12 +147,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     update.add_opt("-source=s")?.add_alias("-s");
     update
         .add_opt("main=m")?
-        .on(|set: &mut ASet, ser: &mut ASer| {
+        .on(|set: &mut ASet, _: &mut ASer| {
             println!(
                 "invoke update command: debug={:?}, force={:?}, source={:?}",
-                ser.sve_val::<bool>(set["-debug"].uid())?,
-                ser.sve_val::<bool>(set["-force"].uid())?,
-                ser.sve_val::<String>(set["-source"].uid())?,
+                set["-debug"].val::<bool>()?,
+                set["-force"].val::<bool>()?,
+                set["-source"].val::<String>()?,
             );
             Ok(Some(true))
         })?;
@@ -163,13 +163,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     install.add_opt("-/override=b")?.add_alias("-/o");
     install.add_opt("-source=s")?.add_alias("-s");
     install.add_opt("name=p!@2")?.on(
-        |set: &mut ASet, ser: &mut ASer, mut val: ctx::Value<String>| {
+        |set: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>| {
             if val.deref() == "software" {
                 println!(
                     "invoke install command: debug={:?}, override={:?}, source={:?}",
-                    ser.sve_val::<bool>(set["-debug"].uid())?,
-                    ser.sve_val::<bool>(set["-/override"].uid())?,
-                    ser.sve_val::<String>(set["-source"].uid())?,
+                    set["-debug"].val::<bool>()?,
+                    set["-/override"].val::<bool>()?,
+                    set["-source"].val::<String>()?,
                 );
                 Ok(Some(val.take()))
             } else {
@@ -178,17 +178,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
     )?;
 
-    getopt!(
-        Args::from_env(),
-        &mut list,
-        &mut update,
-        &mut install
-    )?;
+    getopt!(Args::from_env(), &mut list, &mut update, &mut install)?;
     Ok(())
 }
 ```
 
-* `app.exe ls -source lib.rs -debug` output 
+* `app.exe ls -debug` output
 
     invoke list command: debug=true, force=false, local-only=false, source="lib.rs"
 

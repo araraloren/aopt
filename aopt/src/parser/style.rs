@@ -48,7 +48,7 @@ pub enum UserStyle {
     Boolean,
 }
 
-pub trait UserStyleMange {
+pub trait UserStyleManager {
     fn style_manager(&self) -> &OptStyleManager;
 
     fn style_manager_mut(&mut self) -> &mut OptStyleManager;

@@ -79,6 +79,7 @@ mod __creator {
 pub use __creator::Creator;
 
 use super::config::fill_cfg_if_no_infer;
+use super::Noa;
 
 impl<O: Opt, C, E: Into<Error>> Ctor for Creator<O, C, E> {
     type Opt = O;
@@ -209,7 +210,7 @@ impl Creator<AOpt, OptConfig, Error> {
             BuiltInCtor::Uint => fill_cfg_if_no_infer::<u64, OptConfig>(info),
             BuiltInCtor::Bool => fill_cfg_if_no_infer::<bool, OptConfig>(info),
             BuiltInCtor::Cmd => fill_cfg_if_no_infer::<Cmd, OptConfig>(info),
-            BuiltInCtor::Pos => fill_cfg_if_no_infer::<Pos, OptConfig>(info),
+            BuiltInCtor::Pos => fill_cfg_if_no_infer::<Pos<Noa>, OptConfig>(info),
             BuiltInCtor::Main => fill_cfg_if_no_infer::<Main, OptConfig>(info),
             BuiltInCtor::Any => fill_cfg_if_no_infer::<Any, OptConfig>(info),
         }

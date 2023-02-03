@@ -7,6 +7,7 @@ use crate::ctx::Invoker;
 use crate::map::ErasedTy;
 use crate::opt::ConfigValue;
 use crate::opt::Opt;
+use crate::opt::Pos;
 use crate::set::Commit;
 use crate::set::Set;
 use crate::set::SetCfg;
@@ -14,6 +15,7 @@ use crate::set::SetCommit;
 use crate::set::SetCommitWithValue;
 use crate::set::SetOpt;
 use crate::value::Infer;
+use crate::value::Placeholder;
 use crate::value::RawValParser;
 use crate::value::ValInitializer;
 use crate::value::ValStorer;
@@ -66,6 +68,31 @@ where
 
     fn cfg_mut(&mut self) -> &mut SetCfg<S> {
         self.inner.as_mut().unwrap().cfg_mut()
+    }
+}
+
+impl<'a, S, Ser> ParserCommit<'a, S, Ser, Placeholder>
+where
+    S: Set,
+    SetOpt<S>: Opt,
+    SetCfg<S>: ConfigValue + Default,
+{
+    pub fn set_pos_type<T: ErasedTy + RawValParser + 'static>(
+        mut self,
+    ) -> ParserCommit<'a, S, Ser, Pos<T>> {
+        let inner = self.inner.take().unwrap();
+        let inv_ser = self.inv_ser.take().unwrap();
+
+        ParserCommit::new(inner.set_pos_type::<T>(), inv_ser)
+    }
+
+    pub fn set_pos_type_de<T: ErasedTy + Clone + RawValParser + 'static>(
+        mut self,
+    ) -> ParserCommit<'a, S, Ser, Pos<T>> {
+        let inner = self.inner.take().unwrap();
+        let inv_ser = self.inv_ser.take().unwrap();
+
+        ParserCommit::new(inner.set_pos_type_de::<T>(), inv_ser)
     }
 }
 
@@ -211,19 +238,9 @@ where
     pub fn set_validator(self, validator: ValValidator<U::Val>) -> Self {
         self.set_storer(ValStorer::from(validator))
     }
-}
 
-impl<'a, S, Ser, U> ParserCommit<'a, S, Ser, U>
-where
-    S: Set,
-    U: Infer,
-    U::Val: Copy + RawValParser,
-    SetOpt<S>: Opt,
-    SetCfg<S>: ConfigValue + Default,
-{
-    /// Set the option default value.
-    pub fn set_value(self, value: U::Val) -> Self {
-        self.set_initializer(ValInitializer::with(value))
+    pub fn add_default_storer(self) -> Self {
+        self.set_storer(ValStorer::new::<U::Val>())
     }
 }
 
@@ -236,13 +253,17 @@ where
     SetCfg<S>: ConfigValue + Default,
 {
     /// Set the option default value.
-    pub fn set_value_clone(self, value: U::Val) -> Self {
-        self.set_initializer(ValInitializer::with_clone(value))
+    pub fn set_value(self, value: U::Val) -> Self {
+        self.set_initializer(ValInitializer::with_value(value))
     }
 
     /// Set the option default value.
     pub fn set_values(self, value: Vec<U::Val>) -> Self {
-        self.set_initializer(ValInitializer::with_vec(value))
+        self.set_initializer(ValInitializer::with_values(value))
+    }
+
+    pub fn add_default_initializer(self) -> Self {
+        self.set_initializer(ValInitializer::with_values::<U::Val>(vec![]))
     }
 }
 
@@ -288,20 +309,12 @@ where
     }
 
     /// Set the option default value.
-    pub fn set_value_t<T: ErasedTy + Copy>(
-        self,
-        value: T,
-    ) -> ParserCommitWithValue<'a, S, Ser, U, T> {
-        self.set_type::<T>().set_value_t(value)
-    }
-
-    /// Set the option default value.
-    pub fn set_value_clone_t<T: ErasedTy + Clone>(
+    pub fn set_value_t<T: ErasedTy + Clone>(
         self,
         value: T,
     ) -> ParserCommitWithValue<'a, S, Ser, U, T> {
         self.set_type::<T>()
-            .set_initializer(ValInitializer::with_clone(value))
+            .set_initializer(ValInitializer::with_value(value))
     }
 
     /// Set the option default value.
@@ -310,7 +323,7 @@ where
         value: Vec<T>,
     ) -> ParserCommitWithValue<'a, S, Ser, U, T> {
         self.set_type::<T>()
-            .set_initializer(ValInitializer::with_vec(value))
+            .set_initializer(ValInitializer::with_values(value))
     }
 }
 
@@ -516,32 +529,18 @@ where
     S: Set,
     U: Infer,
     T: ErasedTy,
-    U::Val: Copy + RawValParser,
-    SetOpt<S>: Opt,
-    SetCfg<S>: ConfigValue + Default,
-{
-    /// Set the option default value.
-    pub fn set_value(self, value: U::Val) -> Self {
-        self.set_initializer(ValInitializer::with(value))
-    }
-}
-impl<'a, S, Ser, U, T> ParserCommitWithValue<'a, S, Ser, U, T>
-where
-    S: Set,
-    U: Infer,
-    T: ErasedTy,
     U::Val: Clone + RawValParser,
     SetOpt<S>: Opt,
     SetCfg<S>: ConfigValue + Default,
 {
     /// Set the option default value.
-    pub fn set_value_clone(self, value: U::Val) -> Self {
-        self.set_initializer(ValInitializer::with_clone(value))
+    pub fn set_value(self, value: U::Val) -> Self {
+        self.set_initializer(ValInitializer::with_value(value))
     }
 
     /// Set the option default value.
     pub fn set_values(self, value: Vec<U::Val>) -> Self {
-        self.set_initializer(ValInitializer::with_vec(value))
+        self.set_initializer(ValInitializer::with_values(value))
     }
 }
 
@@ -570,37 +569,22 @@ impl<'a, S, Ser, U, T> ParserCommitWithValue<'a, S, Ser, U, T>
 where
     S: Set,
     U: Infer,
-    T: ErasedTy + Copy,
-    U::Val: RawValParser,
-    SetOpt<S>: Opt,
-    SetCfg<S>: ConfigValue + Default,
-{
-    /// Set the option default value.
-    pub fn set_value_t(self, value: T) -> Self {
-        self.set_initializer(ValInitializer::with(value))
-    }
-}
-
-impl<'a, S, Ser, U, T> ParserCommitWithValue<'a, S, Ser, U, T>
-where
-    S: Set,
-    U: Infer,
     T: ErasedTy + Clone,
     U::Val: RawValParser,
     SetOpt<S>: Opt,
     SetCfg<S>: ConfigValue + Default,
 {
     /// Set the option default value.
-    pub fn set_value_clone_t(self, value: T) -> Self {
-        self.set_initializer(ValInitializer::with_clone(value))
+    pub fn set_value_t(self, value: T) -> Self {
+        self.set_initializer(ValInitializer::with_value(value))
     }
 
     /// Set the option default value.
     pub fn set_values_t(self, value: Vec<T>) -> Self {
-        self.set_initializer(ValInitializer::with_vec(value))
+        self.set_initializer(ValInitializer::with_values(value))
     }
 
     pub fn add_default_initializer_t(self) -> Self {
-        self.set_initializer(ValInitializer::with_vec::<T>(vec![]))
+        self.set_initializer(ValInitializer::with_values::<T>(vec![]))
     }
 }

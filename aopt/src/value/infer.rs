@@ -70,7 +70,7 @@ impl Infer for bool {
     }
 
     fn infer_initializer() -> Option<ValInitializer> {
-        Some(ValInitializer::with(false))
+        Some(ValInitializer::with_value(false))
     }
 }
 
@@ -98,12 +98,15 @@ impl Infer for Cmd {
     }
 
     fn infer_initializer() -> Option<ValInitializer> {
-        Some(ValInitializer::with(Noa::new(false)))
+        Some(ValInitializer::with_value(Noa::new(false)))
     }
 }
 
-impl Infer for Pos {
-    type Val = Noa;
+impl<T> Infer for Pos<T>
+where
+    T: ErasedTy + 'static,
+{
+    type Val = T;
 
     fn infer_style() -> Vec<Style> {
         vec![Style::Pos]

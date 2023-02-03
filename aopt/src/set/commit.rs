@@ -1,8 +1,10 @@
+use std::any::TypeId;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use crate::opt::config::fill_cfg;
 use crate::opt::ConfigValue;
+use crate::opt::Pos;
 use crate::prelude::ErasedTy;
 use crate::set::Ctor;
 use crate::set::Set;
@@ -65,6 +67,30 @@ where
             drop: true,
             marker: PhantomData::default(),
         }
+    }
+
+    pub fn set_pos_type<T: ErasedTy + RawValParser + 'static>(self) -> SetCommit<'a, S, Pos<T>> {
+        let type_id = self.cfg().value_type();
+
+        debug_assert!(
+            type_id.is_none() || type_id == Some(&TypeId::of::<Pos>()),
+            "Can not set value type of Pos if it already has one"
+        );
+        self.set_infer::<Pos<T>>()
+    }
+
+    pub fn set_pos_type_de<T: ErasedTy + RawValParser + Clone + 'static>(
+        self,
+    ) -> SetCommit<'a, S, Pos<T>> {
+        let type_id = self.cfg().value_type();
+
+        debug_assert!(
+            type_id.is_none() || type_id == Some(&TypeId::of::<Pos>()),
+            "Can not set value type of Pos if it already has one"
+        );
+        self.set_infer::<Pos<T>>()
+            .add_default_initializer()
+            .add_default_storer()
     }
 }
 
@@ -163,16 +189,8 @@ where
     }
 
     /// Set the option default value.
-    pub fn set_value_t<T: ErasedTy + Copy>(self, value: T) -> SetCommitWithValue<'a, S, U, T> {
+    pub fn set_value_t<T: ErasedTy + Clone>(self, value: T) -> SetCommitWithValue<'a, S, U, T> {
         self.set_type::<T>().set_value_t(value)
-    }
-
-    /// Set the option default value.
-    pub fn set_value_clone_t<T: ErasedTy + Clone>(
-        self,
-        value: T,
-    ) -> SetCommitWithValue<'a, S, U, T> {
-        self.set_type::<T>().set_value_clone_t(value)
     }
 
     /// Set the option default value.
@@ -195,18 +213,9 @@ where
     pub fn set_validator(self, validator: ValValidator<U::Val>) -> Self {
         self.set_storer(ValStorer::from(validator))
     }
-}
 
-impl<'a, S, U> SetCommit<'a, S, U>
-where
-    S: Set,
-    U: Infer,
-    U::Val: Copy + RawValParser,
-    SetCfg<S>: ConfigValue + Default,
-{
-    /// Set the option default value.
-    pub fn set_value(self, value: U::Val) -> Self {
-        self.set_initializer(ValInitializer::with(value))
+    pub fn add_default_storer(self) -> Self {
+        self.set_storer(ValStorer::new::<U::Val>())
     }
 }
 
@@ -218,13 +227,17 @@ where
     SetCfg<S>: ConfigValue + Default,
 {
     /// Set the option default value.
-    pub fn set_value_clone(self, value: U::Val) -> Self {
-        self.set_initializer(ValInitializer::with_clone(value))
+    pub fn set_value(self, value: U::Val) -> Self {
+        self.set_initializer(ValInitializer::with_value(value))
     }
 
     /// Set the option default value.
     pub fn set_values(self, value: Vec<U::Val>) -> Self {
-        self.set_initializer(ValInitializer::with_vec(value))
+        self.set_initializer(ValInitializer::with_values(value))
+    }
+
+    pub fn add_default_initializer(self) -> Self {
+        self.set_initializer(ValInitializer::with_values::<U::Val>(vec![]))
     }
 }
 
@@ -359,36 +372,23 @@ where
 impl<'a, S, U, T> SetCommitWithValue<'a, S, U, T>
 where
     S: Set,
-    T: ErasedTy + Copy,
-    U: Infer,
-    U::Val: RawValParser,
-    SetCfg<S>: ConfigValue + Default,
-{
-    /// Set the option default value.
-    pub fn set_value_t(self, value: T) -> Self {
-        self.set_initializer(ValInitializer::with(value))
-    }
-}
-impl<'a, S, U, T> SetCommitWithValue<'a, S, U, T>
-where
-    S: Set,
     T: ErasedTy + Clone,
     U: Infer,
     U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
     /// Set the option default value.
-    pub fn set_value_clone_t(self, value: T) -> Self {
-        self.set_initializer(ValInitializer::with_clone(value))
+    pub fn set_value_t(self, value: T) -> Self {
+        self.set_initializer(ValInitializer::with_value(value))
     }
 
     /// Set the option default value.
     pub fn set_values_t(self, value: Vec<T>) -> Self {
-        self.set_initializer(ValInitializer::with_vec(value))
+        self.set_initializer(ValInitializer::with_values(value))
     }
 
     pub fn add_default_initializer_t(self) -> Self {
-        self.set_initializer(ValInitializer::with_vec::<T>(vec![]))
+        self.set_initializer(ValInitializer::with_values::<T>(vec![]))
     }
 }
 
@@ -411,31 +411,17 @@ where
     S: Set,
     T: ErasedTy,
     U: Infer,
-    U::Val: Copy + RawValParser,
-    SetCfg<S>: ConfigValue + Default,
-{
-    /// Set the option default value.
-    pub fn set_value(self, value: U::Val) -> Self {
-        self.set_initializer(ValInitializer::with(value))
-    }
-}
-
-impl<'a, S, U, T> SetCommitWithValue<'a, S, U, T>
-where
-    S: Set,
-    T: ErasedTy,
-    U: Infer,
     U::Val: Clone + RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
     /// Set the option default value.
-    pub fn set_value_clone(self, value: U::Val) -> Self {
-        self.set_initializer(ValInitializer::with_clone(value))
+    pub fn set_value(self, value: U::Val) -> Self {
+        self.set_initializer(ValInitializer::with_value(value))
     }
 
     /// Set the option default value.
     pub fn set_values(self, value: Vec<U::Val>) -> Self {
-        self.set_initializer(ValInitializer::with_vec(value))
+        self.set_initializer(ValInitializer::with_values(value))
     }
 }
 

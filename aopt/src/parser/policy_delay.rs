@@ -16,7 +16,7 @@ use super::Policy;
 use super::ReturnVal;
 use super::SetChecker;
 use super::UserStyle;
-use super::UserStyleMange;
+use super::UserStyleManager;
 use crate::args::ArgParser;
 use crate::args::Args;
 use crate::astr;
@@ -180,7 +180,7 @@ impl<Set, Ser> DelayPolicy<Set, Ser> {
     }
 }
 
-impl<Set, Ser> UserStyleMange for DelayPolicy<Set, Ser> {
+impl<Set, Ser> UserStyleManager for DelayPolicy<Set, Ser> {
     fn style_manager(&self) -> &OptStyleManager {
         &self.style_manager
     }
@@ -421,12 +421,12 @@ where
 #[cfg(test)]
 mod test {
 
-    use std::any::TypeId;
-    use std::ops::Deref;
-
+    use crate::opt::Pos;
     use crate::prelude::*;
     use crate::Arc;
     use crate::Error;
+    use std::any::TypeId;
+    use std::ops::Deref;
 
     #[test]
     fn testing_1() {
@@ -534,7 +534,7 @@ mod test {
         set.add_opt("set=c")?;
         set.add_opt("filter=c")?;
 
-        let args_uid = set.add_opt("args=p@2..")?.set_type_de::<f64>().run()?;
+        let args_uid = set.add_opt("args=p@2..")?.set_pos_type::<f64>().run()?;
 
         inv.entry(set.add_opt("--positive=b")?.add_alias("+>").run()?)
             .on(|set: &mut ASet, _: &mut ASer| {
@@ -561,7 +561,7 @@ mod test {
                     Some(vec![42.0, 88.0, 66.0]),
                     false,
                     &Action::App,
-                    &TypeId::of::<<crate::opt::Pos as Infer>::Val>(),
+                    &TypeId::of::<<Pos<f64> as Infer>::Val>(),
                     Some(&Index::Range(2, None)),
                     None,
                 )?;
