@@ -83,7 +83,7 @@ where
         let inner = self.inner.take().unwrap();
         let inv_ser = self.inv_ser.take().unwrap();
 
-        ParserCommit::new(inner.set_pos_type::<T>(), inv_ser)
+        ParserCommit::new(inner.set_pos_type_only::<T>(), inv_ser)
     }
 
     pub fn set_pos_type_de<T: ErasedTy + Clone + RawValParser + 'static>(
@@ -92,7 +92,7 @@ where
         let inner = self.inner.take().unwrap();
         let inv_ser = self.inv_ser.take().unwrap();
 
-        ParserCommit::new(inner.set_pos_type_de::<T>(), inv_ser)
+        ParserCommit::new(inner.set_pos_type::<T>(), inv_ser)
     }
 }
 

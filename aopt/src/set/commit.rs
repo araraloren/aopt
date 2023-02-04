@@ -69,7 +69,9 @@ where
         }
     }
 
-    pub fn set_pos_type<T: ErasedTy + RawValParser + 'static>(self) -> SetCommit<'a, S, Pos<T>> {
+    pub fn set_pos_type_only<T: ErasedTy + RawValParser + 'static>(
+        self,
+    ) -> SetCommit<'a, S, Pos<T>> {
         let type_id = self.cfg().r#type();
 
         debug_assert!(
@@ -79,7 +81,7 @@ where
         self.set_infer::<Pos<T>>()
     }
 
-    pub fn set_pos_type_de<T: ErasedTy + RawValParser + Clone + 'static>(
+    pub fn set_pos_type<T: ErasedTy + RawValParser + Clone + 'static>(
         self,
     ) -> SetCommit<'a, S, Pos<T>> {
         let type_id = self.cfg().r#type();

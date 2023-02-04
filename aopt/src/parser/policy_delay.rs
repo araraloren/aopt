@@ -60,7 +60,7 @@ use crate::Error;
 /// // POS will be process first, get the items under given directory
 /// parser
 ///     .add_opt("directory=p@1")?
-///     .set_type_de::<PathBuf>()
+///     .set_pos_type::<PathBuf>()
 ///     .on(|_: &mut ASet, _: &mut ASer, path: ctx::Value<PathBuf>| {
 ///         Ok(Some(
 ///             path.read_dir()
@@ -457,7 +457,13 @@ mod test {
                 force
             );
             assert_eq!(opt.action(), action, "action not equal for {}", opt_uid);
-            assert_eq!(opt.r#type(), type_id, "type id not equal for {}", opt_uid);
+            assert_eq!(
+                opt.r#type(),
+                type_id,
+                "type id not equal for {}({})",
+                opt_uid,
+                opt.name()
+            );
             assert_eq!(opt.index(), index, "option index not equal: {:?}", index);
             if let Ok(opt_vals) = opt.vals::<T>() {
                 if let Some(vals) = vals {
@@ -529,19 +535,20 @@ mod test {
         set.add_opt("set=c")?;
         set.add_opt("filter=c")?;
 
-        let args_uid = set.add_opt("args=p@2..")?.set_pos_type::<f64>().run()?;
+        let args_uid = set
+            .add_opt("args=p@2..")?
+            .set_pos_type_only::<f64>()
+            .run()?;
 
         inv.entry(set.add_opt("--positive=b")?.add_alias("+>").run()?)
             .on(|set: &mut ASet, _: &mut ASer| {
-                set["args=p"].filter::<f64>(|v: &f64| v <= &0.0)?;
+                set["args"].filter::<f64>(|v: &f64| v <= &0.0)?;
                 Ok(Some(true))
             });
         inv.entry(set.add_opt("--bigger-than=f")?.add_alias("+>").run()?)
             .on(|set: &mut ASet, _: &mut ASer, val: ctx::Value<f64>| {
                 // this is a vec![vec![], ..]
-                Ok(Some(
-                    set["args=p"].filter::<f64>(|v: &f64| v <= val.deref())?,
-                ))
+                Ok(Some(set["args"].filter::<f64>(|v: &f64| v <= val.deref())?))
             });
         inv.entry(set.add_opt("main=m")?.run()?).on(
             move |set: &mut ASet, _: &mut ASer, app: ctx::Value<String>| {
@@ -556,7 +563,7 @@ mod test {
                     Some(vec![42.0, 88.0, 66.0]),
                     false,
                     &Action::App,
-                    &TypeId::of::<<Pos<f64> as Infer>::Val>(),
+                    &TypeId::of::<Pos<f64>>(),
                     Some(&Index::Range(2, None)),
                     None,
                 )?;
@@ -567,7 +574,7 @@ mod test {
                     Some(vec![vec![8.0, 11.0]]),
                     false,
                     &Action::App,
-                    &TypeId::of::<<Vec<f64> as Infer>::Val>(),
+                    &TypeId::of::<f64>(),
                     None,
                     None,
                 )?;

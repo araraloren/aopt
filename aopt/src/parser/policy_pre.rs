@@ -417,6 +417,7 @@ mod test {
     use std::any::TypeId;
     use std::ops::Deref;
 
+    use crate::opt::Cmd;
     use crate::opt::Pos;
     use crate::prelude::*;
     use crate::Arc;
@@ -615,7 +616,10 @@ mod test {
         set.add_opt("test_cmd=c")?;
 
         let set_uid = set.add_opt("set=c")?.run()?;
-        let bpos_uid = set.add_opt("bpos=p@[2,3]")?.set_pos_type::<u64>().run()?;
+        let bpos_uid = set
+            .add_opt("bpos=p@[2,3]")?
+            .set_pos_type_only::<u64>()
+            .run()?;
         let cpos_uid = set
             .add_opt_i::<Pos<String>>("cpos@4..5")?
             .set_validator(ValValidator::contains2(vec!["average", "plus"]))
@@ -641,7 +645,7 @@ mod test {
                     Some(vec!["反转".to_owned(), "翻转".to_owned()]),
                     false,
                     &Action::App,
-                    &TypeId::of::<Noa>(),
+                    &TypeId::of::<Pos>(),
                     Some(&Index::Range(7, Some(9))),
                     None,
                 )?;
@@ -652,7 +656,7 @@ mod test {
                     Some(vec!["program -- software".to_owned()]),
                     false,
                     &Action::Set,
-                    &TypeId::of::<Noa>(),
+                    &TypeId::of::<Pos>(),
                     Some(&Index::Range(5, Some(7))),
                     None,
                 )?;
@@ -663,7 +667,7 @@ mod test {
                     Some(vec![2.31]),
                     false,
                     &Action::App,
-                    &TypeId::of::<String>(),
+                    &TypeId::of::<Pos<String>>(),
                     Some(&Index::Range(4, Some(5))),
                     None,
                 )?;
@@ -674,7 +678,7 @@ mod test {
                     Some(vec![32, 64]),
                     false,
                     &Action::App,
-                    &TypeId::of::<u64>(),
+                    &TypeId::of::<Pos<u64>>(),
                     Some(&Index::list(vec![2, 3])),
                     None,
                 )?;
@@ -978,7 +982,7 @@ mod test {
                     None,
                     true,
                     &Action::Set,
-                    &TypeId::of::<Noa>(),
+                    &TypeId::of::<Cmd>(),
                     Some(&Index::forward(1)),
                     None,
                 )?;
