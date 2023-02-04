@@ -1,5 +1,7 @@
 use std::fmt::Debug;
 
+use crate::opt::fill_cfg;
+use crate::opt::fill_filter_type;
 use crate::opt::Config;
 use crate::opt::ConfigValue;
 use crate::opt::Information;
@@ -186,10 +188,13 @@ where
         config: impl Into<C::Config>,
     ) -> Result<SetCommit<'_, Self, U>, Error>
     where
-        U: Infer,
+        U: Infer + 'static,
         U::Val: RawValParser,
     {
-        Ok(SetCommit::new(self, config.into()))
+        let mut info = config.into();
+
+        fill_cfg::<U, C::Config>(&mut info);
+        Ok(SetCommit::new(self, info))
     }
 
     /// Add an option into current [`OptSet`].
@@ -212,13 +217,13 @@ where
     /// For option string, reference [`StrParser`](crate::opt::StrParser).
     pub fn add_opt_i<U>(&mut self, opt_str: impl Into<Str>) -> Result<SetCommit<'_, Self, U>, Error>
     where
-        U: Infer,
+        U: Infer + 'static,
         U::Val: RawValParser,
     {
-        Ok(SetCommit::new(
-            self,
-            <C::Config as Config>::new(self.parser(), opt_str.into())?,
-        ))
+        let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
+
+        fill_cfg::<U, C::Config>(&mut info);
+        Ok(SetCommit::new(self, info))
     }
 
     /// Filter the option by configuration.
@@ -226,15 +231,17 @@ where
     /// It parsing the given option string `S` using inner [`OptParser`], return an [`Filter`].
     /// For option string, reference [`StrParser`](crate::opt::StrParser).
     pub fn filter<S: Into<Str>>(&self, opt_str: S) -> Result<Filter<'_, Self>, Error> {
-        Ok(Filter::new(
-            self,
-            <C::Config as Config>::new(self.parser(), opt_str.into())?,
-        ))
+        let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
+
+        fill_filter_type(&mut info);
+        Ok(Filter::new(self, info))
     }
 
     /// Filter the option, return the reference of first matched [`Opt`].
     pub fn find<S: Into<Str>>(&self, opt_str: S) -> Result<Option<&C::Opt>, Error> {
-        let info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
+        let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
+
+        fill_filter_type(&mut info);
         Ok(self.iter().find(|opt| info.mat_opt(*opt)))
     }
 
@@ -243,7 +250,9 @@ where
         &self,
         opt_str: S,
     ) -> Result<impl Iterator<Item = &C::Opt>, Error> {
-        let info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
+        let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
+
+        fill_filter_type(&mut info);
         Ok(self.iter().filter(move |opt| info.mat_opt(*opt)))
     }
 
@@ -252,15 +261,17 @@ where
     /// It parsing the given option string `S` using inner [`OptParser`], return an [`FilterMut`].
     /// For option string, reference [`StrParser`](crate::opt::StrParser).
     pub fn filter_mut<S: Into<Str>>(&mut self, opt_str: S) -> Result<FilterMut<'_, Self>, Error> {
-        Ok(FilterMut::new(
-            self,
-            <C::Config as Config>::new(self.parser(), opt_str.into())?,
-        ))
+        let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
+
+        fill_filter_type(&mut info);
+        Ok(FilterMut::new(self, info))
     }
 
     /// Filter the option, return the mutable reference of first matched [`Opt`].
     pub fn find_mut<S: Into<Str>>(&mut self, opt_str: S) -> Result<Option<&mut C::Opt>, Error> {
-        let info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
+        let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
+
+        fill_filter_type(&mut info);
         Ok(self.iter_mut().find(|opt| info.mat_opt(*opt)))
     }
 
@@ -269,7 +280,9 @@ where
         &mut self,
         opt_str: S,
     ) -> Result<impl Iterator<Item = &mut C::Opt>, Error> {
-        let info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
+        let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
+
+        fill_filter_type(&mut info);
         Ok(self.iter_mut().filter(move |opt| info.mat_opt(*opt)))
     }
 }

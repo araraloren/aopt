@@ -453,7 +453,7 @@ mod test {
             );
             assert_eq!(opt.action(), action, "action not equal for {}", opt_uid);
             assert_eq!(
-                opt.value_type(),
+                opt.r#type(),
                 type_id,
                 "type_id not equal for {}({})",
                 opt_uid,

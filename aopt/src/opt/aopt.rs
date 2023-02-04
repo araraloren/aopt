@@ -45,7 +45,7 @@ pub struct AOpt {
 
     name: Str,
 
-    value_type: TypeId,
+    r#type: TypeId,
 
     help: Help,
 
@@ -75,7 +75,7 @@ impl AOpt {
         Self {
             uid: 0,
             name,
-            value_type: type_id,
+            r#type: type_id,
             help: Default::default(),
             matched: false,
             force: false,
@@ -103,8 +103,8 @@ impl AOpt {
     }
 
     /// Set the type of option, see [`Ctor`](crate::set::Ctor).
-    pub fn with_value_type(mut self, value_type: TypeId) -> Self {
-        self.value_type = value_type;
+    pub fn with_type(mut self, r#type: TypeId) -> Self {
+        self.r#type = r#type;
         self
     }
 
@@ -187,8 +187,8 @@ impl AOpt {
         self
     }
 
-    pub fn set_value_type(&mut self, value_type: TypeId) -> &mut Self {
-        self.value_type = value_type;
+    pub fn set_type(&mut self, r#type: TypeId) -> &mut Self {
+        self.r#type = r#type;
         self
     }
 
@@ -257,8 +257,8 @@ impl Opt for AOpt {
         &self.name
     }
 
-    fn value_type(&self) -> &TypeId {
-        &self.value_type
+    fn r#type(&self) -> &TypeId {
+        &self.r#type
     }
 
     fn hint(&self) -> &Str {

@@ -67,7 +67,7 @@ use crate::Str;
 pub struct StrParser;
 
 thread_local! {
-    static STR_PARSER: Regex = Regex::new(r"^([^=!@;:]+)((?:;[^=!@;:]+)+)?(?:=([a-zA-Z])+)?(!)?(@([^@:]+))?(?::(.+))?$").unwrap();
+    static STR_PARSER: Regex = Regex::new(r"^([^=!@;:]+)?((?:;[^=!@;:]+)+)?(?:=([a-zA-Z])+)?(!)?(@([^@:]+))?(?::(.+))?$").unwrap();
 }
 
 impl StrParser {

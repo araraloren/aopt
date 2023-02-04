@@ -28,7 +28,7 @@ use crate::Uid;
 pub struct ParserCommit<'a, S, Ser, U>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     U::Val: RawValParser,
     SetOpt<S>: Opt,
     SetCfg<S>: ConfigValue + Default,
@@ -40,7 +40,7 @@ where
 
 impl<'a, S, Ser, U> Debug for ParserCommit<'a, S, Ser, U>
 where
-    U: Infer,
+    U: Infer + 'static,
     U::Val: RawValParser,
     S: Set + Debug,
     SetOpt<S>: Opt + Debug,
@@ -57,7 +57,7 @@ where
 impl<'a, S, Ser, U> Commit<S> for ParserCommit<'a, S, Ser, U>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     U::Val: RawValParser,
     SetOpt<S>: Opt,
     SetCfg<S>: ConfigValue + Default,
@@ -99,7 +99,7 @@ where
 impl<'a, S, Ser, U> ParserCommit<'a, S, Ser, U>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     U::Val: RawValParser,
     SetOpt<S>: Opt,
     SetCfg<S>: ConfigValue + Default,
@@ -229,7 +229,7 @@ where
 impl<'a, S, Ser, U> ParserCommit<'a, S, Ser, U>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     U::Val: RawValParser,
     SetOpt<S>: Opt,
     SetCfg<S>: ConfigValue + Default,
@@ -247,7 +247,7 @@ where
 impl<'a, S, Ser, U> ParserCommit<'a, S, Ser, U>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     U::Val: Clone + RawValParser,
     SetOpt<S>: Opt,
     SetCfg<S>: ConfigValue + Default,
@@ -271,21 +271,21 @@ where
 impl<'a, S, Ser, U> ParserCommit<'a, S, Ser, U>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     U::Val: RawValParser,
     SetOpt<S>: Opt,
     SetCfg<S>: ConfigValue + Default,
 {
     /// Set the value type of option.
-    pub fn set_type<T: ErasedTy>(mut self) -> ParserCommitWithValue<'a, S, Ser, U, T> {
+    pub fn set_value_type_only<T: ErasedTy>(mut self) -> ParserCommitWithValue<'a, S, Ser, U, T> {
         let inner = self.inner.take().unwrap();
         let inv_ser = self.inv_ser.take().unwrap();
 
-        ParserCommitWithValue::new(inner.set_type::<T>(), inv_ser)
+        ParserCommitWithValue::new(inner.set_value_type_only::<T>(), inv_ser)
     }
 
     /// Set the value type of option, add default initializer and default value storer.
-    pub fn set_type_de<T: ErasedTy + Clone + RawValParser>(
+    pub fn set_value_type<T: ErasedTy + Clone + RawValParser>(
         mut self,
     ) -> ParserCommitWithValue<'a, S, Ser, U, T> {
         let inner = self.inner.take().unwrap();
@@ -293,7 +293,7 @@ where
 
         ParserCommitWithValue::new(
             inner
-                .set_type::<T>()
+                .set_value_type_only::<T>()
                 .add_default_initializer_t()
                 .add_default_storer_t(),
             inv_ser,
@@ -305,7 +305,7 @@ where
         self,
         validator: ValValidator<T>,
     ) -> ParserCommitWithValue<'a, S, Ser, U, T> {
-        self.set_type::<T>().set_validator_t(validator)
+        self.set_value_type_only::<T>().set_validator_t(validator)
     }
 
     /// Set the option default value.
@@ -313,7 +313,7 @@ where
         self,
         value: T,
     ) -> ParserCommitWithValue<'a, S, Ser, U, T> {
-        self.set_type::<T>()
+        self.set_value_type_only::<T>()
             .set_initializer(ValInitializer::with_value(value))
     }
 
@@ -322,7 +322,7 @@ where
         self,
         value: Vec<T>,
     ) -> ParserCommitWithValue<'a, S, Ser, U, T> {
-        self.set_type::<T>()
+        self.set_value_type_only::<T>()
             .set_initializer(ValInitializer::with_values(value))
     }
 }
@@ -332,7 +332,7 @@ where
 pub struct ParserCommitWithValue<'a, S, Ser, U, T>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     T: ErasedTy,
     U::Val: RawValParser,
     SetOpt<S>: Opt,
@@ -345,7 +345,7 @@ where
 
 impl<'a, S, Ser, U, T> Debug for ParserCommitWithValue<'a, S, Ser, U, T>
 where
-    U: Infer,
+    U: Infer + 'static,
     T: ErasedTy,
     S: Set + Debug,
     U::Val: RawValParser,
@@ -363,7 +363,7 @@ where
 impl<'a, S, Ser, U, T> ParserCommitWithValue<'a, S, Ser, U, T>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     T: ErasedTy,
     U::Val: RawValParser,
     SetOpt<S>: Opt,
@@ -494,7 +494,7 @@ where
 impl<'a, S, Ser, U, T> Commit<S> for ParserCommitWithValue<'a, S, Ser, U, T>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     T: ErasedTy,
     U::Val: RawValParser,
     SetOpt<S>: Opt,
@@ -512,7 +512,7 @@ where
 impl<'a, S, Ser, U, T> ParserCommitWithValue<'a, S, Ser, U, T>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     T: ErasedTy,
     U::Val: RawValParser,
     SetOpt<S>: Opt,
@@ -527,7 +527,7 @@ where
 impl<'a, S, Ser, U, T> ParserCommitWithValue<'a, S, Ser, U, T>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     T: ErasedTy,
     U::Val: Clone + RawValParser,
     SetOpt<S>: Opt,
@@ -547,7 +547,7 @@ where
 impl<'a, S, Ser, U, T> ParserCommitWithValue<'a, S, Ser, U, T>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     T: ErasedTy + RawValParser,
     U::Val: RawValParser,
     SetOpt<S>: Opt,
@@ -568,7 +568,7 @@ where
 impl<'a, S, Ser, U, T> ParserCommitWithValue<'a, S, Ser, U, T>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     T: ErasedTy + Clone,
     U::Val: RawValParser,
     SetOpt<S>: Opt,

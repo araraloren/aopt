@@ -25,7 +25,7 @@ use super::Commit;
 pub struct SetCommit<'a, S, U>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
@@ -39,7 +39,7 @@ where
 impl<'a, S, U> Debug for SetCommit<'a, S, U>
 where
     S: Set + Debug,
-    U: Infer,
+    U: Infer + 'static,
     U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default + Debug,
 {
@@ -70,7 +70,7 @@ where
     }
 
     pub fn set_pos_type<T: ErasedTy + RawValParser + 'static>(self) -> SetCommit<'a, S, Pos<T>> {
-        let type_id = self.cfg().value_type();
+        let type_id = self.cfg().r#type();
 
         debug_assert!(
             type_id.is_none() || type_id == Some(&TypeId::of::<Pos>()),
@@ -82,7 +82,7 @@ where
     pub fn set_pos_type_de<T: ErasedTy + RawValParser + Clone + 'static>(
         self,
     ) -> SetCommit<'a, S, Pos<T>> {
-        let type_id = self.cfg().value_type();
+        let type_id = self.cfg().r#type();
 
         debug_assert!(
             type_id.is_none() || type_id == Some(&TypeId::of::<Pos>()),
@@ -97,12 +97,11 @@ where
 impl<'a, S, U> SetCommit<'a, S, U>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
-    pub fn new(set: &'a mut S, mut info: SetCfg<S>) -> Self {
-        fill_cfg::<U, SetCfg<S>>(&mut info);
+    pub fn new(set: &'a mut S, info: SetCfg<S>) -> Self {
         Self {
             set: Some(set),
             info: Some(info),
@@ -113,16 +112,19 @@ where
     }
 
     /// Set the infer type of option.
-    pub fn set_infer<O: Infer>(mut self) -> SetCommit<'a, S, O>
+    pub fn set_infer<O>(mut self) -> SetCommit<'a, S, O>
     where
+        O: Infer + 'static,
         O::Val: RawValParser,
     {
         self.drop = false;
 
         let set = self.set.take();
         let info = self.info.take();
+        let mut info = info.unwrap();
 
-        SetCommit::new(set.unwrap(), info.unwrap())
+        fill_cfg::<O, SetCfg<S>>(&mut info);
+        SetCommit::new(set.unwrap(), info)
     }
 
     pub(crate) fn commit_change(&mut self) -> Result<Uid, Error> {
@@ -162,20 +164,20 @@ where
 impl<'a, S, U> SetCommit<'a, S, U>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
     /// Set the value type of option.
-    pub fn set_type<T: ErasedTy>(self) -> SetCommitWithValue<'a, S, U, T> {
+    pub(crate) fn set_value_type_only<T: ErasedTy>(self) -> SetCommitWithValue<'a, S, U, T> {
         SetCommitWithValue::new(self)
     }
 
-    /// Set the type of option, add default initializer and default storer.
-    pub fn set_type_de<T: ErasedTy + RawValParser + Clone>(
+    /// Set the value type of option, add default initializer and default storer.
+    pub fn set_value_type<T: ErasedTy + RawValParser + Clone>(
         self,
     ) -> SetCommitWithValue<'a, S, U, T> {
-        SetCommitWithValue::new(self)
+        self.set_value_type_only::<T>()
             .add_default_initializer_t()
             .add_default_storer_t()
     }
@@ -185,12 +187,12 @@ where
         self,
         validator: ValValidator<T>,
     ) -> SetCommitWithValue<'a, S, U, T> {
-        self.set_type::<T>().set_validator_t(validator)
+        self.set_value_type_only::<T>().set_validator_t(validator)
     }
 
     /// Set the option default value.
     pub fn set_value_t<T: ErasedTy + Clone>(self, value: T) -> SetCommitWithValue<'a, S, U, T> {
-        self.set_type::<T>().set_value_t(value)
+        self.set_value_type_only::<T>().set_value_t(value)
     }
 
     /// Set the option default value.
@@ -198,14 +200,14 @@ where
         self,
         value: Vec<T>,
     ) -> SetCommitWithValue<'a, S, U, T> {
-        self.set_type::<T>().set_values_t(value)
+        self.set_value_type_only::<T>().set_values_t(value)
     }
 }
 
 impl<'a, S, U> SetCommit<'a, S, U>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
@@ -222,7 +224,7 @@ where
 impl<'a, S, U> SetCommit<'a, S, U>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     U::Val: Clone + RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
@@ -244,7 +246,7 @@ where
 impl<'a, S, U> Commit<S> for SetCommit<'a, S, U>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
@@ -260,7 +262,7 @@ where
 impl<'a, S, U> Drop for SetCommit<'a, S, U>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
@@ -277,7 +279,7 @@ where
 pub struct SetCommitWithValue<'a, S, U, T>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     T: ErasedTy,
     U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default,
@@ -289,7 +291,7 @@ where
 
 impl<'a, S, U, T> Debug for SetCommitWithValue<'a, S, U, T>
 where
-    U: Infer,
+    U: Infer + 'static,
     T: ErasedTy,
     S: Set + Debug,
     U::Val: RawValParser,
@@ -306,7 +308,7 @@ where
 impl<'a, S, U, T> SetCommitWithValue<'a, S, U, T>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     T: ErasedTy,
     U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default,
@@ -354,7 +356,7 @@ where
 impl<'a, S, U, T> SetCommitWithValue<'a, S, U, T>
 where
     S: Set,
-    U: Infer,
+    U: Infer + 'static,
     U::Val: RawValParser,
     T: ErasedTy + RawValParser,
     SetCfg<S>: ConfigValue + Default,
@@ -373,7 +375,7 @@ impl<'a, S, U, T> SetCommitWithValue<'a, S, U, T>
 where
     S: Set,
     T: ErasedTy + Clone,
-    U: Infer,
+    U: Infer + 'static,
     U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
@@ -396,7 +398,7 @@ impl<'a, S, U, T> SetCommitWithValue<'a, S, U, T>
 where
     S: Set,
     T: ErasedTy,
-    U: Infer,
+    U: Infer + 'static,
     U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
@@ -410,7 +412,7 @@ impl<'a, S, U, T> SetCommitWithValue<'a, S, U, T>
 where
     S: Set,
     T: ErasedTy,
-    U: Infer,
+    U: Infer + 'static,
     U::Val: Clone + RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
@@ -429,7 +431,7 @@ impl<'a, S, U, T> Commit<S> for SetCommitWithValue<'a, S, U, T>
 where
     S: Set,
     T: ErasedTy,
-    U: Infer,
+    U: Infer + 'static,
     U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {

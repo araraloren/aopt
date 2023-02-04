@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 
+use crate::opt::fill_cfg_if_no_infer;
 use crate::opt::AOpt;
 use crate::opt::Action;
 use crate::opt::Any;
@@ -78,7 +79,6 @@ mod __creator {
 
 pub use __creator::Creator;
 
-use super::config::fill_cfg_if_no_infer;
 use super::Noa;
 
 impl<O: Opt, C, E: Into<Error>> Ctor for Creator<O, C, E> {
@@ -142,6 +142,23 @@ impl BuiltInCtor {
             BuiltInCtor::Any => BUILTIN_CTOR_ANY,
         }
     }
+
+    pub fn from_name(ctor: &Str) -> Self {
+        match ctor.as_str() {
+            BUILTIN_CTOR_INT => BuiltInCtor::Int,
+            BUILTIN_CTOR_STR => BuiltInCtor::Str,
+            BUILTIN_CTOR_FLT => BuiltInCtor::Flt,
+            BUILTIN_CTOR_UINT => BuiltInCtor::Uint,
+            BUILTIN_CTOR_BOOL => BuiltInCtor::Bool,
+            BUILTIN_CTOR_CMD => BuiltInCtor::Cmd,
+            BUILTIN_CTOR_POS => BuiltInCtor::Pos,
+            BUILTIN_CTOR_MAIN => BuiltInCtor::Main,
+            BUILTIN_CTOR_ANY => BuiltInCtor::Any,
+            name => {
+                panic!("Unknow creator name: {}", name)
+            }
+        }
+    }
 }
 
 impl Creator<AOpt, OptConfig, Error> {
@@ -161,7 +178,7 @@ impl Creator<AOpt, OptConfig, Error> {
                 let styles = config.gen_styles()?;
                 let name = config.gen_name()?;
                 let help = config.gen_opt_help()?;
-                let value_type = config.gen_value_type()?;
+                let r#type = config.gen_type()?;
                 let index = config.index().cloned();
                 let alias = config.take_alias();
                 let alias = if alias.is_empty() { None } else { Some(alias) };
@@ -187,7 +204,7 @@ impl Creator<AOpt, OptConfig, Error> {
                     }
                 }
                 Ok(
-                    AOpt::new(name, value_type, ValAccessor::new(storer, initializer))
+                    AOpt::new(name, r#type, ValAccessor::new(storer, initializer))
                         .with_force(force)
                         .with_idx(index)
                         .with_action(action)
@@ -236,7 +253,7 @@ impl Creator<AOpt, OptConfig, Error> {
             let styles = config.gen_styles()?;
             let name = config.gen_name()?;
             let help = config.gen_opt_help()?;
-            let value_type = config.gen_value_type()?;
+            let r#type = config.gen_type()?;
             let index = config.index().cloned();
             let alias = config.take_alias();
             let alias = if alias.is_empty() { None } else { Some(alias) };
@@ -262,7 +279,7 @@ impl Creator<AOpt, OptConfig, Error> {
                 }
             }
             Ok(
-                AOpt::new(name, value_type, ValAccessor::new(storer, initializer))
+                AOpt::new(name, r#type, ValAccessor::new(storer, initializer))
                     .with_force(force)
                     .with_idx(index)
                     .with_action(action)

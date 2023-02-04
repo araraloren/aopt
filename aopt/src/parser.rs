@@ -39,6 +39,7 @@ use crate::ctx::InnerCtx;
 use crate::ctx::Invoker;
 use crate::ext::APolicyExt;
 use crate::map::ErasedTy;
+use crate::opt::fill_cfg;
 use crate::opt::Config;
 use crate::opt::ConfigValue;
 use crate::opt::Information;
@@ -46,7 +47,6 @@ use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::prelude::SetCommit;
 use crate::ser::ServicesValExt;
-use crate::set::Ctor;
 use crate::set::OptValidator;
 use crate::set::Set;
 use crate::set::SetCfg;
@@ -571,8 +571,7 @@ where
         &mut self,
         opt: impl Into<Str>,
     ) -> Result<ParserCommit<'_, P::Set, P::Ser, Placeholder>, Error> {
-        let info =
-            <<<P::Set as Set>::Ctor as Ctor>::Config as Config>::new(&self.optset, opt.into())?;
+        let info = <SetCfg<P::Set>>::new(&self.optset, opt.into())?;
 
         Ok(ParserCommit::new(
             SetCommit::new_placeholder(&mut self.optset, info),
@@ -585,12 +584,12 @@ where
         opt: impl Into<Str>,
     ) -> Result<ParserCommit<'_, P::Set, P::Ser, U>, Error>
     where
-        U: Infer,
+        U: Infer + 'static,
         U::Val: RawValParser,
     {
-        let info =
-            <<<P::Set as Set>::Ctor as Ctor>::Config as Config>::new(&self.optset, opt.into())?;
+        let mut info = <SetCfg<P::Set>>::new(&self.optset, opt.into())?;
 
+        fill_cfg::<U, SetCfg<P::Set>>(&mut info);
         Ok(ParserCommit::new(
             SetCommit::new(&mut self.optset, info),
             &mut self.invoker,
@@ -653,16 +652,19 @@ where
         ))
     }
 
-    pub fn add_opt_cfg_i<U: Infer>(
+    pub fn add_opt_cfg_i<U>(
         &mut self,
         config: impl Into<SetCfg<P::Set>>,
     ) -> Result<ParserCommit<'_, P::Set, P::Ser, U>, Error>
     where
-        U: Infer,
+        U: Infer + 'static,
         U::Val: RawValParser,
     {
+        let mut info = config.into();
+
+        fill_cfg::<U, SetCfg<P::Set>>(&mut info);
         Ok(ParserCommit::new(
-            SetCommit::new(&mut self.optset, config.into()),
+            SetCommit::new(&mut self.optset, info),
             &mut self.invoker,
         ))
     }

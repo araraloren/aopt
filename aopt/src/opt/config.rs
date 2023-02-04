@@ -14,6 +14,11 @@ use crate::value::ValInitializer;
 use crate::value::ValStorer;
 use crate::Str;
 
+use super::Any;
+use super::BuiltInCtor;
+use super::Cmd;
+use super::Main;
+use super::Pos;
 use super::Style;
 
 pub trait Config {
@@ -41,7 +46,7 @@ pub trait ConfigValue {
     fn name(&self) -> Option<&Str>;
 
     /// The type name of option.
-    fn value_type(&self) -> Option<&TypeId>;
+    fn r#type(&self) -> Option<&TypeId>;
 
     /// The index configuration of option.
     fn index(&self) -> Option<&Index>;
@@ -74,7 +79,7 @@ pub trait ConfigValue {
 
     fn has_name(&self) -> bool;
 
-    fn has_value_type(&self) -> bool;
+    fn has_type(&self) -> bool;
 
     fn has_hint(&self) -> bool;
 
@@ -120,7 +125,7 @@ pub trait ConfigValue {
 
     fn rem_alias<S: Into<Str>>(&mut self, alias: S) -> &mut Self;
 
-    fn set_value_type<T: ErasedTy>(&mut self) -> &mut Self;
+    fn set_type<T: 'static>(&mut self) -> &mut Self;
 
     fn set_action(&mut self, action: Action) -> &mut Self;
 
@@ -134,7 +139,7 @@ pub trait ConfigValue {
 pub struct OptConfig {
     ctor: Option<Str>,
 
-    value_type: Option<TypeId>,
+    r#type: Option<TypeId>,
 
     name: Option<Str>,
 
@@ -179,8 +184,8 @@ impl OptConfig {
         self
     }
 
-    pub fn with_value_type<T: ErasedTy>(mut self) -> Self {
-        self.value_type = Some(typeid::<T>());
+    pub fn with_type<T: ErasedTy>(mut self) -> Self {
+        self.r#type = Some(typeid::<T>());
         self
     }
 
@@ -234,8 +239,8 @@ impl OptConfig {
             .clone())
     }
 
-    pub fn gen_value_type(&mut self) -> Result<TypeId, Error> {
-        self.value_type.take().ok_or_else(|| {
+    pub fn gen_type(&mut self) -> Result<TypeId, Error> {
+        self.r#type.take().ok_or_else(|| {
             Error::raise_error("Incomplete option configuration: missing value type")
         })
     }
@@ -348,8 +353,8 @@ impl ConfigValue for OptConfig {
         self.name.as_ref()
     }
 
-    fn value_type(&self) -> Option<&TypeId> {
-        self.value_type.as_ref()
+    fn r#type(&self) -> Option<&TypeId> {
+        self.r#type.as_ref()
     }
 
     fn index(&self) -> Option<&Index> {
@@ -404,8 +409,8 @@ impl ConfigValue for OptConfig {
         self.name.is_some()
     }
 
-    fn has_value_type(&self) -> bool {
-        self.value_type.is_some()
+    fn has_type(&self) -> bool {
+        self.r#type.is_some()
     }
 
     fn has_hint(&self) -> bool {
@@ -517,8 +522,8 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn set_value_type<T: ErasedTy>(&mut self) -> &mut Self {
-        self.value_type = Some(typeid::<T>());
+    fn set_type<T: 'static>(&mut self) -> &mut Self {
+        self.r#type = Some(typeid::<T>());
         self
     }
 
@@ -540,7 +545,7 @@ impl ConfigValue for OptConfig {
 
 pub(crate) fn fill_cfg<U, C>(info: &mut C)
 where
-    U: Infer,
+    U: Infer + 'static,
     U::Val: RawValParser,
     C: ConfigValue + Default,
 {
@@ -562,7 +567,7 @@ where
     info.set_infer(true);
     (!info.has_ctor()).then(|| info.set_ctor(ctor));
     (!info.has_index()).then(|| index.map(|idx| info.set_index(idx)));
-    (!info.has_value_type()).then(|| info.set_value_type::<U::Val>());
+    (!info.has_type()).then(|| info.set_type::<U>());
     (!info.has_action()).then(|| info.set_action(act));
     (!info.has_style()).then(|| info.set_style(style));
     (!info.has_force()).then(|| info.set_force(force));
@@ -580,7 +585,7 @@ where
 
 pub(crate) fn fill_cfg_if_no_infer<U, C>(info: &mut C)
 where
-    U: Infer,
+    U: Infer + 'static,
     U::Val: RawValParser,
     C: ConfigValue + Default,
 {
@@ -601,7 +606,7 @@ where
 
     (!info.has_ctor()).then(|| info.set_ctor(ctor));
     (!info.has_index()).then(|| index.map(|idx| info.set_index(idx)));
-    (!info.has_value_type()).then(|| info.set_value_type::<U::Val>());
+    (!info.has_type()).then(|| info.set_type::<U>());
     (!info.has_action()).then(|| info.set_action(act));
     (!info.has_style()).then(|| info.set_style(style));
     (!info.has_force()).then(|| info.set_force(force));
@@ -618,4 +623,27 @@ where
     info.set_ignore_name(ignore_name);
     info.set_ignore_alias(ignore_alias);
     info.set_ignore_index(ignore_index);
+}
+
+pub(crate) fn fill_filter_type<C>(info: &mut C) -> &mut C
+where
+    C: ConfigValue,
+{
+    if let Some(ctor) = info.ctor() {
+        let built_in_ctor = BuiltInCtor::from_name(ctor);
+
+        match built_in_ctor {
+            BuiltInCtor::Int => info.set_type::<i64>(),
+            BuiltInCtor::Str => info.set_type::<String>(),
+            BuiltInCtor::Flt => info.set_type::<f64>(),
+            BuiltInCtor::Uint => info.set_type::<u64>(),
+            BuiltInCtor::Bool => info.set_type::<bool>(),
+            BuiltInCtor::Cmd => info.set_type::<Cmd>(),
+            BuiltInCtor::Pos => info.set_type::<Pos>(),
+            BuiltInCtor::Main => info.set_type::<Main>(),
+            BuiltInCtor::Any => info.set_type::<Any>(),
+        }
+    } else {
+        info
+    }
 }

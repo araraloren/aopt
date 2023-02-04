@@ -16,6 +16,7 @@ pub use self::aopt::AOpt;
 pub use self::config::Config;
 pub use self::config::ConfigValue;
 pub use self::config::OptConfig;
+pub use self::creator::BuiltInCtor;
 pub use self::creator::Creator;
 pub use self::help::Help;
 pub use self::index::Index;
@@ -30,6 +31,10 @@ pub use self::serde::Serde;
 pub use self::serde::Serialize;
 pub use self::style::Style;
 pub use self::value::OptValueExt;
+
+pub(crate) use self::config::fill_cfg;
+pub(crate) use self::config::fill_cfg_if_no_infer;
+pub(crate) use self::config::fill_filter_type;
 
 use std::any::TypeId;
 use std::fmt::Debug;
@@ -115,19 +120,24 @@ pub trait Opt: Debug {
     /// The name of option.
     fn name(&self) -> &Str;
 
-    fn value_type(&self) -> &TypeId;
+    /// The type of option.
+    fn r#type(&self) -> &TypeId;
 
+    /// The help hint of option such as `--flag`.
     fn hint(&self) -> &Str;
 
+    /// The help message of option.
     fn help(&self) -> &Str;
 
     fn valid(&self) -> bool;
 
+    /// If the option matched.
     fn matched(&self) -> bool;
 
-    /// If the option is optional.
+    /// If the option is force required.
     fn force(&self) -> bool;
 
+    /// The associaed action of option.
     fn action(&self) -> &Action;
 
     /// The index of option.

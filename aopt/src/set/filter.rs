@@ -24,14 +24,15 @@ where
     T: Opt,
     C: Config + ConfigValue,
 {
+    /// Check if option matched current option.
     fn mat_opt(&self, opt: &T) -> bool {
         let mut ret = true;
 
         if ret && self.has_force() {
             ret = ret && (self.force().unwrap() == opt.force());
         }
-        if ret && self.has_value_type() {
-            ret = ret && (self.value_type().unwrap() == opt.value_type());
+        if ret && self.has_type() {
+            ret = ret && (self.r#type().unwrap() == opt.r#type());
         }
         if ret && self.has_name() {
             // don't call match name
@@ -103,12 +104,12 @@ where
 
     /// Set the option type name of filter configuration.
     pub fn set_type<U: ErasedTy>(&mut self) -> &mut Self {
-        self.info.set_value_type::<U>();
+        self.info.set_type::<U>();
         self
     }
 
     /// Set the option index of filter configuration.
-    pub fn set_idx(&mut self, index: Index) -> &mut Self {
+    pub fn set_index(&mut self, index: Index) -> &mut Self {
         self.info.set_index(index);
         self
     }
@@ -174,12 +175,12 @@ where
 
     /// Set the option type name of filter configuration.
     pub fn set_type<U: ErasedTy>(&mut self) -> &mut Self {
-        self.info.set_value_type::<U>();
+        self.info.set_type::<U>();
         self
     }
 
     /// Set the option index of filter configuration.
-    pub fn set_idx(&mut self, index: Index) -> &mut Self {
+    pub fn set_index(&mut self, index: Index) -> &mut Self {
         self.info.set_index(index);
         self
     }
