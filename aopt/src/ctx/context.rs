@@ -91,7 +91,7 @@ impl InnerCtx {
     }
 
     /// The index of matching context.
-    pub fn set_idx(&mut self, index: usize) -> &mut Self {
+    pub fn set_index(&mut self, index: usize) -> &mut Self {
         self.index = index;
         self
     }
@@ -224,8 +224,8 @@ impl Ctx {
     }
 
     /// The index of matching context.
-    pub fn set_idx(&mut self, index: usize) -> Result<&mut Self, Error> {
-        self.inner_ctx_mut()?.set_idx(index);
+    pub fn set_index(&mut self, index: usize) -> Result<&mut Self, Error> {
+        self.inner_ctx_mut()?.set_index(index);
         Ok(self)
     }
 

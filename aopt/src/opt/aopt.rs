@@ -217,7 +217,7 @@ impl AOpt {
         self
     }
 
-    pub fn set_idx(&mut self, index: Option<Index>) -> &mut Self {
+    pub fn set_index(&mut self, index: Option<Index>) -> &mut Self {
         self.index = index;
         self
     }

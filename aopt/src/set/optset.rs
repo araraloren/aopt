@@ -34,18 +34,20 @@ use super::SetValueFindExt;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<()> {
-///  let mut set = OptSet::<StrParser, ACreator, PrefixOptValidator>::default();
-///
-///  // add prefix for option
-///  set.validator_mut().add_prefix("/");
-///  // add bool creator
-///  set.register(Creator::bool());
-///  // create a bool option
-///  set.add_opt("/foo=b")?.run()?;
-///  // filter the set option
-///  assert_eq!(set.filter("/foo")?.find_all().count(), 1);
-///
-///  Ok(())
+/// let mut set = OptSet::<StrParser, ACreator, PrefixOptValidator>::default();
+/// 
+/// // add default and bool creator
+/// set.register(Creator::fallback());
+/// set.register(Creator::new_type_ctor(aopt::opt::BuiltInCtor::Bool));
+/// 
+/// // create a bool option
+/// set.add_opt_i::<bool>("--flag")?;
+/// assert_eq!(set.add_opt("/flag=b!")?.run()?, 1);
+/// 
+/// // filter the set option
+/// assert_eq!(set.filter("/flag")?.find_all().count(), 1);
+/// assert!(set.find("--flag")?.is_some());
+/// # Ok(())
 /// # }
 /// ```
 pub struct OptSet<P, C, V>
@@ -454,132 +456,176 @@ where
     }
 }
 
-// #[cfg(test)]
-// mod test {
+#[cfg(test)]
+mod test {
 
-//     use crate::prelude::*;
-//     use crate::Error;
+    use std::any::TypeId;
 
-//     #[test]
-//     fn test_add_option() {
-//         assert!(test_add_option_impl().is_ok());
-//     }
+    use crate::opt::Cmd;
+    use crate::opt::Pos;
+    use crate::prelude::*;
+    use crate::Error;
 
-//     fn test_add_option_impl() -> Result<(), Error> {
-//         let mut set = aset_with_default_creators();
+    #[test]
+    fn test_add_option() {
+        assert!(test_add_option_impl().is_ok());
+    }
 
-//         assert!(set.add_opt("cmda=c")?.run().is_ok());
-//         assert!(set.add_opt("cmdb=c")?.run().is_ok());
+    fn test_add_option_impl() -> Result<(), Error> {
+        let mut set = aset_with_default_creators();
 
-//         assert!(set.add_opt("posa=p@2")?.run().is_ok());
-//         assert!(set.add_opt("posb=p@3")?.run().is_ok());
-//         assert!(set.add_opt("posc=p@4")?.run().is_ok());
-//         assert!(set.add_opt("posd=p!@4")?.run().is_ok());
+        assert!(set.add_opt("set;s=c")?.run().is_ok());
+        assert!(set.add_opt_i::<Cmd>("g;get")?.run().is_ok());
 
-//         assert!(set.add_opt("main=m")?.run().is_ok());
+        assert!(set.add_opt("vala=p@2")?.run().is_ok());
+        assert!(set.add_opt("valb=p@2..5")?.run().is_ok());
+        assert!(set.add_opt("valc=p@1..4")?.run().is_ok());
+        assert!(set.add_opt("vald=p!@2")?.run().is_ok());
+        assert!(set.add_opt("vale=p!@2..4")?.run().is_ok());
+        assert!(set.add_opt("valf=p@-2")?.run().is_ok());
+        assert!(set.add_opt("valg=p!@-1")?.run().is_ok());
+        assert!(set
+            .add_opt("valh@[1,2,6]")?
+            .set_infer::<Pos<f64>>()
+            .run()
+            .is_ok());
+        assert!(set.add_opt_i::<Pos>("vali!@*")?.run().is_ok());
+        assert!(set.add_opt_i::<Pos<bool>>("valj!@1")?.run().is_ok());
 
-//         assert!(set.add_opt("--boola=b")?.run().is_ok());
-//         assert!(set.add_opt("--boolb=b")?.run().is_ok());
-//         assert!(set.add_opt("-boolc=b")?.run().is_ok());
-//         assert!(set.add_opt("-boold=b")?.run().is_ok());
-//         assert!(set.add_opt("--boole=b!")?.run().is_ok());
-//         assert!(set.add_opt("--/boolf=b")?.run().is_ok());
-//         assert!(set.add_opt("--/boolg=b!")?.run().is_ok());
-//         assert!(set.add_opt("-boolh=b!")?.run().is_ok());
+        assert!(set.add_opt("main=m")?.run().is_ok());
 
-//         assert!(set.add_opt("--floatb=f")?.run().is_ok());
-//         assert!(set.add_opt("--floatc=f!")?.run().is_ok());
-//         assert!(set.add_opt("-floata=f")?.run().is_ok());
-//         assert!(set.add_opt("-floatd=f!")?.run().is_ok());
-//         assert!(set.add_opt("-floate=f")?.add_alias("-e").run().is_ok());
+        assert!(set.add_opt("-b;--bool=b")?.run().is_ok());
+        assert!(set.add_opt_i::<bool>("-ba;--boola")?.run().is_ok());
+        assert!(set.add_opt("--boolb=b!")?.run().is_ok());
+        assert!(set.add_opt_i::<bool>("-bc;--boolc")?.run().is_ok());
+        assert!(set.add_opt("--boold!")?.set_infer::<bool>().run().is_ok());
+        assert!(set.add_opt("-/be;--/boole=b")?.run().is_ok());
+        assert!(set.add_opt_i::<bool>("-/bf;--/boolf")?.run().is_ok());
+        assert!(set.add_opt_i::<bool>("-/bg;--/boolg!")?.run().is_ok());
+        assert!(set.add_opt_i::<bool>("/boolh")?.run().is_ok());
+        assert!(set.add_opt_i::<bool>("/booli!")?.run().is_ok());
 
-//         assert!(set.add_opt("--inta=i")?.run().is_ok());
-//         assert!(set.add_opt("--intb=i!")?.run().is_ok());
-//         assert!(set.add_opt("-intc=i")?.run().is_ok());
-//         assert!(set.add_opt("-intd=i!")?.run().is_ok());
+        assert!(set.add_opt("--float=f")?.run().is_ok());
+        assert!(set.add_opt_i::<f64>("-fa;--floata")?.run().is_ok());
+        assert!(set.add_opt("-fb;--floatb=f")?.run().is_ok());
+        assert!(set.add_opt_i::<f64>("-fc;--floatc=f")?.run().is_ok());
+        assert!(set.add_opt("--floatd=f!")?.run().is_ok());
+        assert!(set.add_opt_i::<f64>("-fe;--floate!")?.run().is_ok());
 
-//         assert!(set.find("cmda")?.is_some());
-//         assert_eq!(set.find_all("=c")?.count(), 2);
+        assert!(set.add_opt("--int=i")?.run().is_ok());
+        assert!(set.add_opt_i::<i64>("-i")?.run().is_ok());
+        assert!(set.add_opt("-ia;--inta=i")?.run().is_ok());
+        assert!(set.add_opt("-ib;--intb=i!")?.run().is_ok());
+        assert!(set.add_opt_i::<i64>("--intc!")?.run().is_ok());
+        assert!(set.add_opt("-id;--intd=i!")?.run().is_ok());
 
-//         assert!(set.find("posb")?.is_some());
-//         assert!(set.find_mut("posc")?.is_some());
-//         assert_eq!(set.find_all("=p")?.count(), 4);
-//         assert_eq!(set.find_all_mut("=p")?.count(), 4);
-//         assert_eq!(set.find_all("=p@4")?.count(), 2);
-//         assert!(set.filter("posd")?.set_force(true).find().is_some());
-//         assert!(set.filter("=p")?.set_name("pose").find().is_none());
+        assert!(set.add_opt("--uint=u")?.add_alias("-u").run().is_ok());
+        assert!(set.add_opt("-ua;--uinta=u")?.run().is_ok());
+        assert!(set
+            .add_opt("--ub;--uintb")?
+            .set_infer::<u64>()
+            .run()
+            .is_ok());
+        assert!(set
+            .add_opt_i::<u64>("--uintc=u")?
+            .set_force(true)
+            .run()
+            .is_ok());
+        assert!(set
+            .add_opt("--uintd")?
+            .set_infer::<u64>()
+            .set_force(true)
+            .run()
+            .is_ok());
+        assert!(set.add_opt("--uinte")?.set_force(true).run().is_err());
 
-//         assert!(set.find("main")?.is_some());
+        assert!(set.add_opt("-s=s")?.run().is_ok());
+        assert!(set.add_opt_i::<String>("--str")?.run().is_ok());
+        assert!(set
+            .add_opt_i::<String>("--stra")?
+            .add_alias("/stra")
+            .run()
+            .is_ok());
+        assert!(set.add_opt_i::<String>("--strb!")?.run().is_ok());
+        assert!(set.add_opt("--strc=s")?.add_alias("/strc").run().is_ok());
+        assert!(set.add_opt("/stre;--strd")?.set_ctor("s").run().is_ok());
+        assert!(set
+            .add_opt("!")?
+            .set_name("--strf")
+            .set_ctor("s")
+            .run()
+            .is_ok());
 
-//         assert!(set.find("--boola")?.is_some());
-//         assert!(set.find("--boolb")?.is_some());
-//         assert!(set.find_mut("--boole=b!")?.is_some());
-//         assert!(set.find_mut("--/boolf=b")?.is_some());
-//         assert_eq!(set.find_all("=b")?.count(), 8);
-//         assert_eq!(set.find_all("=b!")?.count(), 3);
-//         assert_eq!(set.filter("=b")?.set_force(true).find_all().count(), 3);
-//         assert!(set.filter("--/boolg=b!")?.find().is_some());
-//         assert!(set.filter("-boolg=b!")?.find().is_none());
+        assert_eq!(set.len(), 47);
+        assert!(set.find("s=c")?.is_some());
+        assert_eq!(set.find_all("=c")?.count(), 2);
 
-//         assert!(set.find("=f")?.is_some());
-//         assert!(set.find("--floatc=f!")?.is_some());
-//         assert!(set.find("-e")?.is_some());
-//         assert!(set.find_mut("-floata=f")?.is_some());
-//         assert!(set.find_mut("-floatd=f!")?.is_some());
-//         assert_eq!(set.find_all("=f")?.count(), 5);
-//         assert_eq!(set.find_all("=f!")?.count(), 2);
-//         assert_eq!(set.filter_mut("=f")?.find_all().count(), 5);
+        assert_eq!(set.find_all("=p")?.count(), 8);
+        assert!(set.filter("")?.set_type::<Pos<bool>>().find().is_some());
+        assert!(set.filter("")?.set_type::<Pos<f64>>().find().is_some());
+        assert_eq!(set.find_all_mut("@2")?.count(), 2);
+        assert_eq!(set.filter_mut("=p")?.set_force(true).find_all().count(), 4);
+        assert!(set.filter("=p")?.set_name("vala").find().is_some());
+        assert!(set.filter("=p")?.set_name("valw").find().is_none());
 
-//         assert!(set.find("=i")?.is_some());
-//         assert!(set.find("--intb")?.is_some());
-//         assert!(set.find_mut("-inta=i")?.is_none());
-//         assert!(set.find_mut("--intb=i!")?.is_some());
-//         assert_eq!(set.find_all_mut("=i")?.count(), 4);
-//         assert_eq!(set.find_all_mut("=i!")?.count(), 2);
-//         assert_eq!(set.filter_mut("=i")?.set_force(true).find_all().count(), 2);
-//         assert_eq!(set.filter_mut("=i")?.set_force(false).find_all().count(), 2);
+        assert!(set.find("main")?.is_some());
 
-//         assert!(set.add_opt("--stra=s")?.add_alias("/stre").run().is_ok());
-//         assert!(set.add_opt("--strb=s!")?.add_alias("/strf").run().is_ok());
-//         assert!(set.add_opt("-strc=s")?.run().is_ok());
-//         assert!(set.add_opt("-strd=s!")?.run().is_ok());
-//         assert!(set.add_opt("+strg=s")?.run().is_ok());
-//         assert!(set.add_opt("+strh=s!")?.run().is_ok());
+        assert_eq!(set.find_all("=b")?.count(), 10);
+        assert_eq!(set.find_all_mut("=b")?.count(), 10);
+        assert!(set.find("-b")?.is_some());
+        assert_eq!(set.find_all("=b!")?.count(), 4);
+        assert!(set.find("--boola")?.is_some());
+        assert!(set.find("/booli")?.is_some());
+        assert_eq!(set.filter_mut("--boolc")?.find_all().count(), 1);
 
-//         assert!(set.add_opt("--uinta=u")?.run().is_ok());
-//         assert!(set.add_opt("--uintb=u!")?.run().is_ok());
-//         assert!(set.add_opt("-uintc=u")?.add_alias("+uintg").run().is_ok());
-//         assert!(set.add_opt("-uintd=u!")?.add_alias("+uinth").run().is_ok());
-//         assert!(set.add_opt("/uinte=u")?.run().is_ok());
-//         assert!(set.add_opt("/uintf=u!")?.run().is_ok());
+        assert_eq!(set.find_all("=i")?.count(), 6);
+        assert!(set.find("-ia")?.is_some());
+        assert!(set.find("-ib")?.is_some());
+        assert!(set.filter("--intd")?.set_type::<i64>().find().is_some());
+        assert!(set.filter("--intw")?.set_type::<i64>().find().is_none());
+        assert_eq!(set.find_all_mut("=i!")?.count(), 3);
 
-//         assert!(set.find("=s")?.is_some());
-//         assert!(set.find("=s!")?.is_some());
-//         assert!(set.find("/stre")?.is_some());
-//         assert!(set.find("/strf")?.is_some());
-//         assert!(set.find_mut("+strg=s")?.is_some());
-//         assert!(set.find_mut("+strh=s!")?.is_some());
-//         assert_eq!(set.find_all_mut("=s")?.count(), 6);
-//         assert_eq!(set.find_all_mut("+strh=s!")?.count(), 1);
+        assert_eq!(set.find_all("=f")?.count(), 6);
+        assert!(set.find("-fa")?.is_some());
+        assert!(set.find("-fb")?.is_some());
+        assert!(set.find("-fc")?.is_some());
+        assert!(set.find("--floatd")?.is_some());
+        assert_eq!(
+            set.filter("")?
+                .set_type::<f64>()
+                .set_force(true)
+                .find_all()
+                .count(),
+            2
+        );
 
-//         assert!(set.find("-uintc")?.is_some());
-//         assert!(set.find("--uintb")?.is_some());
-//         assert!(set.find("+uintg")?.is_some());
-//         assert!(set.find("+uinth")?.is_some());
-//         assert_eq!(set.find_all("=u")?.count(), 6);
-//         assert_eq!(set.find_all("=u!")?.count(), 3);
+        assert_eq!(set.find_all("=u")?.count(), 5);
+        assert!(set.find("--ub")?.is_some());
+        assert!(set.find("--uintc=u")?.is_some());
+        assert!(set.find("--uintd")?.is_some());
+        assert!(set.find("=u!")?.is_some());
+        assert_eq!(set.find_all_mut("=u!")?.count(), 2);
+        assert_eq!(set.filter("!")?.set_type::<u64>().find_all().count(), 2);
 
-//         assert_eq!(set.filter("")?.find_all().count(), 36);
+        assert_eq!(set.find_all("=s")?.count(), 7);
+        assert!(set.find("--strc")?.is_some());
+        assert_eq!(set.find_all("/stra")?.count(), 1);
+        assert_eq!(set.find_all_mut("=s!")?.count(), 2);
+        assert_eq!(set.filter("--strf")?.find_all().count(), 1);
 
-//         // assert!(set
-//         //     .add_opt("")?
-//         //     .set_name("--/foo")
-//         //     .set_force(false)
-//         //     .set_type("b")
-//         //     .run()
-//         //     .is_ok());
-//         assert!(set.find("--/foo")?.is_some());
+        assert_eq!(set["s"].uid(), 0);
+        assert_eq!(set[2].name(), "vala");
+        assert_eq!(set["vali"].index(), Some(&Index::anywhere()));
+        assert_eq!(set["/booli"].force(), true);
+        assert_eq!(set["--floata"].name(), "-fa");
+        assert_eq!(set["-ib=i"].r#type(), &TypeId::of::<i64>());
+        assert_eq!(set.opt(43)?.name(), "--strb");
 
-//         Ok(())
-//     }
-// }
+        // you can add option with different prefix,
+        // but you can't set it if validator not support it
+        assert!(set.add_opt_i::<bool>("+flag")?.run().is_ok());
+        assert_eq!(set["+flag"].uid(), 47);
+
+        Ok(())
+    }
+}

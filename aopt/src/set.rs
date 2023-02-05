@@ -239,7 +239,7 @@ where
 
     fn cfg_mut(&mut self) -> &mut SetCfg<S>;
 
-    fn set_idx(mut self, index: Index) -> Self {
+    fn set_index(mut self, index: Index) -> Self {
         self.cfg_mut().set_index(index);
         self
     }

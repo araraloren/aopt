@@ -27,6 +27,8 @@
 
 - Support create option from type and string both
 
+- Fix filter match issue
+
 ## 0.8.4
 
 - Add `Creator::any` option type

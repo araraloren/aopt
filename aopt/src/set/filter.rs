@@ -54,6 +54,8 @@ where
         if ret && self.has_index() {
             if let Some(index) = opt.index() {
                 ret = ret && (self.index().unwrap() == index);
+            } else {
+                ret = false;
             }
         }
         ret
