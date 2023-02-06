@@ -35,15 +35,15 @@ use super::SetValueFindExt;
 /// #
 /// # fn main() -> Result<()> {
 /// let mut set = OptSet::<StrParser, ACreator, PrefixOptValidator>::default();
-/// 
+///
 /// // add default and bool creator
 /// set.register(Creator::fallback());
 /// set.register(Creator::new_type_ctor(aopt::opt::BuiltInCtor::Bool));
-/// 
+///
 /// // create a bool option
 /// set.add_opt_i::<bool>("--flag")?;
 /// assert_eq!(set.add_opt("/flag=b!")?.run()?, 1);
-/// 
+///
 /// // filter the set option
 /// assert_eq!(set.filter("/flag")?.find_all().count(), 1);
 /// assert!(set.find("--flag")?.is_some());

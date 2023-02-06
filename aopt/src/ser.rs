@@ -1,5 +1,7 @@
 use std::any::type_name;
 use std::fmt::Debug;
+use std::ops::Deref;
+use std::ops::DerefMut;
 
 use crate::map::AnyMap;
 use crate::map::Entry;
@@ -27,60 +29,29 @@ pub trait ServicesValExt {
     fn sve_take_val<T: ErasedTy>(&mut self) -> Result<T, Error>;
 }
 
-/// Services manage the [`AnyValService`], [`RawValService`] and [`UsrValService`].
-///
-/// [`AnyValService`] is use for storing the parsed value of option.
-/// [`RawValService`] is use for storing the raw value of option.
-/// [`UsrValService`] is use for storing any type value can reference in option handler.
-///
+/// A service can keep any type data, user can get the data inside [`hanlder`](crate::ctx::Invoker) of option.
 ///
 /// # Examples
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::RawVal;
 /// #
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-///     #[derive(Debug, PartialEq)]
-///     struct MyVec(pub Vec<i32>);
+/// #[derive(Debug, PartialEq)]
+/// struct MyVec(pub Vec<i32>);
 ///
-///     #[derive(Debug, PartialEq)]
-///     struct I32(i32);
+/// let mut services = AppServices::new();
 ///
-///     let mut services = Services::new();
+/// services.sve_insert(MyVec(vec![42]));
+/// services.sve_insert(42i64);
 ///
-///     services.ser_usrval_mut().insert(MyVec(vec![42]));
+/// /// get value of MyVec from AppServices
+/// assert_eq!(services.sve_val::<MyVec>()?.0[0], 42);
+/// /// modfify the value
+/// services.sve_val_mut::<MyVec>()?.0.push(18);
+/// /// check the value of MyVec
+/// assert_eq!(services.sve_val::<MyVec>()?.0[1], 18);
 ///
-///     // get value from of UsrValService
-///     assert_eq!(services.ser_usrval().val::<MyVec>()?.0[0], 42);
-///     // modfify the value of UsrValServices
-///     services.ser_usrval_mut().val_mut::<MyVec>()?.0.push(18);
-///     // check the value of MyVec
-///     assert_eq!(services.ser_usrval().val::<MyVec>()?.0[1], 18);
-///
-///     // push a new value to option 0
-///     services.ser_val_mut().push(0, I32(42));
-///     assert!(services.ser_val().contain(0));
-///     assert!(services.ser_val().contain_type::<I32>(0));
-///
-///     // pop a new value from option 0
-///     let ret: Option<I32> = services.ser_val_mut().pop(0);
-///     assert!(ret.is_some());
-///     assert_eq!(ret, Some(I32(42)));
-///     // left empty vector in AnyValService
-///     assert!(services.ser_val().contain(0));
-///     assert!(services.ser_val().vals::<I32>(0)?.is_empty());
-///
-///     services.ser_rawval_mut().push(0, RawVal::from("value1"));
-///     assert!(services.ser_rawval().contain(0));
-///     assert_eq!(services.ser_rawval().val(0)?, &RawVal::from("value1"));
-///
-///     // pop a new value from option 0
-///     let ret: Option<RawVal> = services.ser_rawval_mut().pop(0);
-///     assert!(ret.is_some());
-///     assert_eq!(ret, Some(RawVal::from("value1")));
-///     // left empty vector in RawValService
-///     assert!(services.ser_rawval().contain(0));
-///     assert!(services.ser_rawval().vals(0)?.is_empty());
+/// assert_eq!(services.sve_val::<i64>()?, &42);
 /// #
 /// #    Ok(())
 /// # }
@@ -129,6 +100,56 @@ impl ServicesValExt for AppServices {
     }
 }
 
+impl Deref for AppServices {
+    type Target = UsrValService;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for AppServices {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+/// [`UsrValService`] can store values of any type.
+/// 
+/// # Example
+/// ```rust
+/// # use aopt::prelude::*;
+/// # use aopt::Error;   
+/// #
+/// # fn main() -> Result<(), Error> {
+/// let mut service = UsrValService::new();
+/// 
+/// assert_eq!(service.contain_type::<Vec<i32>>(), false);
+/// assert_eq!(service.insert(vec![42]), None);
+/// assert_eq!(service.contain_type::<Vec<i32>>(), true);
+/// 
+/// assert_eq!(service.val::<Vec<i32>>()?, &vec![42]);
+/// service.val_mut::<Vec<i32>>()?.push(256);
+/// assert_eq!(service.val::<Vec<i32>>()?, &vec![42, 256]);
+/// 
+/// assert_eq!(service.val_mut::<Vec<i32>>()?, &mut vec![42, 256]);
+/// assert_eq!(service.val_mut::<Vec<i32>>()?.pop(), Some(256));
+/// assert_eq!(service.val::<Vec<i32>>()?, &vec![42]);
+/// 
+/// service.entry::<Vec<u64>>().or_insert(vec![9, 0, 2, 5]);
+/// assert_eq!(service.entry::<Vec<u64>>().or_default().pop(), Some(5));
+/// 
+/// service.val_mut::<Vec<i32>>()?.pop();
+/// assert_eq!(service.val_mut::<Vec<i32>>()?.len(), 0);
+/// 
+/// assert_eq!(service.remove::<Vec<u64>>(), Some(vec![9, 0, 2]));
+/// assert_eq!(service.contain_type::<u64>(), false);
+/// assert_eq!(service.get::<Vec<u64>>(), None);
+/// assert_eq!(service.get_mut::<Vec<i32>>(), Some(&mut vec![]));
+/// #
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Default)]
 pub struct UsrValService(AnyMap);
 
@@ -155,7 +176,7 @@ impl UsrValService {
         self.0.is_empty()
     }
 
-    pub fn contain<T: ErasedTy>(&self) -> bool {
+    pub fn contain_type<T: ErasedTy>(&self) -> bool {
         self.0.contain::<T>()
     }
 

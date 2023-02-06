@@ -54,6 +54,43 @@ pub trait ErasedValHandler {
     fn rawvals_mut(&mut self) -> Result<&mut Vec<RawVal>, Error>;
 }
 
+/// [`AnyValue`] can store values of any type. In internal it store the value into a vector of type T.
+///
+/// # Example
+/// 
+/// ```rust
+/// # use aopt::prelude::*;
+/// # use aopt::Error;
+/// # use std::ops::SubAssign;
+/// #
+/// # fn main() -> Result<(), Error> {
+/// let mut value = AnyValue::new();
+///
+/// assert_eq!(value.contain_type::<i32>(), false);
+/// assert_eq!(value.set(vec![42]), None);
+/// assert_eq!(value.contain_type::<i32>(), true);
+///
+/// assert_eq!(value.val::<i32>()?, &42);
+/// assert_eq!(value.push(256).val::<i32>()?, &256);
+/// value.val_mut::<i32>()?.sub_assign(128);
+/// assert_eq!(value.val::<i32>()?, &128);
+///
+/// assert_eq!(value.vals::<i32>()?, &vec![42, 128]);
+/// assert_eq!(value.pop::<i32>(), Some(128));
+/// assert_eq!(value.vals::<i32>()?, &vec![42]);
+///
+/// value.entry::<u64>().or_insert(vec![9, 0, 2, 5]);
+/// assert_eq!(value.entry::<u64>().or_default().pop(), Some(5));
+///
+/// value.vals_mut::<i32>()?.pop();
+/// assert_eq!(value.vals::<i32>()?.len(), 0);
+///
+/// assert_eq!(value.remove::<u64>(), Some(vec![9, 0, 2]));
+/// assert_eq!(value.contain_type::<u64>(), false);
+/// #
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Default)]
 pub struct AnyValue(AnyMap);
 
@@ -107,6 +144,7 @@ impl AnyValue {
         self.0.remove::<Vec<T>>()
     }
 
+    /// Get the last value reference of type T.
     pub fn val<T: ErasedTy>(&self) -> Result<&T, Error> {
         self.inner().and_then(|v| v.last()).ok_or_else(|| {
             Error::raise_error(format!(
@@ -116,6 +154,7 @@ impl AnyValue {
         })
     }
 
+    /// Get the last value mutable reference of type T.
     pub fn val_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
         self.inner_mut().and_then(|v| v.last_mut()).ok_or_else(|| {
             Error::raise_error(format!(
@@ -125,6 +164,7 @@ impl AnyValue {
         })
     }
 
+    /// Get the values of type T.
     pub fn vals<T: ErasedTy>(&self) -> Result<&Vec<T>, Error> {
         self.inner().ok_or_else(|| {
             Error::raise_error(format!(
@@ -134,6 +174,7 @@ impl AnyValue {
         })
     }
 
+    /// Get the values of type T.
     pub fn vals_mut<T: ErasedTy>(&mut self) -> Result<&mut Vec<T>, Error> {
         self.inner_mut().ok_or_else(|| {
             Error::raise_error(format!(
