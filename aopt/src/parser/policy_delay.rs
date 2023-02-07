@@ -267,11 +267,11 @@ where
                                     false,
                                 )?;
 
-                                if proc.is_mat() {
+                                if proc.status() {
                                     self.contexts.extend(ret);
                                     matched = true;
                                 }
-                                if proc.consume() {
+                                if proc.is_consume() {
                                     consume = true;
                                 }
                                 if matched {

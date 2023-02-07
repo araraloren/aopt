@@ -124,11 +124,11 @@ where
         self.matched_uid = None;
     }
 
-    fn is_mat(&self) -> bool {
+    fn status(&self) -> bool {
         self.matched_uid.is_some()
     }
 
-    fn mat_uid(&self) -> Option<Uid> {
+    fn uid(&self) -> Option<Uid> {
         self.matched_uid
     }
 
@@ -144,7 +144,7 @@ where
         self.argument.as_ref().map(|v| v.as_ref())
     }
 
-    fn consume(&self) -> bool {
+    fn is_consume(&self) -> bool {
         self.consume_arg
     }
 
@@ -183,7 +183,7 @@ where
             }
         }
         if matched {
-            if self.consume() && self.argument.is_none() {
+            if self.is_consume() && self.argument.is_none() {
                 return Err(Error::sp_missing_argument(opt.hint()));
             }
             opt.set_matched(true);
@@ -247,7 +247,7 @@ where
 
     /// Return true if the process successful.
     fn quit(&self) -> bool {
-        self.is_mat()
+        self.status()
     }
 
     /// Return the count of [`OptMatch`].
@@ -256,41 +256,41 @@ where
     }
 
     /// Return the [`Style`] of OptProcess.
-    fn sty(&self) -> Style {
+    fn style(&self) -> Style {
         self.matches.last().map_or(Style::Null, |v| v.style())
     }
 
     /// Return true if the process successful.
-    fn is_mat(&self) -> bool {
+    fn status(&self) -> bool {
         if self.any_match {
-            self.matches.iter().any(|v| v.is_mat())
+            self.matches.iter().any(|v| v.status())
         } else {
-            self.matches.iter().all(|v| v.is_mat())
+            self.matches.iter().all(|v| v.status())
         }
     }
 
     /// Return true if the process need consume an argument.
-    fn consume(&self) -> bool {
+    fn is_consume(&self) -> bool {
         self.consume_arg
     }
 
-    fn add_mat(&mut self, mat: OptMatch<S>) -> &mut Self {
+    fn add_match(&mut self, mat: OptMatch<S>) -> &mut Self {
         self.matches.push(mat);
         self
     }
 
-    fn mat(&self, index: usize) -> Option<&OptMatch<S>> {
+    fn get_match(&self, index: usize) -> Option<&OptMatch<S>> {
         self.matches.get(index)
     }
 
-    fn mat_mut(&mut self, index: usize) -> Option<&mut OptMatch<S>> {
+    fn get_match_mut(&mut self, index: usize) -> Option<&mut OptMatch<S>> {
         self.matches.get_mut(index)
     }
 
     /// Undo the process modification.
     fn undo(&mut self, set: &mut Self::Set) -> Result<(), Self::Error> {
         for mat in self.matches.iter_mut() {
-            if let Some(uid) = mat.mat_uid() {
+            if let Some(uid) = mat.uid() {
                 if let Some(opt) = set.get_mut(uid) {
                     mat.undo(opt)?;
                 }
@@ -314,8 +314,8 @@ where
                     opt.action()
                 );
                 for (index, mat) in self.matches.iter_mut().enumerate() {
-                    if !mat.is_mat() && mat.process(opt)? {
-                        self.consume_arg = self.consume_arg || mat.consume();
+                    if !mat.status() && mat.process(opt)? {
+                        self.consume_arg = self.consume_arg || mat.is_consume();
                         return Ok(Some(index));
                     }
                 }

@@ -269,10 +269,10 @@ where
                                     ))?
                                     .is_some()
                                     {
-                                        if proc.is_mat() {
+                                        if proc.status() {
                                             matched = true;
                                         }
-                                        if proc.consume() {
+                                        if proc.is_consume() {
                                             consume = true;
                                         }
                                         if matched {

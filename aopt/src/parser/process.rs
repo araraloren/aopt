@@ -88,7 +88,7 @@ where
         match proc.process(uid, set) {
             Ok(index) => {
                 if let Some(index) = index {
-                    let mat = proc.mat(index).unwrap(); // always true
+                    let mat = proc.get_match(index).unwrap(); // always true
 
                     // save the context
                     savers.push(CtxSaver {
@@ -111,7 +111,7 @@ where
             }
         }
     }
-    if proc.is_mat() && invoke {
+    if proc.status() && invoke {
         for saver in savers {
             let uid = saver.uid;
 
@@ -124,7 +124,7 @@ where
         }
         Ok(vec![])
     } else {
-        (!proc.is_mat()).then(|| proc.undo(set));
+        (!proc.status()).then(|| proc.undo(set));
 
         Ok(savers)
     }
@@ -154,7 +154,7 @@ where
         match proc.process(uid, set) {
             Ok(index) => {
                 if let Some(index) = index {
-                    let mat = proc.mat(index).unwrap(); // always true
+                    let mat = proc.get_match(index).unwrap(); // always true
 
                     ctx.set_inner_ctx(Some(
                         InnerCtx::default()

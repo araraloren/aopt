@@ -130,11 +130,11 @@ where
         self.matched_uid = None;
     }
 
-    fn is_mat(&self) -> bool {
+    fn status(&self) -> bool {
         self.matched_uid.is_some()
     }
 
-    fn mat_uid(&self) -> Option<Uid> {
+    fn uid(&self) -> Option<Uid> {
         self.matched_uid
     }
 
@@ -150,7 +150,7 @@ where
         self.arg.as_ref().map(|v| v.as_ref())
     }
 
-    fn consume(&self) -> bool {
+    fn is_consume(&self) -> bool {
         false
     }
 
@@ -255,26 +255,26 @@ where
     }
 
     /// Return the style of inner [`NOAMatch`].
-    fn sty(&self) -> Style {
+    fn style(&self) -> Style {
         self.matches.as_ref().map_or(Style::Null, |v| v.style())
     }
 
     /// Return true if the process successful.
-    fn is_mat(&self) -> bool {
-        self.matches.as_ref().map_or(false, |v| v.is_mat())
+    fn status(&self) -> bool {
+        self.matches.as_ref().map_or(false, |v| v.status())
     }
 
     /// Return true if the process need consume an argument.
-    fn consume(&self) -> bool {
+    fn is_consume(&self) -> bool {
         self.consume_arg
     }
 
-    fn add_mat(&mut self, mat: NOAMatch<S>) -> &mut Self {
+    fn add_match(&mut self, mat: NOAMatch<S>) -> &mut Self {
         self.matches = Some(mat);
         self
     }
 
-    fn mat(&self, index: usize) -> Option<&NOAMatch<S>> {
+    fn get_match(&self, index: usize) -> Option<&NOAMatch<S>> {
         if index == 0 {
             self.matches.as_ref()
         } else {
@@ -282,7 +282,7 @@ where
         }
     }
 
-    fn mat_mut(&mut self, index: usize) -> Option<&mut NOAMatch<S>> {
+    fn get_match_mut(&mut self, index: usize) -> Option<&mut NOAMatch<S>> {
         if index == 0 {
             self.matches.as_mut()
         } else {
@@ -293,7 +293,7 @@ where
     /// Undo the process modification.
     fn undo(&mut self, set: &mut Self::Set) -> Result<(), Self::Error> {
         if let Some(mat) = self.matches.as_mut() {
-            if let Some(uid) = mat.mat_uid() {
+            if let Some(uid) = mat.uid() {
                 if let Some(opt) = set.get_mut(uid) {
                     mat.undo(opt)?;
                 }
@@ -317,8 +317,8 @@ where
                     opt.index()
                 );
                 if let Some(mat) = self.matches.as_mut() {
-                    if !mat.is_mat() && mat.process(opt)? {
-                        self.consume_arg = self.consume_arg || mat.consume();
+                    if !mat.status() && mat.process(opt)? {
+                        self.consume_arg = self.consume_arg || mat.is_consume();
                         return Ok(Some(0));
                     }
                 }
