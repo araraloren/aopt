@@ -138,7 +138,7 @@ where
     }
 }
 
-/// Parser manage the [`Set`], [`Services`] and [`Policy`].
+/// Parser manage the components are using in [`parse`](Policy::parse) of [`Policy`].
 ///
 /// # Example
 ///
@@ -163,7 +163,7 @@ where
 ///     // Output: The question is: Where are you from ?
 ///     println!(
 ///         "The question is: {}",
-///         args.iter()
+///         args.iter().skip(1)
 ///             .map(|v| v.get_str().unwrap().to_owned())
 ///             .collect::<Vec<String>>()
 ///             .join(" ")
@@ -360,7 +360,7 @@ where
         self.appser.sve_val_mut()
     }
 
-    /// Set the user value that can access in option handler.
+    /// Set the value that can access in option handler.
     ///
     /// # Example 1
     /// ```rust
@@ -371,12 +371,14 @@ where
     /// # use std::ops::Deref;
     /// #
     /// # fn main() -> Result<(), Error> {
+    ///
+    /// #[derive(Debug)]
     /// struct Int(i64);
     ///
     /// let mut parser = Parser::new(AFwdPolicy::default());
     ///
     /// // Register a value can access in handler parameter.
-    /// parser.set_usrval(ser::Value::new(Int(42)))?;
+    /// parser.set_app_data(ser::Value::new(Int(42)))?;
     /// parser.add_opt("--guess=i!")?.on(
     ///   |_: &mut ASet, _: &mut ASer, mut val: ctx::Value<i64>, answer: ser::Value<Int>| {
     ///       if &answer.0 == val.deref() {
@@ -405,15 +407,16 @@ where
     /// # use std::ops::Deref;
     /// #
     /// # fn main() -> Result<(), Error> {
+    /// #[derive(Debug)]
     /// struct Int(i64);
     ///
     /// let mut parser = Parser::new(AFwdPolicy::default());
     ///
     /// // Register a value can access in handler parameter.
-    /// parser.set_usrval(Int(42))?;
+    /// parser.set_app_data(Int(42))?;
     /// parser.add_opt("--guess=i!")?.on(
     ///   |_: &mut ASet, ser: &mut ASer, mut val: ctx::Value<i64>| {
-    ///       let answer = ser.sve_usrval::<Int>()?;
+    ///       let answer = ser.sve_val::<Int>()?;
     ///
     ///       if &answer.0 == val.deref() {
     ///           println!("Congratulation, you win!");
@@ -441,7 +444,7 @@ where
     P::Set: Set,
     P: Policy<Error = Error>,
 {
-    /// Call the [`init`](crate::opt::Opt::init) on [`Services`] initialize the option value.
+    /// Call the [`init`](crate::opt::Opt::init) of [`Opt`] initialize the option value.
     pub fn init(&mut self) -> Result<(), P::Error> {
         let optset = &mut self.optset;
 
@@ -458,9 +461,6 @@ where
     P: Policy<Error = Error>,
 {
     /// Call [`parse`](Policy::parse) parsing the given arguments.
-    ///
-    /// The [`status`](ReturnVal::status) is true if parsing successes
-    /// otherwise it will be false if any [`failure`](Error::is_failure) raised.
     pub fn parse(&mut self, args: Arc<Args>) -> Result<P::Ret, P::Error> {
         let optset = &mut self.optset;
         let valser = &mut self.appser;

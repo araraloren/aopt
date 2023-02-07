@@ -5,7 +5,7 @@ use crate::{ctx::Ctx, RawVal};
 
 #[derive(Debug, Clone, Default)]
 pub struct ReturnVal {
-    error: Error,
+    failure: Error,
 
     ctx: Ctx,
 }
@@ -14,22 +14,22 @@ impl ReturnVal {
     pub fn new(ctx: Ctx) -> Self {
         Self {
             ctx,
-            error: Error::Null,
+            failure: Error::Null,
         }
     }
 
-    pub fn with_error(mut self, error: Error) -> Self {
-        self.error = error;
+    pub fn with_failure(mut self, failure: Error) -> Self {
+        self.failure = failure;
         self
     }
 
-    pub fn set_error(&mut self, error: Error) -> &mut Self {
-        self.error = error;
+    pub fn set_failure(&mut self, failure: Error) -> &mut Self {
+        self.failure = failure;
         self
     }
 
-    pub fn error(&self) -> &Error {
-        &self.error
+    pub fn failure(&self) -> &Error {
+        &self.failure
     }
 
     pub fn ctx(&self) -> &Ctx {
@@ -40,24 +40,35 @@ impl ReturnVal {
         self.ctx.args().as_slice()
     }
 
+    /// The [`status`](ReturnVal::status) is true if parsing successes
+    /// otherwise it will be false if any [`failure`](Error::is_failure) raised.
     pub fn status(&self) -> bool {
-        self.error.is_null()
+        self.failure.is_null()
     }
 
+    /// Unwrap the [`Ctx`] from [`ReturnVal`].
     pub fn unwrap(self) -> Ctx {
-        Result::unwrap(if self.error.is_null() {
+        Result::unwrap(if self.failure.is_null() {
             Ok(self.ctx)
         } else {
-            Err(self.error)
+            Err(self.failure)
         })
+    }
+
+    pub fn ok(self) -> Result<Ctx, Error> {
+        if self.failure.is_null() {
+            Ok(self.ctx)
+        } else {
+            Err(self.failure)
+        }
     }
 
     pub fn take_ctx(&mut self) -> Ctx {
         std::mem::take(&mut self.ctx)
     }
 
-    pub fn take_error(&mut self) -> Error {
-        std::mem::take(&mut self.error)
+    pub fn take_failure(&mut self) -> Error {
+        std::mem::take(&mut self.failure)
     }
 
     pub fn clone_args(&self) -> Vec<RawVal> {

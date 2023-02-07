@@ -57,7 +57,7 @@ pub trait ErasedValHandler {
 /// [`AnyValue`] can store values of any type. In internal it store the value into a vector of type T.
 ///
 /// # Example
-/// 
+///
 /// ```rust
 /// # use aopt::prelude::*;
 /// # use aopt::Error;

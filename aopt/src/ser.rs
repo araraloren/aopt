@@ -115,7 +115,7 @@ impl DerefMut for AppServices {
 }
 
 /// [`UsrValService`] can store values of any type.
-/// 
+///
 /// # Example
 /// ```rust
 /// # use aopt::prelude::*;
@@ -123,25 +123,25 @@ impl DerefMut for AppServices {
 /// #
 /// # fn main() -> Result<(), Error> {
 /// let mut service = UsrValService::new();
-/// 
+///
 /// assert_eq!(service.contain_type::<Vec<i32>>(), false);
 /// assert_eq!(service.insert(vec![42]), None);
 /// assert_eq!(service.contain_type::<Vec<i32>>(), true);
-/// 
+///
 /// assert_eq!(service.val::<Vec<i32>>()?, &vec![42]);
 /// service.val_mut::<Vec<i32>>()?.push(256);
 /// assert_eq!(service.val::<Vec<i32>>()?, &vec![42, 256]);
-/// 
+///
 /// assert_eq!(service.val_mut::<Vec<i32>>()?, &mut vec![42, 256]);
 /// assert_eq!(service.val_mut::<Vec<i32>>()?.pop(), Some(256));
 /// assert_eq!(service.val::<Vec<i32>>()?, &vec![42]);
-/// 
+///
 /// service.entry::<Vec<u64>>().or_insert(vec![9, 0, 2, 5]);
 /// assert_eq!(service.entry::<Vec<u64>>().or_default().pop(), Some(5));
-/// 
+///
 /// service.val_mut::<Vec<i32>>()?.pop();
 /// assert_eq!(service.val_mut::<Vec<i32>>()?.len(), 0);
-/// 
+///
 /// assert_eq!(service.remove::<Vec<u64>>(), Some(vec![9, 0, 2]));
 /// assert_eq!(service.contain_type::<u64>(), false);
 /// assert_eq!(service.get::<Vec<u64>>(), None);

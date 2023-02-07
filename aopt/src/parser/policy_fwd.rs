@@ -364,7 +364,7 @@ where
             Ok(_) => Ok(ReturnVal::new(ctx)),
             Err(e) => {
                 if e.is_failure() {
-                    Ok(ReturnVal::new(ctx).with_error(e))
+                    Ok(ReturnVal::new(ctx).with_failure(e))
                 } else {
                     Err(e)
                 }
