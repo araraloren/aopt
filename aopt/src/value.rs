@@ -14,8 +14,7 @@ pub use self::infer::Placeholder;
 pub use self::initiator::InitHandler;
 pub use self::initiator::InitializeValue;
 pub use self::initiator::ValInitializer;
-#[cfg(feature = "serde")]
-pub(crate) use self::parser::convert_raw_to_utf8;
+pub use self::parser::raw2str;
 pub use self::parser::RawValParser;
 pub use self::storer::StoreHandler;
 pub use self::storer::ValStorer;

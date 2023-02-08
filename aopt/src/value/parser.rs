@@ -14,7 +14,7 @@ where
     fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error>;
 }
 
-pub(crate) fn convert_raw_to_utf8(raw: Option<&RawVal>) -> Result<&str, Error> {
+pub fn raw2str(raw: Option<&RawVal>) -> Result<&str, Error> {
     raw.ok_or_else(|| Error::raise_failure("unexcepted empty value"))?
         .get_str()
         .ok_or_else(|| {
@@ -39,7 +39,7 @@ macro_rules! impl_raw_val_parser {
             type Error = Error;
 
             fn parse(raw: Option<&RawVal>, _ctx: &Ctx) -> Result<$int, Self::Error> {
-                let val = convert_raw_to_utf8(raw)?;
+                let val = $crate::value::parser::raw2str(raw)?;
 
                 val.parse::<$int>().map_err(|e| {
                     Error::raise_failure(format!(
@@ -73,7 +73,7 @@ impl RawValParser for String {
     type Error = Error;
 
     fn parse(raw: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(convert_raw_to_utf8(raw)?.to_string())
+        Ok(raw2str(raw)?.to_string())
     }
 }
 
@@ -81,7 +81,7 @@ impl RawValParser for bool {
     type Error = Error;
 
     fn parse(raw: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
-        let val = convert_raw_to_utf8(raw)?;
+        let val = raw2str(raw)?;
 
         match val {
             crate::opt::BOOL_TRUE => Ok(true),
@@ -98,7 +98,7 @@ impl RawValParser for PathBuf {
     type Error = Error;
 
     fn parse(raw: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(PathBuf::from(convert_raw_to_utf8(raw)?))
+        Ok(PathBuf::from(raw2str(raw)?))
     }
 }
 

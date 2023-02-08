@@ -179,6 +179,11 @@ impl OptConfig {
         self
     }
 
+    pub fn with_ctor<S: Into<Str>>(mut self, ctor: S) -> Self {
+        self.ctor = Some(ctor.into());
+        self
+    }
+
     pub fn with_name<S: Into<Str>>(mut self, name: S) -> Self {
         self.name = Some(name.into());
         self
@@ -204,18 +209,38 @@ impl OptConfig {
         self
     }
 
-    pub fn with_action(mut self, action: Option<Action>) -> Self {
-        self.action = action;
+    pub fn with_styles(mut self, styles: Vec<Style>) -> Self {
+        self.styles = Some(styles);
         self
     }
 
-    pub fn with_storer(mut self, storer: Option<ValStorer>) -> Self {
-        self.storer = storer;
+    pub fn with_action(mut self, action: Action) -> Self {
+        self.action = Some(action);
         self
     }
 
-    pub fn with_initializer(mut self, initializer: Option<ValInitializer>) -> Self {
-        self.initializer = initializer;
+    pub fn with_storer(mut self, storer: ValStorer) -> Self {
+        self.storer = Some(storer);
+        self
+    }
+
+    pub fn with_ignore_alias(mut self, ignore_alias: bool) -> Self {
+        self.ignore_alias = ignore_alias;
+        self
+    }
+
+    pub fn with_ignore_index(mut self, ignore_index: bool) -> Self {
+        self.ignore_index = ignore_index;
+        self
+    }
+
+    pub fn with_ignore_name(mut self, ignore_name: bool) -> Self {
+        self.ignore_name = ignore_name;
+        self
+    }
+
+    pub fn with_initializer(mut self, initializer: ValInitializer) -> Self {
+        self.initializer = Some(initializer);
         self
     }
 

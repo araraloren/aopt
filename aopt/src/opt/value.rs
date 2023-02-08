@@ -1,3 +1,4 @@
+use crate::map::Entry;
 use crate::map::ErasedTy;
 use crate::value::ErasedValHandler;
 use crate::Error;
@@ -13,6 +14,8 @@ pub trait OptValueExt {
     fn vals<T: ErasedTy>(&self) -> Result<&Vec<T>, Error>;
 
     fn vals_mut<T: ErasedTy>(&mut self) -> Result<&mut Vec<T>, Error>;
+
+    fn entry<T: ErasedTy>(&mut self) -> Entry<'_, Vec<T>>;
 
     fn rawval(&self) -> Result<&RawVal, Error>;
 
@@ -40,6 +43,10 @@ impl<O: Opt> OptValueExt for O {
 
     fn vals_mut<T: ErasedTy>(&mut self) -> Result<&mut Vec<T>, Error> {
         self.accessor_mut().vals_mut()
+    }
+
+    fn entry<T: ErasedTy>(&mut self) -> Entry<'_, Vec<T>> {
+        self.accessor_mut().entry::<T>()
     }
 
     fn rawval(&self) -> Result<&RawVal, Error> {

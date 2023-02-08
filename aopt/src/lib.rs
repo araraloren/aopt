@@ -182,7 +182,7 @@ macro_rules! getopt {
                                 }));
                             }
                             else {
-                                ret = Err(parser_ret.take_error());
+                                ret = Err(parser_ret.take_failure());
                             }
                         }
                         Err(e) => {

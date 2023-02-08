@@ -511,11 +511,12 @@ where
     ///
     /// // Add an option `--count` with type `i`.
     /// parser1.add_opt("--count=i")?;
+    ///
     /// // Add an option `--len` with type `u`, and get its unique id.
     /// let _len_id = parser1.add_opt("--len=u")?.run()?;
     ///
-    /// // Add an option `--size` with type `u`, it has an alias `-s`.
-    /// parser1.add_opt("--size=u")?.add_alias("-s");
+    /// // Add an option `--size` with type `usize`, it has an alias `-s`.
+    /// parser1.add_opt_i::<usize>("--size;-s")?;
     ///
     /// // Add an option `--path` with type `s`.
     /// // Set its value action to `Action::Set`.
@@ -527,26 +528,27 @@ where
     ///
     /// fn file_count_storer(
     ///     uid: Uid,
-    ///     _: &mut ASet,
-    ///     ser: &mut ASer,
+    ///     set: &mut ASet,
+    ///     _: &mut ASer,
     ///     _: Option<&RawVal>,
     ///     val: Option<bool>,
-    /// ) -> Result<Option<()>, Error> {
-    ///     let values = ser.ser_val_mut().entry::<u64>(uid).or_insert(vec![0]);
+    /// ) -> Result<bool, Error> {
+    ///     let values = set[uid].entry::<u64>().or_insert(vec![0]);
     ///
     ///     if let Some(is_file) = val {
     ///         if is_file {
     ///             values[0] += 1;
-    ///             return Ok(Some(()));
+    ///
+    ///             return Ok(true);
     ///         }
     ///     }
-    ///     Ok(None)
+    ///     Ok(false)
     /// }
     /// // Add an NOA `file` with type `p`.
     /// // The handler which add by `on` will called when option set.
     /// // The store will called by `Invoker` when storing option value.
     /// parser1
-    ///     .add_opt("file=p@2..")?
+    ///     .add_opt("file=p@1..")?
     ///     .on(|_: &mut ASet, _: &mut ASer, val: ctx::Value<String>| {
     ///         let path = val.deref();
     ///
@@ -560,9 +562,10 @@ where
     ///     })?
     ///     .then(file_count_storer);
     ///
-    /// getopt!(Args::from_array(["app", "foo", "bar"]), &mut parser1)?;
+    /// getopt!(Args::from_array(["app", "foo", "-s", "10", "bar"]), &mut parser1)?;
     ///
-    /// dbg!(parser1.find_val::<u64>("file=p")?);
+    /// assert_eq!(parser1.find_val::<u64>("file=p")?, &0);
+    /// assert_eq!(parser1.find_val::<usize>("--size")?, &10);
     /// #
     /// # Ok(())
     /// # }
@@ -604,29 +607,35 @@ where
     /// # use std::convert::From;
     /// #
     /// # fn main() -> Result<(), Error> {
-    ///     pub struct Bool;
+    /// pub struct Bool;
     ///
-    ///     impl From<Bool> for OptConfig {
-    ///         fn from(_: Bool) -> Self {
-    ///             OptConfig::default()
-    ///                 .with_type("a")
-    ///                 .with_action(Some(Action::Set))
-    ///                 .with_assoc(Some(Assoc::Bool))
-    ///                 .with_initiator(Some(ValInitiator::bool(false)))
-    ///         }
+    /// impl From<Bool> for OptConfig {
+    ///     fn from(_: Bool) -> Self {
+    ///         OptConfig::default()
+    ///             .with_ctor("b")
+    ///             .with_type::<bool>()
+    ///             .with_styles(vec![Style::Boolean, Style::Combined])
+    ///             .with_action(Action::Set)
+    ///             .with_storer(ValStorer::new::<bool>())
+    ///             .with_ignore_index(true)
+    ///             .with_initializer(ValInitializer::with_value(false))
     ///     }
+    /// }
     ///
-    ///     pub struct Int64;
+    /// pub struct Int64;
     ///
-    ///     impl From<Int64> for OptConfig {
-    ///         fn from(_: Int64) -> Self {
-    ///             OptConfig::default()
-    ///                 .with_type("i")
-    ///                 .with_action(Some(Action::Set))
-    ///                 .with_assoc(Some(Assoc::Int))
-    ///                 .with_initiator(Some(ValInitiator::i64(0)))
-    ///         }
+    /// impl From<Int64> for OptConfig {
+    ///     fn from(_: Int64) -> Self {
+    ///         OptConfig::default()
+    ///             .with_ctor(ctor_default_name())
+    ///             .with_styles(vec![Style::Argument])
+    ///             .with_type::<i64>()
+    ///             .with_action(Action::Set)
+    ///             .with_storer(ValStorer::new::<i64>())
+    ///             .with_ignore_index(true)
+    ///             .with_initializer(ValInitializer::with_value(0i64))
     ///     }
+    /// }
     ///
     ///     let mut parser = AFwdParser::default();
     ///
