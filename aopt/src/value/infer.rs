@@ -14,6 +14,7 @@ use crate::value::ValInitializer;
 use crate::value::ValValidator;
 use crate::Str;
 
+/// Implement this if you want the type can used for create option.
 pub trait Infer {
     type Val: ErasedTy + 'static;
 

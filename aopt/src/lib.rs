@@ -18,9 +18,9 @@ pub type HashMap<K, V> = ahash::HashMap<K, V>;
 pub type RawVal = raw::RawVal;
 
 #[cfg(feature = "sync")]
-pub type Arc<T> = std::sync::Arc<T>;
+pub type ARef<T> = std::sync::Arc<T>;
 #[cfg(not(feature = "sync"))]
-pub type Arc<T> = std::rc::Rc<T>;
+pub type ARef<T> = std::rc::Rc<T>;
 
 #[cfg(feature = "log")]
 pub(crate) use tracing::trace as trace_log;
@@ -92,7 +92,8 @@ pub struct GetoptRes<'a, P: Policy> {
 ///     assert_eq!(ret.find_val::<i64>("--bopt")?, &42i64);
 /// }
 /// {
-///     pre_parser.add_opt("-d=s")?;
+///     pre_parser.add_opt_i::<String>("-d")?
+///                 .add_default_initializer();
 ///     pre_parser.add_opt("--eopt=s")?;
 ///
 ///     let ret = getopt!(
@@ -166,7 +167,7 @@ macro_rules! getopt {
             fn __check_a(a: $crate::prelude::Args) -> $crate::prelude::Args { a }
 
             let mut ret = Ok(None);
-            let args = $crate::Arc::new(__check_a($args));
+            let args = $crate::ARef::new(__check_a($args));
 
             loop {
                 $(

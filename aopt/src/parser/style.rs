@@ -12,7 +12,7 @@ use crate::proc::NOAProcess;
 use crate::proc::OptMatch;
 use crate::proc::OptProcess;
 use crate::set::Set;
-use crate::Arc;
+use crate::ARef;
 use crate::Error;
 use crate::RawVal;
 use crate::Str;
@@ -136,7 +136,7 @@ pub struct GuessOptCfg<'a, T: OptValidator> {
 
     pub len: usize,
 
-    pub arg: Option<Arc<RawVal>>,
+    pub arg: Option<ARef<RawVal>>,
 
     pub clopt: &'a CLOpt,
 
@@ -147,7 +147,7 @@ impl<'a, T: OptValidator> GuessOptCfg<'a, T> {
     pub fn new(
         idx: usize,
         len: usize,
-        arg: Option<Arc<RawVal>>,
+        arg: Option<ARef<RawVal>>,
         clopt: &'a CLOpt,
         opt_validator: &'a T,
     ) -> Self {
@@ -168,7 +168,7 @@ impl<'a, T: OptValidator> GuessOptCfg<'a, T> {
         self.len
     }
 
-    pub fn arg(&self) -> Option<&Arc<RawVal>> {
+    pub fn arg(&self) -> Option<&ARef<RawVal>> {
         self.arg.as_ref()
     }
 
@@ -191,7 +191,7 @@ impl<'a, S, T> OptGuess<'a, S, T> {
         Self(PhantomData::default())
     }
 
-    fn bool2str(value: bool) -> Arc<RawVal> {
+    fn bool2str(value: bool) -> ARef<RawVal> {
         if value {
             RawVal::from(BOOL_TRUE).into()
         } else {
@@ -357,11 +357,11 @@ where
 pub struct GuessNOACfg {
     index: usize,
     total: usize,
-    args: Arc<Args>,
+    args: ARef<Args>,
 }
 
 impl GuessNOACfg {
-    pub fn new(args: Arc<Args>, index: usize, total: usize) -> Self {
+    pub fn new(args: ARef<Args>, index: usize, total: usize) -> Self {
         Self { args, index, total }
     }
 

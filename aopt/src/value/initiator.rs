@@ -60,7 +60,9 @@ mod __initializer {
 pub use __initializer::InitHandler;
 pub use __initializer::InitializeValue;
 
+/// A type using for initialize the option value.
 pub struct ValInitializer(InitHandler<AnyValue>);
+
 impl Debug for ValInitializer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("ValInitializer").field(&"{...}").finish()
@@ -89,6 +91,7 @@ impl ValInitializer {
         }))
     }
 
+    /// Default value initializer, do nothing.
     pub fn fallback() -> Self {
         Self(Box::new(|_| Ok(())))
     }

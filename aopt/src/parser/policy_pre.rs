@@ -24,7 +24,7 @@ use crate::opt::OptParser;
 use crate::proc::Process;
 use crate::set::OptValidator;
 use crate::set::SetOpt;
-use crate::Arc;
+use crate::ARef;
 use crate::Error;
 
 /// [`PrePolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
@@ -36,7 +36,7 @@ use crate::Error;
 /// ```rust
 /// # use aopt::getopt;
 /// # use aopt::prelude::*;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// # use aopt::Error;
 /// # use std::ops::Deref;
 /// #
@@ -239,7 +239,7 @@ where
             let mut matched = false;
             let mut consume = false;
             let mut like_opt = false;
-            let arg = arg.map(|v| Arc::new(v.clone()));
+            let arg = arg.map(|v| ARef::new(v.clone()));
 
             if let Ok(clopt) = opt.parse_arg() {
                 if let Some(name) = clopt.name() {
@@ -298,7 +298,7 @@ where
 
         Self::ig_failure(self.checker().opt_check(set))?;
 
-        let noa_args = Arc::new(noa_args);
+        let noa_args = ARef::new(noa_args);
         let noa_len = noa_args.len();
 
         ctx.set_args(noa_args.clone());
@@ -394,7 +394,7 @@ where
         set: &mut Self::Set,
         inv: &mut Self::Inv,
         ser: &mut Self::Ser,
-        args: Arc<Args>,
+        args: ARef<Args>,
     ) -> Result<Self::Ret, Self::Error> {
         let mut ctx = Ctx::default().with_orig_args(args.clone()).with_args(args);
 
@@ -420,7 +420,7 @@ mod test {
     use crate::opt::Cmd;
     use crate::opt::Pos;
     use crate::prelude::*;
-    use crate::Arc;
+    use crate::ARef;
     use crate::Error;
     use crate::RawVal;
 
@@ -992,7 +992,7 @@ mod test {
         for opt in set.iter_mut() {
             opt.init()?;
         }
-        let ret = policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args));
+        let ret = policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args));
 
         assert!(ret.is_ok());
         let ret = ret.unwrap();

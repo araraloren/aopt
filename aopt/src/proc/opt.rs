@@ -7,7 +7,7 @@ use crate::proc::Match;
 use crate::proc::Process;
 use crate::set::Ctor;
 use crate::set::Set;
-use crate::Arc;
+use crate::ARef;
 use crate::Error;
 use crate::RawVal;
 use crate::Str;
@@ -18,7 +18,7 @@ pub struct OptMatch<S> {
 
     style: Style,
 
-    argument: Option<Arc<RawVal>>,
+    argument: Option<ARef<RawVal>>,
 
     matched_uid: Option<Uid>,
 
@@ -88,7 +88,7 @@ where
         self
     }
 
-    pub fn with_arg(mut self, argument: Option<Arc<RawVal>>) -> Self {
+    pub fn with_arg(mut self, argument: Option<ARef<RawVal>>) -> Self {
         self.argument = argument;
         self
     }
@@ -107,7 +107,7 @@ impl<S> OptMatch<S> {
         self.total
     }
 
-    pub fn clone_arg(&self) -> Option<Arc<RawVal>> {
+    pub fn clone_arg(&self) -> Option<ARef<RawVal>> {
         self.argument.clone()
     }
 }

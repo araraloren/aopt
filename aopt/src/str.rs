@@ -3,7 +3,7 @@ use std::fmt::Display;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
-use crate::Arc;
+use crate::ARef;
 
 pub fn astr<T: Into<Str>>(value: T) -> Str {
     value.into()
@@ -13,9 +13,9 @@ pub trait StrJoin {
     fn join(&self, sep: &str) -> String;
 }
 
-/// A simple wrapper of [`Arc`](crate::Arc)\<str\>.
+/// A simple wrapper of [`ARef`](crate::ARef)\<str\>.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Str(Arc<str>);
+pub struct Str(ARef<str>);
 
 impl Str {
     pub fn as_str(&self) -> &str {
@@ -37,13 +37,13 @@ impl Default for Str {
 
 impl<'a> From<&'a str> for Str {
     fn from(value: &'a str) -> Self {
-        Str(Arc::from(value))
+        Str(ARef::from(value))
     }
 }
 
 impl From<String> for Str {
     fn from(value: String) -> Self {
-        Str(Arc::from(value))
+        Str(ARef::from(value))
     }
 }
 
@@ -55,12 +55,12 @@ impl<'a> From<&'a Str> for Str {
 
 impl<'a> From<Cow<'a, str>> for Str {
     fn from(value: Cow<'a, str>) -> Self {
-        Self(Arc::from(value))
+        Self(ARef::from(value))
     }
 }
 
 impl Deref for Str {
-    type Target = Arc<str>;
+    type Target = ARef<str>;
 
     fn deref(&self) -> &Self::Target {
         &self.0

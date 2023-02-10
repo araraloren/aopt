@@ -25,7 +25,7 @@ use crate::opt::OptParser;
 use crate::proc::Process;
 use crate::set::OptValidator;
 use crate::set::SetOpt;
-use crate::Arc;
+use crate::ARef;
 use crate::Error;
 
 /// [`FwdPolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
@@ -38,7 +38,7 @@ use crate::Error;
 /// # Examples
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<(), Error> {
@@ -71,7 +71,7 @@ use crate::Error;
 ///     opt.init()?;
 /// }
 /// ser.sve_insert(ser::Value::new(vec!["foo", "bar"]));
-/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?;
 ///
 /// let values = set[pos_id].vals::<String>()?;
 ///
@@ -84,7 +84,7 @@ use crate::Error;
 ///     opt.init()?;
 /// }
 ///
-/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?;
 /// let values = set[pos_id].vals::<String>()?;
 ///
 /// assert_eq!(values[0], "set");
@@ -204,7 +204,7 @@ where
         while let Some((idx, (opt, arg))) = iter.next() {
             let mut matched = false;
             let mut consume = false;
-            let arg = arg.map(|v| Arc::new(v.clone()));
+            let arg = arg.map(|v| ARef::new(v.clone()));
 
             if let Ok(clopt) = opt.parse_arg() {
                 if let Some(name) = clopt.name() {
@@ -260,7 +260,7 @@ where
 
         self.checker().opt_check(set)?;
 
-        let noa_args = Arc::new(noa_args);
+        let noa_args = ARef::new(noa_args);
         let noa_len = noa_args.len();
 
         ctx.set_args(noa_args.clone());
@@ -356,7 +356,7 @@ where
         set: &mut Self::Set,
         inv: &mut Self::Inv,
         ser: &mut Self::Ser,
-        args: Arc<Args>,
+        args: ARef<Args>,
     ) -> Result<Self::Ret, Self::Error> {
         let mut ctx = Ctx::default().with_orig_args(args.clone()).with_args(args);
 
@@ -382,7 +382,7 @@ mod test {
     use crate::opt::Cmd;
     use crate::opt::Pos;
     use crate::prelude::*;
-    use crate::Arc;
+    use crate::ARef;
     use crate::Error;
     use crate::RawVal;
 
@@ -948,7 +948,7 @@ mod test {
         for opt in set.iter_mut() {
             opt.init()?;
         }
-        policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?;
+        policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?;
         Ok(())
     }
 }

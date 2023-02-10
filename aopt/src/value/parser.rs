@@ -5,6 +5,7 @@ use crate::ctx::Ctx;
 use crate::Error;
 use crate::RawVal;
 
+/// Implement this if you want parsing the raw value into your type.
 pub trait RawValParser
 where
     Self: Sized,

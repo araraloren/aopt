@@ -19,6 +19,7 @@ pub type StoreHandler<T> =
 pub type StoreHandler<T> =
     Box<dyn FnMut(Option<&RawVal>, &Ctx, &Action, &mut T) -> Result<(), Error>>;
 
+/// [`ValStorer`] perform the value store action.
 pub struct ValStorer(StoreHandler<AnyValue>);
 
 impl Debug for ValStorer {
@@ -32,10 +33,14 @@ impl ValStorer {
         Self(Self::fallback::<U>())
     }
 
+    /// Create a [`ValStorer`] with a value validator.
+    /// The [`invoke`](ValStorer::invoke) will return a [`failure`](Error::is_failure)
+    /// if value check failed.
     pub fn new_validator<U: ErasedTy + RawValParser>(validator: ValValidator<U>) -> Self {
         Self(Self::validator(validator))
     }
 
+    /// Invoke the inner value store handler on [`AnyValue`].
     pub fn invoke(
         &mut self,
         raw: Option<&RawVal>,

@@ -29,7 +29,7 @@ use crate::proc::Process;
 use crate::set::OptValidator;
 use crate::set::SetOpt;
 use crate::trace_log;
-use crate::Arc;
+use crate::ARef;
 use crate::Error;
 
 /// [`DelayPolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
@@ -243,7 +243,7 @@ where
         while let Some((idx, (opt, arg))) = iter.next() {
             let mut matched = false;
             let mut consume = false;
-            let arg = arg.map(|v| Arc::new(v.clone()));
+            let arg = arg.map(|v| ARef::new(v.clone()));
 
             // parsing current argument
             if let Ok(clopt) = opt.parse_arg() {
@@ -300,7 +300,7 @@ where
             }
         }
 
-        let noa_args = Arc::new(noa_args);
+        let noa_args = ARef::new(noa_args);
         let noa_len = noa_args.len();
 
         ctx.set_args(noa_args.clone());
@@ -401,7 +401,7 @@ where
         set: &mut Self::Set,
         inv: &mut Self::Inv,
         ser: &mut Self::Ser,
-        args: Arc<Args>,
+        args: ARef<Args>,
     ) -> Result<Self::Ret, Self::Error> {
         let mut ctx = Ctx::default().with_orig_args(args.clone()).with_args(args);
 
@@ -423,7 +423,7 @@ mod test {
 
     use crate::opt::Pos;
     use crate::prelude::*;
-    use crate::Arc;
+    use crate::ARef;
     use crate::Error;
     use std::any::TypeId;
     use std::ops::Deref;
@@ -582,7 +582,7 @@ mod test {
             },
         );
 
-        let args = Arc::new(args);
+        let args = ARef::new(args);
 
         for opt in set.iter_mut() {
             opt.init()?;

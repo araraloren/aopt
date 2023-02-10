@@ -9,7 +9,7 @@ use crate::proc::Process;
 use crate::set::Ctor;
 use crate::set::Set;
 use crate::trace_log;
-use crate::Arc;
+use crate::ARef;
 use crate::Error;
 use crate::RawVal;
 use crate::Str;
@@ -18,9 +18,9 @@ use crate::Uid;
 pub struct NOAMatch<S> {
     name: Option<Str>,
 
-    args: Arc<Args>,
+    args: ARef<Args>,
 
-    arg: Option<Arc<RawVal>>,
+    arg: Option<ARef<RawVal>>,
 
     style: Style,
 
@@ -54,7 +54,7 @@ impl<S> Default for NOAMatch<S> {
     fn default() -> Self {
         Self {
             name: None,
-            args: Arc::new(Args::default()),
+            args: ARef::new(Args::default()),
             arg: None,
             style: Style::default(),
             noa_index: 0,
@@ -83,7 +83,7 @@ impl<S> NOAMatch<S> {
         self
     }
 
-    pub fn with_args(mut self, args: Arc<Args>) -> Self {
+    pub fn with_args(mut self, args: ARef<Args>) -> Self {
         self.args = args;
         self
     }
@@ -112,7 +112,7 @@ impl<S> NOAMatch<S> {
         self.name.as_ref()
     }
 
-    pub fn clone_arg(&self) -> Option<Arc<RawVal>> {
+    pub fn clone_arg(&self) -> Option<ARef<RawVal>> {
         self.arg.clone()
     }
 }

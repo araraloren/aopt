@@ -54,7 +54,7 @@ use crate::set::SetOpt;
 use crate::value::Infer;
 use crate::value::Placeholder;
 use crate::value::RawValParser;
-use crate::Arc;
+use crate::ARef;
 use crate::Error;
 use crate::Str;
 use crate::Uid;
@@ -91,7 +91,7 @@ pub struct CtxSaver {
 ///
 ///     type Error = Error;
 ///
-///     fn parse(&mut self, _: &mut S, _: &mut T, _: Arc<Args>) -> Result<bool, Error> {
+///     fn parse(&mut self, _: &mut S, _: &mut T, _: ARef<Args>) -> Result<bool, Error> {
 ///         // ... parsing logical code
 ///         Ok(Some(true))
 ///     }
@@ -109,7 +109,7 @@ pub trait Policy {
         set: &mut Self::Set,
         inv: &mut Self::Inv,
         ser: &mut Self::Ser,
-        args: Arc<Args>,
+        args: ARef<Args>,
     ) -> Result<Self::Ret, Self::Error>;
 }
 
@@ -132,7 +132,7 @@ where
         set: &mut Self::Set,
         inv: &mut Self::Inv,
         ser: &mut Self::Ser,
-        args: Arc<Args>,
+        args: ARef<Args>,
     ) -> Result<Self::Ret, Self::Error> {
         Policy::parse(self.as_mut(), set, inv, ser, args)
     }
@@ -145,7 +145,7 @@ where
 /// ```rust
 /// # use aopt::getopt;
 /// # use aopt::prelude::*;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<(), Error> {
@@ -366,7 +366,7 @@ where
     /// ```rust
     /// # use aopt::getopt;
     /// # use aopt::prelude::*;
-    /// # use aopt::Arc;
+    /// # use aopt::ARef;
     /// # use aopt::Error;
     /// # use std::ops::Deref;
     /// #
@@ -402,7 +402,7 @@ where
     /// ```rust
     /// # use aopt::getopt;
     /// # use aopt::prelude::*;
-    /// # use aopt::Arc;
+    /// # use aopt::ARef;
     /// # use aopt::Error;
     /// # use std::ops::Deref;
     /// #
@@ -461,7 +461,7 @@ where
     P: Policy<Error = Error>,
 {
     /// Call [`parse`](Policy::parse) parsing the given arguments.
-    pub fn parse(&mut self, args: Arc<Args>) -> Result<P::Ret, P::Error> {
+    pub fn parse(&mut self, args: ARef<Args>) -> Result<P::Ret, P::Error> {
         let optset = &mut self.optset;
         let valser = &mut self.appser;
         let invser = &mut self.invoker;
@@ -477,7 +477,7 @@ where
         let optset = &mut self.optset;
         let valser = &mut self.appser;
         let invser = &mut self.invoker;
-        let args = crate::Arc::new(Args::from_env());
+        let args = crate::ARef::new(Args::from_env());
 
         self.policy.parse(optset, invser, valser, args)
     }
@@ -501,7 +501,7 @@ where
     ///```rust
     /// # use aopt::getopt;
     /// # use aopt::prelude::*;
-    /// # use aopt::Arc;
+    /// # use aopt::ARef;
     /// # use aopt::Error;
     /// # use aopt::RawVal;
     /// # use std::ops::Deref;
@@ -643,7 +643,7 @@ where
     ///     parser.add_opt_cfg(Int64)?.set_name("--poll");
     ///
     ///     parser.init()?;
-    ///     parser.parse(aopt::Arc::new(Args::from(["--poll", "42"].into_iter())))?;
+    ///     parser.parse(aopt::ARef::new(Args::from(["--poll", "42"].into_iter())))?;
     ///
     ///     assert_eq!(parser.find_val::<bool>("--round")?, &false);
     ///     assert_eq!(parser.find_val::<i64>("--poll")?, &42);

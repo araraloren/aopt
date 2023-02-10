@@ -1,7 +1,7 @@
 use crate::args::Args;
 use crate::opt::Style;
 use crate::parser::ReturnVal;
-use crate::Arc;
+use crate::ARef;
 use crate::Error;
 use crate::RawVal;
 use crate::Str;
@@ -15,7 +15,7 @@ pub struct InnerCtx {
 
     style: Style,
 
-    arg: Option<Arc<RawVal>>,
+    arg: Option<ARef<RawVal>>,
 
     index: usize,
 
@@ -48,7 +48,7 @@ impl InnerCtx {
         self
     }
 
-    pub fn with_arg(mut self, argument: Option<Arc<RawVal>>) -> Self {
+    pub fn with_arg(mut self, argument: Option<ARef<RawVal>>) -> Self {
         self.arg = argument;
         self
     }
@@ -81,7 +81,7 @@ impl InnerCtx {
     }
 
     /// The argument which set in [`guess`](crate::parser::Guess::guess).
-    pub fn arg(&self) -> Option<Arc<RawVal>> {
+    pub fn arg(&self) -> Option<ARef<RawVal>> {
         self.arg.clone()
     }
 
@@ -112,7 +112,7 @@ impl InnerCtx {
         self
     }
 
-    pub fn set_arg(&mut self, argument: Option<Arc<RawVal>>) -> &mut Self {
+    pub fn set_arg(&mut self, argument: Option<ARef<RawVal>>) -> &mut Self {
         self.arg = argument;
         self
     }
@@ -122,20 +122,20 @@ impl InnerCtx {
 /// It saved the option information and matched arguments.
 #[derive(Debug, Clone, Default)]
 pub struct Ctx {
-    args: Arc<Args>,
+    args: ARef<Args>,
 
-    orig_args: Arc<Args>,
+    orig_args: ARef<Args>,
 
     inner_ctx: Option<InnerCtx>,
 }
 
 impl Ctx {
-    pub fn with_args(mut self, args: Arc<Args>) -> Self {
+    pub fn with_args(mut self, args: ARef<Args>) -> Self {
         self.args = args;
         self
     }
 
-    pub fn with_orig_args(mut self, orig_args: Arc<Args>) -> Self {
+    pub fn with_orig_args(mut self, orig_args: ARef<Args>) -> Self {
         self.orig_args = orig_args;
         self
     }
@@ -176,12 +176,12 @@ impl Ctx {
 
     /// The copy of [`Args`] when the option matched.
     /// It may be changing during parsing process.
-    pub fn args(&self) -> &Arc<Args> {
+    pub fn args(&self) -> &ARef<Args> {
         &self.args
     }
 
     /// The argument which set in [`guess`](crate::parser::Guess::guess).
-    pub fn arg(&self) -> Result<Option<Arc<RawVal>>, Error> {
+    pub fn arg(&self) -> Result<Option<ARef<RawVal>>, Error> {
         Ok(self.inner_ctx()?.arg())
     }
 
@@ -198,7 +198,7 @@ impl Ctx {
     }
 
     /// The original arguments passed by user.
-    pub fn orig_args(&self) -> &Arc<Args> {
+    pub fn orig_args(&self) -> &ARef<Args> {
         &self.orig_args
     }
 
@@ -208,11 +208,11 @@ impl Ctx {
         Ok((idx > 0).then(|| self.orig_args().get(idx)).flatten())
     }
 
-    pub fn take_args(&mut self) -> Arc<Args> {
+    pub fn take_args(&mut self) -> ARef<Args> {
         std::mem::take(&mut self.args)
     }
 
-    pub fn take_orig_args(&mut self) -> Arc<Args> {
+    pub fn take_orig_args(&mut self) -> ARef<Args> {
         std::mem::take(&mut self.orig_args)
     }
 }
@@ -235,7 +235,7 @@ impl Ctx {
         Ok(self)
     }
 
-    pub fn set_args(&mut self, args: Arc<Args>) -> &mut Self {
+    pub fn set_args(&mut self, args: ARef<Args>) -> &mut Self {
         self.args = args;
         self
     }
@@ -250,12 +250,12 @@ impl Ctx {
         Ok(self)
     }
 
-    pub fn set_arg(&mut self, argument: Option<Arc<RawVal>>) -> Result<&mut Self, Error> {
+    pub fn set_arg(&mut self, argument: Option<ARef<RawVal>>) -> Result<&mut Self, Error> {
         self.inner_ctx_mut()?.set_arg(argument);
         Ok(self)
     }
 
-    pub fn set_orig_args(&mut self, orig_args: Arc<Args>) -> &mut Self {
+    pub fn set_orig_args(&mut self, orig_args: ARef<Args>) -> &mut Self {
         self.orig_args = orig_args;
         self
     }

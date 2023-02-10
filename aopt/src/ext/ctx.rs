@@ -4,7 +4,7 @@
 //! # Examples
 //! ```rust
 //! # use aopt::prelude::*;
-//! # use aopt::Arc;
+//! # use aopt::ARef;
 //! # use aopt::RawVal;
 //! # use std::ops::Deref;
 //! #
@@ -54,7 +54,7 @@
 //! let args = Args::from_array(["app", "--/bool", "set", "42", "foo", "bar"]);
 //!
 //! policy
-//!     .parse(&mut set, &mut inv, &mut ser, Arc::new(args))?
+//!     .parse(&mut set, &mut inv, &mut ser, ARef::new(args))?
 //!     .unwrap();
 //!
 //! assert_eq!(set.find_val::<bool>("--/bool")?, &false);
@@ -79,7 +79,7 @@ use std::ops::DerefMut;
 use crate::ctx::Ctx;
 use crate::ctx::Extract;
 use crate::value::RawValParser;
-use crate::Arc;
+use crate::ARef;
 use crate::Error;
 use crate::Str;
 
@@ -101,7 +101,7 @@ impl<Set, Ser> Extract<Set, Ser> for Ctx {
 /// # use std::ops::Deref;
 /// # use aopt::prelude::*;
 /// # use aopt::Error;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// #
 /// # fn main() -> Result<(), Error> {
 ///   let mut policy = AFwdPolicy::default();
@@ -118,7 +118,7 @@ impl<Set, Ser> Extract<Set, Ser> for Ctx {
 ///
 ///   let args = Args::from_array(["app", "--/bool", ]);
 ///
-///   policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?.unwrap();
+///   policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
 ///   assert_eq!(set[0].val::<bool>()?, &false);
 ///
@@ -169,7 +169,7 @@ impl Display for Uid {
 /// # Examples
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// # use aopt::Error;
 /// # use std::ops::Deref;
 /// #
@@ -214,7 +214,7 @@ impl Display for Uid {
 ///
 /// let args = Args::from_array(["app", "--/bool", "set", "value"]);
 ///
-/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?.unwrap();
+/// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
 /// assert_eq!(set.find_val::<bool>("--/bool")?, &false);
 /// assert_eq!(set[1].val::<bool>()?, &true);
@@ -266,7 +266,7 @@ impl Display for Index {
 /// # Example
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// # use aopt::Error;
 /// # use std::ops::Deref;
 /// #
@@ -299,7 +299,7 @@ impl Display for Index {
 ///
 /// let args = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
 ///
-/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?.unwrap();
+/// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
 /// assert_eq!(set[0].val::<bool>()?, &false);
 /// assert_eq!(set[1].val::<bool>()?, &true);
@@ -351,7 +351,7 @@ impl Display for Total {
 /// # Examples
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// # use aopt::Error;
 /// # use std::ops::Deref;
 /// #
@@ -393,7 +393,7 @@ impl Display for Total {
 ///
 /// let args = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
 ///
-/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?.unwrap();
+/// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
 /// assert_eq!(set[0].val::<bool>()?, &false);
 /// assert_eq!(set[1].val::<bool>()?, &true);
@@ -403,7 +403,7 @@ impl Display for Total {
 /// # }
 /// ```
 #[derive(Debug, Clone, Default)]
-pub struct Args(Arc<crate::args::Args>);
+pub struct Args(ARef<crate::args::Args>);
 
 impl Args {
     pub fn extract_ctx(ctx: &Ctx) -> Self {
@@ -432,7 +432,7 @@ impl<Set, Ser> Extract<Set, Ser> for Args {
 /// # Examples
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// # use aopt::Error;
 /// # use std::ops::Deref;
 /// #
@@ -477,7 +477,7 @@ impl<Set, Ser> Extract<Set, Ser> for Args {
 ///
 /// let args = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
 ///
-/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?.unwrap();
+/// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
 /// assert_eq!(set[0].val::<bool>()?, &true);
 /// assert_eq!(set[1].val::<bool>()?, &true);
@@ -537,7 +537,7 @@ impl Display for Name {
 /// # Examples
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// # use aopt::Error;
 /// # use std::ops::Deref;
 /// #
@@ -582,7 +582,7 @@ impl Display for Name {
 ///
 /// let args = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
 ///
-/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?.unwrap();
+/// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
 /// assert_eq!(set.find_val::<bool>("--/bool")?, &false);
 /// assert_eq!(set.find_val::<bool>("set")?, &true);
@@ -633,7 +633,7 @@ impl<Set, Ser> Extract<Set, Ser> for Style {
 /// # Examples
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// # use aopt::Error;
 /// # use aopt::RawVal;
 /// # use std::ops::Deref;
@@ -679,7 +679,7 @@ impl<Set, Ser> Extract<Set, Ser> for Style {
 ///
 /// let args = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
 ///
-/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?.unwrap();
+/// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
 /// assert_eq!(set[0].val::<bool>()?, &false);
 /// assert_eq!(set[1].val::<bool>()?, &true);
@@ -689,7 +689,7 @@ impl<Set, Ser> Extract<Set, Ser> for Style {
 /// # }
 /// ```
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct RawVal(Arc<crate::RawVal>);
+pub struct RawVal(ARef<crate::RawVal>);
 
 impl RawVal {
     pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
@@ -724,7 +724,7 @@ impl<Set, Ser> Extract<Set, Ser> for RawVal {
 /// # Examples
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// # use aopt::Error;
 /// # use std::ops::Deref;
 /// #
@@ -769,7 +769,7 @@ impl<Set, Ser> Extract<Set, Ser> for RawVal {
 ///
 /// let args = Args::from_array(["app", "--/bool", "set", "42", "foo"]);
 ///
-/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?.unwrap();
+/// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
 /// assert_eq!(set.find_val::<bool>("--/bool")?, &false);
 /// assert_eq!(set.find_val::<bool>("set")?, &true);

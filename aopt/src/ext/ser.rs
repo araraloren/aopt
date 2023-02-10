@@ -9,23 +9,23 @@ use crate::ctx::Ctx;
 use crate::ctx::Extract;
 use crate::map::ErasedTy;
 use crate::ser::ServicesValExt;
-use crate::Arc;
+use crate::ARef;
 use crate::Error;
 
 #[cfg(feature = "sync")]
-pub struct Value<T: ?Sized>(Arc<T>);
+pub struct Value<T: ?Sized>(ARef<T>);
 
 #[cfg(not(feature = "sync"))]
 /// Simple wrapper of user value stored in [`UsrValService`](crate::ser::UsrValService).
 ///
-/// Value internally use [Arc](crate::Arc), it is cheap to clone.
+/// Value internally use [ARef](crate::ARef), it is cheap to clone.
 /// Before used it in `handler` which register in [`Invoker`](crate::ctx::Invoker),
 /// you need add it to [`UsrValService`](crate::ser::UsrValService).
 ///
 /// # Examples
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// # use aopt::Error;
 /// # use aopt::RawVal;
 /// # use std::cell::RefCell;
@@ -73,7 +73,7 @@ pub struct Value<T: ?Sized>(Arc<T>);
 ///
 /// let args = Args::from_array(["app", "--/bool", "set", "42", "foo", "bar"]);
 ///
-/// policy.parse(&mut set, &mut inv, &mut ser, Arc::new(args))?.unwrap();
+/// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
 /// assert_eq!(set[0].val::<bool>()?, &false);
 /// ser.sve_val::<ser::Value::<PosList>>()?.test_pos(
@@ -85,11 +85,11 @@ pub struct Value<T: ?Sized>(Arc<T>);
 /// # Ok(())
 /// # }
 /// ```
-pub struct Value<T: ?Sized>(Arc<T>);
+pub struct Value<T: ?Sized>(ARef<T>);
 
 impl<T> Value<T> {
     pub fn new(value: T) -> Self {
-        Self(Arc::new(value))
+        Self(ARef::new(value))
     }
 }
 
@@ -113,20 +113,20 @@ impl<T: ?Sized> Value<T> {
         self.0.as_ref()
     }
 
-    pub fn into_inner(self) -> Arc<T> {
+    pub fn into_inner(self) -> ARef<T> {
         self.0
     }
 }
 
-/// Value internally use Arc.
+/// Value internally use ARef.
 impl<T: ?Sized> Clone for Value<T> {
     fn clone(&self) -> Value<T> {
-        Value(Arc::clone(&self.0))
+        Value(ARef::clone(&self.0))
     }
 }
 
-impl<T: ?Sized> From<Arc<T>> for Value<T> {
-    fn from(val: Arc<T>) -> Self {
+impl<T: ?Sized> From<ARef<T>> for Value<T> {
+    fn from(val: ARef<T>) -> Self {
         Value(val)
     }
 }
@@ -155,7 +155,7 @@ impl<T: Display> Display for Value<T> {
 }
 
 impl<T> Deref for Value<T> {
-    type Target = Arc<T>;
+    type Target = ARef<T>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -184,12 +184,12 @@ where
 #[cfg(feature = "serde")]
 impl<'de, T> serde::Deserialize<'de> for Value<T>
 where
-    Arc<T>: serde::Deserialize<'de>,
+    ARef<T>: serde::Deserialize<'de>,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        Ok(Self(Arc::<T>::deserialize(deserializer)?))
+        Ok(Self(ARef::<T>::deserialize(deserializer)?))
     }
 }
