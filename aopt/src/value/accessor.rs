@@ -13,6 +13,85 @@ use crate::opt::Action;
 use crate::Error;
 use crate::RawVal;
 
+/// [`ValAccessor`] manage the option value and raw value.
+///
+/// # Example
+/// ```rust
+/// # use aopt::prelude::*;
+/// # use aopt::RawVal;
+/// # use aopt::Error;
+/// #
+/// # fn main() -> Result<(), Error> {
+/// let ctx = Ctx::default();
+/// {
+///     let mut value = ValAccessor::fallback::<i32>();
+///     let raw_value = RawVal::from("123");
+///
+///     value.initialize()?;
+///     value.set(vec![1, 4]);
+///     value.store_all(Some(&raw_value), &ctx, &Action::App)?;
+///     assert_eq!(value.pop::<i32>(), Some(123));
+///     assert_eq!(value.rawval()?, &raw_value);
+/// }
+/// {
+///     let mut value =
+///         ValAccessor::new(ValStorer::new::<i32>(), ValInitializer::new_values(vec![7]));
+///     let raw_value = RawVal::from("42");
+///
+///     value.initialize()?;
+///     value.store_all(Some(&raw_value), &ctx, &Action::Set)?;
+///     assert_eq!(value.pop::<i32>(), Some(42));
+///     assert_eq!(value.rawval()?, &raw_value);
+/// }
+/// {
+///     let validator = ValValidator::range_from(-32i32);
+///     let mut value = ValAccessor::new_validator(validator, ValInitializer::fallback());
+///     let raw_value1 = RawVal::from("8");
+///
+///     value.initialize()?;
+///     value.set(vec![1, 4]);
+///     assert_eq!(
+///         value.store_all(Some(&raw_value1), &ctx, &Action::App)?,
+///         true
+///     );
+///     assert_eq!(value.pop::<i32>(), Some(8));
+///     assert_eq!(value.rawval()?, &raw_value1);
+///
+///     let raw_value2 = RawVal::from("-66");
+///
+///     assert_eq!(
+///         value.store_all(Some(&raw_value2), &ctx, &Action::App)?,
+///         false
+///     );
+///     assert_eq!(value.pop::<i32>(), Some(4));
+///     assert_eq!(value.rawval()?, &raw_value1);
+/// }
+/// {
+///     let validator = ValValidator::range_to(-42);
+///     let mut value =
+///         ValAccessor::new_validator(validator, ValInitializer::new_values(vec![-88, 1]));
+///     let raw_value1 = RawVal::from("-68");
+///
+///     value.initialize()?;
+///     assert_eq!(
+///         value.store_all(Some(&raw_value1), &ctx, &Action::Set)?,
+///         true
+///     );
+///     assert_eq!(value.pop::<i32>(), Some(-68));
+///     assert_eq!(value.rawval()?, &raw_value1);
+///
+///     let raw_value2 = RawVal::from("-20");
+///
+///     assert_eq!(
+///         value.store_all(Some(&raw_value2), &ctx, &Action::App)?,
+///         false
+///     );
+///     assert_eq!(value.pop::<i32>(), None);
+///     assert_eq!(value.rawval()?, &raw_value1);
+/// }
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Debug)]
 pub struct ValAccessor {
     any_value: AnyValue,
@@ -40,38 +119,14 @@ impl ValAccessor {
         }
     }
 
-    #[allow(unused)]
-    pub(crate) fn from_storer<U: ErasedTy + RawValParser>(
-        initializer: Option<ValInitializer>,
-        storer: Option<ValStorer>,
+    pub fn new_validator<U: ErasedTy + RawValParser>(
+        validator: ValValidator<U>,
+        initializer: ValInitializer,
     ) -> Self {
-        let initializer = initializer.unwrap_or_else(ValInitializer::fallback);
-        let storer = storer.unwrap_or_else(ValStorer::new::<U>);
-
         Self {
             any_value: AnyValue::default(),
             rawval: vec![],
-            storer,
-            initializer,
-        }
-    }
-
-    #[allow(unused)]
-    pub(crate) fn from_validator<U: ErasedTy + RawValParser>(
-        initializer: Option<ValInitializer>,
-        validator: Option<ValValidator<U>>,
-    ) -> Self {
-        let initializer = initializer.unwrap_or_else(ValInitializer::fallback);
-        let storer = if let Some(validator) = validator {
-            ValStorer::new_validator(validator)
-        } else {
-            ValStorer::new::<U>()
-        };
-
-        Self {
-            any_value: AnyValue::default(),
-            rawval: vec![],
-            storer,
+            storer: ValStorer::new_validator(validator),
             initializer,
         }
     }
@@ -110,7 +165,7 @@ impl ValAccessor {
     }
 
     /// Parsing the raw value into typed value, save the raw value and result.
-    /// Ignore the failure error, map it to `Ok(false)`.
+    /// The function will map the failure error to `Ok(false)`.
     pub fn store_all(
         &mut self,
         raw: Option<&RawVal>,

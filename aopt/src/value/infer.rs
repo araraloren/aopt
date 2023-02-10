@@ -71,7 +71,7 @@ impl Infer for bool {
     }
 
     fn infer_initializer() -> Option<ValInitializer> {
-        Some(ValInitializer::with_value(false))
+        Some(ValInitializer::new_value(false))
     }
 }
 
@@ -99,7 +99,7 @@ impl Infer for Cmd {
     }
 
     fn infer_initializer() -> Option<ValInitializer> {
-        Some(ValInitializer::with_value(Noa::new(false)))
+        Some(ValInitializer::new_value(Noa::new(false)))
     }
 }
 

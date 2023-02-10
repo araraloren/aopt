@@ -232,16 +232,16 @@ where
 {
     /// Set the option default value.
     pub fn set_value(self, value: U::Val) -> Self {
-        self.set_initializer(ValInitializer::with_value(value))
+        self.set_initializer(ValInitializer::new_value(value))
     }
 
     /// Set the option default value.
     pub fn set_values(self, value: Vec<U::Val>) -> Self {
-        self.set_initializer(ValInitializer::with_values(value))
+        self.set_initializer(ValInitializer::new_values(value))
     }
 
     pub fn add_default_initializer(self) -> Self {
-        self.set_initializer(ValInitializer::with_values::<U::Val>(vec![]))
+        self.set_initializer(ValInitializer::new_values::<U::Val>(vec![]))
     }
 }
 
@@ -383,16 +383,16 @@ where
 {
     /// Set the option default value.
     pub fn set_value_t(self, value: T) -> Self {
-        self.set_initializer(ValInitializer::with_value(value))
+        self.set_initializer(ValInitializer::new_value(value))
     }
 
     /// Set the option default value.
     pub fn set_values_t(self, value: Vec<T>) -> Self {
-        self.set_initializer(ValInitializer::with_values(value))
+        self.set_initializer(ValInitializer::new_values(value))
     }
 
     pub fn add_default_initializer_t(self) -> Self {
-        self.set_initializer(ValInitializer::with_values::<T>(vec![]))
+        self.set_initializer(ValInitializer::new_values::<T>(vec![]))
     }
 }
 
@@ -420,12 +420,12 @@ where
 {
     /// Set the option default value.
     pub fn set_value(self, value: U::Val) -> Self {
-        self.set_initializer(ValInitializer::with_value(value))
+        self.set_initializer(ValInitializer::new_value(value))
     }
 
     /// Set the option default value.
     pub fn set_values(self, value: Vec<U::Val>) -> Self {
-        self.set_initializer(ValInitializer::with_values(value))
+        self.set_initializer(ValInitializer::new_values(value))
     }
 }
 

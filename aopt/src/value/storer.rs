@@ -60,7 +60,7 @@ impl ValStorer {
                 let val = U::parse(raw, ctx).map_err(Into::into)?;
 
                 trace_log!("Validator value storer, parsing {:?} -> {:?}", raw, val);
-                if validator.invoke(&val) {
+                if !validator.invoke(&val) {
                     Err(Error::raise_failure(format!(
                         "Value check failed for option {:?}",
                         ctx.uid()
