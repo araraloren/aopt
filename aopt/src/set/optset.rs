@@ -38,7 +38,7 @@ use super::SetValueFindExt;
 ///
 /// // add default and bool creator
 /// set.register(Creator::fallback());
-/// set.register(Creator::new_type_ctor(aopt::opt::BuiltInCtor::Bool));
+/// set.register(Creator::from(aopt::opt::BuiltInCtor::Bool));
 ///
 /// // create a bool option
 /// set.add_opt_i::<bool>("--flag")?;
@@ -201,7 +201,7 @@ where
 
     /// Add an option into current [`OptSet`].
     ///
-    /// It parsing the given option string `S` using inner [`OptParser`], return an [`Commit`].
+    /// It parsing the given option string `S` using inner [`OptParser`], return an [`SetCommit`].
     /// For option string, reference [`StrParser`](crate::opt::StrParser).
     pub fn add_opt(
         &mut self,
@@ -215,7 +215,7 @@ where
 
     /// Add an option into current [`OptSet`].
     ///
-    /// It parsing the given option string `S` using inner [`OptParser`], return an [`Commit`].
+    /// It parsing the given option string `S` using inner [`OptParser`], return an [`SetCommit`].
     /// For option string, reference [`StrParser`](crate::opt::StrParser).
     pub fn add_opt_i<U>(&mut self, opt_str: impl Into<Str>) -> Result<SetCommit<'_, Self, U>, Error>
     where

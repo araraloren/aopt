@@ -29,7 +29,7 @@ use crate::opt::Action;
 use crate::Error;
 use crate::RawVal;
 
-pub trait ErasedValHandler {
+pub trait ErasedValue {
     fn initialize(&mut self) -> Result<(), Error>;
 
     fn store(&mut self, raw: Option<&RawVal>, ctx: &Ctx, act: &Action) -> Result<(), Error>;
@@ -53,7 +53,7 @@ pub trait ErasedValHandler {
     fn rawvals_mut(&mut self) -> Result<&mut Vec<RawVal>, Error>;
 }
 
-/// [`AnyValue`] can store values of any type. In internal it store the value into a vector of type T.
+/// [`AnyValue`] can save values of any type. In internal it save the value into a vector of type T.
 ///
 /// # Example
 ///

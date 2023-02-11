@@ -29,7 +29,7 @@ A flexible and typed getopt like command line framwork for rust.
 
 - Value store support
 
-    By default aopt will store the raw value and parsed value into given [`Services`](crate::ser::Services).
+    By default aopt will saving the raw value and parsed value into [`ValStorer`](crate::value::ValStorer).
 
 - Policy support
 

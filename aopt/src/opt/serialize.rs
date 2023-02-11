@@ -5,7 +5,7 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 
 use crate::ctx::Ctx;
-use crate::value::convert_raw_to_utf8;
+use crate::value::raw2str;
 use crate::value::RawValParser;
 use crate::Error;
 
@@ -114,7 +114,7 @@ where
     type Error = Error;
 
     fn parse(val: Option<&crate::RawVal>, _: &Ctx) -> Result<Self, Self::Error> {
-        let string = convert_raw_to_utf8(val)?;
+        let string = raw2str(val)?;
 
         Ok(Serde(T::deserialize_from(string).map_err(|e| e.into())?))
     }

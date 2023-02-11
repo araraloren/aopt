@@ -52,6 +52,7 @@ impl Action {
         matches!(self, Self::Null)
     }
 
+    /// Save the value in [`handler`](AnyValue).
     pub fn store1<U: ErasedTy>(&self, val: Option<U>, handler: &mut AnyValue) -> bool {
         crate::trace_log!(
             "Saving value {:?}({:?}) [ty = {:?}] in store1",
@@ -87,6 +88,7 @@ impl Action {
         }
     }
 
+    /// Save the value in [`handler`](AnyValue) and raw value in `raw_handler`.
     pub fn store2<U: ErasedTy>(
         &self,
         raw: Option<&RawVal>,
@@ -111,10 +113,10 @@ impl Default for Action {
     }
 }
 
-/// Default store using for store value to [`Services`](crate::ser::Services).
+/// Default store using for store value to [`ValStorer`](crate::value::ValStorer).
 /// It will store `RawVal` and `Val` if `val` is `Some(Val)`, otherwise do nothing.
 ///
-/// Note: The [`AnyValService`](crate::ser::AnyValService) internal using an [`vec`] saving the option value.
+/// Note: The [`ValStorer`](crate::value::ValStorer) internal using an [`vec`] saving the option value.
 ///
 /// * [`Action::Set`] : Set the option value to `vec![ val ]`.
 ///

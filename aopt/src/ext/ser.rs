@@ -1,4 +1,4 @@
-//! The structs hold the data collect from [`Services`](crate::ser::Services).
+//! The structs hold the data collect from [`AppServices`](crate::ser::AppServices).
 //! They are all implemented [`Extract`].
 use std::fmt::Debug;
 use std::fmt::Display;
@@ -16,7 +16,7 @@ use crate::Error;
 pub struct Value<T: ?Sized>(ARef<T>);
 
 #[cfg(not(feature = "sync"))]
-/// Simple wrapper of user value stored in [`UsrValService`](crate::ser::UsrValService).
+/// Simple wrapper of user value saved in [`UsrValService`](crate::ser::UsrValService).
 ///
 /// Value internally use [ARef](crate::ARef), it is cheap to clone.
 /// Before used it in `handler` which register in [`Invoker`](crate::ctx::Invoker),

@@ -63,6 +63,7 @@ pub trait ConfigValue {
     /// Value validator for option.
     fn storer(&self) -> Option<&ValStorer>;
 
+    /// Value initializer for option.
     fn initializer(&self) -> Option<&ValInitializer>;
 
     fn ignore_name(&self) -> bool;

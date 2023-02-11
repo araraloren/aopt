@@ -47,7 +47,10 @@ use crate::Error;
 /// let mut inv = policy.default_inv();
 /// let mut ser = policy.default_ser();
 /// let filter_id = set.add_opt("--/filter=b")?.run()?;
-/// let pos_id = set.add_opt("pos=p@*")?.set_pos_type::<String>().run()?;
+/// let pos_id = set.add_opt("pos=p@*")?
+///                 .set_pos_type::<String>()
+///                 .set_values(vec![])
+///                 .run()?;
 ///
 /// inv.entry(pos_id).on(
 ///     move |set: &mut ASet,

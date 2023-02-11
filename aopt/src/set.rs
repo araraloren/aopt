@@ -95,6 +95,7 @@ impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Debug
 
 pub const CTOR_DEFAULT: &str = "default_ctor";
 
+/// Get default creator name.
 pub fn ctor_default_name() -> Str {
     Str::from(CTOR_DEFAULT)
 }
@@ -110,7 +111,7 @@ pub trait Ctor {
     fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error>;
 }
 
-/// A collection store the [`Ctor`](Set::Ctor) and [`Opt`](Ctor::Opt).
+/// A collection of [`Ctor`](Set::Ctor) and [`Opt`](Ctor::Opt).
 pub trait Set {
     type Ctor: Ctor;
 

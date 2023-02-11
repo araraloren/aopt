@@ -3,11 +3,14 @@ use crate::Error;
 pub trait OptValidator {
     type Error: Into<Error>;
 
+    /// Check the option string.
     fn check(&mut self, name: &str) -> Result<bool, Self::Error>;
 
+    /// Split the option string into prefix and name.
     fn split<'a>(&self, name: &'a str) -> Result<(&'a str, &'a str), Self::Error>;
 }
 
+/// A prefixed validator used in [`Policy`](crate::parser::Policy) and [`OptGuess`](crate::parser::OptGuess).
 #[derive(Debug, Clone)]
 pub struct PrefixOptValidator(Vec<String>);
 

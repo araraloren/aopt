@@ -15,6 +15,7 @@ where
     fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error>;
 }
 
+/// Convert raw value to &[`str`].
 pub fn raw2str(raw: Option<&RawVal>) -> Result<&str, Error> {
     raw.ok_or_else(|| Error::raise_failure("unexcepted empty value"))?
         .get_str()

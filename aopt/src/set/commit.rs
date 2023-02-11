@@ -49,7 +49,6 @@ where
             .field("set", &self.set)
             .field("uid", &self.uid)
             .field("drop", &self.drop)
-            .field("marker", &self.marker)
             .finish()
     }
 }
@@ -69,6 +68,7 @@ where
         }
     }
 
+    /// Set the infer type to [`Pos`]\<T\>.
     pub fn set_pos_type_only<T: ErasedTy + RawValParser + 'static>(
         self,
     ) -> SetCommit<'a, S, Pos<T>> {
@@ -81,6 +81,10 @@ where
         self.set_infer::<Pos<T>>()
     }
 
+    /// Set the infer type to [`Pos`]\<T\>, add default initializer and default storer.
+    ///
+    /// The function will call [`add_default_initializer`](SetCommit::add_default_initializer) add
+    /// [`add_default_storer`](SetCommit::add_default_storer).
     pub fn set_pos_type<T: ErasedTy + RawValParser + Clone + 'static>(
         self,
     ) -> SetCommit<'a, S, Pos<T>> {
@@ -171,11 +175,14 @@ where
     SetCfg<S>: ConfigValue + Default,
 {
     /// Set the value type of option.
-    pub(crate) fn set_value_type_only<T: ErasedTy>(self) -> SetCommitWithValue<'a, S, U, T> {
+    pub fn set_value_type_only<T: ErasedTy>(self) -> SetCommitWithValue<'a, S, U, T> {
         SetCommitWithValue::new(self)
     }
 
     /// Set the value type of option, add default initializer and default storer.
+    ///
+    /// The function will call [`add_default_initializer_t`](SetCommitWithValue::add_default_initializer_t) add
+    /// [`add_default_storer_t`](SetCommitWithValue::add_default_storer_t).
     pub fn set_value_type<T: ErasedTy + RawValParser + Clone>(
         self,
     ) -> SetCommitWithValue<'a, S, U, T> {
@@ -218,6 +225,7 @@ where
         self.set_storer(ValStorer::from(validator))
     }
 
+    /// Add default [`storer`](ValStorer::fallback) of type [`U::Val`](Infer::Val).
     pub fn add_default_storer(self) -> Self {
         self.set_storer(ValStorer::new::<U::Val>())
     }
@@ -240,8 +248,9 @@ where
         self.set_initializer(ValInitializer::new_values(value))
     }
 
+    /// Add a default [`initializer`](ValInitializer::fallback).
     pub fn add_default_initializer(self) -> Self {
-        self.set_initializer(ValInitializer::new_values::<U::Val>(vec![]))
+        self.set_initializer(ValInitializer::fallback())
     }
 }
 
@@ -368,6 +377,7 @@ where
         self.set_storer(ValStorer::new_validator(validator))
     }
 
+    /// Add default [`storer`](ValStorer::fallback) of type `T`.
     pub fn add_default_storer_t(self) -> Self {
         self.set_storer(ValStorer::new::<T>())
     }
@@ -391,8 +401,9 @@ where
         self.set_initializer(ValInitializer::new_values(value))
     }
 
+    /// Add a default [`initializer`](ValInitializer::fallback).
     pub fn add_default_initializer_t(self) -> Self {
-        self.set_initializer(ValInitializer::new_values::<T>(vec![]))
+        self.set_initializer(ValInitializer::fallback())
     }
 }
 

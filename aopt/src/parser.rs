@@ -546,7 +546,7 @@ where
     /// }
     /// // Add an NOA `file` with type `p`.
     /// // The handler which add by `on` will called when option set.
-    /// // The store will called by `Invoker` when storing option value.
+    /// // The `store` will called by `Invoker` when storing option value.
     /// parser1
     ///     .add_opt("file=p@1..")?
     ///     .on(|_: &mut ASet, _: &mut ASer, val: ctx::Value<String>| {
@@ -618,7 +618,7 @@ where
     ///             .with_action(Action::Set)
     ///             .with_storer(ValStorer::new::<bool>())
     ///             .with_ignore_index(true)
-    ///             .with_initializer(ValInitializer::with_value(false))
+    ///             .with_initializer(ValInitializer::new_value(false))
     ///     }
     /// }
     ///
@@ -633,7 +633,7 @@ where
     ///             .with_action(Action::Set)
     ///             .with_storer(ValStorer::new::<i64>())
     ///             .with_ignore_index(true)
-    ///             .with_initializer(ValInitializer::with_value(0i64))
+    ///             .with_initializer(ValInitializer::new_value(0i64))
     ///     }
     /// }
     ///

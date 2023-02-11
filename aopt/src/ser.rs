@@ -114,7 +114,7 @@ impl DerefMut for AppServices {
     }
 }
 
-/// [`UsrValService`] can store values of any type.
+/// [`UsrValService`] can save values of any type.
 ///
 /// # Example
 /// ```rust

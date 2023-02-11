@@ -154,8 +154,7 @@ where
         Ok(())
     }
 
-    /// Match the [`Opt`]'s name, prefix and style.
-    /// Then call the [`check_val`](Opt::check_val) check the argument.
+    /// Match the [`Opt`]'s name, alias, index and style.
     /// If matched, set the matched of [`Opt`] and return true.
     fn process(
         &mut self,

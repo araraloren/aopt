@@ -77,7 +77,8 @@ where
     SetOpt<S>: Opt,
     SetCfg<S>: ConfigValue + Default,
 {
-    pub fn set_pos_type<T: ErasedTy + RawValParser + 'static>(
+    /// Set the infer type to [`Pos`]\<T\>.
+    pub fn set_pos_type_only<T: ErasedTy + RawValParser + 'static>(
         mut self,
     ) -> ParserCommit<'a, S, Ser, Pos<T>> {
         let inner = self.inner.take().unwrap();
@@ -86,7 +87,8 @@ where
         ParserCommit::new(inner.set_pos_type_only::<T>(), inv_ser)
     }
 
-    pub fn set_pos_type_de<T: ErasedTy + Clone + RawValParser + 'static>(
+    /// Set the infer type to [`Pos`]\<T\>, add default initializer and default storer.
+    pub fn set_pos_type<T: ErasedTy + Clone + RawValParser + 'static>(
         mut self,
     ) -> ParserCommit<'a, S, Ser, Pos<T>> {
         let inner = self.inner.take().unwrap();
@@ -161,7 +163,7 @@ where
         H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
         A: Extract<S, Ser, Error = Error> + Send + Sync + 'static,
     {
-        let uid = self.run_and_commit_the_change()?;
+        let uid = self.commit_inner_change()?;
         // we don't need &'a mut InvokeServices, so just take it.
         let ser = std::mem::take(&mut self.inv_ser);
 
@@ -205,7 +207,7 @@ where
         H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
         A: Extract<S, Ser, Error = Error> + Send + Sync + 'static,
     {
-        let uid = self.run_and_commit_the_change()?;
+        let uid = self.commit_inner_change()?;
         // we don't need &'a mut InvokeServices, so just take it.
         let ser = std::mem::take(&mut self.inv_ser);
 
@@ -239,6 +241,7 @@ where
         self.set_storer(ValStorer::from(validator))
     }
 
+    /// Add default [`storer`](ValStorer::fallback) of type [`U::Val`](Infer::Val).
     pub fn add_default_storer(self) -> Self {
         self.set_storer(ValStorer::new::<U::Val>())
     }
@@ -262,12 +265,13 @@ where
         self.set_initializer(ValInitializer::new_values(value))
     }
 
+    /// Add a default [`initializer`](ValInitializer::fallback).
     pub fn add_default_initializer(self) -> Self {
-        self.set_initializer(ValInitializer::new_values::<U::Val>(vec![]))
+        self.set_initializer(ValInitializer::fallback())
     }
 }
 
-/// Convert [`Commit`] to [`CommitWithValue`].
+/// Convert [`ParserCommit`] to [`ParserCommitWithValue`].
 impl<'a, S, Ser, U> ParserCommit<'a, S, Ser, U>
 where
     S: Set,
@@ -426,7 +430,7 @@ where
         H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
         A: Extract<S, Ser, Error = Error> + Send + Sync + 'static,
     {
-        let uid = self.run_and_commit_the_change()?;
+        let uid = self.commit_inner_change()?;
         // we don't need &'a mut InvokeServices, so just take it.
         let ser = std::mem::take(&mut self.inv_ser);
 
@@ -470,7 +474,7 @@ where
         H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
         A: Extract<S, Ser, Error = Error> + Send + Sync + 'static,
     {
-        let uid = self.run_and_commit_the_change()?;
+        let uid = self.commit_inner_change()?;
         // we don't need &'a mut InvokeServices, so just take it.
         let ser = std::mem::take(&mut self.inv_ser);
 
@@ -560,6 +564,7 @@ where
         self
     }
 
+    /// Add default [`storer`](ValStorer::fallback) of type `T`.
     pub fn add_default_storer_t(self) -> Self {
         self.set_storer(ValStorer::new::<T>())
     }
@@ -584,7 +589,8 @@ where
         self.set_initializer(ValInitializer::new_values(value))
     }
 
+    /// Add a default [`initializer`](ValInitializer::fallback).
     pub fn add_default_initializer_t(self) -> Self {
-        self.set_initializer(ValInitializer::new_values::<T>(vec![]))
+        self.set_initializer(ValInitializer::fallback())
     }
 }

@@ -13,7 +13,7 @@ use crate::opt::Opt;
 #[allow(unused)]
 use crate::opt::Pos;
 use crate::opt::Style;
-use crate::value::ErasedValHandler;
+use crate::value::ErasedValue;
 use crate::value::ValAccessor;
 use crate::Error;
 use crate::Str;

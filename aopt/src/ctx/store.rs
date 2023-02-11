@@ -5,8 +5,7 @@ use crate::Error;
 use crate::RawVal;
 use crate::Uid;
 
-/// The [`Store`] processer save the value of given option into
-/// [`AnyValService`](crate::ser::AnyValService) and [`RawValServices`](crate::ser::RawValService).
+/// The [`Store`] saving the value of given option.
 pub trait Store<Set, Ser, Value> {
     type Ret;
     type Error: Into<Error>;
@@ -84,7 +83,7 @@ impl<Set, Ser, Value> Store<Set, Ser, Value> for NullStore {
     }
 }
 
-/// Vector store, append the value to the [`AnyValService`](crate::ser::AnyValService)
+/// Vector store, append the value to the [`ValStorer`](crate::value::ValStorer)
 /// if option's action is Action::App.
 /// See [`Action`](crate::opt::Action) for default store.
 pub struct VecStore;

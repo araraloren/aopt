@@ -1,6 +1,6 @@
 use crate::map::Entry;
 use crate::map::ErasedTy;
-use crate::value::ErasedValHandler;
+use crate::value::ErasedValue;
 use crate::Error;
 use crate::RawVal;
 

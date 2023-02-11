@@ -31,13 +31,13 @@ impl Args {
         }
     }
 
-    #[cfg(feature = "utf8")]
+    #[cfg(not(feature = "utf8"))]
     /// Create from [`args_os`](std::env::args_os()).
     pub fn from_env() -> Self {
         Self::new(std::env::args_os())
     }
 
-    #[cfg(not(feature = "utf8"))]
+    #[cfg(feature = "utf8")]
     /// Create from [`args`](std::env::args()).
     pub fn from_env() -> Self {
         Self::new(std::env::args())

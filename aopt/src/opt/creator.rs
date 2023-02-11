@@ -293,3 +293,9 @@ impl Creator<AOpt, OptConfig, Error> {
         })
     }
 }
+
+impl From<BuiltInCtor> for Creator<AOpt, OptConfig, Error> {
+    fn from(value: BuiltInCtor) -> Self {
+        Self::new_type_ctor(value)
+    }
+}

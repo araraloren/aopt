@@ -50,8 +50,8 @@ where
         set.get(*id).unwrap()
     }
 
-    /// Check if we have [`Cmd`](crate::opt::Creator::cmd),
-    /// then no force required [`Pos`](crate::opt::Creator::pos)@1 allowed.
+    /// Check if we have [`Cmd`](crate::opt::Style::Cmd),
+    /// then no force required [`Pos`](crate::opt::Style::Pos)@1 allowed.
     pub fn pre_check(&self, set: &mut S) -> Result<bool, Error> {
         let has_cmd = set.iter().any(|opt| opt.mat_style(Style::Cmd));
 
@@ -75,6 +75,9 @@ where
         Ok(true)
     }
 
+    /// Call the [`valid`](crate::opt::Opt::valid) check the
+    /// options([`Argument`](crate::opt::Style::Argument),
+    /// [`Boolean`](crate::opt::Style::Boolean), [`Combined`](crate::opt::Style::Combined))
     pub fn opt_check(&self, set: &mut S) -> Result<bool, Error> {
         trace_log!("Opt Check, call valid on all Opt ...");
         for opt in set.iter().filter(|opt| {
@@ -89,12 +92,12 @@ where
         Ok(true)
     }
 
-    /// Check if the [`Pos`](crate::opt::Creator::pos) is valid.
+    /// Check if the [`Pos`](crate::opt::Style::Pos) is valid.
     ///
-    /// For which [`Pos`](crate::opt::Creator::pos) is have fixed position,
-    /// [`Pos`](crate::opt::Creator::pos) has same position are replaceble even it is force reuqired.
+    /// For which [`Pos`](crate::opt::Style::Pos) is have fixed position,
+    /// [`Pos`](crate::opt::Style::Pos) has same position are replaceble even it is force reuqired.
     ///
-    /// For which [`Pos`](crate::opt::Creator::pos) is have floating position, it must be set if it is force reuqired.
+    /// For which [`Pos`](crate::opt::Style::Pos) is have floating position, it must be set if it is force reuqired.
     pub fn pos_check(&self, set: &mut S) -> Result<bool, Error> {
         // for POS has certainty position, POS has same position are replaceble even it is force reuqired.
         let mut index_map = HashMap::<usize, Vec<Uid>>::default();

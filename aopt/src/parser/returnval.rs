@@ -3,6 +3,7 @@ use std::ops::{Deref, DerefMut};
 use crate::Error;
 use crate::{ctx::Ctx, RawVal};
 
+/// Return value for [`Policy`](crate::parser::Policy).
 #[derive(Debug, Clone, Default)]
 pub struct ReturnVal {
     failure: Error,

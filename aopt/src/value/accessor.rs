@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use super::AnyValue;
-use super::ErasedValHandler;
+use super::ErasedValue;
 use super::RawValParser;
 use super::ValInitializer;
 use super::ValStorer;
@@ -190,7 +190,7 @@ impl ValAccessor {
     }
 }
 
-impl ErasedValHandler for ValAccessor {
+impl ErasedValue for ValAccessor {
     fn initialize(&mut self) -> Result<(), Error> {
         let handler = &mut self.any_value;
 

@@ -130,6 +130,7 @@ pub fn valueof(name: &str, value: &Option<Str>) -> Result<Str, Error> {
     Ok(string.clone())
 }
 
+/// Guess configuration for option.
 #[derive(Debug)]
 pub struct GuessOptCfg<'a, T: OptValidator> {
     pub idx: usize,
@@ -354,6 +355,7 @@ where
     }
 }
 
+/// Guess configuration for NOA.
 pub struct GuessNOACfg {
     index: usize,
     total: usize,

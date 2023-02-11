@@ -19,7 +19,7 @@ pub type StoreHandler<T> =
 pub type StoreHandler<T> =
     Box<dyn FnMut(Option<&RawVal>, &Ctx, &Action, &mut T) -> Result<(), Error>>;
 
-/// [`ValStorer`] perform the value store action.
+/// [`ValStorer`] perform the value storing action.
 pub struct ValStorer(StoreHandler<AnyValue>);
 
 impl Debug for ValStorer {

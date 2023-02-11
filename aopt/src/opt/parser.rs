@@ -45,17 +45,17 @@ use crate::Str;
 ///     let parser = StrParser::default();
 ///     let ret = parser.parse("--aopt=t!".into())?;
 ///
-///     assert_eq!(ret.name , Some(astr("--aopt")));
-///     assert_eq!(ret.type_name, Some(astr("t")));
-///     assert_eq!(ret.force, Some(true));
-///     assert_eq!(ret.index, None);
+///     assert_eq!(ret.name() , Some(&astr("--aopt")));
+///     assert_eq!(ret.ctor(), Some(&astr("t")));
+///     assert_eq!(ret.force(), Some(true));
+///     assert_eq!(ret.index(), None);
 ///
 ///     let ret = parser.parse("bopt=t@[1,2,3]".into())?;
 ///
-///     assert_eq!(ret.name , Some(astr("bopt")));
-///     assert_eq!(ret.type_name, Some(astr("t")));
-///     assert_eq!(ret.force, None);
-///     assert_eq!(ret.idx(), Some(&Index::list(vec![1, 2, 3])));
+///     assert_eq!(ret.name(), Some(&astr("bopt")));
+///     assert_eq!(ret.ctor(), Some(&astr("t")));
+///     assert_eq!(ret.force(), None);
+///     assert_eq!(ret.index(), Some(&Index::list(vec![1, 2, 3])));
 ///
 /// #   Ok(())
 /// # }

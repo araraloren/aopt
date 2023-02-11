@@ -92,8 +92,7 @@ pub struct GetoptRes<'a, P: Policy> {
 ///     assert_eq!(ret.find_val::<i64>("--bopt")?, &42i64);
 /// }
 /// {
-///     pre_parser.add_opt_i::<String>("-d")?
-///                 .add_default_initializer();
+///     pre_parser.add_opt_i::<String>("-d")?.set_values(vec![]);
 ///     pre_parser.add_opt("--eopt=s")?;
 ///
 ///     let ret = getopt!(
@@ -271,7 +270,7 @@ pub mod prelude {
     pub use crate::set::SetOpt;
     pub use crate::set::SetValueFindExt;
     pub use crate::value::AnyValue;
-    pub use crate::value::ErasedValHandler;
+    pub use crate::value::ErasedValue;
     pub use crate::value::Infer;
     pub use crate::value::InitializeValue;
     pub use crate::value::RawValParser;

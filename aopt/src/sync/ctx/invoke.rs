@@ -281,8 +281,8 @@ where
         self
     }
 
-    /// Register the handler with given store.
-    /// The store will be used save the return value of option handler.
+    /// Register the handler with given `store`.
+    /// The `store` will be used save the return value of option handler.
     pub fn then(
         mut self,
         store: impl Store<Set, Ser, O, Ret = bool, Error = Error> + Send + Sync + 'static,

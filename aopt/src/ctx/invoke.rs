@@ -199,9 +199,8 @@ where
     /// The default handler for all option.
     ///
     /// If there no handler for a option, then default handler will be called.
-    /// It will parsing [`RawVal`](crate::RawVal)(using [`RawValParser`]) into associated type, then call the action
-    /// of option save the value to [`AnyValService`](crate::ser::AnyValService).
-    /// For value type, reference documents of [`Assoc`].
+    /// It will parsing [`RawVal`](crate::RawVal)(using [`RawValParser`](crate::value::RawValParser)) into associated type,
+    /// then save the value to [`ValStorer`](crate::value::ValStorer).
     pub fn fallback(set: &mut Set, _: &mut Ser, ctx: &Ctx) -> Result<bool, Error> {
         let uid = ctx.uid()?;
         let opt = set.get_mut(uid).unwrap();
@@ -279,8 +278,8 @@ where
         self
     }
 
-    /// Register the handler with given store.
-    /// The store will be used save the return value of option handler.
+    /// Register the handler with given `store`.
+    /// The `store` will be used save the return value of option handler.
     pub fn then(
         mut self,
         store: impl Store<Set, Ser, O, Ret = bool, Error = Error> + 'static,
