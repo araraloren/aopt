@@ -1,13 +1,41 @@
 
 # Relase note
 
+## 0.9.0
+
+- Moving invoke service from ser/ to ctx/
+
+- Change the interface of `Policy`
+
+- Remove return value of `Parser`
+
+- Add a style manager manage the `UserStyle`.
+
+- Change the NOA index base on 0, pass first command line argument to `Main`
+
+- Improve the api of ReturnVal, fix the `getopt!` return value
+
+- Improve the option creator implemetation
+
+- Let option callback return `bool` instead of `Option`
+
+- Make tracing log optional
+
+- Make serde optional
+
+- Remove type from parser, add alias and help message
+
+- Support create option from type and string both
+
+- Fix filter match issue
+
 ## 0.8.4
 
-- Add `Creator::any` option type.
+- Add `Creator::any` option type
 
 - Fix the OptConfig with_* functions
 
-- Add `Parser::add_opt_cfg` function add option by configurations.
+- Add `Parser::add_opt_cfg` function add option by configurations
 
 ## 0.8.3
 

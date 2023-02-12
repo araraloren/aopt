@@ -1,140 +1,220 @@
-pub(crate) mod check;
-#[cfg_attr(feature = "sync", path = "sync/ser/invoke.rs")]
-#[cfg_attr(not(feature = "sync"), path = "ser/invoke.rs")]
-pub(crate) mod invoke;
-pub(crate) mod rawval;
-pub(crate) mod userval;
-pub(crate) mod value;
-
-pub use self::check::CheckService;
-pub use self::invoke::HandlerEntry;
-pub use self::invoke::InvokeService;
-pub use self::rawval::RawValService;
-pub use self::userval::UsrValService;
-pub use self::value::ValEntry;
-pub use self::value::ValService;
+use std::any::type_name;
+use std::fmt::Debug;
+use std::ops::Deref;
+use std::ops::DerefMut;
 
 use crate::map::AnyMap;
+use crate::map::Entry;
 use crate::map::ErasedTy;
 use crate::Error;
-use crate::Str;
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        pub trait Service: Send + Sync {
-            fn service_name() -> Str;
-        }
-    }
-    else {
-        pub trait Service {
-            fn service_name() -> Str;
+/// Some convenient function access the [`AppServices`](crate::ser::AppServices).
+pub trait ServicesExt {
+    fn ser_app(&self) -> &AppServices;
+
+    fn ser_app_mut(&mut self) -> &mut AppServices;
+}
+
+pub trait ServicesValExt {
+    /// Get the user value reference of option `uid` from [`AppServices`].
+    fn sve_insert<T: ErasedTy>(&mut self, val: T) -> Option<T>;
+
+    /// Get the user value reference of option `uid` from [`AppServices`].
+    fn sve_val<T: ErasedTy>(&self) -> Result<&T, Error>;
+
+    /// Get the user value mutable reference of option `uid` from [`AppServices`].
+    fn sve_val_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error>;
+
+    /// Take the user value of option `uid` from [`AppServices`].
+    fn sve_take_val<T: ErasedTy>(&mut self) -> Result<T, Error>;
+}
+
+/// A service can keep any type data, user can get the data inside [`hanlder`](crate::ctx::Invoker) of option.
+///
+/// # Examples
+/// ```rust
+/// # use aopt::prelude::*;
+/// #
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// #[derive(Debug, PartialEq)]
+/// struct MyVec(pub Vec<i32>);
+///
+/// let mut services = AppServices::new();
+///
+/// services.sve_insert(MyVec(vec![42]));
+/// services.sve_insert(42i64);
+///
+/// /// get value of MyVec from AppServices
+/// assert_eq!(services.sve_val::<MyVec>()?.0[0], 42);
+/// /// modfify the value
+/// services.sve_val_mut::<MyVec>()?.0.push(18);
+/// /// check the value of MyVec
+/// assert_eq!(services.sve_val::<MyVec>()?.0[1], 18);
+///
+/// assert_eq!(services.sve_val::<i64>()?, &42);
+/// #
+/// #    Ok(())
+/// # }
+/// ```
+#[derive(Debug, Default)]
+pub struct AppServices(UsrValService);
+
+impl AppServices {
+    pub fn new() -> Self {
+        Self {
+            ..Default::default()
         }
     }
 }
 
-/// Services keep different type [`Service`]s in a map.
-///
-/// # Examples
-/// ```rust
-/// # use aopt::Result;
-/// # use aopt::prelude::*;
-/// # use aopt::astr;
-/// # use aopt::Str;
-/// #
-/// # fn main() -> Result<()> {
-///     #[derive(Debug, PartialEq)]
-///     struct MyVec(pub Vec<i32>);
-///
-///     impl Service for MyVec {
-///         fn service_name() -> Str {
-///             astr("VecService")
-///         }
-///     }
-///
-///     #[derive(Debug, PartialEq)]
-///     struct I32(i32);
-///
-///     impl Service for I32 {
-///         fn service_name() -> Str {
-///             astr("I32Service")
-///         }
-///     }
-///
-///     let mut services = Services::new().with(MyVec(vec![42i32]));
-///
-///     // get value from of service
-///     assert_eq!(services.service::<MyVec>()?.0[0], 42);
-///     // modfify the service value
-///     services.service_mut::<MyVec>()?.0.push(18);
-///     // check the value of MyVec
-///     assert_eq!(services.service::<MyVec>()?.0[1], 18);
-///
-///     // register a new service
-///     services.register(I32(42));
-///     assert!(services.contain::<I32>());
-///
-///     // unregister service from
-///     services.remove::<MyVec>();
-///     assert!(!services.contain::<MyVec>());
-///
-///     Ok(())
-/// # }
-/// ```
-#[derive(Debug, Default)]
-pub struct Services(AnyMap);
-
-impl Services {
-    pub fn new() -> Self {
-        Self(AnyMap::new())
+impl ServicesExt for AppServices {
+    fn ser_app(&self) -> &AppServices {
+        self
     }
 
-    pub fn with<T: Service + ErasedTy + 'static>(mut self, value: T) -> Self {
-        self.register(value);
+    fn ser_app_mut(&mut self) -> &mut AppServices {
         self
+    }
+}
+
+impl ServicesValExt for AppServices {
+    fn sve_insert<T: ErasedTy>(&mut self, val: T) -> Option<T> {
+        self.0.insert(val)
+    }
+
+    fn sve_val<T: ErasedTy>(&self) -> Result<&T, Error> {
+        self.0.val::<T>()
+    }
+
+    fn sve_val_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
+        self.0.val_mut::<T>()
+    }
+
+    fn sve_take_val<T: ErasedTy>(&mut self) -> Result<T, Error> {
+        self.0.remove::<T>().ok_or_else(|| {
+            Error::raise_error(format!(
+                "Can not take value type {} from AppServices",
+                type_name::<T>()
+            ))
+        })
+    }
+}
+
+impl Deref for AppServices {
+    type Target = UsrValService;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for AppServices {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+/// [`UsrValService`] can save values of any type.
+///
+/// # Example
+/// ```rust
+/// # use aopt::prelude::*;
+/// # use aopt::Error;   
+/// #
+/// # fn main() -> Result<(), Error> {
+/// let mut service = UsrValService::new();
+///
+/// assert_eq!(service.contain_type::<Vec<i32>>(), false);
+/// assert_eq!(service.insert(vec![42]), None);
+/// assert_eq!(service.contain_type::<Vec<i32>>(), true);
+///
+/// assert_eq!(service.val::<Vec<i32>>()?, &vec![42]);
+/// service.val_mut::<Vec<i32>>()?.push(256);
+/// assert_eq!(service.val::<Vec<i32>>()?, &vec![42, 256]);
+///
+/// assert_eq!(service.val_mut::<Vec<i32>>()?, &mut vec![42, 256]);
+/// assert_eq!(service.val_mut::<Vec<i32>>()?.pop(), Some(256));
+/// assert_eq!(service.val::<Vec<i32>>()?, &vec![42]);
+///
+/// service.entry::<Vec<u64>>().or_insert(vec![9, 0, 2, 5]);
+/// assert_eq!(service.entry::<Vec<u64>>().or_default().pop(), Some(5));
+///
+/// service.val_mut::<Vec<i32>>()?.pop();
+/// assert_eq!(service.val_mut::<Vec<i32>>()?.len(), 0);
+///
+/// assert_eq!(service.remove::<Vec<u64>>(), Some(vec![9, 0, 2]));
+/// assert_eq!(service.contain_type::<u64>(), false);
+/// assert_eq!(service.get::<Vec<u64>>(), None);
+/// assert_eq!(service.get_mut::<Vec<i32>>(), Some(&mut vec![]));
+/// #
+/// # Ok(())
+/// # }
+/// ```
+#[derive(Default)]
+pub struct UsrValService(AnyMap);
+
+impl Debug for UsrValService {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("UsrValService").field(&self.0).finish()
+    }
+}
+
+impl UsrValService {
+    pub fn new() -> Self {
+        Self(AnyMap::default())
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn clear(&mut self) {
+        self.0.clear()
     }
 
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
-    /// Return true if [`Services`] contain a service type T.
-    pub fn contain<T: Service + ErasedTy + 'static>(&self) -> bool {
+    pub fn contain_type<T: ErasedTy>(&self) -> bool {
         self.0.contain::<T>()
     }
 
-    pub fn get<T: Service + ErasedTy + 'static>(&self) -> Option<&T> {
-        self.0.get::<T>()
-    }
-
-    pub fn get_mut<T: Service + ErasedTy + 'static>(&mut self) -> Option<&mut T> {
-        self.0.get_mut::<T>()
-    }
-
-    pub fn remove<T: Service + ErasedTy + 'static>(&mut self) -> Option<T> {
-        self.0.remove::<T>()
-    }
-
-    /// Register a [`Service`] T into the [`Services`].
-    pub fn register<T: Service + ErasedTy + 'static>(&mut self, value: T) -> Option<T> {
+    pub fn insert<T: ErasedTy>(&mut self, value: T) -> Option<T> {
         self.0.insert(value)
     }
 
-    pub fn service<T: Service + ErasedTy + 'static>(&self) -> Result<&T, Error> {
+    pub fn remove<T: ErasedTy>(&mut self) -> Option<T> {
+        self.0.remove::<T>()
+    }
+
+    pub fn get<T: ErasedTy>(&self) -> Option<&T> {
+        self.0.value::<T>()
+    }
+
+    pub fn get_mut<T: ErasedTy>(&mut self) -> Option<&mut T> {
+        self.0.value_mut::<T>()
+    }
+
+    pub fn val<T: ErasedTy>(&self) -> Result<&T, Error> {
         self.get::<T>().ok_or_else(|| {
-            Error::raise_error(format!("Unknown type {} for Services", T::service_name()))
+            Error::raise_error(format!(
+                "Can not find reference for type {{{:?}}} in UsrValService",
+                type_name::<T>()
+            ))
         })
     }
 
-    pub fn service_mut<T: Service + ErasedTy + 'static>(&mut self) -> Result<&mut T, Error> {
+    pub fn val_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
         self.get_mut::<T>().ok_or_else(|| {
-            Error::raise_error(format!("Unknown type {} for Services", T::service_name(),))
+            Error::raise_error(format!(
+                "Can not find mutable reference for type {{{:?}}} in UsrValService",
+                type_name::<T>()
+            ))
         })
     }
 
-    /// Take the [`Service`].
-    pub fn take<T: Service + ErasedTy + 'static>(&mut self) -> Result<T, Error> {
-        self.remove::<T>().ok_or_else(|| {
-            Error::raise_error(format!("Unknown type {} for Services", T::service_name(),))
-        })
+    pub fn entry<T: ErasedTy>(&mut self) -> Entry<'_, T> {
+        self.0.entry::<T>()
     }
 }

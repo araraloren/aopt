@@ -2,6 +2,7 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use super::invoke_callback_opt;
+use super::process::ProcessCtx;
 use super::process_non_opt;
 use super::process_opt;
 use super::CtxSaver;
@@ -10,64 +11,46 @@ use super::GuessNOACfg;
 use super::GuessOptCfg;
 use super::NOAGuess;
 use super::OptGuess;
+use super::OptStyleManager;
 use super::Policy;
 use super::ReturnVal;
+use super::SetChecker;
 use super::UserStyle;
+use super::UserStyleManager;
 use crate::args::ArgParser;
 use crate::args::Args;
 use crate::astr;
 use crate::ctx::Ctx;
-use crate::ext::ServicesExt;
+use crate::ctx::Invoker;
 use crate::opt::Opt;
 use crate::opt::OptParser;
+use crate::prelude::SetExt;
 use crate::proc::Process;
-use crate::ser::Services;
-use crate::set::Ctor;
 use crate::set::OptValidator;
-use crate::set::Set;
-use crate::Arc;
+use crate::set::SetOpt;
+use crate::trace_log;
+use crate::ARef;
 use crate::Error;
 
-/// [`DelayPolicy`] matching the command line arguments with [`Opt`] in the [`Set`].
+/// [`DelayPolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
 /// The option will match failed if any special [`Error`] raised during option processing.
-/// [`DelayPolicy`] will return `Some(true)` if match successful.
+/// [`DelayPolicy`] will return Some([`ReturnVal`]) if match successful.
 /// [`DelayPolicy`] process the option first, but not invoke the handler of option.
 /// The handler will be called after [`Cmd`](crate::opt::Style::Cmd) NOA and [`Pos`](crate::opt::Style::Pos) NOA processed.
 /// In last, [`DelayPolicy`] will process [`Main`](crate::opt::Style::Main) NOA.
+/// During parsing, you can't get the value of any option in the handler of NOA.
 ///
 /// # Example
 /// ```rust
 /// # use aopt::getopt;
 /// # use aopt::prelude::*;
 /// # use aopt::Error;
-/// # use aopt::RawVal;
 /// # use std::path::PathBuf;
 /// #
 /// # fn main() -> Result<(), Error> {
-/// fn path_storer(
-///     uid: Uid,
-///     set: &mut ASet,
-///     ser: &mut ASer,
-///     raw: Option<&RawVal>,
-///     vals: Option<Vec<PathBuf>>,
-/// ) -> Result<Option<()>, Error> {
-///     if let Some(vals) = vals {
-///         let mut action = set[uid].action().clone();
-///
-///         for val in vals {
-///             action.process(uid, set, ser, raw, Some(val))?;
-///         }
-///         Ok(Some(()))
-///     } else {
-///         Ok(None)
-///     }
-/// }
-///
 /// let filter = |f: fn(&PathBuf) -> bool| {
-///     move |set: &mut ASet, ser: &mut ASer| {
-///         let uid = set["directory"].uid();
-///
-///         ser.sve_filter::<PathBuf>(uid, f)?;
+///     move |set: &mut ASet, _: &mut ASer| {
+///         set["directory"].filter::<PathBuf>(f)?;
 ///         Ok(Some(true))
 ///     }
 /// };
@@ -77,7 +60,7 @@ use crate::Error;
 /// // POS will be process first, get the items under given directory
 /// parser
 ///     .add_opt("directory=p@1")?
-///     .set_values(Vec::<PathBuf>::new())
+///     .set_pos_type::<PathBuf>()
 ///     .on(|_: &mut ASet, _: &mut ASer, path: ctx::Value<PathBuf>| {
 ///         Ok(Some(
 ///             path.read_dir()
@@ -88,7 +71,7 @@ use crate::Error;
 ///                 .collect::<Vec<PathBuf>>(),
 ///         ))
 ///     })?
-///     .then(path_storer);
+///     .then(VecStore);
 ///
 /// // filter the item if any option set
 /// parser
@@ -107,8 +90,8 @@ use crate::Error;
 /// // Main will be process latest, display the items
 /// parser
 ///     .add_opt("main=m")?
-///     .on(move |set: &mut ASet, ser: &mut ASer| {
-///         if let Ok(vals) = ser.sve_vals::<PathBuf>(set["directory"].uid()) {
+///     .on(move |set: &mut ASet, _: &mut ASer| {
+///         if let Ok(vals) = set["directory"].vals::<PathBuf>() {
 ///             for val in vals {
 ///                 println!("{:?}", val);
 ///             }
@@ -116,40 +99,43 @@ use crate::Error;
 ///         Ok(Some(true))
 ///     })?;
 ///
-/// getopt!(std::env::args().skip(1), &mut parser)?;
+/// getopt!(Args::from_env(), &mut parser)?;
 /// #
 /// # Ok(())
 /// # }
 /// ```
 #[derive(Debug, Clone)]
-pub struct DelayPolicy<S> {
+pub struct DelayPolicy<Set, Ser> {
     strict: bool,
 
     contexts: Vec<CtxSaver>,
 
-    marker_s: PhantomData<S>,
+    checker: SetChecker<Set>,
+
+    style_manager: OptStyleManager,
+
+    marker_s: PhantomData<(Set, Ser)>,
 }
 
-impl<S> Default for DelayPolicy<S>
-where
-    S: Set + OptParser,
-{
+impl<Set, Ser> Default for DelayPolicy<Set, Ser> {
     fn default() -> Self {
         Self {
             strict: true,
             contexts: vec![],
+            checker: SetChecker::default(),
+            style_manager: OptStyleManager::default(),
             marker_s: PhantomData::default(),
         }
     }
 }
 
-impl<S> DelayPolicy<S>
-where
-    <S::Ctor as Ctor>::Opt: Opt,
-    S: Set + OptParser + Debug + 'static,
-{
-    pub fn new() -> Self {
-        Self { ..Self::default() }
+impl<Set, Ser> DelayPolicy<Set, Ser> {
+    pub fn new(strict: bool, styles: OptStyleManager) -> Self {
+        Self {
+            strict,
+            style_manager: styles,
+            ..Self::default()
+        }
     }
 
     /// Enable strict mode, if argument is an option, it must be matched.
@@ -158,8 +144,18 @@ where
         self
     }
 
+    pub fn with_styles(mut self, styles: Vec<UserStyle>) -> Self {
+        self.style_manager.set(styles);
+        self
+    }
+
     pub fn set_strict(&mut self, strict: bool) -> &mut Self {
         self.strict = strict;
+        self
+    }
+
+    pub fn set_styles(&mut self, styles: Vec<UserStyle>) -> &mut Self {
+        self.style_manager.set(styles);
         self
     }
 
@@ -167,74 +163,115 @@ where
         self.strict
     }
 
-    pub fn invoke_opt_callback(&mut self, set: &mut S, ser: &mut Services) -> Result<(), Error> {
-        for saver in std::mem::take(&mut self.contexts) {
-            invoke_callback_opt(saver, set, ser)?;
-        }
-        Ok(())
+    pub fn checker(&self) -> &SetChecker<Set> {
+        &self.checker
     }
 
-    /// Return the NOA index base on 1.
-    pub fn noa_idx(idx: usize) -> usize {
-        idx + 1
+    pub(crate) fn noa_cmd() -> usize {
+        1
+    }
+
+    pub(crate) fn noa_main() -> usize {
+        0
+    }
+
+    pub(crate) fn noa_pos(idx: usize) -> usize {
+        idx
     }
 }
 
-impl<S> Policy for DelayPolicy<S>
+impl<Set, Ser> UserStyleManager for DelayPolicy<Set, Ser> {
+    fn style_manager(&self) -> &OptStyleManager {
+        &self.style_manager
+    }
+
+    fn style_manager_mut(&mut self) -> &mut OptStyleManager {
+        &mut self.style_manager
+    }
+}
+
+impl<Set, Ser> DelayPolicy<Set, Ser>
 where
-    <S::Ctor as Ctor>::Opt: Opt,
-    S: Set + OptParser + OptValidator + Debug + 'static,
+    SetOpt<Set>: Opt,
+    Ser: 'static,
+    Set: crate::set::Set + OptParser + Debug + 'static,
 {
-    type Ret = ReturnVal;
-
-    type Set = S;
-
-    type Error = Error;
-
-    fn parse(
+    pub fn invoke_opt_callback(
         &mut self,
-        set: &mut Self::Set,
-        ser: &mut Services,
-        args: Arc<Args>,
-    ) -> Result<Option<Self::Ret>, Self::Error> {
-        ser.ser_check()?.pre_check(set)?;
+        ctx: &mut Ctx,
+        set: &mut Set,
+        inv: &mut Invoker<Set, Ser>,
+        ser: &mut Ser,
+    ) -> Result<(), Error> {
+        for saver in std::mem::take(&mut self.contexts) {
+            let uid = saver.uid;
+
+            ctx.set_inner_ctx(Some(saver.ctx));
+            if !invoke_callback_opt(uid, ctx, set, inv, ser)? {
+                set.opt_mut(uid)?.set_matched(false);
+            }
+        }
+        Ok(())
+    }
+}
+
+impl<Set, Ser> DelayPolicy<Set, Ser>
+where
+    SetOpt<Set>: Opt,
+    Ser: 'static,
+    Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
+{
+    pub(crate) fn parse_impl(
+        &mut self,
+        ctx: &mut Ctx,
+        set: &mut <Self as Policy>::Set,
+        inv: &mut <Self as Policy>::Inv,
+        ser: &mut <Self as Policy>::Ser,
+    ) -> Result<(), <Self as Policy>::Error> {
+        self.checker().pre_check(set)?;
 
         // take the invoke service, avoid borrow the ser
-        let opt_styles = [
-            UserStyle::EqualWithValue,
-            UserStyle::Argument,
-            UserStyle::Boolean,
-            UserStyle::CombinedOption,
-            UserStyle::EmbeddedValue,
-        ];
+        let opt_styles = &self.style_manager;
+        let args = ctx.orig_args().clone();
         let args_len = args.len();
         let mut noa_args = Args::default();
         let mut iter = args.guess_iter().enumerate();
-        let mut opt_ctx = Ctx::default();
 
-        opt_ctx.set_args(args.clone()).set_total(args_len);
+        trace_log!("Parsing {ctx:?} using delay policy");
+        // set option args, and args length
+        ctx.set_args(args.clone());
         while let Some((idx, (opt, arg))) = iter.next() {
             let mut matched = false;
             let mut consume = false;
-            let arg = arg.map(|v| Arc::new(v.clone()));
+            let arg = arg.map(|v| ARef::new(v.clone()));
 
             // parsing current argument
             if let Ok(clopt) = opt.parse_arg() {
                 if let Some(name) = clopt.name() {
-                    if set.check_name(name.as_str())? {
+                    if set.check(name.as_str()).map_err(Into::into)? {
                         for style in opt_styles.iter() {
                             if let Some(mut proc) = OptGuess::new().guess(
                                 style,
-                                GuessOptCfg::new(idx, args_len, arg.clone(), &clopt),
+                                GuessOptCfg::new(idx, args_len, arg.clone(), &clopt, set),
                             )? {
-                                opt_ctx.set_idx(idx);
-                                let ret = process_opt::<S>(&opt_ctx, set, ser, &mut proc, false)?;
+                                let ret = process_opt(
+                                    ProcessCtx {
+                                        idx,
+                                        ctx,
+                                        set,
+                                        inv,
+                                        ser,
+                                        tot: args_len,
+                                    },
+                                    &mut proc,
+                                    false,
+                                )?;
 
-                                if proc.is_mat() {
+                                if proc.status() {
                                     self.contexts.extend(ret);
                                     matched = true;
                                 }
-                                if proc.consume() {
+                                if proc.is_consume() {
                                     consume = true;
                                 }
                                 if matched {
@@ -263,68 +300,133 @@ where
             }
         }
 
-        let ret = noa_args.clone();
-        let noa_args = Arc::new(noa_args);
+        let noa_args = ARef::new(noa_args);
         let noa_len = noa_args.len();
-        let mut noa_ctx = Ctx::default();
 
-        noa_ctx.set_args(noa_args.clone()).set_total(noa_args.len());
+        ctx.set_args(noa_args.clone());
         // when style is pos, noa index is [1..=len]
-        if noa_args.len() > 0 {
+        if noa_len > 0 {
             if let Some(mut proc) = NOAGuess::new().guess(
                 &UserStyle::Cmd,
-                GuessNOACfg::new(noa_args.clone(), Self::noa_idx(0), noa_len),
+                GuessNOACfg::new(noa_args.clone(), Self::noa_cmd(), noa_len),
             )? {
-                noa_ctx.set_idx(Self::noa_idx(0));
-                process_non_opt::<S>(&noa_ctx, set, ser, &mut proc)?;
+                process_non_opt(
+                    ProcessCtx {
+                        ctx,
+                        set,
+                        inv,
+                        ser,
+                        tot: noa_len,
+                        idx: Self::noa_cmd(),
+                    },
+                    &mut proc,
+                )?;
             }
 
-            ser.ser_check()?.cmd_check(set)?;
+            self.checker().cmd_check(set)?;
 
-            for idx in 0..noa_len {
+            for idx in 1..noa_len {
                 if let Some(mut proc) = NOAGuess::new().guess(
                     &UserStyle::Pos,
-                    GuessNOACfg::new(noa_args.clone(), Self::noa_idx(idx), noa_len),
+                    GuessNOACfg::new(noa_args.clone(), Self::noa_pos(idx), noa_len),
                 )? {
-                    noa_ctx.set_idx(Self::noa_idx(idx));
-                    process_non_opt::<S>(&noa_ctx, set, ser, &mut proc)?;
+                    process_non_opt(
+                        ProcessCtx {
+                            ctx,
+                            set,
+                            inv,
+                            ser,
+                            tot: noa_len,
+                            idx: Self::noa_pos(idx),
+                        },
+                        &mut proc,
+                    )?;
                 }
             }
         } else {
-            ser.ser_check()?.cmd_check(set)?;
+            self.checker().cmd_check(set)?;
         }
 
         // after cmd and pos callback invoked, invoke the callback of option
-        self.invoke_opt_callback(set, ser)?;
+        self.invoke_opt_callback(ctx, set, inv, ser)?;
 
-        ser.ser_check()?.opt_check(set)?;
+        self.checker().opt_check(set)?;
 
-        ser.ser_check()?.pos_check(set)?;
+        self.checker().pos_check(set)?;
 
         let main_args = noa_args;
-        let mut main_ctx = noa_ctx;
+        let main_len = main_args.len();
 
-        main_ctx.set_idx(0);
-        if let Some(mut proc) =
-            NOAGuess::new().guess(&UserStyle::Main, GuessNOACfg::new(main_args, 0, noa_len))?
-        {
-            process_non_opt::<S>(&main_ctx, set, ser, &mut proc)?;
+        ctx.set_args(main_args.clone());
+        if let Some(mut proc) = NOAGuess::new().guess(
+            &UserStyle::Main,
+            GuessNOACfg::new(main_args, Self::noa_main(), main_len),
+        )? {
+            process_non_opt(
+                ProcessCtx {
+                    ctx,
+                    set,
+                    inv,
+                    ser,
+                    tot: main_len,
+                    idx: Self::noa_main(),
+                },
+                &mut proc,
+            )?;
         }
 
-        ser.ser_check()?.post_check(set)?;
+        self.checker().post_check(set)?;
+        Ok(())
+    }
+}
 
-        Ok(Some(ReturnVal::new(ret.into_inner(), true)))
+impl<Set, Ser> Policy for DelayPolicy<Set, Ser>
+where
+    SetOpt<Set>: Opt,
+    Ser: 'static,
+    Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
+{
+    type Ret = ReturnVal;
+
+    type Set = Set;
+
+    type Inv = Invoker<Set, Ser>;
+
+    type Ser = Ser;
+
+    type Error = Error;
+
+    fn parse(
+        &mut self,
+        set: &mut Self::Set,
+        inv: &mut Self::Inv,
+        ser: &mut Self::Ser,
+        args: ARef<Args>,
+    ) -> Result<Self::Ret, Self::Error> {
+        let mut ctx = Ctx::default().with_orig_args(args.clone()).with_args(args);
+
+        match self.parse_impl(&mut ctx, set, inv, ser) {
+            Ok(_) => Ok(ReturnVal::new(ctx)),
+            Err(e) => {
+                if e.is_failure() {
+                    Ok(ReturnVal::new(ctx).with_failure(e))
+                } else {
+                    Err(e)
+                }
+            }
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
 
-    use std::ops::Deref;
-
+    use crate::opt::Pos;
     use crate::prelude::*;
-    use crate::Arc;
+    use crate::ARef;
     use crate::Error;
+    use std::any::TypeId;
+    use std::ops::Deref;
 
     #[test]
     fn testing_1() {
@@ -333,14 +435,13 @@ mod test {
 
     fn testing_1_main() -> Result<(), Error> {
         fn check_opt_val<T: std::fmt::Debug + PartialEq + ErasedTy + 'static>(
-            ser: &mut ASer,
             opt: &AOpt,
             uid: Uid,
             name: &str,
             vals: Option<Vec<T>>,
             force: bool,
             action: &Action,
-            assoc: &Assoc,
+            type_id: &TypeId,
             index: Option<&Index>,
             alias: Option<Vec<&str>>,
         ) -> Result<(), Error> {
@@ -356,15 +457,23 @@ mod test {
                 force
             );
             assert_eq!(opt.action(), action, "action not equal for {}", opt_uid);
-            assert_eq!(opt.assoc(), assoc, "assoc not equal for {}", opt_uid);
-            assert_eq!(opt.idx(), index, "option index not equal: {:?}", index);
-            if let Ok(opt_vals) = ser.sve_vals::<T>(opt_uid) {
+            assert_eq!(
+                opt.r#type(),
+                type_id,
+                "type id not equal for {}({})",
+                opt_uid,
+                opt.name()
+            );
+            assert_eq!(opt.index(), index, "option index not equal: {:?}", index);
+            if let Ok(opt_vals) = opt.vals::<T>() {
                 if let Some(vals) = vals {
                     assert_eq!(
                         opt_vals.len(),
                         vals.len(),
-                        "value length not equal for {}",
-                        opt_uid
+                        "value length not equal for -{}- : {:?} != {:?}",
+                        opt_uid,
+                        opt_vals,
+                        vals,
                     );
                     for (l, r) in opt_vals.iter().zip(vals.iter()) {
                         assert_eq!(
@@ -401,88 +510,91 @@ mod test {
 
         let mut policy = ADelayPolicy::default();
         let mut ser = policy.default_ser();
+        let mut inv = policy.default_inv();
         let mut set = policy.default_set();
 
-        let args = Args::new(
-            [
-                "filter",
-                "+>",
-                "foo",
-                "bar",
-                "8",
-                "42",
-                "--option-ignored",
-                "88",
-                "+>",
-                "12.5",
-                "lily",
-                "66",
-                "11",
-            ]
-            .into_iter(),
-        );
+        let args = Args::from_array([
+            "app",
+            "filter",
+            "+>",
+            "foo",
+            "bar",
+            "8",
+            "42",
+            "--option-ignored",
+            "88",
+            "+>",
+            "12.5",
+            "lily",
+            "66",
+            "11",
+        ]);
 
         set.validator_mut().add_prefix("+");
 
         set.add_opt("set=c")?;
         set.add_opt("filter=c")?;
-        let args_uid = set.add_opt("args=p@2..")?.set_assoc(Assoc::Flt).run()?;
 
-        ser.ser_invoke_mut()?
-            .entry(set.add_opt("--positive=b")?.add_alias("+>").run()?)
-            .on(|set: &mut ASet, ser: &mut ASer| {
-                ser.sve_filter::<f64>(set["args=p"].uid(), |v: &f64| v <= &0.0)?;
+        let args_uid = set
+            .add_opt("args=p@2..")?
+            .set_pos_type_only::<f64>()
+            .run()?;
+
+        inv.entry(set.add_opt("--positive=b")?.add_alias("+>").run()?)
+            .on(|set: &mut ASet, _: &mut ASer| {
+                set["args"].filter::<f64>(|v: &f64| v <= &0.0)?;
                 Ok(Some(true))
             });
-        ser.ser_invoke_mut()?
-            .entry(set.add_opt("--bigger-than=f")?.add_alias("+>").run()?)
-            .on(|set: &mut ASet, ser: &mut ASer, val: ctx::Value<f64>| {
+        inv.entry(set.add_opt("--bigger-than=f")?.add_alias("+>").run()?)
+            .on(|set: &mut ASet, _: &mut ASer, val: ctx::Value<f64>| {
                 // this is a vec![vec![], ..]
-                Ok(Some(
-                    ser.sve_filter::<f64>(set["args=p"].uid(), |v: &f64| v <= val.deref())?,
-                ))
+                Ok(Some(set["args"].filter::<f64>(|v: &f64| v <= val.deref())?))
             });
-        ser.ser_invoke_mut()?
-            .entry(set.add_opt("main=m")?.run()?)
-            .on(move |set: &mut ASet, ser: &mut ASer| {
+        inv.entry(set.add_opt("main=m")?.run()?).on(
+            move |set: &mut ASet, _: &mut ASer, app: ctx::Value<String>| {
                 let args = &set["args"];
                 let bopt = &set["--bigger-than"];
 
+                assert_eq!(app.deref(), "app");
                 check_opt_val::<f64>(
-                    ser,
                     args,
                     args_uid,
                     "args",
                     Some(vec![42.0, 88.0, 66.0]),
                     false,
                     &Action::App,
-                    &Assoc::Flt,
-                    Some(&Index::Range(2, 0)),
+                    &TypeId::of::<Pos<f64>>(),
+                    Some(&Index::Range(2, None)),
                     None,
                 )?;
                 check_opt_val::<Vec<f64>>(
-                    ser,
                     bopt,
                     bopt.uid(),
                     "--bigger-than",
                     Some(vec![vec![8.0, 11.0]]),
                     false,
                     &Action::App,
-                    &Assoc::Flt,
+                    &TypeId::of::<f64>(),
                     None,
                     None,
                 )?;
                 Ok(Some(()))
-            });
+            },
+        );
 
-        let args = Arc::new(args);
+        let args = ARef::new(args);
 
         for opt in set.iter_mut() {
-            opt.init(&mut ser)?;
+            opt.init()?;
         }
-        assert!(policy.parse(&mut set, &mut ser, args.clone()).is_err());
+        assert!(!policy
+            .parse(&mut set, &mut inv, &mut ser, args.clone())?
+            .status());
         policy.set_strict(false);
-        policy.parse(&mut set, &mut ser, args)?;
+        for opt in set.iter_mut() {
+            opt.init()?;
+        }
+        assert!(policy.parse(&mut set, &mut inv, &mut ser, args)?.status());
         Ok(())
     }
 }

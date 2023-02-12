@@ -6,7 +6,7 @@ use super::StrParser;
 
 /// Index using for option match.
 ///
-/// The index is the position of left arguments (non-option arguments, NOA) index, its base on 1.
+/// The index is the position of left arguments (non-option arguments, NOA) index.
 ///
 /// # Example
 ///
@@ -23,13 +23,16 @@ use super::StrParser;
 ///             |    option -b
 ///         option -a and its value
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+///
+/// For option check, see [`SetChecker`](crate::parser::SetChecker) for more information.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Index {
-    /// The forward index of NOA.
+    /// The forward index of NOA, fixed position.
     ///
     /// # Example
     ///
-    /// For `["--aopt", "--bopt=42", "pos1", "--copt", "pos2", "--dopt", "value", "pos3"]`:
+    /// For `["app", "--aopt", "--bopt=42", "pos1", "--copt", "pos2", "--dopt", "value", "pos3"]`:
     ///
     /// `@1` will matching `"pos1"`.
     ///
@@ -38,24 +41,24 @@ pub enum Index {
     /// `@3` will matching `"pos3"`.
     Forward(usize),
 
-    /// The backward index of NOA.
+    /// The backward index of NOA, floating position.
     ///
     /// # Example
     ///
-    /// For `["--aopt", "--bopt=42", "pos1", "--copt", "pos2", "--dopt", "value", "pos3"]`:
+    /// For `["app", "--aopt", "--bopt=42", "pos1", "--copt", "pos2", "--dopt", "value", "pos3"]`:
     ///
-    /// `@-1` will matching `"pos3"`.
+    /// `@-1` will matching `"pos2"`.
     ///
-    /// `@-2` will matching `"pos2"`.
+    /// `@-2` will matching `"pos1"`.
     ///
-    /// `@-3` will matching `"pos1"`.
+    /// `@-3` will matching `"app"`.
     Backward(usize),
 
-    /// The include list of forward index of NOA.
+    /// The include list of forward index of NOA, fixed position.
     ///
     /// # Example
     ///
-    /// For `["--aopt", "--bopt=42", "pos1", "--copt", "pos2", "--dopt", "value", "pos3"]`:
+    /// For `["app", "--aopt", "--bopt=42", "pos1", "--copt", "pos2", "--dopt", "value", "pos3"]`:
     ///
     /// `@[1,3]` will matching `"pos1"` or `"pos3"`.
     ///
@@ -64,11 +67,11 @@ pub enum Index {
     /// `@[1,2,3]` will matching `"pos1"`, `"pos2"` or `"pos3"`.
     List(Vec<usize>),
 
-    /// The exclude list of forward index of NOA.
+    /// The exclude list of forward index of NOA, floating position.
     ///
     /// # Example
     ///
-    /// For `["--aopt", "--bopt=42", "pos1", "--copt", "pos2", "--dopt", "value", "pos3"]`:
+    /// For `["app", "--aopt", "--bopt=42", "pos1", "--copt", "pos2", "--dopt", "value", "pos3"]`:
     ///
     /// `@-[1,3]` will matching `"pos2"`.
     ///
@@ -79,30 +82,32 @@ pub enum Index {
 
     /// The NOA which index inside in given position range with format `(m..n]`.
     ///
+    /// If range have upper limit, the index is fixed position otherwise it is floating position.
+    ///
     /// # Example
     ///
-    /// For `["--aopt", "--bopt=42", "pos1", "--copt", "pos2", "--dopt", "value", "pos3"]`:
+    /// For `["app", "--aopt", "--bopt=42", "pos1", "--copt", "pos2", "--dopt", "value", "pos3"]`:
     ///
-    /// `@0..` will matching `"pos1"`, `"pos2"` or `"pos3"`.
+    /// `@0..` will matching `"app"`, `"pos1"`, `"pos2"` or `"pos3"`.
     ///
     /// `@2..` will matching `"pos2"`, `"pos3"`.
     ///
     /// `@1..` will matching `"pos1"`, `"pos2"` or `"pos3"`.
     ///
-    /// `@..4` will matching `"pos1"`, `"pos2"` or `"pos3"`.
+    /// `@..4` will matching `"app"`, `"pos1"`, `"pos2"` or `"pos3"`.
     ///
-    /// `@..2` will matching `"pos1"`.
+    /// `@..2` will matching `"app"`, `"pos1"`.
     ///
     /// `@1..3` will matching `"pos1"`, `"pos2"`.
-    Range(usize, usize),
+    Range(usize, Option<usize>),
 
-    /// The anywhere position of NOA.
+    /// The anywhere position of NOA, floating position.
     ///
     /// # Example
     ///
-    /// For `["--aopt", "--bopt=42", "pos1", "--copt", "pos2", "--dopt", "value", "pos3"]`:
+    /// For `["app", "--aopt", "--bopt=42", "pos1", "--copt", "pos2", "--dopt", "value", "pos3"]`:
     ///
-    /// `@*` or `@0` will matching `"pos1"`, `"pos2"` or `"pos3"`.
+    /// `@*` will matching `"app"`, `"pos1"`, `"pos2"` or `"pos3"`.
     AnyWhere,
 
     Null,
@@ -254,9 +259,8 @@ impl Index {
             (None, None) => {
                 panic!("start and end can't both None")
             }
-            (None, Some(end)) => Self::Range(0, end),
-            (Some(start), None) => Self::Range(start, 0),
-            (Some(start), Some(end)) => Self::Range(start, end),
+            (None, _) => Self::Range(0, end),
+            (Some(start), _) => Self::Range(start, end),
         }
     }
 
@@ -273,47 +277,40 @@ impl Index {
             Self::Forward(offset) => {
                 let offset = *offset;
 
-                if offset <= noa_count {
+                if offset < noa_count {
                     return Some(offset);
                 }
             }
             Self::Backward(offset) => {
                 let offset = *offset;
 
-                if offset <= noa_count {
-                    return Some(noa_count - offset + 1);
+                if offset < noa_count {
+                    return Some(noa_count - offset - 1);
                 }
             }
             Self::List(list) => {
                 for offset in list {
                     let offset = *offset;
 
-                    if offset <= noa_count && offset == noa_index {
+                    if offset < noa_count && offset == noa_index {
                         return Some(offset);
                     }
                 }
             }
             Self::Except(list) => {
-                if noa_index <= noa_count && !list.contains(&noa_index) {
+                if noa_index < noa_count && !list.contains(&noa_index) {
                     return Some(noa_index);
                 }
             }
             Self::Range(start, end) => match (start, end) {
-                (0, end) => {
-                    let end = *end;
-
-                    if noa_index < end {
-                        return Some(noa_index);
-                    }
-                }
-                (start, 0) => {
+                (start, None) => {
                     let start = *start;
 
                     if noa_index >= start {
                         return Some(noa_index);
                     }
                 }
-                (start, end) => {
+                (start, Some(end)) => {
                     let start = *start;
                     let end = *end;
 
@@ -348,13 +345,10 @@ impl ToString for Index {
             Index::Backward(v) => {
                 format!("-{}", v)
             }
-            Index::Range(0, e) => {
-                format!("..{}", e)
-            }
-            Index::Range(s, 0) => {
+            Index::Range(s, None) => {
                 format!("{}..", s,)
             }
-            Index::Range(s, e) => {
+            Index::Range(s, Some(e)) => {
                 format!("{}..{}", s, e)
             }
             Index::List(v) => {

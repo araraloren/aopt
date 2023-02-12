@@ -1,5 +1,4 @@
-#[cfg_attr(feature = "sync", path = "sync/parser/commit.rs")]
-#[cfg_attr(not(feature = "sync"), path = "parser/commit.rs")]
+pub(crate) mod checker;
 pub(crate) mod commit;
 pub(crate) mod policy_delay;
 pub(crate) mod policy_fwd;
@@ -8,7 +7,9 @@ pub(crate) mod process;
 pub(crate) mod returnval;
 pub(crate) mod style;
 
+pub use self::checker::SetChecker;
 pub use self::commit::ParserCommit;
+pub use self::commit::ParserCommitWithValue;
 pub use self::policy_delay::DelayPolicy;
 pub use self::policy_fwd::FwdPolicy;
 pub use self::policy_pre::PrePolicy;
@@ -18,7 +19,9 @@ pub use self::style::GuessNOACfg;
 pub use self::style::GuessOptCfg;
 pub use self::style::NOAGuess;
 pub use self::style::OptGuess;
+pub use self::style::OptStyleManager;
 pub use self::style::UserStyle;
+pub use self::style::UserStyleManager;
 
 pub(crate) use self::process::invoke_callback_opt;
 pub(crate) use self::process::process_non_opt;
@@ -29,29 +32,30 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 
 use crate::args::Args;
-use crate::ctx::Ctx;
 use crate::ctx::Extract;
 use crate::ctx::Handler;
+use crate::ctx::HandlerEntry;
+use crate::ctx::InnerCtx;
+use crate::ctx::Invoker;
 use crate::ext::APolicyExt;
-use crate::ext::ServicesExt;
 use crate::map::ErasedTy;
+use crate::opt::fill_cfg;
 use crate::opt::Config;
 use crate::opt::ConfigValue;
 use crate::opt::Information;
 use crate::opt::Opt;
 use crate::opt::OptParser;
-use crate::ser::invoke::HandlerEntry;
-use crate::ser::Services;
-use crate::set::Commit;
-use crate::set::Ctor;
-use crate::set::Filter;
+use crate::prelude::SetCommit;
+use crate::ser::ServicesValExt;
 use crate::set::OptValidator;
 use crate::set::Set;
 use crate::set::SetCfg;
 use crate::set::SetOpt;
-use crate::Arc;
+use crate::value::Infer;
+use crate::value::Placeholder;
+use crate::value::RawValParser;
+use crate::ARef;
 use crate::Error;
-use crate::RawVal;
 use crate::Str;
 use crate::Uid;
 
@@ -64,7 +68,7 @@ pub struct CtxSaver {
     pub idx: usize,
 
     /// invoke context
-    pub ctx: Ctx,
+    pub ctx: InnerCtx,
 }
 
 /// [`Policy`] doing real parsing work.
@@ -73,17 +77,21 @@ pub struct CtxSaver {
 /// ```ignore
 ///
 /// #[derive(Debug)]
-/// pub struct EmptyPolicy<S>(PhantomData<S>);
+/// pub struct EmptyPolicy<Set, Ser>(PhantomData<(Set, Ser)>);
 ///
 /// // An empty policy do nothing.
-/// impl<S: Set> Policy for EmptyPolicy<S> {
+/// impl<S: Set, T: Ser> Policy for EmptyPolicy<S, T> {
 ///     type Ret = bool;
 ///
 ///     type Set = S;
 ///
+///     type Inv = Invoker<S>;
+///
+///     type Ser = T;
+///
 ///     type Error = Error;
 ///
-///     fn parse(&mut self, _: &mut S, _: &mut ASer, _: Arc<Args>) -> Result<Option<bool>, Error> {
+///     fn parse(&mut self, _: &mut S, _: &mut T, _: ARef<Args>) -> Result<bool, Error> {
 ///         // ... parsing logical code
 ///         Ok(Some(true))
 ///     }
@@ -91,46 +99,53 @@ pub struct CtxSaver {
 /// ```
 pub trait Policy {
     type Ret;
-    type Set: Set;
+    type Set;
+    type Inv;
+    type Ser;
     type Error: Into<Error>;
 
     fn parse(
         &mut self,
         set: &mut Self::Set,
-        ser: &mut Services,
-        args: Arc<Args>,
-    ) -> Result<Option<Self::Ret>, Self::Error>;
+        inv: &mut Self::Inv,
+        ser: &mut Self::Ser,
+        args: ARef<Args>,
+    ) -> Result<Self::Ret, Self::Error>;
 }
 
-impl<S, R, E> Policy for Box<dyn Policy<Ret = R, Set = S, Error = E>>
+impl<S, I, O, R, E> Policy for Box<dyn Policy<Ret = R, Set = S, Inv = I, Ser = O, Error = E>>
 where
-    S: Set,
     E: Into<Error>,
 {
     type Ret = R;
 
     type Set = S;
 
+    type Inv = I;
+
+    type Ser = O;
+
     type Error = E;
 
     fn parse(
         &mut self,
         set: &mut Self::Set,
-        ser: &mut Services,
-        args: Arc<Args>,
-    ) -> Result<Option<Self::Ret>, Self::Error> {
-        Policy::parse(self.as_mut(), set, ser, args)
+        inv: &mut Self::Inv,
+        ser: &mut Self::Ser,
+        args: ARef<Args>,
+    ) -> Result<Self::Ret, Self::Error> {
+        Policy::parse(self.as_mut(), set, inv, ser, args)
     }
 }
 
-/// Parser manage the [`Set`], [`Services`] and [`Policy`].
+/// Parser manage the components are using in [`parse`](Policy::parse) of [`Policy`].
 ///
 /// # Example
 ///
 /// ```rust
 /// # use aopt::getopt;
 /// # use aopt::prelude::*;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<(), Error> {
@@ -148,7 +163,7 @@ where
 ///     // Output: The question is: Where are you from ?
 ///     println!(
 ///         "The question is: {}",
-///         args.iter()
+///         args.iter().skip(1)
 ///             .map(|v| v.get_str().unwrap().to_owned())
 ///             .collect::<Vec<String>>()
 ///             .join(" ")
@@ -157,14 +172,16 @@ where
 /// }
 ///
 /// let ret = getopt!(
-///     ["Where", "are", "you", "from", "?"].into_iter(),
+///     Args::from_array(["app", "Where", "are", "you", "from", "?"]),
 ///     &mut parser1,
 ///     &mut parser2
 /// )?;
 ///
 /// assert!(ret.is_some());
+/// let ret = ret.unwrap();
+/// let parser = ret.parser;
 /// assert_eq!(
-///     ret.unwrap()[0].name(),
+///     parser[0].name(),
 ///     "Where",
 ///     "Parser with `Where` cmd matched"
 /// );
@@ -179,23 +196,24 @@ where
 pub struct Parser<P: Policy> {
     policy: P,
     optset: P::Set,
-    services: Services,
-    return_value: Option<P::Ret>,
+    invoker: P::Inv,
+    appser: P::Ser,
 }
 
 impl<P: Policy> Default for Parser<P>
 where
-    P::Set: Default + Set,
-    P: Default + Policy + APolicyExt<P::Set>,
+    P::Set: Default,
+    P::Inv: Default,
+    P::Ser: Default,
+    P: Default + Policy + APolicyExt<P>,
 {
     fn default() -> Self {
         let policy = P::default();
-
         Self {
             optset: policy.default_set(),
-            services: policy.default_ser(),
+            invoker: policy.default_inv(),
+            appser: policy.default_ser(),
             policy,
-            return_value: None,
         }
     }
 }
@@ -216,50 +234,55 @@ impl<P: Policy> DerefMut for Parser<P> {
 
 impl<P> Parser<P>
 where
-    P: Policy + APolicyExt<P::Set>,
+    P: Policy + APolicyExt<P>,
 {
     pub fn new(policy: P) -> Self {
-        let set = policy.default_set();
-        let services = policy.default_ser();
+        let optset = policy.default_set();
+        let valser = policy.default_ser();
+        let invoker = policy.default_inv();
 
         Self {
-            optset: set,
+            optset,
             policy,
-            services,
-            return_value: None,
+            invoker,
+            appser: valser,
         }
     }
 }
+
+pub type BoxedPolicy<P> = Box<
+    dyn Policy<
+        Ret = <P as Policy>::Ret,
+        Set = <P as Policy>::Set,
+        Inv = <P as Policy>::Inv,
+        Ser = <P as Policy>::Ser,
+        Error = <P as Policy>::Error,
+    >,
+>;
 
 impl<P> Parser<P>
 where
     P: Policy + 'static,
 {
-    pub fn into_boxed(
-        self,
-    ) -> Parser<Box<dyn Policy<Ret = P::Ret, Set = P::Set, Error = P::Error>>> {
-        let policy: Box<dyn Policy<Ret = P::Ret, Set = P::Set, Error = P::Error>> =
-            Box::new(self.policy);
+    pub fn into_boxed(self) -> Parser<BoxedPolicy<P>> {
+        let policy: BoxedPolicy<P> = Box::new(self.policy);
 
         Parser {
-            optset: self.optset,
             policy,
-            services: self.services,
-            return_value: self.return_value,
+            optset: self.optset,
+            invoker: self.invoker,
+            appser: self.appser,
         }
     }
 }
 
-impl<P> Parser<P>
-where
-    P: Policy<Error = Error>,
-{
-    pub fn new_with(policy: P, optset: P::Set, services: Services) -> Self {
+impl<P: Policy> Parser<P> {
+    pub fn new_with(policy: P, optset: P::Set, invoker: P::Inv, valser: P::Ser) -> Self {
         Self {
             optset,
             policy,
-            services,
-            return_value: None,
+            invoker,
+            appser: valser,
         }
     }
 
@@ -276,16 +299,29 @@ where
         self
     }
 
-    pub fn service(&self) -> &Services {
-        &self.services
+    pub fn invoker(&self) -> &P::Inv {
+        &self.invoker
     }
 
-    pub fn service_mut(&mut self) -> &mut Services {
-        &mut self.services
+    pub fn invoker_mut(&mut self) -> &mut P::Inv {
+        &mut self.invoker
     }
 
-    pub fn set_service(&mut self, services: Services) -> &mut Self {
-        self.services = services;
+    pub fn set_invoker(&mut self, invser: P::Inv) -> &mut Self {
+        self.invoker = invser;
+        self
+    }
+
+    pub fn service(&self) -> &P::Ser {
+        &self.appser
+    }
+
+    pub fn service_mut(&mut self) -> &mut P::Ser {
+        &mut self.appser
+    }
+
+    pub fn set_service(&mut self, valser: P::Ser) -> &mut Self {
+        self.appser = valser;
         self
     }
 
@@ -301,55 +337,48 @@ where
         self.optset = optset;
         self
     }
+}
 
-    /// Reset the option set, and clear the [`ValService`](crate::ser::ValService`),
-    /// [`UsrValService`](crate::ser::UsrValService`), [`RawValService`](crate::ser::RawValService`).
-    pub fn clear_all(&mut self) -> Result<&mut Self, Error> {
+impl<P> Parser<P>
+where
+    P::Set: Set,
+    P::Ser: ServicesValExt,
+    P: Policy<Error = Error>,
+{
+    /// Reset the option set.
+    pub fn reset(&mut self) -> Result<&mut Self, Error> {
         self.optset.reset();
-        self.services.ser_val_mut()?.clear();
-        self.services.ser_usrval_mut()?.clear();
-        self.services.ser_rawval_mut::<RawVal>()?.clear();
+        // ignore invoker, it is stateless
         Ok(self)
     }
 
-    pub fn retval(&self) -> Option<&P::Ret> {
-        self.return_value.as_ref()
+    pub fn app_data<T: ErasedTy>(&self) -> Result<&T, Error> {
+        self.appser.sve_val()
     }
 
-    pub fn take_retval(&mut self) -> Option<P::Ret> {
-        self.return_value.take()
+    pub fn app_data_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
+        self.appser.sve_val_mut()
     }
 
-    pub fn set_retval(&mut self, val: Option<P::Ret>) -> &mut Self {
-        self.return_value = val;
-        self
-    }
-
-    pub fn usrval<T: ErasedTy>(&self) -> Result<&T, Error> {
-        self.services.ser_usrval()?.val::<T>()
-    }
-
-    pub fn usrval_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
-        self.services.ser_usrval_mut()?.val_mut::<T>()
-    }
-
-    /// Set the user value that can access in option handler.
+    /// Set the value that can access in option handler.
     ///
     /// # Example 1
     /// ```rust
     /// # use aopt::getopt;
     /// # use aopt::prelude::*;
-    /// # use aopt::Arc;
+    /// # use aopt::ARef;
     /// # use aopt::Error;
     /// # use std::ops::Deref;
     /// #
     /// # fn main() -> Result<(), Error> {
+    ///
+    /// #[derive(Debug)]
     /// struct Int(i64);
     ///
     /// let mut parser = Parser::new(AFwdPolicy::default());
     ///
     /// // Register a value can access in handler parameter.
-    /// parser.set_usrval(ser::Value::new(Int(42)))?;
+    /// parser.set_app_data(ser::Value::new(Int(42)))?;
     /// parser.add_opt("--guess=i!")?.on(
     ///   |_: &mut ASet, _: &mut ASer, mut val: ctx::Value<i64>, answer: ser::Value<Int>| {
     ///       if &answer.0 == val.deref() {
@@ -363,7 +392,7 @@ where
     ///   },
     /// )?;
     ///
-    /// getopt!(["--guess", "42"].into_iter(), &mut parser)?;
+    /// getopt!(Args::from_array(["--guess", "42"]), &mut parser)?;
     /// #
     /// # Ok(())
     /// # }
@@ -373,20 +402,21 @@ where
     /// ```rust
     /// # use aopt::getopt;
     /// # use aopt::prelude::*;
-    /// # use aopt::Arc;
+    /// # use aopt::ARef;
     /// # use aopt::Error;
     /// # use std::ops::Deref;
     /// #
     /// # fn main() -> Result<(), Error> {
+    /// #[derive(Debug)]
     /// struct Int(i64);
     ///
     /// let mut parser = Parser::new(AFwdPolicy::default());
     ///
     /// // Register a value can access in handler parameter.
-    /// parser.set_usrval(Int(42))?;
+    /// parser.set_app_data(Int(42))?;
     /// parser.add_opt("--guess=i!")?.on(
     ///   |_: &mut ASet, ser: &mut ASer, mut val: ctx::Value<i64>| {
-    ///       let answer = ser.sve_usrval::<Int>()?;
+    ///       let answer = ser.sve_val::<Int>()?;
     ///
     ///       if &answer.0 == val.deref() {
     ///           println!("Congratulation, you win!");
@@ -399,82 +429,67 @@ where
     ///   },
     /// )?;
     ///
-    /// getopt!(["--guess", "42"].into_iter(), &mut parser)?;
+    /// getopt!(Args::from_array(["--guess", "42"]), &mut parser)?;
     /// #
     /// # Ok(())
     /// # }
     ///```
-    pub fn set_usrval<T: ErasedTy>(&mut self, val: T) -> Result<Option<T>, Error> {
-        Ok(self.services.ser_usrval_mut()?.insert(val))
-    }
-
-    pub fn val<T: ErasedTy>(&self, uid: Uid) -> Result<&T, Error> {
-        self.services.ser_val()?.val::<T>(uid)
-    }
-
-    pub fn val_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut T, Error> {
-        self.services.ser_val_mut()?.val_mut::<T>(uid)
-    }
-
-    pub fn vals<T: ErasedTy>(&self, uid: Uid) -> Result<&Vec<T>, Error> {
-        self.services.ser_val()?.vals::<T>(uid)
-    }
-
-    pub fn vals_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut Vec<T>, Error> {
-        self.services.ser_val_mut()?.vals_mut::<T>(uid)
-    }
-
-    pub fn rawval(&self, uid: Uid) -> Result<&RawVal, Error> {
-        self.services.ser_rawval()?.val(uid)
-    }
-
-    pub fn rawval_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut RawVal, Error> {
-        self.services.ser_rawval_mut()?.val_mut(uid)
-    }
-
-    pub fn rawvals<T: ErasedTy>(&self, uid: Uid) -> Result<&Vec<RawVal>, Error> {
-        self.services.ser_rawval()?.vals(uid)
-    }
-
-    pub fn rawvals_mut<T: ErasedTy>(&mut self, uid: Uid) -> Result<&mut Vec<RawVal>, Error> {
-        self.services.ser_rawval_mut()?.vals_mut(uid)
+    pub fn set_app_data<T: ErasedTy>(&mut self, val: T) -> Result<Option<T>, Error> {
+        Ok(self.appser.sve_insert(val))
     }
 }
 
 impl<P> Parser<P>
 where
+    P::Set: Set,
     P: Policy<Error = Error>,
 {
-    /// Call the [`init`](crate::opt::Opt::init) on [`Services`] initialize the option value.
+    /// Call the [`init`](crate::opt::Opt::init) of [`Opt`] initialize the option value.
     pub fn init(&mut self) -> Result<(), P::Error> {
         let optset = &mut self.optset;
-        let services = &mut self.services;
 
         for opt in optset.iter_mut() {
-            opt.init(services)?;
+            opt.init()?;
         }
         Ok(())
     }
+}
 
-    pub fn parse(&mut self, args: Arc<Args>) -> Result<Option<()>, P::Error> {
+impl<P> Parser<P>
+where
+    P::Set: Set,
+    P: Policy<Error = Error>,
+{
+    /// Call [`parse`](Policy::parse) parsing the given arguments.
+    pub fn parse(&mut self, args: ARef<Args>) -> Result<P::Ret, P::Error> {
         let optset = &mut self.optset;
-        let services = &mut self.services;
-        let ret = self.policy.parse(optset, services, args)?;
-        let parser_ret = ret.as_ref().map(|_| ());
+        let valser = &mut self.appser;
+        let invser = &mut self.invoker;
 
-        self.return_value = ret;
-        Ok(parser_ret)
+        self.policy.parse(optset, invser, valser, args)
+    }
+
+    /// Call [`parse`](Parser::parse) parsing the [`Args`](Args::from_env).
+    ///
+    /// The [`status`](ReturnVal::status) is true if parsing successes
+    /// otherwise it will be false if any [`failure`](Error::is_failure) raised.
+    pub fn parse_env(&mut self) -> Result<P::Ret, P::Error> {
+        let optset = &mut self.optset;
+        let valser = &mut self.appser;
+        let invser = &mut self.invoker;
+        let args = crate::ARef::new(Args::from_env());
+
+        self.policy.parse(optset, invser, valser, args)
     }
 }
 
 impl<P> Parser<P>
 where
-    P::Set: 'static,
-    P: Policy<Error = Error>,
     SetOpt<P::Set>: Opt,
-    P::Set: Set + OptParser + OptValidator,
     <P::Set as OptParser>::Output: Information,
     SetCfg<P::Set>: Config + ConfigValue + Default,
+    P::Set: Set + OptParser + OptValidator + 'static,
+    P: Policy<Inv = Invoker<<P as Policy>::Set, <P as Policy>::Ser>, Error = Error>,
 {
     /// Add an option to the [`Set`](Policy::Set), return a [`ParserCommit`].
     ///
@@ -486,7 +501,7 @@ where
     ///```rust
     /// # use aopt::getopt;
     /// # use aopt::prelude::*;
-    /// # use aopt::Arc;
+    /// # use aopt::ARef;
     /// # use aopt::Error;
     /// # use aopt::RawVal;
     /// # use std::ops::Deref;
@@ -496,11 +511,12 @@ where
     ///
     /// // Add an option `--count` with type `i`.
     /// parser1.add_opt("--count=i")?;
+    ///
     /// // Add an option `--len` with type `u`, and get its unique id.
     /// let _len_id = parser1.add_opt("--len=u")?.run()?;
     ///
-    /// // Add an option `--size` with type `u`, it has an alias `-s`.
-    /// parser1.add_opt("--size=u")?.add_alias("-s");
+    /// // Add an option `--size` with type `usize`, it has an alias `-s`.
+    /// parser1.add_opt_i::<usize>("--size;-s")?;
     ///
     /// // Add an option `--path` with type `s`.
     /// // Set its value action to `Action::Set`.
@@ -512,26 +528,27 @@ where
     ///
     /// fn file_count_storer(
     ///     uid: Uid,
-    ///     _: &mut ASet,
-    ///     ser: &mut ASer,
+    ///     set: &mut ASet,
+    ///     _: &mut ASer,
     ///     _: Option<&RawVal>,
     ///     val: Option<bool>,
-    /// ) -> Result<Option<()>, Error> {
-    ///     let values = ser.ser_val_mut()?.entry::<u64>(uid).or_insert(vec![0]);
+    /// ) -> Result<bool, Error> {
+    ///     let values = set[uid].entry::<u64>().or_insert(vec![0]);
     ///
     ///     if let Some(is_file) = val {
     ///         if is_file {
     ///             values[0] += 1;
-    ///             return Ok(Some(()));
+    ///
+    ///             return Ok(true);
     ///         }
     ///     }
-    ///     Ok(None)
+    ///     Ok(false)
     /// }
     /// // Add an NOA `file` with type `p`.
     /// // The handler which add by `on` will called when option set.
-    /// // The store will called by `InvokeService` when storing option value.
+    /// // The `store` will called by `Invoker` when storing option value.
     /// parser1
-    ///     .add_opt("file=p@2..")?
+    ///     .add_opt("file=p@1..")?
     ///     .on(|_: &mut ASet, _: &mut ASer, val: ctx::Value<String>| {
     ///         let path = val.deref();
     ///
@@ -545,20 +562,40 @@ where
     ///     })?
     ///     .then(file_count_storer);
     ///
-    /// getopt!(["foo", "bar"].into_iter(), &mut parser1)?;
+    /// getopt!(Args::from_array(["app", "foo", "-s", "10", "bar"]), &mut parser1)?;
     ///
-    /// dbg!(parser1.find_val::<u64>("file=p")?);
+    /// assert_eq!(parser1.find_val::<u64>("file=p")?, &0);
+    /// assert_eq!(parser1.find_val::<usize>("--size")?, &10);
     /// #
     /// # Ok(())
     /// # }
     /// ```
-    pub fn add_opt<T: Into<Str>>(&mut self, opt: T) -> Result<ParserCommit<'_, P::Set>, Error> {
-        let info =
-            <<<P::Set as Set>::Ctor as Ctor>::Config as Config>::new(&self.optset, opt.into())?;
+    pub fn add_opt(
+        &mut self,
+        opt: impl Into<Str>,
+    ) -> Result<ParserCommit<'_, P::Set, P::Ser, Placeholder>, Error> {
+        let info = <SetCfg<P::Set>>::new(&self.optset, opt.into())?;
 
         Ok(ParserCommit::new(
-            Commit::new(&mut self.optset, info),
-            self.services.ser_invoke_mut()?,
+            SetCommit::new_placeholder(&mut self.optset, info),
+            &mut self.invoker,
+        ))
+    }
+
+    pub fn add_opt_i<U>(
+        &mut self,
+        opt: impl Into<Str>,
+    ) -> Result<ParserCommit<'_, P::Set, P::Ser, U>, Error>
+    where
+        U: Infer + 'static,
+        U::Val: RawValParser,
+    {
+        let mut info = <SetCfg<P::Set>>::new(&self.optset, opt.into())?;
+
+        fill_cfg::<U, SetCfg<P::Set>>(&mut info);
+        Ok(ParserCommit::new(
+            SetCommit::new(&mut self.optset, info),
+            &mut self.invoker,
         ))
     }
 
@@ -570,29 +607,35 @@ where
     /// # use std::convert::From;
     /// #
     /// # fn main() -> Result<(), Error> {
-    ///     pub struct Bool;
+    /// pub struct Bool;
     ///
-    ///     impl From<Bool> for OptConfig {
-    ///         fn from(_: Bool) -> Self {
-    ///             OptConfig::default()
-    ///                 .with_type("a")
-    ///                 .with_action(Some(Action::Set))
-    ///                 .with_assoc(Some(Assoc::Bool))
-    ///                 .with_initiator(Some(ValInitiator::bool(false)))
-    ///         }
+    /// impl From<Bool> for OptConfig {
+    ///     fn from(_: Bool) -> Self {
+    ///         OptConfig::default()
+    ///             .with_ctor("b")
+    ///             .with_type::<bool>()
+    ///             .with_styles(vec![Style::Boolean, Style::Combined])
+    ///             .with_action(Action::Set)
+    ///             .with_storer(ValStorer::new::<bool>())
+    ///             .with_ignore_index(true)
+    ///             .with_initializer(ValInitializer::new_value(false))
     ///     }
+    /// }
     ///
-    ///     pub struct Int64;
+    /// pub struct Int64;
     ///
-    ///     impl From<Int64> for OptConfig {
-    ///         fn from(_: Int64) -> Self {
-    ///             OptConfig::default()
-    ///                 .with_type("i")
-    ///                 .with_action(Some(Action::Set))
-    ///                 .with_assoc(Some(Assoc::Int))
-    ///                 .with_initiator(Some(ValInitiator::i64(0)))
-    ///         }
+    /// impl From<Int64> for OptConfig {
+    ///     fn from(_: Int64) -> Self {
+    ///         OptConfig::default()
+    ///             .with_ctor(ctor_default_name())
+    ///             .with_styles(vec![Style::Argument])
+    ///             .with_type::<i64>()
+    ///             .with_action(Action::Set)
+    ///             .with_storer(ValStorer::new::<i64>())
+    ///             .with_ignore_index(true)
+    ///             .with_initializer(ValInitializer::new_value(0i64))
     ///     }
+    /// }
     ///
     ///     let mut parser = AFwdParser::default();
     ///
@@ -600,7 +643,7 @@ where
     ///     parser.add_opt_cfg(Int64)?.set_name("--poll");
     ///
     ///     parser.init()?;
-    ///     parser.parse(aopt::Arc::new(Args::from(["--poll", "42"].into_iter())))?;
+    ///     parser.parse(aopt::ARef::new(Args::from(["--poll", "42"].into_iter())))?;
     ///
     ///     assert_eq!(parser.find_val::<bool>("--round")?, &false);
     ///     assert_eq!(parser.find_val::<i64>("--poll")?, &42);
@@ -608,73 +651,92 @@ where
     /// #    Ok(())
     /// # }
     ///```
-    pub fn add_opt_cfg<Cfg: Into<<<P::Set as Set>::Ctor as Ctor>::Config>>(
+    pub fn add_opt_cfg(
         &mut self,
-        config: Cfg,
-    ) -> Result<ParserCommit<'_, P::Set>, Error> {
+        config: impl Into<SetCfg<P::Set>>,
+    ) -> Result<ParserCommit<'_, P::Set, P::Ser, Placeholder>, Error> {
         Ok(ParserCommit::new(
-            Commit::new(&mut self.optset, config.into()),
-            self.services.ser_invoke_mut()?,
+            SetCommit::new_placeholder(&mut self.optset, config.into()),
+            &mut self.invoker,
         ))
     }
 
-    cfg_if::cfg_if! {
-        if #[cfg(feature = "sync")] {
-            pub fn entry<A, O, H>(&mut self, uid: Uid) -> Result<HandlerEntry<'_, P::Set, H, A, O>, Error>
-            where
-                O: Send + Sync + 'static,
-                H: Handler<P::Set, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
-                A: Extract<P::Set, Error = Error> + Send + Sync + 'static,
-            {
-                Ok(HandlerEntry::new(self.services.ser_invoke_mut()?, uid))
-            }
-        }
-        else {
-            pub fn entry<A, O, H>(&mut self, uid: Uid) -> Result<HandlerEntry<'_, P::Set, H, A, O>, Error>
-            where
-                O: 'static,
-                H: Handler<P::Set, A, Output = Option<O>, Error = Error> + 'static,
-                A: Extract<P::Set, Error = Error> + 'static,
-            {
-                Ok(HandlerEntry::new(self.services.ser_invoke_mut()?, uid))
-            }
-        }
+    pub fn add_opt_cfg_i<U>(
+        &mut self,
+        config: impl Into<SetCfg<P::Set>>,
+    ) -> Result<ParserCommit<'_, P::Set, P::Ser, U>, Error>
+    where
+        U: Infer + 'static,
+        U::Val: RawValParser,
+    {
+        let mut info = config.into();
+
+        fill_cfg::<U, SetCfg<P::Set>>(&mut info);
+        Ok(ParserCommit::new(
+            SetCommit::new(&mut self.optset, info),
+            &mut self.invoker,
+        ))
+    }
+
+    #[cfg(feature = "sync")]
+    #[allow(clippy::type_complexity)]
+    pub fn entry<A, O, H>(
+        &mut self,
+        uid: Uid,
+    ) -> Result<HandlerEntry<'_, P::Set, P::Ser, H, A, O>, Error>
+    where
+        O: ErasedTy,
+        H: Handler<P::Set, P::Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
+        A: Extract<P::Set, P::Ser, Error = Error> + Send + Sync + 'static,
+    {
+        Ok(HandlerEntry::new(&mut self.invoker, uid))
+    }
+
+    #[cfg(not(feature = "sync"))]
+    #[allow(clippy::type_complexity)]
+    pub fn entry<A, O, H>(
+        &mut self,
+        uid: Uid,
+    ) -> Result<HandlerEntry<'_, P::Set, P::Ser, H, A, O>, Error>
+    where
+        O: ErasedTy,
+        H: Handler<P::Set, P::Ser, A, Output = Option<O>, Error = Error> + 'static,
+        A: Extract<P::Set, P::Ser, Error = Error> + 'static,
+    {
+        Ok(HandlerEntry::new(&mut self.invoker, uid))
+    }
+}
+
+impl<P> UserStyleManager for Parser<P>
+where
+    P: Policy + UserStyleManager,
+{
+    fn style_manager(&self) -> &OptStyleManager {
+        self.policy().style_manager()
+    }
+
+    fn style_manager_mut(&mut self) -> &mut OptStyleManager {
+        self.policy_mut().style_manager_mut()
     }
 }
 
 impl<P> Parser<P>
 where
-    P: Policy<Error = Error>,
-    P::Set: Set + OptParser,
-    <P::Set as OptParser>::Output: Information,
-    SetCfg<P::Set>: Config + ConfigValue + Default,
+    P: Policy + UserStyleManager,
 {
-    pub fn find_uid(&self, opt: &str) -> Result<Uid, Error> {
-        let filter = Filter::new(
-            &self.optset,
-            SetCfg::<P::Set>::new(&self.optset, opt.into())?,
-        );
-        filter.find().map(|v| v.uid()).ok_or_else(|| {
-            Error::raise_error(format!(
-                "Can not find option: invalid option string {}",
-                opt
-            ))
-        })
+    /// Enable [`CombinedOption`](UserStyle::CombinedOption) option set style.
+    /// This can support option style like `-abc` which set `-a`, `-b` and `-c` both.
+    pub fn enable_combined(&mut self) -> &mut Self {
+        self.style_manager_mut().push(UserStyle::CombinedOption);
+        self
     }
 
-    pub fn find_val<T: ErasedTy>(&self, opt: &str) -> Result<&T, Error> {
-        self.val(self.find_uid(opt)?)
-    }
-
-    pub fn find_val_mut<T: ErasedTy>(&mut self, opt: &str) -> Result<&mut T, Error> {
-        self.val_mut(self.find_uid(opt)?)
-    }
-
-    pub fn find_vals<T: ErasedTy>(&self, opt: &str) -> Result<&Vec<T>, Error> {
-        self.vals(self.find_uid(opt)?)
-    }
-
-    pub fn find_vals_mut<T: ErasedTy>(&mut self, opt: &str) -> Result<&mut Vec<T>, Error> {
-        self.vals_mut(self.find_uid(opt)?)
+    /// Enable [`EmbeddedValuePlus`](UserStyle::EmbeddedValuePlus) option set style.
+    /// This can support option style like `--opt42` which set `--opt` value to 42.
+    /// In default the [`EmbeddedValue`](UserStyle::EmbeddedValue) style only support
+    /// one letter option such as `-i`.
+    pub fn enable_embedded_plus(&mut self) -> &mut Self {
+        self.style_manager_mut().push(UserStyle::EmbeddedValuePlus);
+        self
     }
 }

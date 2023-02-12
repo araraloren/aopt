@@ -5,48 +5,104 @@ pub(crate) mod creator;
 pub(crate) mod help;
 pub(crate) mod index;
 pub(crate) mod info;
-pub(crate) mod initiator;
 pub(crate) mod parser;
-pub(crate) mod serde;
+#[cfg(feature = "serde")]
+pub(crate) mod serialize;
 pub(crate) mod style;
-pub(crate) mod valid;
 pub(crate) mod value;
 
 pub use self::action::Action;
-pub use self::action::Assoc;
 pub use self::aopt::AOpt;
 pub use self::config::Config;
 pub use self::config::ConfigValue;
 pub use self::config::OptConfig;
+pub use self::creator::BuiltInCtor;
 pub use self::creator::Creator;
 pub use self::help::Help;
 pub use self::index::Index;
 pub use self::info::ConstrctInfo;
 pub use self::info::Information;
-pub use self::initiator::ValInitialize;
-pub use self::initiator::ValInitiator;
 pub use self::parser::StrParser;
-pub use self::serde::Deserialize;
-pub use self::serde::Serde;
-pub use self::serde::Serialize;
+#[cfg(feature = "serde")]
+pub use self::serialize::Deserialize;
+#[cfg(feature = "serde")]
+pub use self::serialize::Serde;
+#[cfg(feature = "serde")]
+pub use self::serialize::Serialize;
 pub use self::style::Style;
-pub use self::valid::RawValValidator;
-pub use self::valid::ValValidator;
-pub use self::valid::ValValidatorExt;
-pub use self::valid::ValValidatorExt2;
-pub use self::value::RawValParser;
+pub use self::value::OptValueExt;
 
+pub(crate) use self::config::fill_cfg;
+pub(crate) use self::config::fill_cfg_if_no_infer;
+pub(crate) use self::config::fill_filter_type;
+
+use std::any::TypeId;
 use std::fmt::Debug;
+use std::ops::Deref;
+use std::ops::DerefMut;
 
-use crate::ser::Services;
+use crate::value::ValAccessor;
 use crate::Error;
-use crate::RawVal;
 use crate::Str;
 use crate::Uid;
 
 pub const BOOL_TRUE: &str = "true";
 
 pub const BOOL_FALSE: &str = "false";
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Cmd;
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Pos<T = Noa>(pub T);
+
+impl<T> Deref for Pos<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> DerefMut for Pos<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Main;
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Noa(bool);
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Any;
+
+impl Noa {
+    pub fn new(value: bool) -> Self {
+        Self(value)
+    }
+}
+
+impl Deref for Noa {
+    type Target = bool;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Noa {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 /// Option parser using for parsing option constructor string.
 pub trait OptParser {
@@ -64,32 +120,45 @@ pub trait Opt: Debug {
     /// The name of option.
     fn name(&self) -> &Str;
 
-    fn r#type(&self) -> Str;
+    /// The type of option.
+    fn r#type(&self) -> &TypeId;
 
+    /// The help hint of option such as `--flag`.
     fn hint(&self) -> &Str;
 
+    /// The help message of option.
     fn help(&self) -> &Str;
 
     fn valid(&self) -> bool;
 
-    fn setted(&self) -> bool;
+    /// If the option matched.
+    fn matched(&self) -> bool;
 
-    /// If the option is optional.
+    /// If the option is force required.
     fn force(&self) -> bool;
 
-    fn assoc(&self) -> &Assoc;
-
+    /// The associaed action of option.
     fn action(&self) -> &Action;
 
     /// The index of option.
-    fn idx(&self) -> Option<&Index>;
+    fn index(&self) -> Option<&Index>;
 
     /// The alias the option.
     fn alias(&self) -> Option<&Vec<Str>>;
 
+    fn accessor(&self) -> &ValAccessor;
+
+    fn accessor_mut(&mut self) -> &mut ValAccessor;
+
+    fn ignore_alias(&self) -> bool;
+
+    fn ignore_name(&self) -> bool;
+
+    fn ignore_index(&self) -> bool;
+
     fn set_uid(&mut self, uid: Uid);
 
-    fn set_setted(&mut self, setted: bool);
+    fn set_matched(&mut self, matched: bool);
 
     fn mat_style(&self, style: Style) -> bool;
 
@@ -99,9 +168,7 @@ pub trait Opt: Debug {
 
     fn mat_alias(&self, name: &Str) -> bool;
 
-    fn mat_idx(&self, index: Option<(usize, usize)>) -> bool;
+    fn mat_index(&self, index: Option<(usize, usize)>) -> bool;
 
-    fn init(&mut self, ser: &mut Services) -> Result<(), Error>;
-
-    fn check_val(&mut self, val: Option<&RawVal>, index: (usize, usize)) -> Result<bool, Error>;
+    fn init(&mut self) -> Result<(), Error>;
 }

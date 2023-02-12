@@ -8,6 +8,8 @@ fn main() -> Result<(), Error> {
         "Here is the footer of global help!",
         Style::default(),
         std::io::stdout(),
+        60,
+        6,
     );
 
     {
@@ -160,7 +162,9 @@ fn main() -> Result<(), Error> {
         block
             .new_store("L")
             .set_hint("-L|--link")
-            .set_help("Add link library")
+            .set_help(
+                "Add link library, Let it so long long long long help, and outside the terminal",
+            )
             .set_optional(true)
             .set_position(false)
             .set_type("str");
@@ -421,6 +425,10 @@ fn main() -> Result<(), Error> {
     app_help.display(true).unwrap();
     println!("help ---------------> ");
 
+    println!("help of cmd c ---------------> ");
+    app_help.display_cmd("c").unwrap();
+    println!("help of cmd c ---------------> ");
+
     println!("help of cmd cpp ---------------> ");
     app_help.display_cmd("cpp").unwrap();
     println!("help of cmd cpp ---------------> ");
@@ -436,6 +444,5 @@ fn main() -> Result<(), Error> {
     println!("help of cmd java ---------------> ");
     app_help.display_cmd("java").unwrap();
     println!("help of cmd java ---------------> ");
-
     Ok(())
 }

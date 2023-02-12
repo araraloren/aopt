@@ -1,78 +1,96 @@
+use std::any::TypeId;
+
 use crate::opt::Action;
-use crate::opt::Assoc;
+#[allow(unused)]
+use crate::opt::Cmd;
 #[allow(unused)]
 use crate::opt::Creator;
 use crate::opt::Help;
 use crate::opt::Index;
+#[allow(unused)]
+use crate::opt::Main;
 use crate::opt::Opt;
+#[allow(unused)]
+use crate::opt::Pos;
 use crate::opt::Style;
-use crate::opt::ValInitiator;
-use crate::opt::ValValidator;
-use crate::ser::Services;
+use crate::value::ErasedValue;
+use crate::value::ValAccessor;
 use crate::Error;
-use crate::RawVal;
 use crate::Str;
 use crate::Uid;
 
 /// A multiple features option type.
 ///
-/// The type support by default:
+/// Some types support by default, see [`Infer`](crate::value::Infer):
 ///
-/// |  creator   | assoc  | default action |string | ignore name | styles |
-/// |  ----  | ----  | -- | -- | -- | -- |
-/// | [`bool`](Creator::bool)  | [`Assoc::Bool`] | [`Action::Set`] | `b` | false | [`Style::Boolean`],[`Style::Combined`] |
-/// | [`str`](Creator::str)  | [`Assoc::Str`] | [`Action::App`] | `s` | false | [`Style::Argument`] |
-/// | [`flt`](Creator::flt)  | [`Assoc::Flt`] | [`Action::App`] | `f` | false | [`Style::Argument`] |
-/// | [`int`](Creator::int)  | [`Assoc::Int`] | [`Action::App`] | `i` | false | [`Style::Argument`] |
-/// | [`uint`](Creator::uint)  | [`Assoc::Uint`] | [`Action::App`] | `u` | false | [`Style::Argument`] |
-/// | [`cmd`](Creator::cmd)  | [`Assoc::Noa`] | [`Action::Set`] | `c` | false | [`Style::Cmd`] |
-/// | [`pos`](Creator::pos)  | [`Assoc::Noa`] | [`Action::App`] | `p` | true | [`Style::Pos`] |
-/// | [`main`](Creator::main)  | [`Assoc::Null`] | [`Action::Set`] | `m` | true | [`Style::Main`] |
-/// | [`any`](Creator::any)  | [`Assoc::Null`] | [`Action::Null`] | `a` | false | except [`Style::Reserve`] |
-///
-/// |  creator   | index support  | optional support | alias support | validator | initializer |
-/// |  ----  | ----  | -- | -- | -- | -- |
-/// | [`bool`](Creator::bool)  | no | yes | yes | [`bool`](ValValidator::bool) | [`false`](ValValidator::bool) |
-/// | [`str`](Creator::str)  | no | yes | yes | [`str`](ValValidator::str) | [`empty`](ValInitiator::empty) |
-/// | [`flt`](Creator::flt)  | no | yes | yes |  [`f64`](ValValidator::f64) | [`empty`](ValInitiator::empty) |
-/// | [`int`](Creator::int)  | no | yes | yes |  [`i64`](ValValidator::i64) | [`empty`](ValInitiator::empty) |
-/// | [`uint`](Creator::uint)  | no | yes | yes |  [`u64`](ValValidator::u64) | [`empty`](ValInitiator::empty) |
-/// | [`cmd`](Creator::cmd)  | [`Forward(1)`](crate::opt::Index::Forward) | `false` | no | [`some`](ValValidator::some) | [`false`](ValValidator::bool) |
-/// | [`pos`](Creator::pos)  | yes | yes | no |  [`some`](ValValidator::some) | [`empty::<bool>`](ValInitiator::empty) |
-/// | [`main`](Creator::main)  | [`AnyWhere`](crate::opt::Index::AnyWhere) | no | no | [`null`](ValValidator::null) | [`null`](ValInitiator::null)
-/// | [`any`](Creator::any)  | yes | yes |  yes | [`null`](ValValidator::null) |  [`null`](ValInitiator::null) |
-#[derive(Debug, Default)]
+/// | type | action | ignore name | styles | index support | default force required | alias | default value |
+/// | --   |   --   |    --       |   --   |        --        |       --       |   --  |  -- |
+/// | [`bool`] | [`Action::Set`] | [`false`] | [`Style::Combined`] [`Style::Boolean`] | no | false | true | false |
+/// | [`i32`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
+/// | [`i64`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
+/// | [`u32`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
+/// | [`u64`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
+/// | [`f32`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
+/// | [`f64`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
+/// | [`usize`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
+/// | [`isize`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
+/// | [`String`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
+/// | [`OsString`](std::ffi::OsString) | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
+/// | [`Cmd`] | [`Action::Set`] | [`false`] | [`Style::Cmd`] | [`Forward(1)`](Index::Forward) | true | true | false |
+/// | [`Pos`] | [`Action::App`] | [`true`] | [`Style::Pos`] | yes | false | false | None |
+/// | [`Main`] | [`Action::Null`] | [`true`] | [`Style::Main`] | [`AnyWhere`](Index::AnyWhere) | false | false | None |
+/// | [`Stdin`](std::io::Stdin) | [`Action::Set`] | [`true`] | [`Style::Pos`] | [`AnyWhere`](Index::AnyWhere) | false | true | None |
+#[derive(Debug)]
 pub struct AOpt {
     uid: Uid,
 
     name: Str,
 
-    r#type: Str,
+    r#type: TypeId,
 
     help: Help,
 
-    setted: bool,
-
-    force: bool,
-
-    assoc: Assoc,
-
-    action: Action,
-
     styles: Vec<Style>,
-
-    ignore_name_mat: bool,
 
     index: Option<Index>,
 
-    validator: ValValidator,
-
-    initiator: ValInitiator,
+    accessor: ValAccessor,
 
     alias: Option<Vec<Str>>,
+
+    action: Action,
+
+    matched: bool,
+
+    force: bool,
+
+    ignore_name: bool,
+
+    ignore_alias: bool,
+
+    ignore_index: bool,
 }
 
 impl AOpt {
+    pub fn new(name: Str, type_id: TypeId, accessor: ValAccessor) -> Self {
+        Self {
+            uid: 0,
+            name,
+            r#type: type_id,
+            help: Default::default(),
+            matched: false,
+            force: false,
+            action: Default::default(),
+            styles: vec![],
+            index: None,
+            accessor,
+            alias: None,
+            ignore_name: false,
+            ignore_alias: false,
+            ignore_index: false,
+        }
+    }
+
     /// Set the unique identifier of option.
     pub fn with_uid(mut self, uid: Uid) -> Self {
         self.uid = uid;
@@ -86,14 +104,26 @@ impl AOpt {
     }
 
     /// Set the type of option, see [`Ctor`](crate::set::Ctor).
-    pub fn with_type(mut self, r#type: Str) -> Self {
+    pub fn with_type(mut self, r#type: TypeId) -> Self {
         self.r#type = r#type;
         self
     }
 
     /// If the option will matching the name.
-    pub fn with_ignore_name(mut self) -> Self {
-        self.ignore_name_mat = true;
+    pub fn with_ignore_name(mut self, ignore_name: bool) -> Self {
+        self.ignore_name = ignore_name;
+        self
+    }
+
+    /// If the option will matching the alias.
+    pub fn with_ignore_alias(mut self, ignore_alias: bool) -> Self {
+        self.ignore_alias = ignore_alias;
+        self
+    }
+
+    /// If the option will matching the alias.
+    pub fn with_ignore_index(mut self, ignore_index: bool) -> Self {
+        self.ignore_index = ignore_index;
         self
     }
 
@@ -106,12 +136,6 @@ impl AOpt {
     /// Set the help message of option.
     pub fn with_help(mut self, help: Str) -> Self {
         self.help.set_help(help);
-        self
-    }
-
-    /// Set the associated type of option.
-    pub fn with_assoc(mut self, assoc: Assoc) -> Self {
-        self.assoc = assoc;
         self
     }
 
@@ -151,16 +175,9 @@ impl AOpt {
         self
     }
 
-    /// Set the value initiator of option, it will called by [`Policy`](crate::parser::Policy)
-    /// initialize the option value.
-    pub fn with_initiator(mut self, initiator: ValInitiator) -> Self {
-        self.initiator = initiator;
-        self
-    }
-
-    /// Set the value validator of option.
-    pub fn with_validator(mut self, validator: ValValidator) -> Self {
-        self.validator = validator;
+    /// Set the value accessor of option, it will used by [`Policy`](crate::parser::Policy);
+    pub fn with_accessor(mut self, value: ValAccessor) -> Self {
+        self.accessor = value;
         self
     }
 }
@@ -171,8 +188,13 @@ impl AOpt {
         self
     }
 
-    pub fn set_type(&mut self, r#type: Str) -> &mut Self {
+    pub fn set_type(&mut self, r#type: TypeId) -> &mut Self {
         self.r#type = r#type;
+        self
+    }
+
+    pub fn set_value(&mut self, value: ValAccessor) -> &mut Self {
+        self.accessor = value;
         self
     }
 
@@ -186,11 +208,6 @@ impl AOpt {
         self
     }
 
-    pub fn set_assoc(&mut self, assoc: Assoc) -> &mut Self {
-        self.assoc = assoc;
-        self
-    }
-
     pub fn set_action(&mut self, action: Action) -> &mut Self {
         self.action = action;
         self
@@ -201,7 +218,7 @@ impl AOpt {
         self
     }
 
-    pub fn set_idx(&mut self, index: Option<Index>) -> &mut Self {
+    pub fn set_index(&mut self, index: Option<Index>) -> &mut Self {
         self.index = index;
         self
     }
@@ -226,21 +243,11 @@ impl AOpt {
         }
         self
     }
-
-    pub fn set_initiator(&mut self, initiator: ValInitiator) -> &mut Self {
-        self.initiator = initiator;
-        self
-    }
-
-    pub fn set_validator(&mut self, validator: ValValidator) -> &mut Self {
-        self.validator = validator;
-        self
-    }
 }
 
 impl Opt for AOpt {
     fn reset(&mut self) {
-        self.set_setted(false);
+        self.set_matched(false);
     }
 
     fn uid(&self) -> Uid {
@@ -251,8 +258,8 @@ impl Opt for AOpt {
         &self.name
     }
 
-    fn r#type(&self) -> Str {
-        self.r#type.clone()
+    fn r#type(&self) -> &TypeId {
+        &self.r#type
     }
 
     fn hint(&self) -> &Str {
@@ -264,26 +271,22 @@ impl Opt for AOpt {
     }
 
     fn valid(&self) -> bool {
-        !self.force() || self.setted()
+        !self.force() || self.matched()
     }
 
-    fn setted(&self) -> bool {
-        self.setted
+    fn matched(&self) -> bool {
+        self.matched
     }
 
     fn force(&self) -> bool {
         self.force
     }
 
-    fn assoc(&self) -> &Assoc {
-        &self.assoc
-    }
-
     fn action(&self) -> &Action {
         &self.action
     }
 
-    fn idx(&self) -> Option<&Index> {
+    fn index(&self) -> Option<&Index> {
         self.index.as_ref()
     }
 
@@ -291,12 +294,32 @@ impl Opt for AOpt {
         self.alias.as_ref()
     }
 
+    fn accessor(&self) -> &ValAccessor {
+        &self.accessor
+    }
+
+    fn accessor_mut(&mut self) -> &mut ValAccessor {
+        &mut self.accessor
+    }
+
+    fn ignore_alias(&self) -> bool {
+        self.ignore_alias
+    }
+
+    fn ignore_name(&self) -> bool {
+        self.ignore_name
+    }
+
+    fn ignore_index(&self) -> bool {
+        self.ignore_index
+    }
+
     fn set_uid(&mut self, uid: Uid) {
         self.uid = uid;
     }
 
-    fn set_setted(&mut self, setted: bool) {
-        self.setted = setted;
+    fn set_matched(&mut self, matched: bool) {
+        self.matched = matched;
     }
 
     fn mat_style(&self, style: Style) -> bool {
@@ -308,11 +331,7 @@ impl Opt for AOpt {
     }
 
     fn mat_name(&self, name: Option<&Str>) -> bool {
-        if self.ignore_name_mat {
-            true
-        } else {
-            name.iter().all(|&v| v == self.name())
-        }
+        name.iter().all(|&v| v == self.name())
     }
 
     fn mat_alias(&self, name: &Str) -> bool {
@@ -323,9 +342,9 @@ impl Opt for AOpt {
         }
     }
 
-    fn mat_idx(&self, index: Option<(usize, usize)>) -> bool {
+    fn mat_index(&self, index: Option<(usize, usize)>) -> bool {
         if let Some((index, total)) = index {
-            if let Some(realindex) = self.idx() {
+            if let Some(realindex) = self.index() {
                 if let Some(realindex) = realindex.calc_index(index, total) {
                     return realindex == index;
                 }
@@ -334,13 +353,7 @@ impl Opt for AOpt {
         false
     }
 
-    fn check_val(&mut self, value: Option<&RawVal>, index: (usize, usize)) -> Result<bool, Error> {
-        let name = self.name().clone();
-
-        self.validator.check(name.as_str(), value, index)
-    }
-
-    fn init(&mut self, ser: &mut Services) -> Result<(), Error> {
-        self.initiator.do_initialize(self.uid, ser)
+    fn init(&mut self) -> Result<(), Error> {
+        self.accessor.initialize()
     }
 }

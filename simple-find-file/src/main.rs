@@ -78,10 +78,10 @@ fn main() -> color_eyre::Result<()> {
             .set_help(help)
             .add_alias(format!("{}{}", alias_prefix, alias_name))
             .fallback(
-                move |set: &mut ASet, ser: &mut ASer, mut val: ctx::Value<String>| {
+                move |set: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>| {
                     let mut filter_type = filter_type.clone();
 
-                    ser.sve_filter(set["directory"].uid(), move |path: &String| {
+                    set["directory"].filter(move |path: &String| {
                         let filter_type = filter_type.copy_value_from(val.take());
 
                         !filter_type.filter(path)
@@ -106,14 +106,14 @@ fn main() -> color_eyre::Result<()> {
     parser
         .add_opt("main=m")?
         .set_help("Main function")
-        .fallback(|set: &mut ASet, ser: &mut ASer| {
-            for file in ser.sve_vals::<String>(set["directory"].uid())? {
+        .fallback(|set: &mut ASet, _: &mut ASer| {
+            for file in set["directory"].vals::<String>()? {
                 println!("{}", file);
             }
             Ok(None::<()>)
         })?;
 
-    getopt!(std::env::args().skip(1), &mut parser)?;
+    getopt!(Args::from_env(), &mut parser)?;
 
     Ok(())
 }
@@ -197,6 +197,8 @@ fn display_help<S: Set>(set: &S) -> Result<(), aopt_help::Error> {
         &foot,
         aopt_help::prelude::Style::default(),
         std::io::stdout(),
+        50,
+        50,
     );
     let global = app_help.global_mut();
 
@@ -210,7 +212,7 @@ fn display_help<S: Set>(set: &S) -> Result<(), aopt_help::Error> {
                     Cow::from(opt.name().as_str()),
                     Cow::from(opt.hint().as_str()),
                     Cow::from(opt.help().as_str()),
-                    Cow::from(opt.r#type().to_string()),
+                    Cow::default(),
                     !opt.force(),
                     true,
                 ),
@@ -225,7 +227,7 @@ fn display_help<S: Set>(set: &S) -> Result<(), aopt_help::Error> {
                     Cow::from(opt.name().as_str()),
                     Cow::from(opt.hint().as_str()),
                     Cow::from(opt.help().as_str()),
-                    Cow::from(opt.r#type().to_string()),
+                    Cow::default(),
                     !opt.force(),
                     false,
                 ),
