@@ -56,6 +56,35 @@ If you want the utils of current crate implement `Send` and `Sync`, you can enab
 
 By default, the command line parsing support `OsString`, enable `utf8` using `String` instead.
 
+## Simple flow chart
+
+```txt
+                     +---------------------------------------+
+                     |             Policy                    |
+                     |                                       |
++--------------+     |  +-----------+     +------------+     |                +-------------+
+|              |     |  |           |     |            |     |   Invoke       |             |
+|   Arguments  +---->|  |  Checker  |     |   Process  |<----+----------------+   Invoker   |
+|              |     |  |           |     |            |     |   the callback |             |
++--------------+     |  +---^-------+     ++-----^-----+     |                +-------------+
+                     |      |              |     |           |
+                     |      |              |     |           |
+                     +------+--------------+-----+-----------+
+                            |              |     |
+                            |              |     |
+                            |  Save the values   |Process the arguments
+                            |              |     |
+                            |              |     |
+                Check the options          |     |
+                            |              |     |
+                            |              |     |
+                            |         +----v-----+-----------+
+                            |         |                      |
+                            +---------+      Option Set      |
+                                      |                      |
+                                      +----------------------+
+```
+
 ## Example
 
 - Using [`AFwdParser`](crate::ext::AFwdParser) parsing process the command line.

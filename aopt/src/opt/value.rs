@@ -65,6 +65,7 @@ impl<O: Opt> OptValueExt for O {
         self.accessor_mut().rawvals_mut()
     }
 
+    /// Filter the value from option values if `f` return true.
     fn filter<T: ErasedTy>(&mut self, mut f: impl FnMut(&T) -> bool) -> Result<Vec<T>, Error> {
         let vals = self.vals_mut::<T>()?;
         let mut i = 0;
