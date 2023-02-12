@@ -11,9 +11,12 @@ pub trait OptValidator {
 }
 
 /// A prefixed validator used in [`Policy`](crate::parser::Policy) and [`OptGuess`](crate::parser::OptGuess).
+///
+/// The default prefixes are `--/`, `--`, `-/`, `-` and `/`(only for windows).
 #[derive(Debug, Clone)]
 pub struct PrefixOptValidator(Vec<String>);
 
+#[cfg(target_os = "windows")]
 impl Default for PrefixOptValidator {
     fn default() -> Self {
         Self::new(
@@ -21,6 +24,13 @@ impl Default for PrefixOptValidator {
                 .map(|v| v.to_string())
                 .to_vec(),
         )
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+impl Default for PrefixOptValidator {
+    fn default() -> Self {
+        Self::new(["--/", "--", "-/", "-"].map(|v| v.to_string()).to_vec())
     }
 }
 
