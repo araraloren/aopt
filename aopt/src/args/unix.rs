@@ -3,7 +3,7 @@ use std::os::unix::ffi::OsStrExt;
 
 use crate::args::ArgParser;
 use crate::astr;
-use crate::Arc;
+use crate::ARef;
 use crate::Error;
 use crate::RawVal;
 use crate::Str;
@@ -69,7 +69,7 @@ impl AOsStrExt for OsStr {
 /// # use aopt::prelude::*;
 /// # use aopt::Error;
 /// # use aopt::astr;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// # use aopt::RawVal;
 /// # use aopt::args::ArgParser;
 /// #
@@ -78,7 +78,7 @@ impl AOsStrExt for OsStr {
 ///         let output = RawVal::from("--foo=32").parse_arg()?;
 ///
 ///         assert_eq!(output.name, Some(astr("--foo")));
-///         assert_eq!(output.value, Some(Arc::new(RawVal::from("32"))));
+///         assert_eq!(output.value, Some(ARef::new(RawVal::from("32"))));
 ///     }
 ///     {// parse boolean option
 ///         let output = RawVal::from("--/bar").parse_arg()?;
@@ -90,7 +90,7 @@ impl AOsStrExt for OsStr {
 ///         let output = RawVal::from("-=bar").parse_arg()?;
 ///
 ///         assert_eq!(output.name, Some(astr("-")));
-///         assert_eq!(output.value, Some(Arc::new(RawVal::from("bar"))));
+///         assert_eq!(output.value, Some(ARef::new(RawVal::from("bar"))));
 ///     }
 /// # Ok(())
 /// # }
@@ -99,7 +99,7 @@ impl AOsStrExt for OsStr {
 pub struct CLOpt {
     pub name: Option<Str>,
 
-    pub value: Option<Arc<RawVal>>,
+    pub value: Option<ARef<RawVal>>,
 }
 
 impl CLOpt {
@@ -107,7 +107,7 @@ impl CLOpt {
         self.name.as_ref()
     }
 
-    pub fn value(&self) -> Option<&Arc<RawVal>> {
+    pub fn value(&self) -> Option<&ARef<RawVal>> {
         self.value.as_ref()
     }
 }
@@ -132,7 +132,7 @@ impl ArgParser for RawVal {
 
             Ok(Self::Output {
                 name: Some(astr(name)),
-                value: Some(Arc::new(value.to_os_string().into())),
+                value: Some(ARef::new(value.to_os_string().into())),
             })
         } else {
             let name = self
@@ -169,7 +169,7 @@ impl ArgParser for RawVal {
 
             Ok(Self::Output {
                 name: Some(astr(name)),
-                value: Some(Arc::new(value.into())),
+                value: Some(ARef::new(value.into())),
             })
         } else {
             Ok(Self::Output {

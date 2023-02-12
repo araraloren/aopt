@@ -1,42 +1,39 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
-use tracing::trace;
 
-use super::Service;
-use crate::astr;
 use crate::opt::Index;
 use crate::opt::Opt;
 use crate::opt::Style;
 use crate::set::SetOpt;
+use crate::trace_log;
 use crate::Error;
 use crate::HashMap;
 use crate::StrJoin;
 use crate::Uid;
 
 /// Service which do option check in [`Policy`](crate::parser::Policy).
-pub struct CheckService<S>(PhantomData<S>);
+#[derive(Clone)]
+pub struct SetChecker<S>(PhantomData<S>);
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        unsafe impl<S> Send for CheckService<S> { }
+#[cfg(feature = "sync")]
+unsafe impl<S> Send for SetChecker<S> {}
 
-        unsafe impl<S> Sync for CheckService<S> { }
-    }
-}
+#[cfg(feature = "sync")]
+unsafe impl<S> Sync for SetChecker<S> {}
 
-impl<S> Debug for CheckService<S> {
+impl<S> Debug for SetChecker<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CheckService").finish()
     }
 }
 
-impl<S> Default for CheckService<S> {
+impl<S> Default for SetChecker<S> {
     fn default() -> Self {
         Self(PhantomData::default())
     }
 }
 
-impl<S> CheckService<S> {
+impl<S> SetChecker<S> {
     pub fn new() -> Self {
         Self(PhantomData::default())
     }
@@ -44,28 +41,29 @@ impl<S> CheckService<S> {
     pub fn clear(&mut self) {}
 }
 
-impl<S> CheckService<S>
+impl<S> SetChecker<S>
 where
     S: crate::set::Set,
     SetOpt<S>: Opt,
 {
-    pub fn opt<'a>(set: &'a S, id: &Uid) -> &'a dyn Opt {
+    pub fn opt<'a>(set: &'a S, id: &Uid) -> &'a SetOpt<S> {
         set.get(*id).unwrap()
     }
 
-    /// Check if we have [`Cmd`](crate::opt::Creator::cmd),
-    /// then no force required [`Pos`](crate::opt::Creator::pos)@1 allowed.
+    /// Check if we have [`Cmd`](crate::opt::Style::Cmd),
+    /// then no force required [`Pos`](crate::opt::Style::Pos)@1 allowed.
     pub fn pre_check(&self, set: &mut S) -> Result<bool, Error> {
         let has_cmd = set.iter().any(|opt| opt.mat_style(Style::Cmd));
 
         const MAX_INDEX: usize = usize::MAX;
 
-        trace!("Pre Check {{has_cmd: {}}}", has_cmd);
+        trace_log!("Pre Check {{has_cmd: {}}}", has_cmd);
         if has_cmd {
             for opt in set.iter() {
                 if opt.mat_style(Style::Pos) {
-                    if let Some(index) = opt.idx() {
-                        let index = index.calc_index(MAX_INDEX, 1).unwrap_or(MAX_INDEX);
+                    if let Some(index) = opt.index() {
+                        let index = index.calc_index(1, MAX_INDEX).unwrap_or(MAX_INDEX);
+
                         if index == 1 && opt.force() {
                             // if we have cmd, can not have force required POS @1
                             return Err(Error::con_can_not_insert_pos());
@@ -77,8 +75,11 @@ where
         Ok(true)
     }
 
+    /// Call the [`valid`](crate::opt::Opt::valid) check the
+    /// options([`Argument`](crate::opt::Style::Argument),
+    /// [`Boolean`](crate::opt::Style::Boolean), [`Combined`](crate::opt::Style::Combined))
     pub fn opt_check(&self, set: &mut S) -> Result<bool, Error> {
-        trace!("Opt Check, call valid on all Opt ...");
+        trace_log!("Opt Check, call valid on all Opt ...");
         for opt in set.iter().filter(|opt| {
             opt.mat_style(Style::Argument)
                 || opt.mat_style(Style::Boolean)
@@ -91,28 +92,26 @@ where
         Ok(true)
     }
 
-    /// Check if the POS is valid.
-    /// For which POS is have certainty position, POS has same position are replaceble even it is force reuqired.
-    /// For which POS is have uncertainty position, it must be set if it is force reuqired.
+    /// Check if the [`Pos`](crate::opt::Style::Pos) is valid.
+    ///
+    /// For which [`Pos`](crate::opt::Style::Pos) is have fixed position,
+    /// [`Pos`](crate::opt::Style::Pos) has same position are replaceble even it is force reuqired.
+    ///
+    /// For which [`Pos`](crate::opt::Style::Pos) is have floating position, it must be set if it is force reuqired.
     pub fn pos_check(&self, set: &mut S) -> Result<bool, Error> {
         // for POS has certainty position, POS has same position are replaceble even it is force reuqired.
         let mut index_map = HashMap::<usize, Vec<Uid>>::default();
         // for POS has uncertainty position, it must be set if it is force reuqired
         let mut float_vec: Vec<Uid> = vec![];
 
+        const MAX_INDEX: usize = usize::MAX;
+
         for opt in set.iter() {
             if opt.mat_style(Style::Pos) {
-                if let Some(index) = opt.idx() {
+                if let Some(index) = opt.index() {
                     match index {
                         Index::Forward(cnt) => {
-                            if let Some(index) = index.calc_index(usize::MAX, *cnt) {
-                                let entry = index_map.entry(index).or_default();
-                                entry.push(opt.uid());
-                            }
-                        }
-                        Index::Backward(cnt) => {
-                            // check the backward with cnt + 1, there not a good way to check it!?
-                            if let Some(index) = index.calc_index(usize::MAX, *cnt + 1) {
+                            if let Some(index) = index.calc_index(*cnt, MAX_INDEX) {
                                 let entry = index_map.entry(index).or_default();
                                 entry.push(opt.uid());
                             }
@@ -123,7 +122,16 @@ where
                                 entry.push(opt.uid());
                             }
                         }
-                        Index::Except(_) | Index::Range(_, _) | Index::AnyWhere => {
+                        Index::Range(start, Some(end)) => {
+                            for index in *start..*end {
+                                let entry = index_map.entry(index).or_default();
+                                entry.push(opt.uid());
+                            }
+                        }
+                        Index::Backward(_)
+                        | Index::Except(_)
+                        | Index::Range(_, _)
+                        | Index::AnyWhere => {
                             float_vec.push(opt.uid());
                         }
                         Index::Null => {}
@@ -133,11 +141,7 @@ where
         }
         let mut names = vec![];
 
-        trace!(
-            "Pos Check, index: {{{:?}}}, float: {{{:?}}}",
-            index_map,
-            float_vec
-        );
+        trace_log!("Pos Check, index: {{{index_map:?}}}, float: {{{float_vec:?}}}");
         for (_, uids) in index_map.iter() {
             // if any of POS is force required, then it must set by user
             let mut pos_valid = true;
@@ -184,7 +188,7 @@ where
                 }
             }
         }
-        trace!("Cmd Check, any one of the cmd matched: {}", valid);
+        trace_log!("Cmd Check, any one of the cmd matched: {}", valid);
         if !valid && !names.is_empty() {
             return Err(Error::sp_cmd_force_require(names.join(" | ")));
         }
@@ -192,16 +196,10 @@ where
     }
 
     pub fn post_check(&self, set: &mut S) -> Result<bool, Error> {
-        trace!("Post Check, call valid on Main ...");
+        trace_log!("Post Check, call valid on Main ...");
         Ok(set
             .iter()
             .filter(|opt| opt.mat_style(Style::Main))
             .all(|opt| opt.valid()))
-    }
-}
-
-impl<S> Service for CheckService<S> {
-    fn service_name() -> crate::Str {
-        astr("CheckService")
     }
 }

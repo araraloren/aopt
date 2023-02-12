@@ -1,45 +1,97 @@
-use std::any::type_name;
-use std::any::Any;
 use std::any::TypeId;
 use std::collections::hash_map::Entry as MapEntry;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use crate::typeid;
-use crate::Error;
 use crate::HashMap;
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        pub trait ErasedTy: Any + Sync + Send + 'static { }
+#[cfg(all(feature = "sync", not(feature = "log")))]
+mod __erased_ty {
+    use crate::HashMap;
+    use std::any::Any;
+    use std::any::TypeId;
 
-        impl<T:  Any + Sync + Send + 'static> ErasedTy for T { }
+    pub trait ErasedTy: Any + Sync + Send + 'static {}
 
-        type BoxedAny = Box<dyn Any + Send + Sync>;
+    impl<T: Any + Sync + Send + 'static> ErasedTy for T {}
 
-        #[derive(Default)]
-        pub struct AnyMap(HashMap<TypeId, BoxedAny>);
-    }
-    else {
-        pub trait ErasedTy: Any + 'static { }
+    pub type BoxedAny = Box<dyn Any + Send + Sync>;
 
-        impl<T: Any + 'static> ErasedTy for T { }
-
-        type BoxedAny = Box<dyn Any>;
-
-        #[derive(Default)]
-        pub struct AnyMap(HashMap<TypeId, BoxedAny>);
-    }
+    #[derive(Default)]
+    pub struct AnyMap(pub(crate) HashMap<TypeId, BoxedAny>);
 }
+
+#[cfg(all(feature = "sync", feature = "log"))]
+mod __erased_ty {
+    use crate::HashMap;
+    use std::any::Any;
+    use std::any::TypeId;
+    use std::fmt::Debug;
+
+    pub trait ErasedTy: Any + Debug + Sync + Send + 'static {}
+
+    impl<T: Any + Debug + Sync + Send + 'static> ErasedTy for T {}
+
+    pub type BoxedAny = Box<dyn Any + Send + Sync>;
+
+    #[derive(Default)]
+    pub struct AnyMap(pub(crate) HashMap<TypeId, BoxedAny>);
+}
+
+#[cfg(all(not(feature = "sync"), not(feature = "log")))]
+mod __erased_ty {
+    use crate::HashMap;
+    use std::any::Any;
+    use std::any::TypeId;
+
+    pub trait ErasedTy: Any + 'static {}
+
+    impl<T: Any + 'static> ErasedTy for T {}
+
+    pub type BoxedAny = Box<dyn Any>;
+
+    #[derive(Default)]
+    pub struct AnyMap(pub(crate) HashMap<TypeId, BoxedAny>);
+}
+
+#[cfg(all(not(feature = "sync"), feature = "log"))]
+mod __erased_ty {
+    use crate::HashMap;
+    use std::any::Any;
+    use std::any::TypeId;
+    use std::fmt::Debug;
+
+    pub trait ErasedTy: Any + Debug + 'static {}
+
+    impl<T: Any + Debug + 'static> ErasedTy for T {}
+
+    pub type BoxedAny = Box<dyn Any>;
+
+    #[derive(Default)]
+    pub struct AnyMap(pub(crate) HashMap<TypeId, BoxedAny>);
+}
+
+pub use __erased_ty::AnyMap;
+pub use __erased_ty::BoxedAny;
+pub use __erased_ty::ErasedTy;
 
 impl Debug for AnyMap {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("AnyMap").field(&"{...}").finish()
+        let field_ids = self
+            .0
+            .iter()
+            .map(|v| format!("{:?}", v.0))
+            .collect::<Vec<String>>()
+            .join(", ");
+        f.debug_tuple("AnyMap")
+            .field(&format!("[{field_ids}]",))
+            .finish()
     }
 }
 
 impl AnyMap {
-    pub fn with<T: ErasedTy>(mut self, value: T) -> Self {
+    pub fn with_value<T: ErasedTy>(mut self, value: T) -> Self {
         self.0.insert(typeid::<T>(), Box::new(value));
         self
     }
@@ -66,6 +118,10 @@ impl AnyMap {
         self.0.contains_key(&typeid::<T>())
     }
 
+    pub fn entry<T: ErasedTy>(&mut self) -> Entry<'_, T> {
+        Entry::new(self.0.entry(typeid::<T>()))
+    }
+
     pub fn insert<T: ErasedTy>(&mut self, value: T) -> Option<T> {
         self.0
             .insert(typeid::<T>(), Box::new(value))
@@ -78,54 +134,21 @@ impl AnyMap {
             .and_then(|v| v.downcast().ok().map(|v| *v))
     }
 
-    pub fn get<T: ErasedTy>(&self) -> Option<&T> {
+    pub fn value<T: ErasedTy>(&self) -> Option<&T> {
         self.0.get(&typeid::<T>()).and_then(|v| v.downcast_ref())
     }
 
-    pub fn get_mut<T: ErasedTy>(&mut self) -> Option<&mut T> {
+    pub fn value_mut<T: ErasedTy>(&mut self) -> Option<&mut T> {
         self.0
             .get_mut(&typeid::<T>())
             .and_then(|v| v.downcast_mut())
     }
-
-    pub fn ty<T: ErasedTy>(&self) -> Result<&T, Error> {
-        self.get::<T>().ok_or_else(|| {
-            Error::raise_error(format!(
-                "Can not find type {{{:?}}} in AnyMap",
-                type_name::<T>()
-            ))
-        })
-    }
-
-    pub fn ty_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
-        self.get_mut::<T>().ok_or_else(|| {
-            Error::raise_error(format!(
-                "Can not find type {{{:?}}} in AnyMap",
-                type_name::<T>()
-            ))
-        })
-    }
-
-    pub fn entry<T: ErasedTy>(&mut self) -> Entry<'_, T> {
-        Entry::new(self.0.entry(typeid::<T>()))
-    }
 }
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        pub struct Entry<'a, T> {
-            inner: MapEntry<'a, TypeId, BoxedAny>,
+pub struct Entry<'a, T> {
+    inner: MapEntry<'a, TypeId, BoxedAny>,
 
-            marker: PhantomData<T>,
-        }
-    }
-    else {
-        pub struct Entry<'a, T> {
-            inner: MapEntry<'a, TypeId, BoxedAny>,
-
-            marker: PhantomData<T>,
-        }
-    }
+    marker: PhantomData<T>,
 }
 
 impl<'a, T> Entry<'a, T>
@@ -171,5 +194,15 @@ where
     {
         self.inner = self.inner.and_modify(|v| f(v.downcast_mut::<T>().unwrap()));
         self
+    }
+}
+
+impl<'a, T> Entry<'a, T>
+where
+    T: ErasedTy + Default,
+{
+    #[allow(clippy::or_fun_call)]
+    pub fn or_default(self) -> &'a mut T {
+        self.or_insert(T::default())
     }
 }

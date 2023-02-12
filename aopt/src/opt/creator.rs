@@ -1,77 +1,86 @@
+use std::ffi::OsString;
 use std::fmt::Debug;
 
-use crate::astr;
+use crate::opt::fill_cfg_if_no_infer;
 use crate::opt::AOpt;
 use crate::opt::Action;
-use crate::opt::Assoc;
+use crate::opt::Any;
+use crate::opt::Cmd;
 use crate::opt::ConfigValue;
+use crate::opt::Main;
 use crate::opt::Opt;
 use crate::opt::OptConfig;
-use crate::opt::Style;
-use crate::opt::ValInitiator;
-use crate::opt::ValValidator;
+use crate::opt::Pos;
 use crate::set::Ctor;
+use crate::trace_log;
+use crate::value::ValAccessor;
 use crate::Error;
 use crate::Str;
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "sync")] {
-        pub struct Creator<O, C, E: Into<Error>> {
-            type_name: Str,
+#[cfg(feature = "sync")]
+mod __creator {
+    use super::*;
 
-            callback: Box<dyn FnMut(C) -> Result<O, E> + Send + Sync + 'static>,
-        }
+    pub struct Creator<O, C, E: Into<Error>> {
+        pub(crate) name: Str,
 
-        impl<O: Opt, C, E: Into<Error>> Debug for Creator<O, C, E> {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                f.debug_struct("Creator")
-                    .field("type_name", &self.type_name)
-                    .field("callback", &"{ ... }")
-                    .finish()
-            }
-        }
+        pub(crate) callback: Box<dyn FnMut(C) -> Result<O, E> + Send + Sync + 'static>,
+    }
 
-        impl<O: Opt, C, E: Into<Error>> Creator<O, C, E> {
-            pub fn new(
-                type_name: Str,
-                callback: impl FnMut(C) -> Result<O, E> + Send + Sync + 'static,
-            ) -> Self {
-                Self {
-                    type_name,
-                    callback: Box::new(callback),
-                }
-            }
+    impl<O: Opt, C, E: Into<Error>> Debug for Creator<O, C, E> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("Creator")
+                .field("name", &self.name)
+                .field("callback", &"{...}")
+                .finish()
         }
     }
-    else {
-        pub struct Creator<O, C, E: Into<Error>> {
-            type_name: Str,
 
-            callback: Box<dyn FnMut(C) -> Result<O, E> + 'static>,
-        }
-
-        impl<O: Opt, C, E: Into<Error>> Debug for Creator<O, C, E> {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                f.debug_struct("Creator")
-                    .field("type_name", &self.type_name)
-                    .field("callback", &"{ ... }")
-                    .finish()
-            }
-        }
-
-        impl<O: Opt, C, E: Into<Error>> Creator<O, C, E> {
-            pub fn new(
-                type_name: Str,
-                callback: impl FnMut(C) -> Result<O, E> + 'static,
-            ) -> Self {
-                Self {
-                    type_name,
-                    callback: Box::new(callback),
-                }
+    impl<O: Opt, C, E: Into<Error>> Creator<O, C, E> {
+        pub fn new(
+            name: Str,
+            callback: impl FnMut(C) -> Result<O, E> + Send + Sync + 'static,
+        ) -> Self {
+            Self {
+                name,
+                callback: Box::new(callback),
             }
         }
     }
 }
+
+#[cfg(not(feature = "sync"))]
+mod __creator {
+    use super::*;
+
+    pub struct Creator<O, C, E: Into<Error>> {
+        pub(crate) name: Str,
+
+        pub(crate) callback: Box<dyn FnMut(C) -> Result<O, E> + 'static>,
+    }
+
+    impl<O: Opt, C, E: Into<Error>> Debug for Creator<O, C, E> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("Creator")
+                .field("name", &self.name)
+                .field("callback", &"{...}")
+                .finish()
+        }
+    }
+
+    impl<O: Opt, C, E: Into<Error>> Creator<O, C, E> {
+        pub fn new(name: Str, callback: impl FnMut(C) -> Result<O, E> + 'static) -> Self {
+            Self {
+                name,
+                callback: Box::new(callback),
+            }
+        }
+    }
+}
+
+pub use __creator::Creator;
+
+use super::Noa;
 
 impl<O: Opt, C, E: Into<Error>> Ctor for Creator<O, C, E> {
     type Opt = O;
@@ -80,8 +89,8 @@ impl<O: Opt, C, E: Into<Error>> Ctor for Creator<O, C, E> {
 
     type Error = E;
 
-    fn r#type(&self) -> Str {
-        self.type_name.clone()
+    fn name(&self) -> &Str {
+        &self.name
     }
 
     fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
@@ -89,324 +98,211 @@ impl<O: Opt, C, E: Into<Error>> Ctor for Creator<O, C, E> {
     }
 }
 
+const BUILTIN_CTOR_INT: &str = "i";
+const BUILTIN_CTOR_BOOL: &str = "b";
+const BUILTIN_CTOR_UINT: &str = "u";
+const BUILTIN_CTOR_STR: &str = "s";
+const BUILTIN_CTOR_FLT: &str = "f";
+const BUILTIN_CTOR_CMD: &str = "c";
+const BUILTIN_CTOR_POS: &str = "p";
+const BUILTIN_CTOR_MAIN: &str = "m";
+const BUILTIN_CTOR_ANY: &str = "a";
+const BUILTIN_CTOR_RAW: &str = "r";
+
+#[derive(Debug, Clone, Copy)]
+pub enum BuiltInCtor {
+    Int,
+
+    Str,
+
+    Flt,
+
+    Uint,
+
+    Bool,
+
+    Cmd,
+
+    Pos,
+
+    Main,
+
+    Any,
+
+    Raw,
+}
+
+impl BuiltInCtor {
+    pub fn name(&self) -> &str {
+        match self {
+            BuiltInCtor::Int => BUILTIN_CTOR_INT,
+            BuiltInCtor::Str => BUILTIN_CTOR_STR,
+            BuiltInCtor::Flt => BUILTIN_CTOR_FLT,
+            BuiltInCtor::Uint => BUILTIN_CTOR_UINT,
+            BuiltInCtor::Bool => BUILTIN_CTOR_BOOL,
+            BuiltInCtor::Cmd => BUILTIN_CTOR_CMD,
+            BuiltInCtor::Pos => BUILTIN_CTOR_POS,
+            BuiltInCtor::Main => BUILTIN_CTOR_MAIN,
+            BuiltInCtor::Any => BUILTIN_CTOR_ANY,
+            BuiltInCtor::Raw => BUILTIN_CTOR_RAW,
+        }
+    }
+
+    pub fn from_name(ctor: &Str) -> Self {
+        match ctor.as_str() {
+            BUILTIN_CTOR_INT => BuiltInCtor::Int,
+            BUILTIN_CTOR_STR => BuiltInCtor::Str,
+            BUILTIN_CTOR_FLT => BuiltInCtor::Flt,
+            BUILTIN_CTOR_UINT => BuiltInCtor::Uint,
+            BUILTIN_CTOR_BOOL => BuiltInCtor::Bool,
+            BUILTIN_CTOR_CMD => BuiltInCtor::Cmd,
+            BUILTIN_CTOR_POS => BuiltInCtor::Pos,
+            BUILTIN_CTOR_MAIN => BuiltInCtor::Main,
+            BUILTIN_CTOR_ANY => BuiltInCtor::Any,
+            BUILTIN_CTOR_RAW => BuiltInCtor::Raw,
+            name => {
+                panic!("Unknow creator name: {}", name)
+            }
+        }
+    }
+}
+
 impl Creator<AOpt, OptConfig, Error> {
-    pub fn int() -> Self {
-        let type_name = astr("i");
+    pub fn fallback() -> Self {
+        Self::new(
+            crate::set::ctor_default_name(),
+            move |mut config: OptConfig| {
+                trace_log!("Construct option with config {:?}", &config);
 
-        Self::new(type_name.clone(), move |mut config: OptConfig| {
-            let force = config.take_force().unwrap_or(false);
-            let assoc = config.take_assoc().unwrap_or(Assoc::Int);
-            let action = config.take_action().unwrap_or(Action::App);
-            let initiator = config
-                .take_initiator()
-                .unwrap_or_else(ValInitiator::empty::<i64>);
-            let validator = config
-                .take_validator()
-                .unwrap_or_else(|| ValValidator::i64());
+                let force = config.force().unwrap_or(false);
+                let action = *config.action().unwrap_or(&Action::App);
+                let storer = config.gen_storer()?;
+                let initializer = config.gen_initializer()?;
+                let ignore_name = config.ignore_name();
+                let ignore_alias = config.ignore_alias();
+                let ignore_index = config.ignore_index();
+                let styles = config.gen_styles()?;
+                let name = config.gen_name()?;
+                let help = config.gen_opt_help()?;
+                let r#type = config.gen_type()?;
+                let index = config.index().cloned();
+                let alias = config.take_alias();
+                let alias = if alias.is_empty() { None } else { Some(alias) };
 
-            debug_assert!(
-                config.idx().is_none(),
-                "Int option not support index configruation"
-            );
-            if let Some(r#type) = config.r#type() {
-                debug_assert_eq!(r#type, &type_name)
-            }
-            Ok(AOpt::default()
-                .with_type(type_name.clone())
-                .with_name(config.gen_name()?)
-                .with_assoc(assoc)
-                .with_action(action)
-                .with_style(vec![Style::Argument])
-                .with_opt_help(config.gen_opt_help()?)
-                .with_alias(Some(config.gen_alias()?))
-                .with_force(force)
-                .with_initiator(initiator)
-                .with_validator(validator))
-        })
+                if ignore_alias {
+                    if let Some(alias) = &alias {
+                        debug_assert!(
+                            !alias.is_empty(),
+                            "Option {} not support alias: {:?}",
+                            name,
+                            alias
+                        );
+                    }
+                }
+                if ignore_index {
+                    if let Some(index) = &index {
+                        debug_assert!(
+                            !index.is_null(),
+                            "Option {} not support position parameters: {:?}",
+                            name,
+                            index
+                        );
+                    }
+                }
+                Ok(
+                    AOpt::new(name, r#type, ValAccessor::new(storer, initializer))
+                        .with_force(force)
+                        .with_idx(index)
+                        .with_action(action)
+                        .with_alias(alias)
+                        .with_style(styles)
+                        .with_opt_help(help)
+                        .with_ignore_name(ignore_name)
+                        .with_ignore_alias(ignore_alias)
+                        .with_ignore_index(ignore_index),
+                )
+            },
+        )
     }
 
-    pub fn uint() -> Self {
-        let type_name = astr("u");
-
-        Self::new(type_name.clone(), move |mut config: OptConfig| {
-            let force = config.take_force().unwrap_or(false);
-            let assoc = config.take_assoc().unwrap_or(Assoc::Uint);
-            let action = config.take_action().unwrap_or(Action::App);
-            let initiator = config
-                .take_initiator()
-                .unwrap_or_else(ValInitiator::empty::<u64>);
-            let validator = config
-                .take_validator()
-                .unwrap_or_else(|| ValValidator::u64());
-
-            debug_assert!(
-                config.idx().is_none(),
-                "Uint option not support index configruation"
-            );
-            if let Some(r#type) = config.r#type() {
-                debug_assert_eq!(r#type, &type_name)
-            }
-            Ok(AOpt::default()
-                .with_type(type_name.clone())
-                .with_name(config.gen_name()?)
-                .with_assoc(assoc)
-                .with_action(action)
-                .with_style(vec![Style::Argument])
-                .with_opt_help(config.gen_opt_help()?)
-                .with_alias(Some(config.gen_alias()?))
-                .with_force(force)
-                .with_initiator(initiator)
-                .with_validator(validator))
-        })
+    pub(crate) fn guess_default_infer(ctor: BuiltInCtor, info: &mut OptConfig) {
+        match ctor {
+            BuiltInCtor::Int => fill_cfg_if_no_infer::<i64, OptConfig>(info),
+            BuiltInCtor::Str => fill_cfg_if_no_infer::<String, OptConfig>(info),
+            BuiltInCtor::Flt => fill_cfg_if_no_infer::<f64, OptConfig>(info),
+            BuiltInCtor::Uint => fill_cfg_if_no_infer::<u64, OptConfig>(info),
+            BuiltInCtor::Bool => fill_cfg_if_no_infer::<bool, OptConfig>(info),
+            BuiltInCtor::Cmd => fill_cfg_if_no_infer::<Cmd, OptConfig>(info),
+            BuiltInCtor::Pos => fill_cfg_if_no_infer::<Pos<Noa>, OptConfig>(info),
+            BuiltInCtor::Main => fill_cfg_if_no_infer::<Main, OptConfig>(info),
+            BuiltInCtor::Any => fill_cfg_if_no_infer::<Any, OptConfig>(info),
+            BuiltInCtor::Raw => fill_cfg_if_no_infer::<OsString, OptConfig>(info),
+        }
     }
 
-    pub fn flt() -> Self {
-        let type_name = astr("f");
+    pub fn new_type_ctor(ctor: BuiltInCtor) -> Self {
+        let name = Str::from(ctor.name());
 
-        Self::new(type_name.clone(), move |mut config: OptConfig| {
-            let force = config.take_force().unwrap_or(false);
-            let assoc = config.take_assoc().unwrap_or(Assoc::Flt);
-            let action = config.take_action().unwrap_or(Action::App);
-            let initiator = config
-                .take_initiator()
-                .unwrap_or_else(ValInitiator::empty::<f64>);
-            let validator = config
-                .take_validator()
-                .unwrap_or_else(|| ValValidator::f64());
+        Self::new(name, move |mut config: OptConfig| {
+            trace_log!("Fill infer data for config {:?}", &config);
 
-            debug_assert!(
-                config.idx().is_none(),
-                "Flt option not support index configruation"
-            );
-            if let Some(r#type) = config.r#type() {
-                debug_assert_eq!(r#type, &type_name)
+            Self::guess_default_infer(ctor, &mut config);
+
+            trace_log!("Construct option with config {:?}", &config);
+
+            let force = config.force().unwrap_or(false);
+            let action = *config.action().unwrap_or(&Action::App);
+            let storer = config.gen_storer()?;
+            let initializer = config.gen_initializer()?;
+            let ignore_name = config.ignore_name();
+            let ignore_alias = config.ignore_alias();
+            let ignore_index = config.ignore_index();
+            let styles = config.gen_styles()?;
+            let name = config.gen_name()?;
+            let help = config.gen_opt_help()?;
+            let r#type = config.gen_type()?;
+            let index = config.index().cloned();
+            let alias = config.take_alias();
+            let alias = if alias.is_empty() { None } else { Some(alias) };
+
+            if ignore_alias {
+                if let Some(alias) = &alias {
+                    debug_assert!(
+                        !alias.is_empty(),
+                        "Option {} not support alias: {:?}",
+                        name,
+                        alias
+                    );
+                }
             }
-            Ok(AOpt::default()
-                .with_type(type_name.clone())
-                .with_name(config.gen_name()?)
-                .with_assoc(assoc)
-                .with_action(action)
-                .with_style(vec![Style::Argument])
-                .with_opt_help(config.gen_opt_help()?)
-                .with_alias(Some(config.gen_alias()?))
-                .with_force(force)
-                .with_initiator(initiator)
-                .with_validator(validator))
+            if ignore_index {
+                if let Some(index) = &index {
+                    debug_assert!(
+                        !index.is_null(),
+                        "Option {} not support position parameters: {:?}",
+                        name,
+                        index
+                    );
+                }
+            }
+            Ok(
+                AOpt::new(name, r#type, ValAccessor::new(storer, initializer))
+                    .with_force(force)
+                    .with_idx(index)
+                    .with_action(action)
+                    .with_alias(alias)
+                    .with_style(styles)
+                    .with_opt_help(help)
+                    .with_ignore_name(ignore_name)
+                    .with_ignore_alias(ignore_alias)
+                    .with_ignore_index(ignore_index),
+            )
         })
     }
+}
 
-    pub fn str() -> Self {
-        let type_name = astr("s");
-
-        Self::new(type_name.clone(), move |mut config: OptConfig| {
-            let force = config.take_force().unwrap_or(false);
-            let assoc = config.take_assoc().unwrap_or(Assoc::Str);
-            let action = config.take_action().unwrap_or(Action::App);
-            let initiator = config
-                .take_initiator()
-                .unwrap_or_else(ValInitiator::empty::<String>);
-            let validator = config
-                .take_validator()
-                .unwrap_or_else(|| ValValidator::str());
-
-            debug_assert!(
-                config.idx().is_none(),
-                "Str option not support index configruation"
-            );
-            if let Some(r#type) = config.r#type() {
-                debug_assert_eq!(r#type, &type_name)
-            }
-            Ok(AOpt::default()
-                .with_type(type_name.clone())
-                .with_name(config.gen_name()?)
-                .with_assoc(assoc)
-                .with_action(action)
-                .with_style(vec![Style::Argument])
-                .with_opt_help(config.gen_opt_help()?)
-                .with_alias(Some(config.gen_alias()?))
-                .with_force(force)
-                .with_initiator(initiator)
-                .with_validator(validator))
-        })
-    }
-
-    pub fn bool() -> Self {
-        let type_name = astr("b");
-
-        Self::new(type_name.clone(), move |mut config: OptConfig| {
-            let force = config.take_force().unwrap_or(false);
-            let assoc = config.take_assoc().unwrap_or(Assoc::Bool);
-            let action = config.take_action().unwrap_or(Action::Set);
-            let initiator = config
-                .take_initiator()
-                .unwrap_or_else(|| ValInitiator::bool(false));
-            let validator = config
-                .take_validator()
-                .unwrap_or_else(|| ValValidator::bool());
-
-            debug_assert!(
-                config.idx().is_none(),
-                "Boolean option not support index configruation"
-            );
-            if let Some(r#type) = config.r#type() {
-                debug_assert_eq!(r#type, &type_name)
-            }
-            Ok(AOpt::default()
-                .with_type(type_name.clone())
-                .with_name(config.gen_name()?)
-                .with_assoc(assoc)
-                .with_action(action)
-                .with_style(vec![Style::Boolean, Style::Combined])
-                .with_opt_help(config.gen_opt_help()?)
-                .with_alias(Some(config.gen_alias()?))
-                .with_force(force)
-                .with_initiator(initiator)
-                .with_validator(validator))
-        })
-    }
-
-    pub fn pos() -> Self {
-        let type_name = astr("p");
-
-        Self::new(type_name.clone(), move |mut config: OptConfig| {
-            let force = config.take_force().unwrap_or(false);
-            let assoc = config.take_assoc().unwrap_or(Assoc::Noa);
-            let action = config.take_action().unwrap_or(Action::App);
-            let initiator = config
-                .take_initiator()
-                .unwrap_or_else(ValInitiator::empty::<bool>);
-            let validator = config.take_validator().unwrap_or_else(ValValidator::some);
-
-            if let Some(v) = config.alias() {
-                debug_assert!(v.is_empty(), "Pos option not support alias configruation")
-            }
-            if let Some(r#type) = config.r#type() {
-                debug_assert_eq!(r#type, &type_name)
-            }
-            Ok(AOpt::default()
-                .with_type(type_name.clone())
-                .with_name(config.gen_name()?)
-                .with_assoc(assoc)
-                .with_action(action)
-                .with_idx(Some(config.gen_idx()?))
-                .with_style(vec![Style::Pos])
-                .with_opt_help(config.gen_opt_help()?)
-                .with_force(force)
-                .with_initiator(initiator)
-                .with_validator(validator)
-                .with_ignore_name())
-        })
-    }
-
-    pub fn cmd() -> Self {
-        let type_name = astr("c");
-
-        Self::new(type_name.clone(), move |mut config: OptConfig| {
-            let assoc = config.take_assoc().unwrap_or(Assoc::Noa);
-            let action = config.take_action().unwrap_or(Action::Set);
-            let initiator = config
-                .take_initiator()
-                .unwrap_or_else(|| ValInitiator::bool(false));
-            let validator = config.take_validator().unwrap_or_else(ValValidator::some);
-
-            if let Some(v) = config.alias() {
-                debug_assert!(v.is_empty(), "Cmd option not support alias configruation")
-            }
-            debug_assert!(
-                config.force().unwrap_or(true),
-                "Cmd option only have default optional configuration"
-            );
-            debug_assert!(
-                config.idx().is_none(),
-                "Cmd option only have default index configuration"
-            );
-            if let Some(r#type) = config.r#type() {
-                debug_assert_eq!(r#type, &type_name)
-            }
-            Ok(AOpt::default()
-                .with_type(type_name.clone())
-                .with_name(config.gen_name()?)
-                .with_assoc(assoc)
-                .with_action(action)
-                .with_idx(Some(crate::opt::Index::forward(1)))
-                .with_style(vec![Style::Cmd])
-                .with_opt_help(config.gen_opt_help()?)
-                .with_force(true)
-                .with_initiator(initiator)
-                .with_validator(validator))
-        })
-    }
-
-    pub fn main() -> Self {
-        let type_name = astr("m");
-
-        Self::new(type_name.clone(), move |mut config: OptConfig| {
-            let assoc = config.take_assoc().unwrap_or(Assoc::Null);
-            let action = config.take_action().unwrap_or(Action::Set);
-            let initiator = config.take_initiator().unwrap_or_default();
-            let validator = config.take_validator().unwrap_or_else(ValValidator::null);
-
-            if let Some(v) = config.alias() {
-                debug_assert!(v.is_empty(), "Main option not support alias configruation")
-            }
-            debug_assert!(
-                !config.force().unwrap_or(false),
-                "Main option only have default optional configuration"
-            );
-            debug_assert!(
-                config.idx().is_none(),
-                "Main option only have default index configuration"
-            );
-            if let Some(r#type) = config.r#type() {
-                debug_assert_eq!(r#type, &type_name)
-            }
-            Ok(AOpt::default()
-                .with_type(type_name.clone())
-                .with_name(config.gen_name()?)
-                .with_assoc(assoc)
-                .with_action(action)
-                .with_idx(Some(crate::opt::Index::anywhere()))
-                .with_style(vec![Style::Main])
-                .with_opt_help(config.gen_opt_help()?)
-                .with_force(false)
-                .with_initiator(initiator)
-                .with_validator(validator)
-                .with_ignore_name())
-        })
-    }
-
-    pub fn any() -> Self {
-        let type_name = astr("a");
-
-        Self::new(type_name.clone(), move |mut config: OptConfig| {
-            let assoc = config.take_assoc().unwrap_or(Assoc::Null);
-            let action = config.take_action().unwrap_or(Action::Null);
-            let initiator = config.take_initiator().unwrap_or_default();
-            let validator = config.take_validator().unwrap_or_else(ValValidator::null);
-            let force = config.take_force().unwrap_or(false);
-
-            if let Some(r#type) = config.r#type() {
-                debug_assert_eq!(r#type, &type_name)
-            }
-            Ok(AOpt::default()
-                .with_type(type_name.clone())
-                .with_name(config.gen_name()?)
-                .with_assoc(assoc)
-                .with_action(action)
-                .with_idx(config.take_idx())
-                .with_style(vec![
-                    Style::Main,
-                    Style::Pos,
-                    Style::Cmd,
-                    Style::Argument,
-                    Style::Combined,
-                    Style::Boolean,
-                    Style::Null,
-                ])
-                .with_opt_help(config.gen_opt_help()?)
-                .with_force(force)
-                .with_initiator(initiator)
-                .with_validator(validator))
-        })
+impl From<BuiltInCtor> for Creator<AOpt, OptConfig, Error> {
+    fn from(value: BuiltInCtor) -> Self {
+        Self::new_type_ctor(value)
     }
 }

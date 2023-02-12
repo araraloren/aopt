@@ -24,7 +24,7 @@ async fn main() -> color_eyre::Result<()> {
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
     color_eyre::install()?;
-    let parser = parser_command_line(Args::new(std::env::args().skip(1)))?;
+    let parser = parser_command_line()?;
     let debug = *parser.find_val::<bool>("--debug")?;
     let help = *parser.find_val::<bool>("--help")?;
 
@@ -154,50 +154,30 @@ impl SnowBall {
     }
 }
 
-fn parser_command_line(args: Args) -> Result<AFwdParser, Error> {
+fn parser_command_line() -> Result<AFwdParser, Error> {
     let mut parser = AFwdParser::default();
 
-    parser.policy_mut().set_strict(true);
+    parser.add_opt_i::<bool>("-d;--debug: Print debug message")?;
+    parser.add_opt_i::<bool>("-h;--help: Display help message")?;
+    parser
+        .add_opt_i::<u64>("-i;--interval: Set access interval")?
+        .set_value(1000);
+    parser
+        .add_opt_i::<i64>("-s;--start: Set start parameter of request")?
+        .set_value(0);
+    parser
+        .add_opt_i::<i64>("-c;--count: Set count parameter of request")?
+        .set_value(14);
 
-    for (optstr, alias, help, value) in [
-        ("-d=b", "--debug", "Print debug message", None),
-        (
-            "-i=u",
-            "--interval",
-            "Set access interval",
-            Some(ValInitiator::u64(1000u64)),
-        ),
-        (
-            "-s=i",
-            "--start",
-            "Set start parameter of request",
-            Some(ValInitiator::i64(0i64)),
-        ),
-        (
-            "-c=i",
-            "--count",
-            "Set count parameter of request",
-            Some(ValInitiator::i64(14i64)),
-        ),
-    ] {
-        if let Some(initiator) = value {
-            parser
-                .add_opt(optstr)?
-                .set_initiator(initiator)
-                .add_alias(alias)
-                .set_help(help);
-        } else {
-            parser.add_opt(optstr)?.add_alias(alias).set_help(help);
-        }
-    }
     // process single stock id
     parser
         .add_opt("stock_id=p@*")?
         .set_help("Get follow from single stock id")
-        .set_values(Vec::<String>::new())
-        .on(|set: &mut ASet, ser: &mut ASer, val: ctx::Value<String>| {
+        .set_pos_type::<String>()
+        .set_values(vec![])
+        .on(|set: &mut ASet, _: &mut ASer, val: ctx::Value<String>| {
             let id = convert_line_to_stock_number(val.deref());
-            let debug = *ser.sve_val::<bool>(set["--debug"].uid())?;
+            let debug = *set["--debug"].val::<bool>()?;
 
             if debug {
                 if id.is_none() {
@@ -213,48 +193,47 @@ fn parser_command_line(args: Args) -> Result<AFwdParser, Error> {
     parser
         .add_opt("stock_file_list=p@1")?
         .set_help("Get follow from stock list in file")
-        .set_values(Vec::<String>::new())
-        .on(
-            |set: &mut ASet, ser: &mut ASer, file: ctx::Value<PathBuf>| {
-                let mut ret = Ok(None);
-                let debug = *ser.sve_val::<bool>(set["--debug"].uid())?;
+        .set_pos_type::<String>()
+        .set_values(vec![])
+        .on(|set: &mut ASet, _: &mut ASer, file: ctx::Value<PathBuf>| {
+            let mut ret = Ok(None);
+            let debug = *set["--debug"].val::<bool>()?;
 
-                if file.is_file() {
-                    let fh = File::open(file.as_path()).map_err(|e| {
-                        Error::raise_error(format!("can not read file {:?}: {:?}", file, e))
+            if file.is_file() {
+                let fh = File::open(file.as_path()).map_err(|e| {
+                    Error::raise_error(format!("can not read file {:?}: {:?}", file, e))
+                })?;
+                let mut reader = BufReader::new(fh);
+                let mut ids = vec![];
+                let mut line = String::default();
+
+                loop {
+                    let count = reader.read_line(&mut line).map_err(|e| {
+                        Error::raise_error(format!(
+                            "can not read line from file {:?}: {:?}",
+                            file, e
+                        ))
                     })?;
-                    let mut reader = BufReader::new(fh);
-                    let mut ids = vec![];
-                    let mut line = String::default();
 
-                    loop {
-                        let count = reader.read_line(&mut line).map_err(|e| {
-                            Error::raise_error(format!(
-                                "can not read line from file {:?}: {:?}",
-                                file, e
-                            ))
-                        })?;
-
-                        if count > 0 {
-                            if let Some(stock_number) = convert_line_to_stock_number(line.trim()) {
-                                ids.push(stock_number);
-                            } else if debug {
-                                eprintln!("{} is not a valid stock number!", line.trim());
-                            }
-                            line.clear();
-                        } else {
-                            break;
+                    if count > 0 {
+                        if let Some(stock_number) = convert_line_to_stock_number(line.trim()) {
+                            ids.push(stock_number);
+                        } else if debug {
+                            eprintln!("{} is not a valid stock number!", line.trim());
                         }
+                        line.clear();
+                    } else {
+                        break;
                     }
-                    ret = Ok(Some(ids));
                 }
-                ret
-            },
-        )?
+                ret = Ok(Some(ids));
+            }
+            ret
+        })?
         .then(VecStore);
 
     parser.init()?;
-    parser.parse(aopt::Arc::new(args))?;
+    parser.parse_env()?.ok()?;
 
     Ok(parser)
 }
@@ -327,6 +306,8 @@ fn display_help<S: Set>(set: &S) -> Result<(), aopt_help::Error> {
         &foot,
         aopt_help::prelude::Style::default(),
         std::io::stdout(),
+        50,
+        50,
     );
     let global = app_help.global_mut();
 
@@ -340,7 +321,7 @@ fn display_help<S: Set>(set: &S) -> Result<(), aopt_help::Error> {
                     Cow::from(opt.name().as_str()),
                     Cow::from(opt.hint().as_str()),
                     Cow::from(opt.help().as_str()),
-                    Cow::from(opt.r#type().to_string()),
+                    Cow::default(),
                     opt.force(),
                     true,
                 ),
@@ -355,7 +336,7 @@ fn display_help<S: Set>(set: &S) -> Result<(), aopt_help::Error> {
                     Cow::from(opt.name().as_str()),
                     Cow::from(opt.hint().as_str()),
                     Cow::from(opt.help().as_str()),
-                    Cow::from(opt.r#type().to_string()),
+                    Cow::default(),
                     opt.force(),
                     false,
                 ),

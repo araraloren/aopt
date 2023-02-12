@@ -1,6 +1,43 @@
 # aopt
 
-A flexible and typed getopt like command line tools for rust.
+A flexible and typed getopt like command line framwork for rust.
+
+## Features
+
+- Option support
+
+    - Prefixed option support, such as `-f`, `--flag`, `-flag` or `--/flag`.
+
+    - Option value support, such as `-f 42`, `--flag 3.14` or `--flag=foo`.
+
+    - Multiple style option support, such as `-f 42`, `-f=42` or `-f42`.
+
+    - Combing style support, such as `-abc` is same as `-a` `-b` `-c`.
+
+    - Positional arguments support, see [`Index`](crate::opt::Index).
+
+    - Type support, you can validator the value of option during parsing.
+
+    See the built-in option type [`AOpt`](crate::opt::AOpt)
+
+- Non UTF8 arguments support
+
+- Callback support
+
+    Can set callback which will called during parsing,
+    see [`Parser`](crate::parser::Parser) and [`Invoker`](crate::ctx::Invoker).
+
+- Value store support
+
+    By default aopt will saving the raw value and parsed value into [`ValStorer`](crate::value::ValStorer).
+
+- Policy support
+
+    - [`DelayPolicy`](crate::parser::DelayPolicy) process positional arguments before any other option.
+
+    - [`FwdPolicy`](crate::parser::FwdPolicy) process options before positional arguments.
+
+    - [`PrePolicy`](crate::parser::PrePolicy) can help you process the options partial.
 
 ## Setup
 
@@ -8,32 +45,101 @@ Add following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-aopt = "0.8"
+aopt = "0.9"
 ```
 
-### Enable `sync` feature
+### `sync` feature
 
 If you want the utils of current crate implement `Send` and `Sync`, you can enable `sync` feature.
 
-```toml
-[dependencies]
-aopt = { version = "0.8", features = [ "sync" ] }
-```
-
-### Enable `utf8` feature
+### `utf8` feature
 
 By default, the command line parsing support `OsString`, enable `utf8` using `String` instead.
 
-```toml
-[dependencies]
-aopt = { version = "0.8", features = [ "utf8" ] }
+## Simple flow chart
+
+```txt
+                     +---------------------------------------+
+                     |             Policy                    |
+                     |                                       |
++--------------+     |  +-----------+     +------------+     |                +-------------+
+|              |     |  |           |     |            |     |   Invoke       |             |
+|   Arguments  +---->|  |  Checker  |     |   Process  |<----+----------------+   Invoker   |
+|              |     |  |           |     |            |     |   the callback |             |
++--------------+     |  +---^-------+     ++-----^-----+     |                +-------------+
+                     |      |              |     |           |
+                     |      |              |     |           |
+                     +------+--------------+-----+-----------+
+                            |              |     |
+                            |              |     |
+                            |  Save the values   |Process the arguments
+                            |              |     |
+                            |              |     |
+                Check the options          |     |
+                            |              |     |
+                            |              |     |
+                            |         +----v-----+-----------+
+                            |         |                      |
+                            +---------+      Option Set      |
+                                      |                      |
+                                      +----------------------+
 ```
 
 ## Example
 
-With `getopt!` and `Parser`, you can match and process every command easily.
+- Using [`AFwdParser`](crate::ext::AFwdParser) parsing process the command line.
 
-```ignore
+```no_run
+use aopt::prelude::*;
+use std::ops::Deref;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut parser = AFwdParser::default();
+
+    parser.validator_mut().add_prefix("+");
+    parser.add_opt("--depth=i")?.set_value_t(0i64); // int option
+    parser.add_opt("-/r=b")?; // boolean flag
+    parser
+        .add_opt("--source=s!")? // ! means the option is force required
+        .add_alias("+S")
+        .on(
+            |set: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>| {
+                let depth: &i64 = set["--depth"].val()?;
+                println!("Adding location({}) with depth({})", val.deref(), depth);
+                Ok(Some((val.take(), *depth)))
+            },
+        )?;
+    parser.add_opt("destination=p!@-0")?.on(
+        |_: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>| {
+            println!("Save destination location({})", val.deref());
+            Ok(Some(val.take()))
+        },
+    )?;
+    parser.add_opt("main=m")?.on(
+        |set: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>| {
+            let src = set["--source"].vals::<(String, i64)>()?;
+            let dest: &String = set["destination"].val()?;
+
+            for (item, depth) in src {
+                println!(
+                    "Application {} will copy location({item}, depth={depth}) to destination({})",
+                    val.deref(),
+                    dest
+                );
+            }
+            Ok(Some(val.take()))
+        },
+    )?;
+    parser.init()?;
+    parser.parse_env()?.unwrap();
+
+    Ok(())
+}
+```
+
+- Using [`getopt!`](crate::getopt) parsing multiple sub command.
+
+```no_run
 use aopt::prelude::*;
 use aopt::Error;
 use std::ops::Deref;
@@ -48,17 +154,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     list.add_opt("-debug=b")?;
     list.add_opt("-force=b")?.add_alias("-f");
     list.add_opt("-local-only=b")?.add_alias("-l");
-    list.add_opt("-source=s")?
+    list.add_opt_i::<String>("-source")?
         .add_alias("-s")
         .set_value(String::from("lib.rs"));
     list.add_opt("main=m")?
-        .fallback(|set: &mut ASet, ser: &mut ASer| {
+        .fallback(|set: &mut ASet, _: &mut ASer| {
             println!(
                 "invoke list command: debug={:?}, force={:?}, local-only={:?}, source={:?}",
-                ser.sve_val::<bool>(set["-debug"].uid())?,
-                ser.sve_val::<bool>(set["-force"].uid())?,
-                ser.sve_val::<bool>(set["-local-only"].uid())?,
-                ser.sve_val::<String>(set["-source"].uid())?,
+                set["-debug"].val::<bool>()?,
+                set["-force"].val::<bool>()?,
+                set["-local-only"].val::<bool>()?,
+                set["-source"].val::<String>()?,
             );
             Ok(None::<()>)
         })?;
@@ -70,12 +176,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     update.add_opt("-source=s")?.add_alias("-s");
     update
         .add_opt("main=m")?
-        .on(|set: &mut ASet, ser: &mut ASer| {
+        .on(|set: &mut ASet, _: &mut ASer| {
             println!(
                 "invoke update command: debug={:?}, force={:?}, source={:?}",
-                ser.sve_val::<bool>(set["-debug"].uid())?,
-                ser.sve_val::<bool>(set["-force"].uid())?,
-                ser.sve_val::<String>(set["-source"].uid())?,
+                set["-debug"].val::<bool>()?,
+                set["-force"].val::<bool>()?,
+                set["-source"].val::<String>()?,
             );
             Ok(Some(true))
         })?;
@@ -86,13 +192,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     install.add_opt("-/override=b")?.add_alias("-/o");
     install.add_opt("-source=s")?.add_alias("-s");
     install.add_opt("name=p!@2")?.on(
-        |set: &mut ASet, ser: &mut ASer, mut val: ctx::Value<String>| {
+        |set: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>| {
             if val.deref() == "software" {
                 println!(
                     "invoke install command: debug={:?}, override={:?}, source={:?}",
-                    ser.sve_val::<bool>(set["-debug"].uid())?,
-                    ser.sve_val::<bool>(set["-/override"].uid())?,
-                    ser.sve_val::<String>(set["-source"].uid())?,
+                    set["-debug"].val::<bool>()?,
+                    set["-/override"].val::<bool>()?,
+                    set["-source"].val::<String>()?,
                 );
                 Ok(Some(val.take()))
             } else {
@@ -101,17 +207,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
     )?;
 
-    getopt!(
-        std::env::args().skip(1),
-        &mut list,
-        &mut update,
-        &mut install
-    )?;
+    getopt!(Args::from_env(), &mut list, &mut update, &mut install)?;
     Ok(())
 }
 ```
 
-* `app.exe ls -source lib.rs -debug` output 
+* `app.exe ls -debug` output
 
     invoke list command: debug=true, force=false, local-only=false, source="lib.rs"
 

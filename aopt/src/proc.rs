@@ -21,21 +21,21 @@ pub trait Match {
     fn reset(&mut self);
 
     /// Return true if the [`Match`] matched.
-    fn is_mat(&self) -> bool;
+    fn status(&self) -> bool;
 
-    /// Return the matched option `Uid`.
-    fn mat_uid(&self) -> Option<Uid>;
+    /// Return the uid of matched option.
+    fn uid(&self) -> Option<Uid>;
 
     fn set_uid(&mut self, uid: Uid);
 
-    /// Return the [`Style`] of option.
+    /// Return the [`Style`] of [`Match`].
     fn style(&self) -> Style;
 
     /// Return the raw value.
     fn arg(&self) -> Option<&RawVal>;
 
     /// Return true if the option need cosume a argument.
-    fn consume(&self) -> bool;
+    fn is_consume(&self) -> bool;
 
     fn undo(
         &mut self,
@@ -60,17 +60,17 @@ pub trait Process<M: Match> {
 
     fn count(&self) -> usize;
 
-    fn sty(&self) -> Style;
+    fn style(&self) -> Style;
 
-    fn is_mat(&self) -> bool;
+    fn status(&self) -> bool;
 
-    fn consume(&self) -> bool;
+    fn is_consume(&self) -> bool;
 
-    fn add_mat(&mut self, mat: M) -> &mut Self;
+    fn add_match(&mut self, mat: M) -> &mut Self;
 
-    fn mat(&self, index: usize) -> Option<&M>;
+    fn get_match(&self, index: usize) -> Option<&M>;
 
-    fn mat_mut(&mut self, index: usize) -> Option<&mut M>;
+    fn get_match_mut(&mut self, index: usize) -> Option<&mut M>;
 
     fn undo(&mut self, set: &mut Self::Set) -> Result<(), Self::Error>;
 
