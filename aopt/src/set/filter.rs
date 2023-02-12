@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 
+use crate::map::ErasedTy;
 use crate::opt::Config;
 use crate::opt::ConfigValue;
 use crate::opt::Index;
@@ -23,6 +24,7 @@ where
     T: Opt,
     C: Config + ConfigValue,
 {
+    /// Check if option matched current option.
     fn mat_opt(&self, opt: &T) -> bool {
         let mut ret = true;
 
@@ -30,7 +32,7 @@ where
             ret = ret && (self.force().unwrap() == opt.force());
         }
         if ret && self.has_type() {
-            ret = ret && (self.r#type().unwrap() == &opt.r#type());
+            ret = ret && (self.r#type().unwrap() == opt.r#type());
         }
         if ret && self.has_name() {
             // don't call match name
@@ -49,9 +51,11 @@ where
             }
             ret = ret && matched;
         }
-        if ret && self.has_idx() {
-            if let Some(index) = opt.idx() {
-                ret = ret && (self.idx().unwrap() == index);
+        if ret && self.has_index() {
+            if let Some(index) = opt.index() {
+                ret = ret && (self.index().unwrap() == index);
+            } else {
+                ret = false;
             }
         }
         ret
@@ -101,14 +105,14 @@ where
     }
 
     /// Set the option type name of filter configuration.
-    pub fn set_type<T: Into<Str>>(&mut self, type_name: T) -> &mut Self {
-        self.info.set_type(type_name);
+    pub fn set_type<U: ErasedTy>(&mut self) -> &mut Self {
+        self.info.set_type::<U>();
         self
     }
 
     /// Set the option index of filter configuration.
-    pub fn set_idx(&mut self, index: Index) -> &mut Self {
-        self.info.set_idx(index);
+    pub fn set_index(&mut self, index: Index) -> &mut Self {
+        self.info.set_index(index);
         self
     }
 
@@ -172,14 +176,14 @@ where
     }
 
     /// Set the option type name of filter configuration.
-    pub fn set_type<T: Into<Str>>(&mut self, type_name: T) -> &mut Self {
-        self.info.set_type(type_name);
+    pub fn set_type<U: ErasedTy>(&mut self) -> &mut Self {
+        self.info.set_type::<U>();
         self
     }
 
     /// Set the option index of filter configuration.
-    pub fn set_idx(&mut self, index: Index) -> &mut Self {
-        self.info.set_idx(index);
+    pub fn set_index(&mut self, index: Index) -> &mut Self {
+        self.info.set_index(index);
         self
     }
 

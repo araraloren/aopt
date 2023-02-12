@@ -4,22 +4,21 @@
 //! # Examples
 //! ```rust
 //! # use aopt::prelude::*;
-//! # use aopt::Arc;
-//! # use aopt::Error;
+//! # use aopt::ARef;
 //! # use aopt::RawVal;
 //! # use std::ops::Deref;
 //! #
-//! # fn main() -> Result<(), Error> {
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let mut policy = AFwdPolicy::default();
 //! let mut set = policy.default_set();
 //! let mut ser = policy.default_ser();
+//! let mut inv = policy.default_inv();
 //!
 //! set.add_opt("--/bool=b")?.run()?;
 //! set.add_opt("set=c")?.run()?;
 //! set.add_opt("pos_2=p@2")?.run()?;
 //! set.add_opt("pos_v=p@3..")?.run()?;
-//! ser.ser_invoke_mut()?
-//!     .entry(0)
+//! inv.entry(0)
 //!     .on(|_: &mut ASet, _: &mut ASer, value: ctx::Value<bool>| {
 //!         assert_eq!(
 //!             &true,
@@ -28,8 +27,7 @@
 //!         );
 //!         Ok(Some(false))
 //!     });
-//! ser.ser_invoke_mut()?
-//!     .entry(1)
+//! inv.entry(1)
 //!     .on(|_: &mut ASet, _: &mut ASer, val: ctx::Value<String>| {
 //!         assert_eq!(
 //!             &String::from("set"),
@@ -38,8 +36,7 @@
 //!         );
 //!         Ok(Some(true))
 //!     });
-//! ser.ser_invoke_mut()?
-//!     .entry(2)
+//! inv.entry(2)
 //!     .on(|_: &mut ASet, _: &mut ASer, val: ctx::Value<i64>| {
 //!         assert_eq!(
 //!             &42,
@@ -48,36 +45,31 @@
 //!         );
 //!         Ok(Some(*val.deref()))
 //!     });
-//! ser.ser_invoke_mut()?.entry(3).on(
+//! inv.entry(3).on(
 //!     |_: &mut ASet, _: &mut ASer, index: ctx::Index, raw_val: ctx::RawVal| {
 //!         Ok(Some((*index.deref(), raw_val.deref().clone())))
 //!     },
 //! );
 //!
-//! let args = Args::new(["--/bool", "set", "42", "foo", "bar"].into_iter());
+//! let args = Args::from_array(["app", "--/bool", "set", "42", "foo", "bar"]);
 //!
-//! policy.parse(&mut set, &mut ser, Arc::new(args))?;
+//! policy
+//!     .parse(&mut set, &mut inv, &mut ser, ARef::new(args))?
+//!     .unwrap();
 //!
-//! assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
-//! assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
-//! assert_eq!(ser.ser_val()?.val::<i64>(2)?, &42);
+//! assert_eq!(set.find_val::<bool>("--/bool")?, &false);
+//! assert_eq!(set.find_val::<bool>("set")?, &true);
+//! assert_eq!(set.find_val::<i64>("pos_2")?, &42);
 //!
 //! let test = vec![(3, RawVal::from("foo")), (4, RawVal::from("bar"))];
 //!
-//! for (idx, val) in ser
-//!     .ser_val()?
-//!     .vals::<(usize, RawVal)>(3)?
-//!     .iter()
-//!     .enumerate()
-//! {
+//! for (idx, val) in set[3].vals::<(usize, RawVal)>()?.iter().enumerate() {
 //!     assert_eq!(val.0, test[idx].0);
 //!     assert_eq!(val.1, test[idx].1);
 //! }
 //! # Ok(())
 //! # }
 //!```
-use serde::Deserialize;
-use serde::Serialize;
 use std::fmt::Debug;
 use std::fmt::Display;
 use std::hash::Hash;
@@ -86,19 +78,15 @@ use std::ops::DerefMut;
 
 use crate::ctx::Ctx;
 use crate::ctx::Extract;
-use crate::opt::RawValParser;
-use crate::ser::Services;
-use crate::set::Set;
-use crate::set::SetExt;
-use crate::set::SetOpt;
-use crate::Arc;
+use crate::value::RawValParser;
+use crate::ARef;
 use crate::Error;
 use crate::Str;
 
-impl<S> Extract<S> for Ctx {
+impl<Set, Ser> Extract<Set, Ser> for Ctx {
     type Error = Error;
 
-    fn extract(_: &S, _: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn extract(_: &Set, _: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(ctx.clone())
     }
 }
@@ -113,56 +101,46 @@ impl<S> Extract<S> for Ctx {
 /// # use std::ops::Deref;
 /// # use aopt::prelude::*;
 /// # use aopt::Error;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// #
 /// # fn main() -> Result<(), Error> {
 ///   let mut policy = AFwdPolicy::default();
 ///   let mut set = policy.default_set();
+///   let mut inv = policy.default_inv();
 ///   let mut ser = policy.default_ser();
 ///
 ///   set.add_opt("--/bool=b")?.run()?;
-///   ser.ser_invoke_mut()?
-///       .entry(0)
+///   inv.entry(0)
 ///       .on(|_: &mut ASet, _: &mut ASer, ctx_uid: ctx::Uid| {
 ///           assert_eq!(&0, ctx_uid.deref(), "The uid in Ctx is same as the uid of matched option");
 ///           Ok(Some(false))
 ///       });
 ///
-///   let args = Args::new(["--/bool", ].into_iter());
+///   let args = Args::from_array(["app", "--/bool", ]);
 ///
-///   policy.parse(&mut set, &mut ser, Arc::new(args))?;
+///   policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
-///   assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
+///   assert_eq!(set[0].val::<bool>()?, &false);
 ///
 /// #  Ok(())
 /// #
 /// # }
 /// ```
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    serde::Serialize,
-    serde::Deserialize,
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Uid(crate::Uid);
 
 impl Uid {
-    pub fn extract_ctx(ctx: &Ctx) -> Self {
-        Self(ctx.uid())
+    pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
+        Ok(Self(ctx.uid()?))
     }
 }
 
-impl<S: Set> Extract<S> for Uid {
+impl<Set, Ser> Extract<Set, Ser> for Uid {
     type Error = Error;
 
-    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(Self::extract_ctx(ctx))
+    fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
+        Self::extract_ctx(ctx)
     }
 }
 
@@ -191,31 +169,30 @@ impl Display for Uid {
 /// # Examples
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// # use aopt::Error;
 /// # use std::ops::Deref;
 /// #
 /// # fn main() -> Result<(), Error> {
 /// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
+/// let mut inv = policy.default_inv();
 /// let mut ser = policy.default_ser();
 ///
 /// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut()?
-///     .entry(0)
+/// inv.entry(0)
 ///     .on(|_: &mut ASet, _: &mut ASer, index: ctx::Index| {
 ///         assert_eq!(
-///             &0,
+///             &1,
 ///             index.deref(),
 ///             "Index is the current index value of Args"
 ///         );
 ///         Ok(Some(false))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(1)
+/// inv.entry(1)
 ///     .on(|_: &mut ASet, _: &mut ASer, index: ctx::Index| {
 ///         assert_eq!(
 ///             &1,
@@ -225,8 +202,7 @@ impl Display for Uid {
 ///         Ok(Some(true))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(2)
+/// inv.entry(2)
 ///     .on(|_: &mut ASet, _: &mut ASer, index: ctx::Index| {
 ///         assert_eq!(
 ///             &2,
@@ -236,42 +212,32 @@ impl Display for Uid {
 ///         Ok(Some(2i64))
 ///     });
 ///
-/// let args = Args::new(["--/bool", "set", "value"].into_iter());
+/// let args = Args::from_array(["app", "--/bool", "set", "value"]);
 ///
-/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
-/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
-/// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val()?.val::<i64>(2)?, &2);
+/// assert_eq!(set.find_val::<bool>("--/bool")?, &false);
+/// assert_eq!(set[1].val::<bool>()?, &true);
+/// assert_eq!(set[2].val::<i64>()?, &2);
 /// #
 /// # Ok(())
 /// # }
 /// ```
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    serde::Serialize,
-    serde::Deserialize,
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Index(usize);
 
 impl Index {
-    pub fn extract_ctx(ctx: &Ctx) -> Self {
-        Self(ctx.idx())
+    pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
+        Ok(Self(ctx.idx()?))
     }
 }
 
-impl<S: Set> Extract<S> for Index {
+impl<Set, Ser> Extract<Set, Ser> for Index {
     type Error = Error;
 
-    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(Self::extract_ctx(ctx))
+    fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
+        Self::extract_ctx(ctx)
     }
 }
 
@@ -300,75 +266,63 @@ impl Display for Index {
 /// # Example
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// # use aopt::Error;
 /// # use std::ops::Deref;
 /// #
 /// # fn main() -> Result<(), Error> {
 /// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
+/// let mut inv = policy.default_inv();
 /// let mut ser = policy.default_ser();
 ///
 /// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut()?
-///     .entry(0)
+/// inv.entry(0)
 ///     .on(|_: &mut ASet, _: &mut ASer, total: ctx::Total| {
-///         assert_eq!( &4, total.deref(), "Total is the length of Args");
+///         assert_eq!( &5, total.deref(), "Total is the length of Args");
 ///         Ok(Some(false))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(1)
+/// inv.entry(1)
 ///     .on(|_: &mut ASet, _: &mut ASer, total: ctx::Total| {
-///         assert_eq!(&3, total.deref(), "Total is the length of Args");
+///         assert_eq!(&4, total.deref(), "Total is the length of Args");
 ///         Ok(Some(true))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(2)
+/// inv.entry(2)
 ///     .on(|_: &mut ASet, _: &mut ASer, total: ctx::Total| {
-///         assert_eq!(&3, total.deref(), "Total is the length of Args");
+///         assert_eq!(&4, total.deref(), "Total is the length of Args");
 ///         Ok(Some(2i64))
 ///     });
 ///
-/// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
+/// let args = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
 ///
-/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
-/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
-/// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val()?.val::<i64>(2)?, &2);
+/// assert_eq!(set[0].val::<bool>()?, &false);
+/// assert_eq!(set[1].val::<bool>()?, &true);
+/// assert_eq!(set[2].val::<i64>()?, &2);
 /// #
 /// # Ok(())
 /// # }
 /// ```
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    serde::Serialize,
-    serde::Deserialize,
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Total(usize);
 
 impl Total {
-    pub fn extract_ctx(ctx: &Ctx) -> Self {
-        Self(ctx.total())
+    pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
+        Ok(Self(ctx.total()?))
     }
 }
 
-impl<S: Set> Extract<S> for Total {
+impl<Set, Ser> Extract<Set, Ser> for Total {
     type Error = Error;
 
-    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(Self::extract_ctx(ctx))
+    fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
+        Self::extract_ctx(ctx)
     }
 }
 
@@ -397,61 +351,59 @@ impl Display for Total {
 /// # Examples
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// # use aopt::Error;
 /// # use std::ops::Deref;
 /// #
 /// # fn main() -> Result<(), Error> {
 /// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
+/// let mut inv = policy.default_inv();
 /// let mut ser = policy.default_ser();
 ///
 /// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut()?
-///     .entry(0)
+/// inv.entry(0)
 ///     .on(|_: &mut ASet, _: &mut ASer, args: ctx::Args| {
-///         let test = Args::new(["--/bool", "set", "value", "foo"].into_iter());
+///         let test = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
 ///         for (idx, arg) in args.deref().deref().iter().enumerate() {
 ///             assert_eq!(arg, &test[idx], "Args is arguments used in Policy");
 ///         }
 ///         Ok(Some(false))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(1)
+/// inv.entry(1)
 ///     .on(|_: &mut ASet, _: &mut ASer, args: ctx::Args| {
-///         let test = Args::new(["set", "value", "foo"].into_iter());
+///         let test = Args::from_array(["app", "set", "value", "foo"]);
 ///         for (idx, arg) in args.deref().deref().iter().enumerate() {
 ///             assert_eq!(arg, &test[idx], "Args is arguments used in Policy");
 ///         }
 ///         Ok(Some(true))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(2)
+/// inv.entry(2)
 ///     .on(|_: &mut ASet, _: &mut ASer, args: ctx::Args| {
-///         let test = Args::new(["set", "value", "foo"].into_iter());
+///         let test = Args::from_array(["app", "set", "value", "foo"]);
 ///         for (idx, arg) in args.deref().deref().iter().enumerate() {
 ///             assert_eq!(arg, &test[idx], "Args is arguments used in Policy");
 ///         }
 ///         Ok(Some(2i64))
 ///     });
 ///
-/// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
+/// let args = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
 ///
-/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
-/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
-/// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val()?.val::<i64>(2)?, &2);
+/// assert_eq!(set[0].val::<bool>()?, &false);
+/// assert_eq!(set[1].val::<bool>()?, &true);
+/// assert_eq!(set[2].val::<i64>()?, &2);
 /// #
 /// # Ok(())
 /// # }
 /// ```
 #[derive(Debug, Clone, Default)]
-pub struct Args(Arc<crate::args::Args>);
+pub struct Args(ARef<crate::args::Args>);
 
 impl Args {
     pub fn extract_ctx(ctx: &Ctx) -> Self {
@@ -467,10 +419,10 @@ impl Deref for Args {
     }
 }
 
-impl<S: Set> Extract<S> for Args {
+impl<Set, Ser> Extract<Set, Ser> for Args {
     type Error = Error;
 
-    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(Self::extract_ctx(ctx))
     }
 }
@@ -480,20 +432,20 @@ impl<S: Set> Extract<S> for Args {
 /// # Examples
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// # use aopt::Error;
 /// # use std::ops::Deref;
 /// #
 /// # fn main() -> Result<(), Error> {
 /// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
+/// let mut inv = policy.default_inv();
 /// let mut ser = policy.default_ser();
 ///
 /// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut()?
-///     .entry(0)
+/// inv.entry(0)
 ///     .on(|_: &mut ASet, _: &mut ASer, name: Option<ctx::Name>| {
 ///         assert_eq!(
 ///             "--/bool",
@@ -503,8 +455,7 @@ impl<S: Set> Extract<S> for Args {
 ///         Ok(Some(true))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(1)
+/// inv.entry(1)
 ///     .on(|_: &mut ASet, _: &mut ASer, name: Option<ctx::Name>| {
 ///         assert_eq!(
 ///             "set",
@@ -514,8 +465,7 @@ impl<S: Set> Extract<S> for Args {
 ///         Ok(Some(true))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(2)
+/// inv.entry(2)
 ///     .on(|_: &mut ASet, _: &mut ASer, name: Option<ctx::Name>| {
 ///         assert_eq!(
 ///             "value",
@@ -525,35 +475,25 @@ impl<S: Set> Extract<S> for Args {
 ///         Ok(Some(2i64))
 ///     });
 ///
-/// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
+/// let args = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
 ///
-/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
-/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &true);
-/// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val()?.val::<i64>(2)?, &2);
+/// assert_eq!(set[0].val::<bool>()?, &true);
+/// assert_eq!(set[1].val::<bool>()?, &true);
+/// assert_eq!(set[2].val::<i64>()?, &2);
 /// #
 /// # Ok(())
 /// # }
 /// ```
-#[derive(
-    Debug,
-    Clone,
-    Default,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    serde::Serialize,
-    serde::Deserialize,
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Name(Str);
 
 impl Name {
     pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
         Ok(Self(
-            ctx.name()
+            ctx.name()?
                 .ok_or_else(|| {
                     Error::sp_extract_error(
                         "consider using Option<Name> instead, Name maybe not exist",
@@ -564,10 +504,10 @@ impl Name {
     }
 }
 
-impl<S: Set> Extract<S> for Name {
+impl<Set, Ser> Extract<Set, Ser> for Name {
     type Error = Error;
 
-    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
         Self::extract_ctx(ctx)
     }
 }
@@ -597,20 +537,20 @@ impl Display for Name {
 /// # Examples
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// # use aopt::Error;
 /// # use std::ops::Deref;
 /// #
 /// # fn main() -> Result<(), Error> {
 /// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
+/// let mut inv = policy.default_inv();
 /// let mut ser = policy.default_ser();
 ///
 /// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut()?
-///     .entry(0)
+/// inv.entry(0)
 ///     .on(|_: &mut ASet, _: &mut ASer, style: ctx::Style| {
 ///         assert_eq!(
 ///             &Style::Boolean,
@@ -620,8 +560,7 @@ impl Display for Name {
 ///         Ok(Some(false))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(1)
+/// inv.entry(1)
 ///     .on(|_: &mut ASet, _: &mut ASer, style: ctx::Style| {
 ///         assert_eq!(
 ///             &Style::Cmd,
@@ -631,8 +570,7 @@ impl Display for Name {
 ///         Ok(Some(true))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(2)
+/// inv.entry(2)
 ///     .on(|_: &mut ASet, _: &mut ASer, style: ctx::Style| {
 ///         assert_eq!(
 ///             &Style::Pos,
@@ -642,13 +580,13 @@ impl Display for Name {
 ///         Ok(Some(2i64))
 ///     });
 ///
-/// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
+/// let args = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
 ///
-/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
-/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
-/// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val()?.val::<i64>(2)?, &2);
+/// assert_eq!(set.find_val::<bool>("--/bool")?, &false);
+/// assert_eq!(set.find_val::<bool>("set")?, &true);
+/// assert_eq!(set.find_val::<i64>("pos_2")?, &2);
 /// #
 /// # Ok(())
 /// # }
@@ -657,8 +595,8 @@ impl Display for Name {
 pub struct Style(crate::opt::Style);
 
 impl Style {
-    pub fn extract_ctx(ctx: &Ctx) -> Self {
-        Self(ctx.style())
+    pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
+        Ok(Self(ctx.style()?))
     }
 }
 
@@ -682,11 +620,11 @@ impl Display for Style {
     }
 }
 
-impl<S: Set> Extract<S> for Style {
+impl<Set, Ser> Extract<Set, Ser> for Style {
     type Error = Error;
 
-    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(Self::extract_ctx(ctx))
+    fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
+        Self::extract_ctx(ctx)
     }
 }
 
@@ -695,7 +633,7 @@ impl<S: Set> Extract<S> for Style {
 /// # Examples
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// # use aopt::Error;
 /// # use aopt::RawVal;
 /// # use std::ops::Deref;
@@ -703,13 +641,13 @@ impl<S: Set> Extract<S> for Style {
 /// # fn main() -> Result<(), Error> {
 /// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
+/// let mut inv = policy.default_inv();
 /// let mut ser = policy.default_ser();
 ///
 /// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut()?
-///     .entry(0)
+/// inv.entry(0)
 ///     .on(|_: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal| {
 ///         assert_eq!(
 ///             &RawVal::from("true"),
@@ -719,8 +657,7 @@ impl<S: Set> Extract<S> for Style {
 ///         Ok(Some(false))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(1)
+/// inv.entry(1)
 ///     .on(|_: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal| {
 ///         assert_eq!(
 ///             &RawVal::from("set"),
@@ -730,8 +667,7 @@ impl<S: Set> Extract<S> for Style {
 ///         Ok(Some(true))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(2)
+/// inv.entry(2)
 ///     .on(|_: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal| {
 ///         assert_eq!(
 ///             &RawVal::from("value"),
@@ -741,23 +677,23 @@ impl<S: Set> Extract<S> for Style {
 ///         Ok(Some(2i64))
 ///     });
 ///
-/// let args = Args::new(["--/bool", "set", "value", "foo"].into_iter());
+/// let args = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
 ///
-/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
-/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
-/// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val()?.val::<i64>(2)?, &2);
+/// assert_eq!(set[0].val::<bool>()?, &false);
+/// assert_eq!(set[1].val::<bool>()?, &true);
+/// assert_eq!(set[2].val::<i64>()?, &2);
 /// #
 /// # Ok(())
 /// # }
 /// ```
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct RawVal(Arc<crate::RawVal>);
+pub struct RawVal(ARef<crate::RawVal>);
 
 impl RawVal {
     pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
-        Ok(Self(ctx.arg().ok_or_else(|| {
+        Ok(Self(ctx.arg()?.ok_or_else(|| {
             Error::sp_extract_error("consider using Option<RawVal> instead, RawVal maybe not exist")
         })?))
     }
@@ -775,10 +711,10 @@ impl Deref for RawVal {
     }
 }
 
-impl<S: Set> Extract<S> for RawVal {
+impl<Set, Ser> Extract<Set, Ser> for RawVal {
     type Error = Error;
 
-    fn extract(_set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
         Self::extract_ctx(ctx)
     }
 }
@@ -788,20 +724,20 @@ impl<S: Set> Extract<S> for RawVal {
 /// # Examples
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// # use aopt::Error;
 /// # use std::ops::Deref;
 /// #
 /// # fn main() -> Result<(), Error> {
 /// let mut policy = AFwdPolicy::default();
 /// let mut set = policy.default_set();
+/// let mut inv = policy.default_inv();
 /// let mut ser = policy.default_ser();
 ///
 /// set.add_opt("--/bool=b")?.run()?;
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
-/// ser.ser_invoke_mut()?
-///     .entry(0)
+/// inv.entry(0)
 ///     .on(|_: &mut ASet,  _: &mut ASer,val: ctx::Value<bool>| {
 ///         assert_eq!(
 ///             &true,
@@ -811,8 +747,7 @@ impl<S: Set> Extract<S> for RawVal {
 ///         Ok(Some(false))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(1)
+/// inv.entry(1)
 ///     .on(|_: &mut ASet,  _: &mut ASer,val: ctx::Value<String>| {
 ///         assert_eq!(
 ///             &String::from("set"),
@@ -822,8 +757,7 @@ impl<S: Set> Extract<S> for RawVal {
 ///         Ok(Some(true))
 ///     });
 ///
-/// ser.ser_invoke_mut()?
-///     .entry(2)
+/// inv.entry(2)
 ///     .on(|_: &mut ASet,  _: &mut ASer,val: ctx::Value<i64>| {
 ///         assert_eq!(
 ///             &42,
@@ -833,13 +767,13 @@ impl<S: Set> Extract<S> for RawVal {
 ///         Ok(Some(*val.deref()))
 ///     });
 ///
-/// let args = Args::new(["--/bool", "set", "42", "foo"].into_iter());
+/// let args = Args::from_array(["app", "--/bool", "set", "42", "foo"]);
 ///
-/// policy.parse(&mut set, &mut ser, Arc::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
-/// assert_eq!(ser.ser_val()?.val::<bool>(0)?, &false);
-/// assert_eq!(ser.ser_val()?.val::<bool>(1)?, &true);
-/// assert_eq!(ser.ser_val()?.val::<i64>(2)?, &42);
+/// assert_eq!(set.find_val::<bool>("--/bool")?, &false);
+/// assert_eq!(set.find_val::<bool>("set")?, &true);
+/// assert_eq!(set.find_val::<i64>("pos_2")?, &42);
 /// #
 /// # Ok(())
 /// # }
@@ -922,15 +856,15 @@ impl<T> DerefMut for Value<T> {
     }
 }
 
-impl<S: Set, T: RawValParser<SetOpt<S>>> Extract<S> for Value<T> {
+impl<Set: crate::set::Set, Ser, T: RawValParser> Extract<Set, Ser> for Value<T> {
     type Error = Error;
 
-    fn extract(set: &S, _ser: &Services, ctx: &Ctx) -> Result<Self, Self::Error> {
-        let arg = ctx.arg();
+    fn extract(_: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
+        let arg = ctx.arg()?;
         let arg = arg.as_ref().map(|v| v.as_ref());
-        let uid = ctx.uid();
+        let uid = ctx.uid()?;
 
-        Ok(Value(T::parse(set.opt(uid)?, arg, ctx).map_err(|e| {
+        Ok(Value(T::parse(arg, ctx).map_err(|e| {
             Error::sp_extract_error(format!(
                 "failed parsing raw value of {{{}}}: {}",
                 uid,
@@ -940,9 +874,10 @@ impl<S: Set, T: RawValParser<SetOpt<S>>> Extract<S> for Value<T> {
     }
 }
 
-impl<T> Serialize for Value<T>
+#[cfg(feature = "serde")]
+impl<T> serde::Serialize for Value<T>
 where
-    T: Serialize,
+    T: serde::Serialize,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -952,9 +887,10 @@ where
     }
 }
 
-impl<'de, T> Deserialize<'de> for Value<T>
+#[cfg(feature = "serde")]
+impl<'de, T> serde::Deserialize<'de> for Value<T>
 where
-    T: Deserialize<'de>,
+    T: serde::Deserialize<'de>,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

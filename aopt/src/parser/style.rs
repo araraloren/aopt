@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use std::ops::Deref;
 
 use crate::args::Args;
 use crate::args::CLOpt;
@@ -11,7 +12,7 @@ use crate::proc::OptMatch;
 use crate::proc::OptProcess;
 use crate::set::OptValidator;
 use crate::set::Set;
-use crate::Arc;
+use crate::ARef;
 use crate::Error;
 use crate::RawVal;
 use crate::Str;
@@ -45,8 +46,70 @@ pub enum UserStyle {
 
     /// Option set style like `--bool`, only support boolean option.
     Boolean,
+}
 
-    Custom(u64),
+pub trait UserStyleManager {
+    fn style_manager(&self) -> &OptStyleManager;
+
+    fn style_manager_mut(&mut self) -> &mut OptStyleManager;
+}
+
+/// Manage the support option set style[`UserStyle`].
+#[derive(Debug, Clone)]
+pub struct OptStyleManager {
+    styles: Vec<UserStyle>,
+}
+
+impl Default for OptStyleManager {
+    fn default() -> Self {
+        Self {
+            styles: vec![
+                UserStyle::EqualWithValue,
+                UserStyle::Argument,
+                UserStyle::Boolean,
+                UserStyle::EmbeddedValue,
+            ],
+        }
+    }
+}
+
+impl OptStyleManager {
+    pub fn with(mut self, styles: Vec<UserStyle>) -> Self {
+        self.styles = styles;
+        self
+    }
+
+    pub fn set(&mut self, styles: Vec<UserStyle>) -> &mut Self {
+        self.styles = styles;
+        self
+    }
+
+    pub fn remove(&mut self, style: UserStyle) -> &mut Self {
+        if let Some((index, _)) = self.styles.iter().enumerate().find(|v| v.1 == &style) {
+            self.styles.remove(index);
+        }
+        self
+    }
+
+    pub fn insert(&mut self, index: usize, style: UserStyle) -> &mut Self {
+        self.styles.insert(index, style);
+        self
+    }
+
+    pub fn push(&mut self, style: UserStyle) -> &mut Self {
+        if !self.styles.iter().any(|v| v == &style) {
+            self.styles.push(style);
+        }
+        self
+    }
+}
+
+impl Deref for OptStyleManager {
+    type Target = Vec<UserStyle>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.styles
+    }
 }
 
 pub trait Guess {
@@ -67,13 +130,14 @@ pub fn valueof(name: &str, value: &Option<Str>) -> Result<Str, Error> {
     Ok(string.clone())
 }
 
+/// Guess configuration for option.
 #[derive(Debug)]
 pub struct GuessOptCfg<'a, T: OptValidator> {
     pub idx: usize,
 
     pub len: usize,
 
-    pub arg: Option<Arc<RawVal>>,
+    pub arg: Option<ARef<RawVal>>,
 
     pub clopt: &'a CLOpt,
 
@@ -84,7 +148,7 @@ impl<'a, T: OptValidator> GuessOptCfg<'a, T> {
     pub fn new(
         idx: usize,
         len: usize,
-        arg: Option<Arc<RawVal>>,
+        arg: Option<ARef<RawVal>>,
         clopt: &'a CLOpt,
         opt_validator: &'a T,
     ) -> Self {
@@ -105,7 +169,7 @@ impl<'a, T: OptValidator> GuessOptCfg<'a, T> {
         self.len
     }
 
-    pub fn arg(&self) -> Option<&Arc<RawVal>> {
+    pub fn arg(&self) -> Option<&ARef<RawVal>> {
         self.arg.as_ref()
     }
 
@@ -128,7 +192,7 @@ impl<'a, S, T> OptGuess<'a, S, T> {
         Self(PhantomData::default())
     }
 
-    fn bool2str(value: bool) -> Arc<RawVal> {
+    fn bool2str(value: bool) -> ARef<RawVal> {
         if value {
             RawVal::from(BOOL_TRUE).into()
         } else {
@@ -291,14 +355,15 @@ where
     }
 }
 
+/// Guess configuration for NOA.
 pub struct GuessNOACfg {
     index: usize,
     total: usize,
-    args: Arc<Args>,
+    args: ARef<Args>,
 }
 
 impl GuessNOACfg {
-    pub fn new(args: Arc<Args>, index: usize, total: usize) -> Self {
+    pub fn new(args: ARef<Args>, index: usize, total: usize) -> Self {
         Self { args, index, total }
     }
 
@@ -343,11 +408,7 @@ where
         let args = cfg.args.clone();
         let pos = cfg.idx();
         let count = cfg.total();
-        let name = (pos > 0)
-            .then(|| args.get(pos.saturating_sub(1)))
-            .flatten()
-            .and_then(|v| v.get_str())
-            .map(Str::from);
+        let name = args.get(pos).and_then(|v| v.get_str()).map(Str::from);
 
         match style {
             UserStyle::Main => {

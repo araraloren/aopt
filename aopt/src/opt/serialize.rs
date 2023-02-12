@@ -5,7 +5,8 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 
 use crate::ctx::Ctx;
-use crate::opt::RawValParser;
+use crate::value::raw2str;
+use crate::value::RawValParser;
 use crate::Error;
 
 pub trait Serialize
@@ -106,24 +107,14 @@ impl<T> DerefMut for Serde<T> {
     }
 }
 
-impl<Opt, T> RawValParser<Opt> for Serde<T>
+impl<T> RawValParser for Serde<T>
 where
     T: for<'a> Deserialize<'a>,
-    Opt: crate::opt::Opt,
 {
     type Error = Error;
 
-    fn parse(opt: &Opt, val: Option<&crate::RawVal>, _: &Ctx) -> Result<Self, Self::Error> {
-        let name = opt.name().as_str();
-        let string = val
-            .ok_or_else(|| Error::sp_missing_argument(name))?
-            .get_str()
-            .ok_or_else(|| {
-                Error::sp_invalid_option_value(
-                    name,
-                    "Can't deserialize string to value: invalid utf8",
-                )
-            })?;
+    fn parse(val: Option<&crate::RawVal>, _: &Ctx) -> Result<Self, Self::Error> {
+        let string = raw2str(val)?;
 
         Ok(Serde(T::deserialize_from(string).map_err(|e| e.into())?))
     }

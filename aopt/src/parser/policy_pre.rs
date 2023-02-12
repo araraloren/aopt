@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
+use super::process::ProcessCtx;
 use super::process_non_opt;
 use super::process_opt;
 use super::Guess;
@@ -8,48 +9,65 @@ use super::GuessNOACfg;
 use super::GuessOptCfg;
 use super::NOAGuess;
 use super::OptGuess;
+use super::OptStyleManager;
 use super::Policy;
 use super::ReturnVal;
+use super::SetChecker;
 use super::UserStyle;
+use super::UserStyleManager;
 use crate::args::ArgParser;
 use crate::args::Args;
 use crate::ctx::Ctx;
-use crate::ext::ServicesExt;
+use crate::ctx::Invoker;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::proc::Process;
-use crate::ser::Services;
-use crate::set::Ctor;
 use crate::set::OptValidator;
-use crate::set::Set;
-use crate::Arc;
+use crate::set::SetOpt;
+use crate::ARef;
 use crate::Error;
 
-/// [`PrePolicy`] matching the command line arguments with [`Opt`] in the [`Set`].
+/// [`PrePolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
 /// [`PrePolicy`] will skip any special [`Error`] during [`parse`](Policy::parse) process.
-/// [`PrePolicy`] will return the left `NOA`s after parsing.
+/// [`PrePolicy`] will return Some([`ReturnVal`]) if match successful.
 /// [`PrePolicy`] don't consume the `NOA` when process [`NOAMatch`](crate::proc::NOAMatch).
 ///
 /// # Example
 /// ```rust
 /// # use aopt::getopt;
 /// # use aopt::prelude::*;
-/// # use aopt::Arc;
+/// # use aopt::ARef;
 /// # use aopt::Error;
 /// # use std::ops::Deref;
 /// #
 /// # fn main() -> Result<(), Error> {
-/// let parser = AFwdParser::default();
+/// let mut parser = AFwdParser::default();
 /// let mut cfg_loader = APreParser::default();
 ///
-/// cfg_loader.set_usrval(parser)?;
+/// parser
+///     .add_opt("-check=s")?
+///     .on(|set: &mut ASet, _: &mut ASer, ext: ctx::Value<String>| {
+///         let mut found = false;
+///
+///         for name in ["-c", "-cxx"] {
+///             if let Some(opt) = set.find(name)? {
+///                 if let Ok(file) = opt.vals::<String>() {
+///                     if file.contains(ext.deref()) {
+///                         found = true;
+///                     }
+///                 }
+///             }
+///         }
+///         Ok(Some(found))
+///     })?;
+/// cfg_loader.set_app_data(parser)?;
 /// cfg_loader.add_opt("--load=s")?.on(
 ///     |_: &mut ASet, ser: &mut ASer, mut cfg: ctx::Value<String>| {
-///         let parser = ser.sve_usrval_mut::<AFwdParser>()?;
+///         let parser = ser.sve_val_mut::<AFwdParser>()?;
 ///
 ///         match cfg.as_str() {
 ///             "cxx" => {
-///                 parser.add_opt("-cxx=s")?.set_values(
+///                 parser.add_opt_i::<String>("-cxx")?.set_values(
 ///                     ["cxx", "cpp", "c++", "cc", "hpp", "hxx", "h"]
 ///                         .map(|v| v.to_owned())
 ///                         .to_vec(),
@@ -58,7 +76,7 @@ use crate::Error;
 ///             "c" => {
 ///                 parser
 ///                     .add_opt("-c=s")?
-///                     .set_values(["c", "h"].map(|v| v.to_owned()).to_vec());
+///                     .set_values_t(["c", "h"].map(|v| v.to_owned()).to_vec());
 ///             }
 ///             _ => {
 ///                 panic!("Unknow configuration name")
@@ -69,28 +87,28 @@ use crate::Error;
 ///     },
 /// )?;
 ///
-/// getopt!(["--load", "cxx", "-check", "cc"].into_iter(), &mut cfg_loader)?;
+/// let ret = getopt!(
+///     Args::from_array(["--load", "cxx", "-check", "cc"]),
+///     &mut cfg_loader
+/// )?;
+/// let next_args = ret.unwrap().ret.clone_args();
+/// let mut parser = cfg_loader.service_mut().sve_take_val::<AFwdParser>()?;
 ///
-/// let mut parser = cfg_loader.service_mut().sve_take_usrval::<AFwdParser>()?;
+/// getopt!(Args::from_vec(next_args), &mut parser)?;
 ///
-/// parser
-///     .add_opt("-check=s")?
-///     .on(|set: &mut ASet, ser: &mut ASer, ext: ctx::Value<String>| {
-///         let mut found = false;
+/// assert!(*parser.find_val::<bool>("-check")?);
 ///
-///         for name in ["-c", "-cxx"] {
-///             if let Some(opt) = set.find(name)? {
-///                 if let Ok(file) = ser.sve_vals::<String>(opt.uid()) {
-///                     if file.contains(ext.deref()) {
-///                         found = true;
-///                     }
-///                 }
-///             }
-///         }
-///         Ok(Some(found))
-///     })?;
+/// // pass the parser to AppService
+/// cfg_loader.set_app_data(parser)?;
 ///
-/// getopt!(cfg_loader.take_retval().unwrap().take_args().into_iter(), &mut parser)?;
+/// let ret = getopt!(
+///     Args::from_array(["--load", "c", "-check", "c"]),
+///     &mut cfg_loader
+/// )?;
+/// let next_args = ret.unwrap().ret.clone_args();
+/// let mut parser = cfg_loader.service_mut().sve_take_val::<AFwdParser>()?;
+///
+/// getopt!(Args::from_vec(next_args), &mut parser)?;
 ///
 /// assert!(*parser.find_val::<bool>("-check")?);
 /// #
@@ -98,25 +116,34 @@ use crate::Error;
 /// # }
 /// ```
 #[derive(Debug, Clone)]
-pub struct PrePolicy<S> {
+pub struct PrePolicy<Set, Ser> {
     strict: bool,
 
-    marker_s: PhantomData<S>,
+    style_manager: OptStyleManager,
+
+    checker: SetChecker<Set>,
+
+    marker_s: PhantomData<(Set, Ser)>,
 }
 
-impl<S> Default for PrePolicy<S> {
+impl<Set, Ser> Default for PrePolicy<Set, Ser> {
     fn default() -> Self {
         Self {
             strict: false,
-
+            style_manager: OptStyleManager::default(),
+            checker: SetChecker::default(),
             marker_s: PhantomData::default(),
         }
     }
 }
 
-impl<S> PrePolicy<S> {
-    pub fn new() -> Self {
-        Self { ..Self::default() }
+impl<Set, Ser> PrePolicy<Set, Ser> {
+    pub fn new(strict: bool, styles: OptStyleManager) -> Self {
+        Self {
+            strict,
+            style_manager: styles,
+            ..Self::default()
+        }
     }
 
     /// In strict mode, if an argument looks like an option (it matched any option prefix),
@@ -126,13 +153,27 @@ impl<S> PrePolicy<S> {
         self
     }
 
+    pub fn with_styles(mut self, styles: Vec<UserStyle>) -> Self {
+        self.style_manager.set(styles);
+        self
+    }
+
     pub fn set_strict(&mut self, strict: bool) -> &mut Self {
         self.strict = strict;
         self
     }
 
-    pub fn get_strict(&self) -> bool {
+    pub fn set_styles(&mut self, styles: Vec<UserStyle>) -> &mut Self {
+        self.style_manager.set(styles);
+        self
+    }
+
+    pub fn strict(&self) -> bool {
         self.strict
+    }
+
+    pub fn checker(&self) -> &SetChecker<Set> {
+        &self.checker
     }
 
     /// Ignore failure when parsing.
@@ -149,50 +190,56 @@ impl<S> PrePolicy<S> {
         }
     }
 
-    /// Return the NOA index base on 1.
-    pub fn noa_idx(idx: usize) -> usize {
-        idx + 1
+    pub(crate) fn noa_cmd() -> usize {
+        1
+    }
+
+    pub(crate) fn noa_main() -> usize {
+        0
+    }
+
+    pub(crate) fn noa_pos(idx: usize) -> usize {
+        idx
     }
 }
 
-impl<S> Policy for PrePolicy<S>
+impl<Set, Ser> UserStyleManager for PrePolicy<Set, Ser> {
+    fn style_manager(&self) -> &OptStyleManager {
+        &self.style_manager
+    }
+
+    fn style_manager_mut(&mut self) -> &mut OptStyleManager {
+        &mut self.style_manager
+    }
+}
+
+impl<Set, Ser> PrePolicy<Set, Ser>
 where
-    <S::Ctor as Ctor>::Opt: Opt,
-    S: Set + OptParser + OptValidator + Debug + 'static,
+    SetOpt<Set>: Opt,
+    Ser: 'static,
+    Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
 {
-    type Ret = ReturnVal;
-
-    type Set = S;
-
-    type Error = Error;
-
-    fn parse(
+    pub(crate) fn parse_impl(
         &mut self,
-        set: &mut Self::Set,
-        ser: &mut Services,
-        args: Arc<Args>,
-    ) -> Result<Option<Self::Ret>, Self::Error> {
-        Self::ig_failure(ser.ser_check()?.pre_check(set))?;
+        ctx: &mut Ctx,
+        set: &mut <Self as Policy>::Set,
+        inv: &mut <Self as Policy>::Inv,
+        ser: &mut <Self as Policy>::Ser,
+    ) -> Result<(), <Self as Policy>::Error> {
+        Self::ig_failure(self.checker().pre_check(set))?;
 
-        let opt_styles = [
-            UserStyle::EqualWithValue,
-            UserStyle::Argument,
-            UserStyle::Boolean,
-            UserStyle::CombinedOption,
-            UserStyle::EmbeddedValue,
-        ];
+        let opt_styles = &self.style_manager;
+        let args = ctx.orig_args().clone();
         let args_len = args.len();
         let mut noa_args = Args::default();
         let mut iter = args.guess_iter().enumerate();
-        let mut opt_ctx = Ctx::default();
 
-        opt_ctx.set_args(args.clone()).set_total(args_len);
-
+        ctx.set_args(args.clone());
         while let Some((idx, (opt, arg))) = iter.next() {
             let mut matched = false;
             let mut consume = false;
             let mut like_opt = false;
-            let arg = arg.map(|v| Arc::new(v.clone()));
+            let arg = arg.map(|v| ARef::new(v.clone()));
 
             if let Ok(clopt) = opt.parse_arg() {
                 if let Some(name) = clopt.name() {
@@ -208,16 +255,24 @@ where
                                 ))?;
 
                                 if let Some(Some(mut proc)) = ret {
-                                    opt_ctx.set_idx(idx);
-                                    if Self::ig_failure(process_opt::<S>(
-                                        &opt_ctx, set, ser, &mut proc, true,
+                                    if Self::ig_failure(process_opt(
+                                        ProcessCtx {
+                                            idx,
+                                            ctx,
+                                            set,
+                                            inv,
+                                            ser,
+                                            tot: args_len,
+                                        },
+                                        &mut proc,
+                                        true,
                                     ))?
                                     .is_some()
                                     {
-                                        if proc.is_mat() {
+                                        if proc.status() {
                                             matched = true;
                                         }
-                                        if proc.consume() {
+                                        if proc.is_consume() {
                                             consume = true;
                                         }
                                         if matched {
@@ -234,73 +289,138 @@ where
             // if consume the argument, skip it
             if matched && consume {
                 iter.next();
-            } else if !matched && !self.get_strict() || !like_opt {
+            } else if !matched && !self.strict() || !like_opt {
                 // add it to NOA if current argument not matched
                 // and not in strict mode or the argument not like an option
                 noa_args.push(args[idx].clone());
             }
         }
 
-        Self::ig_failure(ser.ser_check()?.opt_check(set))?;
+        Self::ig_failure(self.checker().opt_check(set))?;
 
-        let ret = noa_args.clone();
-        let noa_args = Arc::new(noa_args);
+        let noa_args = ARef::new(noa_args);
         let noa_len = noa_args.len();
-        let mut noa_ctx = Ctx::default();
 
-        noa_ctx.set_args(noa_args.clone()).set_total(noa_args.len());
-
-        if noa_args.len() > 0 {
+        ctx.set_args(noa_args.clone());
+        if noa_len > 0 {
             if let Some(Some(mut proc)) = Self::ig_failure(NOAGuess::new().guess(
                 &UserStyle::Cmd,
-                GuessNOACfg::new(noa_args.clone(), Self::noa_idx(0), noa_len),
+                GuessNOACfg::new(noa_args.clone(), Self::noa_cmd(), noa_len),
             ))? {
-                noa_ctx.set_idx(Self::noa_idx(0));
-                Self::ig_failure(process_non_opt::<S>(&noa_ctx, set, ser, &mut proc))?;
+                Self::ig_failure(process_non_opt(
+                    ProcessCtx {
+                        ctx,
+                        set,
+                        inv,
+                        ser,
+                        tot: noa_len,
+                        idx: Self::noa_cmd(),
+                    },
+                    &mut proc,
+                ))?;
             }
 
-            Self::ig_failure(ser.ser_check()?.cmd_check(set))?;
+            Self::ig_failure(self.checker().cmd_check(set))?;
 
-            for idx in 0..noa_len {
+            for idx in 1..noa_len {
                 if let Some(Some(mut proc)) = Self::ig_failure(NOAGuess::new().guess(
                     &UserStyle::Pos,
-                    GuessNOACfg::new(noa_args.clone(), Self::noa_idx(idx), noa_len),
+                    GuessNOACfg::new(noa_args.clone(), Self::noa_pos(idx), noa_len),
                 ))? {
-                    noa_ctx.set_idx(Self::noa_idx(idx));
-                    Self::ig_failure(process_non_opt::<S>(&noa_ctx, set, ser, &mut proc))?;
+                    Self::ig_failure(process_non_opt(
+                        ProcessCtx {
+                            ctx,
+                            set,
+                            inv,
+                            ser,
+                            tot: noa_len,
+                            idx: Self::noa_pos(idx),
+                        },
+                        &mut proc,
+                    ))?;
                 }
             }
         } else {
-            Self::ig_failure(ser.ser_check()?.cmd_check(set))?;
+            Self::ig_failure(self.checker().cmd_check(set))?;
         }
 
-        Self::ig_failure(ser.ser_check()?.pos_check(set))?;
+        Self::ig_failure(self.checker().pos_check(set))?;
 
         let main_args = noa_args;
-        let mut main_ctx = noa_ctx;
+        let main_len = main_args.len();
 
         // set 0 for Main's index
-        main_ctx.set_idx(0);
-
-        if let Some(Some(mut proc)) = Self::ig_failure(
-            NOAGuess::new().guess(&UserStyle::Main, GuessNOACfg::new(main_args, 0, noa_len)),
-        )? {
-            Self::ig_failure(process_non_opt::<S>(&main_ctx, set, ser, &mut proc))?;
+        if let Some(Some(mut proc)) = Self::ig_failure(NOAGuess::new().guess(
+            &UserStyle::Main,
+            GuessNOACfg::new(main_args, Self::noa_main(), noa_len),
+        ))? {
+            Self::ig_failure(process_non_opt(
+                ProcessCtx {
+                    ctx,
+                    set,
+                    inv,
+                    ser,
+                    tot: main_len,
+                    idx: Self::noa_main(),
+                },
+                &mut proc,
+            ))?;
         }
 
-        Self::ig_failure(ser.ser_check()?.post_check(set))?;
+        Self::ig_failure(self.checker().post_check(set))?;
 
-        Ok(Some(ReturnVal::new(ret.into_inner(), true)))
+        Ok(())
+    }
+}
+
+impl<Set, Ser> Policy for PrePolicy<Set, Ser>
+where
+    SetOpt<Set>: Opt,
+    Ser: 'static,
+    Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
+{
+    type Ret = ReturnVal;
+
+    type Set = Set;
+
+    type Inv = Invoker<Set, Ser>;
+
+    type Ser = Ser;
+
+    type Error = Error;
+
+    fn parse(
+        &mut self,
+        set: &mut Self::Set,
+        inv: &mut Self::Inv,
+        ser: &mut Self::Ser,
+        args: ARef<Args>,
+    ) -> Result<Self::Ret, Self::Error> {
+        let mut ctx = Ctx::default().with_orig_args(args.clone()).with_args(args);
+
+        match self.parse_impl(&mut ctx, set, inv, ser) {
+            Ok(_) => Ok(ReturnVal::new(ctx)),
+            Err(e) => {
+                if e.is_failure() {
+                    Ok(ReturnVal::new(ctx).with_failure(e))
+                } else {
+                    Err(e)
+                }
+            }
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
 
+    use std::any::TypeId;
     use std::ops::Deref;
 
+    use crate::opt::Cmd;
+    use crate::opt::Pos;
     use crate::prelude::*;
-    use crate::Arc;
+    use crate::ARef;
     use crate::Error;
     use crate::RawVal;
 
@@ -311,14 +431,13 @@ mod test {
 
     fn testing_1_main() -> Result<(), Error> {
         fn check_opt_val<T: std::fmt::Debug + PartialEq + ErasedTy + 'static>(
-            ser: &mut ASer,
             opt: &AOpt,
             uid: Uid,
             name: &str,
             vals: Option<Vec<T>>,
             force: bool,
             action: &Action,
-            assoc: &Assoc,
+            type_id: &TypeId,
             index: Option<&Index>,
             alias: Option<Vec<&str>>,
         ) -> Result<(), Error> {
@@ -334,9 +453,15 @@ mod test {
                 force
             );
             assert_eq!(opt.action(), action, "action not equal for {}", opt_uid);
-            assert_eq!(opt.assoc(), assoc, "assoc not equal for {}", opt_uid);
-            assert_eq!(opt.idx(), index, "option index not equal: {:?}", index);
-            if let Ok(opt_vals) = ser.sve_vals::<T>(opt_uid) {
+            assert_eq!(
+                opt.r#type(),
+                type_id,
+                "type_id not equal for {}({})",
+                opt_uid,
+                opt.name(),
+            );
+            assert_eq!(opt.index(), index, "option index not equal: {:?}", index);
+            if let Ok(opt_vals) = opt.vals::<T>() {
                 if let Some(vals) = vals {
                     assert_eq!(
                         opt_vals.len(),
@@ -377,77 +502,56 @@ mod test {
             Ok(())
         }
 
-        fn string_collection_validator(vals: Vec<&'static str>) -> ValValidator {
-            ValValidator::new(
-                move |_: &str, val: Option<&RawVal>, _: (usize, usize)| -> Result<bool, Error> {
-                    Ok(val
-                        .map(|v| v.get_str())
-                        .flatten()
-                        .map(|v| vals.contains(&v))
-                        .unwrap_or_default())
-                },
-            )
-        }
-
-        fn index_validator(idxs: Vec<usize>) -> ValValidator {
-            ValValidator::new(
-                move |_: &str, _: Option<&RawVal>, idx: (usize, usize)| -> Result<bool, Error> {
-                    Ok(idxs.contains(&idx.0))
-                },
-            )
-        }
-
         let mut policy = APrePolicy::default();
         let mut set = policy.default_set();
+        let mut inv = policy.default_inv();
         let mut ser = policy.default_ser();
-        let args = Args::new(
-            [
-                "--copt",
-                "--iopt=63",
-                "--/dopt",
-                "set", // 1
-                "--iopt",
-                "-42",
-                "+eopt",
-                "-/fopt",
-                "8",       // 2
-                "16",      // 3
-                "average", // 4
-                "--りょう",
-                "88",
-                "--jopt",
-                "2",
-                "--iopt-alias1",
-                "0",
-                "--nopt=8.99",
-                "--hopt",
-                "48",
-                "--qopt=cpp",
-                "--alias-k=4",
-                "-l2.79",
-                "--nopt",
-                "3.12",
-                "--开关",
-                "-olily",
-                "program",  // 5
-                "software", // 6
-                "反转",   //7
-                "--值=恍恍惚惚",
-                "--qopt",
-                "rust",
-                "翻转", // 8
-                "left",
-                "--wopt=98",
-                "剩余的",
-                "--ropt=23",
-                "-r",
-                "--s我的",
-            ]
-            .into_iter(),
-        );
+        let args = Args::from_array([
+            "app", // 0
+            "--copt",
+            "--iopt=63",
+            "--/dopt",
+            "set", // 1
+            "--iopt",
+            "-42",
+            "+eopt",
+            "-/fopt",
+            "8",       // 2
+            "16",      // 3
+            "average", // 4
+            "--りょう",
+            "88",
+            "--jopt",
+            "2",
+            "--iopt-alias1",
+            "0",
+            "--nopt=8.99",
+            "--hopt",
+            "48",
+            "--qopt=cpp",
+            "--alias-k=4",
+            "-l2.79",
+            "--nopt",
+            "3.12",
+            "--开关",
+            "-olily",
+            "program",  // 5
+            "software", // 6
+            "反转",   //7
+            "--值=恍恍惚惚",
+            "--qopt",
+            "rust",
+            "翻转", // 8
+            "left",
+            "--wopt=98",
+            "剩余的",
+            "--ropt=23",
+            "-r",
+            "--s我的",
+        ]);
 
+        // add '+' to the prefix validator
         set.validator_mut().add_prefix("+");
-
         // 5
         set.add_opt("--aopt=b")?;
         set.add_opt("--/bopt=b")?.run()?;
@@ -459,11 +563,10 @@ mod test {
         // 8
         set.add_opt("--gopt=i")?.run()?;
         set.add_opt("--hopt=i!")?.run()?;
-        ser.ser_invoke_mut()?
-            .entry(set.add_opt("--iopt=i")?.add_alias("--iopt-alias1").run()?)
-            .on(|set: &mut ASet, ser: &mut ASer, val: ctx::Value<i64>| {
+        inv.entry(set.add_opt("--iopt=i")?.add_alias("--iopt-alias1").run()?)
+            .on(|set: &mut ASet, _: &mut ASer, val: ctx::Value<i64>| {
                 assert_eq!(
-                    ser.sve_val::<i64>(set["--hopt"].uid()).ok(),
+                    set["--hopt"].val::<i64>().ok(),
                     None,
                     "Option can set in any order, not access it in option"
                 );
@@ -479,30 +582,29 @@ mod test {
 
         // 13
         set.add_opt("--lopt=f!")?.add_alias("-l").run()?;
-        set.add_opt("--mopt=f")?.set_value(1.02f64).run()?;
+        set.add_opt("--mopt=f")?.set_value_t(1.02f64).run()?;
         set.add_opt("--nopt=f")?.set_action(Action::Set).run()?;
 
         // 16
         set.add_opt("--oopt=s!")?.add_alias("-o");
         set.add_opt("--popt=s")?.run()?;
-        ser.ser_invoke_mut()?
-            .entry(set.add_opt("--qopt=s")?.run()?)
+        inv.entry(set.add_opt("--qopt=s")?.run()?)
             .on(|_: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>| Ok(Some(val.take())))
             .then(
                 |uid: Uid,
                  set: &mut ASet,
-                 ser: &mut ASer,
+                 _: &mut ASer,
                  raw: Option<&RawVal>,
                  val: Option<String>| {
                     if let Some(val) = val {
                         // let's put the value to `popt`
-                        ser.ser_val_mut()?.push(set["--popt"].uid(), val);
+                        set["--popt"].accessor_mut().push(val);
                         if let Some(raw) = raw {
-                            ser.ser_rawval_mut()?.push(uid, raw.clone());
+                            set[uid].rawvals_mut()?.push(raw.clone());
                         }
-                        Ok(Some(()))
+                        Ok(true)
                     } else {
-                        Ok(None)
+                        Ok(false)
                     }
                 },
             );
@@ -514,21 +616,19 @@ mod test {
         set.add_opt("test_cmd=c")?;
 
         let set_uid = set.add_opt("set=c")?.run()?;
-        let bpos_uid = set.add_opt("bpos=p@[2,3]")?.set_assoc(Assoc::Uint).run()?;
+        let bpos_uid = set
+            .add_opt("bpos=p@[2,3]")?
+            .set_pos_type_only::<u64>()
+            .run()?;
         let cpos_uid = set
-            .add_opt("cpos=p@4..5")?
-            .set_validator(string_collection_validator(vec!["average", "plus"]))
+            .add_opt_i::<Pos<String>>("cpos@4..5")?
+            .set_validator(ValValidator::contains2(vec!["average", "plus"]))
             .run()?;
-        let dpos_uid = set
-            .add_opt("dpos=p@..7")?
-            .set_validator(index_validator(vec![5, 6]))
-            .set_action(Action::Set)
-            .run()?;
+        let dpos_uid = set.add_opt("dpos=p@5..7")?.set_action(Action::Set).run()?;
         let epos_uid = set.add_opt("epos=p@7..9")?.run()?;
 
-        ser.ser_invoke_mut::<ASet>()?
-            .entry(set.add_opt("main=m")?.run()?)
-            .on(move |set: &mut ASet, ser: &mut Services, idx: ctx::Index| {
+        inv.entry(set.add_opt("main=m")?.run()?).on(
+            move |set: &mut ASet, _: &mut ASer, idx: ctx::Index, name: ctx::Name| {
                 let copt = &set["--copt"];
                 let dopt = &set["--/dopt"];
                 let bpos = &set["bpos"];
@@ -537,119 +637,112 @@ mod test {
                 let epos = &set["epos"];
 
                 assert_eq!(idx.deref(), &0);
+                assert_eq!(name.deref(), "app");
                 check_opt_val::<String>(
-                    ser,
                     epos,
                     epos_uid,
                     "epos",
                     Some(vec!["反转".to_owned(), "翻转".to_owned()]),
                     false,
                     &Action::App,
-                    &Assoc::Noa,
-                    Some(&Index::Range(7, 9)),
+                    &TypeId::of::<Pos>(),
+                    Some(&Index::Range(7, Some(9))),
                     None,
                 )?;
                 check_opt_val::<String>(
-                    ser,
                     dpos,
                     dpos_uid,
                     "dpos",
                     Some(vec!["program -- software".to_owned()]),
                     false,
                     &Action::Set,
-                    &Assoc::Noa,
-                    Some(&Index::Range(0, 7)),
+                    &TypeId::of::<Pos>(),
+                    Some(&Index::Range(5, Some(7))),
                     None,
                 )?;
                 check_opt_val(
-                    ser,
                     cpos,
                     cpos_uid,
                     "cpos",
                     Some(vec![2.31]),
                     false,
                     &Action::App,
-                    &Assoc::Noa,
-                    Some(&Index::Range(4, 5)),
+                    &TypeId::of::<Pos<String>>(),
+                    Some(&Index::Range(4, Some(5))),
                     None,
                 )?;
                 check_opt_val::<u64>(
-                    ser,
                     bpos,
                     bpos_uid,
                     "bpos",
                     Some(vec![32, 64]),
                     false,
                     &Action::App,
-                    &Assoc::Uint,
+                    &TypeId::of::<Pos<u64>>(),
                     Some(&Index::list(vec![2, 3])),
                     None,
                 )?;
                 check_opt_val::<u64>(
-                    ser,
                     copt,
                     2,
                     "--copt",
                     Some(vec![1]),
                     true,
                     &Action::Cnt,
-                    &Assoc::Bool,
+                    &TypeId::of::<bool>(),
                     None,
                     None,
                 )?;
                 check_opt_val(
-                    ser,
                     dopt,
                     3,
                     "--/dopt",
                     Some(vec![true]),
                     true,
                     &Action::Set,
-                    &Assoc::Bool,
+                    &TypeId::of::<bool>(),
                     None,
                     None,
                 )?;
                 Ok(Some(true))
-            });
-        ser.ser_invoke_mut()?.entry(epos_uid).on(
-            |set: &mut ASet, ser: &mut ASer, mut val: ctx::Value<String>, idx: ctx::Index| {
+            },
+        );
+        inv.entry(epos_uid).on(
+            |set: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>, idx: ctx::Index| {
                 let ropt = &set["--开关"];
                 let sopt = &set["--值"];
                 let topt = &set["--りょう"];
 
                 check_opt_val::<i64>(
-                    ser,
                     topt,
                     19,
                     "--りょう",
                     Some(vec![88]),
                     false,
                     &Action::App,
-                    &Assoc::Int,
+                    &TypeId::of::<i64>(),
                     None,
                     None,
                 )?;
                 check_opt_val::<String>(
-                    ser,
                     sopt,
                     18,
                     "--值",
                     Some(vec![String::from("恍恍惚惚")]),
                     false,
                     &Action::App,
-                    &Assoc::Str,
+                    &TypeId::of::<String>(),
                     None,
                     None,
                 )?;
                 check_opt_val(
-                    ser,
                     ropt,
                     17,
                     "--开关",
                     Some(vec![true]),
                     false,
                     &Action::Set,
-                    &Assoc::Bool,
+                    &TypeId::of::<bool>(),
                     None,
                     None,
                 )?;
@@ -657,103 +750,97 @@ mod test {
                 Ok(Some(val.take()))
             },
         );
-        ser.ser_invoke_mut()?.entry(dpos_uid).on(
-            |set: &mut ASet, ser: &mut ASer, mut val: ctx::Value<String>, idx: ctx::Index| {
+        inv.entry(dpos_uid).on(
+            |set: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>, idx: ctx::Index| {
                 let oopt = &set["--oopt"];
                 let popt = &set["--popt"];
                 let qopt = &set["--qopt"];
 
                 check_opt_val::<String>(
-                    ser,
                     qopt,
                     16,
                     "--qopt",
                     None,
                     false,
                     &Action::App,
-                    &Assoc::Str,
+                    &TypeId::of::<String>(),
                     None,
                     None,
                 )?;
                 check_opt_val(
-                    ser,
                     popt,
                     15,
                     "--popt",
                     Some(vec![String::from("cpp"), String::from("rust")]),
                     false,
                     &Action::App,
-                    &Assoc::Str,
+                    &TypeId::of::<String>(),
                     None,
                     None,
                 )?;
                 check_opt_val(
-                    ser,
                     oopt,
                     14,
                     "--oopt",
                     Some(vec![String::from("lily")]),
                     true,
                     &Action::App,
-                    &Assoc::Str,
+                    &TypeId::of::<String>(),
                     None,
-                    Some(vec!["-o"]),
+                    Some(vec![("-o")]),
                 )?;
                 assert!(idx.deref() == &5 || idx.deref() == &6);
-                match ser.sve_val::<String>(set["dpos"].uid()) {
+                match set["dpos"].val::<String>() {
                     Ok(last_val) => Ok(Some(format!("{} -- {}", last_val, val.take()))),
                     Err(_) => Ok(Some(val.take())),
                 }
             },
         );
-        ser.ser_invoke_mut()?.entry(cpos_uid).on(
-            |set: &mut ASet, ser: &mut ASer, val: ctx::Value<String>, idx: ctx::Index| {
+        inv.entry(cpos_uid).on(
+            |set: &mut ASet, _: &mut ASer, val: ctx::Value<String>, idx: ctx::Index| {
                 let lopt = &set["--lopt"];
                 let mopt = &set["--mopt"];
                 let nopt = &set["--nopt"];
 
                 check_opt_val(
-                    ser,
                     nopt,
                     13,
                     "--nopt",
                     Some(vec![3.12]),
                     false,
                     &Action::Set,
-                    &Assoc::Flt,
+                    &TypeId::of::<f64>(),
                     None,
                     None,
                 )?;
                 check_opt_val::<f64>(
-                    ser,
                     mopt,
                     12,
                     "--mopt",
                     Some(vec![1.02]),
                     false,
                     &Action::App,
-                    &Assoc::Flt,
+                    &TypeId::of::<f64>(),
                     None,
                     None,
                 )?;
                 check_opt_val::<f64>(
-                    ser,
                     lopt,
                     11,
                     "--lopt",
                     Some(vec![2.79]),
                     true,
                     &Action::App,
-                    &Assoc::Flt,
+                    &TypeId::of::<f64>(),
                     None,
-                    Some(vec!["-l"]),
+                    Some(vec![("-l")]),
                 )?;
                 assert!(idx.deref() == &4);
 
                 let mut sum = 0.0;
 
                 for uid in [lopt, mopt, nopt].iter().map(|v| v.uid()) {
-                    sum += ser.sve_val::<f64>(uid)?;
+                    sum += set[uid].val::<f64>()?;
                 }
 
                 match val.deref().as_str() {
@@ -763,44 +850,40 @@ mod test {
                 }
             },
         );
-        ser.ser_invoke_mut()?.entry(bpos_uid).on(
-            |set: &mut ASet, ser: &mut ASer, val: ctx::Value<u64>, idx: ctx::Index| {
+        inv.entry(bpos_uid).on(
+            |set: &mut ASet, _: &mut ASer, val: ctx::Value<u64>, idx: ctx::Index| {
                 let jopt = &set["--jopt"];
                 let kopt = &set["--kopt"];
 
                 check_opt_val::<u64>(
-                    ser,
                     jopt,
                     9,
                     "--jopt",
                     Some(vec![2]),
                     false,
                     &Action::App,
-                    &Assoc::Uint,
+                    &TypeId::of::<u64>(),
                     None,
                     None,
                 )?;
                 check_opt_val::<u64>(
-                    ser,
                     kopt,
                     10,
                     "--kopt",
                     Some(vec![4]),
                     false,
                     &Action::Set,
-                    &Assoc::Uint,
+                    &TypeId::of::<u64>(),
                     None,
                     None,
                 )?;
                 assert!(idx.deref() == &2 || idx.deref() == &3);
-                Ok(Some(
-                    val.deref() * ser.sve_val::<u64>(set["--alias-k"].uid())?,
-                ))
+                Ok(Some(val.deref() * set["--alias-k"].val::<u64>()?))
             },
         );
-        ser.ser_invoke_mut()?.entry(set_uid).on(
+        inv.entry(set_uid).on(
             move |set: &mut ASet,
-                  ser: &mut ASer,
+                  _: &mut ASer,
                   uid: ctx::Uid,
                   name: ctx::Name,
                   mut value: ctx::Value<String>| {
@@ -815,99 +898,91 @@ mod test {
 
                 assert_eq!(name.deref(), "set");
                 check_opt_val::<i64>(
-                    ser,
                     iopt,
                     8,
                     "--iopt",
                     Some(vec![84, -21, 21]),
                     false,
                     &Action::App,
-                    &Assoc::Int,
+                    &TypeId::of::<i64>(),
                     None,
-                    Some(vec!["--iopt-alias1"]),
+                    Some(vec![("--iopt-alias1")]),
                 )?;
                 check_opt_val::<i64>(
-                    ser,
                     hopt,
                     7,
                     "--hopt",
                     Some(vec![48]),
                     true,
                     &Action::App,
-                    &Assoc::Int,
+                    &TypeId::of::<i64>(),
                     None,
                     None,
                 )?;
                 check_opt_val::<i64>(
-                    ser,
                     gopt,
                     6,
                     "--gopt",
                     None,
                     false,
                     &Action::App,
-                    &Assoc::Int,
+                    &TypeId::of::<i64>(),
                     None,
                     None,
                 )?;
 
                 check_opt_val(
-                    ser,
                     fopt,
                     5,
                     "--/fopt",
                     Some(vec![true]),
                     false,
                     &Action::Set,
-                    &Assoc::Bool,
+                    &TypeId::of::<bool>(),
                     None,
-                    Some(vec!["-/fopt"]),
+                    Some(vec![("-/fopt")]),
                 )?;
                 check_opt_val(
-                    ser,
                     eopt,
                     4,
                     "--eopt",
                     Some(vec![true]),
                     false,
                     &Action::Set,
-                    &Assoc::Bool,
+                    &TypeId::of::<bool>(),
                     None,
-                    Some(vec!["+eopt"]),
+                    Some(vec![("+eopt")]),
                 )?;
                 check_opt_val(
-                    ser,
                     bopt,
                     1,
                     "--/bopt",
                     Some(vec![false]),
                     false,
                     &Action::Set,
-                    &Assoc::Bool,
+                    &TypeId::of::<bool>(),
                     None,
                     None,
                 )?;
                 check_opt_val(
-                    ser,
                     aopt,
                     0,
                     "--aopt",
                     Some(vec![false]),
                     false,
                     &Action::Set,
-                    &Assoc::Bool,
+                    &TypeId::of::<bool>(),
                     None,
                     None,
                 )?;
                 check_opt_val::<String>(
-                    ser,
                     apos,
                     set_uid,
                     "set",
                     None,
                     true,
                     &Action::Set,
-                    &Assoc::Noa,
+                    &TypeId::of::<Cmd>(),
                     Some(&Index::forward(1)),
                     None,
                 )?;
@@ -915,14 +990,16 @@ mod test {
             },
         );
         for opt in set.iter_mut() {
-            opt.init(&mut ser)?;
+            opt.init()?;
         }
-        let ret = policy.parse(&mut set, &mut ser, Arc::new(args))?;
+        let ret = policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args));
 
-        assert!(ret.is_some());
+        assert!(ret.is_ok());
         let ret = ret.unwrap();
+        let args = ret.args();
 
         for (idx, arg) in [
+            "app",
             "set",
             "8",
             "16",
@@ -941,7 +1018,7 @@ mod test {
         .iter()
         .enumerate()
         {
-            assert_eq!(ret[idx].get_str(), Some(*arg));
+            assert_eq!(args[idx].get_str(), Some(*arg));
         }
         Ok(())
     }

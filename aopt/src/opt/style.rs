@@ -1,13 +1,12 @@
 /// Option style
 ///
 #[non_exhaustive]
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize, Hash,
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Style {
     Null,
 
-    /// The style indicate the `NOA` are set base on position(base on `1` !!!).
+    /// The style indicate the `NOA` are set base on position.
     Pos,
 
     /// The style indicate the `NOA` are set in first position(`@1`).
@@ -24,9 +23,6 @@ pub enum Style {
 
     /// The style indicate option support set multiple option in one string, such as `-ade` means set `-a`, `-d` and `-e`.
     Combined,
-
-    /// Reserve using for user define style option.
-    Reserve(u64),
 }
 
 impl Default for Style {
@@ -58,9 +54,6 @@ impl std::fmt::Display for Style {
             }
             Style::Combined => {
                 write!(f, "Style::Combined")
-            }
-            Style::Reserve(val) => {
-                write!(f, "Style::Reserve({val})")
             }
         }
     }

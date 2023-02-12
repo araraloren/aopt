@@ -57,6 +57,7 @@ impl Display for ErrorStr {
     }
 }
 
+#[derive(Clone)]
 pub enum Error {
     Null,
 
@@ -105,8 +106,12 @@ pub enum Error {
     SpInvalidOptionValue(ErrorStr, ErrorStr),
 
     SpDeactivateStyleError(ErrorStr, bool),
+}
 
-    InvokeError(ErrorStr),
+impl Default for Error {
+    fn default() -> Self {
+        Self::Null
+    }
 }
 
 impl std::fmt::Debug for Error {
@@ -132,6 +137,8 @@ impl Display for Error {
 }
 
 impl Error {
+    /// The error can be moitted if [`is_failure`](Error::is_failure) return true.
+    ///
     pub fn is_failure(&self) -> bool {
         matches!(
             self,
@@ -143,8 +150,11 @@ impl Error {
                 | Error::SpInvalidOptionValue(_, _)
                 | Error::SpDeactivateStyleError(_, _)
                 | Error::SpExtractError(_)
-                | Error::InvokeError(_)
         )
+    }
+
+    pub fn is_null(&self) -> bool {
+        matches!(self, Error::Null)
     }
 
     /// Create Error::CustomError error
@@ -257,14 +267,9 @@ impl Error {
         Self::SpExtractError(t.into())
     }
 
-    /// Create Error::InvokeError error
-    pub fn invoke_error<T: Into<ErrorStr>>(t: T) -> Self {
-        Self::InvokeError(t.into())
-    }
-
     pub fn display(&self) -> String {
         match self {
-            Error::Null => String::default(),
+            Error::Null => "Null".to_owned(),
             Error::Failure(opt) => opt.to_string(),
             Error::CustomError(opt) => opt.to_string(),
             Error::ArgMissingName(opt) => {
@@ -279,8 +284,8 @@ impl Error {
             Error::ConNoPOSIfCMDExists => {
                 "Can not have force required POS if CMD exists.".to_owned()
             }
-            Error::ConOptionTypeError(r#type) => {
-                format!("Not support option type '{type}'.")
+            Error::ConOptionTypeError(value_type) => {
+                format!("Not support option type '{value_type}'.")
             }
             Error::ConDeactivateStyleError(name) => {
                 format!("Option '{name}' not support deactivate style.")
@@ -288,11 +293,13 @@ impl Error {
             Error::ConInvalidName(name, msg) => {
                 format!("Invalid name of option '{name}': {msg}")
             }
-            Error::ConMissingIndex(name, r#type) => {
-                format!("Syntax error! Missing index for option '{name}' with type '{type}'.")
+            Error::ConMissingIndex(name, value_type) => {
+                format!("Syntax error! Missing index for option '{name}' with type '{value_type}'.")
             }
-            Error::ConMissingField(field, name, r#type) => {
-                format!("Syntax error! Missing `{field}` for option '{name}' with type '{type}'.")
+            Error::ConMissingField(field, name, value_type) => {
+                format!(
+                    "Syntax error! Missing `{field}` for option '{name}' with type '{value_type}'."
+                )
             }
             Error::ConOptionAliasError(alias) => {
                 format!("Invalid alias '{alias}', check the option prefix or name.")
@@ -330,7 +337,6 @@ impl Error {
             Error::SpExtractError(msg) => {
                 format!("Extract error: {}", msg)
             }
-            Error::InvokeError(msg) => msg.to_string(),
             Error::ConInvalidIndex(pattern, msg) => {
                 format!("Syntax error, invalid index of '{pattern}': {msg}")
             }

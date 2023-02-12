@@ -1,12 +1,9 @@
-use serde::de::Visitor;
-use serde::Deserialize;
-use serde::Serialize;
 use std::borrow::Cow;
 use std::fmt::Display;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
-use crate::Arc;
+use crate::ARef;
 
 pub fn astr<T: Into<Str>>(value: T) -> Str {
     value.into()
@@ -16,9 +13,9 @@ pub trait StrJoin {
     fn join(&self, sep: &str) -> String;
 }
 
-/// A simple wrapper of [`Arc`](crate::Arc)\<str\>.
+/// A simple wrapper of [`ARef`](crate::ARef)\<str\>.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Str(Arc<str>);
+pub struct Str(ARef<str>);
 
 impl Str {
     pub fn as_str(&self) -> &str {
@@ -40,13 +37,13 @@ impl Default for Str {
 
 impl<'a> From<&'a str> for Str {
     fn from(value: &'a str) -> Self {
-        Str(Arc::from(value))
+        Str(ARef::from(value))
     }
 }
 
 impl From<String> for Str {
     fn from(value: String) -> Self {
-        Str(Arc::from(value))
+        Str(ARef::from(value))
     }
 }
 
@@ -58,12 +55,12 @@ impl<'a> From<&'a Str> for Str {
 
 impl<'a> From<Cow<'a, str>> for Str {
     fn from(value: Cow<'a, str>) -> Self {
-        Self(Arc::from(value))
+        Self(ARef::from(value))
     }
 }
 
 impl Deref for Str {
-    type Target = Arc<str>;
+    type Target = ARef<str>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -106,7 +103,8 @@ impl PartialEq<String> for Str {
     }
 }
 
-impl Serialize for Str {
+#[cfg(feature = "serde")]
+impl serde::Serialize for Str {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -115,9 +113,11 @@ impl Serialize for Str {
     }
 }
 
+#[cfg(feature = "serde")]
 struct StrVisitor;
 
-impl<'de> Visitor<'de> for StrVisitor {
+#[cfg(feature = "serde")]
+impl<'de> serde::de::Visitor<'de> for StrVisitor {
     type Value = Str;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -148,7 +148,8 @@ impl<'de> Visitor<'de> for StrVisitor {
     }
 }
 
-impl<'de> Deserialize<'de> for Str {
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for Str {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
