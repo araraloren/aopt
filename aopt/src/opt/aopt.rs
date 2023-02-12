@@ -35,6 +35,7 @@ use crate::Uid;
 /// | [`usize`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
 /// | [`isize`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
 /// | [`String`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
+/// | [`OsString`](std::ffi::OsString) | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
 /// | [`Cmd`] | [`Action::Set`] | [`false`] | [`Style::Cmd`] | [`Forward(1)`](Index::Forward) | true | true | false |
 /// | [`Pos`] | [`Action::App`] | [`true`] | [`Style::Pos`] | yes | false | false | None |
 /// | [`Main`] | [`Action::Null`] | [`true`] | [`Style::Main`] | [`AnyWhere`](Index::AnyWhere) | false | false | None |

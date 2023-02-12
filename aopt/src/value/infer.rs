@@ -1,3 +1,5 @@
+use std::ffi::OsStr;
+use std::ffi::OsString;
 use std::io::Stdin;
 use std::path::PathBuf;
 
@@ -226,6 +228,7 @@ impl_infer_for!(isize);
 impl_infer_for!(usize);
 impl_infer_for!(String);
 impl_infer_for!(PathBuf);
+impl_infer_for!(OsString);
 
 impl_infer_for!(&'a f64);
 impl_infer_for!(&'a f32);
@@ -247,6 +250,7 @@ impl_infer_for!(&'a isize);
 impl_infer_for!(&'a usize);
 impl_infer_for!(&'a String);
 impl_infer_for!(&'a PathBuf);
+impl_infer_for!(&'a OsString);
 
 impl<'a> Infer for &'a str {
     type Val = String;
@@ -254,6 +258,10 @@ impl<'a> Infer for &'a str {
 
 impl Infer for std::path::Path {
     type Val = PathBuf;
+}
+
+impl<'a> Infer for &'a OsStr {
+    type Val = OsString;
 }
 
 impl Infer for Stdin {

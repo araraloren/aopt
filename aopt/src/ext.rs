@@ -96,6 +96,7 @@ impl APolicyExt<ADelayPolicy> for ADelayPolicy {
 /// * [`Pos`](BuiltInCtor::Pos)
 /// * [`Main`](BuiltInCtor::Main)
 /// * [`Any`](BuiltInCtor::Any)
+/// * [`Raw`](BuiltInCtor::Raw)
 pub fn aset_with_default_creators() -> ASet {
     ASet::default()
         .with_creator(Creator::fallback())
@@ -108,4 +109,5 @@ pub fn aset_with_default_creators() -> ASet {
         .with_creator(Creator::from(BuiltInCtor::Pos))
         .with_creator(Creator::from(BuiltInCtor::Main))
         .with_creator(Creator::from(BuiltInCtor::Any))
+        .with_creator(Creator::from(BuiltInCtor::Raw))
 }

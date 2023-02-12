@@ -1,4 +1,5 @@
 use std::any::TypeId;
+use std::ffi::OsString;
 
 use crate::err::Error;
 use crate::map::ErasedTy;
@@ -668,6 +669,7 @@ where
             BuiltInCtor::Pos => info.set_type::<Pos>(),
             BuiltInCtor::Main => info.set_type::<Main>(),
             BuiltInCtor::Any => info.set_type::<Any>(),
+            BuiltInCtor::Raw => info.set_type::<OsString>(),
         }
     } else {
         info

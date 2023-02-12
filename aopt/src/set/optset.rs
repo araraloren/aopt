@@ -460,6 +460,7 @@ where
 mod test {
 
     use std::any::TypeId;
+    use std::ffi::OsString;
 
     use crate::opt::Cmd;
     use crate::opt::Pos;
@@ -556,7 +557,10 @@ mod test {
             .run()
             .is_ok());
 
-        assert_eq!(set.len(), 47);
+        assert!(set.add_opt("--raw=r")?.run().is_ok());
+        assert!(set.add_opt_i::<OsString>("-raw;--raw-value")?.run().is_ok());
+
+        assert_eq!(set.len(), 49);
         assert!(set.find("s=c")?.is_some());
         assert_eq!(set.find_all("=c")?.count(), 2);
 
@@ -624,7 +628,7 @@ mod test {
         // you can add option with different prefix,
         // but you can't set it if validator not support it
         assert!(set.add_opt_i::<bool>("+flag")?.run().is_ok());
-        assert_eq!(set["+flag"].uid(), 47);
+        assert_eq!(set["+flag"].uid(), 49);
 
         Ok(())
     }

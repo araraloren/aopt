@@ -1,3 +1,5 @@
+use std::ffi::OsStr;
+use std::ffi::OsString;
 use std::io::Stdin;
 use std::path::PathBuf;
 
@@ -71,11 +73,44 @@ impl_raw_val_parser!(f64);
 impl_raw_val_parser!(isize);
 impl_raw_val_parser!(usize);
 
+#[cfg(not(feature = "utf8"))]
 impl RawValParser for String {
     type Error = Error;
 
     fn parse(raw: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(raw2str(raw)?.to_string())
+    }
+}
+
+#[cfg(not(feature = "utf8"))]
+impl RawValParser for OsString {
+    type Error = Error;
+
+    fn parse(raw: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
+        Ok(Self::clone(raw.ok_or_else(|| {
+            Error::raise_failure("unexcepted empty value")
+        })?))
+    }
+}
+
+#[cfg(feature = "utf8")]
+impl RawValParser for String {
+    type Error = Error;
+
+    fn parse(raw: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
+        Ok(raw2str(raw)?.to_owned())
+    }
+}
+
+#[cfg(feature = "utf8")]
+impl RawValParser for OsString {
+    type Error = Error;
+
+    fn parse(raw: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
+        let raw: &OsStr = raw
+            .ok_or_else(|| Error::raise_failure("unexcepted empty value"))?
+            .as_ref();
+        Ok(raw.to_owned())
     }
 }
 

@@ -1,3 +1,4 @@
+use std::ffi::OsString;
 use std::fmt::Debug;
 
 use crate::opt::fill_cfg_if_no_infer;
@@ -106,6 +107,7 @@ const BUILTIN_CTOR_CMD: &str = "c";
 const BUILTIN_CTOR_POS: &str = "p";
 const BUILTIN_CTOR_MAIN: &str = "m";
 const BUILTIN_CTOR_ANY: &str = "a";
+const BUILTIN_CTOR_RAW: &str = "r";
 
 #[derive(Debug, Clone, Copy)]
 pub enum BuiltInCtor {
@@ -126,6 +128,8 @@ pub enum BuiltInCtor {
     Main,
 
     Any,
+
+    Raw,
 }
 
 impl BuiltInCtor {
@@ -140,6 +144,7 @@ impl BuiltInCtor {
             BuiltInCtor::Pos => BUILTIN_CTOR_POS,
             BuiltInCtor::Main => BUILTIN_CTOR_MAIN,
             BuiltInCtor::Any => BUILTIN_CTOR_ANY,
+            BuiltInCtor::Raw => BUILTIN_CTOR_RAW,
         }
     }
 
@@ -154,6 +159,7 @@ impl BuiltInCtor {
             BUILTIN_CTOR_POS => BuiltInCtor::Pos,
             BUILTIN_CTOR_MAIN => BuiltInCtor::Main,
             BUILTIN_CTOR_ANY => BuiltInCtor::Any,
+            BUILTIN_CTOR_RAW => BuiltInCtor::Raw,
             name => {
                 panic!("Unknow creator name: {}", name)
             }
@@ -230,6 +236,7 @@ impl Creator<AOpt, OptConfig, Error> {
             BuiltInCtor::Pos => fill_cfg_if_no_infer::<Pos<Noa>, OptConfig>(info),
             BuiltInCtor::Main => fill_cfg_if_no_infer::<Main, OptConfig>(info),
             BuiltInCtor::Any => fill_cfg_if_no_infer::<Any, OptConfig>(info),
+            BuiltInCtor::Raw => fill_cfg_if_no_infer::<OsString, OptConfig>(info),
         }
     }
 
