@@ -9,7 +9,6 @@ use crate::opt::Any;
 use crate::opt::Cmd;
 use crate::opt::Index;
 use crate::opt::Main;
-use crate::opt::Noa;
 use crate::opt::Pos;
 use crate::opt::Style;
 use crate::value::ValInitializer;
@@ -77,8 +76,11 @@ impl Infer for bool {
     }
 }
 
-impl Infer for Cmd {
-    type Val = Noa;
+impl<T> Infer for Cmd<T>
+where
+    T: Default + Clone + ErasedTy + 'static,
+{
+    type Val = T;
 
     fn infer_act() -> Action {
         Action::Set
@@ -101,7 +103,7 @@ impl Infer for Cmd {
     }
 
     fn infer_initializer() -> Option<ValInitializer> {
-        Some(ValInitializer::new_value(Noa::new(false)))
+        Some(ValInitializer::new_value(T::default()))
     }
 }
 
@@ -128,8 +130,11 @@ where
     }
 }
 
-impl Infer for Main {
-    type Val = ();
+impl<T> Infer for Main<T>
+where
+    T: ErasedTy + 'static,
+{
+    type Val = T;
 
     fn infer_act() -> Action {
         Action::Null
@@ -156,8 +161,11 @@ impl Infer for Main {
     }
 }
 
-impl Infer for Any {
-    type Val = ();
+impl<T> Infer for Any<T>
+where
+    T: ErasedTy + 'static,
+{
+    type Val = T;
 
     fn infer_act() -> Action {
         Action::Null
