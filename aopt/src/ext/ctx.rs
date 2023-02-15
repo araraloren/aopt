@@ -30,7 +30,7 @@
 //! inv.entry(1)
 //!     .on(|_: &mut ASet, _: &mut ASer, val: ctx::Value<String>| {
 //!         assert_eq!(
-//!             &String::from("set"),
+//!             &String::from("true"),
 //!             val.deref(),
 //!             "Value is parsed from argument of Ctx which set in Policy"
 //!         );
@@ -660,7 +660,7 @@ impl<Set, Ser> Extract<Set, Ser> for Style {
 /// inv.entry(1)
 ///     .on(|_: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal| {
 ///         assert_eq!(
-///             &RawVal::from("set"),
+///             &RawVal::from("true"),
 ///             raw_val.deref(),
 ///             "RawVal is the raw value copied from Ctx set in Policy"
 ///         );
@@ -750,7 +750,7 @@ impl<Set, Ser> Extract<Set, Ser> for RawVal {
 /// inv.entry(1)
 ///     .on(|_: &mut ASet,  _: &mut ASer,val: ctx::Value<String>| {
 ///         assert_eq!(
-///             &String::from("set"),
+///             &String::from("true"),
 ///             val.deref(),
 ///             "Value is parsed from argument of Ctx which set in Policy"
 ///         );

@@ -32,10 +32,6 @@ pub use self::serialize::Serialize;
 pub use self::style::Style;
 pub use self::value::OptValueExt;
 
-pub(crate) use self::config::fill_cfg;
-pub(crate) use self::config::fill_cfg_if_no_infer;
-pub(crate) use self::config::fill_filter_type;
-
 use std::any::TypeId;
 use std::fmt::Debug;
 use std::ops::Deref;
@@ -52,25 +48,11 @@ pub const BOOL_FALSE: &str = "false";
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Cmd<T = Noa>(pub T);
-
-impl<T> Deref for Cmd<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<T> DerefMut for Cmd<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
+pub struct Cmd;
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Pos<T = Noa>(pub T);
+pub struct Pos<T = bool>(pub T);
 
 impl<T> Deref for Pos<T> {
     type Target = T;
@@ -106,10 +88,6 @@ impl<T> DerefMut for Main<T> {
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Noa(bool);
-
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Any<T = ()>(pub T);
 
 impl<T> Deref for Any<T> {
@@ -121,26 +99,6 @@ impl<T> Deref for Any<T> {
 }
 
 impl<T> DerefMut for Any<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl Noa {
-    pub fn new(value: bool) -> Self {
-        Self(value)
-    }
-}
-
-impl Deref for Noa {
-    type Target = bool;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for Noa {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }

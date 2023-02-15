@@ -1,5 +1,4 @@
 use std::any::TypeId;
-use std::ffi::OsString;
 
 use crate::err::Error;
 use crate::map::ErasedTy;
@@ -9,17 +8,10 @@ use crate::opt::Index;
 use crate::opt::Information;
 use crate::opt::OptParser;
 use crate::typeid;
-use crate::value::Infer;
-use crate::value::RawValParser;
 use crate::value::ValInitializer;
 use crate::value::ValStorer;
 use crate::Str;
 
-use super::Any;
-use super::BuiltInCtor;
-use super::Cmd;
-use super::Main;
-use super::Pos;
 use super::Style;
 
 pub trait Config {
@@ -567,111 +559,5 @@ impl ConfigValue for OptConfig {
     fn set_initializer(&mut self, initializer: ValInitializer) -> &mut Self {
         self.initializer = Some(initializer);
         self
-    }
-}
-
-pub(crate) fn fill_cfg<U, C>(info: &mut C)
-where
-    U: Infer + 'static,
-    U::Val: RawValParser,
-    C: ConfigValue + Default,
-{
-    let act = U::infer_act();
-    let style = U::infer_style();
-    let index = U::infer_index();
-    let ignore_name = U::infer_ignore_name();
-    let ignore_alias = U::infer_ignore_alias();
-    let ignore_index = U::infer_ignore_index();
-    let force = U::infer_force();
-    let ctor = U::infer_ctor();
-    let initializer = U::infer_initializer();
-    let storer = if let Some(validator) = U::infer_validator() {
-        Some(ValStorer::from(validator))
-    } else {
-        Some(ValStorer::new::<U::Val>())
-    };
-
-    info.set_infer(true);
-    (!info.has_ctor()).then(|| info.set_ctor(ctor));
-    (!info.has_index()).then(|| index.map(|idx| info.set_index(idx)));
-    (!info.has_type()).then(|| info.set_type::<U>());
-    (!info.has_action()).then(|| info.set_action(act));
-    (!info.has_style()).then(|| info.set_style(style));
-    (!info.has_force()).then(|| info.set_force(force));
-    (!info.has_action()).then(|| info.set_action(act));
-    if let Some(storer) = storer {
-        (!info.has_storer()).then(|| info.set_storer(storer));
-    }
-    if let Some(initializer) = initializer {
-        (!info.has_initializer()).then(|| info.set_initializer(initializer));
-    }
-    info.set_ignore_name(ignore_name);
-    info.set_ignore_alias(ignore_alias);
-    info.set_ignore_index(ignore_index);
-}
-
-pub(crate) fn fill_cfg_if_no_infer<U, C>(info: &mut C)
-where
-    U: Infer + 'static,
-    U::Val: RawValParser,
-    C: ConfigValue + Default,
-{
-    let act = U::infer_act();
-    let style = U::infer_style();
-    let index = U::infer_index();
-    let ignore_name = U::infer_ignore_name();
-    let ignore_alias = U::infer_ignore_alias();
-    let ignore_index = U::infer_ignore_index();
-    let force = U::infer_force();
-    let ctor = U::infer_ctor();
-    let initializer = U::infer_initializer();
-    let storer = if let Some(validator) = U::infer_validator() {
-        Some(ValStorer::from(validator))
-    } else {
-        Some(ValStorer::new::<U::Val>())
-    };
-
-    (!info.has_ctor()).then(|| info.set_ctor(ctor));
-    (!info.has_index()).then(|| index.map(|idx| info.set_index(idx)));
-    (!info.has_type()).then(|| info.set_type::<U>());
-    (!info.has_action()).then(|| info.set_action(act));
-    (!info.has_style()).then(|| info.set_style(style));
-    (!info.has_force()).then(|| info.set_force(force));
-    (!info.has_action()).then(|| info.set_action(act));
-    if !info.has_infer() {
-        info.set_infer(true);
-        if let Some(storer) = storer {
-            (!info.has_storer()).then(|| info.set_storer(storer));
-        }
-        if let Some(initializer) = initializer {
-            (!info.has_initializer()).then(|| info.set_initializer(initializer));
-        }
-    }
-    info.set_ignore_name(ignore_name);
-    info.set_ignore_alias(ignore_alias);
-    info.set_ignore_index(ignore_index);
-}
-
-pub(crate) fn fill_filter_type<C>(info: &mut C) -> &mut C
-where
-    C: ConfigValue,
-{
-    if let Some(ctor) = info.ctor() {
-        let built_in_ctor = BuiltInCtor::from_name(ctor);
-
-        match built_in_ctor {
-            BuiltInCtor::Int => info.set_type::<i64>(),
-            BuiltInCtor::Str => info.set_type::<String>(),
-            BuiltInCtor::Flt => info.set_type::<f64>(),
-            BuiltInCtor::Uint => info.set_type::<u64>(),
-            BuiltInCtor::Bool => info.set_type::<bool>(),
-            BuiltInCtor::Cmd => info.set_type::<Cmd>(),
-            BuiltInCtor::Pos => info.set_type::<Pos>(),
-            BuiltInCtor::Main => info.set_type::<Main>(),
-            BuiltInCtor::Any => info.set_type::<Any>(),
-            BuiltInCtor::Raw => info.set_type::<OsString>(),
-        }
-    } else {
-        info
     }
 }

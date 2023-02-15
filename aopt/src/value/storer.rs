@@ -29,8 +29,12 @@ impl Debug for ValStorer {
 }
 
 impl ValStorer {
-    pub fn new<U: ErasedTy + RawValParser>() -> Self {
-        Self(Self::fallback::<U>())
+    pub fn new(handler: StoreHandler<AnyValue>) -> Self {
+        Self(handler)
+    }
+
+    pub fn fallback<U: ErasedTy + RawValParser>() -> Self {
+        Self(Self::fallback_handler::<U>())
     }
 
     /// Create a [`ValStorer`] with a value validator.
@@ -73,7 +77,7 @@ impl ValStorer {
         )
     }
 
-    pub fn fallback<U: ErasedTy + RawValParser>() -> StoreHandler<AnyValue> {
+    pub fn fallback_handler<U: ErasedTy + RawValParser>() -> StoreHandler<AnyValue> {
         Box::new(
             |raw: Option<&RawVal>, ctx: &Ctx, act: &Action, handler: &mut AnyValue| {
                 let val = U::parse(raw, ctx).map_err(Into::into)?;
@@ -97,7 +101,7 @@ impl<U: ErasedTy + RawValParser> From<Option<ValValidator<U>>> for ValStorer {
         if let Some(validator) = validator {
             Self::new_validator(validator)
         } else {
-            Self::new::<U>()
+            Self::fallback::<U>()
         }
     }
 }

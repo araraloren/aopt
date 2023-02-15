@@ -1,12 +1,16 @@
+use std::ffi::OsString;
 use std::fmt::Debug;
 
-use crate::opt::fill_cfg;
-use crate::opt::fill_filter_type;
+use crate::opt::Any;
+use crate::opt::BuiltInCtor;
+use crate::opt::Cmd;
 use crate::opt::Config;
 use crate::opt::ConfigValue;
 use crate::opt::Information;
+use crate::opt::Main;
 use crate::opt::Opt;
 use crate::opt::OptParser;
+use crate::opt::Pos;
 use crate::set::Ctor;
 use crate::set::Filter;
 use crate::set::FilterMatcher;
@@ -195,7 +199,7 @@ where
     {
         let mut info = config.into();
 
-        fill_cfg::<U, C::Config>(&mut info);
+        U::infer_fill_info(&mut info, true);
         Ok(SetCommit::new(self, info))
     }
 
@@ -213,6 +217,30 @@ where
         ))
     }
 
+    fn infer_fill_type<Cfg>(cfg: &mut Cfg) -> &mut Cfg
+    where
+        Cfg: ConfigValue,
+    {
+        if let Some(ctor) = cfg.ctor() {
+            let built_in_ctor = BuiltInCtor::from_name(ctor);
+
+            match built_in_ctor {
+                BuiltInCtor::Int => cfg.set_type::<i64>(),
+                BuiltInCtor::Str => cfg.set_type::<String>(),
+                BuiltInCtor::Flt => cfg.set_type::<f64>(),
+                BuiltInCtor::Uint => cfg.set_type::<u64>(),
+                BuiltInCtor::Bool => cfg.set_type::<bool>(),
+                BuiltInCtor::Cmd => cfg.set_type::<Cmd>(),
+                BuiltInCtor::Pos => cfg.set_type::<Pos>(),
+                BuiltInCtor::Main => cfg.set_type::<Main>(),
+                BuiltInCtor::Any => cfg.set_type::<Any>(),
+                BuiltInCtor::Raw => cfg.set_type::<OsString>(),
+            }
+        } else {
+            cfg
+        }
+    }
+
     /// Add an option into current [`OptSet`].
     ///
     /// It parsing the given option string `S` using inner [`OptParser`], return an [`SetCommit`].
@@ -224,7 +252,7 @@ where
     {
         let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
 
-        fill_cfg::<U, C::Config>(&mut info);
+        U::infer_fill_info(&mut info, true);
         Ok(SetCommit::new(self, info))
     }
 
@@ -235,7 +263,7 @@ where
     pub fn filter<S: Into<Str>>(&self, opt_str: S) -> Result<Filter<'_, Self>, Error> {
         let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
 
-        fill_filter_type(&mut info);
+        Self::infer_fill_type(&mut info);
         Ok(Filter::new(self, info))
     }
 
@@ -243,7 +271,7 @@ where
     pub fn find<S: Into<Str>>(&self, opt_str: S) -> Result<Option<&C::Opt>, Error> {
         let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
 
-        fill_filter_type(&mut info);
+        Self::infer_fill_type(&mut info);
         Ok(self.iter().find(|opt| info.mat_opt(*opt)))
     }
 
@@ -254,7 +282,7 @@ where
     ) -> Result<impl Iterator<Item = &C::Opt>, Error> {
         let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
 
-        fill_filter_type(&mut info);
+        Self::infer_fill_type(&mut info);
         Ok(self.iter().filter(move |opt| info.mat_opt(*opt)))
     }
 
@@ -265,7 +293,7 @@ where
     pub fn filter_mut<S: Into<Str>>(&mut self, opt_str: S) -> Result<FilterMut<'_, Self>, Error> {
         let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
 
-        fill_filter_type(&mut info);
+        Self::infer_fill_type(&mut info);
         Ok(FilterMut::new(self, info))
     }
 
@@ -273,7 +301,7 @@ where
     pub fn find_mut<S: Into<Str>>(&mut self, opt_str: S) -> Result<Option<&mut C::Opt>, Error> {
         let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
 
-        fill_filter_type(&mut info);
+        Self::infer_fill_type(&mut info);
         Ok(self.iter_mut().find(|opt| info.mat_opt(*opt)))
     }
 
@@ -284,7 +312,7 @@ where
     ) -> Result<impl Iterator<Item = &mut C::Opt>, Error> {
         let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
 
-        fill_filter_type(&mut info);
+        Self::infer_fill_type(&mut info);
         Ok(self.iter_mut().filter(move |opt| info.mat_opt(*opt)))
     }
 }
@@ -564,11 +592,11 @@ mod test {
         assert!(set.find("s=c")?.is_some());
         assert_eq!(set.find_all("=c")?.count(), 2);
 
-        assert_eq!(set.find_all("=p")?.count(), 8);
+        assert_eq!(set.find_all("=p")?.count(), 9);
         assert!(set.filter("")?.set_type::<Pos<bool>>().find().is_some());
         assert!(set.filter("")?.set_type::<Pos<f64>>().find().is_some());
         assert_eq!(set.find_all_mut("@2")?.count(), 2);
-        assert_eq!(set.filter_mut("=p")?.set_force(true).find_all().count(), 4);
+        assert_eq!(set.filter_mut("=p")?.set_force(true).find_all().count(), 5);
         assert!(set.filter("=p")?.set_name("vala").find().is_some());
         assert!(set.filter("=p")?.set_name("valw").find().is_none());
 

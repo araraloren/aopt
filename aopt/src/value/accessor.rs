@@ -35,7 +35,7 @@ use crate::RawVal;
 /// }
 /// {
 ///     let mut value =
-///         ValAccessor::new(ValStorer::new::<i32>(), ValInitializer::new_values(vec![7]));
+///         ValAccessor::new(ValStorer::fallback::<i32>(), ValInitializer::new_values(vec![7]));
 ///     let raw_value = RawVal::from("42");
 ///
 ///     value.initialize()?;
@@ -135,7 +135,7 @@ impl ValAccessor {
         Self {
             any_value: AnyValue::default(),
             rawval: vec![],
-            storer: ValStorer::new::<U>(),
+            storer: ValStorer::fallback::<U>(),
             initializer: ValInitializer::fallback(),
         }
     }

@@ -1,3 +1,4 @@
+use std::any::TypeId;
 use std::fmt::Debug;
 
 use crate::ctx::Extract;
@@ -109,14 +110,6 @@ where
     add_interface!(Main, set_main_type_only, set_main_type, 'static, 'static);
 
     add_interface!(Any, set_any_type_only, set_any_type, 'static, 'static);
-
-    add_interface!(
-        Cmd,
-        set_cmd_type_only,
-        set_cmd_type,
-        Default + Clone + 'static,
-        Default + 'static
-    );
 }
 
 impl<'a, S, Ser, U> ParserCommit<'a, S, Ser, U>
@@ -264,7 +257,7 @@ where
 
     /// Add default [`storer`](ValStorer::fallback) of type [`U::Val`](Infer::Val).
     pub fn add_default_storer(self) -> Self {
-        self.set_storer(ValStorer::new::<U::Val>())
+        self.set_storer(ValStorer::fallback::<U::Val>())
     }
 }
 
@@ -301,11 +294,15 @@ where
     SetOpt<S>: Opt,
     SetCfg<S>: ConfigValue + Default,
 {
-    /// Set the value type of option.
+    /// Set the value type of option(except for [`Cmd`]).
     pub fn set_value_type_only<T: ErasedTy>(mut self) -> ParserCommitWithValue<'a, S, Ser, U, T> {
         let inner = self.inner.take().unwrap();
         let inv_ser = self.inv_ser.take().unwrap();
 
+        debug_assert!(
+            TypeId::of::<U>() != TypeId::of::<Cmd>() || TypeId::of::<T>() == TypeId::of::<bool>(),
+            "For Cmd, you can't have other value type!"
+        );
         ParserCommitWithValue::new(inner.set_value_type_only::<T>(), inv_ser)
     }
 
@@ -587,7 +584,7 @@ where
 
     /// Add default [`storer`](ValStorer::fallback) of type `T`.
     pub fn add_default_storer_t(self) -> Self {
-        self.set_storer(ValStorer::new::<T>())
+        self.set_storer(ValStorer::fallback::<T>())
     }
 }
 

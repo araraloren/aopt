@@ -39,7 +39,6 @@ use crate::ctx::InnerCtx;
 use crate::ctx::Invoker;
 use crate::ext::APolicyExt;
 use crate::map::ErasedTy;
-use crate::opt::fill_cfg;
 use crate::opt::Config;
 use crate::opt::ConfigValue;
 use crate::opt::Information;
@@ -592,7 +591,7 @@ where
     {
         let mut info = <SetCfg<P::Set>>::new(&self.optset, opt.into())?;
 
-        fill_cfg::<U, SetCfg<P::Set>>(&mut info);
+        U::infer_fill_info(&mut info, true);
         Ok(ParserCommit::new(
             SetCommit::new(&mut self.optset, info),
             &mut self.invoker,
@@ -616,7 +615,7 @@ where
     ///             .with_type::<bool>()
     ///             .with_styles(vec![Style::Boolean, Style::Combined])
     ///             .with_action(Action::Set)
-    ///             .with_storer(ValStorer::new::<bool>())
+    ///             .with_storer(ValStorer::fallback::<bool>())
     ///             .with_ignore_index(true)
     ///             .with_initializer(ValInitializer::new_value(false))
     ///     }
@@ -631,7 +630,7 @@ where
     ///             .with_styles(vec![Style::Argument])
     ///             .with_type::<i64>()
     ///             .with_action(Action::Set)
-    ///             .with_storer(ValStorer::new::<i64>())
+    ///             .with_storer(ValStorer::fallback::<i64>())
     ///             .with_ignore_index(true)
     ///             .with_initializer(ValInitializer::new_value(0i64))
     ///     }
@@ -671,7 +670,7 @@ where
     {
         let mut info = config.into();
 
-        fill_cfg::<U, SetCfg<P::Set>>(&mut info);
+        U::infer_fill_info(&mut info, true);
         Ok(ParserCommit::new(
             SetCommit::new(&mut self.optset, info),
             &mut self.invoker,

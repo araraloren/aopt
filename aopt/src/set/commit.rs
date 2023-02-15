@@ -2,7 +2,6 @@ use std::any::TypeId;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-use crate::opt::config::fill_cfg;
 use crate::opt::Any;
 use crate::opt::Cmd;
 use crate::opt::ConfigValue;
@@ -111,14 +110,6 @@ where
     add_interface!(Main, set_main_type_only, set_main_type, 'static, 'static);
 
     add_interface!(Any, set_any_type_only, set_any_type, 'static, 'static);
-
-    add_interface!(
-        Cmd,
-        set_cmd_type_only,
-        set_cmd_type,
-        Default + Clone + 'static,
-        Default + 'static
-    );
 }
 
 impl<'a, S, U> SetCommit<'a, S, U>
@@ -150,7 +141,7 @@ where
         let info = self.info.take();
         let mut info = info.unwrap();
 
-        fill_cfg::<O, SetCfg<S>>(&mut info);
+        O::infer_fill_info(&mut info, true);
         SetCommit::new(set.unwrap(), info)
     }
 
@@ -195,8 +186,12 @@ where
     U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
-    /// Set the value type of option.
+    /// Set the value type of option(except for [`Cmd`]).
     pub fn set_value_type_only<T: ErasedTy>(self) -> SetCommitWithValue<'a, S, U, T> {
+        debug_assert!(
+            TypeId::of::<U>() != TypeId::of::<Cmd>() || TypeId::of::<T>() == TypeId::of::<bool>(),
+            "For Cmd, you can't have other value type!"
+        );
         SetCommitWithValue::new(self)
     }
 
@@ -248,7 +243,7 @@ where
 
     /// Add default [`storer`](ValStorer::fallback) of type [`U::Val`](Infer::Val).
     pub fn add_default_storer(self) -> Self {
-        self.set_storer(ValStorer::new::<U::Val>())
+        self.set_storer(ValStorer::fallback::<U::Val>())
     }
 }
 
@@ -400,7 +395,7 @@ where
 
     /// Add default [`storer`](ValStorer::fallback) of type `T`.
     pub fn add_default_storer_t(self) -> Self {
-        self.set_storer(ValStorer::new::<T>())
+        self.set_storer(ValStorer::fallback::<T>())
     }
 }
 
