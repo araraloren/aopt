@@ -27,9 +27,9 @@ A flexible and typed getopt like command line framwork for rust.
     Can set callback which will called during parsing,
     see [`Parser`](crate::parser::Parser) and [`Invoker`](crate::ctx::Invoker).
 
-- Value store support
+- Value support
 
-    By default aopt will saving the raw value and parsed value into [`ValStorer`](crate::value::ValStorer).
+    By default aopt will saving the raw value and parsed value in [`ValStorer`](crate::value::ValStorer).
 
 - Policy support
 
