@@ -441,7 +441,7 @@ where
                         .with_idx(pos)
                         .with_total(count)
                         .with_style(Style::Cmd)
-                        .reset_arg(),
+                        .with_arg(Some(RawVal::from(BOOL_TRUE).into())),
                 );
             }
             _ => {

@@ -2,8 +2,10 @@ use std::any::TypeId;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-use crate::opt::config::fill_cfg;
+use crate::opt::Any;
+use crate::opt::Cmd;
 use crate::opt::ConfigValue;
+use crate::opt::Main;
 use crate::opt::Pos;
 use crate::prelude::ErasedTy;
 use crate::set::Ctor;
@@ -53,6 +55,41 @@ where
     }
 }
 
+macro_rules! add_interface {
+    ($ty:ident, $name1:ident, $name2:ident, $bound1:tt $(+ $others1:tt)*, $bound2:tt $(+ $others2:tt)*) => {
+        #[doc = concat!("Set the infer type to [`", stringify!($ty), "`]\\<T\\>.")]
+        pub fn $name1<T>(
+            self,
+        ) -> SetCommit<'a, S, $ty<T>> where T: ErasedTy + RawValParser + $bound1 $(+ $others1)* {
+            let type_id = self.cfg().r#type();
+
+            debug_assert!(
+                type_id.is_none() || type_id == Some(&TypeId::of::<$ty>()),
+                "Can not set value type of {} if it already has one", stringify!($ty),
+            );
+            self.set_infer::<$ty<T>>()
+        }
+
+        #[doc = concat!("Set the infer type to [`", stringify!($ty) ,"`]\\<T\\>, add default initializer and default storer.")]
+        ///
+        /// The function will call [`add_default_initializer`](SetCommit::add_default_initializer) add
+        /// [`add_default_storer`](SetCommit::add_default_storer).
+        pub fn $name2<T>(
+            self,
+        ) -> SetCommit<'a, S, $ty<T>> where T: ErasedTy + RawValParser + Clone + $bound1 $(+ $others1)* {
+            let type_id = self.cfg().r#type();
+
+            debug_assert!(
+                type_id.is_none() || type_id == Some(&TypeId::of::<$ty>()),
+                "Can not set value type of {} if it already has one", stringify!($ty),
+            );
+            self.set_infer::<$ty<T>>()
+                .add_default_initializer()
+                .add_default_storer()
+        }
+    }
+}
+
 impl<'a, S> SetCommit<'a, S, Placeholder>
 where
     S: Set,
@@ -68,36 +105,11 @@ where
         }
     }
 
-    /// Set the infer type to [`Pos`]\<T\>.
-    pub fn set_pos_type_only<T: ErasedTy + RawValParser + 'static>(
-        self,
-    ) -> SetCommit<'a, S, Pos<T>> {
-        let type_id = self.cfg().r#type();
+    add_interface!(Pos, set_pos_type_only, set_pos_type, 'static, 'static);
 
-        debug_assert!(
-            type_id.is_none() || type_id == Some(&TypeId::of::<Pos>()),
-            "Can not set value type of Pos if it already has one"
-        );
-        self.set_infer::<Pos<T>>()
-    }
+    add_interface!(Main, set_main_type_only, set_main_type, 'static, 'static);
 
-    /// Set the infer type to [`Pos`]\<T\>, add default initializer and default storer.
-    ///
-    /// The function will call [`add_default_initializer`](SetCommit::add_default_initializer) add
-    /// [`add_default_storer`](SetCommit::add_default_storer).
-    pub fn set_pos_type<T: ErasedTy + RawValParser + Clone + 'static>(
-        self,
-    ) -> SetCommit<'a, S, Pos<T>> {
-        let type_id = self.cfg().r#type();
-
-        debug_assert!(
-            type_id.is_none() || type_id == Some(&TypeId::of::<Pos>()),
-            "Can not set value type of Pos if it already has one"
-        );
-        self.set_infer::<Pos<T>>()
-            .add_default_initializer()
-            .add_default_storer()
-    }
+    add_interface!(Any, set_any_type_only, set_any_type, 'static, 'static);
 }
 
 impl<'a, S, U> SetCommit<'a, S, U>
@@ -129,7 +141,7 @@ where
         let info = self.info.take();
         let mut info = info.unwrap();
 
-        fill_cfg::<O, SetCfg<S>>(&mut info);
+        O::infer_fill_info(&mut info, true);
         SetCommit::new(set.unwrap(), info)
     }
 
@@ -174,8 +186,12 @@ where
     U::Val: RawValParser,
     SetCfg<S>: ConfigValue + Default,
 {
-    /// Set the value type of option.
+    /// Set the value type of option(except for [`Cmd`]).
     pub fn set_value_type_only<T: ErasedTy>(self) -> SetCommitWithValue<'a, S, U, T> {
+        debug_assert!(
+            TypeId::of::<U>() != TypeId::of::<Cmd>() || TypeId::of::<T>() == TypeId::of::<bool>(),
+            "For Cmd, you can't have other value type!"
+        );
         SetCommitWithValue::new(self)
     }
 
@@ -227,7 +243,7 @@ where
 
     /// Add default [`storer`](ValStorer::fallback) of type [`U::Val`](Infer::Val).
     pub fn add_default_storer(self) -> Self {
-        self.set_storer(ValStorer::new::<U::Val>())
+        self.set_storer(ValStorer::fallback::<U::Val>())
     }
 }
 
@@ -379,7 +395,7 @@ where
 
     /// Add default [`storer`](ValStorer::fallback) of type `T`.
     pub fn add_default_storer_t(self) -> Self {
-        self.set_storer(ValStorer::new::<T>())
+        self.set_storer(ValStorer::fallback::<T>())
     }
 }
 

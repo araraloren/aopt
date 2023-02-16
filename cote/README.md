@@ -58,6 +58,7 @@ fn main() -> Result<(), Error> {
         )
         .unwrap(),
     )?;
+    cote.insert_help(env!("CARGO_PKG_AUTHORS"), env!("CARGO_PKG_VERSION"), env!("CARGO_PKG_DESCRIPTION"))?;
     cote.add_opt("--from=i")?
         .add_alias("-f")
         .set_help("The sub string start index");

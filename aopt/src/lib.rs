@@ -221,7 +221,6 @@ pub mod prelude {
     pub use crate::opt::Help;
     pub use crate::opt::Index;
     pub use crate::opt::Information;
-    pub use crate::opt::Noa;
     pub use crate::opt::Opt;
     pub use crate::opt::OptConfig;
     pub use crate::opt::OptParser;

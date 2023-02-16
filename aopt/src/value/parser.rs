@@ -156,11 +156,3 @@ impl RawValParser for Stdin {
         )))
     }
 }
-
-impl RawValParser for crate::opt::Noa {
-    type Error = Error;
-
-    fn parse(raw: Option<&RawVal>, _: &Ctx) -> Result<Self, Self::Error> {
-        Ok(crate::opt::Noa::new(raw.is_some()))
-    }
-}

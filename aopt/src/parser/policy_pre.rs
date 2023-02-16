@@ -975,7 +975,7 @@ mod test {
                     None,
                     None,
                 )?;
-                check_opt_val::<String>(
+                check_opt_val::<bool>(
                     apos,
                     set_uid,
                     "set",

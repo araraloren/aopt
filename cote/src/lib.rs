@@ -93,14 +93,8 @@ impl<P: Policy, E: Policy> Cote<P, E> {
         self.parser_map.insert(name.into(), sub_parser);
         self
     }
-
     pub fn contain_link(&mut self, name: &str) -> bool {
         self.parser_map.contains_key(name)
-    }
-
-    pub fn sub_parser_mut(&mut self, name: &str) -> Result<&mut Parser<E>, Error> {
-        self.sub_parser
-            .get_mut(name)
             .ok_or_else(|| Error::raise_error(format!("Invalid sub parser name: {}", name)))
     }
 

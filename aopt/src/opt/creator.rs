@@ -1,7 +1,6 @@
 use std::ffi::OsString;
 use std::fmt::Debug;
 
-use crate::opt::fill_cfg_if_no_infer;
 use crate::opt::AOpt;
 use crate::opt::Action;
 use crate::opt::Any;
@@ -13,6 +12,7 @@ use crate::opt::OptConfig;
 use crate::opt::Pos;
 use crate::set::Ctor;
 use crate::trace_log;
+use crate::value::Infer;
 use crate::value::ValAccessor;
 use crate::Error;
 use crate::Str;
@@ -80,8 +80,6 @@ mod __creator {
 
 pub use __creator::Creator;
 
-use super::Noa;
-
 impl<O: Opt, C, E: Into<Error>> Ctor for Creator<O, C, E> {
     type Opt = O;
 
@@ -109,7 +107,7 @@ const BUILTIN_CTOR_MAIN: &str = "m";
 const BUILTIN_CTOR_ANY: &str = "a";
 const BUILTIN_CTOR_RAW: &str = "r";
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum BuiltInCtor {
     Int,
 
@@ -227,16 +225,16 @@ impl Creator<AOpt, OptConfig, Error> {
 
     pub(crate) fn guess_default_infer(ctor: BuiltInCtor, info: &mut OptConfig) {
         match ctor {
-            BuiltInCtor::Int => fill_cfg_if_no_infer::<i64, OptConfig>(info),
-            BuiltInCtor::Str => fill_cfg_if_no_infer::<String, OptConfig>(info),
-            BuiltInCtor::Flt => fill_cfg_if_no_infer::<f64, OptConfig>(info),
-            BuiltInCtor::Uint => fill_cfg_if_no_infer::<u64, OptConfig>(info),
-            BuiltInCtor::Bool => fill_cfg_if_no_infer::<bool, OptConfig>(info),
-            BuiltInCtor::Cmd => fill_cfg_if_no_infer::<Cmd, OptConfig>(info),
-            BuiltInCtor::Pos => fill_cfg_if_no_infer::<Pos<Noa>, OptConfig>(info),
-            BuiltInCtor::Main => fill_cfg_if_no_infer::<Main, OptConfig>(info),
-            BuiltInCtor::Any => fill_cfg_if_no_infer::<Any, OptConfig>(info),
-            BuiltInCtor::Raw => fill_cfg_if_no_infer::<OsString, OptConfig>(info),
+            BuiltInCtor::Int => i64::infer_fill_info(info, false),
+            BuiltInCtor::Str => String::infer_fill_info(info, false),
+            BuiltInCtor::Flt => f64::infer_fill_info(info, false),
+            BuiltInCtor::Uint => u64::infer_fill_info(info, false),
+            BuiltInCtor::Bool => bool::infer_fill_info(info, false),
+            BuiltInCtor::Cmd => Cmd::infer_fill_info(info, false),
+            BuiltInCtor::Pos => Pos::<bool>::infer_fill_info(info, false),
+            BuiltInCtor::Main => Main::<()>::infer_fill_info(info, false),
+            BuiltInCtor::Any => Any::<()>::infer_fill_info(info, false),
+            BuiltInCtor::Raw => OsString::infer_fill_info(info, false),
         }
     }
 

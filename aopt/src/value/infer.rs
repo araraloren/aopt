@@ -3,18 +3,26 @@ use std::ffi::OsString;
 use std::io::Stdin;
 use std::path::PathBuf;
 
+use crate::ctx::Ctx;
 use crate::map::ErasedTy;
 use crate::opt::Action;
 use crate::opt::Any;
+use crate::opt::BuiltInCtor;
 use crate::opt::Cmd;
+use crate::opt::ConfigValue;
 use crate::opt::Index;
 use crate::opt::Main;
-use crate::opt::Noa;
 use crate::opt::Pos;
 use crate::opt::Style;
+use crate::trace_log;
 use crate::value::ValInitializer;
 use crate::value::ValValidator;
+use crate::RawVal;
 use crate::Str;
+
+use super::AnyValue;
+use super::RawValParser;
+use super::ValStorer;
 
 /// Implement this if you want the type can used for create option.
 pub trait Infer {
@@ -59,6 +67,57 @@ pub trait Infer {
     fn infer_initializer() -> Option<ValInitializer> {
         Some(ValInitializer::fallback())
     }
+
+    fn infer_tweak_info<C>(_cfg: &mut C)
+    where
+        Self: Sized + 'static,
+        Self::Val: RawValParser,
+        C: ConfigValue + Default,
+    {
+    }
+
+    fn infer_fill_info<C>(cfg: &mut C, ignore_infer: bool)
+    where
+        Self: Sized + 'static,
+        Self::Val: RawValParser,
+        C: ConfigValue + Default,
+    {
+        let act = Self::infer_act();
+        let style = Self::infer_style();
+        let index = Self::infer_index();
+        let ignore_name = Self::infer_ignore_name();
+        let ignore_alias = Self::infer_ignore_alias();
+        let ignore_index = Self::infer_ignore_index();
+        let force = Self::infer_force();
+        let ctor = Self::infer_ctor();
+        let initializer = Self::infer_initializer();
+        let storer = if let Some(validator) = Self::infer_validator() {
+            Some(ValStorer::from(validator))
+        } else {
+            Some(ValStorer::fallback::<Self::Val>())
+        };
+
+        Self::infer_tweak_info(cfg);
+        (!cfg.has_ctor()).then(|| cfg.set_ctor(ctor));
+        (!cfg.has_index()).then(|| index.map(|idx| cfg.set_index(idx)));
+        (!cfg.has_type()).then(|| cfg.set_type::<Self>());
+        (!cfg.has_action()).then(|| cfg.set_action(act));
+        (!cfg.has_style()).then(|| cfg.set_style(style));
+        (!cfg.has_force()).then(|| cfg.set_force(force));
+        (!cfg.has_action()).then(|| cfg.set_action(act));
+        if ignore_infer || !cfg.has_infer() {
+            cfg.set_infer(true);
+            if let Some(storer) = storer {
+                (!cfg.has_storer()).then(|| cfg.set_storer(storer));
+            }
+            if let Some(initializer) = initializer {
+                (!cfg.has_initializer()).then(|| cfg.set_initializer(initializer));
+            }
+        }
+        cfg.set_ignore_name(ignore_name);
+        cfg.set_ignore_alias(ignore_alias);
+        cfg.set_ignore_index(ignore_index);
+    }
 }
 
 impl Infer for bool {
@@ -78,7 +137,7 @@ impl Infer for bool {
 }
 
 impl Infer for Cmd {
-    type Val = Noa;
+    type Val = bool;
 
     fn infer_act() -> Action {
         Action::Set
@@ -101,7 +160,7 @@ impl Infer for Cmd {
     }
 
     fn infer_initializer() -> Option<ValInitializer> {
-        Some(ValInitializer::new_value(Noa::new(false)))
+        Some(ValInitializer::new_value(false))
     }
 }
 
@@ -126,10 +185,53 @@ where
     fn infer_ignore_index() -> bool {
         false
     }
+
+    /// Will add default type storer when value type is bool.
+    ///
+    /// # Storer
+    /// ```!
+    /// Box::new(
+    ///     |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
+    ///         let val = raw.is_some();
+    ///
+    ///         trace_log!("Cmd value storer, parsing {:?} -> {:?}", raw, val);
+    ///         act.store1(Some(val), handler);
+    ///         Ok(())
+    ///     },
+    /// );
+    /// ```
+    fn infer_tweak_info<C>(cfg: &mut C)
+    where
+        Self: Sized + 'static,
+        Self::Val: RawValParser,
+        C: ConfigValue + Default,
+    {
+        if !cfg.has_storer() {
+            let type_id = cfg.r#type();
+            let ctor = cfg.ctor().map(|v| BuiltInCtor::from_name(v));
+            let bool_type = std::any::TypeId::of::<bool>();
+
+            // add default storer when value type is bool.
+            if type_id == Some(&bool_type) || ctor == Some(BuiltInCtor::Bool) {
+                cfg.set_storer(ValStorer::new(Box::new(
+                    |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
+                        let val = raw.is_some();
+
+                        trace_log!("Cmd value storer, parsing {:?} -> {:?}", raw, val);
+                        act.store1(Some(val), handler);
+                        Ok(())
+                    },
+                )));
+            }
+        }
+    }
 }
 
-impl Infer for Main {
-    type Val = ();
+impl<T> Infer for Main<T>
+where
+    T: ErasedTy + 'static,
+{
+    type Val = T;
 
     fn infer_act() -> Action {
         Action::Null
@@ -156,8 +258,11 @@ impl Infer for Main {
     }
 }
 
-impl Infer for Any {
-    type Val = ();
+impl<T> Infer for Any<T>
+where
+    T: ErasedTy + 'static,
+{
+    type Val = T;
 
     fn infer_act() -> Action {
         Action::Null

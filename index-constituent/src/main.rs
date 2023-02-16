@@ -41,6 +41,7 @@ async fn main() -> color_eyre::Result<()> {
             pc.set_initiator(value);
         }
     }
+    cote.insert_help(env!("CARGO_PKG_AUTHORS"), env!("CARGO_PKG_VERSION"), env!("CARGO_PKG_DESCRIPTION"))?;
     cote.add_opt("-t=s!")?
         .add_alias("--type")
         .set_help("Search keyword and list result")

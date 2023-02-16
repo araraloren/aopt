@@ -23,23 +23,25 @@ use crate::Uid;
 ///
 /// Some types support by default, see [`Infer`](crate::value::Infer):
 ///
-/// | type | action | ignore name | styles | index support | default force required | alias | default value |
-/// | --   |   --   |    --       |   --   |        --        |       --       |   --  |  -- |
-/// | [`bool`] | [`Action::Set`] | [`false`] | [`Style::Combined`] [`Style::Boolean`] | no | false | true | false |
-/// | [`i32`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
-/// | [`i64`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
-/// | [`u32`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
-/// | [`u64`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
-/// | [`f32`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
-/// | [`f64`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
-/// | [`usize`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
-/// | [`isize`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
-/// | [`String`] | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
-/// | [`OsString`](std::ffi::OsString) | [`Action::App`] | [`false`] | [`Style::Argument`] | no | false | true | None |
-/// | [`Cmd`] | [`Action::Set`] | [`false`] | [`Style::Cmd`] | [`Forward(1)`](Index::Forward) | true | true | false |
-/// | [`Pos`] | [`Action::App`] | [`true`] | [`Style::Pos`] | yes | false | false | None |
-/// | [`Main`] | [`Action::Null`] | [`true`] | [`Style::Main`] | [`AnyWhere`](Index::AnyWhere) | false | false | None |
-/// | [`Stdin`](std::io::Stdin) | [`Action::Set`] | [`true`] | [`Style::Pos`] | [`AnyWhere`](Index::AnyWhere) | false | true | None |
+/// | type | value type | action | ignore name | styles | index support |  force | alias | default value | creator |
+/// | --   |   --       |    --  |    -        |    --  |       -       |   -    |   --  |   --          |  -      |
+/// | [`bool`] | [`bool`] | [`Action::Set`] | `false` | [`Style::Combined`] [`Style::Boolean`] | no | false | true | false | `b` |
+/// | [`i32`] | [`i32`] | [`Action::App`] | `false` | [`Style::Argument`] | no | false | true | None | None |
+/// | [`i64`] | [`i64`] | [`Action::App`] | `false` | [`Style::Argument`] | no | false | true | None | `i` |
+/// | [`u32`] | [`u32`] | [`Action::App`] | `false` | [`Style::Argument`] | no | false | true | None | None |
+/// | [`u64`] | [`u64`] | [`Action::App`] | `false` | [`Style::Argument`] | no | false | true | None | `u` |
+/// | [`f32`] | [`f32`] | [`Action::App`] | `false` | [`Style::Argument`] | no | false | true | None | None |
+/// | [`f64`] | [`f64`] | [`Action::App`] | `false` | [`Style::Argument`] | no | false | true | None | `f` |
+/// | [`usize`] | [`usize`] | [`Action::App`] | `false` | [`Style::Argument`] | no | false | true | None | None |
+/// | [`isize`] | [`isize`] | [`Action::App`] | `false` | [`Style::Argument`] | no | false | true | None | None |
+/// | [`String`] | [`String`] | [`Action::App`] | `false` | [`Style::Argument`] | no | false | true | None | `s`|
+/// | [`OsString`](std::ffi::OsString) | [`OsString`](std::ffi::OsString) | [`Action::App`] | `false` | [`Style::Argument`] | no | false | true | None | `r` |
+/// | [`Cmd`] | [`bool`] | [`Action::Set`] | `false` | [`Style::Cmd`] | [`Forward(1)`](Index::Forward) | true | true | false | `c` |
+/// | [`Pos`] | [`bool`] | [`Action::App`] | `true` | [`Style::Pos`] | yes | false | false | None | `p` |
+/// | [`Main`] | [`bool`] | [`Action::Null`] | `true` | [`Style::Main`] | [`AnyWhere`](Index::AnyWhere) | false | false | None | `m` |
+/// | [`Stdin`](std::io::Stdin) | [`Stdin`](std::io::Stdin) | [`Action::Set`] | [`true`] | [`Style::Pos`] | [`AnyWhere`](Index::AnyWhere) | false | true | None | None |
+/// 
+/// For the value parser support, see [`RawValParser`](crate::value::RawValParser).
 #[derive(Debug)]
 pub struct AOpt {
     uid: Uid,

@@ -93,6 +93,11 @@ impl<S> NOAMatch<S> {
         self
     }
 
+    pub fn with_arg(mut self, arg: Option<ARef<RawVal>>) -> Self {
+        self.arg = arg;
+        self
+    }
+
     pub fn reset_arg(mut self) -> Self {
         self.arg = self.args.get(self.idx()).map(|v| v.clone().into());
         self

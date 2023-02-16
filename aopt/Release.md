@@ -1,6 +1,16 @@
 
 # Relase note
 
+## 0.9.1
+
+- Add type paramter for `Main`, `Any`
+
+- Change the default value of `Cmd`, `Pos` to `bool`
+
+- Change the guess argument of `Cmd` to `true`.
+
+- Remove `Noa` type
+
 ## 0.9.0
 
 - Moving invoke service from ser/ to ctx/
