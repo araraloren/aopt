@@ -12,18 +12,18 @@ use crate::trace_log;
 use crate::Error;
 use crate::Uid;
 
-pub struct ProcessCtx<'a, Set, Ser> {
+pub struct ProcessCtx<'a, 'b, Set, Ser> {
     pub idx: usize,
 
     pub tot: usize,
 
-    pub ctx: &'a mut Ctx,
+    pub ctx: &'b mut Ctx,
 
-    pub set: &'a mut Set,
+    pub set: &'b mut Set,
 
-    pub inv: &'a mut Invoker<Set, Ser>,
+    pub inv: &'b mut Invoker<'a, Set, Ser>,
 
-    pub ser: &'a mut Ser,
+    pub ser: &'b mut Ser,
 }
 
 /// Invoke the callback of option, map failure to false

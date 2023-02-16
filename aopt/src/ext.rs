@@ -22,7 +22,7 @@ pub trait APolicyExt<P: Policy> {
 
     fn default_set(&self) -> P::Set;
 
-    fn default_inv(&self) -> P::Inv;
+    fn default_inv<'a>(&self) -> P::Inv<'a>;
 }
 
 pub type ACreator = Creator<AOpt, OptConfig, Error>;
@@ -37,11 +37,11 @@ pub type APrePolicy = PrePolicy<ASet, ASer>;
 
 pub type ADelayPolicy = DelayPolicy<ASet, ASer>;
 
-pub type AFwdParser = Parser<AFwdPolicy>;
+pub type AFwdParser<'a> = Parser<'a, AFwdPolicy>;
 
-pub type APreParser = Parser<APrePolicy>;
+pub type APreParser<'a> = Parser<'a, APrePolicy>;
 
-pub type ADelayParser = Parser<ADelayPolicy>;
+pub type ADelayParser<'a> = Parser<'a, ADelayPolicy>;
 
 impl APolicyExt<AFwdPolicy> for AFwdPolicy {
     fn default_set(&self) -> <AFwdPolicy as Policy>::Set {
@@ -52,7 +52,7 @@ impl APolicyExt<AFwdPolicy> for AFwdPolicy {
         ASer::default()
     }
 
-    fn default_inv(&self) -> <AFwdPolicy as Policy>::Inv {
+    fn default_inv<'a>(&self) -> <AFwdPolicy as Policy>::Inv<'a> {
         Invoker::<<AFwdPolicy as Policy>::Set, <AFwdPolicy as Policy>::Ser>::default()
     }
 }
@@ -66,7 +66,7 @@ impl APolicyExt<APrePolicy> for APrePolicy {
         ASer::default()
     }
 
-    fn default_inv(&self) -> <APrePolicy as Policy>::Inv {
+    fn default_inv<'a>(&self) -> <APrePolicy as Policy>::Inv<'a> {
         Invoker::<<APrePolicy as Policy>::Set, <APrePolicy as Policy>::Ser>::default()
     }
 }
@@ -80,7 +80,7 @@ impl APolicyExt<ADelayPolicy> for ADelayPolicy {
         ASer::default()
     }
 
-    fn default_inv(&self) -> <ADelayPolicy as Policy>::Inv {
+    fn default_inv<'a>(&self) -> <ADelayPolicy as Policy>::Inv<'a> {
         Invoker::<<ADelayPolicy as Policy>::Set, <ADelayPolicy as Policy>::Ser>::default()
     }
 }

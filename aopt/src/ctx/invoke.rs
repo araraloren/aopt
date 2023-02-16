@@ -83,14 +83,14 @@ use crate::Uid;
 /// #    Ok(())
 /// # }
 /// ```
-pub struct Invoker<Set, Ser> {
-    callbacks: HashMap<Uid, InvokeHandler<Set, Ser, Error>>,
+pub struct Invoker<'a, Set, Ser> {
+    callbacks: HashMap<Uid, InvokeHandler<'a, Set, Ser, Error>>,
 }
 
-pub type InvokeHandler<Set, Ser, Error> =
-    Box<dyn FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error>>;
+pub type InvokeHandler<'a, Set, Ser, Error> =
+    Box<dyn FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error> + 'a>;
 
-impl<Set, Ser> Debug for Invoker<Set, Ser> {
+impl<'a, Set, Ser> Debug for Invoker<'a, Set, Ser> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Invoker")
             .field("callbacks", &"{ ... }")
@@ -98,7 +98,7 @@ impl<Set, Ser> Debug for Invoker<Set, Ser> {
     }
 }
 
-impl<Set, Ser> Default for Invoker<Set, Ser> {
+impl<'a, Set, Ser> Default for Invoker<'a, Set, Ser> {
     fn default() -> Self {
         Self {
             callbacks: HashMap::default(),
@@ -106,7 +106,7 @@ impl<Set, Ser> Default for Invoker<Set, Ser> {
     }
 }
 
-impl<Set, Ser> Invoker<Set, Ser> {
+impl<'a, Set, Ser> Invoker<'a, Set, Ser> {
     pub fn new() -> Self {
         Self {
             callbacks: HashMap::default(),
@@ -114,12 +114,12 @@ impl<Set, Ser> Invoker<Set, Ser> {
     }
 }
 
-impl<Set, Ser> Invoker<Set, Ser>
+impl<'a, Set, Ser> Invoker<'a, Set, Ser>
 where
-    Ser: 'static,
-    Set: crate::set::Set + 'static,
+    Ser: 'a,
+    Set: crate::set::Set + 'a,
 {
-    pub fn set_raw<H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error> + 'static>(
+    pub fn set_raw<H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error> + 'a>(
         &mut self,
         uid: Uid,
         handler: H,
@@ -155,9 +155,9 @@ where
     pub fn set_handler<A, O, H, T>(&mut self, uid: Uid, handler: H, store: T) -> &mut Self
     where
         O: ErasedTy,
-        A: Extract<Set, Ser, Error = Error> + 'static,
-        T: Store<Set, Ser, O, Ret = bool, Error = Error> + 'static,
-        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'static,
+        A: Extract<Set, Ser, Error = Error> + 'a,
+        T: Store<Set, Ser, O, Ret = bool, Error = Error> + 'a,
+        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
     {
         self.set_raw(uid, wrap_handler(handler, store));
         self
@@ -182,16 +182,16 @@ where
     }
 }
 
-impl<Set, Ser> Invoker<Set, Ser>
+impl<'a, Set, Ser> Invoker<'a, Set, Ser>
 where
     SetOpt<Set>: Opt,
     Set: crate::set::Set,
 {
-    pub fn entry<A, O, H>(&mut self, uid: Uid) -> HandlerEntry<'_, Set, Ser, H, A, O>
+    pub fn entry<A, O, H>(&mut self, uid: Uid) -> HandlerEntry<'a, '_, Set, Ser, H, A, O>
     where
         O: ErasedTy,
-        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'static,
-        A: Extract<Set, Ser, Error = Error> + 'static,
+        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
+        A: Extract<Set, Ser, Error = Error> + 'a,
     {
         HandlerEntry::new(self, uid)
     }
@@ -222,16 +222,16 @@ where
     }
 }
 
-pub struct HandlerEntry<'a, Set, Ser, H, A, O>
+pub struct HandlerEntry<'a, 'b, Set, Ser, H, A, O>
 where
     O: ErasedTy,
-    Ser: 'static,
-    Set: crate::set::Set + 'static,
+    Ser: 'a,
+    Set: crate::set::Set + 'a,
     SetOpt<Set>: Opt,
-    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'static,
-    A: Extract<Set, Ser, Error = Error> + 'static,
+    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
+    A: Extract<Set, Ser, Error = Error> + 'a,
 {
-    ser: &'a mut Invoker<Set, Ser>,
+    ser: &'b mut Invoker<'a, Set, Ser>,
 
     handler: Option<H>,
 
@@ -242,16 +242,16 @@ where
     marker: PhantomData<(A, O)>,
 }
 
-impl<'a, Set, Ser, H, A, O> HandlerEntry<'a, Set, Ser, H, A, O>
+impl<'a, 'b, Set, Ser, H, A, O> HandlerEntry<'a, 'b, Set, Ser, H, A, O>
 where
     O: ErasedTy,
-    Ser: 'static,
-    Set: crate::set::Set + 'static,
+    Ser: 'a,
+    Set: crate::set::Set + 'a,
     SetOpt<Set>: Opt,
-    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'static,
-    A: Extract<Set, Ser, Error = Error> + 'static,
+    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
+    A: Extract<Set, Ser, Error = Error> + 'a,
 {
-    pub fn new(inv_ser: &'a mut Invoker<Set, Ser>, uid: Uid) -> Self {
+    pub fn new(inv_ser: &'b mut Invoker<'a, Set, Ser>, uid: Uid) -> Self {
         Self {
             ser: inv_ser,
             handler: None,
@@ -280,10 +280,7 @@ where
 
     /// Register the handler with given `store`.
     /// The `store` will be used save the return value of option handler.
-    pub fn then(
-        mut self,
-        store: impl Store<Set, Ser, O, Ret = bool, Error = Error> + 'static,
-    ) -> Self {
+    pub fn then(mut self, store: impl Store<Set, Ser, O, Ret = bool, Error = Error> + 'a) -> Self {
         if !self.register {
             if let Some(handler) = self.handler.take() {
                 self.ser.set_raw(self.uid, wrap_handler(handler, store));
@@ -304,14 +301,14 @@ where
     }
 }
 
-impl<'a, Set, Ser, H, A, O> Drop for HandlerEntry<'a, Set, Ser, H, A, O>
+impl<'a, 'b, Set, Ser, H, A, O> Drop for HandlerEntry<'a, 'b, Set, Ser, H, A, O>
 where
     O: ErasedTy,
-    Ser: 'static,
-    Set: crate::set::Set + 'static,
+    Ser: 'a,
+    Set: crate::set::Set + 'a,
     SetOpt<Set>: Opt,
-    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'static,
-    A: Extract<Set, Ser, Error = Error> + 'static,
+    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
+    A: Extract<Set, Ser, Error = Error> + 'a,
 {
     fn drop(&mut self) {
         if !self.register {

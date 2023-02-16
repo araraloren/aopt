@@ -40,7 +40,7 @@ use crate::Uid;
 /// | [`Pos`] | [`bool`] | [`Action::App`] | `true` | [`Style::Pos`] | yes | false | false | None | `p` |
 /// | [`Main`] | [`bool`] | [`Action::Null`] | `true` | [`Style::Main`] | [`AnyWhere`](Index::AnyWhere) | false | false | None | `m` |
 /// | [`Stdin`](std::io::Stdin) | [`Stdin`](std::io::Stdin) | [`Action::Set`] | [`true`] | [`Style::Pos`] | [`AnyWhere`](Index::AnyWhere) | false | true | None | None |
-/// 
+///
 /// For the value parser support, see [`RawValParser`](crate::value::RawValParser).
 #[derive(Debug)]
 pub struct AOpt {

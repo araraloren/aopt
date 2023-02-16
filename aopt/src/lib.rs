@@ -50,10 +50,10 @@ use parser::Parser;
 use parser::Policy;
 use parser::ReturnVal;
 
-pub struct GetoptRes<'a, P: Policy> {
+pub struct GetoptRes<'a, 'b, P: Policy> {
     pub ret: ReturnVal,
 
-    pub parser: &'a mut Parser<P>,
+    pub parser: &'b mut Parser<'a, P>,
 }
 
 /// Parse the given string sequence, return the first matched [`Parser`](crate::parser::Parser): `getopt!($args, $($parser),+)`.
@@ -116,10 +116,6 @@ pub struct GetoptRes<'a, P: Policy> {
 /// parser.reset()?;
 /// pre_parser.reset()?;
 ///
-/// // boxed it
-/// let mut parser = parser.into_boxed();
-/// let mut pre_parser = pre_parser.into_boxed();
-///
 /// {
 ///     let ret = getopt!(
 ///         Args::from_array(["-a", "--bopt=42", "foo"]),
@@ -158,10 +154,12 @@ pub struct GetoptRes<'a, P: Policy> {
 ///```
 #[macro_export]
 macro_rules! getopt {
+    // FIXME
+    // construct a new struct for return value
     ($args:expr, $($parser_left:expr),+) => {
         {
-            fn __check_p<P: $crate::prelude::Policy<Error = $crate::Error>>
-                (p: &mut $crate::prelude::Parser<P>) -> &mut $crate::prelude::Parser<P>
+            fn __check_p<'a, 'b, P: $crate::prelude::Policy<Error = $crate::Error>>
+                (p: &'b mut $crate::prelude::Parser<'a, P>) -> &'b mut $crate::prelude::Parser<'a, P>
                 { p }
             fn __check_a(a: $crate::prelude::Args) -> $crate::prelude::Args { a }
 
@@ -229,7 +227,7 @@ pub mod prelude {
     pub use crate::opt::Serde;
     pub use crate::opt::StrParser;
     pub use crate::opt::Style;
-    pub use crate::parser::BoxedPolicy;
+    // pub use crate::parser::BoxedPolicy;
     pub use crate::parser::DelayPolicy;
     pub use crate::parser::FwdPolicy;
     pub use crate::parser::OptStyleManager;
