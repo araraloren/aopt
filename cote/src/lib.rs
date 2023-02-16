@@ -38,25 +38,6 @@ where
     name: String,
 
     parser: Parser<P>,
-
-    auto_help: bool,
-}
-
-impl<P: Policy> Cote<P> {
-    pub fn with_auto_help(mut self, auto_help: bool) -> Self {
-        self.auto_help = auto_help;
-        self
-    }
-
-    pub fn set_auto_help(&mut self, auto_help: bool) -> &mut Self {
-        self.auto_help = auto_help;
-        self
-    }
-
-    /// Add option `/?,-?,-h,--help=b` in default.
-    pub fn auto_help(&mut self) -> bool {
-        self.auto_help
-    }
 }
 
 impl<P> Debug for Cote<P>
@@ -69,7 +50,6 @@ where
         f.debug_struct("Cote")
             .field("name", &self.name)
             .field("parser", &self.parser)
-            .field("auto_help", &self.auto_help)
             .finish()
     }
 }
@@ -83,7 +63,6 @@ where
         Self {
             name: "Cote".to_owned(),
             parser: Parser::default(),
-            auto_help: true,
         }
     }
 }
@@ -111,8 +90,6 @@ where
             name: name.into(),
 
             parser: Parser::new(policy),
-
-            auto_help: true,
         }
     }
 
@@ -295,22 +272,26 @@ where
         meta.inject_opt(&mut self.parser)
     }
 
-    pub(crate) fn insert_def_options(&mut self) -> Result<&mut Self, Error> {
-        if self.auto_help() {
-            let name = self.name.clone();
+    pub fn insert_help<S: Into<String>>(
+        &mut self,
+        author: S,
+        version: S,
+        description: S,
+    ) -> Result<&mut Self, Error> {
+        let name = self.name.clone();
+        let (author, version, description) = (author.into(), version.into(), description.into());
 
-            self.add_opt("--help=b")?
-                .add_alias("-h")
-                .add_alias("/?")
-                .add_alias("-?")
-                .set_help("Print help message")
-                .on(
-                    move |set: &mut P::Set, _: &mut ASer| -> Result<Option<()>, Error> {
-                        cote_set_help!(&name, set)?;
-                        std::process::exit(0)
-                    },
-                )?;
-        }
+        self.add_opt("--help=b")?
+            .add_alias("-h")
+            .add_alias("/?")
+            .add_alias("-?")
+            .set_help("Print help message")
+            .on(
+                move |set: &mut P::Set, _: &mut ASer| -> Result<Option<()>, Error> {
+                    cote_set_help!(&name, set, author, version, description)?;
+                    std::process::exit(0)
+                },
+            )?;
         Ok(self)
     }
 
@@ -353,9 +334,6 @@ where
         I: Into<RawVal>,
         F: FnMut(Option<()>, &'b mut Cote<P>) -> Result<R, Error>,
     {
-        // add default options
-        self.insert_def_options()?;
-
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
 
@@ -418,9 +396,6 @@ where
         FUT: Future<Output = Result<R, Error>>,
         F: FnMut(Option<()>, &'b mut Cote<P>) -> FUT,
     {
-        // add default options
-        self.insert_def_options()?;
-
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
         let async_ret;
@@ -489,9 +464,6 @@ where
         I: Into<RawVal>,
         F: FnMut(Option<()>, &'b Cote<P>) -> Result<R, Error>,
     {
-        // add default options
-        self.insert_def_options()?;
-
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
 
@@ -554,9 +526,6 @@ where
         FUT: Future<Output = Result<R, Error>>,
         F: FnMut(Option<()>, &'b Cote<P>) -> FUT,
     {
-        // add default options
-        self.insert_def_options()?;
-
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
         let async_ret;
@@ -601,8 +570,6 @@ where
             name: name.into(),
 
             parser: Parser::new_with(policy, optset, services),
-
-            auto_help: true,
         }
     }
 
@@ -723,13 +690,9 @@ macro_rules! cote_help {
 /// The `foot` will be generate from package's authors and version.
 #[macro_export]
 macro_rules! cote_set_help {
-    ($name:expr, $set:ident) => {{
-        let foot = format!(
-            "Create by {} v{}",
-            env!("CARGO_PKG_AUTHORS"),
-            env!("CARGO_PKG_VERSION")
-        );
-        let head = format!("{}", env!("CARGO_PKG_DESCRIPTION"));
+    ($name:expr, $set:ident, $author:expr, $version:expr, $description:expr) => {{
+        let foot = format!("Create by {} v{}", $author, $version,);
+        let head = format!("{}", $description);
 
         fn __check_set<S: aopt::prelude::Set>(a: &S) -> &S {
             a
