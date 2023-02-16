@@ -614,6 +614,8 @@ pub fn cote_display_set_help<'a, T: Set, S: Into<Cow<'a, str>>>(
         foot,
         aopt_help::prelude::Style::default(),
         std::io::stdout(),
+        50,
+        50,
     );
     let global = app_help.global_mut();
 
