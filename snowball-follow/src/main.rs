@@ -154,7 +154,7 @@ impl SnowBall {
     }
 }
 
-fn parser_command_line() -> Result<AFwdParser, Error> {
+fn parser_command_line<'a>() -> Result<AFwdParser<'a>, Error> {
     let mut parser = AFwdParser::default();
 
     parser.add_opt_i::<bool>("-d;--debug: Print debug message")?;
