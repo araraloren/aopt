@@ -99,42 +99,17 @@ pub struct CtxSaver {
 pub trait Policy {
     type Ret;
     type Set;
-    type Inv;
+    type Inv<'a>;
     type Ser;
     type Error: Into<Error>;
 
-    fn parse(
+    fn parse<'a>(
         &mut self,
         set: &mut Self::Set,
-        inv: &mut Self::Inv,
+        inv: &mut Self::Inv<'a>,
         ser: &mut Self::Ser,
         args: ARef<Args>,
     ) -> Result<Self::Ret, Self::Error>;
-}
-
-impl<S, I, O, R, E> Policy for Box<dyn Policy<Ret = R, Set = S, Inv = I, Ser = O, Error = E>>
-where
-    E: Into<Error>,
-{
-    type Ret = R;
-
-    type Set = S;
-
-    type Inv = I;
-
-    type Ser = O;
-
-    type Error = E;
-
-    fn parse(
-        &mut self,
-        set: &mut Self::Set,
-        inv: &mut Self::Inv,
-        ser: &mut Self::Ser,
-        args: ARef<Args>,
-    ) -> Result<Self::Ret, Self::Error> {
-        Policy::parse(self.as_mut(), set, inv, ser, args)
-    }
 }
 
 /// Parser manage the components are using in [`parse`](Policy::parse) of [`Policy`].
@@ -175,10 +150,8 @@ where
 ///     &mut parser1,
 ///     &mut parser2
 /// )?;
-///
-/// assert!(ret.is_some());
-/// let ret = ret.unwrap();
 /// let parser = ret.parser;
+///
 /// assert_eq!(
 ///     parser[0].name(),
 ///     "Where",
@@ -192,17 +165,17 @@ where
 /// Using it with macro [`getopt`](crate::getopt),
 /// which can process multiple [`Parser`] with same type [`Policy`].
 #[derive(Debug)]
-pub struct Parser<P: Policy> {
+pub struct Parser<'a, P: Policy> {
     policy: P,
     optset: P::Set,
-    invoker: P::Inv,
+    invoker: P::Inv<'a>,
     appser: P::Ser,
 }
 
-impl<P: Policy> Default for Parser<P>
+impl<'a, P: Policy> Default for Parser<'a, P>
 where
     P::Set: Default,
-    P::Inv: Default,
+    P::Inv<'a>: Default,
     P::Ser: Default,
     P: Default + Policy + APolicyExt<P>,
 {
@@ -217,7 +190,7 @@ where
     }
 }
 
-impl<P: Policy> Deref for Parser<P> {
+impl<'a, P: Policy> Deref for Parser<'a, P> {
     type Target = P::Set;
 
     fn deref(&self) -> &Self::Target {
@@ -225,13 +198,13 @@ impl<P: Policy> Deref for Parser<P> {
     }
 }
 
-impl<P: Policy> DerefMut for Parser<P> {
+impl<'a, P: Policy> DerefMut for Parser<'a, P> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.optset
     }
 }
 
-impl<P> Parser<P>
+impl<'a, P> Parser<'a, P>
 where
     P: Policy + APolicyExt<P>,
 {
@@ -249,34 +222,8 @@ where
     }
 }
 
-pub type BoxedPolicy<P> = Box<
-    dyn Policy<
-        Ret = <P as Policy>::Ret,
-        Set = <P as Policy>::Set,
-        Inv = <P as Policy>::Inv,
-        Ser = <P as Policy>::Ser,
-        Error = <P as Policy>::Error,
-    >,
->;
-
-impl<P> Parser<P>
-where
-    P: Policy + 'static,
-{
-    pub fn into_boxed(self) -> Parser<BoxedPolicy<P>> {
-        let policy: BoxedPolicy<P> = Box::new(self.policy);
-
-        Parser {
-            policy,
-            optset: self.optset,
-            invoker: self.invoker,
-            appser: self.appser,
-        }
-    }
-}
-
-impl<P: Policy> Parser<P> {
-    pub fn new_with(policy: P, optset: P::Set, invoker: P::Inv, valser: P::Ser) -> Self {
+impl<'a, P: Policy> Parser<'a, P> {
+    pub fn new_with(policy: P, optset: P::Set, invoker: P::Inv<'a>, valser: P::Ser) -> Self {
         Self {
             optset,
             policy,
@@ -298,15 +245,15 @@ impl<P: Policy> Parser<P> {
         self
     }
 
-    pub fn invoker(&self) -> &P::Inv {
+    pub fn invoker(&self) -> &P::Inv<'a> {
         &self.invoker
     }
 
-    pub fn invoker_mut(&mut self) -> &mut P::Inv {
+    pub fn invoker_mut(&mut self) -> &mut P::Inv<'a> {
         &mut self.invoker
     }
 
-    pub fn set_invoker(&mut self, invser: P::Inv) -> &mut Self {
+    pub fn set_invoker(&mut self, invser: P::Inv<'a>) -> &mut Self {
         self.invoker = invser;
         self
     }
@@ -338,7 +285,7 @@ impl<P: Policy> Parser<P> {
     }
 }
 
-impl<P> Parser<P>
+impl<'a, P> Parser<'a, P>
 where
     P::Set: Set,
     P::Ser: ServicesValExt,
@@ -438,7 +385,7 @@ where
     }
 }
 
-impl<P> Parser<P>
+impl<'a, P> Parser<'a, P>
 where
     P::Set: Set,
     P: Policy<Error = Error>,
@@ -454,7 +401,7 @@ where
     }
 }
 
-impl<P> Parser<P>
+impl<'a, P> Parser<'a, P>
 where
     P::Set: Set,
     P: Policy<Error = Error>,
@@ -482,13 +429,13 @@ where
     }
 }
 
-impl<P> Parser<P>
+impl<'a, P> Parser<'a, P>
 where
     SetOpt<P::Set>: Opt,
     <P::Set as OptParser>::Output: Information,
     SetCfg<P::Set>: Config + ConfigValue + Default,
-    P::Set: Set + OptParser + OptValidator + 'static,
-    P: Policy<Inv = Invoker<<P as Policy>::Set, <P as Policy>::Ser>, Error = Error>,
+    P::Set: Set + OptParser + OptValidator + 'a,
+    P: for<'b> Policy<Inv<'b> = Invoker<'b, <P as Policy>::Set, <P as Policy>::Ser>, Error = Error>,
 {
     /// Add an option to the [`Set`](Policy::Set), return a [`ParserCommit`].
     ///
@@ -572,7 +519,7 @@ where
     pub fn add_opt(
         &mut self,
         opt: impl Into<Str>,
-    ) -> Result<ParserCommit<'_, P::Set, P::Ser, Placeholder>, Error> {
+    ) -> Result<ParserCommit<'a, '_, P::Set, P::Ser, Placeholder>, Error> {
         let info = <SetCfg<P::Set>>::new(&self.optset, opt.into())?;
 
         Ok(ParserCommit::new(
@@ -584,7 +531,7 @@ where
     pub fn add_opt_i<U>(
         &mut self,
         opt: impl Into<Str>,
-    ) -> Result<ParserCommit<'_, P::Set, P::Ser, U>, Error>
+    ) -> Result<ParserCommit<'a, '_, P::Set, P::Ser, U>, Error>
     where
         U: Infer + 'static,
         U::Val: RawValParser,
@@ -653,7 +600,7 @@ where
     pub fn add_opt_cfg(
         &mut self,
         config: impl Into<SetCfg<P::Set>>,
-    ) -> Result<ParserCommit<'_, P::Set, P::Ser, Placeholder>, Error> {
+    ) -> Result<ParserCommit<'a, '_, P::Set, P::Ser, Placeholder>, Error> {
         Ok(ParserCommit::new(
             SetCommit::new_placeholder(&mut self.optset, config.into()),
             &mut self.invoker,
@@ -663,7 +610,7 @@ where
     pub fn add_opt_cfg_i<U>(
         &mut self,
         config: impl Into<SetCfg<P::Set>>,
-    ) -> Result<ParserCommit<'_, P::Set, P::Ser, U>, Error>
+    ) -> Result<ParserCommit<'a, '_, P::Set, P::Ser, U>, Error>
     where
         U: Infer + 'static,
         U::Val: RawValParser,
@@ -682,11 +629,11 @@ where
     pub fn entry<A, O, H>(
         &mut self,
         uid: Uid,
-    ) -> Result<HandlerEntry<'_, P::Set, P::Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntry<'a, '_, P::Set, P::Ser, H, A, O>, Error>
     where
         O: ErasedTy,
-        H: Handler<P::Set, P::Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'static,
-        A: Extract<P::Set, P::Ser, Error = Error> + Send + Sync + 'static,
+        H: Handler<P::Set, P::Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
+        A: Extract<P::Set, P::Ser, Error = Error> + Send + Sync + 'a,
     {
         Ok(HandlerEntry::new(&mut self.invoker, uid))
     }
@@ -696,17 +643,17 @@ where
     pub fn entry<A, O, H>(
         &mut self,
         uid: Uid,
-    ) -> Result<HandlerEntry<'_, P::Set, P::Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntry<'a, '_, P::Set, P::Ser, H, A, O>, Error>
     where
         O: ErasedTy,
-        H: Handler<P::Set, P::Ser, A, Output = Option<O>, Error = Error> + 'static,
-        A: Extract<P::Set, P::Ser, Error = Error> + 'static,
+        H: Handler<P::Set, P::Ser, A, Output = Option<O>, Error = Error> + 'a,
+        A: Extract<P::Set, P::Ser, Error = Error> + 'a,
     {
         Ok(HandlerEntry::new(&mut self.invoker, uid))
     }
 }
 
-impl<P> UserStyleManager for Parser<P>
+impl<'a, P> UserStyleManager for Parser<'a, P>
 where
     P: Policy + UserStyleManager,
 {
@@ -719,7 +666,7 @@ where
     }
 }
 
-impl<P> Parser<P>
+impl<'a, P> Parser<'a, P>
 where
     P: Policy + UserStyleManager,
 {

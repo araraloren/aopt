@@ -91,7 +91,7 @@ use crate::Error;
 ///     Args::from_array(["--load", "cxx", "-check", "cc"]),
 ///     &mut cfg_loader
 /// )?;
-/// let next_args = ret.unwrap().ret.clone_args();
+/// let next_args = ret.ret.clone_args();
 /// let mut parser = cfg_loader.service_mut().sve_take_val::<AFwdParser>()?;
 ///
 /// getopt!(Args::from_vec(next_args), &mut parser)?;
@@ -105,7 +105,7 @@ use crate::Error;
 ///     Args::from_array(["--load", "c", "-check", "c"]),
 ///     &mut cfg_loader
 /// )?;
-/// let next_args = ret.unwrap().ret.clone_args();
+/// let next_args = ret.ret.clone_args();
 /// let mut parser = cfg_loader.service_mut().sve_take_val::<AFwdParser>()?;
 ///
 /// getopt!(Args::from_vec(next_args), &mut parser)?;
@@ -219,11 +219,11 @@ where
     Ser: 'static,
     Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
 {
-    pub(crate) fn parse_impl(
+    pub(crate) fn parse_impl<'a>(
         &mut self,
         ctx: &mut Ctx,
         set: &mut <Self as Policy>::Set,
-        inv: &mut <Self as Policy>::Inv,
+        inv: &mut <Self as Policy>::Inv<'a>,
         ser: &mut <Self as Policy>::Ser,
     ) -> Result<(), <Self as Policy>::Error> {
         Self::ig_failure(self.checker().pre_check(set))?;
@@ -383,16 +383,16 @@ where
 
     type Set = Set;
 
-    type Inv = Invoker<Set, Ser>;
+    type Inv<'a> = Invoker<'a, Set, Ser>;
 
     type Ser = Ser;
 
     type Error = Error;
 
-    fn parse(
+    fn parse<'a>(
         &mut self,
         set: &mut Self::Set,
-        inv: &mut Self::Inv,
+        inv: &mut Self::Inv<'a>,
         ser: &mut Self::Ser,
         args: ARef<Args>,
     ) -> Result<Self::Ret, Self::Error> {
