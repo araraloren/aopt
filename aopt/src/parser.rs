@@ -150,10 +150,8 @@ pub trait Policy {
 ///     &mut parser1,
 ///     &mut parser2
 /// )?;
-///
-/// assert!(ret.is_some());
-/// let ret = ret.unwrap();
 /// let parser = ret.parser;
+///
 /// assert_eq!(
 ///     parser[0].name(),
 ///     "Where",

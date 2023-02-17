@@ -1,6 +1,14 @@
 
 # Relase note
 
+## 0.9.2
+
+- Change the 'static of Invoker to 'a
+
+- Remove the into_boxed of Parser
+
+- Improve `getopt!`
+
 ## 0.9.1
 
 - Add type paramter for `Main`, `Any`
