@@ -48,11 +48,37 @@ pub const BOOL_FALSE: &str = "false";
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Cmd;
+pub struct Cmd(pub bool);
+
+impl Cmd {
+    pub fn new(value: bool) -> Self {
+        Self(value)
+    }
+}
+
+impl Deref for Cmd {
+    type Target = bool;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Cmd {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Pos<T = bool>(pub T);
+
+impl<T> Pos<T> {
+    pub fn new(value: T) -> Self {
+        Self(value)
+    }
+}
 
 impl<T> Deref for Pos<T> {
     type Target = T;
@@ -72,6 +98,12 @@ impl<T> DerefMut for Pos<T> {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Main<T = ()>(pub T);
 
+impl<T> Main<T> {
+    pub fn new(value: T) -> Self {
+        Self(value)
+    }
+}
+
 impl<T> Deref for Main<T> {
     type Target = T;
 
@@ -89,6 +121,12 @@ impl<T> DerefMut for Main<T> {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Any<T = ()>(pub T);
+
+impl<T> Any<T> {
+    pub fn new(value: T) -> Self {
+        Self(value)
+    }
+}
 
 impl<T> Deref for Any<T> {
     type Target = T;
