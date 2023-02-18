@@ -79,20 +79,26 @@ pub struct CtxSaver {
 /// pub struct EmptyPolicy<Set, Ser>(PhantomData<(Set, Ser)>);
 ///
 /// // An empty policy do nothing.
-/// impl<S: Set, T: Ser> Policy for EmptyPolicy<S, T> {
+/// impl<S: Set, Ser> Policy for EmptyPolicy<S, Ser> {
 ///     type Ret = bool;
-///
+/// 
 ///     type Set = S;
-///
-///     type Inv = Invoker<S>;
-///
-///     type Ser = T;
-///
+/// 
+///     type Inv<'a> = Invoker<'a, S, Ser>;
+/// 
+///     type Ser = Ser;
+/// 
 ///     type Error = Error;
 ///
-///     fn parse(&mut self, _: &mut S, _: &mut T, _: ARef<Args>) -> Result<bool, Error> {
+///     fn parse<'a>(
+///         &mut self,
+///         _: &mut Self::Set,
+///         _: &mut Self::Inv<'a>,
+///         _: &mut Self::Ser,
+///         _: ARef<Args>,
+///    ) -> Result<bool, Error> {
 ///         // ... parsing logical code
-///         Ok(Some(true))
+///        Ok(true)
 ///     }
 /// }
 /// ```
@@ -404,7 +410,7 @@ where
 impl<'a, P> Parser<'a, P>
 where
     P::Set: Set,
-    P: Policy<Error = Error>,
+    P: Policy,
 {
     /// Call [`parse`](Policy::parse) parsing the given arguments.
     pub fn parse(&mut self, args: ARef<Args>) -> Result<P::Ret, P::Error> {
