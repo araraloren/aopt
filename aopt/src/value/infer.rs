@@ -24,6 +24,33 @@ use super::AnyValue;
 use super::RawValParser;
 use super::ValStorer;
 
+/// Using for derive value convert.
+pub enum InferConverter {
+    Pop,
+
+    PopOk,
+
+    PopNew,
+
+    Val,
+
+    ValOk,
+
+    ValNew,
+
+    ValAsRef,
+
+    Vals,
+
+    ValsAsRef,
+
+    ValsTake,
+
+    ValsNew,
+
+    Null,
+}
+
 /// Implement this if you want the type can used for create option.
 pub trait Infer {
     type Val: ErasedTy + 'static;
@@ -67,6 +94,8 @@ pub trait Infer {
     fn infer_initializer() -> Option<ValInitializer> {
         Some(ValInitializer::fallback())
     }
+
+    fn infer_convert() -> InferConverter;
 
     fn infer_tweak_info<C>(_cfg: &mut C)
     where
@@ -134,6 +163,10 @@ impl Infer for bool {
     fn infer_initializer() -> Option<ValInitializer> {
         Some(ValInitializer::new_value(false))
     }
+
+    fn infer_convert() -> InferConverter {
+        InferConverter::Pop
+    }
 }
 
 impl Infer for Cmd {
@@ -162,6 +195,10 @@ impl Infer for Cmd {
     fn infer_initializer() -> Option<ValInitializer> {
         Some(ValInitializer::new_value(false))
     }
+
+    fn infer_convert() -> InferConverter {
+        InferConverter::PopNew
+    }
 }
 
 impl<T> Infer for Pos<T>
@@ -184,6 +221,10 @@ where
 
     fn infer_ignore_index() -> bool {
         false
+    }
+
+    fn infer_convert() -> InferConverter {
+        InferConverter::PopNew
     }
 
     /// Will add default type storer when value type is bool.
@@ -256,6 +297,10 @@ where
     fn infer_ignore_index() -> bool {
         false
     }
+
+    fn infer_convert() -> InferConverter {
+        InferConverter::PopNew
+    }
 }
 
 impl<T> Infer for Any<T>
@@ -282,33 +327,61 @@ where
     fn infer_ignore_index() -> bool {
         false
     }
+
+    fn infer_convert() -> InferConverter {
+        InferConverter::PopNew
+    }
 }
 
 macro_rules! impl_infer_for {
     ($name:ident) => {
         impl Infer for $name {
             type Val = $name;
+
+            fn infer_convert() -> InferConverter {
+                InferConverter::Pop
+            }
         }
 
         impl Infer for std::option::Option<$name> {
             type Val = $name;
+
+            fn infer_convert() -> InferConverter {
+                InferConverter::PopOk
+            }
         }
 
         impl Infer for std::vec::Vec<$name> {
             type Val = $name;
+
+            fn infer_convert() -> InferConverter {
+                InferConverter::ValsTake
+            }
         }
     };
     (&$a:lifetime $name:ident) => {
         impl<$a> Infer for &$a $name {
             type Val = $name;
+
+            fn infer_convert() -> InferConverter {
+                InferConverter::Val
+            }
         }
 
         impl<$a> Infer for std::option::Option<&$a $name> {
             type Val = $name;
+
+            fn infer_convert() -> InferConverter {
+                InferConverter::ValOk
+            }
         }
 
         impl<$a> Infer for &$a std::vec::Vec<$name> {
             type Val = $name;
+
+            fn infer_convert() -> InferConverter {
+                InferConverter::Vals
+            }
         }
     };
 }
@@ -359,14 +432,26 @@ impl_infer_for!(&'a OsString);
 
 impl<'a> Infer for &'a str {
     type Val = String;
+
+    fn infer_convert() -> InferConverter {
+        InferConverter::ValAsRef
+    }
 }
 
-impl Infer for std::path::Path {
+impl<'a> Infer for &'a std::path::Path {
     type Val = PathBuf;
+
+    fn infer_convert() -> InferConverter {
+        InferConverter::ValAsRef
+    }
 }
 
 impl<'a> Infer for &'a OsStr {
     type Val = OsString;
+
+    fn infer_convert() -> InferConverter {
+        InferConverter::ValAsRef
+    }
 }
 
 impl Infer for Stdin {
@@ -391,6 +476,10 @@ impl Infer for Stdin {
     fn infer_ignore_index() -> bool {
         false
     }
+
+    fn infer_convert() -> InferConverter {
+        InferConverter::Pop
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -398,4 +487,8 @@ pub struct Placeholder;
 
 impl Infer for Placeholder {
     type Val = ();
+
+    fn infer_convert() -> InferConverter {
+        InferConverter::Null
+    }
 }

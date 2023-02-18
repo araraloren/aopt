@@ -81,13 +81,13 @@ pub struct CtxSaver {
 /// // An empty policy do nothing.
 /// impl<S: Set, Ser> Policy for EmptyPolicy<S, Ser> {
 ///     type Ret = bool;
-/// 
+///
 ///     type Set = S;
-/// 
+///
 ///     type Inv<'a> = Invoker<'a, S, Ser>;
-/// 
+///
 ///     type Ser = Ser;
-/// 
+///
 ///     type Error = Error;
 ///
 ///     fn parse<'a>(
