@@ -46,10 +46,9 @@ pub(crate) fn typeid<T: 'static>() -> TypeId {
     TypeId::of::<T>()
 }
 
-use parser::ReturnVal;
-
-pub struct GetoptRes<T> {
-    pub ret: ReturnVal,
+#[derive(Debug)]
+pub struct GetoptRes<R, T> {
+    pub ret: R,
 
     pub parser: T,
 }
