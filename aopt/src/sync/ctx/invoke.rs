@@ -187,7 +187,7 @@ where
     SetOpt<Set>: Opt,
     Set: crate::set::Set,
 {
-    pub fn entry<A, O, H>(&mut self, uid: Uid) -> HandlerEntry<'a, '_, Set, Ser, H, A, O>
+    pub fn entry<A, O, H>(&mut self, uid: Uid) -> HandlerEntry<'a, '_, Self, Set, Ser, H, A, O>
     where
         O: ErasedTy,
         H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
@@ -223,16 +223,43 @@ where
     }
 }
 
-pub struct HandlerEntry<'a, 'b, Set, Ser, H, A, O>
+pub trait HandlerCollection<'a, Set, Ser> {
+    fn register_handler<
+        H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error> + Send + Sync + 'a,
+    >(
+        &mut self,
+        uid: Uid,
+        handler: H,
+    );
+}
+
+impl<'a, Set, Ser> HandlerCollection<'a, Set, Ser> for Invoker<'a, Set, Ser>
+where
+    Ser: 'a,
+    Set: crate::set::Set + 'a,
+{
+    fn register_handler<
+        H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error> + Send + Sync + 'a,
+    >(
+        &mut self,
+        uid: Uid,
+        handler: H,
+    ) {
+        self.set_raw(uid, handler);
+    }
+}
+
+pub struct HandlerEntry<'a, 'b, I, Set, Ser, H, A, O>
 where
     O: ErasedTy,
     Ser: 'a,
     Set: crate::set::Set + 'a,
     SetOpt<Set>: Opt,
+    I: HandlerCollection<'a, Set, Ser>,
     H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
     A: Extract<Set, Ser, Error = Error> + Send + Sync + 'a,
 {
-    ser: &'b mut Invoker<'a, Set, Ser>,
+    ser: &'b mut I,
 
     handler: Option<H>,
 
@@ -240,19 +267,20 @@ where
 
     uid: Uid,
 
-    marker: PhantomData<(A, O)>,
+    marker: PhantomData<(A, O, Set, &'a Ser)>,
 }
 
-impl<'a, 'b, Set, Ser, H, A, O> HandlerEntry<'a, 'b, Set, Ser, H, A, O>
+impl<'a, 'b, I, Set, Ser, H, A, O> HandlerEntry<'a, 'b, I, Set, Ser, H, A, O>
 where
     O: ErasedTy,
     Ser: 'a,
     Set: crate::set::Set + 'a,
     SetOpt<Set>: Opt,
+    I: HandlerCollection<'a, Set, Ser>,
     H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
     A: Extract<Set, Ser, Error = Error> + Send + Sync + 'a,
 {
-    pub fn new(inv_ser: &'b mut Invoker<'a, Set, Ser>, uid: Uid) -> Self {
+    pub fn new(inv_ser: &'b mut I, uid: Uid) -> Self {
         Self {
             ser: inv_ser,
             handler: None,
@@ -273,7 +301,8 @@ where
     /// the handler return None.
     pub fn fallback(mut self, handler: H) -> Self {
         if !self.register {
-            self.ser.set_raw(self.uid, wrap_handler_fallback(handler));
+            self.ser
+                .register_handler(self.uid, wrap_handler_fallback(handler));
             self.register = true;
         }
         self
@@ -287,7 +316,8 @@ where
     ) -> Self {
         if !self.register {
             if let Some(handler) = self.handler.take() {
-                self.ser.set_raw(self.uid, wrap_handler(handler, store));
+                self.ser
+                    .register_handler(self.uid, wrap_handler(handler, store));
             }
             self.register = true;
         }
@@ -297,7 +327,8 @@ where
     pub fn submit(mut self) -> Uid {
         if !self.register {
             if let Some(handler) = self.handler.take() {
-                self.ser.set_raw(self.uid, wrap_handler_action(handler));
+                self.ser
+                    .register_handler(self.uid, wrap_handler_action(handler));
             }
             self.register = true;
         }
@@ -305,19 +336,21 @@ where
     }
 }
 
-impl<'a, 'b, Set, Ser, H, A, O> Drop for HandlerEntry<'a, 'b, Set, Ser, H, A, O>
+impl<'a, 'b, I, Set, Ser, H, A, O> Drop for HandlerEntry<'a, 'b, I, Set, Ser, H, A, O>
 where
     O: ErasedTy,
     Ser: 'a,
     Set: crate::set::Set + 'a,
     SetOpt<Set>: Opt,
+    I: HandlerCollection<'a, Set, Ser>,
     H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
     A: Extract<Set, Ser, Error = Error> + Send + Sync + 'a,
 {
     fn drop(&mut self) {
         if !self.register {
             if let Some(handler) = self.handler.take() {
-                self.ser.set_raw(self.uid, wrap_handler_action(handler));
+                self.ser
+                    .register_handler(self.uid, wrap_handler_action(handler));
             }
             self.register = true;
         }

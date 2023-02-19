@@ -34,9 +34,9 @@ use std::ops::DerefMut;
 use crate::args::Args;
 use crate::ctx::Extract;
 use crate::ctx::Handler;
+use crate::ctx::HandlerCollection;
 use crate::ctx::HandlerEntry;
 use crate::ctx::InnerCtx;
-use crate::ctx::Invoker;
 use crate::ext::APolicyExt;
 use crate::map::ErasedTy;
 use crate::opt::Config;
@@ -437,11 +437,12 @@ where
 
 impl<'a, P> Parser<'a, P>
 where
+    P: Policy,
     SetOpt<P::Set>: Opt,
     <P::Set as OptParser>::Output: Information,
     SetCfg<P::Set>: Config + ConfigValue + Default,
     P::Set: Set + OptParser + OptValidator + 'a,
-    P: for<'b> Policy<Inv<'b> = Invoker<'b, <P as Policy>::Set, <P as Policy>::Ser>, Error = Error>,
+    P::Inv<'a>: HandlerCollection<'a, P::Set, P::Ser>,
 {
     /// Add an option to the [`Set`](Policy::Set), return a [`ParserCommit`].
     ///
@@ -525,7 +526,7 @@ where
     pub fn add_opt(
         &mut self,
         opt: impl Into<Str>,
-    ) -> Result<ParserCommit<'a, '_, P::Set, P::Ser, Placeholder>, Error> {
+    ) -> Result<ParserCommit<'a, '_, P::Inv<'a>, P::Set, P::Ser, Placeholder>, Error> {
         let info = <SetCfg<P::Set>>::new(&self.optset, opt.into())?;
 
         Ok(ParserCommit::new(
@@ -537,7 +538,7 @@ where
     pub fn add_opt_i<U>(
         &mut self,
         opt: impl Into<Str>,
-    ) -> Result<ParserCommit<'a, '_, P::Set, P::Ser, U>, Error>
+    ) -> Result<ParserCommit<'a, '_, P::Inv<'a>, P::Set, P::Ser, U>, Error>
     where
         U: Infer + 'static,
         U::Val: RawValParser,
@@ -606,7 +607,7 @@ where
     pub fn add_opt_cfg(
         &mut self,
         config: impl Into<SetCfg<P::Set>>,
-    ) -> Result<ParserCommit<'a, '_, P::Set, P::Ser, Placeholder>, Error> {
+    ) -> Result<ParserCommit<'a, '_, P::Inv<'a>, P::Set, P::Ser, Placeholder>, Error> {
         Ok(ParserCommit::new(
             SetCommit::new_placeholder(&mut self.optset, config.into()),
             &mut self.invoker,
@@ -616,7 +617,7 @@ where
     pub fn add_opt_cfg_i<U>(
         &mut self,
         config: impl Into<SetCfg<P::Set>>,
-    ) -> Result<ParserCommit<'a, '_, P::Set, P::Ser, U>, Error>
+    ) -> Result<ParserCommit<'a, '_, P::Inv<'a>, P::Set, P::Ser, U>, Error>
     where
         U: Infer + 'static,
         U::Val: RawValParser,
@@ -629,13 +630,20 @@ where
             &mut self.invoker,
         ))
     }
+}
 
+impl<'a, P> Parser<'a, P>
+where
+    P::Set: Set,
+    P: Policy,
+    P::Inv<'a>: HandlerCollection<'a, P::Set, P::Ser>,
+{
     #[cfg(feature = "sync")]
     #[allow(clippy::type_complexity)]
     pub fn entry<A, O, H>(
         &mut self,
         uid: Uid,
-    ) -> Result<HandlerEntry<'a, '_, P::Set, P::Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntry<'a, '_, P::Inv<'a>, P::Set, P::Ser, H, A, O>, Error>
     where
         O: ErasedTy,
         H: Handler<P::Set, P::Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
@@ -649,7 +657,7 @@ where
     pub fn entry<A, O, H>(
         &mut self,
         uid: Uid,
-    ) -> Result<HandlerEntry<'a, '_, P::Set, P::Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntry<'a, '_, P::Inv<'a>, P::Set, P::Ser, H, A, O>, Error>
     where
         O: ErasedTy,
         H: Handler<P::Set, P::Ser, A, Output = Option<O>, Error = Error> + 'a,
