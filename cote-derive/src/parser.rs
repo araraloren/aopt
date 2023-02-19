@@ -1,22 +1,40 @@
 use proc_macro2::{Ident, TokenStream};
-use quote::quote;
+use proc_macro_error::abort;
+use quote::{quote, ToTokens};
 use syn::{
-    Data::Struct, DataStruct, DeriveInput, Field, Fields, GenericArgument, Path, PathArguments,
-    Type, TypePath, TypeReference,
+    Data::Struct, DataStruct, DeriveInput, Field, Fields, FieldsNamed, GenericArgument, Path,
+    PathArguments, Type, TypePath, TypeReference, GenericParam,
 };
 
-use crate::global::{Configurations, FieldCfg, GlobalCfg};
+use crate::{
+    lifetime_gen::LifetimedCodeGenerator,
+    global::{CfgKind, Configurations, FieldCfg, GlobalCfg},
+};
+
+pub(crate) struct FieldInfo {
+    pub has_lifetime: bool,
+
+    pub trimed_ty: Type,
+}
 
 pub fn derive_parser(input: DeriveInput) -> TokenStream {
     let ident = &input.ident;
-    let cfgs = Configurations::<GlobalCfg>::parse_attrs(&input.attrs);
+    let global_cfgs = Configurations::<GlobalCfg>::parse_attrs(Some(ident), &input.attrs);
+    let parameters = input.generics.params.to_token_stream();
+    let mut lifetime = None;
 
-    dbg!(&cfgs);
+    for param in input.generics.params.iter() {
+        if let GenericParam::Lifetime(lf) = param {
+            lifetime = Some(lf.lifetime.clone());
+        }
+    }
     match input.data {
         Struct(DataStruct {
             fields: Fields::Named(ref fields),
             ..
         }) => {
+            let mut fields_ = vec![];
+
             for field in fields.named.iter() {
                 if let Some(field) = CoteField::parse_field(field) {
                     eprintln!(
@@ -30,16 +48,61 @@ pub fn derive_parser(input: DeriveInput) -> TokenStream {
                         );
                     }
                 }
-                println!(
-                    "got configuration::::::: ===> {:?}",
-                    Configurations::<FieldCfg>::parse_attrs(&field.attrs)
-                );
+                let mut ty = field.ty.clone();
+                let mut has_lifetime = false;
+
+                if let Type::Reference(tr) = &mut ty {
+                    tr.lifetime = None;
+                    has_lifetime = true;
+                } else if let Type::Path(tp) = &mut ty {
+                    for segment in tp.path.segments.iter_mut() {
+                        if let PathArguments::AngleBracketed(ab) = &mut segment.arguments {
+                            for arg in ab.args.iter_mut() {
+                                if let GenericArgument::Type(Type::Reference(tr)) = arg {
+                                    tr.lifetime = None;
+                                    has_lifetime = true;
+                                }
+                            }
+                        }
+                    }
+                }
+                fields_.push((
+                    field,
+                    Configurations::<FieldCfg>::parse_attrs(field.ident.as_ref(), &field.attrs),
+                    FieldInfo {
+                        trimed_ty: ty,
+                        has_lifetime,
+                    }
+                ));
+            }
+
+            if let Some(lifetime) = lifetime {
+                let generator = LifetimedCodeGenerator {
+                    ident,
+                    global_cfg: global_cfgs,
+                    fields: fields_,
+                };
+    
+                generator.generate(parameters, lifetime).unwrap_or_else(|e| {
+                    abort! {
+                        ident, "can not generate code: {:?}", e
+                    }
+                })
+            }
+            else {
+                quote!{}
             }
         }
-        _ => {}
+        Struct(DataStruct {
+            fields: Fields::Unit,
+            ..
+        }) => {
+            quote! {}
+        }
+        _ => {
+            quote! {}
+        }
     }
-
-    quote! {}
 }
 
 #[derive(Debug, Clone)]

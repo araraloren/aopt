@@ -1,4 +1,5 @@
 use proc_macro_error::abort;
+use quote::{quote, ToTokens};
 use syn::{parenthesized, parse::Parse, punctuated::Punctuated, token::Paren, Expr, Lit, Token};
 
 #[derive(Debug, Clone)]
@@ -10,6 +11,20 @@ pub(crate) enum CfgValue {
     Call(Vec<Expr>),
 
     Null,
+}
+
+impl ToTokens for CfgValue {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        match self {
+            Self::Literal(t) => t.to_tokens(tokens),
+            Self::Expr(t) => t.to_tokens(tokens),
+            Self::Call(t) => {
+                let t = quote!(#(#t),*);
+                t.to_tokens(tokens)
+            }
+            Self::Null => {}
+        }
+    }
 }
 
 impl Default for CfgValue {

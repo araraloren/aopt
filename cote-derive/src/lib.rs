@@ -1,3 +1,4 @@
+mod lifetime_gen;
 mod global;
 mod parser;
 mod value;

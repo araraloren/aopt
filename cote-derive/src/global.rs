@@ -2,7 +2,7 @@ pub(crate) use crate::value::CfgValue;
 
 use proc_macro2::Ident;
 use proc_macro_error::abort;
-use syn::{parse::Parse, punctuated::Punctuated, Attribute, Token};
+use syn::{parse::Parse, punctuated::Punctuated, Attribute, Token, Type};
 
 pub(crate) trait Attr {
     fn cfg_kind(&self) -> CfgKind;
@@ -10,36 +10,45 @@ pub(crate) trait Attr {
     fn cfg_value(&self) -> &CfgValue;
 }
 
+pub(crate) trait ConfigCheck {
+    fn has_policy(&self) -> bool {
+        false
+    }
+
+    fn check(&self, has_policy: bool) -> bool;
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum CfgKind {
     Policy,
 
-    Name,
-
-    Type,
-
     Hint,
 
-    // Help, // can be set by comment
+    Help,
+
+    Author,
+
+    Version,
+
+    Head,
+
+    Foot,
+
+    Name,
+
     Value,
 
     Values,
 
-    Force, // !
+    Alias,
+
+    Action,
 
     Index,
 
-    Alias,
-
-    Action, // determind how to store value
-
-    Assoc, // determind which type value store in default handler
+    Validator,
 
     On,
-
-    Fallback,
-
-    Skip,
 }
 
 #[derive(Debug, Clone)]
@@ -65,6 +74,11 @@ impl Parse for GlobalCfg {
         let cfg_kind = ident.to_string();
         let cfg_kind = match cfg_kind.as_str() {
             "policy" => CfgKind::Policy,
+            "help" => CfgKind::Help,
+            "author" => CfgKind::Author,
+            "version" => CfgKind::Version,
+            "head" => CfgKind::Head,
+            "foot" => CfgKind::Foot,
             _ => {
                 abort! {
                     ident, "invalid configuration name in cote(...): {:?}", cfg_kind
@@ -72,10 +86,22 @@ impl Parse for GlobalCfg {
             }
         };
 
-        Ok(Self {
-            kind: cfg_kind,
-            value: input.parse()?,
-        })
+        match cfg_kind {
+            CfgKind::Help | CfgKind::Author | CfgKind::Version => Ok(Self {
+                kind: cfg_kind,
+                value: CfgValue::Null,
+            }),
+            _ => Ok(Self {
+                kind: cfg_kind,
+                value: input.parse()?,
+            }),
+        }
+    }
+}
+
+impl ConfigCheck for GlobalCfg {
+    fn check(&self, _: bool) -> bool {
+        true
     }
 }
 
@@ -103,18 +129,15 @@ impl Parse for FieldCfg {
         let cfg_kind = match cfg_kind.as_str() {
             "policy" => CfgKind::Policy,
             "name" => CfgKind::Name,
-            "ty" => CfgKind::Type,
             "hint" => CfgKind::Hint,
-            "val" => CfgKind::Value,
-            "vals" => CfgKind::Values,
-            "force" => CfgKind::Force,
-            "index" => CfgKind::Index,
+            "help" => CfgKind::Help,
+            "value" => CfgKind::Value,
+            "values" => CfgKind::Values,
             "alias" => CfgKind::Alias,
-            "act" => CfgKind::Action,
-            "assoc" => CfgKind::Assoc,
+            "index" => CfgKind::Index,
+            "action" => CfgKind::Action,
+            "validator" => CfgKind::Validator,
             "on" => CfgKind::On,
-            "fallback" => CfgKind::Fallback,
-            "skip" => CfgKind::Skip,
             _ => {
                 abort! {
                     ident, "invalid configuration name in cote(...): {:?}", cfg_kind
@@ -122,22 +145,30 @@ impl Parse for FieldCfg {
             }
         };
 
-        match cfg_kind {
-            CfgKind::Skip => Ok(Self {
-                kind: cfg_kind,
-                value: CfgValue::Null,
-            }),
-            _ => Ok(Self {
-                kind: cfg_kind,
-                value: input.parse()?,
-            }),
-        }
+        Ok(Self {
+            kind: cfg_kind,
+            value: input.parse()?,
+        })
     }
 }
 
-#[derive(Debug, Clone, Default)]
+impl ConfigCheck for FieldCfg {
+    fn check(&self, has_policy: bool) -> bool {
+        match self.kind {
+            CfgKind::Policy => has_policy,
+            CfgKind::Name | CfgKind::Alias => true,
+            _ => !has_policy,
+        }
+    }
+
+    fn has_policy(&self) -> bool {
+        matches!(self.kind, CfgKind::Policy)
+    }
+}
+
+#[derive(Debug, Clone)]
 pub(crate) struct Configurations<T: Parse> {
-    cfgs: Vec<T>,
+    pub cfgs: Vec<T>,
 }
 
 impl<T: Parse + Attr> Configurations<T> {
@@ -146,25 +177,32 @@ impl<T: Parse + Attr> Configurations<T> {
     }
 }
 
-impl<T: Parse> Configurations<T> {
-    pub fn parse_attrs(attrs: &[Attribute]) -> Self {
-        Self {
-            cfgs: attrs
-                .iter()
-                .filter(Self::cote_filter)
-                .map(|attr| {
-                    attr.parse_args_with(Punctuated::<T, Token![,]>::parse_terminated)
-                        .map(|res| res.into_iter())
-                        .unwrap_or_else(|e| {
-                            abort! {
-                                attr,
-                                "can not parsing cote attributes: {:?}", e
-                            }
-                        })
+impl<T: Parse + ConfigCheck> Configurations<T> {
+    pub fn parse_attrs(ident: Option<&Ident>, attrs: &[Attribute]) -> Self {
+        let attrs = attrs.iter().filter(Self::cote_filter);
+        let cfgs = attrs.map(|attr| {
+            attr.parse_args_with(Punctuated::<T, Token![,]>::parse_terminated)
+                .map(|res| res.into_iter())
+                .unwrap_or_else(|e| {
+                    abort! {
+                        attr,
+                        "can not parsing cote attributes: {:?}", e
+                    }
                 })
-                .flatten()
-                .collect::<Vec<T>>(),
+        });
+        let cfgs = cfgs.flatten().collect::<Vec<T>>();
+        let has_policy = cfgs.iter().any(|v| v.has_policy());
+
+        for cfg in cfgs.iter() {
+            if !cfg.check(has_policy) {
+                abort! {
+                    ident,
+                    "can not have attribute except `name` and `alias` if `policy` set"
+                }
+            }
         }
+
+        Self { cfgs }
     }
 
     fn cote_filter(attr: &&Attribute) -> bool {

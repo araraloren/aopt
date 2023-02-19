@@ -1,19 +1,21 @@
 use proc_macro2::{Ident, TokenStream};
 use proc_macro_error::abort;
 use quote::{quote, ToTokens};
-use syn::{spanned::Spanned, Field, Type, AngleBracketedGenericArguments, PathArguments, GenericArgument};
+use syn::{
+    spanned::Spanned, AngleBracketedGenericArguments, Field, GenericArgument, PathArguments, Type, Lifetime,
+};
 
-use crate::global::{CfgKind, Configurations, FieldCfg, GlobalCfg};
+use crate::{global::{CfgKind, Configurations, FieldCfg, GlobalCfg}, parser::FieldInfo};
 
-pub(crate) struct CodeGenerator<'a> {
+pub(crate) struct LifetimedCodeGenerator<'a> {
     pub ident: &'a Ident,
 
     pub global_cfg: Configurations<GlobalCfg>,
 
-    pub fields: Vec<(&'a Field, Configurations<FieldCfg>, Type)>,
+    pub fields: Vec<(&'a Field, Configurations<FieldCfg>, FieldInfo)>,
 }
 
-impl<'a> CodeGenerator<'a> {
+impl<'a> LifetimedCodeGenerator<'a> {
     // generate cote for current struct if has any sub parser
     pub fn using_cote(&self) -> bool {
         self.fields
@@ -21,35 +23,36 @@ impl<'a> CodeGenerator<'a> {
             .any(|(_, cfg, _)| cfg.find_cfg(CfgKind::Policy).is_some())
     }
 
-    pub fn generate(&self, lifetime: TokenStream) -> syn::Result<TokenStream> {
+    pub fn generate(&self, parameters: TokenStream, lifetime: Lifetime) -> syn::Result<TokenStream> {
         if self.using_cote() {
             todo!()
         } else {
-            self.generate_parser(lifetime)
+            self.generate_parser(parameters, lifetime)
         }
     }
 
-    pub fn generate_parser(&self, lifetime: TokenStream) -> syn::Result<TokenStream> {
+    pub fn generate_parser(&self, parameters: TokenStream, lifetime: Lifetime) -> syn::Result<TokenStream> {
         let has_handler = self
             .fields
             .iter()
             .any(|(_, cfg, _)| cfg.find_cfg(CfgKind::On).is_some());
         let update = self.generate_update()?;
-        let extract = self.generate_try_extract()?;
-        let inner = quote! {
-            fn update<'ylifetime>(parser: &'ylifetime mut Parser<'zlifetime, P>) -> Result<&'ylifetime mut Parser<'zlifetime, P>, Error> {
-                #update
-            }
+        let extract = self.generate_try_extract(&parameters, &lifetime)?;
+        let parser_ty = self.get_parser_type()?;
+        let ident = self.ident;
+        let try_from = quote! {
+            impl<#parameters, 'zlifetime: #lifetime> TryFrom<&'zlifetime mut #parser_ty> for #ident<#parameters> {
+                type Error = aopt::Error;
 
-            fn try_extract<'ylifetime>(parser: &'ylifetime mut Parser<'zlifetime, P>) -> Result<Self, Error> where Self: Sized {
-                #extract
+                fn try_from(parser: &'zlifetime mut #parser_ty) -> Result<Self, Self::Error> {
+                    <#ident as CoteParserExtractValueExt<ASet>>::try_extract(parser.optset_mut())
+                }
             }
         };
-        let ident = self.ident;
 
         if has_handler {
             Ok(quote! {
-                impl<#lifetime, 'zlifetime, P> CoteParserDeriveExt<'zlifetime, P> for #ident<#lifetime>
+                impl<#parameters, P> CoteParserDeriveExt<P> for #ident<#parameters>
                 where
                     P::Set: aopt::set::Set,
                     P::Error: Into<aopt::Error>,
@@ -57,79 +60,110 @@ impl<'a> CodeGenerator<'a> {
                     SetCfg<P::Set>: aopt::opt::Config + aopt::opt::ConfigValue + Default,
                     P::Inv<'a>: aopt::ctx::HandlerCollection<'a, P::Set, P::Ser>,
                 {
-                    #inner
+                    fn update<'zlifetime>(parser: &mut Parser<'zlifetime, P>) -> Result<(), Error> {
+                        #update
+                    }
                 }
+
+                #extract
+
+                #try_from
             })
         } else {
             Ok(quote! {
-                impl<#lifetime, 'zlifetime, P> CoteParserDeriveExt<'zlifetime, P> for #ident<#lifetime>
+                impl<#parameters, P> CoteParserDeriveExt<P> for #ident<#parameters>
                 where
                     P::Set: aopt::set::Set,
                     P::Error: Into<aopt::Error>,
                     P: aopt::parser::Policy + aopt::ext::APolicyExt<P> + Default,
                     SetCfg<P::Set>: aopt::opt::Config + aopt::opt::ConfigValue + Default,
                 {
-                    #inner
+                    fn update<'zlifetime>(parser: &mut Parser<'zlifetime, P>) -> Result<(), Error> {
+                        #update
+                    }
                 }
+
+                #extract
+
+                #try_from
             })
         }
     }
 
-    pub fn generate_try_extract(&self) -> syn::Result<TokenStream> {
-        Ok(quote! {
-            todo!()
+    pub fn get_parser_type(&self) -> syn::Result<TokenStream> {
+        let policy = self.global_cfg.find_cfg(CfgKind::Policy);
+        let policy_name = policy
+            .map(|v| v.value.to_token_stream().to_string())
+            .unwrap_or(String::from("fwd"));
+
+        Ok(match policy_name.as_str() {
+            "pre" => {
+                quote! {
+                    APreParser<'_>
+                }
+            }
+            "fwd" => {
+                quote! {
+                    AFwdParser<'_>
+                }
+            }
+            "delay" => {
+                quote! {
+                    ADelayParser<'_>
+                }
+            }
+            _ => policy_name.to_token_stream(),
         })
     }
 
-    pub fn generate_try_extract_field(field: &Field, config: &Configurations<FieldCfg>) -> syn::Result<TokenStream> {
-        let ident = field.ident.as_ref().unwrap_or_else(|| {
-            abort! {
-                field,
-                "missing field name"
-            }
-        });
-        let name = format!("--{}", ident.to_string()).to_token_stream();
-        let name = config.find_cfg(CfgKind::Name).map(|v|v.value.to_token_stream()).unwrap_or(name);
-        let ty = &field.ty;
+    pub fn generate_try_extract(&self, parameters: &TokenStream, lifetime: &Lifetime) -> syn::Result<TokenStream> {
+        let extract_fields = self.generate_try_extract_fields()?;
+        let ident = self.ident;
 
         Ok(quote! {
-            match <#ty as aopt::value::Infer>::infer_convert() {
-                aopt::value::InferConverter::Pop => {
-                    set.take_val::<<#ty as aopt::value::Infer>::Val>(#name)?
+            impl<#parameters, 'zlifetime: #lifetime, S>  CoteParserExtractValueExt<'zlifetime, S> for #ident<#parameters> 
+                where S: SetValueFindExt {
+                fn try_extract(set: &'zlifetime mut S) -> Result<Self, Error> where Self: Sized {
+                    Ok(Self {
+                        #extract_fields
+                    })
                 }
-                aopt::value::InferConverter::PopOk => {
-                    set.take_val::<<#ty as aopt::value::Infer>::Val>(#name).ok()
-                }
-                aopt::value::InferConverter::PopNew => {
-                    <#ty>::from(set.take_val::<<#ty as aopt::value::Infer>::Val>(#name)?)
-                }
-                aopt::value::InferConverter::Val => {
-                    set.find_val::<<#ty as aopt::value::Infer>::Val>(#name)?
-                }
-                aopt::value::InferConverter::ValOk => {
-                    set.find_val::<<#ty as aopt::value::Infer>::Val>(#name).ok()
-                }
-                aopt::value::InferConverter::ValNew => {
-                    <#ty>::from(set.find_val::<<#ty as aopt::value::Infer>::Val>(#name)?)
-                }
-                aopt::value::InferConverter::Val => {
-                    set.find_val::<<#ty as aopt::value::Infer>::Val>(#name)?.as_ref()
-                }
-                aopt::value::InferConverter::Vals => {
-                    set.find_vals::<<#ty as aopt::value::Infer>::Val>(#name)?
-                }
-                aopt::value::InferConverter::ValsAsRef => {
-                    set.find_vals::<<#ty as aopt::value::Infer>::Val>(#name)?
-                }
-                aopt::value::InferConverter::Vals => {
-                    set.find_vals::<<#ty as aopt::value::Infer>::Val>(#name)?
-                }
-                aopt::value::InferConverter::Vals => {
-                    set.find_vals::<<#ty as aopt::value::Infer>::Val>(#name)?
-                }
-                _ => { }
             }
         })
+    }
+
+    pub fn generate_try_extract_fields(&self) -> syn::Result<TokenStream> {
+        let mut extract_field = quote! {};
+        let mut reference_field = quote!{};
+
+        for field in self.fields.iter() {
+            let ident = field.0.ident.as_ref().unwrap_or_else(|| {
+                abort! {
+                    field.0,
+                    "missing field name"
+                }
+            });
+            let name = format!("--{}", ident.to_string()).to_token_stream();
+            let name = field
+                .1
+                .find_cfg(CfgKind::Name)
+                .map(|v| v.value.to_token_stream())
+                .unwrap_or(name);
+            let ty = &field.0.ty;
+
+            if field.2.has_lifetime {
+                reference_field.extend(quote! {
+                    #ident: <#ty>::infer_fetch(#name, set)?,
+                });
+            }
+            else {
+                extract_field.extend(quote! {
+                    #ident: <#ty>::infer_fetch(#name, set)?,
+                });
+            }
+        }
+        extract_field.extend(reference_field);
+        Ok(extract_field)
     }
 
     pub fn generate_update(&self) -> syn::Result<TokenStream> {
@@ -146,7 +180,7 @@ impl<'a> CodeGenerator<'a> {
 
         for (idx, field) in self.fields.iter().enumerate() {
             let ident = Ident::new(&format!("opt{}", idx), field.0.span());
-            let create_option = Self::generate_create_option(field.0, &field.1, &field.2)?;
+            let create_option = Self::generate_create_option(field.0, &field.1, &field.2.trimed_ty)?;
             let handler_cfg = field.1.find_cfg(CfgKind::On);
 
             create.push(quote! {
@@ -173,7 +207,7 @@ impl<'a> CodeGenerator<'a> {
         update.extend(create.into_iter());
         update.extend(insert.into_iter());
         update.extend(register.into_iter());
-        update.extend(quote! { Ok(parser) });
+        update.extend(quote! { Ok(()) });
         Ok(update)
     }
 
