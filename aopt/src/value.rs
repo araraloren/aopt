@@ -10,7 +10,8 @@ use std::fmt::Debug;
 
 pub use self::accessor::ValAccessor;
 pub use self::infer::Infer;
-pub use self::infer::InferConverter;
+pub use self::infer::InferValueMut;
+pub use self::infer::InferValueRef;
 pub use self::infer::Placeholder;
 pub use self::initializer::InitHandler;
 pub use self::initializer::InitializeValue;

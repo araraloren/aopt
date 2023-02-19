@@ -254,6 +254,8 @@ pub mod prelude {
     pub use crate::opt::Serde;
     pub use crate::opt::StrParser;
     pub use crate::opt::Style;
+    pub use crate::value::InferValueMut;
+    pub use crate::value::InferValueRef;
     // pub use crate::parser::BoxedPolicy;
     pub use crate::parser::DelayPolicy;
     pub use crate::parser::FwdPolicy;
@@ -303,5 +305,6 @@ pub mod prelude {
     pub use crate::value::ValStorer;
     pub use crate::value::ValValidator;
     pub use crate::ARef;
+    pub use crate::GetoptRes;
     pub use crate::Uid;
 }

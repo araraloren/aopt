@@ -14,6 +14,7 @@ use crate::opt::Index;
 use crate::opt::Main;
 use crate::opt::Pos;
 use crate::opt::Style;
+use crate::prelude::SetValueFindExt;
 use crate::trace_log;
 use crate::value::ValInitializer;
 use crate::value::ValValidator;
@@ -23,35 +24,6 @@ use crate::Str;
 use super::AnyValue;
 use super::RawValParser;
 use super::ValStorer;
-
-/// Using for derive value convert.
-pub enum InferConverter {
-    Pop,
-
-    PopOk,
-
-    PopFrom,
-
-    Val,
-
-    ValOk,
-
-    ValFrom,
-
-    ValAsRef,
-
-    Vals,
-
-    ValsOk,
-
-    ValsAsRef,
-
-    ValsTake,
-
-    ValsFrom,
-
-    Null,
-}
 
 /// Implement this if you want the type can used for create option.
 pub trait Infer {
@@ -96,8 +68,6 @@ pub trait Infer {
     fn infer_initializer() -> Option<ValInitializer> {
         Some(ValInitializer::fallback())
     }
-
-    fn infer_convert() -> InferConverter;
 
     fn infer_tweak_info<C>(_cfg: &mut C)
     where
@@ -151,6 +121,18 @@ pub trait Infer {
     }
 }
 
+pub trait InferValueRef<'a> {
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error>
+    where
+        Self: Sized;
+}
+
+pub trait InferValueMut<'a> {
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
+    where
+        Self: Sized;
+}
+
 impl Infer for bool {
     type Val = bool;
 
@@ -165,9 +147,14 @@ impl Infer for bool {
     fn infer_initializer() -> Option<ValInitializer> {
         Some(ValInitializer::new_value(false))
     }
+}
 
-    fn infer_convert() -> InferConverter {
-        InferConverter::Pop
+impl<'a> InferValueMut<'a> for bool {
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        set.take_val::<bool>(name)
     }
 }
 
@@ -197,9 +184,14 @@ impl Infer for Cmd {
     fn infer_initializer() -> Option<ValInitializer> {
         Some(ValInitializer::new_value(false))
     }
+}
 
-    fn infer_convert() -> InferConverter {
-        InferConverter::PopFrom
+impl<'a> InferValueMut<'a> for Cmd {
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        Ok(Cmd::new(set.take_val::<bool>(name)?))
     }
 }
 
@@ -223,10 +215,6 @@ where
 
     fn infer_ignore_index() -> bool {
         false
-    }
-
-    fn infer_convert() -> InferConverter {
-        InferConverter::PopFrom
     }
 
     /// Will add default type storer when value type is bool.
@@ -270,6 +258,18 @@ where
     }
 }
 
+impl<'a, T> InferValueMut<'a> for Pos<T>
+where
+    T: ErasedTy + 'static,
+{
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        Ok(Pos::new(set.take_val::<T>(name)?))
+    }
+}
+
 impl<T> Infer for Main<T>
 where
     T: ErasedTy + 'static,
@@ -299,9 +299,17 @@ where
     fn infer_ignore_index() -> bool {
         false
     }
+}
 
-    fn infer_convert() -> InferConverter {
-        InferConverter::PopFrom
+impl<'a, T> InferValueMut<'a> for Main<T>
+where
+    T: ErasedTy + 'static,
+{
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        Ok(Main::new(set.take_val::<T>(name)?))
     }
 }
 
@@ -329,9 +337,17 @@ where
     fn infer_ignore_index() -> bool {
         false
     }
+}
 
-    fn infer_convert() -> InferConverter {
-        InferConverter::PopFrom
+impl<'a, T> InferValueMut<'a> for Any<T>
+where
+    T: ErasedTy + 'static,
+{
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        Ok(Any::new(set.take_val::<T>(name)?))
     }
 }
 
@@ -339,50 +355,63 @@ macro_rules! impl_infer_for {
     ($name:ident) => {
         impl Infer for $name {
             type Val = $name;
+        }
 
-            fn infer_convert() -> InferConverter {
-                InferConverter::Pop
+        impl<'a> InferValueMut<'a> for $name {
+            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error> where Self: Sized {
+                set.take_val::<$name>(name)
             }
         }
 
         impl Infer for std::option::Option<$name> {
             type Val = $name;
+        }
 
-            fn infer_convert() -> InferConverter {
-                InferConverter::PopOk
+        impl<'a> InferValueMut<'a> for std::option::Option<$name> {
+            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error> where Self: Sized {
+                Ok(set.take_val::<$name>(name).ok())
             }
         }
 
         impl Infer for std::vec::Vec<$name> {
             type Val = $name;
+        }
 
-            fn infer_convert() -> InferConverter {
-                InferConverter::ValsTake
+        impl<'a> InferValueMut<'a> for std::vec::Vec<$name> {
+            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error> where Self: Sized {
+                Ok(std::mem::take(set.find_vals_mut::<$name>(name)?))
             }
         }
+
     };
     (&$a:lifetime $name:ident) => {
         impl<$a> Infer for &$a $name {
             type Val = $name;
+        }
 
-            fn infer_convert() -> InferConverter {
-                InferConverter::Val
+        impl<$a> InferValueRef<$a> for &$a $name {
+            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error> where Self: Sized {
+                set.find_val::<$name>(name)
             }
         }
 
         impl<$a> Infer for std::option::Option<&$a $name> {
             type Val = $name;
+        }
 
-            fn infer_convert() -> InferConverter {
-                InferConverter::ValOk
+        impl<$a> InferValueRef<$a> for std::option::Option<&$a $name> {
+            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error> where Self: Sized {
+                Ok(set.find_val::<$name>(name).ok())
             }
         }
 
         impl<$a> Infer for &$a std::vec::Vec<$name> {
             type Val = $name;
+        }
 
-            fn infer_convert() -> InferConverter {
-                InferConverter::Vals
+        impl<$a> InferValueRef<$a> for &$a std::vec::Vec<$name> {
+            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error> where Self: Sized {
+                set.find_vals::<$name>(name)
             }
         }
     };
@@ -434,25 +463,40 @@ impl_infer_for!(&'a OsString);
 
 impl<'a> Infer for &'a str {
     type Val = String;
+}
 
-    fn infer_convert() -> InferConverter {
-        InferConverter::ValAsRef
+impl<'a> InferValueRef<'a> for &'a str {
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        set.find_val::<String>(name).map(|v| v.as_ref())
     }
 }
 
 impl<'a> Infer for &'a std::path::Path {
     type Val = PathBuf;
+}
 
-    fn infer_convert() -> InferConverter {
-        InferConverter::ValAsRef
+impl<'a> InferValueRef<'a> for &'a std::path::Path {
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        set.find_val::<PathBuf>(name).map(|v| v.as_ref())
     }
 }
 
 impl<'a> Infer for &'a OsStr {
     type Val = OsString;
+}
 
-    fn infer_convert() -> InferConverter {
-        InferConverter::ValAsRef
+impl<'a> InferValueRef<'a> for &'a OsStr {
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        set.find_val::<OsString>(name).map(|v| v.as_ref())
     }
 }
 
@@ -478,9 +522,14 @@ impl Infer for Stdin {
     fn infer_ignore_index() -> bool {
         false
     }
+}
 
-    fn infer_convert() -> InferConverter {
-        InferConverter::Pop
+impl<'a> InferValueMut<'a> for Stdin {
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        set.take_val::<Stdin>(name)
     }
 }
 
@@ -489,8 +538,13 @@ pub struct Placeholder;
 
 impl Infer for Placeholder {
     type Val = ();
+}
 
-    fn infer_convert() -> InferConverter {
-        InferConverter::Null
+impl<'a> InferValueMut<'a> for Placeholder {
+    fn infer_fetch<S: SetValueFindExt>(_: &str, _: &'a mut S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        Ok(Placeholder {})
     }
 }
