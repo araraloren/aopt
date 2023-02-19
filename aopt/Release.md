@@ -9,6 +9,8 @@
 
 - Improve `getopt!`
 
+- Improve the handler register for option
+
 ## 0.9.1
 
 - Add type paramter for `Main`, `Any`
