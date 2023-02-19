@@ -30,23 +30,25 @@ pub enum InferConverter {
 
     PopOk,
 
-    PopNew,
+    PopFrom,
 
     Val,
 
     ValOk,
 
-    ValNew,
+    ValFrom,
 
     ValAsRef,
 
     Vals,
 
+    ValsOk,
+
     ValsAsRef,
 
     ValsTake,
 
-    ValsNew,
+    ValsFrom,
 
     Null,
 }
@@ -197,7 +199,7 @@ impl Infer for Cmd {
     }
 
     fn infer_convert() -> InferConverter {
-        InferConverter::PopNew
+        InferConverter::PopFrom
     }
 }
 
@@ -224,7 +226,7 @@ where
     }
 
     fn infer_convert() -> InferConverter {
-        InferConverter::PopNew
+        InferConverter::PopFrom
     }
 
     /// Will add default type storer when value type is bool.
@@ -299,7 +301,7 @@ where
     }
 
     fn infer_convert() -> InferConverter {
-        InferConverter::PopNew
+        InferConverter::PopFrom
     }
 }
 
@@ -329,7 +331,7 @@ where
     }
 
     fn infer_convert() -> InferConverter {
-        InferConverter::PopNew
+        InferConverter::PopFrom
     }
 }
 
