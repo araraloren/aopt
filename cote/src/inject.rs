@@ -1,49 +1,43 @@
-pub trait Inject<'a, T> {
-    type Ret;
-    type Error;
 
-    fn inject(parser: &'a mut T) -> Result<Self::Ret, Self::Error>;
-}
+use aopt::prelude::*;
+use aopt::GetoptRes;
+use aopt::Error;
 
-pub trait InjectFrom<'a, T> {
-    type Ret;
-    type Error;
-
-    fn inject_from(&mut self, parser: &'a mut T) -> Result<Self::Ret, Self::Error>;
-}
-
-pub trait ExtractVal<'a, P>
+pub trait CoteParserDeriveExt<P>
 where
-    Self: 'a + Sized,
+    P::Set: Set,
+    P::Error: Into<aopt::Error>,
+    P: Policy + APolicyExt<P> + Default,
+    SetCfg<P::Set>: Config + ConfigValue + Default,
 {
-    type Error;
+    fn parse_env<'zlifetime>() -> Result<GetoptRes<P::Ret, Parser<'zlifetime, P>>, Error> {
+        Self::parse(ARef::new(Args::from_env()))
+    }
 
-    fn extract_new(parser: &'a P) -> Result<Self, Self::Error>;
+    fn parse<'zlifetime>(
+        args: ARef<Args>,
+    ) -> Result<GetoptRes<P::Ret, Parser<'zlifetime, P>>, Error> {
+        let mut parser = Self::into_parser()?;
+        let ret = parser.parse(args).map_err(Into::into)?;
+
+        Ok(GetoptRes {
+            ret: ret,
+            parser: parser,
+        })
+    }
+
+    fn into_parser<'zlifetime>() -> Result<Parser<'zlifetime, P>, Error> {
+        let mut parser = Parser::<'zlifetime, P>::new(P::default());
+
+        Self::update(&mut parser)?;
+        Ok(parser)
+    }
+
+    fn update<'zlifetime>(parser: &mut Parser<'zlifetime, P>) -> Result<(), Error>;
 }
 
-pub trait ExtractValMut<'a, P>
-where
-    Self: 'a + Sized,
-{
-    type Error;
-
-    fn extract_new_mut(parser: &'a mut P) -> Result<Self, Self::Error>;
-}
-
-pub trait ExtractValFor<'a, P>
-where
-    Self: 'a + Sized,
-{
-    type Error;
-
-    fn extract_for(&mut self, name: &str, parser: &'a P) -> Result<&mut Self, Self::Error>;
-}
-
-pub trait ExtractValForMut<'a, P>
-where
-    Self: 'a + Sized,
-{
-    type Error;
-
-    fn extract_for_mut(&mut self, name: &str, parser: &'a mut P) -> Result<&mut Self, Self::Error>;
+pub trait CoteParserExtractValueExt<'zlifetime, S> where S: SetValueFindExt {
+    fn try_extract(set: &'zlifetime mut S) -> Result<Self, Error>
+    where
+        Self: Sized;
 }
