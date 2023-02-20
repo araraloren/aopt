@@ -1,7 +1,8 @@
-mod lifetime_gen;
-mod global;
-mod parser;
-mod value;
+// mod lifetime_gen;
+// mod global;
+// mod parser;
+// mod value;
+mod analyzer;
 
 use syn::{parse_macro_input, DeriveInput};
 
@@ -10,5 +11,5 @@ use syn::{parse_macro_input, DeriveInput};
 pub fn parser(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input: DeriveInput = parse_macro_input!(input);
 
-    parser::derive_parser(input).into()
+    analyzer::derive_parser(input).into()
 }
