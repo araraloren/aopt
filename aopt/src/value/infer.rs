@@ -352,7 +352,7 @@ where
 }
 
 macro_rules! impl_infer_for {
-    ($name:ident) => {
+    ($name:path) => {
         impl Infer for $name {
             type Val = $name;
         }
@@ -384,7 +384,7 @@ macro_rules! impl_infer_for {
         }
 
     };
-    (&$a:lifetime $name:ident) => {
+    (&$a:lifetime $name:path) => {
         impl<$a> Infer for &$a $name {
             type Val = $name;
         }
@@ -412,6 +412,57 @@ macro_rules! impl_infer_for {
         impl<$a> InferValueRef<$a> for &$a std::vec::Vec<$name> {
             fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error> where Self: Sized {
                 set.find_vals::<$name>(name)
+            }
+        }
+
+        impl<$a> Infer for Option<&$a std::vec::Vec<$name>> {
+            type Val = $name;
+        }
+
+        impl<$a> InferValueRef<$a> for Option<&$a std::vec::Vec<$name>> {
+            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error> where Self: Sized {
+                Ok(set.find_vals::<$name>(name).ok())
+            }
+        }
+    };
+    (&$a:lifetime $name:path, $inner_type:path) => {
+        impl<$a> Infer for &$a $name {
+            type Val = $inner_type;
+        }
+
+        impl<$a> InferValueRef<$a> for &$a $name {
+            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error> where Self: Sized {
+                set.find_val::<$inner_type>(name).map(|v| v.as_ref())
+            }
+        }
+
+        impl<$a> Infer for std::option::Option<&$a $name> {
+            type Val = $inner_type;
+        }
+
+        impl<$a> InferValueRef<$a> for std::option::Option<&$a $name> {
+            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error> where Self: Sized {
+                Ok(set.find_val::<$inner_type>(name).map(|v| v.as_ref()).ok())
+            }
+        }
+
+        impl<$a> Infer for std::vec::Vec<&$a $name> {
+            type Val = $inner_type;
+        }
+
+        impl<$a> InferValueRef<$a> for std::vec::Vec<&$a $name> {
+            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error> where Self: Sized {
+                Ok(set.find_vals::<$inner_type>(name)?.iter().map(|v|v.as_ref()).collect())
+            }
+        }
+
+        impl<$a> Infer for Option<std::vec::Vec<&$a $name>> {
+            type Val = $inner_type;
+        }
+
+        impl<$a> InferValueRef<$a> for Option<std::vec::Vec<&$a $name>> {
+            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error> where Self: Sized {
+                Ok(Some(set.find_vals::<$inner_type>(name)?.iter().map(|v|v.as_ref()).collect()))
             }
         }
     };
@@ -460,45 +511,9 @@ impl_infer_for!(&'a usize);
 impl_infer_for!(&'a String);
 impl_infer_for!(&'a PathBuf);
 impl_infer_for!(&'a OsString);
-
-impl<'a> Infer for &'a str {
-    type Val = String;
-}
-
-impl<'a> InferValueRef<'a> for &'a str {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        set.find_val::<String>(name).map(|v| v.as_ref())
-    }
-}
-
-impl<'a> Infer for &'a std::path::Path {
-    type Val = PathBuf;
-}
-
-impl<'a> InferValueRef<'a> for &'a std::path::Path {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        set.find_val::<PathBuf>(name).map(|v| v.as_ref())
-    }
-}
-
-impl<'a> Infer for &'a OsStr {
-    type Val = OsString;
-}
-
-impl<'a> InferValueRef<'a> for &'a OsStr {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        set.find_val::<OsString>(name).map(|v| v.as_ref())
-    }
-}
+impl_infer_for!(&'a std::path::Path, PathBuf);
+impl_infer_for!(&'a str, String);
+impl_infer_for!(&'a OsStr, OsString);
 
 impl Infer for Stdin {
     type Val = Stdin;
