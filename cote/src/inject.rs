@@ -1,7 +1,6 @@
-
 use aopt::prelude::*;
-use aopt::GetoptRes;
 use aopt::Error;
+use aopt::GetoptRes;
 
 pub trait CoteParserDeriveExt<P>
 where
@@ -36,7 +35,10 @@ where
     fn update<'zlifetime>(parser: &mut Parser<'zlifetime, P>) -> Result<(), Error>;
 }
 
-pub trait CoteParserExtractValueExt<'zlifetime, S> where S: SetValueFindExt {
+pub trait CoteParserExtractValueExt<'zlifetime, S>
+where
+    S: SetValueFindExt,
+{
     fn try_extract(set: &'zlifetime mut S) -> Result<Self, Error>
     where
         Self: Sized;
