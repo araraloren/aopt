@@ -253,14 +253,13 @@ where
                         // strip the prefix before generate
                         let opt_validator = cfg.opt_validator();
                         let splited = opt_validator.split(name).map_err(Into::into)?;
+                        let prefix_len = splited.0.len();
 
                         // make sure we using `chars.count`, not len()
-                        if splited.1.chars().count() >= 2 {
-                            let prefix_len = splited.0.len() + 1;
-                            let i = (prefix_len..name.len())
-                                .find(|v| name.is_char_boundary(*v))
-                                .unwrap();
-                            let name_value = name.split_at(i);
+                        // make sure the name length >= 2
+                        // only check first letter `--v42` ==> `--v 42`
+                        if let Some((idx, _)) = splited.1.char_indices().nth(1) {
+                            let name_value = name.split_at(prefix_len + idx);
 
                             matches.push(
                                 OptMatch::default()
@@ -279,31 +278,24 @@ where
                     if let Some(name) = &clopt.name {
                         let opt_validator = cfg.opt_validator();
                         let splited = opt_validator.split(name).map_err(Into::into)?;
+                        let prefix_len = splited.0.len();
+                        let mut char_indices = splited.1.char_indices().skip(2);
 
                         // make sure we using `chars.count`, not len()
-                        if splited.1.chars().count() >= 3 {
-                            let mut i = splited.0.len() + 2;
+                        // check the name start 3th letter
+                        // for `--opt42` check the option like `--op t42`, `--opt 42`, `--opt4 2`
+                        while let Some((i, _)) = char_indices.next() {
+                            let name_value = name.split_at(prefix_len + i);
 
-                            while i < name.len() {
-                                if let Some(next) =
-                                    (i..name.len()).find(|v| name.is_char_boundary(*v))
-                                {
-                                    let name_value = name.split_at(next);
-
-                                    matches.push(
-                                        OptMatch::default()
-                                            .with_idx(index)
-                                            .with_total(count)
-                                            .with_arg(Some(RawVal::from(name_value.1).into()))
-                                            .with_style(Style::Argument)
-                                            .with_name(name_value.0.into()),
-                                    );
-                                    any_match = true;
-                                    i = next + 1;
-                                } else {
-                                    break;
-                                }
-                            }
+                            matches.push(
+                                OptMatch::default()
+                                    .with_idx(index)
+                                    .with_total(count)
+                                    .with_arg(Some(RawVal::from(name_value.1).into()))
+                                    .with_style(Style::Argument)
+                                    .with_name(name_value.0.into()),
+                            );
+                            any_match = true;
                         }
                     }
                 }
