@@ -1,8 +1,8 @@
 // mod lifetime_gen;
-// mod global;
 // mod parser;
-// mod value;
 mod analyzer;
+mod global;
+mod value;
 
 use syn::{parse_macro_input, DeriveInput};
 

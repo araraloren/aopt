@@ -2,7 +2,7 @@ pub(crate) use crate::value::CfgValue;
 
 use proc_macro2::Ident;
 use proc_macro_error::abort;
-use syn::{parse::Parse, punctuated::Punctuated, Attribute, Token, Type};
+use syn::{parse::Parse, punctuated::Punctuated, Attribute, Token};
 
 pub(crate) trait Attr {
     fn cfg_kind(&self) -> CfgKind;
@@ -136,7 +136,7 @@ impl Parse for FieldCfg {
             "alias" => CfgKind::Alias,
             "index" => CfgKind::Index,
             "action" => CfgKind::Action,
-            "validator" => CfgKind::Validator,
+            "valid" => CfgKind::Validator,
             "on" => CfgKind::On,
             _ => {
                 abort! {

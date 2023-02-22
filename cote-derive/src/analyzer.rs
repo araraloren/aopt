@@ -1,18 +1,16 @@
+use std::ops::{Deref, DerefMut};
+
 use proc_macro2::{Ident, TokenStream};
 use proc_macro_error::abort;
 use quote::{quote, ToTokens};
 use syn::{
     Data::Struct, DataStruct, DeriveInput, Field, Fields, FieldsNamed, GenericArgument,
-    GenericParam, Generics, Lifetime, LifetimeDef, Path, PathArguments, Type, TypePath,
-    TypeReference, WhereClause,
+    GenericParam, Generics, Lifetime, LifetimeDef, Path, PathArguments, Type, TypeArray, TypePath,
+    TypeReference, TypeTuple, WhereClause,
 };
 
-///
-/// pub struct Widget<'a, T> {
-///     a: &'a T,
-///     b: &'a mut Option<T>,
-///     c: Option<&'a T>,
-/// }
+use crate::global::{Configurations, FieldCfg, GlobalCfg};
+
 pub fn derive_parser(input: DeriveInput) -> TokenStream {
     let analyzer = Analyzer::new(&input).unwrap_or_else(|e| {
         abort! {
@@ -23,21 +21,7 @@ pub fn derive_parser(input: DeriveInput) -> TokenStream {
     let ident = analyzer.struct_meta.ident;
     let where_clause = analyzer.struct_meta.where_clause;
 
-    for field in analyzer.field_metas {
-        if let Some(ident) = field.ident {
-            let ty = field.ty;
-            let trimed_ty = field.trimed_ty;
-
-            println!(
-                "get ident = {}, ty = {}, trimed = {}",
-                ident.to_string(),
-                ty.to_token_stream().to_string(),
-                trimed_ty.to_token_stream().to_string()
-            );
-        } else {
-            panic!("???????????? {:?}", field)
-        }
-    }
+    dbg!(&analyzer);
     quote! {
         impl #generics You for #ident #generics #where_clause {
             fn you(&self) {
@@ -65,7 +49,7 @@ impl<'a> Analyzer<'a> {
                 let mut field_metas = vec![];
 
                 for field in fields.named.iter() {
-                    field_metas.push(FieldMeta::new(&struct_meta, field)?);
+                    field_metas.push(FieldMeta::new(field)?);
                 }
                 Ok(Self {
                     field_metas,
@@ -93,6 +77,8 @@ pub struct StructMeta<'a> {
     lifetimes: Vec<&'a Ident>,
 
     where_clause: Option<&'a WhereClause>,
+
+    global_cfg: Configurations<GlobalCfg>,
 }
 
 impl<'a> StructMeta<'a> {
@@ -103,6 +89,7 @@ impl<'a> StructMeta<'a> {
         let where_clause = generics.where_clause.as_ref();
         let mut lifetimes = vec![];
         let mut tys = vec![];
+        let global_cfg = Configurations::<GlobalCfg>::parse_attrs(Some(ident), &input.attrs);
 
         for param in params {
             match param {
@@ -126,6 +113,7 @@ impl<'a> StructMeta<'a> {
             ident,
             generics,
             lifetimes,
+            global_cfg,
             where_clause,
         })
     }
@@ -139,50 +127,89 @@ pub struct FieldMeta<'a> {
 
     trimed_ty: Type,
 
-    has_lifetime: bool,
+    is_reference: bool,
+
+    field_cfg: Configurations<FieldCfg>,
 }
 
 impl<'a> FieldMeta<'a> {
-    pub fn new(major_meta: &StructMeta<'a>, field: &'a Field) -> syn::Result<Self> {
+    pub fn new(field: &'a Field) -> syn::Result<Self> {
         let ident = field.ident.as_ref();
         let ty = &field.ty;
-        let (has_lifetime, trimed_ty) = Self::trim_ty(ty);
+        let (is_reference, trimed_ty) = remove_lifetime(ty);
+        let field_cfg = Configurations::<FieldCfg>::parse_attrs(ident, &field.attrs);
 
         Ok(Self {
             ident,
-
             ty,
-
             trimed_ty,
-
-            has_lifetime,
+            field_cfg,
+            is_reference,
         })
     }
+}
 
-    pub fn trim_ty(ty: &Type) -> (bool, Type) {
-        let mut ty = ty.clone();
-        let mut has_lifetime = false;
+pub fn remove_lifetime(ty: &Type) -> (bool, Type) {
+    let mut ty = ty.clone();
+    let mut is_reference = false;
 
-        if let Type::Reference(tr) = &mut ty {
-            tr.lifetime = None;
-            has_lifetime = true;
-        } else if let Type::Path(tp) = &mut ty {
-            let mut tp = Some(tp);
+    if let Type::Reference(reference) = &mut ty {
+        is_reference = true;
+        remove_reference_lifetime(reference);
+    } else {
+        is_reference = check_if_reference(&ty);
+        if let Type::Path(path) = &mut ty {
+            remove_path_lifetime(path);
+        }
+    }
+    (is_reference, ty)
+}
 
-            let sgment = tp.path.segments.last_mut();
-
-            if let Some(mut segment) = sgment {
-                if let PathArguments::AngleBracketed(ab) = &mut segment.arguments {
-                    for arg in ab.args.iter_mut() {
-                        if let GenericArgument::Type(Type::Reference(tr)) = arg {
-                            tr.lifetime = None;
-                            has_lifetime = true;
+pub fn check_if_reference(ty: &Type) -> bool {
+    match ty {
+        Type::Path(path) => {
+            if let Some(segment) = path.path.segments.last() {
+                match &segment.arguments {
+                    PathArguments::AngleBracketed(ab) => {
+                        for arg in ab.args.iter() {
+                            if let GenericArgument::Type(next_ty) = arg {
+                                return check_if_reference(next_ty);
+                            }
                         }
                     }
+                    _ => {}
+                }
+            }
+            false
+        }
+        Type::Reference(_) => true,
+        _ => false,
+    }
+}
+
+pub fn remove_reference_lifetime(ty: &mut TypeReference) {
+    ty.lifetime = None;
+    match ty.elem.deref_mut() {
+        Type::Path(path) => remove_path_lifetime(path),
+        Type::Reference(ref_) => remove_reference_lifetime(ref_),
+        _ => {
+            // do nothing
+        }
+    }
+}
+
+pub fn remove_path_lifetime(ty: &mut TypePath) {
+    if let Some(segment) = ty.path.segments.last_mut() {
+        if let PathArguments::AngleBracketed(ab) = &mut segment.arguments {
+            for arg in ab.args.iter_mut() {
+                if let GenericArgument::Type(ty) = arg {
+                    match ty {
+                        Type::Path(path) => remove_path_lifetime(path),
+                        Type::Reference(ref_) => remove_reference_lifetime(ref_),
+                        _ => {}
+                    };
                 }
             }
         }
-
-        (has_lifetime, ty)
     }
 }
