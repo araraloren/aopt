@@ -10,45 +10,51 @@ pub(crate) trait Attr {
     fn cfg_value(&self) -> &CfgValue;
 }
 
-pub(crate) trait ConfigCheck {
-    fn has_policy(&self) -> bool {
-        false
-    }
-
-    fn check(&self, has_policy: bool) -> bool;
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum CfgKind {
-    Policy,
+    ParserPolicy,
 
-    Hint,
+    ParserHelp,
 
-    Help,
+    ParserVer,
 
-    Author,
+    ParserAuthor,
 
-    Version,
+    ParserOn,
 
-    Head,
+    ParserHead,
 
-    Foot,
+    ParserFoot,
 
-    Name,
+    SubPolicy,
 
-    Value,
+    SubName,
 
-    Values,
+    SubAlias,
 
-    Alias,
+    OptHint,
 
-    Action,
+    OptHelp,
 
-    Index,
+    OptName,
 
-    Validator,
+    OptValue,
 
-    On,
+    OptValues,
+
+    OptAlias,
+
+    OptAction,
+
+    OptIndex,
+
+    OptValidator,
+
+    OptOn,
+
+    OptRef,
+
+    OptMut,
 }
 
 #[derive(Debug, Clone)]
@@ -73,21 +79,22 @@ impl Parse for GlobalCfg {
         let ident: Ident = input.parse()?;
         let cfg_kind = ident.to_string();
         let cfg_kind = match cfg_kind.as_str() {
-            "policy" => CfgKind::Policy,
-            "help" => CfgKind::Help,
-            "author" => CfgKind::Author,
-            "version" => CfgKind::Version,
-            "head" => CfgKind::Head,
-            "foot" => CfgKind::Foot,
+            "policy" => CfgKind::ParserPolicy,
+            "help" => CfgKind::ParserHelp,
+            "version" => CfgKind::ParserVer,
+            "author" => CfgKind::ParserAuthor,
+            "head" => CfgKind::ParserHead,
+            "foot" => CfgKind::ParserFoot,
+            "on" => CfgKind::ParserOn,
             _ => {
                 abort! {
-                    ident, "invalid configuration name in cote(...): {:?}", cfg_kind
+                    ident, "invalid configuration name in parser(...): {:?}", cfg_kind
                 }
             }
         };
 
         match cfg_kind {
-            CfgKind::Help | CfgKind::Author | CfgKind::Version => Ok(Self {
+            CfgKind::OptHelp | CfgKind::ParserVer | CfgKind::ParserAuthor => Ok(Self {
                 kind: cfg_kind,
                 value: CfgValue::Null,
             }),
@@ -99,17 +106,126 @@ impl Parse for GlobalCfg {
     }
 }
 
-impl ConfigCheck for GlobalCfg {
-    fn check(&self, _: bool) -> bool {
-        true
+#[derive(Debug, Clone)]
+pub(crate) struct ArgCfg {
+    pub kind: CfgKind,
+
+    pub value: CfgValue,
+}
+
+impl Attr for ArgCfg {
+    fn cfg_kind(&self) -> CfgKind {
+        self.kind
+    }
+
+    fn cfg_value(&self) -> &CfgValue {
+        &self.value
+    }
+}
+
+impl Parse for ArgCfg {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let ident: Ident = input.parse()?;
+        let cfg_kind = ident.to_string();
+        let cfg_kind = match cfg_kind.as_str() {
+            "name" => CfgKind::OptName,
+            "hint" => CfgKind::OptHint,
+            "help" => CfgKind::OptHelp,
+            "value" => CfgKind::OptValue,
+            "values" => CfgKind::OptValues,
+            "alias" => CfgKind::OptAlias,
+            "index" => CfgKind::OptIndex,
+            "action" => CfgKind::OptAction,
+            "valid" => CfgKind::OptValidator,
+            "on" => CfgKind::OptOn,
+            "ref" => CfgKind::OptRef,
+            "mut" => CfgKind::OptMut,
+            _ => {
+                abort! {
+                    ident, "invalid configuration name in arg(...): {:?}", cfg_kind
+                }
+            }
+        };
+
+        Ok(Self {
+            kind: cfg_kind,
+            value: input.parse()?,
+        })
+    }
+}
+
+impl From<ArgCfg> for FieldCfg {
+    fn from(value: ArgCfg) -> Self {
+        FieldCfg {
+            kind: value.kind,
+            value: value.value,
+            is_arg: true,
+        }
     }
 }
 
 #[derive(Debug, Clone)]
+pub(crate) struct SubCfg {
+    pub kind: CfgKind,
+
+    pub value: CfgValue,
+}
+
+impl Attr for SubCfg {
+    fn cfg_kind(&self) -> CfgKind {
+        self.kind
+    }
+
+    fn cfg_value(&self) -> &CfgValue {
+        &self.value
+    }
+}
+
+impl Parse for SubCfg {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let ident: Ident = input.parse()?;
+        let cfg_kind = ident.to_string();
+        let cfg_kind = match cfg_kind.as_str() {
+            "policy" => CfgKind::SubPolicy,
+            "name" => CfgKind::SubName,
+            "hint" => CfgKind::SubAlias,
+            _ => {
+                abort! {
+                    ident, "invalid configuration name in sub(...): {:?}", cfg_kind
+                }
+            }
+        };
+
+        Ok(Self {
+            kind: cfg_kind,
+            value: input.parse()?,
+        })
+    }
+}
+
+impl From<SubCfg> for FieldCfg {
+    fn from(value: SubCfg) -> Self {
+        FieldCfg {
+            kind: value.kind,
+            value: value.value,
+            is_arg: false,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub(crate) struct FieldCfg {
     pub kind: CfgKind,
 
     pub value: CfgValue,
+
+    pub is_arg: bool,
+}
+
+impl Parse for FieldCfg {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        unimplemented!("not implement")
+    }
 }
 
 impl Attr for FieldCfg {
@@ -122,64 +238,20 @@ impl Attr for FieldCfg {
     }
 }
 
-impl Parse for FieldCfg {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let ident: Ident = input.parse()?;
-        let cfg_kind = ident.to_string();
-        let cfg_kind = match cfg_kind.as_str() {
-            "policy" => CfgKind::Policy,
-            "name" => CfgKind::Name,
-            "hint" => CfgKind::Hint,
-            "help" => CfgKind::Help,
-            "value" => CfgKind::Value,
-            "values" => CfgKind::Values,
-            "alias" => CfgKind::Alias,
-            "index" => CfgKind::Index,
-            "action" => CfgKind::Action,
-            "valid" => CfgKind::Validator,
-            "on" => CfgKind::On,
-            _ => {
-                abort! {
-                    ident, "invalid configuration name in cote(...): {:?}", cfg_kind
-                }
-            }
-        };
-
-        Ok(Self {
-            kind: cfg_kind,
-            value: input.parse()?,
-        })
-    }
-}
-
-impl ConfigCheck for FieldCfg {
-    fn check(&self, has_policy: bool) -> bool {
-        match self.kind {
-            CfgKind::Policy => has_policy,
-            CfgKind::Name | CfgKind::Alias => true,
-            _ => !has_policy,
-        }
-    }
-
-    fn has_policy(&self) -> bool {
-        matches!(self.kind, CfgKind::Policy)
-    }
-}
-
 #[derive(Debug, Clone)]
-pub(crate) struct Configurations<T: Parse> {
+pub(crate) struct Configurations<T> {
     pub cfgs: Vec<T>,
 }
 
-impl<T: Parse + Attr> Configurations<T> {
+impl<T: Attr> Configurations<T> {
     pub fn find_cfg(&self, kind: CfgKind) -> Option<&T> {
         self.cfgs.iter().find(|v| v.cfg_kind() == kind)
     }
 }
 
-impl<T: Parse + ConfigCheck> Configurations<T> {
-    pub fn parse_attrs(ident: Option<&Ident>, attrs: &[Attribute]) -> Self {
-        let attrs = attrs.iter().filter(Self::cote_filter);
+impl<T: Parse> Configurations<T> {
+    pub fn parse_attrs(ident: Option<&Ident>, attrs: &[Attribute], name: &str) -> Self {
+        let attrs = attrs.iter().filter(|v| v.path.is_ident(name));
         let cfgs = attrs.map(|attr| {
             attr.parse_args_with(Punctuated::<T, Token![,]>::parse_terminated)
                 .map(|res| res.into_iter())
@@ -190,22 +262,9 @@ impl<T: Parse + ConfigCheck> Configurations<T> {
                     }
                 })
         });
-        let cfgs = cfgs.flatten().collect::<Vec<T>>();
-        let has_policy = cfgs.iter().any(|v| v.has_policy());
 
-        for cfg in cfgs.iter() {
-            if !cfg.check(has_policy) {
-                abort! {
-                    ident,
-                    "can not have attribute except `name` and `alias` if `policy` set"
-                }
-            }
+        Self {
+            cfgs: cfgs.flatten().collect::<Vec<T>>(),
         }
-
-        Self { cfgs }
-    }
-
-    fn cote_filter(attr: &&Attribute) -> bool {
-        attr.path.is_ident("cote")
     }
 }

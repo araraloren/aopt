@@ -3,13 +3,15 @@ use std::ops::{Deref, DerefMut};
 use proc_macro2::{Ident, TokenStream};
 use proc_macro_error::abort;
 use quote::{quote, ToTokens};
+use syn::spanned::Spanned;
 use syn::{
     Data::Struct, DataStruct, DeriveInput, Field, Fields, FieldsNamed, GenericArgument,
     GenericParam, Generics, Lifetime, LifetimeDef, Path, PathArguments, Type, TypeArray, TypePath,
     TypeReference, TypeTuple, WhereClause,
 };
 
-use crate::global::{Configurations, FieldCfg, GlobalCfg};
+use crate::global::{ArgCfg, Configurations, GlobalCfg};
+use crate::global::{CfgKind, FieldCfg, SubCfg};
 
 pub fn derive_parser(input: DeriveInput) -> TokenStream {
     let analyzer = Analyzer::new(&input).unwrap_or_else(|e| {
@@ -64,6 +66,49 @@ impl<'a> Analyzer<'a> {
             }
         }
     }
+
+    pub fn generate_update(&self) -> syn::Result<TokenStream> {
+        let mut ret = quote! {
+            let set = parser.optset_mut();
+            let ctor_name = aopt::prelude::ctor_default_name();
+            let ctor = set.ctor_mut(&ctor_name)?;
+        };
+        let mut configs = vec![];
+        let mut inserts = vec![];
+        let mut handlers = vec![];
+
+        for (idx, field) in self.field_metas.iter().enumerate() {
+            let ident = Ident::new(&format!("option{}", idx), field.ident.span());
+            let ctor_new_with = field.generate_config()?;
+            let handler_cfg = field.field_cfg.find_cfg(CfgKind::OptOn);
+
+            configs.push(quote! {
+                let #ident = {
+                    #ctor_new_with
+                };
+            });
+            if let Some(cfg) = handler_cfg {
+                let uid_ident = Ident::new(&format!("option_uid_{}", idx), field.ident.span());
+                let handler = cfg.value.to_token_stream();
+
+                inserts.push(quote! {
+                    let #uid_ident = set.insert(#ident);
+                });
+                handlers.push(quote! {
+                    parser.entry(#uid_ident).on(#handler)?;
+                });
+            } else {
+                inserts.push(quote! {
+                    set.insert(#ident);
+                });
+            }
+        }
+        ret.extend(configs.into_iter());
+        ret.extend(inserts.into_iter());
+        ret.extend(handlers.into_iter());
+        ret.extend(quote! { Ok(()) });
+        Ok(ret)
+    }
 }
 
 #[derive(Debug)]
@@ -89,7 +134,8 @@ impl<'a> StructMeta<'a> {
         let where_clause = generics.where_clause.as_ref();
         let mut lifetimes = vec![];
         let mut tys = vec![];
-        let global_cfg = Configurations::<GlobalCfg>::parse_attrs(Some(ident), &input.attrs);
+        let global_cfg =
+            Configurations::<GlobalCfg>::parse_attrs(Some(ident), &input.attrs, "cote");
 
         for param in params {
             match param {
@@ -137,7 +183,23 @@ impl<'a> FieldMeta<'a> {
         let ident = field.ident.as_ref();
         let ty = &field.ty;
         let (is_reference, trimed_ty) = remove_lifetime(ty);
-        let field_cfg = Configurations::<FieldCfg>::parse_attrs(ident, &field.attrs);
+        let arg_cfg = Configurations::<ArgCfg>::parse_attrs(ident, &field.attrs, "arg");
+        let sub_cfg = Configurations::<SubCfg>::parse_attrs(ident, &field.attrs, "sub");
+
+        let field_cfg = if arg_cfg.cfgs.len() > 0 && sub_cfg.cfgs.len() > 0 {
+            abort! {
+                ident,
+                "can not both `arg` and `sub` on one field",
+            }
+        } else if arg_cfg.cfgs.len() > 0 {
+            Configurations {
+                cfgs: arg_cfg.cfgs.into_iter().map(|v| v.into()).collect(),
+            }
+        } else {
+            Configurations {
+                cfgs: sub_cfg.cfgs.into_iter().map(|v| v.into()).collect(),
+            }
+        };
 
         Ok(Self {
             ident,
@@ -147,11 +209,135 @@ impl<'a> FieldMeta<'a> {
             is_reference,
         })
     }
+
+    pub fn generate_option(&self) -> syn::Result<TokenStream> {
+        let config = self.generate_config()?;
+
+        Ok(quote! {
+            let config = { #config };
+            ctor.new_with(config).map_err(Into::into)?
+        })
+    }
+
+    pub fn generate_config(&self) -> syn::Result<TokenStream> {
+        let ty = self.ty;
+        let ident = self.ident;
+        let config = &self.field_cfg;
+        let trimed_ty = &self.trimed_ty;
+
+        let mut codes = vec![];
+        let mut has_name = false;
+        let mut ret = quote! {
+            let mut config = SetCfg::<P::Set>::default();
+        };
+
+        for cfg in config.cfgs.iter() {
+            codes.push(match cfg.kind {
+                CfgKind::OptHint => {
+                    let token = cfg.value.to_token_stream();
+
+                    quote! {
+                        config.set_hint(#token);
+                    }
+                }
+                CfgKind::OptHelp => {
+                    let token = cfg.value.to_token_stream();
+
+                    quote! {
+                        config.set_help(#token);
+                    }
+                }
+                CfgKind::OptName => {
+                    let token = cfg.value.to_token_stream();
+
+                    has_name = true;
+                    quote! {
+                        config.set_name(#token);
+                    }
+                }
+                CfgKind::OptValue => {
+                    let token = cfg.value.to_token_stream();
+
+                    quote! {
+                        config.set_initializer(aopt::value::ValInitializer::new_value(<<#ty as aopt::value::Infer>::Val>::from(#token)));
+                    }
+                }
+                CfgKind::OptValues => {
+                    let token = cfg.value.to_token_stream();
+
+                    quote! {
+                        let values = #token.into_iter().map(|v|<<#ty as aopt::value::Infer>::Val>::from(v)).collect::<Vec<<#ty as aopt::value::Infer>::Val>>();
+                        config.set_initializer(aopt::value::ValInitializer::new_values(values));
+                    }
+                }
+                CfgKind::OptAlias => {
+                    let token = cfg.value.to_token_stream();
+
+                    quote! {
+                        config.add_alias(#token);
+                    }
+                }
+                CfgKind::OptAction => {
+                    let token = cfg.value.to_token_stream();
+
+                    quote! {
+                        config.set_action(#token);
+                    }
+                }
+                CfgKind::OptIndex => {
+                    let token = cfg.value.to_token_stream();
+
+                    quote! {
+                        config.set_index(aopt::opt::Index::parse(#token)?);
+                    }
+                }
+                CfgKind::OptValidator => {
+                    let token = cfg.value.to_token_stream();
+
+                    quote! {
+                        config.set_storer(aopt::value::ValStorer::new_validator::<#ty>(#token));
+                    }
+                }
+                CfgKind::OptOn | CfgKind::OptRef | CfgKind::OptMut => {
+                    // will process in another function
+                    quote! { }
+                }
+                _ => {
+                    abort! {
+                        ident, "Unsupport config kind on field: {:?}", cfg.kind
+                    }
+                }
+            });
+        }
+        if !has_name {
+            let ident = ident.map(|v| v.to_string()).unwrap_or_else(|| {
+                abort! {
+                    ident,
+                    "missing field name for field {:?}", ident
+                }
+            });
+            let name = format!(
+                "{}{}",
+                if ident.chars().count() > 1 { "--" } else { "-" },
+                ident
+            );
+
+            codes.push(quote! {
+                config.set_name(#name);
+            });
+        }
+        codes.push(quote! {
+            <#trimed_ty>::infer_fill_info(&mut config, true);
+            config
+        });
+        ret.extend(codes.into_iter());
+        Ok(ret)
+    }
 }
 
 pub fn remove_lifetime(ty: &Type) -> (bool, Type) {
     let mut ty = ty.clone();
-    let mut is_reference = false;
+    let is_reference;
 
     if let Type::Reference(reference) = &mut ty {
         is_reference = true;
