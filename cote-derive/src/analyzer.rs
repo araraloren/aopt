@@ -3,34 +3,25 @@ use std::ops::{Deref, DerefMut};
 use proc_macro2::{Ident, TokenStream};
 use proc_macro_error::abort;
 use quote::{quote, ToTokens};
+use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::{
     Data::Struct, DataStruct, DeriveInput, Field, Fields, FieldsNamed, GenericArgument,
     GenericParam, Generics, Lifetime, LifetimeDef, Path, PathArguments, Type, TypeArray, TypePath,
     TypeReference, TypeTuple, WhereClause,
 };
+use syn::{Token, TypeParam, WherePredicate};
 
 use crate::global::{ArgCfg, Configurations, GlobalCfg};
 use crate::global::{CfgKind, FieldCfg, SubCfg};
 
-pub fn derive_parser(input: DeriveInput) -> TokenStream {
-    let analyzer = Analyzer::new(&input).unwrap_or_else(|e| {
-        abort! {
-            input, "parsing struct failed: {:?}", e
-        }
-    });
-    let generics = analyzer.struct_meta.generics;
-    let ident = analyzer.struct_meta.ident;
-    let where_clause = analyzer.struct_meta.where_clause;
+pub fn derive_parser(input: &DeriveInput) -> syn::Result<TokenStream> {
+    let analyzer = Analyzer::new(input)?;
+    let impl_for_parser = analyzer.generate_all()?;
 
-    dbg!(&analyzer);
-    quote! {
-        impl #generics You for #ident #generics #where_clause {
-            fn you(&self) {
-                println!("New implement for {}", stringify!(#ident));
-            }
-        }
-    }
+    Ok(quote! {
+        #impl_for_parser
+    })
 }
 
 #[derive(Debug)]
@@ -67,6 +58,72 @@ impl<'a> Analyzer<'a> {
         }
     }
 
+    pub fn generate_all(&self) -> syn::Result<TokenStream> {
+        let has_handler_on_field = self
+            .field_metas
+            .iter()
+            .any(|v| v.field_cfg.find_cfg(CfgKind::OptOn).is_some());
+        let has_handler_on_global = self
+            .struct_meta
+            .global_cfg
+            .find_cfg(CfgKind::ParserOn)
+            .is_some();
+        let update = self.generate_update()?;
+        let extract_value = self.generate_try_extract()?;
+        let try_from = self.generate_try_from()?;
+        let ident = self.struct_meta.ident;
+        let generics = &self.struct_meta.generics.params;
+        let where_clause = self.struct_meta.generate_where_clause()?;
+        let where_clause = if has_handler_on_field || has_handler_on_global {
+            quote! {
+                where
+                P::Set: aopt::set::Set,
+                P::Error: Into<aopt::Error>,
+                P: aopt::parser::Policy + aopt::ext::APolicyExt<P> + Default,
+                aopt::set::SetCfg<P::Set>: aopt::opt::Config + aopt::opt::ConfigValue + Default,
+                P::Inv<'a>: aopt::ctx::HandlerCollection<'a, P::Set, P::Ser>,
+                #where_clause
+            }
+        } else {
+            quote! {
+                where
+                P::Set: aopt::set::Set,
+                P::Error: Into<aopt::Error>,
+                P: aopt::parser::Policy + aopt::ext::APolicyExt<P> + Default,
+                aopt::set::SetCfg<P::Set>: aopt::opt::Config + aopt::opt::ConfigValue + Default,
+                #where_clause
+            }
+        };
+
+        if generics.is_empty() {
+            Ok(quote! {
+                impl<P> CoteParserDeriveExt<P> for #ident #where_clause
+                {
+                    fn update<'zlifetime>(parser: &mut aopt::parser::Parser<'zlifetime, P>) -> Result<(), aopt::Error> {
+                        #update
+                    }
+                }
+
+                #extract_value
+
+                #try_from
+            })
+        } else {
+            Ok(quote! {
+                impl<#generics, P> CoteParserDeriveExt<P> for #ident<#generics> #where_clause
+                {
+                    fn update<'zlifetime>(parser: &mut aopt::parser::Parser<'zlifetime, P>) -> Result<(), aopt::Error> {
+                        #update
+                    }
+                }
+
+                #extract_value
+
+                #try_from
+            })
+        }
+    }
+
     pub fn generate_update(&self) -> syn::Result<TokenStream> {
         let mut ret = quote! {
             let set = parser.optset_mut();
@@ -84,7 +141,7 @@ impl<'a> Analyzer<'a> {
 
             configs.push(quote! {
                 let #ident = {
-                    #ctor_new_with
+                    ctor.new_with({ #ctor_new_with }).map_err(Into::into)?
                 };
             });
             if let Some(cfg) = handler_cfg {
@@ -106,8 +163,82 @@ impl<'a> Analyzer<'a> {
         ret.extend(configs.into_iter());
         ret.extend(inserts.into_iter());
         ret.extend(handlers.into_iter());
+        ret.extend(self.struct_meta.generate_main()?);
         ret.extend(quote! { Ok(()) });
         Ok(ret)
+    }
+
+    pub fn generate_try_from(&self) -> syn::Result<TokenStream> {
+        let generics = &self.struct_meta.generics.params;
+        let where_clause = self.struct_meta.generate_where_clause()?;
+        let ident = self.struct_meta.ident;
+        let parser_ty = self.struct_meta.gen_parser_type()?;
+
+        Ok(if generics.is_empty() {
+            quote! {
+                impl <'zlifetime> std::convert::TryFrom<&'zlifetime mut #parser_ty> for #ident {
+                    type Error = aopt::Error;
+
+                    fn try_from(parser: &'zlifetime mut #parser_ty) -> Result<Self, Self::Error> {
+                        <#ident as CoteParserExtractValueExt<aopt::ext::ASet>>::try_extract(parser.optset_mut())
+                    }
+                }
+            }
+        } else {
+            quote! {
+                impl <'zlifetime, #generics> std::convert::TryFrom<&'zlifetime mut #parser_ty>
+                    for #ident<#generics> where #where_clause {
+                    type Error = aopt::Error;
+
+                    fn try_from(parser: &'zlifetime mut #parser_ty) -> Result<Self, Self::Error> {
+                        <#ident as CoteParserExtractValueExt<aopt::ext::ASet>>::try_extract(parser.optset_mut())
+                    }
+                }
+            }
+        })
+    }
+
+    pub fn generate_try_extract(&self) -> syn::Result<TokenStream> {
+        let mut mut_field = quote! {};
+        let mut ref_field = quote! {};
+        let generics = &self.struct_meta.generics.params;
+        let where_clause = self.struct_meta.generate_where_clause()?;
+        let ident = self.struct_meta.ident;
+
+        for field in self.field_metas.iter() {
+            let (is_reference, code) = field.generate_try_extract()?;
+
+            if is_reference {
+                ref_field.extend(code);
+            } else {
+                mut_field.extend(code);
+            }
+        }
+        Ok(if generics.is_empty() {
+            quote! {
+                impl <'zlifetime, S> CoteParserExtractValueExt<'zlifetime, S>
+                    for #ident where S: aopt::set::SetValueFindExt, #where_clause {
+                    fn try_extract(set: &'zlifetime mut S) -> Result<Self, aopt::Error> where Self: Sized {
+                        Ok(Self {
+                            #mut_field
+                            #ref_field
+                        })
+                    }
+                }
+            }
+        } else {
+            quote! {
+                impl <'zlifetime, #generics, S> CoteParserExtractValueExt<'zlifetime, S>
+                    for #ident<#generics> where S: aopt::set::SetValueFindExt, #where_clause {
+                    fn try_extract(set: &'zlifetime mut S) -> Result<Self, aopt::Error> where Self: Sized {
+                        Ok(Self {
+                            #mut_field
+                            #ref_field
+                        })
+                    }
+                }
+            }
+        })
     }
 }
 
@@ -121,7 +252,7 @@ pub struct StructMeta<'a> {
 
     lifetimes: Vec<&'a Ident>,
 
-    where_clause: Option<&'a WhereClause>,
+    where_clause: Option<&'a Punctuated<WherePredicate, Token!(,)>>,
 
     global_cfg: Configurations<GlobalCfg>,
 }
@@ -131,7 +262,7 @@ impl<'a> StructMeta<'a> {
         let ident = &input.ident;
         let generics = &input.generics;
         let params = &generics.params;
-        let where_clause = generics.where_clause.as_ref();
+        let where_clause = generics.where_clause.as_ref().map(|v| &v.predicates);
         let mut lifetimes = vec![];
         let mut tys = vec![];
         let global_cfg =
@@ -163,6 +294,70 @@ impl<'a> StructMeta<'a> {
             where_clause,
         })
     }
+
+    pub fn has_generics(&self) -> bool {
+        !self.generics.params.is_empty()
+    }
+
+    pub fn generate_main(&self) -> syn::Result<TokenStream> {
+        Ok(
+            if let Some(cfg) = self.global_cfg.find_cfg(CfgKind::ParserOn) {
+                let value = &cfg.value;
+
+                quote! {
+                    parser.add_opt_i::<Main>("default_main")?.on(#value)?;
+                }
+            } else {
+                quote! {}
+            },
+        )
+    }
+
+    pub fn generate_where_clause(&self) -> syn::Result<TokenStream> {
+        let mut code = quote! {};
+        let zlifetime = Lifetime::new("'zlifetime", self.ident.span());
+
+        for lifetime in self.lifetimes.iter() {
+            let lifetime = Lifetime::new(&format!("'{}", lifetime.to_string()), lifetime.span());
+
+            code.extend(quote! {
+                #zlifetime: #lifetime,
+            });
+        }
+        Ok(if let Some(where_clause) = self.where_clause {
+            quote! { #code #where_clause }
+        } else if !self.lifetimes.is_empty() {
+            quote! { #code }
+        } else {
+            quote! {}
+        })
+    }
+
+    pub fn gen_parser_type(&self) -> syn::Result<TokenStream> {
+        let policy = self.global_cfg.find_cfg(CfgKind::ParserPolicy);
+        let policy_name = policy
+            .map(|v| v.value.to_token_stream().to_string())
+            .unwrap_or(String::from("fwd"));
+
+        Ok(match policy_name.as_str() {
+            "pre" => {
+                quote! {
+                    aopt::ext::APreParser<'_>
+                }
+            }
+            "fwd" => {
+                quote! {
+                    aopt::ext::AFwdParser<'_>
+                }
+            }
+            "delay" => {
+                quote! {
+                    aopt::ext::ADelayParser<'_>
+                }
+            }
+            _ => policy_name.to_token_stream(),
+        })
+    }
 }
 
 #[derive(Debug)]
@@ -189,7 +384,7 @@ impl<'a> FieldMeta<'a> {
         let field_cfg = if arg_cfg.cfgs.len() > 0 && sub_cfg.cfgs.len() > 0 {
             abort! {
                 ident,
-                "can not both `arg` and `sub` on one field",
+                "can not have both `arg` and `sub` on one field",
             }
         } else if arg_cfg.cfgs.len() > 0 {
             Configurations {
@@ -210,6 +405,58 @@ impl<'a> FieldMeta<'a> {
         })
     }
 
+    pub fn generate_try_extract(&self) -> syn::Result<(bool, TokenStream)> {
+        let is_ref = self.field_cfg.find_cfg(CfgKind::OptRef).is_some();
+        let is_mut = self.field_cfg.find_cfg(CfgKind::OptMut).is_some();
+        let ident = self.ident.unwrap_or_else(|| {
+            abort! {
+                self.ident,
+                "missing filed name",
+            }
+        });
+        let name = format!("--{}", ident.to_string()).to_token_stream();
+        let name = self
+            .field_cfg
+            .find_cfg(CfgKind::OptName)
+            .map(|v| v.value.to_token_stream())
+            .unwrap_or(name);
+
+        if is_ref && is_mut {
+            abort! {
+                ident,
+                "can not set both mut and ref on arg"
+            }
+        } else if is_ref {
+            Ok((
+                true,
+                quote! {
+                    #ident: aopt::value::InferValueRef::infer_fetch(#name, set)?,
+                },
+            ))
+        } else if is_mut {
+            Ok((
+                false,
+                quote! {
+                    #ident: aopt::value::InferValueMut::infer_fetch(#name, set)?,
+                },
+            ))
+        } else if self.is_reference {
+            Ok((
+                true,
+                quote! {
+                    #ident: aopt::value::InferValueRef::infer_fetch(#name, set)?,
+                },
+            ))
+        } else {
+            Ok((
+                false,
+                quote! {
+                    #ident: aopt::value::InferValueMut::infer_fetch(#name, set)?,
+                },
+            ))
+        }
+    }
+
     pub fn generate_option(&self) -> syn::Result<TokenStream> {
         let config = self.generate_config()?;
 
@@ -228,7 +475,7 @@ impl<'a> FieldMeta<'a> {
         let mut codes = vec![];
         let mut has_name = false;
         let mut ret = quote! {
-            let mut config = SetCfg::<P::Set>::default();
+            let mut config = aopt::set::SetCfg::<P::Set>::default();
         };
 
         for cfg in config.cfgs.iter() {
