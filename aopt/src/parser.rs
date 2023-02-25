@@ -295,7 +295,7 @@ impl<'a, P> Parser<'a, P>
 where
     P::Set: Set,
     P::Ser: ServicesValExt,
-    P: Policy<Error = Error>,
+    P: Policy,
 {
     /// Reset the option set.
     pub fn reset(&mut self) -> Result<&mut Self, Error> {
@@ -394,10 +394,10 @@ where
 impl<'a, P> Parser<'a, P>
 where
     P::Set: Set,
-    P: Policy<Error = Error>,
+    P: Policy,
 {
     /// Call the [`init`](crate::opt::Opt::init) of [`Opt`] initialize the option value.
-    pub fn init(&mut self) -> Result<(), P::Error> {
+    pub fn init(&mut self) -> Result<(), Error> {
         let optset = &mut self.optset;
 
         for opt in optset.iter_mut() {
