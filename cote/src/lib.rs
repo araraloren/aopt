@@ -1,13 +1,35 @@
-pub mod inject;
-pub mod null;
+use aopt::prelude::*;
+use aopt::Error;
 
 use std::fmt::Debug;
 
-pub use crate::inject::CoteParserDeriveExt;
-pub use crate::inject::CoteParserExtractValueExt;
+pub trait ParserIntoExtension<'zlifetime, P>
+where
+    P::Ser: 'zlifetime,
+    P::Set: Set + 'zlifetime,
+    P::Error: Into<aopt::Error>,
+    P: Policy + APolicyExt<P> + Default,
+    SetCfg<P::Set>: Config + ConfigValue + Default,
+{
+    fn into_parser() -> Result<Parser<'zlifetime, P>, Error> {
+        let mut parser = Parser::<'zlifetime, P>::new(P::default());
+        Self::update(&mut parser)?;
+        Ok(parser)
+    }
+    fn update(parser: &mut Parser<'zlifetime, P>) -> Result<(), Error>;
+}
 
-use aopt::prelude::*;
-use aopt::{Error, HashMap, RawVal};
+pub trait ParserExtractExtension<'zlifetime, S>
+where
+    S: SetValueFindExt,
+{
+    fn try_extract(set: &'zlifetime mut S) -> Result<Self, aopt::Error>
+    where
+        Self: Sized;
+}
+
+// use aopt::prelude::*;
+// use aopt::{Error, HashMap, RawVal};
 
 // pub struct Cote<P: Policy, E: Policy = NullPolicy<ASet>> {
 //     name: String,
