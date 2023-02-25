@@ -2,7 +2,10 @@ pub(crate) use crate::value::CfgValue;
 
 use proc_macro2::Ident;
 use proc_macro_error::abort;
-use syn::{parse::Parse, punctuated::Punctuated, Attribute, Token};
+use syn::parse::Parse;
+use syn::punctuated::Punctuated;
+use syn::Attribute;
+use syn::Token;
 
 pub(crate) trait Attr {
     fn cfg_kind(&self) -> CfgKind;
@@ -31,6 +34,10 @@ pub enum CfgKind {
     SubName,
 
     SubAlias,
+
+    SubRef,
+
+    SubMut,
 
     OptHint,
 
@@ -159,7 +166,6 @@ impl From<ArgCfg> for FieldCfg {
         FieldCfg {
             kind: value.kind,
             value: value.value,
-            is_arg: true,
         }
     }
 }
@@ -188,7 +194,9 @@ impl Parse for SubCfg {
         let cfg_kind = match cfg_kind.as_str() {
             "policy" => CfgKind::SubPolicy,
             "name" => CfgKind::SubName,
-            "hint" => CfgKind::SubAlias,
+            "alias" => CfgKind::SubAlias,
+            "ref" => CfgKind::SubRef,
+            "mut" => CfgKind::SubMut,
             _ => {
                 abort! {
                     ident, "invalid configuration name in sub(...): {:?}", cfg_kind
@@ -208,7 +216,6 @@ impl From<SubCfg> for FieldCfg {
         FieldCfg {
             kind: value.kind,
             value: value.value,
-            is_arg: false,
         }
     }
 }
@@ -218,12 +225,10 @@ pub(crate) struct FieldCfg {
     pub kind: CfgKind,
 
     pub value: CfgValue,
-
-    pub is_arg: bool,
 }
 
 impl Parse for FieldCfg {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+    fn parse(_input: syn::parse::ParseStream) -> syn::Result<Self> {
         unimplemented!("not implement")
     }
 }
@@ -250,7 +255,7 @@ impl<T: Attr> Configurations<T> {
 }
 
 impl<T: Parse> Configurations<T> {
-    pub fn parse_attrs(ident: Option<&Ident>, attrs: &[Attribute], name: &str) -> Self {
+    pub fn parse_attrs(attrs: &[Attribute], name: &str) -> Self {
         let attrs = attrs.iter().filter(|v| v.path.is_ident(name));
         let cfgs = attrs.map(|attr| {
             attr.parse_args_with(Punctuated::<T, Token![,]>::parse_terminated)
