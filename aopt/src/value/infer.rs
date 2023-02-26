@@ -158,6 +158,32 @@ impl<'a> InferValueMut<'a> for bool {
     }
 }
 
+impl Infer for Option<bool> {
+    type Val = bool;
+
+    fn infer_act() -> Action {
+        Action::Set
+    }
+
+    fn infer_style() -> Vec<Style> {
+        vec![Style::Combined, Style::Boolean]
+    }
+
+    fn infer_initializer() -> Option<ValInitializer> {
+        Some(ValInitializer::new_value(false))
+    }
+}
+
+impl<'a> InferValueMut<'a> for Option<bool> {
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        Ok(set.take_val::<bool>(name).ok())
+    }
+}
+
+
 impl Infer for Cmd {
     type Val = bool;
 
@@ -383,6 +409,15 @@ macro_rules! impl_infer_for {
             }
         }
 
+        impl Infer for std::option::Option<std::vec::Vec<$name>> {
+            type Val = $name;
+        }
+
+        impl<'a> InferValueMut<'a> for std::option::Option<std::vec::Vec<$name>> {
+            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error> where Self: Sized {
+                Ok(set.find_vals_mut::<$name>(name).ok().map(|v|std::mem::take(v)))
+            }
+        }
     };
     (&$a:lifetime $name:path) => {
         impl<$a> Infer for &$a $name {
@@ -545,6 +580,39 @@ impl<'a> InferValueMut<'a> for Stdin {
         Self: Sized,
     {
         set.take_val::<Stdin>(name)
+    }
+}
+
+impl Infer for Option<Stdin> {
+    type Val = Stdin;
+
+    fn infer_act() -> Action {
+        Action::Set
+    }
+
+    fn infer_index() -> Option<Index> {
+        Some(Index::anywhere())
+    }
+
+    fn infer_style() -> Vec<Style> {
+        vec![Style::Pos]
+    }
+
+    fn infer_ignore_name() -> bool {
+        true
+    }
+
+    fn infer_ignore_index() -> bool {
+        false
+    }
+}
+
+impl<'a> InferValueMut<'a> for Option<Stdin> {
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        Ok(set.take_val::<Stdin>(name).ok())
     }
 }
 
