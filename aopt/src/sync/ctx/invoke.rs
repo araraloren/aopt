@@ -72,13 +72,13 @@ use crate::Uid;
 ///      .then(NullStore);
 ///
 ///  ctx.set_inner_ctx(Some(InnerCtx::default().with_uid(0)));
-///  is.invoke(&mut set, &mut ser, &ctx)?;
+///  is.invoke(&mut set, &mut ser, &mut ctx)?;
 ///
 ///  ctx.set_inner_ctx(Some(InnerCtx::default().with_uid(1)));
-///  is.invoke(&mut set, &mut ser, &ctx)?;
+///  is.invoke(&mut set, &mut ser, &mut ctx)?;
 ///
 ///  ctx.set_inner_ctx(Some(InnerCtx::default().with_uid(2)));
-///  is.invoke(&mut set, &mut ser, &ctx)?;
+///  is.invoke(&mut set, &mut ser, &mut ctx)?;
 /// #
 /// #    Ok(())
 /// # }
@@ -88,7 +88,7 @@ pub struct Invoker<'a, Set, Ser> {
 }
 
 pub type InvokeHandler<'a, Set, Ser, Error> =
-    Box<dyn FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error> + Send + Sync + 'a>;
+    Box<dyn FnMut(&mut Set, &mut Ser, &mut Ctx) -> Result<bool, Error> + Send + Sync + 'a>;
 
 impl<'a, Set, Ser> Debug for Invoker<'a, Set, Ser> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -119,7 +119,7 @@ where
     Ser: 'a,
     Set: crate::set::Set + 'a,
 {
-    pub fn set_raw<H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error> + Send + Sync + 'a>(
+    pub fn set_raw<H: FnMut(&mut Set, &mut Ser, &mut Ctx) -> Result<bool, Error> + Send + Sync + 'a>(
         &mut self,
         uid: Uid,
         handler: H,
@@ -145,7 +145,7 @@ where
     ///      invoked
     ///         |
     ///         v
-    /// |   call Callbacks::invoke(&mut self, &mut Set, &mut Ser, &Ctx)
+    /// |   call Callbacks::invoke(&mut self, &mut Set, &mut Ser, &mut Ctx)
     /// |       call Handler::invoke(&mut self, &mut Set, &mut Ser, Args)
     /// |           call Args::extract(&Set, &Ser, &Ctx) -> Args
     /// |           -> Result<Option<Value>, Error>
@@ -168,7 +168,7 @@ where
     }
 
     /// Invoke the handler saved in [`Invoker`], it will panic if the handler not exist.
-    pub fn invoke(&mut self, set: &mut Set, ser: &mut Ser, ctx: &Ctx) -> Result<bool, Error> {
+    pub fn invoke(&mut self, set: &mut Set, ser: &mut Ser, ctx: &mut Ctx) -> Result<bool, Error> {
         let uid = ctx.uid()?;
 
         crate::trace_log!("Invoking callback of {}({:?})", uid, ctx);
@@ -202,7 +202,7 @@ where
     /// It will parsing [`RawVal`](crate::RawVal)(using [`RawValParser`]) into associated type, then call the action
     /// of option save the value to [`AnyValService`](crate::ser::AnyValService).
     /// For value type, reference documents of [`Assoc`].
-    pub fn fallback(set: &mut Set, _: &mut Ser, ctx: &Ctx) -> Result<bool, Error> {
+    pub fn fallback(set: &mut Set, _: &mut Ser, ctx: &mut Ctx) -> Result<bool, Error> {
         let uid = ctx.uid()?;
         let opt = set.get_mut(uid).unwrap();
         let arg = ctx.arg()?;
@@ -217,7 +217,7 @@ where
         &mut self,
         set: &mut Set,
         ser: &mut Ser,
-        ctx: &Ctx,
+        ctx: &mut Ctx,
     ) -> Result<bool, Error> {
         Self::fallback(set, ser, ctx)
     }
@@ -225,7 +225,7 @@ where
 
 pub trait HandlerCollection<'a, Set, Ser> {
     fn register_handler<
-        H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error> + Send + Sync + 'a,
+        H: FnMut(&mut Set, &mut Ser, &mut Ctx) -> Result<bool, Error> + Send + Sync + 'a,
     >(
         &mut self,
         uid: Uid,
@@ -239,7 +239,7 @@ where
     Set: crate::set::Set + 'a,
 {
     fn register_handler<
-        H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error> + Send + Sync + 'a,
+        H: FnMut(&mut Set, &mut Ser, &mut Ctx) -> Result<bool, Error> + Send + Sync + 'a,
     >(
         &mut self,
         uid: Uid,

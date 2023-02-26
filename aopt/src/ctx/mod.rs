@@ -36,7 +36,7 @@ mod __wrapper {
     /// otherwise call the [`fallback`](crate::ctx::Invoker::fallback).
     pub fn wrap_handler_fallback<'a, Set, Ser, A, O, H, E>(
         mut handler: H,
-    ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error> + 'a
+    ) -> impl FnMut(&mut Set, &mut Ser, &mut Ctx) -> Result<bool, Error> + 'a
     where
         O: ErasedTy,
         E: Into<Error>,
@@ -45,7 +45,7 @@ mod __wrapper {
         A: Extract<Set, Ser, Error = E> + Send + Sync,
         H: Handler<Set, Ser, A, Output = Option<O>, Error = E> + Send + Sync + 'a,
     {
-        move |set: &mut Set, ser: &mut Ser, ctx: &Ctx| {
+        move |set: &mut Set, ser: &mut Ser, ctx: &mut Ctx| {
             let val = handler
                 .invoke(set, ser, A::extract(set, ser, ctx).map_err(Into::into)?)
                 .map_err(Into::into)?;
@@ -66,7 +66,7 @@ mod __wrapper {
     /// Wrap the handler and call the default action of option.
     pub fn wrap_handler_action<'a, Set, Ser, A, O, H, E>(
         mut handler: H,
-    ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error> + 'a
+    ) -> impl FnMut(&mut Set, &mut Ser, &mut Ctx) -> Result<bool, Error> + 'a
     where
         O: ErasedTy,
         E: Into<Error>,
@@ -75,7 +75,7 @@ mod __wrapper {
         A: Extract<Set, Ser, Error = E> + Send + Sync,
         H: Handler<Set, Ser, A, Output = Option<O>, Error = E> + Send + Sync + 'a,
     {
-        move |set: &mut Set, ser: &mut Ser, ctx: &Ctx| {
+        move |set: &mut Set, ser: &mut Ser, ctx: &mut Ctx| {
             let val = handler
                 .invoke(set, ser, A::extract(set, ser, ctx).map_err(Into::into)?)
                 .map_err(Into::into)?;
@@ -92,14 +92,14 @@ mod __wrapper {
     pub fn wrap_handler<'a, Set, Ser, A, O, H, T, E>(
         mut handler: H,
         mut store: T,
-    ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error> + 'a
+    ) -> impl FnMut(&mut Set, &mut Ser, &mut Ctx) -> Result<bool, Error> + 'a
     where
         E: Into<Error>,
         A: Extract<Set, Ser, Error = E> + Send + Sync,
         T: Store<Set, Ser, O, Ret = bool, Error = E> + Send + Sync + 'a,
         H: Handler<Set, Ser, A, Output = Option<O>, Error = E> + Send + Sync + 'a,
     {
-        Box::new(move |set: &mut Set, ser: &mut Ser, ctx: &Ctx| {
+        Box::new(move |set: &mut Set, ser: &mut Ser, ctx: &mut Ctx| {
             let ext_args = A::extract(set, ser, ctx).map_err(Into::into)?;
             let val = handler.invoke(set, ser, ext_args).map_err(Into::into)?;
             let arg = ctx.arg()?;
@@ -120,7 +120,7 @@ mod __wrapper {
     /// otherwise call the [`fallback`](crate::ctx::Invoker::fallback).
     pub fn wrap_handler_fallback<'a, Set, Ser, A, O, H, E>(
         mut handler: H,
-    ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error> + 'a
+    ) -> impl FnMut(&mut Set, &mut Ser, &mut Ctx) -> Result<bool, Error> + 'a
     where
         O: ErasedTy,
         Set: crate::set::Set,
@@ -129,7 +129,7 @@ mod __wrapper {
         A: Extract<Set, Ser, Error = E>,
         H: Handler<Set, Ser, A, Output = Option<O>, Error = E> + 'a,
     {
-        move |set: &mut Set, ser: &mut Ser, ctx: &Ctx| {
+        move |set: &mut Set, ser: &mut Ser, ctx: &mut Ctx| {
             let val = handler
                 .invoke(set, ser, A::extract(set, ser, ctx).map_err(Into::into)?)
                 .map_err(Into::into)?;
@@ -150,7 +150,7 @@ mod __wrapper {
     /// Wrap the handler and call the default action of option.
     pub fn wrap_handler_action<'a, Set, Ser, A, O, H, E>(
         mut handler: H,
-    ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error> + 'a
+    ) -> impl FnMut(&mut Set, &mut Ser, &mut Ctx) -> Result<bool, Error> + 'a
     where
         O: ErasedTy,
         Set: crate::set::Set,
@@ -159,7 +159,7 @@ mod __wrapper {
         A: Extract<Set, Ser, Error = E>,
         H: Handler<Set, Ser, A, Output = Option<O>, Error = E> + 'a,
     {
-        move |set: &mut Set, ser: &mut Ser, ctx: &Ctx| {
+        move |set: &mut Set, ser: &mut Ser, ctx: &mut Ctx| {
             let val = handler
                 .invoke(set, ser, A::extract(set, ser, ctx).map_err(Into::into)?)
                 .map_err(Into::into)?;
@@ -176,14 +176,14 @@ mod __wrapper {
     pub fn wrap_handler<'a, Set, Ser, A, O, H, T, E>(
         mut handler: H,
         mut store: T,
-    ) -> impl FnMut(&mut Set, &mut Ser, &Ctx) -> Result<bool, Error> + 'a
+    ) -> impl FnMut(&mut Set, &mut Ser, &mut Ctx) -> Result<bool, Error> + 'a
     where
         E: Into<Error>,
         A: Extract<Set, Ser, Error = E>,
         T: Store<Set, Ser, O, Ret = bool, Error = E> + 'a,
         H: Handler<Set, Ser, A, Output = Option<O>, Error = E> + 'a,
     {
-        Box::new(move |set: &mut Set, ser: &mut Ser, ctx: &Ctx| {
+        Box::new(move |set: &mut Set, ser: &mut Ser, ctx: &mut Ctx| {
             let ext_args = A::extract(set, ser, ctx).map_err(Into::into)?;
             let val = handler.invoke(set, ser, ext_args).map_err(Into::into)?;
             let arg = ctx.arg()?;

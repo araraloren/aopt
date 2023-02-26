@@ -29,7 +29,7 @@ pub struct ProcessCtx<'a, 'b, Set, Ser> {
 /// Invoke the callback of option, map failure to false
 pub fn invoke_callback_opt<Set, Ser>(
     uid: Uid,
-    ctx: &Ctx,
+    ctx: &mut Ctx,
     set: &mut Set,
     inv: &mut Invoker<Set, Ser>,
     ser: &mut Ser,
