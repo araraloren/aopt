@@ -89,6 +89,7 @@ impl<'a> Analyzer<'a> {
         let where_clause = if has_handler_on_field || has_handler_on_global {
             quote! {
                 where
+                P: 'zlifetime,
                 P::Ser: 'zlifetime,
                 P::Set: aopt::prelude::Set + 'zlifetime,
                 P::Error: Into<aopt::Error>,
@@ -100,6 +101,7 @@ impl<'a> Analyzer<'a> {
         } else {
             quote! {
                 where
+                P: 'zlifetime,
                 P::Ser: 'zlifetime,
                 P::Set: aopt::prelude::Set + 'zlifetime,
                 P::Error: Into<aopt::Error>,
@@ -557,6 +559,8 @@ pub struct FieldMeta<'a> {
 
     is_sub_command: bool,
 
+    is_position: bool,
+
     parser_ty: Option<TokenStream>,
 
     comment_doc: Vec<Lit>,
@@ -572,6 +576,7 @@ impl<'a> FieldMeta<'a> {
         let sub_cfg = Configurations::<SubCfg>::parse_attrs(&field.attrs, "sub");
         let comment_doc = filter_comment_doc(&field.attrs);
         let is_sub_command;
+        let is_position = check_in_path(ty, "Pos") || check_in_path(ty, "Cmd");
         let mut parser_ty = None;
 
         let field_cfg = if !arg_cfg.cfgs.is_empty() && !sub_cfg.cfgs.is_empty() {
@@ -627,6 +632,7 @@ impl<'a> FieldMeta<'a> {
             unwrap_ty,
             comment_doc,
             is_reference,
+            is_position,
             is_sub_command,
         })
     }
@@ -685,6 +691,25 @@ impl<'a> FieldMeta<'a> {
         }
     }
 
+    pub fn generate_field_name(&self) -> String {
+        let ident = self.ident.unwrap_or_else(|| {
+            abort! {
+                self.ident,
+                "missing filed name",
+            }
+        }).to_string();
+        
+        if self.is_position || self.is_sub_command() {
+            ident
+        }
+        else if ident.chars().count() >= 2 {
+            format!("--{}", ident)
+        }
+        else {
+            format!("-{}", ident)
+        }
+    }
+
     pub fn has_handler(&self) -> bool {
         self.field_cfg.find_cfg(CfgKind::OptOn).is_some() || self.is_sub_command()
     }
@@ -696,13 +721,8 @@ impl<'a> FieldMeta<'a> {
     pub fn generate_command_extract(&self) -> syn::Result<(bool, TokenStream)> {
         let is_ref = self.field_cfg.find_cfg(CfgKind::SubRef).is_some();
         let is_mut = self.field_cfg.find_cfg(CfgKind::SubMut).is_some();
-        let ident = self.ident.unwrap_or_else(|| {
-            abort! {
-                self.ident,
-                "missing filed name",
-            }
-        });
-        let name = format!("{}", ident).to_token_stream();
+        let ident = self.ident;
+        let name = self.generate_field_name().to_token_stream();
         let name = self
             .field_cfg
             .find_cfg(CfgKind::OptName)
@@ -748,13 +768,8 @@ impl<'a> FieldMeta<'a> {
     pub fn generate_option_extract(&self) -> syn::Result<(bool, TokenStream)> {
         let is_ref = self.field_cfg.find_cfg(CfgKind::OptRef).is_some();
         let is_mut = self.field_cfg.find_cfg(CfgKind::OptMut).is_some();
-        let ident = self.ident.unwrap_or_else(|| {
-            abort! {
-                self.ident,
-                "missing filed name",
-            }
-        });
-        let name = format!("--{}", ident).to_token_stream();
+        let ident = self.ident;
+        let name = self.generate_field_name().to_token_stream();
         let name = self
             .field_cfg
             .find_cfg(CfgKind::OptName)
@@ -857,12 +872,7 @@ impl<'a> FieldMeta<'a> {
         }
 
         if !has_name {
-            let ident = ident.map(|v| v.to_string()).unwrap_or_else(|| {
-                abort! {
-                    ident,
-                    "missing field name for field {:?}", ident
-                }
-            });
+            let ident = self.generate_field_name();
 
             codes.push(quote! {
                 config.set_name(#ident);
@@ -976,17 +986,7 @@ impl<'a> FieldMeta<'a> {
             });
         }
         if !has_name {
-            let ident = ident.map(|v| v.to_string()).unwrap_or_else(|| {
-                abort! {
-                    ident,
-                    "missing field name for field {:?}", ident
-                }
-            });
-            let name = format!(
-                "{}{}",
-                if ident.chars().count() > 1 { "--" } else { "-" },
-                ident
-            );
+            let name = self.generate_field_name();
 
             codes.push(quote! {
                 config.set_name(#name);
@@ -998,7 +998,9 @@ impl<'a> FieldMeta<'a> {
             let token = &help_cfg.value;
 
             help_code = Some(quote! {
-                let mut message = String::from(#token);
+                let mut message = String::from(#token.trim());
+
+                message.push_str(" ");
             });
         } else if !self.comment_doc.is_empty() {
             help_code = Some({
@@ -1007,7 +1009,8 @@ impl<'a> FieldMeta<'a> {
                 };
                 for doc in self.comment_doc.iter() {
                     code.extend(quote! {
-                        message.push_str(#doc);
+                        message.push_str(#doc.trim());
+                        message.push_str(" ");
                     });
                 }
                 code
@@ -1017,7 +1020,7 @@ impl<'a> FieldMeta<'a> {
             if let Some(value) = value {
                 help_code.extend(quote! {
                     message.push_str("[");
-                    message.push_str(#value);
+                    message.push_str(#value.trim());
                     message.push_str("]");
                 });
             }
@@ -1143,4 +1146,27 @@ pub fn filter_comment_doc(attrs: &[Attribute]) -> Vec<Lit> {
         }
     }
     ret
+}
+
+pub fn check_in_path(ty: &Type, name: &str) -> bool {
+    if let Type::Path(path) = ty {
+        if let Some(segment) = path.path.segments.last() {
+            let ident = segment.ident.to_string();
+
+            if ident == name {
+                return true;
+            }
+            else if let PathArguments::AngleBracketed(ab) = &segment.arguments {
+                for arg in ab.args.iter() {
+                    if let GenericArgument::Type(next_ty) = arg {
+                        return check_in_path(next_ty, name);
+                    }
+                }
+            }
+        }
+    }
+    else if let Type::Reference(reference) = ty {
+        return check_in_path(reference.elem.as_ref(), name);
+    }
+    false
 }
