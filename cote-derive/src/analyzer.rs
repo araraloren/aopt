@@ -7,6 +7,7 @@ use quote::quote;
 use quote::ToTokens;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
+use syn::Attribute;
 use syn::Data::Struct;
 use syn::DataStruct;
 use syn::DeriveInput;
@@ -16,6 +17,7 @@ use syn::GenericArgument;
 use syn::GenericParam;
 use syn::Generics;
 use syn::Lifetime;
+use syn::Lit;
 use syn::PathArguments;
 use syn::Token;
 use syn::Type;
@@ -29,6 +31,8 @@ use crate::global::Configurations;
 use crate::global::FieldCfg;
 use crate::global::GlobalCfg;
 use crate::global::SubCfg;
+
+const HELP_OPTION_UID: &str = "help_option_uid";
 
 pub fn derive_parser(input: &DeriveInput) -> syn::Result<TokenStream> {
     let analyzer = Analyzer::new(input)?;
@@ -75,11 +79,7 @@ impl<'a> Analyzer<'a> {
 
     pub fn generate_simple_parser(&self) -> syn::Result<TokenStream> {
         let has_handler_on_field = self.field_metas.iter().any(|v| v.has_handler());
-        let has_handler_on_global = self
-            .struct_meta
-            .global_cfg
-            .find_cfg(CfgKind::ParserOn)
-            .is_some();
+        let has_handler_on_global = self.struct_meta.has_handler();
         let update = self.generate_parser_update()?;
         let extract_value = self.generate_try_extract()?;
         let try_from = self.generate_try_from()?;
@@ -192,7 +192,129 @@ impl<'a> Analyzer<'a> {
         let mut configs = vec![];
         let mut inserts = vec![];
         let mut handlers = vec![];
+        let process_help = self
+            .struct_meta
+            .global_cfg
+            .find_cfg(CfgKind::ParserHelp)
+            .is_some();
 
+        // insert main if global has `on`
+        if let Some(cfg) = self.struct_meta.global_cfg.find_cfg(CfgKind::ParserOn) {
+            let value = &cfg.value;
+            let ident = Ident::new("main_option", self.struct_meta.ident.span());
+            let uid_ident = Ident::new("main_option_uid", self.struct_meta.ident.span());
+
+            configs.push(quote! {
+                let #ident = {
+                    ctor.new_with({
+                        let mut config = aopt::prelude::SetCfg::<P::Set>::default();
+                        config.set_name("main_option");
+                        <aopt::opt::Main>::infer_fill_info(&mut config, true);
+                        config
+                    }).map_err(Into::into)?
+                };
+            });
+            inserts.push(quote! {
+                let #uid_ident = set.insert(#ident);
+            });
+            handlers.push(quote! {
+                parser.entry(#uid_ident)?.on(#value);
+            });
+        }
+        // insert help function
+        if process_help {
+            let head =
+                if let Some(head_cfg) = self.struct_meta.global_cfg.find_cfg(CfgKind::ParserHead) {
+                    let value = &head_cfg.value;
+
+                    quote! {
+                        #value
+                    }
+                } else {
+                    quote! {
+                        format!("{}", env!("CARGO_PKG_DESCRIPTION"))
+                    }
+                };
+            let foot = if let Some(head_cfg) =
+                self.struct_meta.global_cfg.find_cfg(CfgKind::ParserFoot)
+            {
+                let value = &head_cfg.value;
+
+                quote! {
+                    #value
+                }
+            } else {
+                quote! {
+                    format!("Create by {} v{}", env!("CARGO_PKG_AUTHORS"), env!("CARGO_PKG_VERSION"))
+                }
+            };
+            let name =
+                if let Some(head_cfg) = self.struct_meta.global_cfg.find_cfg(CfgKind::ParserName) {
+                    let value = &head_cfg.value;
+
+                    quote! {
+                        #value
+                    }
+                } else {
+                    quote! {
+                        format!("{}", env!("CARGO_PKG_NAME"))
+                    }
+                };
+            let ident = Ident::new("help_option", self.struct_meta.ident.span());
+            let uid_ident = Ident::new(HELP_OPTION_UID, self.struct_meta.ident.span());
+
+            configs.push(quote! {
+                let #ident = {
+                    ctor.new_with({
+                        let mut config = aopt::prelude::SetCfg::<P::Set>::default();
+                        config.set_name("--help");
+                        config.add_alias("-h");
+                        config.add_alias("-?");
+                        config.set_help("Display help message");
+                        <bool>::infer_fill_info(&mut config, true);
+                        config
+                    }).map_err(Into::into)?
+                };
+            });
+            inserts.push(quote! {
+                let #uid_ident = set.insert(#ident);
+            });
+            let main_ident = Ident::new("help_main_handler", self.struct_meta.ident.span());
+            let main_uid_ident = Ident::new("help_main_handler_uid", self.struct_meta.ident.span());
+
+            configs.push(quote! {
+                let #main_ident = {
+                    ctor.new_with({
+                        let mut config = aopt::prelude::SetCfg::<P::Set>::default();
+                        config.set_name("help_main_handler");
+                        <aopt::opt::Main>::infer_fill_info(&mut config, true);
+                        config
+                    }).map_err(Into::into)?
+                };
+            });
+            inserts.push(quote! {
+                let #main_uid_ident = set.insert(#main_ident);
+            });
+            handlers.push(quote! {
+                parser.entry(#main_uid_ident)?.on(
+                    move |set: &mut P::Set, _: &mut P::Ser| -> Result<Option<()>, Error> {
+                        let help_uid = #uid_ident;
+                        if let Ok(value) = set.opt(help_uid)?.val::<bool>() {
+                            if *value {
+                                if ! set.iter()
+                                        .filter(|v|v.mat_style(aopt::prelude::Style::Cmd))
+                                        .any(|v|v.matched()) {
+                                    cote::cote_display_set_help(set, #name, #head, #foot)
+                                        .map_err(|e| aopt::Error::raise_error(format!("Can not display help message: {:?}", e)))?;
+                                    std::process::exit(0)
+                                }
+                            }
+                        }
+                        Ok(Some(()))
+                    }
+                );
+            });
+        }
         for (idx, field) in self.field_metas.iter().enumerate() {
             let ident = Ident::new(&format!("option{}", idx), field.ident.span());
             let config = field.generate_config()?;
@@ -204,7 +326,7 @@ impl<'a> Analyzer<'a> {
             });
             if field.has_handler() {
                 let uid_ident = Ident::new(&format!("option_uid_{}", idx), field.ident.span());
-                let handler = field.generate_handler()?;
+                let handler = field.generate_handler(process_help)?;
 
                 inserts.push(quote! {
                     let #uid_ident = set.insert(#ident);
@@ -221,7 +343,6 @@ impl<'a> Analyzer<'a> {
         ret.extend(configs.into_iter());
         ret.extend(inserts.into_iter());
         ret.extend(handlers.into_iter());
-        ret.extend(self.struct_meta.generate_main()?);
         ret.extend(quote! { Ok(()) });
         Ok(ret)
     }
@@ -382,18 +503,9 @@ impl<'a> StructMeta<'a> {
         })
     }
 
-    pub fn generate_main(&self) -> syn::Result<TokenStream> {
-        Ok(
-            if let Some(cfg) = self.global_cfg.find_cfg(CfgKind::ParserOn) {
-                let value = &cfg.value;
-
-                quote! {
-                    parser.add_opt_i::<Main>("default_main")?.on(#value)?;
-                }
-            } else {
-                quote! {}
-            },
-        )
+    pub fn has_handler(&self) -> bool {
+        self.global_cfg.find_cfg(CfgKind::ParserOn).is_some()
+            || self.global_cfg.find_cfg(CfgKind::ParserHelp).is_some()
     }
 
     pub fn generate_where_clause_with_zlifetime(&self) -> syn::Result<TokenStream> {
@@ -401,7 +513,7 @@ impl<'a> StructMeta<'a> {
         let zlifetime = Lifetime::new("'zlifetime", self.ident.span());
 
         for lifetime in self.lifetimes.iter() {
-            let lifetime = Lifetime::new(&format!("'{}", lifetime.to_string()), lifetime.span());
+            let lifetime = Lifetime::new(&format!("'{}", lifetime), lifetime.span());
 
             code.extend(quote! {
                 #zlifetime: #lifetime,
@@ -446,6 +558,8 @@ pub struct FieldMeta<'a> {
     is_sub_command: bool,
 
     parser_ty: Option<TokenStream>,
+
+    comment_doc: Vec<Lit>,
 }
 
 impl<'a> FieldMeta<'a> {
@@ -456,20 +570,21 @@ impl<'a> FieldMeta<'a> {
         let mut unwrap_ty = None;
         let arg_cfg = Configurations::<ArgCfg>::parse_attrs(&field.attrs, "arg");
         let sub_cfg = Configurations::<SubCfg>::parse_attrs(&field.attrs, "sub");
+        let comment_doc = filter_comment_doc(&field.attrs);
         let is_sub_command;
         let mut parser_ty = None;
 
-        let field_cfg = if arg_cfg.cfgs.len() > 0 && sub_cfg.cfgs.len() > 0 {
+        let field_cfg = if !arg_cfg.cfgs.is_empty() && !sub_cfg.cfgs.is_empty() {
             abort! {
                 ident,
                 "can not have both `arg` and `sub` on one field",
             }
-        } else if arg_cfg.cfgs.len() > 0 {
+        } else if !arg_cfg.cfgs.is_empty() {
             is_sub_command = false;
             Configurations {
                 cfgs: arg_cfg.cfgs.into_iter().map(|v| v.into()).collect(),
             }
-        } else if sub_cfg.cfgs.len() > 0 {
+        } else if !sub_cfg.cfgs.is_empty() {
             let policy = sub_cfg.find_cfg(CfgKind::SubPolicy);
             let policy_name = policy
                 .map(|v| v.value.to_token_stream().to_string())
@@ -503,7 +618,6 @@ impl<'a> FieldMeta<'a> {
             is_sub_command = false;
             Configurations { cfgs: vec![] }
         };
-
         Ok(Self {
             ident,
             ty,
@@ -511,12 +625,13 @@ impl<'a> FieldMeta<'a> {
             field_cfg,
             parser_ty,
             unwrap_ty,
+            comment_doc,
             is_reference,
             is_sub_command,
         })
     }
 
-    pub fn generate_handler(&self) -> syn::Result<TokenStream> {
+    pub fn generate_handler(&self, process_help: bool) -> syn::Result<TokenStream> {
         if let Some(cfg) = self.field_cfg.find_cfg(CfgKind::OptOn) {
             let value = &cfg.value;
 
@@ -526,14 +641,30 @@ impl<'a> FieldMeta<'a> {
         } else if self.is_sub_command() {
             let parser_ty = self.parser_ty.as_ref().unwrap();
             let unwrap_ty = self.unwrap_ty.as_ref().unwrap();
+            let pass_help_to_next = if process_help {
+                let uid_ident = Ident::new(HELP_OPTION_UID, self.ident.span());
+
+                quote! {
+                    if let Ok(value) = set.opt(#uid_ident)?.val::<bool>() {
+                        if *value {
+                            // pass a fake flag to next sub command
+                            args.push(aopt::RawVal::from("--help"));
+                        }
+                    }
+                }
+            } else {
+                quote! {}
+            };
 
             Ok(quote! {
-                |set: &mut P::Set, ser: &mut P::Ser, args: aopt::prelude::ctx::Args, index: aopt::prelude::ctx::Index| {
+                move |set: &mut P::Set, _: &mut P::Ser, args: aopt::prelude::ctx::Args, index: aopt::prelude::ctx::Index| {
                     use std::ops::Deref;
 
                     let mut args = args.deref().clone().into_inner();
 
+                    // remove current sub command
                     args.remove(*index.deref());
+                    #pass_help_to_next
 
                     let args = aopt::ARef::new(aopt::prelude::Args::from_vec(args));
                     let mut parser: #parser_ty = <#unwrap_ty>::into_parser()?;
@@ -571,7 +702,7 @@ impl<'a> FieldMeta<'a> {
                 "missing filed name",
             }
         });
-        let name = format!("{}", ident.to_string()).to_token_stream();
+        let name = format!("{}", ident).to_token_stream();
         let name = self
             .field_cfg
             .find_cfg(CfgKind::OptName)
@@ -623,7 +754,7 @@ impl<'a> FieldMeta<'a> {
                 "missing filed name",
             }
         });
-        let name = format!("--{}", ident.to_string()).to_token_stream();
+        let name = format!("--{}", ident).to_token_stream();
         let name = self
             .field_cfg
             .find_cfg(CfgKind::OptName)
@@ -703,6 +834,20 @@ impl<'a> FieldMeta<'a> {
                         config.add_alias(#token);
                     }
                 }
+                CfgKind::SubHint => {
+                    let token = cfg.value.to_token_stream();
+
+                    quote! {
+                        config.set_hint(#token);
+                    }
+                }
+                CfgKind::SubHelp => {
+                    let token = cfg.value.to_token_stream();
+
+                    quote! {
+                        config.set_help(#token);
+                    }
+                }
                 _ => {
                     abort! {
                         ident, "Unsupport config kind on field macro `sub`: {:?}", cfg.kind
@@ -718,11 +863,23 @@ impl<'a> FieldMeta<'a> {
                     "missing field name for field {:?}", ident
                 }
             });
-            let name = ident.to_string();
 
             codes.push(quote! {
-                config.set_name(#name);
+                config.set_name(#ident);
             });
+        }
+        if self.field_cfg.find_cfg(CfgKind::SubHelp).is_none() && !self.comment_doc.is_empty() {
+            let mut code = quote! {
+                let mut message = String::default();
+            };
+            for doc in self.comment_doc.iter() {
+                code.extend(quote! {
+                    message.push_str(#doc);
+                });
+            }
+            codes.push(quote! {
+                config.set_help({ #code message });
+            })
         }
         codes.push(quote! {
             aopt::opt::Cmd::infer_fill_info(&mut config, true);
@@ -737,6 +894,7 @@ impl<'a> FieldMeta<'a> {
         let ident = self.ident;
         let config = &self.field_cfg;
         let trimed_ty = &self.trimed_ty;
+        let mut value = None;
 
         let mut codes = vec![];
         let mut has_name = false;
@@ -753,13 +911,6 @@ impl<'a> FieldMeta<'a> {
                         config.set_hint(#token);
                     }
                 }
-                CfgKind::OptHelp => {
-                    let token = cfg.value.to_token_stream();
-
-                    quote! {
-                        config.set_help(#token);
-                    }
-                }
                 CfgKind::OptName => {
                     let token = cfg.value.to_token_stream();
 
@@ -771,6 +922,7 @@ impl<'a> FieldMeta<'a> {
                 CfgKind::OptValue => {
                     let token = cfg.value.to_token_stream();
 
+                    value = Some(token.clone());
                     quote! {
                         config.set_initializer(aopt::prelude::ValInitializer::new_value(<<#ty as aopt::prelude::Infer>::Val>::from(#token)));
                     }
@@ -778,6 +930,7 @@ impl<'a> FieldMeta<'a> {
                 CfgKind::OptValues => {
                     let token = cfg.value.to_token_stream();
 
+                    value = Some(token.clone());
                     quote! {
                         let values = #token.into_iter().map(|v|<<#ty as aopt::prelude::Infer>::Val>::from(v)).collect::<Vec<<#ty as aopt::prelude::Infer>::Val>>();
                         config.set_initializer(aopt::prelude::ValInitializer::new_values(values));
@@ -811,7 +964,7 @@ impl<'a> FieldMeta<'a> {
                         config.set_storer(aopt::prelude::ValStorer::new_validator::<#ty>(#token));
                     }
                 }
-                CfgKind::OptOn | CfgKind::OptRef | CfgKind::OptMut => {
+                CfgKind::OptOn | CfgKind::OptRef | CfgKind::OptMut | CfgKind::OptHelp => {
                     // will process in another function
                     quote! { }
                 }
@@ -839,6 +992,39 @@ impl<'a> FieldMeta<'a> {
                 config.set_name(#name);
             });
         }
+        let mut help_code = None;
+
+        if let Some(help_cfg) = self.field_cfg.find_cfg(CfgKind::OptHelp) {
+            let token = &help_cfg.value;
+
+            help_code = Some(quote! {
+                let mut message = String::from(#token);
+            });
+        } else if !self.comment_doc.is_empty() {
+            help_code = Some({
+                let mut code = quote! {
+                    let mut message = String::default();
+                };
+                for doc in self.comment_doc.iter() {
+                    code.extend(quote! {
+                        message.push_str(#doc);
+                    });
+                }
+                code
+            });
+        }
+        if let Some(mut help_code) = help_code {
+            if let Some(value) = value {
+                help_code.extend(quote! {
+                    message.push_str("[");
+                    message.push_str(#value);
+                    message.push_str("]");
+                });
+            }
+            codes.push(quote! {
+                config.set_help({ #help_code message });
+            })
+        }
         codes.push(quote! {
             <#trimed_ty>::infer_fill_info(&mut config, true);
             config
@@ -849,39 +1035,36 @@ impl<'a> FieldMeta<'a> {
 }
 
 pub fn remove_option(ty: &Type) -> syn::Result<Type> {
-    match ty {
-        Type::Path(path) => {
-            if let Some(segment) = path.path.segments.last() {
-                let ident = segment.ident.to_string();
+    if let Type::Path(path) = ty {
+        if let Some(segment) = path.path.segments.last() {
+            let ident = segment.ident.to_string();
 
-                if ident == "Option" {
-                    match &segment.arguments {
-                        PathArguments::AngleBracketed(ab) => {
-                            if let Some(GenericArgument::Type(next_ty)) = ab.args.first().as_ref() {
-                                return Ok(next_ty.clone());
-                            } else {
-                                abort! {
-                                    ty,
-                                    "`sub` not support current type"
-                                }
-                            }
-                        }
-                        _ => {
+            if ident == "Option" {
+                match &segment.arguments {
+                    PathArguments::AngleBracketed(ab) => {
+                        if let Some(GenericArgument::Type(next_ty)) = ab.args.first().as_ref() {
+                            return Ok(next_ty.clone());
+                        } else {
                             abort! {
                                 ty,
                                 "`sub` not support current type"
                             }
                         }
                     }
-                } else {
-                    abort! {
-                        ty,
-                        "`sub` must wrapped with Option"
+                    _ => {
+                        abort! {
+                            ty,
+                            "`sub` not support current type"
+                        }
                     }
+                }
+            } else {
+                abort! {
+                    ty,
+                    "`sub` must wrapped with Option"
                 }
             }
         }
-        _ => {}
     }
     Ok(ty.clone())
 }
@@ -906,15 +1089,12 @@ pub fn check_if_reference(ty: &Type) -> bool {
     match ty {
         Type::Path(path) => {
             if let Some(segment) = path.path.segments.last() {
-                match &segment.arguments {
-                    PathArguments::AngleBracketed(ab) => {
-                        for arg in ab.args.iter() {
-                            if let GenericArgument::Type(next_ty) = arg {
-                                return check_if_reference(next_ty);
-                            }
+                if let PathArguments::AngleBracketed(ab) = &segment.arguments {
+                    for arg in ab.args.iter() {
+                        if let GenericArgument::Type(next_ty) = arg {
+                            return check_if_reference(next_ty);
                         }
                     }
-                    _ => {}
                 }
             }
             false
@@ -949,4 +1129,18 @@ pub fn remove_path_lifetime(ty: &mut TypePath) {
             }
         }
     }
+}
+
+pub fn filter_comment_doc(attrs: &[Attribute]) -> Vec<Lit> {
+    let attrs = attrs.iter().filter(|v| v.path.is_ident("doc"));
+    let mut ret = vec![];
+
+    for attr in attrs {
+        if let Ok(syn::Meta::NameValue(meta)) = attr.parse_meta() {
+            if let syn::Lit::Str(_) = &meta.lit {
+                ret.push(meta.lit);
+            }
+        }
+    }
+    ret
 }

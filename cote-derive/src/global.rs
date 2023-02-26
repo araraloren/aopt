@@ -19,11 +19,13 @@ pub enum CfgKind {
 
     ParserHelp,
 
-    ParserVer,
+    ParserHelpWidth,
 
-    ParserAuthor,
+    ParserUsageWidth,
 
     ParserOn,
+
+    ParserName,
 
     ParserHead,
 
@@ -34,6 +36,10 @@ pub enum CfgKind {
     SubName,
 
     SubAlias,
+
+    SubHint,
+
+    SubHelp,
 
     SubRef,
 
@@ -88,11 +94,12 @@ impl Parse for GlobalCfg {
         let cfg_kind = match cfg_kind.as_str() {
             "policy" => CfgKind::ParserPolicy,
             "help" => CfgKind::ParserHelp,
-            "version" => CfgKind::ParserVer,
-            "author" => CfgKind::ParserAuthor,
+            "width" => CfgKind::ParserHelpWidth,
+            "usage_width" => CfgKind::ParserUsageWidth,
             "head" => CfgKind::ParserHead,
             "foot" => CfgKind::ParserFoot,
             "on" => CfgKind::ParserOn,
+            "name" => CfgKind::ParserName,
             _ => {
                 abort! {
                     ident, "invalid configuration name in parser(...): {:?}", cfg_kind
@@ -101,7 +108,7 @@ impl Parse for GlobalCfg {
         };
 
         match cfg_kind {
-            CfgKind::OptHelp | CfgKind::ParserVer | CfgKind::ParserAuthor => Ok(Self {
+            CfgKind::ParserHelp => Ok(Self {
                 kind: cfg_kind,
                 value: CfgValue::Null,
             }),
@@ -197,6 +204,8 @@ impl Parse for SubCfg {
             "alias" => CfgKind::SubAlias,
             "ref" => CfgKind::SubRef,
             "mut" => CfgKind::SubMut,
+            "hint" => CfgKind::SubHint,
+            "help" => CfgKind::SubHelp,
             _ => {
                 abort! {
                     ident, "invalid configuration name in sub(...): {:?}", cfg_kind
