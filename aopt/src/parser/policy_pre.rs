@@ -67,7 +67,7 @@ use crate::Error;
 ///
 ///         match cfg.as_str() {
 ///             "cxx" => {
-///                 parser.add_opt_i::<String>("-cxx")?.set_values(
+///                 parser.add_opt_i::<Option<String>>("-cxx")?.set_values(
 ///                     ["cxx", "cpp", "c++", "cc", "hpp", "hxx", "h"]
 ///                         .map(|v| v.to_owned())
 ///                         .to_vec(),
@@ -621,7 +621,7 @@ mod test {
             .set_pos_type_only::<u64>()
             .run()?;
         let cpos_uid = set
-            .add_opt_i::<Pos<String>>("cpos@4..5")?
+            .add_opt_i::<Option<Pos<String>>>("cpos@4..5")?
             .set_validator(ValValidator::contains2(vec!["average", "plus"]))
             .run()?;
         let dpos_uid = set.add_opt("dpos=p@5..7")?.set_action(Action::Set).run()?;

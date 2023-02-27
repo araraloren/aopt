@@ -21,26 +21,31 @@ use crate::Uid;
 
 /// A multiple features option type.
 ///
-/// Some types support by default, see [`Infer`](crate::value::Infer):
+/// Some types support by default, they all implement [`Infer`](crate::value::Infer).
+/// When create the option with `creator` using [`add_opt`](crate::set::OptSet::add_opt), the [`Creator`] will retrieve 
+/// other informations from the `infer type` list on the table.
+/// When create the option from type using [`add_opt_i`](crate::set::OptSet::add_opt_i), the [`Creator`] will retrieve 
+/// other informations from given type.
 ///
-/// | type | value type | action | ignore name | styles | index support |  force | alias | default value | creator |
-/// | --   |   --       |    --  |    -        |    --  |       -       |   -    |   --  |   --          |  -      |
-/// | [`bool`] | [`bool`] | [`Action::Set`] | `false` | [`Style::Combined`] [`Style::Boolean`] | no | false | true | false | `b` |
-/// | [`i32`] | [`i32`] | [`Action::App`] | `false` | [`Style::Argument`] | no | false | true | None | None |
-/// | [`i64`] | [`i64`] | [`Action::App`] | `false` | [`Style::Argument`] | no | false | true | None | `i` |
-/// | [`u32`] | [`u32`] | [`Action::App`] | `false` | [`Style::Argument`] | no | false | true | None | None |
-/// | [`u64`] | [`u64`] | [`Action::App`] | `false` | [`Style::Argument`] | no | false | true | None | `u` |
-/// | [`f32`] | [`f32`] | [`Action::App`] | `false` | [`Style::Argument`] | no | false | true | None | None |
-/// | [`f64`] | [`f64`] | [`Action::App`] | `false` | [`Style::Argument`] | no | false | true | None | `f` |
-/// | [`usize`] | [`usize`] | [`Action::App`] | `false` | [`Style::Argument`] | no | false | true | None | None |
-/// | [`isize`] | [`isize`] | [`Action::App`] | `false` | [`Style::Argument`] | no | false | true | None | None |
-/// | [`String`] | [`String`] | [`Action::App`] | `false` | [`Style::Argument`] | no | false | true | None | `s`|
-/// | [`OsString`](std::ffi::OsString) | [`OsString`](std::ffi::OsString) | [`Action::App`] | `false` | [`Style::Argument`] | no | false | true | None | `r` |
-/// | [`Cmd`] | [`bool`] | [`Action::Set`] | `false` | [`Style::Cmd`] | [`Forward(1)`](Index::Forward) | true | true | false | `c` |
-/// | [`Pos`] | [`bool`] | [`Action::App`] | `true` | [`Style::Pos`] | yes | false | false | None | `p` |
-/// | [`Main`] | [`bool`] | [`Action::Null`] | `true` | [`Style::Main`] | [`AnyWhere`](Index::AnyWhere) | false | false | None | `m` |
-/// | [`Stdin`](std::io::Stdin) | [`Stdin`](std::io::Stdin) | [`Action::Set`] | [`true`] | [`Style::Pos`] | [`AnyWhere`](Index::AnyWhere) | false | true | None | None |
+/// | type | action | ignore name | styles | index | alias | default value | creator | infer type |
+/// |   -- |    --  |    -        |    --  |   -   |   -   |   --          |  -      |    --      |
+/// | [`bool`] | [`Action::Set`] | `false` | [`Style::Combined`] [`Style::Boolean`] | no   | true | false | `b` | [`bool`] |
+/// | [`i32`] | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | None | None |
+/// | [`i64`] | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | `i`  | [`Option<i64>`] |
+/// | [`u32`] | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | None | None |
+/// | [`u64`] | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | `u`  | [`Option<u64>`] |
+/// | [`f32`] | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | None | None |
+/// | [`f64`] | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | `f`  | [`Option<f64>`] |
+/// | [`usize`] | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | None | None |
+/// | [`isize`] | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | None | None |
+/// | [`String`]| [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | `s`  | [`Option<String>`] |
+/// | [`OsString`](std::ffi::OsString) | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | `r` | [`Option<OsString>`] |
+/// | [`Cmd`] | [`Action::Set`] | `false` | [`Style::Cmd`] | [`Forward(1)`](Index::Forward)  | true  |false | `c` | [`Cmd`] |
+/// | [`Pos`] | [`Action::App`] | `true` | [`Style::Pos`] | yes | false | None | `p` | [`Pos`] |
+/// | [`Main`] | [`Action::Null`] | `true` | [`Style::Main`] | [`AnyWhere`](Index::AnyWhere) | false | None | `m` | [`Main`] |
+/// | [`Stdin`](std::io::Stdin) | [`Action::Set`] | [`true`] | [`Style::Pos`] | [`AnyWhere`](Index::AnyWhere) | true | None | None | None |
 ///
+/// 
 /// For the value parser support, see [`RawValParser`](crate::value::RawValParser).
 #[derive(Debug)]
 pub struct AOpt {

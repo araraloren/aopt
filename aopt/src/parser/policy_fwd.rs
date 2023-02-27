@@ -409,12 +409,13 @@ mod test {
             let opt_uid = opt.uid();
 
             assert_eq!(opt_uid, uid);
-            assert_eq!(opt.name(), name, "name not equal -{}-", opt_uid);
+            assert_eq!(opt.name(), name, "name not equal -{}({})-", opt_uid, name);
             assert_eq!(
                 opt.force(),
                 force,
-                "option force required not equal -{}-: {}",
+                "option force required not equal -{}({})-: {}",
                 opt_uid,
+                name,
                 force
             );
             assert_eq!(opt.action(), action, "action not equal for {}", opt_uid);
@@ -580,7 +581,7 @@ mod test {
             .set_pos_type_only::<u64>()
             .run()?;
         let cpos_uid = set
-            .add_opt_i::<Pos<String>>("cpos@4..5")?
+            .add_opt_i::<Option<Pos<String>>>("cpos@4..5")?
             .set_validator(ValValidator::contains2(vec!["average", "plus"]))
             .run()?;
         let dpos_uid = set.add_opt("dpos=p@5..7")?.set_action(Action::Set).run()?;
