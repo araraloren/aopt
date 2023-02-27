@@ -63,6 +63,10 @@ pub enum CfgKind {
 
     OptValidator,
 
+    OptForce,
+
+    OptNoForce,
+
     OptOn,
 
     OptRef,
@@ -154,6 +158,8 @@ impl Parse for ArgCfg {
             "on" => CfgKind::OptOn,
             "ref" => CfgKind::OptRef,
             "mut" => CfgKind::OptMut,
+            "force" => CfgKind::OptForce,
+            "!force" => CfgKind::OptNoForce,
             _ => {
                 abort! {
                     ident, "invalid configuration name in arg(...): {:?}", cfg_kind
@@ -161,10 +167,16 @@ impl Parse for ArgCfg {
             }
         };
 
-        Ok(Self {
-            kind: cfg_kind,
-            value: input.parse()?,
-        })
+        match cfg_kind {
+            CfgKind::OptForce | CfgKind::OptNoForce | CfgKind::OptRef | CfgKind::OptMut  => Ok(Self {
+                kind: cfg_kind,
+                value: CfgValue::Null,
+            }),
+            _ => Ok(Self {
+                kind: cfg_kind,
+                value: input.parse()?,
+            }),
+        }
     }
 }
 

@@ -673,6 +673,7 @@ impl<'a> FieldMeta<'a> {
                     #pass_help_to_next
 
                     let args = aopt::ARef::new(aopt::prelude::Args::from_vec(args));
+                    let dbg_args = args.clone();
                     let mut parser: #parser_ty = <#unwrap_ty>::into_parser()?;
 
                     parser.init()?;
@@ -681,7 +682,10 @@ impl<'a> FieldMeta<'a> {
                             Ok(<#unwrap_ty>::try_extract(parser.optset_mut()).ok())
                         }
                         Err(e) => {
-                            Err(aopt::Error::raise_failure(format!("parsing arguments failed: {:?}", e)))
+                            Err(aopt::Error::raise_error(
+                                format!("parsing arguments failed! {{parser: {}, args: {:?}}}: {:?}", 
+                                    stringify!(#unwrap_ty),
+                                    dbg_args, e)))
                         }
                     }
                 }
@@ -927,6 +931,16 @@ impl<'a> FieldMeta<'a> {
                     has_name = true;
                     quote! {
                         config.set_name(#token);
+                    }
+                }
+                CfgKind::OptForce => {
+                    quote! {
+                        config.set_name(true);
+                    }
+                }
+                CfgKind::OptNoForce => {
+                    quote! {
+                        config.set_name(false);
                     }
                 }
                 CfgKind::OptValue => {
