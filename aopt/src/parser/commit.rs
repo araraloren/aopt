@@ -82,11 +82,11 @@ where
 }
 
 macro_rules! add_interface {
-    ($ty:ident, $name1:ident, $name2:ident, $bound1:tt $(+ $others1:tt)*, $bound2:tt $(+ $others2:tt)*) => {
+    ($ty:ty, $name1:ident, $name2:ident, $bound1:tt $(+ $others1:tt)*, $bound2:tt $(+ $others2:tt)*) => {
         #[doc = concat!("Set the infer type to [`", stringify!($ty), "`]\\<T\\>.")]
         pub fn $name1<T>(
             mut self,
-        ) -> ParserCommit<'a, 'b, I, S, Ser, $ty<T>> where T: ErasedTy + RawValParser + $bound1 $(+ $others1)* {
+        ) -> ParserCommit<'a, 'b, I, S, Ser, $ty> where T: ErasedTy + RawValParser + $bound1 $(+ $others1)* {
             let inner = self.inner.take().unwrap();
             let inv_ser = self.inv_ser.take().unwrap();
 
@@ -96,7 +96,7 @@ macro_rules! add_interface {
         #[doc = concat!("Set the infer type to [`", stringify!($ty) ,"`]\\<T\\>, add default initializer and default storer.")]
         pub fn $name2<T>(
             mut self,
-        ) -> ParserCommit<'a, 'b, I, S, Ser, $ty<T>> where T: ErasedTy + RawValParser + Clone + $bound1 $(+ $others1)* {
+        ) -> ParserCommit<'a, 'b, I, S, Ser, $ty> where T: ErasedTy + RawValParser + Clone + $bound1 $(+ $others1)* {
             let inner = self.inner.take().unwrap();
         let inv_ser = self.inv_ser.take().unwrap();
 
@@ -112,11 +112,11 @@ where
     SetCfg<S>: ConfigValue + Default,
     I: HandlerCollection<'a, S, Ser>,
 {
-    add_interface!(Pos, set_pos_type_only, set_pos_type, 'static, 'static);
+    add_interface!(Option<Pos<T>>, set_pos_type_only, set_pos_type, 'static, 'static);
 
-    add_interface!(Main, set_main_type_only, set_main_type, 'static, 'static);
+    add_interface!(Main<T>, set_main_type_only, set_main_type, 'static, 'static);
 
-    add_interface!(Any, set_any_type_only, set_any_type, 'static, 'static);
+    add_interface!(Any<T>, set_any_type_only, set_any_type, 'static, 'static);
 }
 
 impl<'a, 'b, I, S, Ser, U> ParserCommit<'a, 'b, I, S, Ser, U>

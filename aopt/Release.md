@@ -1,7 +1,7 @@
 
 # Relase note
 
-## 0.9.2
+## 0.9.11
 
 - Change the 'static of Invoker to 'a
 
@@ -10,6 +10,8 @@
 - Improve `getopt!`
 
 - Improve the handler register for option
+
+- Improve the infer information, option using same type_id for T, Option<T>, Vec<T>, Option<Vec<T>>
 
 ## 0.9.1
 

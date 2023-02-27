@@ -121,6 +121,8 @@ pub trait ConfigValue {
 
     fn set_type<T: 'static>(&mut self) -> &mut Self;
 
+    fn set_type_id(&mut self, type_id: TypeId) -> &mut Self;
+
     fn set_action(&mut self, action: Action) -> &mut Self;
 
     fn set_storer(&mut self, storer: ValStorer) -> &mut Self;
@@ -543,6 +545,11 @@ impl ConfigValue for OptConfig {
 
     fn set_type<T: 'static>(&mut self) -> &mut Self {
         self.r#type = Some(typeid::<T>());
+        self
+    }
+
+    fn set_type_id(&mut self, type_id: TypeId) -> &mut Self {
+        self.r#type = Some(type_id);
         self
     }
 

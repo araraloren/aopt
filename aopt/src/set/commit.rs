@@ -56,18 +56,18 @@ where
 }
 
 macro_rules! add_interface {
-    ($ty:ident, $name1:ident, $name2:ident, $bound1:tt $(+ $others1:tt)*, $bound2:tt $(+ $others2:tt)*) => {
+    ($ty:ty, $name1:ident, $name2:ident, $bound1:tt $(+ $others1:tt)*, $bound2:tt $(+ $others2:tt)*) => {
         #[doc = concat!("Set the infer type to [`", stringify!($ty), "`]\\<T\\>.")]
         pub fn $name1<T>(
             self,
-        ) -> SetCommit<'a, S, $ty<T>> where T: ErasedTy + RawValParser + $bound1 $(+ $others1)* {
+        ) -> SetCommit<'a, S, $ty> where T: ErasedTy + RawValParser + $bound1 $(+ $others1)* {
             let type_id = self.cfg().r#type();
 
             debug_assert!(
                 type_id.is_none() || type_id == Some(&TypeId::of::<$ty>()),
                 "Can not set value type of {} if it already has one", stringify!($ty),
             );
-            self.set_infer::<$ty<T>>()
+            self.set_infer::<$ty>()
         }
 
         #[doc = concat!("Set the infer type to [`", stringify!($ty) ,"`]\\<T\\>, add default initializer and default storer.")]
@@ -76,14 +76,14 @@ macro_rules! add_interface {
         /// [`add_default_storer`](SetCommit::add_default_storer).
         pub fn $name2<T>(
             self,
-        ) -> SetCommit<'a, S, $ty<T>> where T: ErasedTy + RawValParser + Clone + $bound1 $(+ $others1)* {
+        ) -> SetCommit<'a, S, $ty> where T: ErasedTy + RawValParser + Clone + $bound1 $(+ $others1)* {
             let type_id = self.cfg().r#type();
 
             debug_assert!(
                 type_id.is_none() || type_id == Some(&TypeId::of::<$ty>()),
                 "Can not set value type of {} if it already has one", stringify!($ty),
             );
-            self.set_infer::<$ty<T>>()
+            self.set_infer::<$ty>()
                 .add_default_initializer()
                 .add_default_storer()
         }
@@ -105,11 +105,11 @@ where
         }
     }
 
-    add_interface!(Pos, set_pos_type_only, set_pos_type, 'static, 'static);
+    add_interface!(Option<Pos<T>>, set_pos_type_only, set_pos_type, 'static, 'static);
 
-    add_interface!(Main, set_main_type_only, set_main_type, 'static, 'static);
+    add_interface!(Main<T>, set_main_type_only, set_main_type, 'static, 'static);
 
-    add_interface!(Any, set_any_type_only, set_any_type, 'static, 'static);
+    add_interface!(Any<T>, set_any_type_only, set_any_type, 'static, 'static);
 }
 
 impl<'a, S, U> SetCommit<'a, S, U>

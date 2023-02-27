@@ -119,7 +119,9 @@ where
     Ser: 'a,
     Set: crate::set::Set + 'a,
 {
-    pub fn set_raw<H: FnMut(&mut Set, &mut Ser, &mut Ctx) -> Result<bool, Error> + Send + Sync + 'a>(
+    pub fn set_raw<
+        H: FnMut(&mut Set, &mut Ser, &mut Ctx) -> Result<bool, Error> + Send + Sync + 'a,
+    >(
         &mut self,
         uid: Uid,
         handler: H,

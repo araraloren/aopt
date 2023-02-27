@@ -1,3 +1,4 @@
+use std::any::TypeId;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::io::Stdin;
@@ -16,6 +17,7 @@ use crate::opt::Pos;
 use crate::opt::Style;
 use crate::prelude::SetValueFindExt;
 use crate::trace_log;
+use crate::typeid;
 use crate::value::ValInitializer;
 use crate::value::ValValidator;
 use crate::RawVal;
@@ -69,6 +71,10 @@ pub trait Infer {
         Some(ValInitializer::fallback())
     }
 
+    fn infer_type_id() -> TypeId {
+        typeid::<Self::Val>()
+    }
+
     fn infer_tweak_info<C>(_cfg: &mut C)
     where
         Self: Sized + 'static,
@@ -91,6 +97,7 @@ pub trait Infer {
         let ignore_index = Self::infer_ignore_index();
         let force = Self::infer_force();
         let ctor = Self::infer_ctor();
+        let type_id = Self::infer_type_id();
         let initializer = Self::infer_initializer();
         let storer = if let Some(validator) = Self::infer_validator() {
             Some(ValStorer::from(validator))
@@ -101,7 +108,7 @@ pub trait Infer {
         Self::infer_tweak_info(cfg);
         (!cfg.has_ctor()).then(|| cfg.set_ctor(ctor));
         (!cfg.has_index()).then(|| index.map(|idx| cfg.set_index(idx)));
-        (!cfg.has_type()).then(|| cfg.set_type::<Self>());
+        (!cfg.has_type()).then(|| cfg.set_type_id(type_id));
         (!cfg.has_action()).then(|| cfg.set_action(act));
         (!cfg.has_style()).then(|| cfg.set_style(style));
         (!cfg.has_force()).then(|| cfg.set_force(force));
@@ -133,17 +140,24 @@ pub trait InferValueMut<'a> {
         Self: Sized;
 }
 
+macro_rules! impl_for_bool {
+    () => {
+        fn infer_act() -> Action {
+            Action::Set
+        }
+
+        fn infer_style() -> Vec<Style> {
+            vec![Style::Combined, Style::Boolean]
+        }
+    };
+}
+
 impl Infer for bool {
     type Val = bool;
 
-    fn infer_act() -> Action {
-        Action::Set
-    }
+    impl_for_bool!();
 
-    fn infer_style() -> Vec<Style> {
-        vec![Style::Combined, Style::Boolean]
-    }
-
+    /// bool has a default value [`false`]
     fn infer_initializer() -> Option<ValInitializer> {
         Some(ValInitializer::new_value(false))
     }
@@ -161,17 +175,7 @@ impl<'a> InferValueMut<'a> for bool {
 impl Infer for Option<bool> {
     type Val = bool;
 
-    fn infer_act() -> Action {
-        Action::Set
-    }
-
-    fn infer_style() -> Vec<Style> {
-        vec![Style::Combined, Style::Boolean]
-    }
-
-    fn infer_initializer() -> Option<ValInitializer> {
-        Some(ValInitializer::new_value(false))
-    }
+    impl_for_bool!();
 }
 
 impl<'a> InferValueMut<'a> for Option<bool> {
@@ -183,6 +187,20 @@ impl<'a> InferValueMut<'a> for Option<bool> {
     }
 }
 
+impl Infer for Vec<bool> {
+    type Val = bool;
+
+    impl_for_bool!();
+}
+
+impl<'a> InferValueMut<'a> for Vec<bool> {
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        Ok(std::mem::take(set.find_vals_mut::<bool>(name)?))
+    }
+}
 
 impl Infer for Cmd {
     type Val = bool;
@@ -210,6 +228,10 @@ impl Infer for Cmd {
     fn infer_initializer() -> Option<ValInitializer> {
         Some(ValInitializer::new_value(false))
     }
+
+    fn infer_type_id() -> TypeId {
+        typeid::<Self>()
+    }
 }
 
 impl<'a> InferValueMut<'a> for Cmd {
@@ -221,67 +243,81 @@ impl<'a> InferValueMut<'a> for Cmd {
     }
 }
 
+macro_rules! impl_pos_type {
+    () => {
+        fn infer_style() -> Vec<Style> {
+            vec![Style::Pos]
+        }
+
+        fn infer_ignore_name() -> bool {
+            true
+        }
+
+        fn infer_ignore_alias() -> bool {
+            true
+        }
+
+        fn infer_ignore_index() -> bool {
+            false
+        }
+
+        /// Will add default type storer when value type is bool.
+        ///
+        /// # Storer
+        /// ```!
+        /// Box::new(
+        ///     |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
+        ///         let val = raw.is_some();
+        ///
+        ///         trace_log!("Cmd value storer, parsing {:?} -> {:?}", raw, val);
+        ///         act.store1(Some(val), handler);
+        ///         Ok(())
+        ///     },
+        /// );
+        /// ```
+        fn infer_tweak_info<C>(cfg: &mut C)
+        where
+            Self: Sized + 'static,
+            Self::Val: RawValParser,
+            C: ConfigValue + Default,
+        {
+            if !cfg.has_storer() {
+                let type_id = cfg.r#type();
+                let ctor = cfg.ctor().map(|v| BuiltInCtor::from_name(v));
+                let bool_type = std::any::TypeId::of::<bool>();
+
+                // add default storer when value type is bool.
+                if type_id == Some(&bool_type) || ctor == Some(BuiltInCtor::Bool) {
+                    cfg.set_storer(ValStorer::new(Box::new(
+                        |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
+                            let val = raw.is_some();
+
+                            trace_log!("Cmd value storer, parsing {:?} -> {:?}", raw, val);
+                            act.store1(Some(val), handler);
+                            Ok(())
+                        },
+                    )));
+                }
+            }
+        }
+    };
+}
+
 impl<T> Infer for Pos<T>
 where
     T: ErasedTy + 'static,
 {
     type Val = T;
 
-    fn infer_style() -> Vec<Style> {
-        vec![Style::Pos]
-    }
-
-    fn infer_ignore_name() -> bool {
+    fn infer_force() -> bool {
         true
     }
 
-    fn infer_ignore_alias() -> bool {
-        true
+    fn infer_type_id() -> TypeId {
+        typeid::<Self>()
     }
 
-    fn infer_ignore_index() -> bool {
-        false
-    }
-
-    /// Will add default type storer when value type is bool.
-    ///
-    /// # Storer
-    /// ```!
-    /// Box::new(
-    ///     |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
-    ///         let val = raw.is_some();
-    ///
-    ///         trace_log!("Cmd value storer, parsing {:?} -> {:?}", raw, val);
-    ///         act.store1(Some(val), handler);
-    ///         Ok(())
-    ///     },
-    /// );
-    /// ```
-    fn infer_tweak_info<C>(cfg: &mut C)
-    where
-        Self: Sized + 'static,
-        Self::Val: RawValParser,
-        C: ConfigValue + Default,
-    {
-        if !cfg.has_storer() {
-            let type_id = cfg.r#type();
-            let ctor = cfg.ctor().map(|v| BuiltInCtor::from_name(v));
-            let bool_type = std::any::TypeId::of::<bool>();
-
-            // add default storer when value type is bool.
-            if type_id == Some(&bool_type) || ctor == Some(BuiltInCtor::Bool) {
-                cfg.set_storer(ValStorer::new(Box::new(
-                    |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
-                        let val = raw.is_some();
-
-                        trace_log!("Cmd value storer, parsing {:?} -> {:?}", raw, val);
-                        act.store1(Some(val), handler);
-                        Ok(())
-                    },
-                )));
-            }
-        }
-    }
+    impl_pos_type!();
 }
 
 impl<'a, T> InferValueMut<'a> for Pos<T>
@@ -293,6 +329,31 @@ where
         Self: Sized,
     {
         Ok(Pos::new(set.take_val::<T>(name)?))
+    }
+}
+
+impl<T> Infer for Option<Pos<T>>
+where
+    T: ErasedTy + 'static,
+{
+    type Val = T;
+
+    fn infer_type_id() -> TypeId {
+        typeid::<Pos<T>>()
+    }
+
+    impl_pos_type!();
+}
+
+impl<'a, T> InferValueMut<'a> for Option<Pos<T>>
+where
+    T: ErasedTy + 'static,
+{
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        Ok(set.take_val::<T>(name).ok().map(|v| Pos::new(v)))
     }
 }
 
@@ -324,6 +385,10 @@ where
 
     fn infer_ignore_index() -> bool {
         false
+    }
+
+    fn infer_type_id() -> TypeId {
+        typeid::<Self>()
     }
 }
 
@@ -363,6 +428,10 @@ where
     fn infer_ignore_index() -> bool {
         false
     }
+
+    fn infer_type_id() -> TypeId {
+        typeid::<Self>()
+    }
 }
 
 impl<'a, T> InferValueMut<'a> for Any<T>
@@ -377,10 +446,68 @@ where
     }
 }
 
+macro_rules! impl_for_stdin {
+    () => {
+        fn infer_act() -> Action {
+            Action::Set
+        }
+
+        fn infer_index() -> Option<Index> {
+            Some(Index::anywhere())
+        }
+
+        fn infer_style() -> Vec<Style> {
+            vec![Style::Pos]
+        }
+
+        fn infer_ignore_name() -> bool {
+            true
+        }
+
+        fn infer_ignore_index() -> bool {
+            false
+        }
+    };
+}
+
+impl Infer for Stdin {
+    type Val = Stdin;
+
+    impl_for_stdin!();
+}
+
+impl<'a> InferValueMut<'a> for Stdin {
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        Ok(set.take_val::<Stdin>(name)?)
+    }
+}
+
+impl Infer for Option<Stdin> {
+    type Val = Stdin;
+
+    impl_for_stdin!();
+}
+
+impl<'a> InferValueMut<'a> for Option<Stdin> {
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        Ok(set.take_val::<Stdin>(name).ok())
+    }
+}
+
 macro_rules! impl_infer_for {
     ($name:path) => {
         impl Infer for $name {
             type Val = $name;
+
+            fn infer_force() -> bool {
+                true
+            }
         }
 
         impl<'a> InferValueMut<'a> for $name {
@@ -401,6 +528,10 @@ macro_rules! impl_infer_for {
 
         impl Infer for std::vec::Vec<$name> {
             type Val = $name;
+
+            fn infer_force() -> bool {
+                true
+            }
         }
 
         impl<'a> InferValueMut<'a> for std::vec::Vec<$name> {
@@ -422,6 +553,10 @@ macro_rules! impl_infer_for {
     (&$a:lifetime $name:path) => {
         impl<$a> Infer for &$a $name {
             type Val = $name;
+
+            fn infer_force() -> bool {
+                true
+            }
         }
 
         impl<$a> InferValueRef<$a> for &$a $name {
@@ -442,6 +577,10 @@ macro_rules! impl_infer_for {
 
         impl<$a> Infer for &$a std::vec::Vec<$name> {
             type Val = $name;
+
+            fn infer_force() -> bool {
+                true
+            }
         }
 
         impl<$a> InferValueRef<$a> for &$a std::vec::Vec<$name> {
@@ -463,6 +602,10 @@ macro_rules! impl_infer_for {
     (&$a:lifetime $name:path, $inner_type:path) => {
         impl<$a> Infer for &$a $name {
             type Val = $inner_type;
+
+            fn infer_force() -> bool {
+                true
+            }
         }
 
         impl<$a> InferValueRef<$a> for &$a $name {
@@ -483,6 +626,10 @@ macro_rules! impl_infer_for {
 
         impl<$a> Infer for std::vec::Vec<&$a $name> {
             type Val = $inner_type;
+
+            fn infer_force() -> bool {
+                true
+            }
         }
 
         impl<$a> InferValueRef<$a> for std::vec::Vec<&$a $name> {
@@ -498,6 +645,71 @@ macro_rules! impl_infer_for {
         impl<$a> InferValueRef<$a> for Option<std::vec::Vec<&$a $name>> {
             fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error> where Self: Sized {
                 Ok(Some(set.find_vals::<$inner_type>(name)?.iter().map(|v|v.as_ref()).collect()))
+            }
+        }
+    };
+    ($name:path, $force:literal { type Val = $val_type:ty; $( fn $fn_name:ident() -> $ret_type:ty $fn_block:block )+ }) => {
+        impl Infer for $name {
+            type Val = $val_type;
+
+            $(
+                fn $fn_name() -> $ret_type $fn_block
+            )+
+
+            fn infer_force() -> bool {
+                $force
+            }
+        }
+
+        impl<'a> InferValueMut<'a> for $name {
+            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error> where Self: Sized {
+                set.take_val::<$name>(name)
+            }
+        }
+
+        impl Infer for std::option::Option<$name> {
+            type Val = $val_type;
+
+            $(
+                fn $fn_name() -> $ret_type $fn_block
+            )+
+        }
+
+        impl<'a> InferValueMut<'a> for std::option::Option<$name> {
+            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error> where Self: Sized {
+                Ok(set.take_val::<$name>(name).ok())
+            }
+        }
+
+        impl Infer for std::vec::Vec<$name> {
+            type Val = $val_type;
+
+            $(
+                fn $fn_name() -> $ret_type $fn_block
+            )+
+
+            fn infer_force() -> bool {
+                $force
+            }
+        }
+
+        impl<'a> InferValueMut<'a> for std::vec::Vec<$name> {
+            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error> where Self: Sized {
+                Ok(std::mem::take(set.find_vals_mut::<$name>(name)?))
+            }
+        }
+
+        impl Infer for std::option::Option<std::vec::Vec<$name>> {
+            type Val = $val_type;
+
+            $(
+                fn $fn_name() -> $ret_type $fn_block
+            )+
+        }
+
+        impl<'a> InferValueMut<'a> for std::option::Option<std::vec::Vec<$name>> {
+            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error> where Self: Sized {
+                Ok(set.find_vals_mut::<$name>(name).ok().map(|v|std::mem::take(v)))
             }
         }
     };
@@ -550,77 +762,15 @@ impl_infer_for!(&'a std::path::Path, PathBuf);
 impl_infer_for!(&'a str, String);
 impl_infer_for!(&'a OsStr, OsString);
 
-impl Infer for Stdin {
-    type Val = Stdin;
-
-    fn infer_act() -> Action {
-        Action::Set
-    }
-
-    fn infer_index() -> Option<Index> {
-        Some(Index::anywhere())
-    }
-
-    fn infer_style() -> Vec<Style> {
-        vec![Style::Pos]
-    }
-
-    fn infer_ignore_name() -> bool {
-        true
-    }
-
-    fn infer_ignore_index() -> bool {
-        false
-    }
-}
-
-impl<'a> InferValueMut<'a> for Stdin {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        set.take_val::<Stdin>(name)
-    }
-}
-
-impl Infer for Option<Stdin> {
-    type Val = Stdin;
-
-    fn infer_act() -> Action {
-        Action::Set
-    }
-
-    fn infer_index() -> Option<Index> {
-        Some(Index::anywhere())
-    }
-
-    fn infer_style() -> Vec<Style> {
-        vec![Style::Pos]
-    }
-
-    fn infer_ignore_name() -> bool {
-        true
-    }
-
-    fn infer_ignore_index() -> bool {
-        false
-    }
-}
-
-impl<'a> InferValueMut<'a> for Option<Stdin> {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        Ok(set.take_val::<Stdin>(name).ok())
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 pub struct Placeholder;
 
 impl Infer for Placeholder {
     type Val = ();
+
+    fn infer_type_id() -> TypeId {
+        typeid::<Self>()
+    }
 }
 
 impl<'a> InferValueMut<'a> for Placeholder {
