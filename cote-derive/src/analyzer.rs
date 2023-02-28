@@ -114,7 +114,7 @@ impl<'a> Analyzer<'a> {
 
         if generics.is_empty() {
             Ok(quote! {
-                impl<'zlifetime, P> cote::ParserIntoExtension<'zlifetime, P> for #ident #where_clause
+                impl<'zlifetime, P> cote::IntoParserDerive<'zlifetime, P> for #ident #where_clause
                 {
                     fn update(parser: &mut aopt::prelude::Parser<'zlifetime, P>) -> Result<(), aopt::Error> {
                         #update
@@ -129,7 +129,7 @@ impl<'a> Analyzer<'a> {
             })
         } else {
             Ok(quote! {
-                impl<'zlifetime, #generics, P> cote::ParserIntoExtension<'zlifetime, P> for #ident<#generics> #where_clause
+                impl<'zlifetime, #generics, P> cote::IntoParserDerive<'zlifetime, P> for #ident<#generics> #where_clause
                 {
                     fn update(parser: &mut aopt::prelude::Parser<'zlifetime, P>) -> Result<(), aopt::Error> {
                         #update
@@ -264,6 +264,32 @@ impl<'a> Analyzer<'a> {
                 };
             let ident = Ident::new("help_option", self.struct_meta.ident.span());
             let uid_ident = Ident::new(HELP_OPTION_UID, self.struct_meta.ident.span());
+            let width = if let Some(head_cfg) = self
+                .struct_meta
+                .global_cfg
+                .find_cfg(CfgKind::ParserHelpWidth)
+            {
+                let value = &head_cfg.value;
+
+                quote! {
+                    #value
+                }
+            } else {
+                quote! { 20 }
+            };
+            let usage_width = if let Some(head_cfg) = self
+                .struct_meta
+                .global_cfg
+                .find_cfg(CfgKind::ParserUsageWidth)
+            {
+                let value = &head_cfg.value;
+
+                quote! {
+                    #value
+                }
+            } else {
+                quote! { 10 }
+            };
 
             configs.push(quote! {
                 let #ident = {
@@ -306,7 +332,7 @@ impl<'a> Analyzer<'a> {
                                 if ! set.iter()
                                         .filter(|v|v.mat_style(aopt::prelude::Style::Cmd))
                                         .any(|v|v.matched()) {
-                                    cote::cote_display_set_help(set, #name, #head, #foot)
+                                    cote::simple_display_set_help(set, #name, #head, #foot, #width, #usage_width)
                                         .map_err(|e| aopt::Error::raise_error(format!("Can not display help message: {:?}", e)))?;
                                     std::process::exit(0)
                                 }
@@ -361,7 +387,7 @@ impl<'a> Analyzer<'a> {
                     type Error = aopt::Error;
 
                     fn try_from(parser: &'zlifetime mut #parser_ty) -> Result<Self, Self::Error> {
-                        <#ident as cote::ParserExtractExtension<aopt::prelude::ASet>>::try_extract(parser.optset_mut())
+                        <#ident as cote::ExtractFromSetDerive<aopt::prelude::ASet>>::try_extract(parser.optset_mut())
                     }
                 }
             }
@@ -372,7 +398,7 @@ impl<'a> Analyzer<'a> {
                     type Error = aopt::Error;
 
                     fn try_from(parser: &'zlifetime mut #parser_ty) -> Result<Self, Self::Error> {
-                        <#ident as cote::ParserExtractExtension<aopt::prelude::ASet>>::try_extract(parser.optset_mut())
+                        <#ident as cote::ExtractFromSetDerive<aopt::prelude::ASet>>::try_extract(parser.optset_mut())
                     }
                 }
             }
@@ -401,7 +427,7 @@ impl<'a> Analyzer<'a> {
         }
         Ok(if generics.is_empty() {
             quote! {
-                impl <'zlifetime, S> cote::ParserExtractExtension<'zlifetime, S>
+                impl <'zlifetime, S> cote::ExtractFromSetDerive<'zlifetime, S>
                     for #ident where S: aopt::prelude::SetValueFindExt, #where_clause {
                     fn try_extract(set: &'zlifetime mut S) -> Result<Self, aopt::Error> where Self: Sized {
                         Ok(Self {
@@ -413,7 +439,7 @@ impl<'a> Analyzer<'a> {
             }
         } else {
             quote! {
-                impl <'zlifetime, #generics, S> cote::ParserExtractExtension<'zlifetime, S>
+                impl <'zlifetime, #generics, S> cote::ExtractFromSetDerive<'zlifetime, S>
                     for #ident<#generics> where S: aopt::prelude::SetValueFindExt, #where_clause {
                     fn try_extract(set: &'zlifetime mut S) -> Result<Self, aopt::Error> where Self: Sized {
                         Ok(Self {
@@ -683,7 +709,7 @@ impl<'a> FieldMeta<'a> {
                         }
                         Err(e) => {
                             Err(aopt::Error::raise_error(
-                                format!("parsing arguments failed! {{parser: {}, args: {:?}}}: {:?}", 
+                                format!("parsing arguments failed! {{parser: {}, args: {:?}}}: {:?}",
                                     stringify!(#unwrap_ty),
                                     dbg_args, e)))
                         }
@@ -696,20 +722,21 @@ impl<'a> FieldMeta<'a> {
     }
 
     pub fn generate_field_name(&self) -> String {
-        let ident = self.ident.unwrap_or_else(|| {
-            abort! {
-                self.ident,
-                "missing filed name",
-            }
-        }).to_string();
-        
+        let ident = self
+            .ident
+            .unwrap_or_else(|| {
+                abort! {
+                    self.ident,
+                    "missing filed name",
+                }
+            })
+            .to_string();
+
         if self.is_position || self.is_sub_command() {
             ident
-        }
-        else if ident.chars().count() >= 2 {
+        } else if ident.chars().count() >= 2 {
             format!("--{}", ident)
-        }
-        else {
+        } else {
             format!("-{}", ident)
         }
     }
@@ -1169,8 +1196,7 @@ pub fn check_in_path(ty: &Type, name: &str) -> bool {
 
             if ident == name {
                 return true;
-            }
-            else if let PathArguments::AngleBracketed(ab) = &segment.arguments {
+            } else if let PathArguments::AngleBracketed(ab) = &segment.arguments {
                 for arg in ab.args.iter() {
                     if let GenericArgument::Type(next_ty) = arg {
                         return check_in_path(next_ty, name);
@@ -1178,8 +1204,7 @@ pub fn check_in_path(ty: &Type, name: &str) -> bool {
                 }
             }
         }
-    }
-    else if let Type::Reference(reference) = ty {
+    } else if let Type::Reference(reference) = ty {
         return check_in_path(reference.elem.as_ref(), name);
     }
     false

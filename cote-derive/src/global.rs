@@ -168,10 +168,12 @@ impl Parse for ArgCfg {
         };
 
         match cfg_kind {
-            CfgKind::OptForce | CfgKind::OptNoForce | CfgKind::OptRef | CfgKind::OptMut  => Ok(Self {
-                kind: cfg_kind,
-                value: CfgValue::Null,
-            }),
+            CfgKind::OptForce | CfgKind::OptNoForce | CfgKind::OptRef | CfgKind::OptMut => {
+                Ok(Self {
+                    kind: cfg_kind,
+                    value: CfgValue::Null,
+                })
+            }
             _ => Ok(Self {
                 kind: cfg_kind,
                 value: input.parse()?,
