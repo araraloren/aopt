@@ -22,9 +22,9 @@ use crate::Uid;
 /// A multiple features option type.
 ///
 /// Some types support by default, they all implement [`Infer`](crate::value::Infer).
-/// When create the option with `creator` using [`add_opt`](crate::set::OptSet::add_opt), the [`Creator`] will retrieve 
+/// When create the option with `creator` using [`add_opt`](crate::set::OptSet::add_opt), the [`Creator`] will retrieve
 /// other informations from the `infer type` list on the table.
-/// When create the option from type using [`add_opt_i`](crate::set::OptSet::add_opt_i), the [`Creator`] will retrieve 
+/// When create the option from type using [`add_opt_i`](crate::set::OptSet::add_opt_i), the [`Creator`] will retrieve
 /// other informations from given type.
 ///
 /// | type | action | ignore name | styles | index | alias | default value | creator | infer type |
@@ -45,7 +45,7 @@ use crate::Uid;
 /// | [`Main`] | [`Action::Null`] | `true` | [`Style::Main`] | [`AnyWhere`](Index::AnyWhere) | false | None | `m` | [`Main`] |
 /// | [`Stdin`](std::io::Stdin) | [`Action::Set`] | [`true`] | [`Style::Pos`] | [`AnyWhere`](Index::AnyWhere) | true | None | None | None |
 ///
-/// 
+///
 /// For the value parser support, see [`RawValParser`](crate::value::RawValParser).
 #[derive(Debug)]
 pub struct AOpt {

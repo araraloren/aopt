@@ -257,6 +257,7 @@ pub mod prelude {
     pub use crate::value::InferValueMut;
     pub use crate::value::InferValueRef;
     // pub use crate::parser::BoxedPolicy;
+    pub use crate::ctx::HandlerCollection;
     pub use crate::parser::DelayPolicy;
     pub use crate::parser::FwdPolicy;
     pub use crate::parser::OptStyleManager;
@@ -306,5 +307,6 @@ pub mod prelude {
     pub use crate::value::ValValidator;
     pub use crate::ARef;
     pub use crate::GetoptRes;
+    pub use crate::RawVal;
     pub use crate::Uid;
 }
