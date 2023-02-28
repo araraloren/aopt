@@ -27,7 +27,7 @@ pub mod prelude {
     pub use crate::IntoParserDerive;
     pub use aopt;
     pub use aopt_help;
-    pub use cote_derive::Cote;
+    pub use cote_derive;
 }
 
 pub trait IntoParserDerive<'zlifetime, P>
