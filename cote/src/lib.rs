@@ -22,12 +22,18 @@ pub mod prelude {
     pub use crate::meta::IntoConfig;
     pub use crate::meta::OptionMeta;
     pub use crate::simple_display_set_help;
-    pub use crate::Cote;
+    pub use crate::CoteApp;
     pub use crate::ExtractFromSetDerive;
     pub use crate::IntoParserDerive;
     pub use aopt;
     pub use aopt_help;
     pub use cote_derive;
+
+    pub mod derive {
+        pub use cote_derive::Cote;
+        pub use crate::ExtractFromSetDerive;
+        pub use crate::IntoParserDerive;
+    }
 }
 
 pub trait IntoParserDerive<'zlifetime, P>
@@ -55,7 +61,7 @@ where
         Self: Sized;
 }
 
-pub struct Cote<'a, P>
+pub struct CoteApp<'a, P>
 where
     P: Policy,
 {
@@ -64,7 +70,7 @@ where
     parser: Parser<'a, P>,
 }
 
-impl<'a, P> Debug for Cote<'a, P>
+impl<'a, P> Debug for CoteApp<'a, P>
 where
     P::Ret: Debug,
     P::Set: Debug,
@@ -80,7 +86,7 @@ where
     }
 }
 
-impl<'a, P> Default for Cote<'a, P>
+impl<'a, P> Default for CoteApp<'a, P>
 where
     P::Set: Default,
     P::Ser: Default,
@@ -95,7 +101,7 @@ where
     }
 }
 
-impl<'a, P: Policy> Deref for Cote<'a, P> {
+impl<'a, P: Policy> Deref for CoteApp<'a, P> {
     type Target = Parser<'a, P>;
 
     fn deref(&self) -> &Self::Target {
@@ -103,13 +109,13 @@ impl<'a, P: Policy> Deref for Cote<'a, P> {
     }
 }
 
-impl<'a, P: Policy> DerefMut for Cote<'a, P> {
+impl<'a, P: Policy> DerefMut for CoteApp<'a, P> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.parser
     }
 }
 
-impl<'a, P> Cote<'a, P>
+impl<'a, P> CoteApp<'a, P>
 where
     P: Policy + APolicyExt<P>,
 {
@@ -126,7 +132,7 @@ where
     }
 }
 
-impl<'a, P> Cote<'a, P>
+impl<'a, P> CoteApp<'a, P>
 where
     P::Ser: 'a,
     P: Policy,
@@ -290,7 +296,7 @@ where
     where
         'c: 'b,
         I: Into<RawVal>,
-        F: FnMut(P::Ret, &'b mut Cote<P>) -> Result<R, Error>,
+        F: FnMut(P::Ret, &'b mut CoteApp<P>) -> Result<R, Error>,
     {
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
@@ -309,7 +315,7 @@ where
     pub fn run_mut<'c, 'b, R, F>(&'c mut self, r: F) -> Result<R, Error>
     where
         'c: 'b,
-        F: FnMut(P::Ret, &'b mut Cote<P>) -> Result<R, Error>,
+        F: FnMut(P::Ret, &'b mut CoteApp<P>) -> Result<R, Error>,
     {
         let args = Args::from_env().into_inner();
         self.run_mut_with(args.into_iter(), r)
@@ -355,7 +361,7 @@ where
         'c: 'b,
         I: Into<RawVal>,
         FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b mut Cote<P>) -> FUT,
+        F: FnMut(P::Ret, &'b mut CoteApp<P>) -> FUT,
     {
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
@@ -381,7 +387,7 @@ where
     where
         'c: 'b,
         FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b mut Cote<P>) -> FUT,
+        F: FnMut(P::Ret, &'b mut CoteApp<P>) -> FUT,
     {
         let args = Args::from_env().into_inner();
         self.run_async_mut_with(args.into_iter(), r).await
@@ -424,7 +430,7 @@ where
     where
         'c: 'b,
         I: Into<RawVal>,
-        F: FnMut(P::Ret, &'b Cote<P>) -> Result<R, Error>,
+        F: FnMut(P::Ret, &'b CoteApp<P>) -> Result<R, Error>,
     {
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
@@ -443,7 +449,7 @@ where
     pub fn run<'c, 'b, R, F>(&'c mut self, r: F) -> Result<R, Error>
     where
         'c: 'b,
-        F: FnMut(P::Ret, &'b Cote<P>) -> Result<R, Error>,
+        F: FnMut(P::Ret, &'b CoteApp<P>) -> Result<R, Error>,
     {
         let args = Args::from_env().into_inner();
         self.run_with(args.into_iter(), r)
@@ -489,7 +495,7 @@ where
         'c: 'b,
         I: Into<RawVal>,
         FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b Cote<P>) -> FUT,
+        F: FnMut(P::Ret, &'b CoteApp<P>) -> FUT,
     {
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
@@ -515,14 +521,14 @@ where
     where
         'c: 'b,
         FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b Cote<P>) -> FUT,
+        F: FnMut(P::Ret, &'b CoteApp<P>) -> FUT,
     {
         let args = Args::from_env().into_inner();
         self.run_async_with(args.into_iter(), r).await
     }
 }
 
-impl<'a, P> Cote<'a, P>
+impl<'a, P> CoteApp<'a, P>
 where
     P: Policy,
     P::Set: Set,
