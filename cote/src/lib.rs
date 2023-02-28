@@ -30,6 +30,7 @@ pub mod prelude {
     pub use cote_derive;
 
     pub mod derive {
+        pub use aopt;
         pub use aopt::prelude::*;
         pub use cote_derive::Cote;
         pub use crate::ExtractFromSetDerive;
