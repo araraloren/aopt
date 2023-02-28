@@ -13,8 +13,8 @@ categories = ["command-line-interface"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aopt = { path = "../aopt", features = ["serde"] }
-cote-derive = { path = "../cote-derive" }
+aopt = { git = "https://github.com/araraloren/aopt", branch = "cote_research", features = ["serde"] }
+cote-derive = { git = "https://github.com/araraloren/aopt", branch = "cote_research" }
 aopt-help = { version = "0.3" }
 serde = { version = "1.0", features = [ "derive" ] }
 tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }
