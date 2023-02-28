@@ -3,7 +3,7 @@ use aopt::{
     set::{SetCfg, SetOpt},
     Error,
 };
-use cote::{ParserIntoExtension, ParserExtractExtension};
+use cote::{ExtractFromSetDerive, IntoParserDerive};
 use cote_derive::Cote;
 
 // #[derive(Cote, Debug, Clone)]
