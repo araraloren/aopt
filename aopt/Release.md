@@ -13,6 +13,8 @@
 
 - Improve the infer information, option using same type_id for T, Option<T>, Vec<T>, Option<Vec<T>>
 
+- Fix the PrePolicy, don't ignore the failure from `Checker`
+
 ## 0.9.1
 
 - Add type paramter for `Main`, `Any`
