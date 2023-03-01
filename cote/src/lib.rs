@@ -30,11 +30,11 @@ pub mod prelude {
     pub use cote_derive;
 
     pub mod derive {
+        pub use crate::ExtractFromSetDerive;
+        pub use crate::IntoParserDerive;
         pub use aopt;
         pub use aopt::prelude::*;
         pub use cote_derive::Cote;
-        pub use crate::ExtractFromSetDerive;
-        pub use crate::IntoParserDerive;
     }
 }
 
@@ -694,4 +694,40 @@ macro_rules! display_set_help {
         )
         .map_err(|e| aopt::Error::raise_error(format!("Can not show help message: {:?}", e)))
     }};
+}
+
+#[cfg(test)]
+mod test {
+
+    #[test]
+    fn test_example_simple() {
+        use crate::prelude::derive::*;
+        // macro generate the code depend on crate name
+        use crate as cote;
+        use aopt::opt::Pos;
+
+        #[derive(Debug, Cote)]
+        pub struct Example {
+            /// a flag argument
+            foo: bool,
+
+            /// a position argument
+            #[arg(index = "1")]
+            bar: Pos<usize>,
+        }
+
+        let example = Example::parse(ARef::new(Args::from_array(["app", "--foo", "42"])));
+
+        assert!(example.is_ok());
+
+        let example = example.unwrap();
+
+        assert_eq!(example.foo, true);
+        assert_eq!(example.bar.0, 42);
+
+        let parser : AFwdParser = Example::into_parser().unwrap();
+
+        assert_eq!(parser["--foo"].help(), &aopt::astr("a flag argument"));
+        assert_eq!(parser["bar"].help(), &aopt::astr("a position argument"));
+    }
 }
