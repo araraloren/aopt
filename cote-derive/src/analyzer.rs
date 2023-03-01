@@ -1040,18 +1040,23 @@ impl<'a> FieldMeta<'a> {
 
             help_code = Some(quote! {
                 let mut message = String::from(#token.trim());
-
-                message.push_str(" ");
             });
         } else if !self.comment_doc.is_empty() {
             help_code = Some({
                 let mut code = quote! {
                     let mut message = String::default();
                 };
-                for doc in self.comment_doc.iter() {
+                let mut iter = self.comment_doc.iter();
+
+                if let Some(doc) = iter.next() {
                     code.extend(quote! {
                         message.push_str(#doc.trim());
+                    });
+                }
+                for doc in iter {
+                    code.extend(quote! {
                         message.push_str(" ");
+                        message.push_str(#doc.trim());
                     });
                 }
                 code
@@ -1060,6 +1065,7 @@ impl<'a> FieldMeta<'a> {
         if let Some(mut help_code) = help_code {
             if let Some(value) = value {
                 help_code.extend(quote! {
+                    message.push_str(" ");
                     message.push_str("[");
                     message.push_str(#value.trim());
                     message.push_str("]");
