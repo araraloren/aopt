@@ -325,7 +325,7 @@ impl<'a> Analyzer<'a> {
             });
             handlers.push(quote! {
                 parser.entry(#main_uid_ident)?.on(
-                    move |set: &mut P::Set, _: &mut P::Ser| -> Result<Option<()>, Error> {
+                    move |set: &mut P::Set, _: &mut P::Ser| -> Result<Option<()>, aopt::Error> {
                         let help_uid = #uid_ident;
                         if let Ok(value) = set.opt(help_uid)?.val::<bool>() {
                             if *value {
