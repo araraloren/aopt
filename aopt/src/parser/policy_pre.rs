@@ -226,7 +226,7 @@ where
         inv: &mut <Self as Policy>::Inv<'a>,
         ser: &mut <Self as Policy>::Ser,
     ) -> Result<(), <Self as Policy>::Error> {
-        Self::ig_failure(self.checker().pre_check(set))?;
+        self.checker().pre_check(set)?;
 
         let opt_styles = &self.style_manager;
         let args = ctx.orig_args().clone();
@@ -249,12 +249,12 @@ where
                         if valid {
                             like_opt = true;
                             for style in opt_styles.iter() {
-                                let ret = Self::ig_failure(OptGuess::new().guess(
+                                let ret = OptGuess::new().guess(
                                     style,
                                     GuessOptCfg::new(idx, args_len, arg.clone(), &clopt, set),
-                                ))?;
+                                )?;
 
-                                if let Some(Some(mut proc)) = ret {
+                                if let Some(mut proc) = ret {
                                     if Self::ig_failure(process_opt(
                                         ProcessCtx {
                                             idx,
@@ -296,17 +296,17 @@ where
             }
         }
 
-        Self::ig_failure(self.checker().opt_check(set))?;
+        self.checker().opt_check(set)?;
 
         let noa_args = ARef::new(noa_args);
         let noa_len = noa_args.len();
 
         ctx.set_args(noa_args.clone());
         if noa_len > 0 {
-            if let Some(Some(mut proc)) = Self::ig_failure(NOAGuess::new().guess(
+            if let Some(mut proc) = NOAGuess::new().guess(
                 &UserStyle::Cmd,
                 GuessNOACfg::new(noa_args.clone(), Self::noa_cmd(), noa_len),
-            ))? {
+            )? {
                 Self::ig_failure(process_non_opt(
                     ProcessCtx {
                         ctx,
@@ -320,13 +320,13 @@ where
                 ))?;
             }
 
-            Self::ig_failure(self.checker().cmd_check(set))?;
+            self.checker().cmd_check(set)?;
 
             for idx in 1..noa_len {
-                if let Some(Some(mut proc)) = Self::ig_failure(NOAGuess::new().guess(
+                if let Some(mut proc) = NOAGuess::new().guess(
                     &UserStyle::Pos,
                     GuessNOACfg::new(noa_args.clone(), Self::noa_pos(idx), noa_len),
-                ))? {
+                )? {
                     Self::ig_failure(process_non_opt(
                         ProcessCtx {
                             ctx,
@@ -341,19 +341,19 @@ where
                 }
             }
         } else {
-            Self::ig_failure(self.checker().cmd_check(set))?;
+            self.checker().cmd_check(set)?;
         }
 
-        Self::ig_failure(self.checker().pos_check(set))?;
+        self.checker().pos_check(set)?;
 
         let main_args = noa_args;
         let main_len = main_args.len();
 
         // set 0 for Main's index
-        if let Some(Some(mut proc)) = Self::ig_failure(NOAGuess::new().guess(
+        if let Some(mut proc) = NOAGuess::new().guess(
             &UserStyle::Main,
             GuessNOACfg::new(main_args, Self::noa_main(), noa_len),
-        ))? {
+        )? {
             Self::ig_failure(process_non_opt(
                 ProcessCtx {
                     ctx,
@@ -367,7 +367,7 @@ where
             ))?;
         }
 
-        Self::ig_failure(self.checker().post_check(set))?;
+        self.checker().post_check(set)?;
 
         Ok(())
     }
