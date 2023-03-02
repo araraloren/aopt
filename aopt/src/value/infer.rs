@@ -305,9 +305,9 @@ macro_rules! impl_pos_type {
 
 impl<T> Infer for Pos<T>
 where
-    T: ErasedTy + 'static,
+    T: Infer + ErasedTy,
 {
-    type Val = T;
+    type Val = T::Val;
 
     fn infer_force() -> bool {
         true
@@ -322,21 +322,33 @@ where
 
 impl<'a, T> InferValueMut<'a> for Pos<T>
 where
-    T: ErasedTy + 'static,
+    T: ErasedTy + InferValueMut<'a>,
 {
     fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
     where
         Self: Sized,
     {
-        Ok(Pos::new(set.take_val::<T>(name)?))
+        Ok(Pos::new(<T as InferValueMut>::infer_fetch(name, set)?))
+    }
+}
+
+impl<'a, T> InferValueRef<'a> for Pos<T>
+where
+    T: ErasedTy + InferValueRef<'a>,
+{
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        Ok(Pos::new(<T as InferValueRef>::infer_fetch(name, set)?))
     }
 }
 
 impl<T> Infer for Option<Pos<T>>
 where
-    T: ErasedTy + 'static,
+    T: Infer + ErasedTy,
 {
-    type Val = T;
+    type Val = T::Val;
 
     fn infer_type_id() -> TypeId {
         typeid::<Pos<T>>()
@@ -347,21 +359,37 @@ where
 
 impl<'a, T> InferValueMut<'a> for Option<Pos<T>>
 where
-    T: ErasedTy + 'static,
+    T: InferValueMut<'a> + ErasedTy,
 {
     fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
     where
         Self: Sized,
     {
-        Ok(set.take_val::<T>(name).ok().map(|v| Pos::new(v)))
+        Ok(<T as InferValueMut>::infer_fetch(name, set)
+            .ok()
+            .map(|v| Pos::new(v)))
+    }
+}
+
+impl<'a, T> InferValueRef<'a> for Option<Pos<T>>
+where
+    T: InferValueRef<'a> + ErasedTy,
+{
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        Ok(<T as InferValueRef>::infer_fetch(name, set)
+            .ok()
+            .map(|v| Pos::new(v)))
     }
 }
 
 impl<T> Infer for Main<T>
 where
-    T: ErasedTy + 'static,
+    T: Infer + ErasedTy,
 {
-    type Val = T;
+    type Val = T::Val;
 
     fn infer_act() -> Action {
         Action::Null
@@ -394,21 +422,33 @@ where
 
 impl<'a, T> InferValueMut<'a> for Main<T>
 where
-    T: ErasedTy + 'static,
+    T: InferValueMut<'a> + ErasedTy,
 {
     fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
     where
         Self: Sized,
     {
-        Ok(Main::new(set.take_val::<T>(name)?))
+        Ok(Main::new(<T as InferValueMut>::infer_fetch(name, set)?))
+    }
+}
+
+impl<'a, T> InferValueRef<'a> for Main<T>
+where
+    T: InferValueRef<'a> + ErasedTy,
+{
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        Ok(Main::new(<T as InferValueRef>::infer_fetch(name, set)?))
     }
 }
 
 impl<T> Infer for Any<T>
 where
-    T: ErasedTy + 'static,
+    T: Infer + ErasedTy,
 {
-    type Val = T;
+    type Val = T::Val;
 
     fn infer_act() -> Action {
         Action::Null
@@ -436,13 +476,25 @@ where
 
 impl<'a, T> InferValueMut<'a> for Any<T>
 where
-    T: ErasedTy + 'static,
+    T: InferValueMut<'a> + ErasedTy,
 {
     fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
     where
         Self: Sized,
     {
-        Ok(Any::new(set.take_val::<T>(name)?))
+        Ok(Any::new(<T as InferValueMut>::infer_fetch(name, set)?))
+    }
+}
+
+impl<'a, T> InferValueRef<'a> for Any<T>
+where
+    T: InferValueRef<'a> + ErasedTy,
+{
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        Ok(Any::new(<T as InferValueRef>::infer_fetch(name, set)?))
     }
 }
 
@@ -779,5 +831,27 @@ impl<'a> InferValueMut<'a> for Placeholder {
         Self: Sized,
     {
         Ok(Placeholder {})
+    }
+}
+
+impl Infer for () {
+    type Val = ();
+}
+
+impl<'a> InferValueMut<'a> for () {
+    fn infer_fetch<S: SetValueFindExt>(_: &str, _: &'a mut S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        Ok(())
+    }
+}
+
+impl<'a> InferValueRef<'a> for () {
+    fn infer_fetch<S: SetValueFindExt>(_: &str, _: &'a S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        Ok(())
     }
 }
