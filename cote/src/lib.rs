@@ -725,7 +725,7 @@ mod test {
         assert_eq!(example.foo, true);
         assert_eq!(example.bar.0, 42);
 
-        let parser : AFwdParser = Example::into_parser().unwrap();
+        let parser = Example::into_parser().unwrap();
 
         assert_eq!(parser["--foo"].help(), &aopt::astr("a flag argument"));
         assert_eq!(parser["bar"].help(), &aopt::astr("a position argument"));

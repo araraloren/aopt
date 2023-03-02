@@ -23,7 +23,7 @@ fn main() -> Result<(), aopt::Error> {
     assert_eq!(example.foo, true);
     assert_eq!(example.bar.0, 42);
 
-    let parser : AFwdParser = Example::into_parser()?;
+    let parser = Example::into_parser()?;
 
     assert_eq!(parser["--foo"].help(), &aopt::astr("a flag argument"));
     assert_eq!(parser["bar"].help(), &aopt::astr("a position argument"));
