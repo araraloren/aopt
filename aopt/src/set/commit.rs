@@ -56,11 +56,11 @@ where
 }
 
 macro_rules! add_interface {
-    ($ty:ty, $name1:ident, $name2:ident, $bound1:tt $(+ $others1:tt)*, $bound2:tt $(+ $others2:tt)*) => {
+    ($ty:ty, $name1:ident, $name2:ident) => {
         #[doc = concat!("Set the infer type to [`", stringify!($ty), "`]\\<T\\>.")]
         pub fn $name1<T>(
             self,
-        ) -> SetCommit<'a, S, $ty> where T: ErasedTy + RawValParser + $bound1 $(+ $others1)* {
+        ) -> SetCommit<'a, S, $ty> where T::Val: RawValParser, T: ErasedTy + Infer {
             let type_id = self.cfg().r#type();
 
             debug_assert!(
@@ -76,7 +76,7 @@ macro_rules! add_interface {
         /// [`add_default_storer`](SetCommit::add_default_storer).
         pub fn $name2<T>(
             self,
-        ) -> SetCommit<'a, S, $ty> where T: ErasedTy + RawValParser + Clone + $bound1 $(+ $others1)* {
+        ) -> SetCommit<'a, S, $ty> where T::Val: RawValParser + Clone, T: ErasedTy + Infer {
             let type_id = self.cfg().r#type();
 
             debug_assert!(
@@ -105,11 +105,11 @@ where
         }
     }
 
-    add_interface!(Option<Pos<T>>, set_pos_type_only, set_pos_type, 'static, 'static);
+    add_interface!(Option<Pos<T>>, set_pos_type_only, set_pos_type);
 
-    add_interface!(Main<T>, set_main_type_only, set_main_type, 'static, 'static);
+    add_interface!(Main<T>, set_main_type_only, set_main_type);
 
-    add_interface!(Any<T>, set_any_type_only, set_any_type, 'static, 'static);
+    add_interface!(Any<T>, set_any_type_only, set_any_type);
 }
 
 impl<'a, S, U> SetCommit<'a, S, U>
