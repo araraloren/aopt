@@ -32,7 +32,7 @@ use crate::global::FieldCfg;
 use crate::global::GlobalCfg;
 use crate::global::SubCfg;
 
-const HELP_OPTION_UID: &str = "help_option_uid";
+const HELP_OPTION_NAME: &str = "--help";
 
 pub fn derive_parser(input: &DeriveInput) -> syn::Result<TokenStream> {
     let analyzer = Analyzer::new(input)?;
@@ -152,6 +152,28 @@ impl<'a> Analyzer<'a> {
         let ident = self.struct_meta.ident;
         let policy_ty = self.struct_meta.gen_policy_type()?;
         let where_clause = self.struct_meta.generate_where_clause()?;
+        let process_help = self
+            .struct_meta
+            .global_cfg
+            .find_cfg(CfgKind::ParserHelp)
+            .is_some();
+        let help_handler = if process_help {
+            self.struct_meta.generate_display_help()?
+        } else {
+            quote! {}
+        };
+        let may_be_display_help = if process_help {
+            quote! {
+                let set = parser.optset();
+                if let Ok(value) = set.find_val::<bool>(#HELP_OPTION_NAME) {
+                    if *value {
+                        #help_handler
+                    }
+                }
+            }
+        } else {
+            quote! {}
+        };
         let inner = quote! {
             fn into_parser<'a>() -> Result<aopt::prelude::Parser<'a, #policy_ty>, aopt::Error> {
                 <Self as cote::IntoParserDerive<#policy_ty>>::into_parser()
@@ -166,6 +188,7 @@ impl<'a> Analyzer<'a> {
                         Self::try_extract(parser.optset_mut())
                     }
                     Err(e) => {
+                        #may_be_display_help
                         Err(aopt::Error::raise_error(format!("parsing arguments failed: {:?}", e)))
                     }
                 }
@@ -231,79 +254,15 @@ impl<'a> Analyzer<'a> {
                 parser.entry(#uid_ident)?.on(#value);
             });
         }
-        // insert help function
+        // insert help option
         if process_help {
-            let head =
-                if let Some(head_cfg) = self.struct_meta.global_cfg.find_cfg(CfgKind::ParserHead) {
-                    let value = &head_cfg.value;
-
-                    quote! {
-                        #value
-                    }
-                } else {
-                    quote! {
-                        format!("{}", env!("CARGO_PKG_DESCRIPTION"))
-                    }
-                };
-            let foot = if let Some(head_cfg) =
-                self.struct_meta.global_cfg.find_cfg(CfgKind::ParserFoot)
-            {
-                let value = &head_cfg.value;
-
-                quote! {
-                    #value
-                }
-            } else {
-                quote! {
-                    format!("Create by {} v{}", env!("CARGO_PKG_AUTHORS"), env!("CARGO_PKG_VERSION"))
-                }
-            };
-            let name =
-                if let Some(head_cfg) = self.struct_meta.global_cfg.find_cfg(CfgKind::ParserName) {
-                    let value = &head_cfg.value;
-
-                    quote! {
-                        #value
-                    }
-                } else {
-                    quote! {
-                        format!("{}", env!("CARGO_PKG_NAME"))
-                    }
-                };
             let ident = Ident::new("help_option", self.struct_meta.ident.span());
-            let uid_ident = Ident::new(HELP_OPTION_UID, self.struct_meta.ident.span());
-            let width = if let Some(head_cfg) = self
-                .struct_meta
-                .global_cfg
-                .find_cfg(CfgKind::ParserHelpWidth)
-            {
-                let value = &head_cfg.value;
-
-                quote! {
-                    #value
-                }
-            } else {
-                quote! { 20 }
-            };
-            let usage_width = if let Some(head_cfg) = self
-                .struct_meta
-                .global_cfg
-                .find_cfg(CfgKind::ParserUsageWidth)
-            {
-                let value = &head_cfg.value;
-
-                quote! {
-                    #value
-                }
-            } else {
-                quote! { 10 }
-            };
 
             configs.push(quote! {
                 let #ident = {
                     ctor.new_with({
                         let mut config = aopt::prelude::SetCfg::<P::Set>::default();
-                        config.set_name("--help");
+                        config.set_name(#HELP_OPTION_NAME);
                         config.add_alias("-h");
                         config.add_alias("-?");
                         config.set_help("Display help message");
@@ -313,42 +272,7 @@ impl<'a> Analyzer<'a> {
                 };
             });
             inserts.push(quote! {
-                let #uid_ident = set.insert(#ident);
-            });
-            let main_ident = Ident::new("help_main_handler", self.struct_meta.ident.span());
-            let main_uid_ident = Ident::new("help_main_handler_uid", self.struct_meta.ident.span());
-
-            configs.push(quote! {
-                let #main_ident = {
-                    ctor.new_with({
-                        let mut config = aopt::prelude::SetCfg::<P::Set>::default();
-                        config.set_name("help_main_handler");
-                        <aopt::opt::Main>::infer_fill_info(&mut config, true);
-                        config
-                    }).map_err(Into::into)?
-                };
-            });
-            inserts.push(quote! {
-                let #main_uid_ident = set.insert(#main_ident);
-            });
-            handlers.push(quote! {
-                parser.entry(#main_uid_ident)?.on(
-                    move |set: &mut P::Set, _: &mut P::Ser| -> Result<Option<()>, aopt::Error> {
-                        let help_uid = #uid_ident;
-                        if let Ok(value) = set.opt(help_uid)?.val::<bool>() {
-                            if *value {
-                                if ! set.iter()
-                                        .filter(|v|v.mat_style(aopt::prelude::Style::Cmd))
-                                        .any(|v|v.matched()) {
-                                    cote::simple_display_set_help(set, #name, #head, #foot, #width, #usage_width)
-                                        .map_err(|e| aopt::Error::raise_error(format!("Can not display help message: {:?}", e)))?;
-                                    std::process::exit(0)
-                                }
-                            }
-                        }
-                        Ok(Some(()))
-                    }
-                );
+                set.insert(#ident);
             });
         }
         for (idx, field) in self.field_metas.iter().enumerate() {
@@ -362,7 +286,12 @@ impl<'a> Analyzer<'a> {
             });
             if field.has_handler() {
                 let uid_ident = Ident::new(&format!("option_uid_{}", idx), field.ident.span());
-                let handler = field.generate_handler(process_help)?;
+                let help_handler = if process_help {
+                    self.struct_meta.generate_display_help()?
+                } else {
+                    quote! {}
+                };
+                let handler = field.generate_handler(process_help, help_handler)?;
 
                 inserts.push(quote! {
                     let #uid_ident = set.insert(#ident);
@@ -543,6 +472,67 @@ impl<'a> StructMeta<'a> {
         })
     }
 
+    pub fn generate_display_help(&self) -> syn::Result<TokenStream> {
+        let head = if let Some(head_cfg) = self.global_cfg.find_cfg(CfgKind::ParserHead) {
+            let value = &head_cfg.value;
+
+            quote! {
+                #value
+            }
+        } else {
+            quote! {
+                format!("{}", env!("CARGO_PKG_DESCRIPTION"))
+            }
+        };
+        let foot = if let Some(head_cfg) = self.global_cfg.find_cfg(CfgKind::ParserFoot) {
+            let value = &head_cfg.value;
+
+            quote! {
+                #value
+            }
+        } else {
+            quote! {
+                format!("Create by {} v{}", env!("CARGO_PKG_AUTHORS"), env!("CARGO_PKG_VERSION"))
+            }
+        };
+        let name = if let Some(head_cfg) = self.global_cfg.find_cfg(CfgKind::ParserName) {
+            let value = &head_cfg.value;
+
+            quote! {
+                #value
+            }
+        } else {
+            quote! {
+                format!("{}", env!("CARGO_PKG_NAME"))
+            }
+        };
+        let width = if let Some(head_cfg) = self.global_cfg.find_cfg(CfgKind::ParserHelpWidth) {
+            let value = &head_cfg.value;
+
+            quote! {
+                #value
+            }
+        } else {
+            quote! { 20 }
+        };
+        let usage_width =
+            if let Some(head_cfg) = self.global_cfg.find_cfg(CfgKind::ParserUsageWidth) {
+                let value = &head_cfg.value;
+
+                quote! {
+                    #value
+                }
+            } else {
+                quote! { 10 }
+            };
+
+        Ok(quote! {
+            cote::simple_display_set_help(set, #name, #head, #foot, #width, #usage_width)
+                        .map_err(|e| aopt::Error::raise_error(format!("Can not display help message: {:?}", e)))?;
+            std::process::exit(0)
+        })
+    }
+
     pub fn has_handler(&self) -> bool {
         self.global_cfg.find_cfg(CfgKind::ParserOn).is_some()
             || self.global_cfg.find_cfg(CfgKind::ParserHelp).is_some()
@@ -675,7 +665,11 @@ impl<'a> FieldMeta<'a> {
         })
     }
 
-    pub fn generate_handler(&self, process_help: bool) -> syn::Result<TokenStream> {
+    pub fn generate_handler(
+        &self,
+        process_help: bool,
+        help_handler: TokenStream,
+    ) -> syn::Result<TokenStream> {
         if let Some(cfg) = self.field_cfg.find_cfg(CfgKind::OptOn) {
             let value = &cfg.value;
 
@@ -685,14 +679,25 @@ impl<'a> FieldMeta<'a> {
         } else if self.is_sub_command() {
             let policy_ty = self.policy_ty.as_ref().unwrap();
             let unwrap_ty = self.unwrap_ty.as_ref().unwrap();
+            let help_uid_ident = Ident::new("help_option_uid", self.ident.span());
             let pass_help_to_next = if process_help {
-                let uid_ident = Ident::new(HELP_OPTION_UID, self.ident.span());
-
                 quote! {
-                    if let Ok(value) = set.opt(#uid_ident)?.val::<bool>() {
+                    if let Ok(value) = set.opt(#help_uid_ident)?.val::<bool>() {
                         if *value {
                             // pass a fake flag to next sub command
-                            args.push(aopt::RawVal::from("--help"));
+                            args.push(aopt::RawVal::from(#HELP_OPTION_NAME));
+                        }
+                    }
+                }
+            } else {
+                quote! {}
+            };
+            let may_be_display_help = if process_help {
+                quote! {
+                    let set = parser.optset();
+                    if let Ok(value) = set.find_val::<bool>(#HELP_OPTION_NAME) {
+                        if *value {
+                            #help_handler
                         }
                     }
                 }
@@ -720,6 +725,7 @@ impl<'a> FieldMeta<'a> {
                             Ok(<#unwrap_ty>::try_extract(parser.optset_mut()).ok())
                         }
                         Err(e) => {
+                            #may_be_display_help
                             Err(aopt::Error::raise_error(
                                 format!("parsing arguments failed! {{parser: {}, args: {:?}}}: {:?}",
                                     stringify!(#unwrap_ty),

@@ -698,7 +698,6 @@ macro_rules! display_set_help {
 
 #[cfg(test)]
 mod test {
-
     #[test]
     fn test_example_simple() {
         use crate::prelude::derive::*;
@@ -729,5 +728,54 @@ mod test {
 
         assert_eq!(parser["--foo"].help(), &aopt::astr("a flag argument"));
         assert_eq!(parser["bar"].help(), &aopt::astr("a position argument"));
+    }
+
+    #[test]
+    fn test_multiple_pos_arguments() {
+        use crate::prelude::derive::*;
+        // macro generate the code depend on crate name
+        use crate as cote;
+        use aopt::opt::Pos;
+        use std::path::PathBuf;
+
+        #[derive(Debug, Cote)]
+        #[cote(help)]
+        pub struct CopyTool {
+            #[arg(alias = "-f")]
+            force: bool,
+
+            /// Enable the recursive mode
+            #[arg(alias = "-r")]
+            recursive: bool,
+
+            #[arg(index = "1", help = "The copy destination")]
+            destination: Pos<String>,
+
+            /// Specify path to copy
+            #[arg(index = "2..")]
+            sources: Pos<Vec<PathBuf>>,
+        }
+
+        let example = CopyTool::parse(aopt::ARef::new(aopt::args::Args::from_array([
+            "app", "--force",
+        ]))); 
+
+        assert!(example.is_err());
+
+        let example = CopyTool::parse(aopt::ARef::new(aopt::args::Args::from_array([
+            "app", "--force", ".", "../foo", "../bar/", "other",
+        ])))
+        .unwrap();
+
+        assert_eq!(example.force, true);
+        assert_eq!(example.recursive, false);
+        assert_eq!(example.destination.0, String::from("."));
+        assert_eq!(
+            example.sources.0,
+            ["../foo", "../bar/", "other"]
+                .into_iter()
+                .map(|v| PathBuf::from(v))
+                .collect::<Vec<PathBuf>>()
+        );
     }
 }
