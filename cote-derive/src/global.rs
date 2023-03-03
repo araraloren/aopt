@@ -99,7 +99,7 @@ impl Parse for GlobalCfg {
             "policy" => CfgKind::ParserPolicy,
             "help" => CfgKind::ParserHelp,
             "width" => CfgKind::ParserHelpWidth,
-            "usage_width" => CfgKind::ParserUsageWidth,
+            "usagew" => CfgKind::ParserUsageWidth,
             "head" => CfgKind::ParserHead,
             "foot" => CfgKind::ParserFoot,
             "on" => CfgKind::ParserOn,
