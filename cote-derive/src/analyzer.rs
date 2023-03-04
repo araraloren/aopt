@@ -95,23 +95,22 @@ impl<'a> Analyzer<'a> {
         let where_clause = if has_handler_on_field || has_handler_on_global {
             quote! {
                 where
-                P: 'zlifetime,
                 P::Ser: 'zlifetime,
-                P::Set: aopt::prelude::Set + 'zlifetime,
                 P::Error: Into<aopt::Error>,
-                P: aopt::prelude::Policy + aopt::prelude::APolicyExt<P> + Default,
-                aopt::prelude::SetCfg<P::Set>: aopt::prelude::Config + aopt::prelude::ConfigValue + Default,
+                P::Set: aopt::prelude::Set + aopt::set::SetValueFindExt + 'zlifetime,
                 P::Inv<'zlifetime>: aopt::ctx::HandlerCollection<'zlifetime, P::Set, P::Ser>,
+                P: aopt::prelude::Policy + aopt::prelude::APolicyExt<P> + Default + 'zlifetime,
+                aopt::prelude::SetCfg<P::Set>: aopt::prelude::Config + aopt::prelude::ConfigValue + Default,
                 #where_clause
             }
         } else {
             quote! {
                 where
-                P: 'zlifetime,
                 P::Ser: 'zlifetime,
-                P::Set: aopt::prelude::Set + 'zlifetime,
                 P::Error: Into<aopt::Error>,
-                P: aopt::prelude::Policy + aopt::prelude::APolicyExt<P> + Default,
+                P::Set: aopt::prelude::Set + aopt::set::SetValueFindExt + 'zlifetime,
+                P::Inv<'zlifetime>: aopt::ctx::HandlerCollection<'zlifetime, P::Set, P::Ser>,
+                P: aopt::prelude::Policy + aopt::prelude::APolicyExt<P> + Default + 'zlifetime,
                 aopt::prelude::SetCfg<P::Set>: aopt::prelude::Config + aopt::prelude::ConfigValue + Default,
                 #where_clause
             }

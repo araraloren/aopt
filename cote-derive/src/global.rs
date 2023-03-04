@@ -17,13 +17,13 @@ pub(crate) trait Attr {
 pub enum CfgKind {
     ParserPolicy,
 
+    ParserOn,
+
     ParserHelp,
 
     ParserHelpWidth,
 
     ParserUsageWidth,
-
-    ParserOn,
 
     ParserName,
 
