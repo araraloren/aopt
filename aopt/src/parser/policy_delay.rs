@@ -31,6 +31,7 @@ use crate::set::SetOpt;
 use crate::trace_log;
 use crate::ARef;
 use crate::Error;
+use crate::Str;
 
 /// [`DelayPolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
 /// The option will match failed if any special [`Error`] raised during option processing.
@@ -104,7 +105,7 @@ use crate::Error;
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct DelayPolicy<Set, Ser> {
     strict: bool,
 
@@ -114,7 +115,21 @@ pub struct DelayPolicy<Set, Ser> {
 
     style_manager: OptStyleManager,
 
+    no_delay_opt: Vec<Str>,
+
     marker_s: PhantomData<(Set, Ser)>,
+}
+
+impl<Set, Ser> Debug for DelayPolicy<Set, Ser> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DelayPolicy")
+            .field("strict", &self.strict)
+            .field("contexts", &self.contexts)
+            .field("checker", &self.checker)
+            .field("style_manager", &self.style_manager)
+            .field("no_delay_opt", &self.no_delay_opt)
+            .finish()
+    }
 }
 
 impl<Set, Ser> Default for DelayPolicy<Set, Ser> {
@@ -124,6 +139,7 @@ impl<Set, Ser> Default for DelayPolicy<Set, Ser> {
             contexts: vec![],
             checker: SetChecker::default(),
             style_manager: OptStyleManager::default(),
+            no_delay_opt: vec![],
             marker_s: PhantomData::default(),
         }
     }
@@ -149,6 +165,11 @@ impl<Set, Ser> DelayPolicy<Set, Ser> {
         self
     }
 
+    pub fn with_no_delay(mut self, name: impl Into<Str>) -> Self {
+        self.no_delay_opt.push(name.into());
+        self
+    }
+
     pub fn set_strict(&mut self, strict: bool) -> &mut Self {
         self.strict = strict;
         self
@@ -159,12 +180,21 @@ impl<Set, Ser> DelayPolicy<Set, Ser> {
         self
     }
 
+    pub fn set_no_delay(&mut self, name: impl Into<Str>) -> &mut Self {
+        self.no_delay_opt.push(name.into());
+        self
+    }
+
     pub fn strict(&self) -> bool {
         self.strict
     }
 
     pub fn checker(&self) -> &SetChecker<Set> {
         &self.checker
+    }
+
+    pub fn no_delay(&self) -> &[Str] {
+        &self.no_delay_opt
     }
 
     pub(crate) fn noa_cmd() -> usize {
@@ -202,15 +232,33 @@ where
         set: &mut Set,
         inv: &mut Invoker<Set, Ser>,
         ser: &mut Ser,
+        saver: CtxSaver,
     ) -> Result<(), Error> {
-        for saver in std::mem::take(&mut self.contexts) {
-            let uid = saver.uid;
+        let uid = saver.uid;
 
-            ctx.set_inner_ctx(Some(saver.ctx));
-            if !invoke_callback_opt(uid, ctx, set, inv, ser)? {
-                set.opt_mut(uid)?.set_matched(false);
-            }
+        ctx.set_inner_ctx(Some(saver.ctx));
+        if !invoke_callback_opt(uid, ctx, set, inv, ser)? {
+            set.opt_mut(uid)?.set_matched(false);
         }
+        Ok(())
+    }
+
+    pub fn save_or_call(
+        &mut self,
+        ctx: &mut Ctx,
+        set: &mut Set,
+        inv: &mut Invoker<Set, Ser>,
+        ser: &mut Ser,
+        saver: CtxSaver,
+    ) -> Result<(), Error> {
+        let name = set.opt(saver.uid)?.name();
+
+        if self.no_delay_opt.contains(name) {
+            return self.invoke_opt_callback(ctx, set, inv, ser, saver);
+        } else {
+            self.contexts.push(saver);
+        }
+
         Ok(())
     }
 }
@@ -231,7 +279,7 @@ where
         self.checker().pre_check(set)?;
 
         // take the invoke service, avoid borrow the ser
-        let opt_styles = &self.style_manager;
+        let opt_styles = self.style_manager.clone();
         let args = ctx.orig_args().clone();
         let args_len = args.len();
         let mut noa_args = Args::default();
@@ -268,7 +316,9 @@ where
                                 )?;
 
                                 if proc.status() {
-                                    self.contexts.extend(ret);
+                                    for saver in ret {
+                                        self.save_or_call(ctx, set, inv, ser, saver)?;
+                                    }
                                     matched = true;
                                 }
                                 if proc.is_consume() {
@@ -348,7 +398,9 @@ where
         }
 
         // after cmd and pos callback invoked, invoke the callback of option
-        self.invoke_opt_callback(ctx, set, inv, ser)?;
+        for saver in std::mem::take(&mut self.contexts) {
+            self.invoke_opt_callback(ctx, set, inv, ser, saver)?;
+        }
 
         self.checker().opt_check(set)?;
 
@@ -519,6 +571,7 @@ mod test {
             "+>",
             "foo",
             "bar",
+            "--no-delay",
             "8",
             "42",
             "--option-ignored",
@@ -540,6 +593,13 @@ mod test {
             .set_pos_type_only::<f64>()
             .run()?;
 
+        inv.entry(set.add_opt_i::<bool>("--no-delay")?.run()?)
+            .on(|set: &mut ASet, _: &mut ASer| {
+                assert_eq!(set["filter"].val::<bool>()?, &false);
+                Ok(Some(true))
+            });
+        policy.set_no_delay("--no-delay");
+
         inv.entry(set.add_opt("--positive=b")?.add_alias("+>").run()?)
             .on(|set: &mut ASet, _: &mut ASer| {
                 set["args"].filter::<f64>(|v: &f64| v <= &0.0)?;
@@ -547,6 +607,7 @@ mod test {
             });
         inv.entry(set.add_opt("--bigger-than=f")?.add_alias("+>").run()?)
             .on(|set: &mut ASet, _: &mut ASer, val: ctx::Value<f64>| {
+                assert_eq!(set["filter"].val::<bool>()?, &true);
                 // this is a vec![vec![], ..]
                 Ok(Some(set["args"].filter::<f64>(|v: &f64| v <= val.deref())?))
             });
