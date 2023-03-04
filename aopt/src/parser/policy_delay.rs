@@ -593,11 +593,12 @@ mod test {
             .set_pos_type_only::<f64>()
             .run()?;
 
-        inv.entry(set.add_opt_i::<bool>("--no-delay")?.run()?)
-            .on(|set: &mut ASet, _: &mut ASer| {
+        inv.entry(set.add_opt_i::<bool>("--no-delay")?.run()?).on(
+            |set: &mut ASet, _: &mut ASer| {
                 assert_eq!(set["filter"].val::<bool>()?, &false);
                 Ok(Some(true))
-            });
+            },
+        );
         policy.set_no_delay("--no-delay");
 
         inv.entry(set.add_opt("--positive=b")?.add_alias("+>").run()?)

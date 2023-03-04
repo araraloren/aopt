@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 use crate::ctx::wrap_handler;
 use crate::ctx::wrap_handler_action;
 use crate::ctx::wrap_handler_fallback;
+use crate::ctx::wrap_handler_fallback_action;
 use crate::ctx::Ctx;
 use crate::ctx::Extract;
 use crate::ctx::Handler;
@@ -262,6 +263,8 @@ where
 
     uid: Uid,
 
+    fallback: bool,
+
     marker: PhantomData<(A, O, Set, &'a Ser)>,
 }
 
@@ -281,6 +284,7 @@ where
             handler: None,
             register: false,
             uid,
+            fallback: false,
             marker: PhantomData::default(),
         }
     }
@@ -295,11 +299,8 @@ where
     /// And the [`fallback`](crate::ctx::Invoker::fallback) will be called if
     /// the handler return None.
     pub fn fallback(mut self, handler: H) -> Self {
-        if !self.register {
-            self.ser
-                .register_handler(self.uid, wrap_handler_fallback(handler));
-            self.register = true;
-        }
+        self.handler = Some(handler);
+        self.fallback = true;
         self
     }
 
@@ -308,8 +309,13 @@ where
     pub fn then(mut self, store: impl Store<Set, Ser, O, Ret = bool, Error = Error> + 'a) -> Self {
         if !self.register {
             if let Some(handler) = self.handler.take() {
-                self.ser
-                    .register_handler(self.uid, wrap_handler(handler, store));
+                if self.fallback {
+                    self.ser
+                        .register_handler(self.uid, wrap_handler_fallback(handler, store));
+                } else {
+                    self.ser
+                        .register_handler(self.uid, wrap_handler(handler, store));
+                }
             }
             self.register = true;
         }
@@ -319,8 +325,13 @@ where
     pub fn submit(mut self) -> Uid {
         if !self.register {
             if let Some(handler) = self.handler.take() {
-                self.ser
-                    .register_handler(self.uid, wrap_handler_action(handler));
+                if self.fallback {
+                    self.ser
+                        .register_handler(self.uid, wrap_handler_fallback_action(handler));
+                } else {
+                    self.ser
+                        .register_handler(self.uid, wrap_handler_action(handler));
+                }
             }
             self.register = true;
         }
@@ -341,8 +352,13 @@ where
     fn drop(&mut self) {
         if !self.register {
             if let Some(handler) = self.handler.take() {
-                self.ser
-                    .register_handler(self.uid, wrap_handler_action(handler));
+                if self.fallback {
+                    self.ser
+                        .register_handler(self.uid, wrap_handler_fallback_action(handler));
+                } else {
+                    self.ser
+                        .register_handler(self.uid, wrap_handler_action(handler));
+                }
             }
             self.register = true;
         }
