@@ -758,7 +758,7 @@ mod test {
 
         let example = CopyTool::parse(aopt::ARef::new(aopt::args::Args::from_array([
             "app", "--force",
-        ]))); 
+        ])));
 
         assert!(example.is_err());
 
@@ -777,5 +777,87 @@ mod test {
                 .map(|v| PathBuf::from(v))
                 .collect::<Vec<PathBuf>>()
         );
+    }
+
+    #[test]
+    fn test_fallback() {
+        use crate::prelude::derive::*;
+        // macro generate the code depend on crate name
+        use crate as cote;
+        use aopt::opt::Pos;
+        use aopt::GetoptRes;
+
+        #[derive(Debug, Cote)]
+        #[cote(policy = delay, help, on = find_main::<P>, name = "find")]
+        pub struct Find {
+            /// Do not follow symbolic link
+            #[arg(name = "-H", nodelay)]
+            hard: bool,
+
+            /// Fllow symbolic link
+            #[arg(name = "-L", nodelay)]
+            symbol: bool,
+
+            #[arg(name = "-P", nodelay, value = true)]
+            never: bool,
+
+            #[arg(name = "-name", help = "Search the file base on file name")]
+            name: Option<String>,
+
+            /// List the file large than the size
+            #[arg(name = "-size")]
+            size: Option<usize>,
+
+            #[arg(index = "1", help = "Search starting point", fallback = search::<P>, then = VecStore)]
+            destination: Pos<Vec<String>>,
+        }
+
+        fn search<P: Policy>(
+            _: &mut P::Set,
+            _: &mut P::Ser,
+        ) -> Result<Option<Vec<String>>, aopt::Error> {
+            Ok(Some(
+                ["file1", "file2", "dir1", "dir2"]
+                    .into_iter()
+                    .map(|v| v.to_string())
+                    .collect(),
+            ))
+        }
+
+        fn find_main<P>(set: &mut P::Set, _: &mut P::Ser) -> Result<Option<()>, aopt::Error>
+        where
+            P: Policy,
+            P::Set: SetValueFindExt,
+        {
+            let tool = Find::try_extract(set)?;
+
+            assert_eq!(tool.hard, true);
+            assert_eq!(tool.symbol, false);
+            assert_eq!(tool.never, true);
+            assert_eq!(tool.name, Some("foo".to_owned()));
+            assert_eq!(tool.size, Some(42));
+            assert_eq!(
+                tool.destination.0,
+                ["file1", "file2", "dir1", "dir2"]
+                    .into_iter()
+                    .map(|v| v.to_string())
+                    .collect::<Vec<String>>()
+            );
+
+            Ok(Some(()))
+        }
+
+        let args = aopt::ARef::new(aopt::args::Args::from_array([
+            "app",
+            ".",
+            "-H",
+            "-name=foo",
+            "-size",
+            "42",
+        ]));
+
+        let GetoptRes { ret, parser: _ } = Find::parse_args(args).unwrap();
+
+        ret.ok().unwrap();
     }
 }

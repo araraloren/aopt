@@ -39,7 +39,6 @@ const HELP_OPTION_HELP: &str = "Display help message";
 const HELP_OPTION_WIDTH: usize = 40;
 const HELP_USAGE_WIDTH: usize = 10;
 
-
 pub fn derive_parser(input: &DeriveInput) -> syn::Result<TokenStream> {
     let analyzer = Analyzer::new(input)?;
     let impl_for_parser = analyzer.generate_simple_parser()?;
@@ -179,14 +178,24 @@ impl<'a> Analyzer<'a> {
         } else {
             quote! {}
         };
+        let mut no_delay_gen = quote! {};
+
+        for field in self.field_metas.iter() {
+            no_delay_gen.extend(field.generate_delay(true)?);
+        }
+        no_delay_gen.extend(quote! { policy; });
         let inner = quote! {
             #[doc=concat!("Generate a [`Parser`] from [`", stringify!(#ident), "`].")]
             pub fn into_parser<'a>() -> Result<aopt::prelude::Parser<'a, #policy_ty>, aopt::Error> {
-                <Self as cote::IntoParserDerive<#policy_ty>>::into_parser()
+                let mut parser = <Self as cote::IntoParserDerive<#policy_ty>>::into_parser()?;
+                let policy = parser.policy_mut();
+
+                #no_delay_gen
+                Ok(parser)
             }
 
             /// Parsing the given arguments and return the [`GetoptRes`](aopt::GetoptRes).
-            pub fn parse_args<'a>(args: aopt::ARef<aopt::prelude::Args>) 
+            pub fn parse_args<'a>(args: aopt::ARef<aopt::prelude::Args>)
                 -> Result<aopt::GetoptRes<<#policy_ty as aopt::prelude::Policy>::Ret, aopt::prelude::Parser<'a, #policy_ty>>, aopt::Error> {
                 let mut parser = Self::into_parser()?;
                 parser.init()?;
@@ -320,13 +329,13 @@ impl<'a> Analyzer<'a> {
                 } else {
                     quote! {}
                 };
-                let handler = field.generate_handler(process_help, help_handler)?;
+                let handler = field.generate_handler(&uid_ident, process_help, help_handler)?;
 
                 inserts.push(quote! {
                     let #uid_ident = set.insert(#ident);
                 });
                 handlers.push(quote! {
-                    parser.entry(#uid_ident)?.on(#handler);
+                    #handler
                 });
             } else {
                 inserts.push(quote! {
@@ -610,17 +619,20 @@ pub struct FieldMeta<'a> {
 
     unwrap_ty: Option<Type>,
 
-    is_reference: bool,
+    name: TokenStream,
 
-    field_cfg: Configurations<FieldCfg>,
+    is_reference: bool,
 
     is_sub_command: bool,
 
+    #[allow(unused)]
     is_position: bool,
 
     policy_ty: Option<TokenStream>,
 
     comment_doc: Vec<Lit>,
+
+    field_cfg: Configurations<FieldCfg>,
 }
 
 impl<'a> FieldMeta<'a> {
@@ -635,55 +647,82 @@ impl<'a> FieldMeta<'a> {
         let is_sub_command;
         let is_position = check_in_path(ty, "Pos") || check_in_path(ty, "Cmd");
         let mut policy_ty = None;
-
-        let field_cfg = if !arg_cfg.cfgs.is_empty() && !sub_cfg.cfgs.is_empty() {
-            abort! {
-                ident,
-                "can not have both `arg` and `sub` on one field",
-            }
-        } else if !arg_cfg.cfgs.is_empty() {
-            is_sub_command = false;
-            Configurations {
-                cfgs: arg_cfg.cfgs.into_iter().map(|v| v.into()).collect(),
-            }
-        } else if !sub_cfg.cfgs.is_empty() {
-            let policy = sub_cfg.find_cfg(CfgKind::SubPolicy);
-            let policy_name = policy
-                .map(|v| v.value.to_token_stream().to_string())
-                .unwrap_or(String::from("fwd"));
-
-            policy_ty = Some(match policy_name.as_str() {
-                "pre" => {
-                    quote! {
-                        aopt::prelude::APrePolicy
-                    }
+        let field_cfg: Configurations<FieldCfg> =
+            if !arg_cfg.cfgs.is_empty() && !sub_cfg.cfgs.is_empty() {
+                abort! {
+                    ident,
+                    "can not have both `arg` and `sub` on one field",
                 }
-                "fwd" => {
-                    quote! {
-                        aopt::prelude::AFwdPolicy
-                    }
+            } else if !arg_cfg.cfgs.is_empty() {
+                is_sub_command = false;
+                Configurations {
+                    cfgs: arg_cfg.cfgs.into_iter().map(|v| v.into()).collect(),
                 }
-                "delay" => {
-                    quote! {
-                        aopt::prelude::ADelayPolicy
-                    }
-                }
-                _ => policy_name.to_token_stream(),
-            });
-            unwrap_ty = Some(remove_option(&trimed_ty)?);
+            } else if !sub_cfg.cfgs.is_empty() {
+                let policy = sub_cfg.find_cfg(CfgKind::SubPolicy);
+                let policy_name = policy
+                    .map(|v| v.value.to_token_stream().to_string())
+                    .unwrap_or(String::from("fwd"));
 
-            is_sub_command = true;
-            Configurations {
-                cfgs: sub_cfg.cfgs.into_iter().map(|v| v.into()).collect(),
-            }
+                policy_ty = Some(match policy_name.as_str() {
+                    "pre" => {
+                        quote! {
+                            aopt::prelude::APrePolicy
+                        }
+                    }
+                    "fwd" => {
+                        quote! {
+                            aopt::prelude::AFwdPolicy
+                        }
+                    }
+                    "delay" => {
+                        quote! {
+                            aopt::prelude::ADelayPolicy
+                        }
+                    }
+                    _ => policy_name.to_token_stream(),
+                });
+                unwrap_ty = Some(remove_option(&trimed_ty)?);
+
+                is_sub_command = true;
+                Configurations {
+                    cfgs: sub_cfg.cfgs.into_iter().map(|v| v.into()).collect(),
+                }
+            } else {
+                is_sub_command = false;
+                Configurations { cfgs: vec![] }
+            };
+        let name = if let Some(cfg) = field_cfg.find_cfg(CfgKind::SubName) {
+            let value = &cfg.value;
+            quote! { #value }
+        } else if let Some(cfg) = field_cfg.find_cfg(CfgKind::OptName) {
+            let value = &cfg.value;
+            quote! { #value }
         } else {
-            is_sub_command = false;
-            Configurations { cfgs: vec![] }
+            let ident = ident
+                .unwrap_or_else(|| {
+                    abort! {
+                        ident,
+                        "missing filed name",
+                    }
+                })
+                .to_string();
+            let name = if is_position || is_sub_command {
+                ident
+            } else if ident.chars().count() >= 2 {
+                format!("--{}", ident)
+            } else {
+                format!("-{}", ident)
+            };
+
+            quote! { #name }
         };
+
         Ok(Self {
             ident,
             ty,
             trimed_ty,
+            name,
             field_cfg,
             policy_ty,
             unwrap_ty,
@@ -694,17 +733,59 @@ impl<'a> FieldMeta<'a> {
         })
     }
 
+    pub fn generate_delay(&self, is_delay_policy: bool) -> syn::Result<TokenStream> {
+        if is_delay_policy {
+            if self.field_cfg.find_cfg(CfgKind::OptNoDelay).is_some() {
+                let name = &self.name;
+
+                Ok(quote! {
+                    policy.set_no_delay(#name);
+                })
+            } else {
+                Ok(quote! {})
+            }
+        } else {
+            abort! {
+                self.ident,
+                "option not support `!delay` attribute for current policy type"
+            }
+        }
+    }
+
     pub fn generate_handler(
         &self,
+        ident: &Ident,
         process_help: bool,
         help_handler: TokenStream,
     ) -> syn::Result<TokenStream> {
         if let Some(cfg) = self.field_cfg.find_cfg(CfgKind::OptOn) {
             let value = &cfg.value;
 
-            Ok(quote! {
-                #value
-            })
+            if let Some(then_cfg) = self.field_cfg.find_cfg(CfgKind::OptThen) {
+                let then = &then_cfg.value;
+
+                Ok(quote! {
+                    parser.entry(#ident)?.on(#value).then(#then);
+                })
+            } else {
+                Ok(quote! {
+                    parser.entry(#ident)?.on(#value);
+                })
+            }
+        } else if let Some(cfg) = self.field_cfg.find_cfg(CfgKind::OptFallback) {
+            let value = &cfg.value;
+
+            if let Some(fallback) = self.field_cfg.find_cfg(CfgKind::OptThen) {
+                let then = &fallback.value;
+
+                Ok(quote! {
+                    parser.entry(#ident)?.fallback(#value).then(#then);
+                })
+            } else {
+                Ok(quote! {
+                    parser.entry(#ident)?.fallback(#value);
+                })
+            }
         } else if self.is_sub_command() {
             let policy_ty = self.policy_ty.as_ref().unwrap();
             let unwrap_ty = self.unwrap_ty.as_ref().unwrap();
@@ -735,61 +816,45 @@ impl<'a> FieldMeta<'a> {
             };
 
             Ok(quote! {
-                move |set: &mut P::Set, _: &mut P::Ser, args: aopt::prelude::ctx::Args, index: aopt::prelude::ctx::Index| {
-                    use std::ops::Deref;
+                parser.entry(#ident)?.on(
+                    move |set: &mut P::Set, _: &mut P::Ser, args: aopt::prelude::ctx::Args, index: aopt::prelude::ctx::Index| {
+                        use std::ops::Deref;
 
-                    let mut args = args.deref().clone().into_inner();
+                        let mut args = args.deref().clone().into_inner();
 
-                    // remove current sub command
-                    args.remove(*index.deref());
-                    #pass_help_to_next
+                        // remove current sub command
+                        args.remove(*index.deref());
+                        #pass_help_to_next
 
-                    let args = aopt::ARef::new(aopt::prelude::Args::from_vec(args));
-                    let dbg_args = args.clone();
-                    let mut parser = <#unwrap_ty as cote::IntoParserDerive<#policy_ty>>::into_parser()?;
+                        let args = aopt::ARef::new(aopt::prelude::Args::from_vec(args));
+                        let dbg_args = args.clone();
+                        let mut parser = <#unwrap_ty as cote::IntoParserDerive<#policy_ty>>::into_parser()?;
 
-                    parser.init()?;
-                    match parser.parse(args).map_err(Into::into)?.ok() {
-                        Ok(_) => {
-                            Ok(<#unwrap_ty>::try_extract(parser.optset_mut()).ok())
-                        }
-                        Err(e) => {
-                            #may_be_display_help
-                            Err(aopt::Error::raise_error(
-                                format!("parsing arguments failed! {{parser: {}, args: {:?}}}: {:?}",
-                                    stringify!(#unwrap_ty),
-                                    dbg_args, e)))
+                        parser.init()?;
+                        match parser.parse(args).map_err(Into::into)?.ok() {
+                            Ok(_) => {
+                                Ok(<#unwrap_ty>::try_extract(parser.optset_mut()).ok())
+                            }
+                            Err(e) => {
+                                #may_be_display_help
+                                Err(aopt::Error::raise_error(
+                                    format!("parsing arguments failed! {{parser: {}, args: {:?}}}: {:?}",
+                                        stringify!(#unwrap_ty),
+                                        dbg_args, e)))
+                            }
                         }
                     }
-                }
+                );
             })
         } else {
             unreachable!("can not generate handler for field: {:?}", self.ident)
         }
     }
 
-    pub fn generate_field_name(&self) -> String {
-        let ident = self
-            .ident
-            .unwrap_or_else(|| {
-                abort! {
-                    self.ident,
-                    "missing filed name",
-                }
-            })
-            .to_string();
-
-        if self.is_position || self.is_sub_command() {
-            ident
-        } else if ident.chars().count() >= 2 {
-            format!("--{}", ident)
-        } else {
-            format!("-{}", ident)
-        }
-    }
-
     pub fn has_handler(&self) -> bool {
-        self.field_cfg.find_cfg(CfgKind::OptOn).is_some() || self.is_sub_command()
+        self.field_cfg.find_cfg(CfgKind::OptOn).is_some()
+            || self.field_cfg.find_cfg(CfgKind::OptFallback).is_some()
+            || self.is_sub_command()
     }
 
     pub fn is_sub_command(&self) -> bool {
@@ -800,12 +865,7 @@ impl<'a> FieldMeta<'a> {
         let is_ref = self.field_cfg.find_cfg(CfgKind::SubRef).is_some();
         let is_mut = self.field_cfg.find_cfg(CfgKind::SubMut).is_some();
         let ident = self.ident;
-        let name = self.generate_field_name().to_token_stream();
-        let name = self
-            .field_cfg
-            .find_cfg(CfgKind::OptName)
-            .map(|v| v.value.to_token_stream())
-            .unwrap_or(name);
+        let name = &self.name;
 
         if is_ref && is_mut {
             abort! {
@@ -847,12 +907,7 @@ impl<'a> FieldMeta<'a> {
         let is_ref = self.field_cfg.find_cfg(CfgKind::OptRef).is_some();
         let is_mut = self.field_cfg.find_cfg(CfgKind::OptMut).is_some();
         let ident = self.ident;
-        let name = self.generate_field_name().to_token_stream();
-        let name = self
-            .field_cfg
-            .find_cfg(CfgKind::OptName)
-            .map(|v| v.value.to_token_stream())
-            .unwrap_or(name);
+        let name = &self.name;
 
         if is_ref && is_mut {
             abort! {
@@ -904,21 +959,13 @@ impl<'a> FieldMeta<'a> {
         let mut ret = quote! {
             let mut config = aopt::prelude::SetCfg::<P::Set>::default();
         };
-        let mut has_name = false;
+        let name = &self.name;
         let mut codes = vec![];
 
         for cfg in config.cfgs.iter() {
             codes.push(match cfg.kind {
                 CfgKind::SubPolicy => {
                     quote! {}
-                }
-                CfgKind::SubName => {
-                    let token = cfg.value.to_token_stream();
-
-                    has_name = true;
-                    quote! {
-                        config.set_name(#token);
-                    }
                 }
                 CfgKind::SubAlias => {
                     let token = cfg.value.to_token_stream();
@@ -941,6 +988,9 @@ impl<'a> FieldMeta<'a> {
                         config.set_help(#token);
                     }
                 }
+                CfgKind::SubName => {
+                    quote! {}
+                }
                 _ => {
                     abort! {
                         ident, "Unsupport config kind on field macro `sub`: {:?}", cfg.kind
@@ -949,13 +999,9 @@ impl<'a> FieldMeta<'a> {
             });
         }
 
-        if !has_name {
-            let ident = self.generate_field_name();
-
-            codes.push(quote! {
-                config.set_name(#ident);
-            });
-        }
+        codes.push(quote! {
+            config.set_name(#name);
+        });
         if self.field_cfg.find_cfg(CfgKind::SubHelp).is_none() && !self.comment_doc.is_empty() {
             let mut code = quote! {
                 let mut message = String::default();
@@ -985,7 +1031,7 @@ impl<'a> FieldMeta<'a> {
         let mut value = None;
 
         let mut codes = vec![];
-        let mut has_name = false;
+        let name = &self.name;
         let mut ret = quote! {
             let mut config = aopt::prelude::SetCfg::<P::Set>::default();
         };
@@ -999,22 +1045,14 @@ impl<'a> FieldMeta<'a> {
                         config.set_hint(#token);
                     }
                 }
-                CfgKind::OptName => {
-                    let token = cfg.value.to_token_stream();
-
-                    has_name = true;
-                    quote! {
-                        config.set_name(#token);
-                    }
-                }
                 CfgKind::OptForce => {
                     quote! {
-                        config.set_name(true);
+                        config.set_force(true);
                     }
                 }
                 CfgKind::OptNoForce => {
                     quote! {
-                        config.set_name(false);
+                        config.set_force(false);
                     }
                 }
                 CfgKind::OptValue => {
@@ -1062,7 +1100,8 @@ impl<'a> FieldMeta<'a> {
                         config.set_storer(aopt::prelude::ValStorer::new_validator::<#ty>(#token));
                     }
                 }
-                CfgKind::OptOn | CfgKind::OptRef | CfgKind::OptMut | CfgKind::OptHelp => {
+                CfgKind::OptOn | CfgKind::OptName | CfgKind::OptNoDelay | CfgKind::OptRef | CfgKind::OptMut | CfgKind::OptHelp |
+                CfgKind::OptThen | CfgKind::OptFallback => {
                     // will process in another function
                     quote! { }
                 }
@@ -1073,13 +1112,10 @@ impl<'a> FieldMeta<'a> {
                 }
             });
         }
-        if !has_name {
-            let name = self.generate_field_name();
+        codes.push(quote! {
+            config.set_name(#name);
+        });
 
-            codes.push(quote! {
-                config.set_name(#name);
-            });
-        }
         let mut help_code = None;
 
         if let Some(help_cfg) = self.field_cfg.find_cfg(CfgKind::OptHelp) {

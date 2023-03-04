@@ -69,9 +69,15 @@ pub enum CfgKind {
 
     OptOn,
 
+    OptFallback,
+
+    OptThen,
+
     OptRef,
 
     OptMut,
+
+    OptNoDelay,
 }
 
 #[derive(Debug, Clone)]
@@ -156,10 +162,13 @@ impl Parse for ArgCfg {
             "action" => CfgKind::OptAction,
             "valid" => CfgKind::OptValidator,
             "on" => CfgKind::OptOn,
+            "fallback" => CfgKind::OptFallback,
+            "then" => CfgKind::OptThen,
             "ref" => CfgKind::OptRef,
             "mut" => CfgKind::OptMut,
             "force" => CfgKind::OptForce,
-            "!force" => CfgKind::OptNoForce,
+            "noforce" => CfgKind::OptNoForce,
+            "nodelay" => CfgKind::OptNoDelay,
             _ => {
                 abort! {
                     ident, "invalid configuration name in arg(...): {:?}", cfg_kind
@@ -168,12 +177,14 @@ impl Parse for ArgCfg {
         };
 
         match cfg_kind {
-            CfgKind::OptForce | CfgKind::OptNoForce | CfgKind::OptRef | CfgKind::OptMut => {
-                Ok(Self {
-                    kind: cfg_kind,
-                    value: CfgValue::Null,
-                })
-            }
+            CfgKind::OptForce
+            | CfgKind::OptNoForce
+            | CfgKind::OptNoDelay
+            | CfgKind::OptRef
+            | CfgKind::OptMut => Ok(Self {
+                kind: cfg_kind,
+                value: CfgValue::Null,
+            }),
             _ => Ok(Self {
                 kind: cfg_kind,
                 value: input.parse()?,
