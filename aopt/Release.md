@@ -15,6 +15,10 @@
 
 - Fix the PrePolicy, don't ignore the failure from `Checker`
 
+- Change the name of `wrap_handler_fallback` to `wrap_handler_fallback_action`
+
+- Add a new handler wrapper function `wrap_handler_fallback`
+
 ## 0.9.1
 
 - Add type paramter for `Main`, `Any`

@@ -225,7 +225,7 @@ pub mod prelude {
     pub use crate::args::Args;
     pub use crate::ctx::wrap_handler;
     pub use crate::ctx::wrap_handler_action;
-    pub use crate::ctx::wrap_handler_fallback;
+    pub use crate::ctx::wrap_handler_fallback_action;
     pub use crate::ctx::Ctx;
     pub use crate::ctx::Extract;
     pub use crate::ctx::Handler;
