@@ -1,5 +1,6 @@
 #![doc = include_str!("../README.md")]
 pub mod meta;
+pub mod valid;
 
 use std::borrow::Cow;
 use std::fmt::Debug;
@@ -22,6 +23,7 @@ pub mod prelude {
     pub use crate::meta::IntoConfig;
     pub use crate::meta::OptionMeta;
     pub use crate::simple_display_set_help;
+    pub use crate::valid;
     pub use crate::CoteApp;
     pub use crate::ExtractFromSetDerive;
     pub use crate::IntoParserDerive;
