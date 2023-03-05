@@ -310,6 +310,7 @@ impl<'a> Analyzer<'a> {
                 };
             });
             inserts.push(quote! {
+                #[allow(unused)]
                 let #help_option_uid = set.insert(#ident);
             });
         }
