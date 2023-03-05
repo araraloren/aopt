@@ -43,14 +43,14 @@ impl<T: ErasedTy + PartialEq> ValValidator<T> {
 impl<T: ErasedTy> ValValidator<T> {
     pub fn equal2<K>(val: K) -> Self
     where
-        K: ErasedTy + for<'a> PartialEq<&'a T>,
+        K: ErasedTy + PartialEq<T>,
     {
-        Self(Box::new(move |inner_val| val == inner_val))
+        Self(Box::new(move |inner_val| &val == inner_val))
     }
 
     pub fn contains2<K>(vals: Vec<K>) -> Self
     where
-        K: ErasedTy + for<'a> PartialEq<&'a T>,
+        K: ErasedTy + PartialEq<T>,
     {
         Self(Box::new(move |inner_val| {
             vals.iter().any(|v| PartialEq::eq(v, &inner_val))
