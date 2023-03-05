@@ -17,7 +17,14 @@ use aopt_help::prelude::Store;
 
 use meta::IntoConfig;
 
+pub use aopt;
+pub use aopt_help;
+pub use cote_derive;
+
 pub mod prelude {
+    pub use crate::aopt;
+    pub use crate::aopt::prelude::*;
+    pub use crate::cote_derive::Cote;
     pub use crate::display_help;
     pub use crate::display_set_help;
     pub use crate::meta::IntoConfig;
@@ -27,17 +34,6 @@ pub mod prelude {
     pub use crate::CoteApp;
     pub use crate::ExtractFromSetDerive;
     pub use crate::IntoParserDerive;
-    pub use aopt;
-    pub use aopt_help;
-    pub use cote_derive;
-
-    pub mod derive {
-        pub use crate::ExtractFromSetDerive;
-        pub use crate::IntoParserDerive;
-        pub use aopt;
-        pub use aopt::prelude::*;
-        pub use cote_derive::Cote;
-    }
 }
 
 pub trait IntoParserDerive<'zlifetime, P>
@@ -130,9 +126,39 @@ where
             parser: Parser::new(policy),
         }
     }
+}
+
+impl<'a, P> CoteApp<'a, P>
+where
+    P: Policy,
+{
+    pub fn inner_parser(&mut self) -> &mut Parser<'a, P> {
+        &mut self.parser
+    }
 
     pub fn inner_parser_mut(&mut self) -> &mut Parser<'a, P> {
         &mut self.parser
+    }
+
+    pub fn set_parser(&mut self, parser: Parser<'a, P>) -> &mut Self {
+        self.parser = parser;
+        self
+    }
+}
+
+impl<'a, 'b, P> CoteApp<'a, P>
+where
+    'a: 'b,
+    P: Policy,
+    P::Set: SetValueFindExt,
+{
+    pub fn extract_type<T>(&'b mut self) -> Result<T, Error>
+    where
+        T: ExtractFromSetDerive<'b, P::Set>,
+    {
+        let set = self.parser.optset_mut();
+
+        T::try_extract(set)
     }
 }
 
@@ -146,120 +172,87 @@ where
     SetCfg<P::Set>: Config + ConfigValue + Default,
     P::Inv<'a>: HandlerCollection<'a, P::Set, P::Ser>,
 {
-    /// Call [`inject_opt`](crate::InjectConfig::inject_opt) add option.
+    /// Add option by option configuration generated from [`OptionMeta`](crate::meta::OptionMeta).
     ///
-    /// ```ignore
+    /// # Example load option from json configuration.
+    /// ```rust
     /// # use cote::prelude::*;
     /// # use aopt::prelude::*;
     /// # use aopt::Error;
     /// #
     /// # fn main() -> Result<(), Error> {
-    ///     let mut cote = Cote::<AFwdPolicy>::default();
+    ///     let mut cote = CoteApp::<AFwdPolicy>::default();
     ///
-    ///     let config: MetaConfig<String> = serde_json::from_str(
+    ///     let config: OptionMeta<String> = serde_json::from_str(
     ///         r#"
-    ///                 {
-    ///                     "id": "-c",
-    ///                     "option": "-c=s",
-    ///                     "hint": "-c <str>",
-    ///                     "help": "This is a help for option c",
-    ///                     "action": "App",
-    ///                     "assoc": "Str",
-    ///                     "alias": null,
-    ///                     "value": [
-    ///                     "we",
-    ///                     "it"
-    ///                     ]
-    ///                 }
-    ///             "#,
+    ///                      {
+    ///                          "id": "-c",
+    ///                          "option": "-c=s",
+    ///                          "hint": "-c <str>",
+    ///                          "help": "This is a help for option c",
+    ///                          "action": "App",
+    ///                          "alias": null,
+    ///                          "value": [
+    ///                          "we",
+    ///                          "it"
+    ///                          ]
+    ///                      }
+    ///                  "#,
     ///     )
     ///     .unwrap();
     ///
-    ///     cote.inject_opt(config)?;
+    ///     cote.add_opt_meta(config)?;
     ///
-    ///     let config: MetaConfig<i64> = serde_json::from_str(
+    ///     let config: OptionMeta<i64> = serde_json::from_str(
     ///         r#"
-    ///                     {
-    ///                         "id": "-p",
-    ///                         "option": "--point=i",
-    ///                         "hint": "--point <int>",
-    ///                         "help": "This is a help for option",
-    ///                         "action": "App",
-    ///                         "assoc": "Int",
-    ///                         "alias": [
-    ///                             "-p"
-    ///                         ]
-    ///                     }
-    ///                 "#,
+    ///                          {
+    ///                              "id": "-p",
+    ///                              "option": "--point=i",
+    ///                              "hint": "--point <int>",
+    ///                              "help": "This is a help for option",
+    ///                              "action": "App",
+    ///                              "alias": [
+    ///                                  "-p"
+    ///                              ]
+    ///                          }
+    ///                      "#,
     ///     )
     ///     .unwrap();
     ///
-    ///     cote.inject_opt(config)?;
+    ///     cote.add_opt_meta(config)?;
     ///
-    ///     cote.run_with(["-p", "256"].into_iter(), |ret, cote: &Cote<AFwdPolicy>| {
-    ///         if ret.is_some() {
-    ///             assert_eq!(
-    ///                 &vec!["we".to_owned(), "it".to_owned()],
-    ///                 cote.find_vals::<String>("-c")?
-    ///             );
-    ///             assert_eq!(&256, cote.find_val::<i64>("--point")?);
-    ///             println!("cote running okay!!!");
-    ///         }
-    ///         Ok(())
-    ///     })?;
-    /// #
-    /// #   Ok(())
+    ///     cote.run_with(
+    ///         ["-p", "256"].into_iter(),
+    ///         |ret, cote: &CoteApp<AFwdPolicy>| {
+    ///             if ret.status() {
+    ///                 assert_eq!(
+    ///                     &vec!["we".to_owned(), "it".to_owned()],
+    ///                     cote.find_vals::<String>("-c")?
+    ///                 );
+    ///                 assert_eq!(&256, cote.find_val::<i64>("--point")?);
+    ///                 println!("cote running okay!!!");
+    ///             }
+    ///             Ok(())
+    ///         },
+    ///     )?;
+    ///
+    /// #    Ok(())
     /// # }
-    /// ```
-    pub fn inject_opt<T: ErasedTy + Clone, I: IntoConfig<Ret = SetCfg<P::Set>>>(
+    ///```
+    ///
+    pub fn add_opt_meta(
         &mut self,
-        mut option_meta: I,
-    ) -> Result<ParserCommitWithValue<'a, '_, P::Inv<'a>, P::Set, P::Ser, Placeholder, T>, Error>
-    {
+        mut meta: impl IntoConfig<Ret = SetCfg<P::Set>>,
+    ) -> Result<ParserCommit<'a, '_, P::Inv<'a>, P::Set, P::Ser, Placeholder>, Error> {
         let set = self.parser.optset();
-        let config = option_meta.into_config(set)?;
+        let config = meta.into_config(set)?;
 
-        Ok(self.parser.add_opt_cfg(config)?.set_value_type_only::<T>())
+        self.parser.add_opt_cfg(config)
     }
 
-    pub fn add_help<S: Into<String>>(
-        &mut self,
-        author: S,
-        version: S,
-        description: S,
-    ) -> Result<&mut Self, Error> {
-        self.add_help_width(author, version, description, 20, 20)
-    }
-
-    pub fn add_help_width<S: Into<String>>(
-        &mut self,
-        author: S,
-        version: S,
-        description: S,
-        option_width: usize,
-        usage_width: usize,
-    ) -> Result<&mut Self, Error> {
-        let name = self.name.clone();
-        let (author, version, description) = (author.into(), version.into(), description.into());
-
-        self.add_opt("--help=b")?
-            .add_alias("-h")
-            .add_alias("-?")
-            .set_help("Display help message")
-            .on(
-                move |set: &mut P::Set, _: &mut P::Ser| -> Result<Option<()>, Error> {
-                    display_set_help!(
-                        &name,
-                        set,
-                        author,
-                        version,
-                        description,
-                        option_width,
-                        usage_width
-                    )?;
-                    std::process::exit(0)
-                },
-            )?;
+    /// This function will insert help option `--help;-h;-?: Display help message`.
+    pub fn add_help_option(&mut self) -> Result<&mut Self, Error> {
+        self.add_opt_i::<bool>("--help;-h;-?: Display help message")?;
         Ok(self)
     }
 
@@ -268,18 +261,18 @@ where
     /// # Example
     ///
     /// ```rust
-    /// use cote::Cote;
-    /// use cote::Error;
+    /// use cote::CoteApp;
+    /// use aopt::Error;
     /// use aopt::prelude::*;
     ///
     /// fn main() -> Result<(), Error> {
-    ///     let mut cote = Cote::<AFwdPolicy>::default();
+    ///     let mut cote = CoteApp::<AFwdPolicy>::default();
     ///
     ///     cote.add_opt("-a=b!")?;
     ///     cote.add_opt("-b=i")?;
     ///
     ///     cote.run_mut_with(["-a", "-b", "42"].into_iter(), move |ret, cote| {
-    ///         if ret.is_some() {
+    ///         if ret.status() {
     ///             assert_eq!(cote.find_val::<bool>("-a")?, &true);
     ///             assert_eq!(cote.find_val::<i64>("-b")?, &42);
     ///             println!("{} running over!", cote.name());
@@ -300,7 +293,7 @@ where
     where
         'c: 'b,
         I: Into<RawVal>,
-        F: FnMut(P::Ret, &'b mut CoteApp<P>) -> Result<R, Error>,
+        F: FnMut(P::Ret, &'b mut CoteApp<'a, P>) -> Result<R, Error>,
     {
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
@@ -319,7 +312,7 @@ where
     pub fn run_mut<'c, 'b, R, F>(&'c mut self, r: F) -> Result<R, Error>
     where
         'c: 'b,
-        F: FnMut(P::Ret, &'b mut CoteApp<P>) -> Result<R, Error>,
+        F: FnMut(P::Ret, &'b mut CoteApp<'a, P>) -> Result<R, Error>,
     {
         let args = Args::from_env().into_inner();
         self.run_mut_with(args.into_iter(), r)
@@ -329,20 +322,20 @@ where
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// use cote::Cote;
-    /// use cote::Error;
+    /// ```rust
+    /// use cote::CoteApp;
+    /// use aopt::Error;
     /// use aopt::prelude::*;
     ///
-    /// #[async_std::main]
+    /// #[tokio::main]
     /// async fn main() -> Result<(), Error> {
-    ///     let mut cote = Cote::<AFwdPolicy>::default();
+    ///     let mut cote = CoteApp::<AFwdPolicy>::default();
     ///
     ///     cote.add_opt("-a=b!")?;
     ///     cote.add_opt("-b=i")?;
     ///
     ///     cote.run_async_mut_with(["-a", "-b", "42"].into_iter(), |ret, cote| async move {
-    ///         if ret.is_some() {
+    ///         if ret.status() {
     ///             assert_eq!(cote.find_val::<bool>("-a")?, &true);
     ///             assert_eq!(cote.find_val::<i64>("-b")?, &42);
     ///             println!("{} running over!", cote.name());
@@ -365,7 +358,7 @@ where
         'c: 'b,
         I: Into<RawVal>,
         FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b mut CoteApp<P>) -> FUT,
+        F: FnMut(P::Ret, &'b mut CoteApp<'a, P>) -> FUT,
     {
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
@@ -391,7 +384,7 @@ where
     where
         'c: 'b,
         FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b mut CoteApp<P>) -> FUT,
+        F: FnMut(P::Ret, &'b mut CoteApp<'a, P>) -> FUT,
     {
         let args = Args::from_env().into_inner();
         self.run_async_mut_with(args.into_iter(), r).await
@@ -402,18 +395,18 @@ where
     /// # Example
     ///
     /// ```rust
-    /// use cote::Cote;
-    /// use cote::Error;
+    /// use cote::CoteApp;
+    /// use aopt::Error;
     /// use aopt::prelude::*;
     ///
     /// fn main() -> Result<(), Error> {
-    ///     let mut cote = Cote::<AFwdPolicy>::default();
+    ///     let mut cote = CoteApp::<AFwdPolicy>::default();
     ///
     ///     cote.add_opt("-a=b!")?;
     ///     cote.add_opt("-b=i")?;
     ///
     ///     cote.run_with(["-a", "-b", "42"].into_iter(), move |ret, cote| {
-    ///         if ret.is_some() {
+    ///         if ret.status() {
     ///             assert_eq!(cote.find_val::<bool>("-a")?, &true);
     ///             assert_eq!(cote.find_val::<i64>("-b")?, &42);
     ///             println!("{} running over!", cote.name());
@@ -434,7 +427,7 @@ where
     where
         'c: 'b,
         I: Into<RawVal>,
-        F: FnMut(P::Ret, &'b CoteApp<P>) -> Result<R, Error>,
+        F: FnMut(P::Ret, &'b CoteApp<'a, P>) -> Result<R, Error>,
     {
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
@@ -453,7 +446,7 @@ where
     pub fn run<'c, 'b, R, F>(&'c mut self, r: F) -> Result<R, Error>
     where
         'c: 'b,
-        F: FnMut(P::Ret, &'b CoteApp<P>) -> Result<R, Error>,
+        F: FnMut(P::Ret, &'b CoteApp<'a, P>) -> Result<R, Error>,
     {
         let args = Args::from_env().into_inner();
         self.run_with(args.into_iter(), r)
@@ -463,20 +456,20 @@ where
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// use cote::Cote;
-    /// use cote::Error;
+    /// ```rust
+    /// use cote::CoteApp;
+    /// use aopt::Error;
     /// use aopt::prelude::*;
     ///
-    /// #[async_std::main]
+    /// #[tokio::main]
     /// async fn main() -> Result<(), Error> {
-    ///     let mut cote = Cote::<AFwdPolicy>::default();
+    ///     let mut cote = CoteApp::<AFwdPolicy>::default();
     ///
     ///     cote.add_opt("-a=b!")?;
     ///     cote.add_opt("-b=i")?;
     ///
     ///     cote.run_async_with(["-a", "-b", "42"].into_iter(), |ret, cote| async move {
-    ///         if ret.is_some() {
+    ///         if ret.status() {
     ///             assert_eq!(cote.find_val::<bool>("-a")?, &true);
     ///             assert_eq!(cote.find_val::<i64>("-b")?, &42);
     ///             println!("{} running over!", cote.name());
@@ -499,7 +492,7 @@ where
         'c: 'b,
         I: Into<RawVal>,
         FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b CoteApp<P>) -> FUT,
+        F: FnMut(P::Ret, &'b CoteApp<'a, P>) -> FUT,
     {
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
@@ -525,7 +518,7 @@ where
     where
         'c: 'b,
         FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b CoteApp<P>) -> FUT,
+        F: FnMut(P::Ret, &'b CoteApp<'a, P>) -> FUT,
     {
         let args = Args::from_env().into_inner();
         self.run_async_with(args.into_iter(), r).await
@@ -535,7 +528,7 @@ where
 impl<'a, P> CoteApp<'a, P>
 where
     P: Policy,
-    P::Set: Set,
+    P::Set: SetValueFindExt,
 {
     pub fn new_with<S: Into<String>>(
         name: S,
@@ -565,19 +558,55 @@ where
         self
     }
 
-    pub fn display_help<'c>(
+    pub fn display_help(
         &self,
-        head: impl Into<Cow<'c, str>>,
-        foot: impl Into<Cow<'c, str>>,
-        max_width: usize,
-        usage_width: usize,
-    ) -> Result<(), Error> {
-        let head = head.into();
-        let foot = foot.into();
-        let name = self.name.as_str();
+        author: impl Into<String>,
+        version: impl Into<String>,
+        description: impl Into<String>,
+    ) -> Result<bool, Error> {
+        self.display_help_if("--help", author, version, description)
+    }
 
-        simple_display_set_help(self.optset(), name, &head, &foot, max_width, usage_width)
-            .map_err(|e| Error::raise_error(format!("Can not show help message: {:?}", e)))
+    pub fn display_help_if(
+        &self,
+        option: &str,
+        author: impl Into<String>,
+        version: impl Into<String>,
+        description: impl Into<String>,
+    ) -> Result<bool, Error> {
+        self.display_help_if_width(option, author, version, description, 40, 10)
+    }
+
+    pub fn display_help_if_width(
+        &self,
+        option: &str,
+        author: impl Into<String>,
+        version: impl Into<String>,
+        description: impl Into<String>,
+        option_width: usize,
+        usage_width: usize,
+    ) -> Result<bool, Error> {
+        let set = self.parser.optset();
+
+        if let Ok(help_option) = set.find_val::<bool>(option) {
+            if *help_option {
+                let (author, version, description) =
+                    (author.into(), version.into(), description.into());
+                let name = self.name.to_string();
+
+                crate::display_set_help!(
+                    &name,
+                    set,
+                    author,
+                    version,
+                    description,
+                    option_width,
+                    usage_width
+                )?;
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 }
 
@@ -658,14 +687,11 @@ pub fn simple_display_set_help<'a, T: Set, S: Into<Cow<'a, str>>>(
 #[macro_export]
 macro_rules! display_help {
     ($cote:ident) => {{
-        let foot = format!(
-            "Create by {} v{}",
+        $cote.display_help(
             env!("CARGO_PKG_AUTHORS"),
-            env!("CARGO_PKG_VERSION")
-        );
-        let head = format!("{}", env!("CARGO_PKG_DESCRIPTION"));
-
-        $cote.display_help(head, foot, 10, 20)
+            env!("CARGO_PKG_VERSION"),
+            env!("CARGO_PKG_DESCRIPTION"),
+        )
     }};
 }
 
@@ -702,7 +728,7 @@ macro_rules! display_set_help {
 mod test {
     #[test]
     fn test_example_simple() {
-        use crate::prelude::derive::*;
+        use crate::prelude::*;
         // macro generate the code depend on crate name
         use crate as cote;
         use aopt::opt::Pos;
@@ -717,7 +743,7 @@ mod test {
             bar: Pos<usize>,
         }
 
-        let example = Example::parse(ARef::new(Args::from_array(["app", "--foo", "42"])));
+        let example = Example::parse(Args::from_array(["app", "--foo", "42"]));
 
         assert!(example.is_ok());
 
@@ -734,7 +760,7 @@ mod test {
 
     #[test]
     fn test_multiple_pos_arguments() {
-        use crate::prelude::derive::*;
+        use crate::prelude::*;
         // macro generate the code depend on crate name
         use crate as cote;
         use aopt::opt::Pos;
@@ -758,15 +784,15 @@ mod test {
             sources: Pos<Vec<PathBuf>>,
         }
 
-        let example = CopyTool::parse(aopt::ARef::new(aopt::args::Args::from_array([
+        let example = CopyTool::parse(Args::from_array([
             "app", "--force",
-        ])));
+        ]));
 
         assert!(example.is_err());
 
-        let example = CopyTool::parse(aopt::ARef::new(aopt::args::Args::from_array([
+        let example = CopyTool::parse(Args::from_array([
             "app", "--force", ".", "../foo", "../bar/", "other",
-        ])))
+        ]))
         .unwrap();
 
         assert_eq!(example.force, true);
@@ -783,7 +809,7 @@ mod test {
 
     #[test]
     fn test_fallback() {
-        use crate::prelude::derive::*;
+        use crate::prelude::*;
         // macro generate the code depend on crate name
         use crate as cote;
         use aopt::opt::Pos;
@@ -849,17 +875,159 @@ mod test {
             Ok(Some(()))
         }
 
-        let args = aopt::ARef::new(aopt::args::Args::from_array([
+        let args = Args::from_array([
             "app",
             ".",
             "-H",
             "-name=foo",
             "-size",
             "42",
-        ]));
+        ]);
 
         let GetoptRes { ret, parser: _ } = Find::parse_args(args).unwrap();
 
         ret.ok().unwrap();
+    }
+
+    #[test]
+    fn sub_test() {
+        assert!(sub_test_impl().is_ok());
+    }
+
+    fn sub_test_impl() -> Result<(), aopt::Error> {
+        use crate::prelude::*;
+        // macro generate the code depend on crate name
+        use crate as cote;
+        use aopt::opt::Pos;
+        use aopt::GetoptRes;
+        use cote::valid;
+        use std::path::PathBuf;
+
+        #[derive(Debug, Cote, PartialEq, Default)]
+        #[cote(policy = pre, help, name = "app")]
+        pub struct App {
+            /// Set the count value
+            #[arg(values = [1usize, 2, 3])]
+            count: Option<Vec<usize>>,
+
+            #[sub(alias = "ls", help = "list subcommand list file of given path")]
+            list: Option<List>,
+
+            #[sub(help = "find something under directory")]
+            find: Option<Find>,
+        }
+
+        #[derive(Debug, Cote, PartialEq)]
+        #[cote(help)]
+        pub struct List {
+            #[arg(help = "list all the file")]
+            all: bool,
+
+            #[arg(valid = valid::array([1, 42, 68]))]
+            depth: usize,
+
+            #[arg(index = "1")]
+            path: Pos<PathBuf>,
+        }
+
+        #[derive(Debug, Cote, PartialEq)]
+        #[cote(help)]
+        pub struct Find {
+            recursive: bool,
+
+            #[arg(index = "1")]
+            path: Pos<PathBuf>,
+        }
+
+        let args = Args::from_array([
+            "app",
+            "ls",
+            "--all",
+            "--depth=42",
+            ".",
+        ]);
+
+        let app = App::parse(args)?;
+
+        assert_eq!(
+            app,
+            App {
+                count: Some(vec![1, 2, 3]),
+                list: Some(List {
+                    all: true,
+                    depth: 42,
+                    path: Pos(PathBuf::from("."))
+                }),
+                find: None,
+            }
+        );
+
+        let args = Args::from_array([
+            "app",
+            "list",
+            "--all",
+            "--depth=6",
+            ".",
+        ]);
+
+        let app = App::parse(args)?;
+
+        assert_eq!(
+            app,
+            App {
+                count: Some(vec![1, 2, 3]),
+                list: None,
+                find: None,
+            }
+        );
+
+        let args = Args::from_array([
+            "app",
+            "--count=8",
+            "find",
+            "something",
+        ]);
+
+        let app = App::parse(args)?;
+
+        assert_eq!(
+            app,
+            App {
+                count: Some(vec![1, 2, 3, 8]),
+                list: None,
+                find: Some(Find {
+                    recursive: false,
+                    path: Pos(PathBuf::from("something")),
+                }),
+            }
+        );
+
+        let args = Args::from_array(["app", "--count", "42"]);
+
+        let app = App::parse(args)?;
+
+        assert_eq!(
+            app,
+            App {
+                count: Some(vec![1, 2, 3, 42]),
+                list: None,
+                find: None,
+            }
+        );
+
+        let args = Args::from_array(["app", "--count=42", "list"]);
+
+        let app = App::parse(args)?;
+
+        assert_eq!(
+            app,
+            App {
+                count: Some(vec![1, 2, 3, 42]),
+                list: None,
+                find: None,
+            }
+        );
+
+        Ok(())
     }
 }

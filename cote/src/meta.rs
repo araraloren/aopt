@@ -16,19 +16,19 @@ pub struct OptionMeta<T>
 where
     T: Clone,
 {
-    id: String,
+    pub id: String,
 
-    option: String,
+    pub option: String,
 
-    hint: Option<String>,
+    pub hint: Option<String>,
 
-    help: Option<String>,
+    pub help: Option<String>,
 
-    action: Option<Action>,
+    pub action: Option<Action>,
 
-    alias: Option<Vec<String>>,
+    pub alias: Option<Vec<String>>,
 
-    value: Option<Vec<T>>,
+    pub value: Option<Vec<T>>,
 }
 
 impl<T> OptionMeta<T>
