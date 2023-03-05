@@ -1,10 +1,6 @@
 [workspace]
 
 members = [
-    "aopt",
     "cote",
-    "snowball-follow",
-    "aopt-help",
-    "simple-find-file",
-    "index-constituent"
+    "cote-derive",
 ]
