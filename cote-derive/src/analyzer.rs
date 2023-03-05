@@ -201,9 +201,7 @@ impl<'a> Analyzer<'a> {
                 parser.init()?;
                 let ret = parser.parse(args).map_err(Into::into)?;
                 // if has failure
-                if !ret.status() {
-                    #may_be_display_help
-                }
+                #may_be_display_help
                 Ok(aopt::GetoptRes{ ret, parser })
             }
 
@@ -217,12 +215,12 @@ impl<'a> Analyzer<'a> {
             pub fn parse(args: aopt::ARef<aopt::prelude::Args>) -> Result<Self, aopt::Error> {
                 let GetoptRes { mut ret, mut parser } = Self::parse_args(args)?;
 
+                #may_be_display_help
                 match ret.ok() {
                     Ok(_) => {
                         Self::try_extract(parser.optset_mut())
                     }
                     Err(e) => {
-                        #may_be_display_help
                         Err(aopt::Error::raise_error(format!("parsing arguments failed: {:?}", e)))
                     }
                 }
@@ -831,12 +829,14 @@ impl<'a> FieldMeta<'a> {
                         let mut parser = <#unwrap_ty as cote::IntoParserDerive<#policy_ty>>::into_parser()?;
 
                         parser.init()?;
-                        match parser.parse(args).map_err(Into::into)?.ok() {
+                        let ret = parser.parse(args).map_err(Into::into)?;
+
+                        #may_be_display_help
+                        match ret.ok() {
                             Ok(_) => {
                                 Ok(<#unwrap_ty>::try_extract(parser.optset_mut()).ok())
                             }
                             Err(e) => {
-                                #may_be_display_help
                                 Err(aopt::Error::raise_error(
                                     format!("parsing arguments failed! {{parser: {}, args: {:?}}}: {:?}",
                                         stringify!(#unwrap_ty),
