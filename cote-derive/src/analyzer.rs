@@ -291,6 +291,8 @@ impl<'a> Analyzer<'a> {
             });
         }
         // insert help option
+        let help_option_uid = Ident::new(&format!("{}_uid", HELP_OPTION_IDENT), self.struct_meta.ident.span());
+
         if process_help {
             let ident = Ident::new(HELP_OPTION_IDENT, self.struct_meta.ident.span());
 
@@ -308,7 +310,7 @@ impl<'a> Analyzer<'a> {
                 };
             });
             inserts.push(quote! {
-                set.insert(#ident);
+                let #help_option_uid = set.insert(#ident);
             });
         }
         for (idx, field) in self.field_metas.iter().enumerate() {
@@ -327,7 +329,7 @@ impl<'a> Analyzer<'a> {
                 } else {
                     quote! {}
                 };
-                let handler = field.generate_handler(&uid_ident, process_help, help_handler)?;
+                let handler = field.generate_handler(&uid_ident, &help_option_uid, process_help, help_handler)?;
 
                 inserts.push(quote! {
                     let #uid_ident = set.insert(#ident);
@@ -753,6 +755,7 @@ impl<'a> FieldMeta<'a> {
     pub fn generate_handler(
         &self,
         ident: &Ident,
+        help_uid: &Ident,
         process_help: bool,
         help_handler: TokenStream,
     ) -> syn::Result<TokenStream> {
@@ -787,10 +790,9 @@ impl<'a> FieldMeta<'a> {
         } else if self.is_sub_command() {
             let policy_ty = self.policy_ty.as_ref().unwrap();
             let unwrap_ty = self.unwrap_ty.as_ref().unwrap();
-            let help_uid_ident = Ident::new("help_option_uid", self.ident.span());
             let pass_help_to_next = if process_help {
                 quote! {
-                    if let Ok(value) = set.opt(#help_uid_ident)?.val::<bool>() {
+                    if let Ok(value) = set.opt(#help_uid)?.val::<bool>() {
                         if *value {
                             // pass a fake flag to next sub command
                             args.push(aopt::RawVal::from(#HELP_OPTION_NAME));
@@ -1147,10 +1149,12 @@ impl<'a> FieldMeta<'a> {
         }
         if let Some(mut help_code) = help_code {
             if let Some(value) = value {
+                let value_string = value.to_string();
+
                 help_code.extend(quote! {
                     message.push_str(" ");
                     message.push_str("[");
-                    message.push_str(#value.trim());
+                    message.push_str(#value_string.trim());
                     message.push_str("]");
                 });
             }
