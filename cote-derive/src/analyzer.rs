@@ -195,11 +195,11 @@ impl<'a> Analyzer<'a> {
             }
 
             /// Parsing the given arguments and return the [`GetoptRes`](aopt::GetoptRes).
-            pub fn parse_args<'a>(args: aopt::ARef<aopt::prelude::Args>)
+            pub fn parse_args<'a>(args: aopt::prelude::Args)
                 -> Result<aopt::GetoptRes<<#policy_ty as aopt::prelude::Policy>::Ret, aopt::prelude::Parser<'a, #policy_ty>>, aopt::Error> {
                 let mut parser = Self::into_parser()?;
                 parser.init()?;
-                let ret = parser.parse(args).map_err(Into::into);
+                let ret = parser.parse(aopt::ARef::new(args)).map_err(Into::into);
                 // if has failure
                 #may_be_display_help
                 Ok(aopt::GetoptRes{ ret: ret?, parser })
@@ -208,11 +208,11 @@ impl<'a> Analyzer<'a> {
             /// Parsing arguments returned from [`from_env`](aopt::prelude::Args::from_env) and return the [`GetoptRes`](aopt::GetoptRes).
             pub fn parse_env_args<'a>()
             -> Result<aopt::GetoptRes<<#policy_ty as aopt::prelude::Policy>::Ret, aopt::prelude::Parser<'a, #policy_ty>>, aopt::Error> {
-                Self::parse_args(aopt::ARef::new(aopt::prelude::Args::from_env()))
+                Self::parse_args(aopt::prelude::Args::from_env())
             }
 
             /// Parsing the given arguments and generate a .
-            pub fn parse(args: aopt::ARef<aopt::prelude::Args>) -> Result<Self, aopt::Error> {
+            pub fn parse(args: aopt::prelude::Args) -> Result<Self, aopt::Error> {
                 let GetoptRes { mut ret, mut parser } = Self::parse_args(args)?;
 
                 #may_be_display_help
@@ -220,7 +220,7 @@ impl<'a> Analyzer<'a> {
             }
 
             pub fn parse_env() -> Result<Self, aopt::Error> {
-                Self::parse(aopt::ARef::new(aopt::prelude::Args::from_env()))
+                Self::parse(aopt::prelude::Args::from_env())
             }
         };
 
