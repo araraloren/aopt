@@ -199,10 +199,10 @@ impl<'a> Analyzer<'a> {
                 -> Result<aopt::GetoptRes<<#policy_ty as aopt::prelude::Policy>::Ret, aopt::prelude::Parser<'a, #policy_ty>>, aopt::Error> {
                 let mut parser = Self::into_parser()?;
                 parser.init()?;
-                let ret = parser.parse(args).map_err(Into::into)?;
+                let ret = parser.parse(args).map_err(Into::into);
                 // if has failure
                 #may_be_display_help
-                Ok(aopt::GetoptRes{ ret, parser })
+                Ok(aopt::GetoptRes{ ret: ret?, parser })
             }
 
             /// Parsing arguments returned from [`from_env`](aopt::prelude::Args::from_env) and return the [`GetoptRes`](aopt::GetoptRes).
@@ -832,10 +832,10 @@ impl<'a> FieldMeta<'a> {
                         let mut parser = <#unwrap_ty as cote::IntoParserDerive<#policy_ty>>::into_parser()?;
 
                         parser.init()?;
-                        let ret = parser.parse(args).map_err(Into::into)?;
+                        let ret = parser.parse(args).map_err(Into::into);
 
                         #may_be_display_help
-                        match ret.ok() {
+                        match ret?.ok() {
                             Ok(_) => {
                                 Ok(<#unwrap_ty>::try_extract(parser.optset_mut()).ok())
                             }
