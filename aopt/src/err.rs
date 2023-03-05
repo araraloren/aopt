@@ -104,8 +104,6 @@ pub enum Error {
     SpInvalidOptionName(ErrorStr),
 
     SpInvalidOptionValue(ErrorStr, ErrorStr),
-
-    SpDeactivateStyleError(ErrorStr, bool),
 }
 
 impl Default for Error {
@@ -143,13 +141,14 @@ impl Error {
         matches!(
             self,
             Error::Failure(_)
+                | Error::SpExtractError(_)
                 | Error::SpMissingArgument(_)
+                | Error::SpOptForceRequired(_)
                 | Error::SpPOSForceRequired(_)
                 | Error::SpCMDForceRequired(_)
                 | Error::SpInvalidOptionName(_)
                 | Error::SpInvalidOptionValue(_, _)
-                | Error::SpDeactivateStyleError(_, _)
-                | Error::SpExtractError(_)
+                
         )
     }
 
@@ -257,11 +256,6 @@ impl Error {
         Self::SpInvalidOptionValue(n.into(), t.into())
     }
 
-    /// Create Error::SpDeactivateStyleError error
-    pub fn sp_deactivate_style_error<T: Into<ErrorStr>>(t: T, support: bool) -> Self {
-        Self::SpDeactivateStyleError(t.into(), support)
-    }
-
     /// Create Error::SpExtractError error
     pub fn sp_extract_error<T: Into<ErrorStr>>(t: T) -> Self {
         Self::SpExtractError(t.into())
@@ -327,12 +321,6 @@ impl Error {
             }
             Error::SpInvalidOptionValue(name, error) => {
                 format!("Invalid option value for '{name}': {error}")
-            }
-            Error::SpDeactivateStyleError(msg, support) => {
-                format!(
-                    "Syntax error, option '{msg}' {} support deactivate style",
-                    if *support { "only" } else { "not" }
-                )
             }
             Error::SpExtractError(msg) => {
                 format!("Extract error: {}", msg)
