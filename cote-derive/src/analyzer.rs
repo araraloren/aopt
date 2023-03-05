@@ -216,14 +216,7 @@ impl<'a> Analyzer<'a> {
                 let GetoptRes { mut ret, mut parser } = Self::parse_args(args)?;
 
                 #may_be_display_help
-                match ret.ok() {
-                    Ok(_) => {
-                        Self::try_extract(parser.optset_mut())
-                    }
-                    Err(e) => {
-                        Err(aopt::Error::raise_error(format!("parsing arguments failed: {:?}", e)))
-                    }
-                }
+                Self::try_extract(parser.optset_mut())
             }
 
             pub fn parse_env() -> Result<Self, aopt::Error> {
@@ -840,7 +833,7 @@ impl<'a> FieldMeta<'a> {
                                 Ok(<#unwrap_ty>::try_extract(parser.optset_mut()).ok())
                             }
                             Err(e) => {
-                                Err(aopt::Error::raise_error(
+                                Err(aopt::Error::raise_failure(
                                     format!("parsing arguments failed! {{parser: {}, args: {:?}}}: {:?}",
                                         stringify!(#unwrap_ty),
                                         dbg_args, e)))
