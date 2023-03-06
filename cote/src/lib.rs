@@ -1,6 +1,7 @@
 #![doc = include_str!("../README.md")]
 pub mod meta;
 pub mod valid;
+pub mod _toturial;
 
 use std::borrow::Cow;
 use std::fmt::Debug;
@@ -79,7 +80,7 @@ where
     P::Inv<'a>: Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Cote")
+        f.debug_struct("CoteApp")
             .field("name", &self.name)
             .field("parser", &self.parser)
             .finish()
@@ -95,7 +96,7 @@ where
 {
     fn default() -> Self {
         Self {
-            name: "Cote".to_owned(),
+            name: "CoteApp".to_owned(),
             parser: Parser::default(),
         }
     }
@@ -280,7 +281,7 @@ where
     ///         Ok(())
     ///     })?;
     ///
-    ///     // cote still avilable here, Cote::run_mut_with pass mutable reference to closure.
+    ///     // cote still avilable here, CoteApp::run_mut_with pass mutable reference to closure.
     ///
     ///     Ok(())
     /// }
@@ -344,7 +345,7 @@ where
     ///     })
     ///     .await?;
     ///
-    ///     // cote still avilable here, Cote::run_async_mut_with pass mutable reference to closure.
+    ///     // cote still avilable here, CoteApp::run_async_mut_with pass mutable reference to closure.
     ///
     ///     Ok(())
     /// }
@@ -414,7 +415,7 @@ where
     ///         Ok(())
     ///     })?;
     ///
-    ///     // cote still avilable here, Cote::run_with pass reference to closure.
+    ///     // cote still avilable here, CoteApp::run_with pass reference to closure.
     ///
     ///     Ok(())
     /// }
@@ -478,7 +479,7 @@ where
     ///     })
     ///     .await?;
     ///
-    ///     // cote still avilable here, Cote::run_async_with pass reference to closure.
+    ///     // cote still avilable here, CoteApp::run_async_with pass reference to closure.
     ///
     ///     Ok(())
     /// }
@@ -680,7 +681,7 @@ pub fn simple_display_set_help<'a, T: Set, S: Into<Cow<'a, str>>>(
     Ok(())
 }
 
-/// Display help message of [`Cote`] generate from `Cargo.toml`.
+/// Display help message of [`CoteApp`] generate from `Cargo.toml`.
 /// The `head` will be generate from package's description.
 /// The `foot` will be generate from package's authors and version.
 /// Default option text width is 20, and default usage width is 10.
@@ -695,7 +696,7 @@ macro_rules! display_help {
     }};
 }
 
-/// Display help message of [`Cote`] generate from `Cargo.toml`.
+/// Display help message of [`CoteApp`] generate from `Cargo.toml`.
 /// The `head` will be generate from package's description.
 /// The `foot` will be generate from package's authors and version.
 #[macro_export]

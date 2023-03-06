@@ -84,6 +84,7 @@ fn main() -> Result<(), Error> {
 }
 ```
 
+See [`toturial`](crate::_toturial) for more information.
 
 ### Using [`CoteApp`](crate::CoteApp) load option from json configuration.
 
