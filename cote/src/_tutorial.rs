@@ -1,5 +1,5 @@
 //!
-//! # Documentation: Cote Toturial
+//! # Documentation: Cote Tutorial
 //! 
 //! 1. [Quick Start](#qucik-start)
 //! 

@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
 pub mod meta;
 pub mod valid;
-pub mod _toturial;
+pub mod _tutorial;
 
 use std::borrow::Cow;
 use std::fmt::Debug;
