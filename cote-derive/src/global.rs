@@ -17,6 +17,10 @@ pub(crate) trait Attr {
 pub enum CfgKind {
     ParserPolicy,
 
+    ParserCombined,
+
+    ParserEmbeddedPlus,
+
     ParserOn,
 
     ParserHelp,
@@ -110,15 +114,17 @@ impl Parse for GlobalCfg {
             "foot" => CfgKind::ParserFoot,
             "on" => CfgKind::ParserOn,
             "name" => CfgKind::ParserName,
+            "combine" => CfgKind::ParserCombined,
+            "embedded" => CfgKind::ParserEmbeddedPlus,
             _ => {
                 abort! {
-                    ident, "invalid configuration name in parser(...): {:?}", cfg_kind
+                    ident, "invalid configuration name in cote(...): {:?}", cfg_kind
                 }
             }
         };
 
         match cfg_kind {
-            CfgKind::ParserHelp => Ok(Self {
+            CfgKind::ParserHelp |  CfgKind::ParserCombined | CfgKind::ParserEmbeddedPlus => Ok(Self {
                 kind: cfg_kind,
                 value: CfgValue::Null,
             }),

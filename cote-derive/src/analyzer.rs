@@ -178,19 +178,22 @@ impl<'a> Analyzer<'a> {
         } else {
             quote! {}
         };
-        let mut no_delay_gen = quote! {};
+        let style_manager = self.struct_meta.generate_style_manager()?;
+        let mut other_setting = quote!{};
 
         for field in self.field_metas.iter() {
-            no_delay_gen.extend(field.generate_delay(true)?);
+            other_setting.extend(field.generate_delay(true)?);
         }
-        no_delay_gen.extend(quote! { policy; });
+        other_setting.extend(quote! { policy; });
         let inner = quote! {
             #[doc=concat!("Generate a [`Parser`] from [`", stringify!(#ident), "`].")]
             pub fn into_parser<'a>() -> Result<aopt::prelude::Parser<'a, #policy_ty>, aopt::Error> {
                 let mut parser = <Self as cote::IntoParserDerive<#policy_ty>>::into_parser()?;
-                let policy = parser.policy_mut();
-
-                #no_delay_gen
+                #style_manager
+                {
+                    let policy = parser.policy_mut();
+                    #other_setting
+                }
                 Ok(parser)
             }
 
@@ -502,6 +505,22 @@ impl<'a> StructMeta<'a> {
             policy_ty,
             where_clause,
         })
+    }
+
+    pub fn generate_style_manager(&self) -> syn::Result<TokenStream> {
+        let mut ret = quote!{};
+
+        if self.global_cfg.find_cfg(CfgKind::ParserCombined).is_some() {
+            ret.extend(quote!{
+                parser.enable_combined();
+            })
+        }
+        if self.global_cfg.find_cfg(CfgKind::ParserEmbeddedPlus).is_some() {
+            ret.extend(quote!{
+                parser.enable_embedded_plus();
+            })
+        }
+        Ok(ret)
     }
 
     pub fn generate_display_help(&self) -> syn::Result<TokenStream> {
