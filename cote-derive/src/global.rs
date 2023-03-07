@@ -35,6 +35,8 @@ pub enum CfgKind {
 
     ParserFoot,
 
+    ParserAbortHelp,
+
     SubPolicy,
 
     SubName,
@@ -116,6 +118,7 @@ impl Parse for GlobalCfg {
             "name" => CfgKind::ParserName,
             "combine" => CfgKind::ParserCombined,
             "embedded" => CfgKind::ParserEmbeddedPlus,
+            "aborthelp" => CfgKind::ParserAbortHelp,
             _ => {
                 abort! {
                     ident, "invalid configuration name in cote(...): {:?}", cfg_kind
@@ -124,7 +127,10 @@ impl Parse for GlobalCfg {
         };
 
         match cfg_kind {
-            CfgKind::ParserHelp |  CfgKind::ParserCombined | CfgKind::ParserEmbeddedPlus => Ok(Self {
+            CfgKind::ParserHelp
+            | CfgKind::ParserAbortHelp
+            | CfgKind::ParserCombined
+            | CfgKind::ParserEmbeddedPlus => Ok(Self {
                 kind: cfg_kind,
                 value: CfgValue::Null,
             }),
