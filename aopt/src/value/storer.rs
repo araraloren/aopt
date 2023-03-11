@@ -66,8 +66,8 @@ impl ValStorer {
                 trace_log!("Validator value storer, parsing {:?} -> {:?}", raw, val);
                 if !validator.invoke(&val) {
                     Err(Error::raise_failure(format!(
-                        "Value check failed for option {:?}",
-                        ctx.uid()
+                        "Value check failed for option Ctx {{ `{:?}` }}",
+                        ctx,
                     )))
                 } else {
                     act.store1(Some(val), handler);

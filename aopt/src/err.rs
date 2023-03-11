@@ -1,109 +1,22 @@
-use std::convert::From;
 use std::fmt::Display;
-
-use crate::Str;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-/// Error string of [`Error`](crate::Error) type.
-#[derive(Debug, Clone, Default)]
-pub struct ErrorStr(String);
-
-impl From<String> for ErrorStr {
-    fn from(v: String) -> Self {
-        Self(v)
-    }
-}
-
-impl<'a> From<&'a String> for ErrorStr {
-    fn from(v: &'a String) -> Self {
-        Self(v.clone())
-    }
-}
-
-impl<'a> From<&'a mut String> for ErrorStr {
-    fn from(v: &'a mut String) -> Self {
-        Self(v.clone())
-    }
-}
-
-impl<'a> From<&'a str> for ErrorStr {
-    fn from(v: &'a str) -> Self {
-        Self(String::from(v))
-    }
-}
-
-impl From<Str> for ErrorStr {
-    fn from(v: Str) -> Self {
-        Self(v.to_string())
-    }
-}
-
-impl<'a> From<&'a Str> for ErrorStr {
-    fn from(v: &'a Str) -> Self {
-        Self(v.to_string())
-    }
-}
-
-impl<'a> From<&'a mut Str> for ErrorStr {
-    fn from(v: &'a mut Str) -> Self {
-        Self(v.to_string())
-    }
-}
-
-impl Display for ErrorStr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.0.as_str())
-    }
-}
-
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum Error {
     Null,
-
-    Failure(ErrorStr),
-
-    CustomError(ErrorStr),
-
-    ArgMissingName(ErrorStr),
-
-    ArgParsingError(ErrorStr),
-
-    ArgMissingValue(ErrorStr),
-
-    ConParsingFailed(ErrorStr),
-
-    ConNoPOSIfCMDExists,
-
-    ConOptionTypeError(ErrorStr),
-
-    ConDeactivateStyleError(ErrorStr),
-
-    ConMissingIndex(ErrorStr, ErrorStr),
-
-    ConMissingField(ErrorStr, ErrorStr, ErrorStr),
-
-    ConInvalidName(ErrorStr, ErrorStr),
-
-    ConInvalidIndex(ErrorStr, ErrorStr),
-
-    ConOptionAliasError(ErrorStr),
-
-    ConParsingIndexFailed(ErrorStr, ErrorStr),
-
-    SpExtractError(ErrorStr),
-
-    SpMissingArgument(ErrorStr),
-
-    SpOptForceRequired(ErrorStr),
-
-    SpPOSForceRequired(ErrorStr),
-
-    SpCMDForceRequired(ErrorStr),
-
-    SpInvalidOptionName(ErrorStr),
-
-    SpInvalidOptionValue(ErrorStr, ErrorStr),
+    Custom(String),
+    InvalidArgName(String),
+    UnexceptedPos,
+    InvalidOptIndex { pattern: String, message: String },
+    InvalidCreateStr { pattern: String, message: String },
+    Failure(String),
+    MissingOptValue(String),
+    PosForceRequired(String),
+    OptForceRequired(String),
+    CmdForceRequired(String),
+    OptionNotFound(String),
+    ExtractValueError(String),
 }
 
 impl Default for Error {
@@ -112,21 +25,7 @@ impl Default for Error {
     }
 }
 
-impl std::fmt::Debug for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.display())
-    }
-}
-
-impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        None
-    }
-
-    fn cause(&self) -> Option<&dyn std::error::Error> {
-        self.source()
-    }
-}
+impl std::error::Error for Error {}
 
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -135,198 +34,119 @@ impl Display for Error {
 }
 
 impl Error {
+    pub fn is_null(&self) -> bool {
+        matches!(self, Error::Null)
+    }
+
     /// The error can be moitted if [`is_failure`](Error::is_failure) return true.
     ///
     pub fn is_failure(&self) -> bool {
         matches!(
             self,
             Error::Failure(_)
-                | Error::SpExtractError(_)
-                | Error::SpMissingArgument(_)
-                | Error::SpOptForceRequired(_)
-                | Error::SpPOSForceRequired(_)
-                | Error::SpCMDForceRequired(_)
-                | Error::SpInvalidOptionName(_)
-                | Error::SpInvalidOptionValue(_, _)
-                
+                | Error::ExtractValueError(_)
+                | Error::OptionNotFound(_)
+                | Error::CmdForceRequired(_)
+                | Error::PosForceRequired(_)
+                | Error::OptForceRequired(_)
+                | Error::MissingOptValue(_)
         )
     }
 
-    pub fn is_null(&self) -> bool {
-        matches!(self, Error::Null)
+    pub fn null() -> Self {
+        Self::Null
     }
 
-    /// Create Error::CustomError error
-    pub fn raise_error<T: Into<ErrorStr>>(t: T) -> Self {
-        Error::CustomError(t.into())
+    pub fn invalid_arg_name<T: Into<String>>(msg: T) -> Self {
+        Self::InvalidArgName(msg.into())
     }
 
-    /// Create Error::Failure error
-    pub fn raise_failure<T: Into<ErrorStr>>(t: T) -> Self {
-        Error::Failure(t.into())
+    /// No Pos@1 allowed if the option set has cmd.
+    pub fn unexcepted_pos_if_has_cmd() -> Self {
+        Self::UnexceptedPos
     }
 
-    /// Create Error::ArgParsingError error
-    pub fn arg_parsing_failed<T: Into<ErrorStr>>(t: T) -> Self {
-        Self::ArgParsingError(t.into())
+    pub fn invalid_opt_index<T: Into<String>>(pattern: T, msg: T) -> Self {
+        Self::InvalidOptIndex {
+            pattern: pattern.into(),
+            message: msg.into(),
+        }
     }
 
-    /// Create Error::ArgMissingName error
-    pub fn arg_missing_name<T: Into<ErrorStr>>(t: T) -> Self {
-        Self::ArgMissingName(t.into())
+    pub fn invalid_create_str<T: Into<String>>(pattern: T, msg: T) -> Self {
+        Self::InvalidCreateStr {
+            pattern: pattern.into(),
+            message: msg.into(),
+        }
     }
 
-    /// Create Error::ConNoPOSIfCMDExists error
-    pub fn con_can_not_insert_pos() -> Self {
-        Self::ConNoPOSIfCMDExists
+    pub fn raise_error(message: impl Into<String>) -> Self {
+        Self::Custom(message.into())
     }
 
-    /// Create Error::ConInvalidName error
-    pub fn con_invalid_name<T: Into<ErrorStr>>(t: T, p: T) -> Self {
-        Self::ConInvalidName(t.into(), p.into())
+    pub fn sp_missing_opt_value<T: Into<String>>(option: T) -> Self {
+        Self::MissingOptValue(option.into())
     }
 
-    /// Create Error::ConMissingIndex error
-    pub fn con_missing_index<T: Into<ErrorStr>>(t: T, p: T) -> Self {
-        Self::ConMissingIndex(t.into(), p.into())
+    pub fn sp_pos_force_require<T: Into<String>>(options: T) -> Self {
+        Self::PosForceRequired(options.into())
     }
 
-    /// Create Error::ConMissingField error
-    pub fn con_missing_field<T: Into<ErrorStr>>(f: T, t: T, p: T) -> Self {
-        Self::ConMissingField(f.into(), t.into(), p.into())
+    pub fn sp_opt_force_require<T: Into<String>>(options: T) -> Self {
+        Self::OptForceRequired(options.into())
     }
 
-    /// Create Error::ConInvalidIndex error
-    pub fn con_invalid_index<T: Into<ErrorStr>>(p: T, e: T) -> Self {
-        Self::ConInvalidIndex(p.into(), e.into())
+    pub fn sp_cmd_force_require<T: Into<String>>(options: T) -> Self {
+        Self::CmdForceRequired(options.into())
     }
 
-    /// Create Error::ConParsingFailed error
-    pub fn con_parsing_failed<T: Into<ErrorStr>>(t: T) -> Self {
-        Self::ConParsingFailed(t.into())
+    pub fn sp_option_not_found<T: Into<String>>(option: T) -> Self {
+        Self::OptionNotFound(option.into())
     }
 
-    /// Create Error::ConParsingIndexFailed error
-    pub fn con_parsing_index_failed<T: Into<ErrorStr>>(t: T, e: T) -> Self {
-        Self::ConParsingIndexFailed(t.into(), e.into())
+    pub fn sp_raise_extract_error<T: Into<String>>(msg: T) -> Self {
+        Self::ExtractValueError(msg.into())
     }
 
-    /// Create Error::ConDeactivateStyleError error
-    pub fn con_unsupport_deactivate_style<T: Into<ErrorStr>>(t: T) -> Self {
-        Self::ConDeactivateStyleError(t.into())
-    }
-
-    /// Create Error::ConOptionTypeError error
-    pub fn con_unsupport_option_type<T: Into<ErrorStr>>(t: T) -> Self {
-        Self::ConOptionTypeError(t.into())
-    }
-
-    /// Create Error::ConOptionAliasError error
-    pub fn con_invalid_option_alias<T: Into<ErrorStr>>(t: T) -> Self {
-        Self::ConOptionAliasError(t.into())
-    }
-
-    /// Create Error::SpMissingArgument error
-    pub fn sp_missing_argument<T: Into<ErrorStr>>(t: T) -> Self {
-        Self::SpMissingArgument(t.into())
-    }
-
-    /// Create Error::SpPOSForceRequired error
-    pub fn sp_pos_force_require<T: Into<ErrorStr>>(t: T) -> Self {
-        Self::SpPOSForceRequired(t.into())
-    }
-
-    /// Create Error::SpOptForceRequired error
-    pub fn sp_opt_force_require<T: Into<ErrorStr>>(t: T) -> Self {
-        Self::SpOptForceRequired(t.into())
-    }
-
-    /// Create Error::SpCMDForceRequired error
-    pub fn sp_cmd_force_require<T: Into<ErrorStr>>(t: T) -> Self {
-        Self::SpCMDForceRequired(t.into())
-    }
-
-    /// Create Error::SpInvalidOptionName error
-    pub fn sp_invalid_option_name<T: Into<ErrorStr>>(t: T) -> Self {
-        Self::SpInvalidOptionName(t.into())
-    }
-
-    /// Create Error::SpInvalidOptionValue error
-    pub fn sp_invalid_option_value<T: Into<ErrorStr>>(n: T, t: T) -> Self {
-        Self::SpInvalidOptionValue(n.into(), t.into())
-    }
-
-    /// Create Error::SpExtractError error
-    pub fn sp_extract_error<T: Into<ErrorStr>>(t: T) -> Self {
-        Self::SpExtractError(t.into())
+    pub fn raise_failure(message: impl Into<String>) -> Self {
+        Self::Failure(message.into())
     }
 
     pub fn display(&self) -> String {
         match self {
-            Error::Null => "Null".to_owned(),
-            Error::Failure(opt) => opt.to_string(),
-            Error::CustomError(opt) => opt.to_string(),
-            Error::ArgMissingName(opt) => {
-                format!("Syntax error! Missing option name: '{opt}'")
+            Error::Null => "Null { }".to_owned(),
+            Error::Custom(message) => message.clone(),
+            Error::InvalidArgName(msg) => {
+                format!("Invalid argument name: {}", msg)
             }
-            Error::ArgParsingError(opt) => {
-                format!("Syntax error! Parsing failed: '{opt}'.")
-            }
-            Error::ArgMissingValue(opt) => {
-                format!("Syntax error! Missing option value: '{opt}'.")
-            }
-            Error::ConNoPOSIfCMDExists => {
-                "Can not have force required POS if CMD exists.".to_owned()
-            }
-            Error::ConOptionTypeError(value_type) => {
-                format!("Not support option type '{value_type}'.")
-            }
-            Error::ConDeactivateStyleError(name) => {
-                format!("Option '{name}' not support deactivate style.")
-            }
-            Error::ConInvalidName(name, msg) => {
-                format!("Invalid name of option '{name}': {msg}")
-            }
-            Error::ConMissingIndex(name, value_type) => {
-                format!("Syntax error! Missing index for option '{name}' with type '{value_type}'.")
-            }
-            Error::ConMissingField(field, name, value_type) => {
+            Error::UnexceptedPos => "Can not insert Pos@1 and Cmd both".to_owned(),
+            Error::InvalidOptIndex { pattern, message } => {
                 format!(
-                    "Syntax error! Missing `{field}` for option '{name}' with type '{value_type}'."
+                    "Invalid index create string within `{}`: {}",
+                    pattern, message
                 )
             }
-            Error::ConOptionAliasError(alias) => {
-                format!("Invalid alias '{alias}', check the option prefix or name.")
+            Error::InvalidCreateStr { pattern, message } => {
+                format!("Invalid option create string `{}`: {}", pattern, message)
             }
-            Error::ConParsingIndexFailed(opt, err) => {
-                format!("Syntax error! Parsing index '{opt}' failed: {err}.")
+            Error::Failure(message) => message.clone(),
+            Error::MissingOptValue(option) => {
+                format!("Missing option value for `{}`", option)
             }
-            Error::ConParsingFailed(opt) => {
-                format!("Syntax error! Parsing option string '{opt}' failed.")
+            Error::PosForceRequired(options) => {
+                format!("Pos `{}` are force required", options)
             }
-            Error::SpMissingArgument(opt) => {
-                format!("Syntax error! Missing argument for option '{opt}'.")
+            Error::OptForceRequired(options) => {
+                format!("Option `{}` are force required", options)
             }
-            Error::SpOptForceRequired(poss) => {
-                format!("Option '{poss}' are force required.")
+            Error::CmdForceRequired(options) => {
+                format!("Cmd `{}` are force required", options)
             }
-            Error::SpPOSForceRequired(poss) => {
-                format!("POS '{poss}' are force required.")
+            Error::OptionNotFound(option) => {
+                format!("Can not find option `{}`", option)
             }
-            Error::SpCMDForceRequired(cmds) => {
-                format!("CMD '{cmds}' are force required.")
-            }
-            Error::SpInvalidOptionName(name) => {
-                format!("Can not find option '{name}'.")
-            }
-            Error::SpInvalidOptionValue(name, error) => {
-                format!("Invalid option value for '{name}': {error}")
-            }
-            Error::SpExtractError(msg) => {
-                format!("Extract error: {}", msg)
-            }
-            Error::ConInvalidIndex(pattern, msg) => {
-                format!("Syntax error, invalid index of '{pattern}': {msg}")
+            Error::ExtractValueError(msg) => {
+                format!("Extract value failed: {}", msg)
             }
         }
     }

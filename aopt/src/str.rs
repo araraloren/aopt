@@ -53,6 +53,18 @@ impl<'a> From<&'a Str> for Str {
     }
 }
 
+impl From<Str> for String {
+    fn from(value: Str) -> Self {
+        String::from(value.as_str())
+    }
+}
+
+impl<'a> From<&'a Str> for String {
+    fn from(value: &'a Str) -> Self {
+        String::from(value.as_str())
+    }
+}
+
 impl<'a> From<Cow<'a, str>> for Str {
     fn from(value: Cow<'a, str>) -> Self {
         Self(ARef::from(value))

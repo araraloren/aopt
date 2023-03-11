@@ -75,67 +75,6 @@ impl StrParser {
         Self {}
     }
 
-    // the index number is small in generally
-    pub(crate) fn parse_as_usize(pattern: &str, data: &str) -> Result<usize, Error> {
-        // let mut count = 0;
-        // let mut ret = 0usize;
-
-        // for ch in data.chars() {
-        //     // skip '+'
-        //     if ch == '+' || ch.is_ascii_whitespace() {
-        //         continue;
-        //     }
-        //     count += 1;
-        //     ret = ret * 10
-        //         + ch.to_digit(10).ok_or_else(|| {
-        //             Error::con_parsing_index_failed(
-        //                 pattern.to_string(),
-        //                 format!("{} is not a valid number", data),
-        //             )
-        //         })? as usize;
-        // }
-        // if count == 0 {
-        //     return Err(Error::con_parsing_index_failed(
-        //         pattern.to_string(),
-        //         format!("{} is not a valid number", data),
-        //     ));
-        // }
-        // Ok(ret)
-        data.parse::<usize>().map_err(|e| {
-            Error::con_parsing_index_failed(
-                pattern.to_string(),
-                format!("{} is not a valid number: {:?}", data, e),
-            )
-        })
-    }
-
-    pub(crate) fn parse_as_usize_sequence(pattern: &str, data: &str) -> Result<Vec<usize>, Error> {
-        let mut ret = vec![];
-        let mut last = 0usize;
-
-        for (index, ch) in data.chars().enumerate() {
-            // skip '+'
-            if ch == '+' || ch == '[' {
-                last += 1;
-                continue;
-            }
-            if ch.is_ascii_whitespace() {
-                continue;
-            }
-            if ch == ',' || ch == ']' {
-                if last == index {
-                    return Err(Error::con_parsing_index_failed(
-                        pattern.to_string(),
-                        format!("{} is not a valid number", data),
-                    ));
-                }
-                ret.push(Self::parse_as_usize(pattern, &data[last..index])?);
-                last = index + 1;
-            }
-        }
-        Ok(ret)
-    }
-
     pub fn parse_creator_string(&self, pattern: Str) -> Result<ConstrctInfo, Error> {
         let pattern_clone = pattern.clone();
         let pattern = pattern.as_str();
@@ -182,10 +121,13 @@ impl StrParser {
                         .with_ctor(cap.get(IDX_CTOR).map(|v| Str::from(v.as_str().trim())))
                         .with_alias(alias))
                 } else {
-                    Err(Error::con_parsing_failed(pattern_clone))
+                    Err(Error::invalid_create_str(
+                        pattern_clone.as_str(),
+                        "option create string parsing failed",
+                    ))
                 }
             })
-            .map_err(|e| Error::raise_error(format!("Can not access str parser regex: {:?}", e)))?
+            .map_err(|e| Error::raise_error(format!("can not access str parser regex: {:?}", e)))?
     }
 }
 

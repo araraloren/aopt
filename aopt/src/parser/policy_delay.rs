@@ -332,7 +332,7 @@ where
                         if !matched && self.strict() {
                             let default_str = astr("");
 
-                            return Err(Error::sp_invalid_option_name(format!(
+                            return Err(Error::sp_option_not_found(format!(
                                 "{}",
                                 clopt.name().unwrap_or(&default_str)
                             )));

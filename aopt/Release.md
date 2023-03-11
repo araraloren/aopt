@@ -1,6 +1,10 @@
 
 # Relase note
 
+## 0.9.12
+
+- Improve the error message, remove unused function
+
 ## 0.9.11
 
 - Change the 'static of Invoker to 'a

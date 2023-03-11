@@ -180,22 +180,22 @@ pub trait SetExt<C: Ctor> {
 impl<S: Set> SetExt<S::Ctor> for S {
     fn opt(&self, uid: Uid) -> Result<&<S::Ctor as Ctor>::Opt, Error> {
         self.get(uid)
-            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for Set")))
+            .ok_or_else(|| Error::raise_error(format!("Can not find option `{}` by uid", uid)))
     }
 
     fn opt_mut(&mut self, uid: Uid) -> Result<&mut <S::Ctor as Ctor>::Opt, Error> {
         self.get_mut(uid)
-            .ok_or_else(|| Error::raise_error(format!("Invalid uid {uid} for Set")))
+            .ok_or_else(|| Error::raise_error(format!("Can not find option `{}` by uid", uid)))
     }
 
     fn ctor(&self, name: &Str) -> Result<&S::Ctor, Error> {
         self.get_ctor(name)
-            .ok_or_else(|| Error::con_unsupport_option_type(name))
+            .ok_or_else(|| Error::raise_error(format!("Can not find option `{}` by name", name)))
     }
 
     fn ctor_mut(&mut self, name: &Str) -> Result<&mut S::Ctor, Error> {
         self.get_ctor_mut(name)
-            .ok_or_else(|| Error::con_unsupport_option_type(name))
+            .ok_or_else(|| Error::raise_error(format!("Can not find option `{}` by name", name)))
     }
 }
 
@@ -226,7 +226,7 @@ where
         let vals = self.opt_mut(opt)?.vals_mut::<U>()?;
 
         vals.pop().ok_or_else(|| {
-            Error::raise_error(format!("Not enough value can take from option {}", opt))
+            Error::raise_error(format!("Not enough value can take from option `{}`", opt))
         })
     }
 }

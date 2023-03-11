@@ -295,9 +295,8 @@ where
 {
     fn drop(&mut self) {
         if self.drop {
-            let error = "Error when commit the option in Commit::Drop, call `run` get the Result";
-
-            self.commit_change().expect(error);
+            self.commit_change()
+                .unwrap_or_else(|e| panic!("catch error in SetCommit::drop: {:?}", e));
         }
     }
 }

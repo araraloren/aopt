@@ -66,7 +66,7 @@ where
 
                         if index == 1 && opt.force() {
                             // if we have cmd, can not have force required POS @1
-                            return Err(Error::con_can_not_insert_pos());
+                            return Err(Error::unexcepted_pos_if_has_cmd());
                         }
                     }
                 }

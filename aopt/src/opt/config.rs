@@ -256,13 +256,15 @@ impl OptConfig {
         Ok(self
             .name
             .as_ref()
-            .ok_or_else(|| Error::raise_error("Incomplete option configuration: missing Name"))?
+            .ok_or_else(|| {
+                Error::raise_error("Incomplete option configuration: missing option name")
+            })?
             .clone())
     }
 
     pub fn gen_type(&mut self) -> Result<TypeId, Error> {
         self.r#type.take().ok_or_else(|| {
-            Error::raise_error("Incomplete option configuration: missing value type")
+            Error::raise_error("Incomplete option configuration: missing option value type")
         })
     }
 

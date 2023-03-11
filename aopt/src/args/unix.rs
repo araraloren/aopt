@@ -124,10 +124,15 @@ impl ArgParser for RawVal {
         if let Some((name, value)) = self.split_once(EQUAL) {
             let name = name
                 .to_str()
-                .ok_or_else(|| Error::arg_missing_name(format!("Name must be valid utf8")))?
+                .ok_or_else(|| {
+                    Error::invalid_arg_name(format!(
+                        "failed convert argument name `{}` to str",
+                        self
+                    ))
+                })?
                 .trim();
             if name.is_empty() {
-                return Err(Error::arg_missing_name(format!("Name can not be empty")));
+                return Err(Error::invalid_arg_name("argument name can not be empty"));
             }
 
             Ok(Self::Output {
@@ -138,8 +143,8 @@ impl ArgParser for RawVal {
             let name = self
                 .to_str()
                 .ok_or_else(|| {
-                    Error::arg_parsing_failed(format!(
-                        "Not a valid option setting string: {:?}",
+                    Error::invalid_arg_name(format!(
+                        "failed convert argument name `{}` to str",
                         self
                     ))
                 })?
@@ -164,7 +169,7 @@ impl ArgParser for RawVal {
             let name = name.trim();
 
             if name.is_empty() {
-                return Err(Error::arg_missing_name("Name can not be empty"));
+                return Err(Error::invalid_arg_name("argument name can not be empty"));
             }
 
             Ok(Self::Output {

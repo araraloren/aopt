@@ -20,12 +20,7 @@ where
 pub fn raw2str(raw: Option<&RawVal>) -> Result<&str, Error> {
     raw.ok_or_else(|| Error::raise_failure("unexcepted empty value"))?
         .get_str()
-        .ok_or_else(|| {
-            Error::raise_failure(format!(
-                "Can't convert value `{:?}` to &str: invalid utf8",
-                raw
-            ))
-        })
+        .ok_or_else(|| Error::raise_failure(format!("can't convert value `{:?}` to str", raw)))
 }
 
 impl RawValParser for () {

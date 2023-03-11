@@ -41,7 +41,7 @@ mod __raw_utf8 {
                 value
                     .to_str()
                     .ok_or_else(|| {
-                        crate::Error::raise_error(format!("Invalid utf8 for RawVal: {:?}", &value))
+                        crate::Error::raise_error(format!("failed convert `{:?}` to str", &value))
                     })?
                     .to_owned(),
             ))

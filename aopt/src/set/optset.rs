@@ -330,10 +330,7 @@ where
         let opt: Str = opt.into();
 
         self.find(opt.clone())?.map(|v| v.uid()).ok_or_else(|| {
-            Error::raise_error(format!(
-                "Can not find option: invalid option string {}",
-                opt
-            ))
+            Error::raise_error(format!("Can not find option `{}` in option set", opt))
         })
     }
 }

@@ -30,19 +30,39 @@ pub trait OptValueExt {
 
 impl<O: Opt> OptValueExt for O {
     fn val<T: ErasedTy>(&self) -> Result<&T, Error> {
-        self.accessor().val()
+        self.accessor().val().map_err(|e| {
+            Error::raise_error(format!(
+                "Can not find value(ref) of `{}`: {:?}",
+                self.hint(),
+                e
+            ))
+        })
     }
 
     fn val_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
-        self.accessor_mut().val_mut()
+        let hint = self.hint().clone();
+
+        self.accessor_mut().val_mut().map_err(|e| {
+            Error::raise_error(format!("Can not find value(mut) of `{}`: {:?}", hint, e))
+        })
     }
 
     fn vals<T: ErasedTy>(&self) -> Result<&Vec<T>, Error> {
-        self.accessor().vals()
+        self.accessor().vals().map_err(|e| {
+            Error::raise_error(format!(
+                "Can not find values(ref) of `{}`: {:?}",
+                self.hint(),
+                e
+            ))
+        })
     }
 
     fn vals_mut<T: ErasedTy>(&mut self) -> Result<&mut Vec<T>, Error> {
-        self.accessor_mut().vals_mut()
+        let hint = self.hint().clone();
+
+        self.accessor_mut().vals_mut().map_err(|e| {
+            Error::raise_error(format!("Can not find value(mut) of `{}`: {:?}", hint, e))
+        })
     }
 
     fn entry<T: ErasedTy>(&mut self) -> Entry<'_, Vec<T>> {
@@ -50,19 +70,45 @@ impl<O: Opt> OptValueExt for O {
     }
 
     fn rawval(&self) -> Result<&RawVal, Error> {
-        self.accessor().rawval()
+        self.accessor().rawval().map_err(|e| {
+            Error::raise_error(format!(
+                "Can not find raw value(ref) of `{}`: {:?}",
+                self.hint(),
+                e
+            ))
+        })
     }
 
     fn rawval_mut(&mut self) -> Result<&mut RawVal, Error> {
-        self.accessor_mut().rawval_mut()
+        let hint = self.hint().clone();
+
+        self.accessor_mut().rawval_mut().map_err(|e| {
+            Error::raise_error(format!(
+                "Can not find raw value(mut) of `{}`: {:?}",
+                hint, e
+            ))
+        })
     }
 
     fn rawvals(&self) -> Result<&Vec<RawVal>, Error> {
-        self.accessor().rawvals()
+        self.accessor().rawvals().map_err(|e| {
+            Error::raise_error(format!(
+                "Can not find raw values(ref) of `{}`: {:?}",
+                self.hint(),
+                e
+            ))
+        })
     }
 
     fn rawvals_mut(&mut self) -> Result<&mut Vec<RawVal>, Error> {
-        self.accessor_mut().rawvals_mut()
+        let hint = self.hint().clone();
+
+        self.accessor_mut().rawvals_mut().map_err(|e| {
+            Error::raise_error(format!(
+                "Can not find raw values(mut) of `{}`: {:?}",
+                hint, e
+            ))
+        })
     }
 
     /// Filter the value from option values if `f` return true.

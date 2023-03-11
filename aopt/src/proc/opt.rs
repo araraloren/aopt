@@ -183,7 +183,7 @@ where
         }
         if matched {
             if self.is_consume() && self.argument.is_none() {
-                return Err(Error::sp_missing_argument(opt.hint()));
+                return Err(Error::sp_missing_opt_value(opt.hint()));
             }
             opt.set_matched(true);
             self.matched_uid = Some(opt.uid());
