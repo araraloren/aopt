@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 use crate::opt::Index;
 use crate::opt::Opt;
 use crate::opt::Style;
+use crate::set::SetChecker;
 use crate::set::SetOpt;
 use crate::trace_log;
 use crate::Error;
@@ -13,46 +14,46 @@ use crate::Uid;
 
 /// Service which do option check in [`Policy`](crate::parser::Policy).
 #[derive(Clone)]
-pub struct SetChecker<S>(PhantomData<S>);
+pub struct DefaultSetChecker<S>(PhantomData<S>);
 
-#[cfg(feature = "sync")]
-unsafe impl<S> Send for SetChecker<S> {}
-
-#[cfg(feature = "sync")]
-unsafe impl<S> Sync for SetChecker<S> {}
-
-impl<S> Debug for SetChecker<S> {
+impl<S> Debug for DefaultSetChecker<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CheckService").finish()
     }
 }
 
-impl<S> Default for SetChecker<S> {
+impl<S> Default for DefaultSetChecker<S> {
     fn default() -> Self {
         Self(PhantomData::default())
     }
 }
 
-impl<S> SetChecker<S> {
+impl<S> DefaultSetChecker<S>
+where
+    S: crate::set::Set,
+    SetOpt<S>: Opt,
+{
     pub fn new() -> Self {
         Self(PhantomData::default())
     }
 
     pub fn clear(&mut self) {}
+
+    pub fn opt<'a>(set: &'a S, id: &Uid) -> &'a SetOpt<S> {
+        set.get(*id).unwrap()
+    }
 }
 
-impl<S> SetChecker<S>
+impl<S> SetChecker<S> for DefaultSetChecker<S>
 where
     S: crate::set::Set,
     SetOpt<S>: Opt,
 {
-    pub fn opt<'a>(set: &'a S, id: &Uid) -> &'a SetOpt<S> {
-        set.get(*id).unwrap()
-    }
+    type Error = Error;
 
     /// Check if we have [`Cmd`](crate::opt::Style::Cmd),
     /// then no force required [`Pos`](crate::opt::Style::Pos)@1 allowed.
-    pub fn pre_check(&self, set: &mut S) -> Result<bool, Error> {
+    fn pre_check(&self, set: &mut S) -> Result<bool, Error> {
         let has_cmd = set.iter().any(|opt| opt.mat_style(Style::Cmd));
 
         const MAX_INDEX: usize = usize::MAX;
@@ -78,7 +79,7 @@ where
     /// Call the [`valid`](crate::opt::Opt::valid) check the
     /// options([`Argument`](crate::opt::Style::Argument),
     /// [`Boolean`](crate::opt::Style::Boolean), [`Combined`](crate::opt::Style::Combined))
-    pub fn opt_check(&self, set: &mut S) -> Result<bool, Error> {
+    fn opt_check(&self, set: &mut S) -> Result<bool, Error> {
         trace_log!("Opt Check, call valid on all Opt ...");
         for opt in set.iter().filter(|opt| {
             opt.mat_style(Style::Argument)
@@ -98,7 +99,7 @@ where
     /// [`Pos`](crate::opt::Style::Pos) has same position are replaceble even it is force reuqired.
     ///
     /// For which [`Pos`](crate::opt::Style::Pos) is have floating position, it must be set if it is force reuqired.
-    pub fn pos_check(&self, set: &mut S) -> Result<bool, Error> {
+    fn pos_check(&self, set: &mut S) -> Result<bool, Error> {
         // for POS has certainty position, POS has same position are replaceble even it is force reuqired.
         let mut index_map = HashMap::<usize, Vec<Uid>>::default();
         // for POS has uncertainty position, it must be set if it is force reuqired
@@ -174,7 +175,7 @@ where
         Ok(true)
     }
 
-    pub fn cmd_check(&self, set: &mut S) -> Result<bool, Error> {
+    fn cmd_check(&self, set: &mut S) -> Result<bool, Error> {
         let mut names = vec![];
         let mut valid = false;
 
@@ -195,7 +196,7 @@ where
         Ok(true)
     }
 
-    pub fn post_check(&self, set: &mut S) -> Result<bool, Error> {
+    fn post_check(&self, set: &mut S) -> Result<bool, Error> {
         trace_log!("Post Check, call valid on Main ...");
         Ok(set
             .iter()

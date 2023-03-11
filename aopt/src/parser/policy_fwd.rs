@@ -12,7 +12,6 @@ use super::OptGuess;
 use super::OptStyleManager;
 use super::Policy;
 use super::ReturnVal;
-use super::SetChecker;
 use super::UserStyle;
 use super::UserStyleManager;
 use crate::args::ArgParser;
@@ -24,6 +23,7 @@ use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::proc::Process;
 use crate::set::OptValidator;
+use crate::set::SetChecker;
 use crate::set::SetOpt;
 use crate::ARef;
 use crate::Error;
@@ -98,29 +98,48 @@ use crate::Error;
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Debug, Clone)]
-pub struct FwdPolicy<Set, Ser> {
+#[derive(Clone)]
+pub struct FwdPolicy<Set, Ser, Chk> {
     strict: bool,
 
-    checker: SetChecker<Set>,
+    checker: Chk,
 
     style_manager: OptStyleManager,
 
     marker_s: PhantomData<(Set, Ser)>,
 }
 
-impl<Set, Ser> Default for FwdPolicy<Set, Ser> {
+impl<Set, Ser, Chk> Debug for FwdPolicy<Set, Ser, Chk>
+where
+    Chk: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FwdPolicy")
+            .field("strict", &self.strict)
+            .field("checker", &self.checker)
+            .field("style_manager", &self.style_manager)
+            .finish()
+    }
+}
+
+impl<Set, Ser, Chk> Default for FwdPolicy<Set, Ser, Chk>
+where
+    Chk: Default,
+{
     fn default() -> Self {
         Self {
             strict: true,
             style_manager: OptStyleManager::default(),
-            checker: SetChecker::default(),
+            checker: Chk::default(),
             marker_s: PhantomData::default(),
         }
     }
 }
 
-impl<Set, Ser> FwdPolicy<Set, Ser> {
+impl<Set, Ser, Chk> FwdPolicy<Set, Ser, Chk>
+where
+    Chk: Default,
+{
     pub fn new(strict: bool, style: OptStyleManager) -> Self {
         Self {
             strict,
@@ -128,7 +147,9 @@ impl<Set, Ser> FwdPolicy<Set, Ser> {
             ..Default::default()
         }
     }
+}
 
+impl<Set, Ser, Chk> FwdPolicy<Set, Ser, Chk> {
     /// In strict mode, if an argument looks like an option (it matched any option prefix),
     /// then it must matched.
     pub fn with_strict(mut self, strict: bool) -> Self {
@@ -138,6 +159,11 @@ impl<Set, Ser> FwdPolicy<Set, Ser> {
 
     pub fn with_styles(mut self, styles: Vec<UserStyle>) -> Self {
         self.style_manager.set(styles);
+        self
+    }
+
+    pub fn with_checker(mut self, checker: Chk) -> Self {
+        self.checker = checker;
         self
     }
 
@@ -151,12 +177,21 @@ impl<Set, Ser> FwdPolicy<Set, Ser> {
         self
     }
 
+    pub fn set_checker(&mut self, checker: Chk) -> &mut Self {
+        self.checker = checker;
+        self
+    }
+
     pub fn strict(&self) -> bool {
         self.strict
     }
 
-    pub fn checker(&self) -> &SetChecker<Set> {
+    pub fn checker(&self) -> &Chk {
         &self.checker
+    }
+
+    pub fn checker_mut(&mut self) -> &mut Chk {
+        &mut self.checker
     }
 
     pub(crate) fn noa_cmd() -> usize {
@@ -172,7 +207,7 @@ impl<Set, Ser> FwdPolicy<Set, Ser> {
     }
 }
 
-impl<Set, Ser> UserStyleManager for FwdPolicy<Set, Ser> {
+impl<Set, Ser, Chk> UserStyleManager for FwdPolicy<Set, Ser, Chk> {
     fn style_manager(&self) -> &OptStyleManager {
         &self.style_manager
     }
@@ -182,11 +217,12 @@ impl<Set, Ser> UserStyleManager for FwdPolicy<Set, Ser> {
     }
 }
 
-impl<Set, Ser> FwdPolicy<Set, Ser>
+impl<Set, Ser, Chk> FwdPolicy<Set, Ser, Chk>
 where
     SetOpt<Set>: Opt,
     Ser: 'static,
-    Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
+    Chk: SetChecker<Set>,
+    Set: crate::set::Set + OptParser + OptValidator + 'static,
 {
     pub(crate) fn parse_impl<'a>(
         &mut self,
@@ -195,7 +231,7 @@ where
         inv: &mut <Self as Policy>::Inv<'a>,
         ser: &mut <Self as Policy>::Ser,
     ) -> Result<(), <Self as Policy>::Error> {
-        self.checker().pre_check(set)?;
+        self.checker().pre_check(set).map_err(|e| e.into())?;
 
         let opt_styles = &self.style_manager;
         let args = ctx.orig_args().clone();
@@ -261,7 +297,7 @@ where
             }
         }
 
-        self.checker().opt_check(set)?;
+        self.checker().opt_check(set).map_err(|e| e.into())?;
 
         let noa_args = ARef::new(noa_args);
         let noa_len = noa_args.len();
@@ -286,7 +322,7 @@ where
                 )?;
             }
 
-            self.checker().cmd_check(set)?;
+            self.checker().cmd_check(set).map_err(|e| e.into())?;
 
             for idx in 1..noa_len {
                 if let Some(mut proc) = NOAGuess::new().guess(
@@ -307,9 +343,9 @@ where
                 }
             }
         } else {
-            self.checker().cmd_check(set)?;
+            self.checker().cmd_check(set).map_err(|e| e.into())?;
         }
-        self.checker().pos_check(set)?;
+        self.checker().pos_check(set).map_err(|e| e.into())?;
 
         let main_args = noa_args;
         let main_len = main_args.len();
@@ -332,17 +368,18 @@ where
             )?;
         }
 
-        self.checker().post_check(set)?;
+        self.checker().post_check(set).map_err(|e| e.into())?;
 
         Ok(())
     }
 }
 
-impl<Set, Ser> Policy for FwdPolicy<Set, Ser>
+impl<Set, Ser, Chk> Policy for FwdPolicy<Set, Ser, Chk>
 where
     SetOpt<Set>: Opt,
     Ser: 'static,
-    Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
+    Chk: SetChecker<Set>,
+    Set: crate::set::Set + OptParser + OptValidator + 'static,
 {
     type Ret = ReturnVal;
 

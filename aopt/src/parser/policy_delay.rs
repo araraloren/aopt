@@ -14,7 +14,6 @@ use super::OptGuess;
 use super::OptStyleManager;
 use super::Policy;
 use super::ReturnVal;
-use super::SetChecker;
 use super::UserStyle;
 use super::UserStyleManager;
 use crate::args::ArgParser;
@@ -27,6 +26,7 @@ use crate::opt::OptParser;
 use crate::prelude::SetExt;
 use crate::proc::Process;
 use crate::set::OptValidator;
+use crate::set::SetChecker;
 use crate::set::SetOpt;
 use crate::trace_log;
 use crate::ARef;
@@ -106,12 +106,12 @@ use crate::Str;
 /// # }
 /// ```
 #[derive(Clone)]
-pub struct DelayPolicy<Set, Ser> {
+pub struct DelayPolicy<Set, Ser, Chk> {
     strict: bool,
 
     contexts: Vec<CtxSaver>,
 
-    checker: SetChecker<Set>,
+    checker: Chk,
 
     style_manager: OptStyleManager,
 
@@ -120,7 +120,10 @@ pub struct DelayPolicy<Set, Ser> {
     marker_s: PhantomData<(Set, Ser)>,
 }
 
-impl<Set, Ser> Debug for DelayPolicy<Set, Ser> {
+impl<Set, Ser, Chk> Debug for DelayPolicy<Set, Ser, Chk>
+where
+    Chk: Debug,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DelayPolicy")
             .field("strict", &self.strict)
@@ -132,12 +135,15 @@ impl<Set, Ser> Debug for DelayPolicy<Set, Ser> {
     }
 }
 
-impl<Set, Ser> Default for DelayPolicy<Set, Ser> {
+impl<Set, Ser, Chk> Default for DelayPolicy<Set, Ser, Chk>
+where
+    Chk: Default,
+{
     fn default() -> Self {
         Self {
             strict: true,
             contexts: vec![],
-            checker: SetChecker::default(),
+            checker: Chk::default(),
             style_manager: OptStyleManager::default(),
             no_delay_opt: vec![],
             marker_s: PhantomData::default(),
@@ -145,7 +151,10 @@ impl<Set, Ser> Default for DelayPolicy<Set, Ser> {
     }
 }
 
-impl<Set, Ser> DelayPolicy<Set, Ser> {
+impl<Set, Ser, Chk> DelayPolicy<Set, Ser, Chk>
+where
+    Chk: Default,
+{
     pub fn new(strict: bool, styles: OptStyleManager) -> Self {
         Self {
             strict,
@@ -153,7 +162,9 @@ impl<Set, Ser> DelayPolicy<Set, Ser> {
             ..Self::default()
         }
     }
+}
 
+impl<Set, Ser, Chk> DelayPolicy<Set, Ser, Chk> {
     /// Enable strict mode, if argument is an option, it must be matched.
     pub fn with_strict(mut self, strict: bool) -> Self {
         self.strict = strict;
@@ -167,6 +178,11 @@ impl<Set, Ser> DelayPolicy<Set, Ser> {
 
     pub fn with_no_delay(mut self, name: impl Into<Str>) -> Self {
         self.no_delay_opt.push(name.into());
+        self
+    }
+
+    pub fn with_checker(mut self, checker: Chk) -> Self {
+        self.checker = checker;
         self
     }
 
@@ -185,16 +201,25 @@ impl<Set, Ser> DelayPolicy<Set, Ser> {
         self
     }
 
+    pub fn set_checker(&mut self, checker: Chk) -> &mut Self {
+        self.checker = checker;
+        self
+    }
+
     pub fn strict(&self) -> bool {
         self.strict
     }
 
-    pub fn checker(&self) -> &SetChecker<Set> {
+    pub fn no_delay(&self) -> &[Str] {
+        &self.no_delay_opt
+    }
+
+    pub fn checker(&self) -> &Chk {
         &self.checker
     }
 
-    pub fn no_delay(&self) -> &[Str] {
-        &self.no_delay_opt
+    pub fn checker_mut(&mut self) -> &mut Chk {
+        &mut self.checker
     }
 
     pub(crate) fn noa_cmd() -> usize {
@@ -210,7 +235,7 @@ impl<Set, Ser> DelayPolicy<Set, Ser> {
     }
 }
 
-impl<Set, Ser> UserStyleManager for DelayPolicy<Set, Ser> {
+impl<Set, Ser, Chk> UserStyleManager for DelayPolicy<Set, Ser, Chk> {
     fn style_manager(&self) -> &OptStyleManager {
         &self.style_manager
     }
@@ -220,10 +245,11 @@ impl<Set, Ser> UserStyleManager for DelayPolicy<Set, Ser> {
     }
 }
 
-impl<Set, Ser> DelayPolicy<Set, Ser>
+impl<Set, Ser, Chk> DelayPolicy<Set, Ser, Chk>
 where
     SetOpt<Set>: Opt,
     Ser: 'static,
+    Chk: SetChecker<Set>,
     Set: crate::set::Set + OptParser + Debug + 'static,
 {
     pub fn invoke_opt_callback(
@@ -263,10 +289,11 @@ where
     }
 }
 
-impl<Set, Ser> DelayPolicy<Set, Ser>
+impl<Set, Ser, Chk> DelayPolicy<Set, Ser, Chk>
 where
     SetOpt<Set>: Opt,
     Ser: 'static,
+    Chk: SetChecker<Set>,
     Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
 {
     pub(crate) fn parse_impl<'a>(
@@ -276,7 +303,7 @@ where
         inv: &mut <Self as Policy>::Inv<'a>,
         ser: &mut <Self as Policy>::Ser,
     ) -> Result<(), <Self as Policy>::Error> {
-        self.checker().pre_check(set)?;
+        self.checker().pre_check(set).map_err(|e| e.into())?;
 
         // take the invoke service, avoid borrow the ser
         let opt_styles = self.style_manager.clone();
@@ -373,7 +400,7 @@ where
                 )?;
             }
 
-            self.checker().cmd_check(set)?;
+            self.checker().cmd_check(set).map_err(|e| e.into())?;
 
             for idx in 1..noa_len {
                 if let Some(mut proc) = NOAGuess::new().guess(
@@ -394,7 +421,7 @@ where
                 }
             }
         } else {
-            self.checker().cmd_check(set)?;
+            self.checker().cmd_check(set).map_err(|e| e.into())?;
         }
 
         // after cmd and pos callback invoked, invoke the callback of option
@@ -402,9 +429,9 @@ where
             self.invoke_opt_callback(ctx, set, inv, ser, saver)?;
         }
 
-        self.checker().opt_check(set)?;
+        self.checker().opt_check(set).map_err(|e| e.into())?;
 
-        self.checker().pos_check(set)?;
+        self.checker().pos_check(set).map_err(|e| e.into())?;
 
         let main_args = noa_args;
         let main_len = main_args.len();
@@ -427,15 +454,16 @@ where
             )?;
         }
 
-        self.checker().post_check(set)?;
+        self.checker().post_check(set).map_err(|e| e.into())?;
         Ok(())
     }
 }
 
-impl<Set, Ser> Policy for DelayPolicy<Set, Ser>
+impl<Set, Ser, Chk> Policy for DelayPolicy<Set, Ser, Chk>
 where
     SetOpt<Set>: Opt,
     Ser: 'static,
+    Chk: SetChecker<Set>,
     Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
 {
     type Ret = ReturnVal;

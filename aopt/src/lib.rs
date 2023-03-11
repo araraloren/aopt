@@ -258,6 +258,7 @@ pub mod prelude {
     pub use crate::value::InferValueRef;
     // pub use crate::parser::BoxedPolicy;
     pub use crate::ctx::HandlerCollection;
+    pub use crate::parser::DefaultSetChecker;
     pub use crate::parser::DelayPolicy;
     pub use crate::parser::FwdPolicy;
     pub use crate::parser::OptStyleManager;
@@ -267,7 +268,6 @@ pub mod prelude {
     pub use crate::parser::Policy;
     pub use crate::parser::PrePolicy;
     pub use crate::parser::ReturnVal;
-    pub use crate::parser::SetChecker;
     pub use crate::parser::UserStyle;
     pub use crate::parser::UserStyleManager;
     pub use crate::proc::Match;
@@ -291,6 +291,7 @@ pub mod prelude {
     pub use crate::set::PrefixOptValidator;
     pub use crate::set::Set;
     pub use crate::set::SetCfg;
+    pub use crate::set::SetChecker;
     pub use crate::set::SetCommit;
     pub use crate::set::SetCommitWithValue;
     pub use crate::set::SetExt;

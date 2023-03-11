@@ -7,7 +7,7 @@ pub(crate) mod process;
 pub(crate) mod returnval;
 pub(crate) mod style;
 
-pub use self::checker::SetChecker;
+pub use self::checker::DefaultSetChecker;
 pub use self::commit::ParserCommit;
 pub use self::commit::ParserCommitWithValue;
 pub use self::policy_delay::DelayPolicy;

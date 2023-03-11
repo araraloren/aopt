@@ -5,6 +5,8 @@
 
 - Improve the error message, remove unused function
 
+- Support self define set checker of Policy
+
 ## 0.9.11
 
 - Change the 'static of Invoker to 'a

@@ -300,3 +300,17 @@ where
         self
     }
 }
+
+pub trait SetChecker<S> {
+    type Error: Into<Error>;
+
+    fn pre_check(&self, set: &mut S) -> Result<bool, Self::Error>;
+
+    fn opt_check(&self, set: &mut S) -> Result<bool, Self::Error>;
+
+    fn pos_check(&self, set: &mut S) -> Result<bool, Self::Error>;
+
+    fn cmd_check(&self, set: &mut S) -> Result<bool, Self::Error>;
+
+    fn post_check(&self, set: &mut S) -> Result<bool, Self::Error>;
+}

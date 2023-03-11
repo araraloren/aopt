@@ -4,11 +4,13 @@ use crate::opt::AOpt;
 use crate::opt::Creator;
 use crate::opt::OptConfig;
 use crate::opt::StrParser;
+use crate::parser::DefaultSetChecker;
 use crate::parser::DelayPolicy;
 use crate::parser::FwdPolicy;
 use crate::parser::Parser;
 use crate::parser::Policy;
 use crate::parser::PrePolicy;
+use crate::prelude::SetChecker;
 use crate::ser::AppServices;
 use crate::set::OptSet;
 use crate::set::PrefixOptValidator;
@@ -31,11 +33,11 @@ pub type ASet = OptSet<StrParser, ACreator, PrefixOptValidator>;
 
 pub type ASer = AppServices;
 
-pub type AFwdPolicy = FwdPolicy<ASet, ASer>;
+pub type AFwdPolicy = FwdPolicy<ASet, ASer, DefaultSetChecker<ASet>>;
 
-pub type APrePolicy = PrePolicy<ASet, ASer>;
+pub type APrePolicy = PrePolicy<ASet, ASer, DefaultSetChecker<ASet>>;
 
-pub type ADelayPolicy = DelayPolicy<ASet, ASer>;
+pub type ADelayPolicy = DelayPolicy<ASet, ASer, DefaultSetChecker<ASet>>;
 
 pub type AFwdParser<'a> = Parser<'a, AFwdPolicy>;
 
@@ -43,45 +45,57 @@ pub type APreParser<'a> = Parser<'a, APrePolicy>;
 
 pub type ADelayParser<'a> = Parser<'a, ADelayPolicy>;
 
-impl APolicyExt<AFwdPolicy> for AFwdPolicy {
-    fn default_set(&self) -> <AFwdPolicy as Policy>::Set {
+impl<Ser, Chk> APolicyExt<FwdPolicy<ASet, Ser, Chk>> for FwdPolicy<ASet, Ser, Chk>
+where
+    Ser: Default + 'static,
+    Chk: SetChecker<ASet>,
+{
+    fn default_set(&self) -> ASet {
         aset_with_default_creators()
     }
 
-    fn default_ser(&self) -> <AFwdPolicy as Policy>::Ser {
-        ASer::default()
+    fn default_ser(&self) -> Ser {
+        Ser::default()
     }
 
-    fn default_inv<'a>(&self) -> <AFwdPolicy as Policy>::Inv<'a> {
-        Invoker::<<AFwdPolicy as Policy>::Set, <AFwdPolicy as Policy>::Ser>::default()
+    fn default_inv<'a>(&self) -> <FwdPolicy<ASet, Ser, Chk> as Policy>::Inv<'a> {
+        Invoker::<ASet, Ser>::default()
     }
 }
 
-impl APolicyExt<APrePolicy> for APrePolicy {
-    fn default_set(&self) -> <AFwdPolicy as Policy>::Set {
+impl<Ser, Chk> APolicyExt<PrePolicy<ASet, Ser, Chk>> for PrePolicy<ASet, Ser, Chk>
+where
+    Ser: Default + 'static,
+    Chk: SetChecker<ASet>,
+{
+    fn default_set(&self) -> ASet {
         aset_with_default_creators()
     }
 
-    fn default_ser(&self) -> <AFwdPolicy as Policy>::Ser {
-        ASer::default()
+    fn default_ser(&self) -> Ser {
+        Ser::default()
     }
 
-    fn default_inv<'a>(&self) -> <APrePolicy as Policy>::Inv<'a> {
-        Invoker::<<APrePolicy as Policy>::Set, <APrePolicy as Policy>::Ser>::default()
+    fn default_inv<'a>(&self) -> <PrePolicy<ASet, Ser, Chk> as Policy>::Inv<'a> {
+        Invoker::<ASet, Ser>::default()
     }
 }
 
-impl APolicyExt<ADelayPolicy> for ADelayPolicy {
-    fn default_set(&self) -> <AFwdPolicy as Policy>::Set {
+impl<Ser, Chk> APolicyExt<DelayPolicy<ASet, Ser, Chk>> for DelayPolicy<ASet, Ser, Chk>
+where
+    Ser: Default + 'static,
+    Chk: SetChecker<ASet>,
+{
+    fn default_set(&self) -> ASet {
         aset_with_default_creators()
     }
 
-    fn default_ser(&self) -> <AFwdPolicy as Policy>::Ser {
-        ASer::default()
+    fn default_ser(&self) -> Ser {
+        Ser::default()
     }
 
-    fn default_inv<'a>(&self) -> <ADelayPolicy as Policy>::Inv<'a> {
-        Invoker::<<ADelayPolicy as Policy>::Set, <ADelayPolicy as Policy>::Ser>::default()
+    fn default_inv<'a>(&self) -> <DelayPolicy<ASet, Ser, Chk> as Policy>::Inv<'a> {
+        Invoker::<ASet, Ser>::default()
     }
 }
 
