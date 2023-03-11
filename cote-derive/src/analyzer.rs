@@ -473,7 +473,7 @@ impl<'a> StructMeta<'a> {
                     aopt::prelude::ADelayPolicy
                 }
             }
-            _ => policy_name.to_token_stream(),
+            _ => policy.unwrap().value.to_token_stream(),
         };
 
         for param in params {
@@ -730,7 +730,7 @@ impl<'a> FieldMeta<'a> {
                             aopt::prelude::ADelayPolicy
                         }
                     }
-                    _ => policy_name.to_token_stream(),
+                    _ => policy.unwrap().value.to_token_stream(),
                 });
                 unwrap_ty = Some(remove_option(&trimed_ty)?);
 
