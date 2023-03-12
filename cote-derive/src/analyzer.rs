@@ -154,7 +154,8 @@ impl<'a> Analyzer<'a> {
     pub fn generate_parse_interface(&self) -> syn::Result<TokenStream> {
         let generics = &self.struct_meta.generics.params;
         let ident = self.struct_meta.ident;
-        let policy_ty = self.struct_meta.gen_policy_type()?;
+        let has_sub_command = self.field_metas.iter().any(|v| v.is_sub_command());
+        let policy_ty = self.struct_meta.gen_policy_type(has_sub_command)?;
         let where_clause = self.struct_meta.generate_where_clause()?;
         let help_handler = self.struct_meta.generate_help_handler(None)?;
         let may_be_display_help = self.struct_meta.generate_help_display(&help_handler)?;
@@ -376,7 +377,8 @@ impl<'a> Analyzer<'a> {
         let generics = &self.struct_meta.generics.params;
         let where_clause = self.struct_meta.generate_where_clause_with_zlifetime()?;
         let ident = self.struct_meta.ident;
-        let policy_ty = self.struct_meta.gen_policy_type()?;
+        let has_sub_command = self.field_metas.iter().any(|v| v.is_sub_command());
+        let policy_ty = self.struct_meta.gen_policy_type(has_sub_command)?;
 
         Ok(if self.struct_meta.lifetimes.is_empty() {
             if generics.is_empty() {
@@ -473,8 +475,6 @@ pub struct StructMeta<'a> {
 
     global_cfg: Configurations<GlobalCfg>,
 
-    policy_ty: TokenStream,
-
     application_name: TokenStream,
 }
 
@@ -487,28 +487,6 @@ impl<'a> StructMeta<'a> {
         let mut lifetimes = vec![];
         let mut tys = vec![];
         let global_cfg = Configurations::<GlobalCfg>::parse_attrs(&input.attrs, "cote");
-        let policy = global_cfg.find_cfg(CfgKind::ParserPolicy);
-        let policy_name = policy
-            .map(|v| v.value.to_token_stream().to_string())
-            .unwrap_or(String::from("fwd"));
-        let policy_ty = match policy_name.as_str() {
-            "pre" => {
-                quote! {
-                    aopt::prelude::APrePolicy
-                }
-            }
-            "fwd" => {
-                quote! {
-                    aopt::prelude::AFwdPolicy
-                }
-            }
-            "delay" => {
-                quote! {
-                    aopt::prelude::ADelayPolicy
-                }
-            }
-            _ => policy.unwrap().value.to_token_stream(),
-        };
         let application_name = if let Some(head_cfg) = global_cfg.find_cfg(CfgKind::ParserName) {
             let value = &head_cfg.value;
 
@@ -544,7 +522,6 @@ impl<'a> StructMeta<'a> {
             generics,
             lifetimes,
             global_cfg,
-            policy_ty,
             where_clause,
             application_name,
         })
@@ -712,8 +689,25 @@ impl<'a> StructMeta<'a> {
         })
     }
 
-    pub fn gen_policy_type(&self) -> syn::Result<&TokenStream> {
-        Ok(&self.policy_ty)
+    pub fn gen_policy_type(&self, has_sub_command: bool) -> syn::Result<TokenStream> {
+        let policy_ty = self.global_cfg.find_cfg(CfgKind::ParserPolicy);
+
+        Ok(if let Some(policy_ty) = policy_ty {
+            let policy_name = policy_ty.value.to_token_stream().to_string();
+            let policy = generate_default_policy(&policy_name);
+
+            if has_sub_command && policy.is_some() {
+                generate_default_policy("pre").unwrap()
+            } else {
+                policy_ty.value.to_token_stream()
+            }
+        } else {
+            if has_sub_command {
+                generate_default_policy("pre").unwrap()
+            } else {
+                generate_default_policy("fwd").unwrap()
+            }
+        })
     }
 }
 
@@ -767,31 +761,17 @@ impl<'a> FieldMeta<'a> {
                     cfgs: arg_cfg.cfgs.into_iter().map(|v| v.into()).collect(),
                 }
             } else if !sub_cfg.cfgs.is_empty() {
-                let policy = sub_cfg.find_cfg(CfgKind::SubPolicy);
-                let policy_name = policy
-                    .map(|v| v.value.to_token_stream().to_string())
-                    .unwrap_or(String::from("fwd"));
+                policy_ty = Some(
+                    if let Some(policy_cfg) = sub_cfg.find_cfg(CfgKind::SubPolicy) {
+                        let policy_name = policy_cfg.value.to_token_stream().to_string();
+                        let policy = generate_default_policy(&policy_name);
 
-                policy_ty = Some(match policy_name.as_str() {
-                    "pre" => {
-                        quote! {
-                            aopt::prelude::APrePolicy
-                        }
-                    }
-                    "fwd" => {
-                        quote! {
-                            aopt::prelude::AFwdPolicy
-                        }
-                    }
-                    "delay" => {
-                        quote! {
-                            aopt::prelude::ADelayPolicy
-                        }
-                    }
-                    _ => policy.unwrap().value.to_token_stream(),
-                });
+                        policy.unwrap_or(policy_cfg.value.to_token_stream())
+                    } else {
+                        generate_default_policy("fwd").unwrap()
+                    },
+                );
                 unwrap_ty = Some(remove_option(&trimed_ty)?);
-
                 is_sub_command = true;
                 Configurations {
                     cfgs: sub_cfg.cfgs.into_iter().map(|v| v.into()).collect(),
@@ -897,7 +877,7 @@ impl<'a> FieldMeta<'a> {
                 })
             }
         } else if self.is_sub_command() {
-            let policy_ty = self.policy_ty.as_ref().unwrap();
+            let policy_ty = self.policy_ty.as_ref().unwrap_or_else(|| panic!("123"));
             let unwrap_ty = self.unwrap_ty.as_ref().unwrap();
             let pass_help_to_next = if insert_help {
                 quote! {
@@ -1113,8 +1093,12 @@ impl<'a> FieldMeta<'a> {
                         config.set_help(#token);
                     }
                 }
-                CfgKind::SubName | CfgKind::SubRef | CfgKind::SubMut | CfgKind::SubHead | CfgKind::SubFoot => {
-                    quote!{}
+                CfgKind::SubName
+                | CfgKind::SubRef
+                | CfgKind::SubMut
+                | CfgKind::SubHead
+                | CfgKind::SubFoot => {
+                    quote! {}
                 }
                 _ => {
                     abort! {
@@ -1427,4 +1411,19 @@ pub fn check_in_path(ty: &Type, name: &str) -> bool {
         return check_in_path(reference.elem.as_ref(), name);
     }
     false
+}
+
+pub fn generate_default_policy(policy_name: &str) -> Option<TokenStream> {
+    match policy_name {
+        "pre" => Some(quote! {
+            aopt::prelude::APrePolicy
+        }),
+        "fwd" => Some(quote! {
+            aopt::prelude::AFwdPolicy
+        }),
+        "delay" => Some(quote! {
+            aopt::prelude::ADelayPolicy
+        }),
+        _ => None,
+    }
 }
