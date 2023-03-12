@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
+pub mod _tutorial;
 pub mod meta;
 pub mod valid;
-pub mod _tutorial;
 
 use std::borrow::Cow;
 use std::fmt::Debug;
@@ -630,9 +630,9 @@ pub fn simple_display_set_help<'a, T: Set, S: Into<Cow<'a, str>>>(
     );
     let global = app_help.global_mut();
 
-    global.add_block(Block::new("command", "<COMMAND>", "", "COMMAND:", ""))?;
-    global.add_block(Block::new("option", "", "", "OPTION:", ""))?;
-    global.add_block(Block::new("args", "[ARGS]", "", "ARGS:", ""))?;
+    global.add_block(Block::new("command", "<COMMAND>", "", "Commands:", ""))?;
+    global.add_block(Block::new("option", "", "", "Options:", ""))?;
+    global.add_block(Block::new("args", "[ARGS]", "", "Args:", ""))?;
     for opt in set.iter() {
         if opt.mat_style(Style::Pos) {
             global.add_store(
@@ -785,9 +785,7 @@ mod test {
             sources: Pos<Vec<PathBuf>>,
         }
 
-        let example = CopyTool::parse(Args::from_array([
-            "app", "--force",
-        ]));
+        let example = CopyTool::parse(Args::from_array(["app", "--force"]));
 
         assert!(example.is_err());
 
@@ -876,14 +874,7 @@ mod test {
             Ok(Some(()))
         }
 
-        let args = Args::from_array([
-            "app",
-            ".",
-            "-H",
-            "-name=foo",
-            "-size",
-            "42",
-        ]);
+        let args = Args::from_array(["app", ".", "-H", "-name=foo", "-size", "42"]);
 
         let GetoptRes { ret, parser: _ } = Find::parse_args(args).unwrap();
 
@@ -940,13 +931,7 @@ mod test {
             path: Pos<PathBuf>,
         }
 
-        let args = Args::from_array([
-            "app",
-            "ls",
-            "--all",
-            "--depth=42",
-            ".",
-        ]);
+        let args = Args::from_array(["app", "ls", "--all", "--depth=42", "."]);
 
         let app = App::parse(args)?;
 
@@ -963,13 +948,7 @@ mod test {
             }
         );
 
-        let args = Args::from_array([
-            "app",
-            "list",
-            "--all",
-            "--depth=6",
-            ".",
-        ]);
+        let args = Args::from_array(["app", "list", "--all", "--depth=6", "."]);
 
         let app = App::parse(args)?;
 
@@ -982,12 +961,7 @@ mod test {
             }
         );
 
-        let args = Args::from_array([
-            "app",
-            "--count=8",
-            "find",
-            "something",
-        ]);
+        let args = Args::from_array(["app", "--count=8", "find", "something"]);
 
         let app = App::parse(args)?;
 
