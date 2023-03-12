@@ -94,7 +94,7 @@ impl<'a> Analyzer<'a> {
         let where_clause = if has_handler_on_field || has_handler_on_global {
             quote! {
                 where
-                P::Ser: 'zlifetime,
+                P::Ser: aopt::ser::ServicesValExt + 'zlifetime,
                 P::Error: Into<aopt::Error>,
                 P::Set: aopt::prelude::Set + aopt::set::SetValueFindExt + 'zlifetime,
                 P::Inv<'zlifetime>: aopt::ctx::HandlerCollection<'zlifetime, P::Set, P::Ser>,
@@ -105,7 +105,7 @@ impl<'a> Analyzer<'a> {
         } else {
             quote! {
                 where
-                P::Ser: 'zlifetime,
+                P::Ser: aopt::ser::ServicesValExt + 'zlifetime,
                 P::Error: Into<aopt::Error>,
                 P::Set: aopt::prelude::Set + aopt::set::SetValueFindExt + 'zlifetime,
                 P::Inv<'zlifetime>: aopt::ctx::HandlerCollection<'zlifetime, P::Set, P::Ser>,
@@ -156,9 +156,10 @@ impl<'a> Analyzer<'a> {
         let ident = self.struct_meta.ident;
         let policy_ty = self.struct_meta.gen_policy_type()?;
         let where_clause = self.struct_meta.generate_where_clause()?;
-        let help_handler = self.struct_meta.generate_help_handler()?;
+        let help_handler = self.struct_meta.generate_help_handler(false)?;
         let may_be_display_help = self.struct_meta.generate_help_display(&help_handler)?;
         let style_manager = self.struct_meta.generate_style_manager()?;
+        let app_name = &self.struct_meta.application_name;
         let mut other_setting = quote! {};
 
         for field in self.field_metas.iter() {
@@ -181,6 +182,7 @@ impl<'a> Analyzer<'a> {
             pub fn parse_args<'yliftime>(args: aopt::prelude::Args)
                 -> Result<aopt::GetoptRes<<#policy_ty as aopt::prelude::Policy>::Ret, aopt::prelude::Parser<'yliftime, #policy_ty>>, aopt::Error> {
                 let mut parser = Self::into_parser()?;
+                parser.set_app_data(vec![#app_name])?;
                 parser.init()?;
                 let ret = parser.parse(aopt::ARef::new(args)).map_err(Into::into);
                 // if has failure
@@ -342,7 +344,7 @@ impl<'a> Analyzer<'a> {
             });
             if field.has_handler() {
                 let uid_ident = Ident::new(&format!("option_uid_{}", idx), field.ident.span());
-                let help_handler = self.struct_meta.generate_help_handler()?;
+                let help_handler = self.struct_meta.generate_help_handler(true)?;
                 let handler = field.generate_handler(
                     &uid_ident,
                     &help_option_uid,
@@ -472,6 +474,8 @@ pub struct StructMeta<'a> {
     global_cfg: Configurations<GlobalCfg>,
 
     policy_ty: TokenStream,
+
+    application_name: TokenStream,
 }
 
 impl<'a> StructMeta<'a> {
@@ -505,6 +509,17 @@ impl<'a> StructMeta<'a> {
             }
             _ => policy.unwrap().value.to_token_stream(),
         };
+        let application_name = if let Some(head_cfg) = global_cfg.find_cfg(CfgKind::ParserName) {
+            let value = &head_cfg.value;
+
+            quote! {
+                String::from(#value)
+            }
+        } else {
+            quote! {
+                format!("{}", env!("CARGO_PKG_NAME"))
+            }
+        };
 
         for param in params {
             match param {
@@ -531,6 +546,7 @@ impl<'a> StructMeta<'a> {
             global_cfg,
             policy_ty,
             where_clause,
+            application_name,
         })
     }
 
@@ -585,7 +601,7 @@ impl<'a> StructMeta<'a> {
         }
     }
 
-    pub fn generate_help_handler(&self) -> syn::Result<TokenStream> {
+    pub fn  generate_help_handler(&self, for_field: bool) -> syn::Result<TokenStream> {
         let head = if let Some(head_cfg) = self.global_cfg.find_cfg(CfgKind::ParserHead) {
             let value = &head_cfg.value;
 
@@ -608,17 +624,6 @@ impl<'a> StructMeta<'a> {
                 format!("Create by {} v{}", env!("CARGO_PKG_AUTHORS"), env!("CARGO_PKG_VERSION"))
             }
         };
-        let name = if let Some(head_cfg) = self.global_cfg.find_cfg(CfgKind::ParserName) {
-            let value = &head_cfg.value;
-
-            quote! {
-                String::from(#value)
-            }
-        } else {
-            quote! {
-                format!("{}", env!("CARGO_PKG_NAME"))
-            }
-        };
         let width = if let Some(head_cfg) = self.global_cfg.find_cfg(CfgKind::ParserHelpWidth) {
             let value = &head_cfg.value;
 
@@ -638,6 +643,14 @@ impl<'a> StructMeta<'a> {
             } else {
                 quote! { #HELP_USAGE_WIDTH }
             };
+        let name = if !for_field {
+            self.application_name.clone()
+        }
+        else {
+            quote! {
+                ser_names.join(" ")
+            }
+        };
 
         if self.global_cfg.find_cfg(CfgKind::ParserAbortHelp).is_some()
             || self.global_cfg.find_cfg(CfgKind::ParserHelp).is_some()
@@ -905,19 +918,27 @@ impl<'a> FieldMeta<'a> {
 
             Ok(quote! {
                 parser.entry(#ident)?.on(
-                    move |set: &mut P::Set, _: &mut P::Ser, args: aopt::prelude::ctx::Args, index: aopt::prelude::ctx::Index| {
+                    move |set: &mut P::Set, ser: &mut P::Ser, args: aopt::prelude::ctx::Args, index: aopt::prelude::ctx::Index| {
                         use std::ops::Deref;
 
                         let mut args = args.deref().clone().into_inner();
-
+                        let pre_ser_names = ser.sve_val::<Vec<String>>()?;
+                        let mut ser_names = pre_ser_names.clone();
+                        let current_cmd = args.remove(*index.deref());
+                        let current_cmd = current_cmd.get_str();
+                        
                         // remove current sub command
-                        args.remove(*index.deref());
+                        
+                        ser_names.push(current_cmd.ok_or_else(|| 
+                            aopt::Error::raise_error(format!("can not convert `{:?}` to str", current_cmd)))?.to_owned()
+                        );
                         #pass_help_to_next
 
                         let args = aopt::ARef::new(aopt::prelude::Args::from_vec(args));
                         let dbg_args = args.clone();
                         let mut parser = <#unwrap_ty as cote::IntoParserDerive<#policy_ty>>::into_parser()?;
 
+                        parser.set_app_data(ser_names.clone())?;
                         parser.init()?;
                         let ret = parser.parse(args).map_err(Into::into);
 
