@@ -51,6 +51,10 @@ pub enum CfgKind {
 
     SubMut,
 
+    SubHead,
+
+    SubFoot,
+
     OptHint,
 
     OptHelp,
@@ -243,6 +247,8 @@ impl Parse for SubCfg {
             "mut" => CfgKind::SubMut,
             "hint" => CfgKind::SubHint,
             "help" => CfgKind::SubHelp,
+            "head" => CfgKind::SubHead,
+            "foot" => CfgKind::SubFoot,
             _ => {
                 abort! {
                     ident, "invalid configuration name in sub(...): {:?}", cfg_kind

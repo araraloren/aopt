@@ -156,7 +156,7 @@ impl<'a> Analyzer<'a> {
         let ident = self.struct_meta.ident;
         let policy_ty = self.struct_meta.gen_policy_type()?;
         let where_clause = self.struct_meta.generate_where_clause()?;
-        let help_handler = self.struct_meta.generate_help_handler(false)?;
+        let help_handler = self.struct_meta.generate_help_handler(None)?;
         let may_be_display_help = self.struct_meta.generate_help_display(&help_handler)?;
         let style_manager = self.struct_meta.generate_style_manager()?;
         let app_name = &self.struct_meta.application_name;
@@ -210,7 +210,7 @@ impl<'a> Analyzer<'a> {
                     let inner_ctx = ctx.inner_ctx().ok();
                     let e = ret.failure();
                     Err(aopt::Error::raise_error(
-                        format!("Parsing arguments `{:?}` failed: {:?}, inner_ctx = {:?}", 
+                        format!("Parsing arguments `{:?}` failed: {:?}, inner_ctx = {:?}",
                             args, e.display(), inner_ctx)))
                 }
             }
@@ -344,7 +344,7 @@ impl<'a> Analyzer<'a> {
             });
             if field.has_handler() {
                 let uid_ident = Ident::new(&format!("option_uid_{}", idx), field.ident.span());
-                let help_handler = self.struct_meta.generate_help_handler(true)?;
+                let help_handler = self.struct_meta.generate_help_handler(Some(field))?;
                 let handler = field.generate_handler(
                     &uid_ident,
                     &help_option_uid,
@@ -601,8 +601,8 @@ impl<'a> StructMeta<'a> {
         }
     }
 
-    pub fn  generate_help_handler(&self, for_field: bool) -> syn::Result<TokenStream> {
-        let head = if let Some(head_cfg) = self.global_cfg.find_cfg(CfgKind::ParserHead) {
+    pub fn generate_help_handler(&self, sub_field: Option<&FieldMeta>) -> syn::Result<TokenStream> {
+        let mut head = if let Some(head_cfg) = self.global_cfg.find_cfg(CfgKind::ParserHead) {
             let value = &head_cfg.value;
 
             quote! {
@@ -613,8 +613,8 @@ impl<'a> StructMeta<'a> {
                 format!("{}", env!("CARGO_PKG_DESCRIPTION"))
             }
         };
-        let foot = if let Some(head_cfg) = self.global_cfg.find_cfg(CfgKind::ParserFoot) {
-            let value = &head_cfg.value;
+        let mut foot = if let Some(foot_cfg) = self.global_cfg.find_cfg(CfgKind::ParserFoot) {
+            let value = &foot_cfg.value;
 
             quote! {
                 String::from(#value)
@@ -624,6 +624,22 @@ impl<'a> StructMeta<'a> {
                 format!("Create by {} v{}", env!("CARGO_PKG_AUTHORS"), env!("CARGO_PKG_VERSION"))
             }
         };
+        if let Some(sub_field_ref) = sub_field {
+            if let Some(head_cfg) = sub_field_ref.field_cfg.find_cfg(CfgKind::SubHead) {
+                let value = &head_cfg.value;
+
+                head = quote! {
+                    String::from(#value)
+                };
+            }
+            if let Some(foot_cfg) = sub_field_ref.field_cfg.find_cfg(CfgKind::SubFoot) {
+                let value = &foot_cfg.value;
+
+                foot = quote! {
+                    String::from(#value)
+                };
+            }
+        }
         let width = if let Some(head_cfg) = self.global_cfg.find_cfg(CfgKind::ParserHelpWidth) {
             let value = &head_cfg.value;
 
@@ -643,10 +659,9 @@ impl<'a> StructMeta<'a> {
             } else {
                 quote! { #HELP_USAGE_WIDTH }
             };
-        let name = if !for_field {
+        let name = if sub_field.is_none() {
             self.application_name.clone()
-        }
-        else {
+        } else {
             quote! {
                 ser_names.join(" ")
             }
@@ -926,10 +941,10 @@ impl<'a> FieldMeta<'a> {
                         let mut ser_names = pre_ser_names.clone();
                         let current_cmd = args.remove(*index.deref());
                         let current_cmd = current_cmd.get_str();
-                        
+
                         // remove current sub command
-                        
-                        ser_names.push(current_cmd.ok_or_else(|| 
+
+                        ser_names.push(current_cmd.ok_or_else(||
                             aopt::Error::raise_error(format!("can not convert `{:?}` to str", current_cmd)))?.to_owned()
                         );
                         #pass_help_to_next
@@ -1098,8 +1113,8 @@ impl<'a> FieldMeta<'a> {
                         config.set_help(#token);
                     }
                 }
-                CfgKind::SubName => {
-                    quote! {}
+                CfgKind::SubName | CfgKind::SubRef | CfgKind::SubMut | CfgKind::SubHead | CfgKind::SubFoot => {
+                    quote!{}
                 }
                 _ => {
                     abort! {
