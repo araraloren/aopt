@@ -32,8 +32,9 @@ impl<O: Opt> OptValueExt for O {
     fn val<T: ErasedTy>(&self) -> Result<&T, Error> {
         self.accessor().val().map_err(|e| {
             Error::raise_error(format!(
-                "Can not find value(ref) of `{}`: {:?}",
+                "Can not find value(ref) of `{}`({}): {:?}",
                 self.hint(),
+                self.action(),
                 e
             ))
         })
@@ -41,17 +42,22 @@ impl<O: Opt> OptValueExt for O {
 
     fn val_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
         let hint = self.hint().clone();
+        let action = self.action().clone();
 
         self.accessor_mut().val_mut().map_err(|e| {
-            Error::raise_error(format!("Can not find value(mut) of `{}`: {:?}", hint, e))
+            Error::raise_error(format!(
+                "Can not find value(mut) of `{}`({}): {:?}",
+                hint, action, e
+            ))
         })
     }
 
     fn vals<T: ErasedTy>(&self) -> Result<&Vec<T>, Error> {
         self.accessor().vals().map_err(|e| {
             Error::raise_error(format!(
-                "Can not find values(ref) of `{}`: {:?}",
+                "Can not find values(ref) of `{}`({}): {:?}",
                 self.hint(),
+                self.action(),
                 e
             ))
         })
@@ -59,9 +65,13 @@ impl<O: Opt> OptValueExt for O {
 
     fn vals_mut<T: ErasedTy>(&mut self) -> Result<&mut Vec<T>, Error> {
         let hint = self.hint().clone();
+        let action = self.action().clone();
 
         self.accessor_mut().vals_mut().map_err(|e| {
-            Error::raise_error(format!("Can not find value(mut) of `{}`: {:?}", hint, e))
+            Error::raise_error(format!(
+                "Can not find value(mut) of `{}`({}): {:?}",
+                hint, action, e
+            ))
         })
     }
 

@@ -239,6 +239,7 @@ pub mod prelude {
     pub use crate::map::ErasedTy;
     pub use crate::opt::AOpt;
     pub use crate::opt::Action;
+    pub use crate::opt::Cmd;
     pub use crate::opt::Config;
     pub use crate::opt::ConfigValue;
     pub use crate::opt::ConstrctInfo;
@@ -246,10 +247,14 @@ pub mod prelude {
     pub use crate::opt::Help;
     pub use crate::opt::Index;
     pub use crate::opt::Information;
+    pub use crate::opt::Main;
+    pub use crate::opt::MutOpt;
     pub use crate::opt::Opt;
     pub use crate::opt::OptConfig;
     pub use crate::opt::OptParser;
     pub use crate::opt::OptValueExt;
+    pub use crate::opt::Pos;
+    pub use crate::opt::RefOpt;
     #[cfg(feature = "serde")]
     pub use crate::opt::Serde;
     pub use crate::opt::StrParser;

@@ -1,11 +1,13 @@
 
 # Relase note
 
-## 0.9.12
+## 0.9.13
 
 - Improve the error message, remove unused function
 
 - Support self define set checker of Policy
+
+- Add MutOpt RefOpt works with types are implemented `RawValParser`
 
 ## 0.9.11
 

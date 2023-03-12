@@ -12,13 +12,14 @@ use crate::HashMap;
 use crate::StrJoin;
 use crate::Uid;
 
-/// Service which do option check in [`Policy`](crate::parser::Policy).
+/// Check the option base on [`Style`].
+/// The checker will used for option check of [`Policy`](crate::parser::Policy).
 #[derive(Clone)]
 pub struct DefaultSetChecker<S>(PhantomData<S>);
 
 impl<S> Debug for DefaultSetChecker<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CheckService").finish()
+        f.debug_struct("DefaultSetChecker").finish()
     }
 }
 
@@ -175,6 +176,8 @@ where
         Ok(true)
     }
 
+    /// Return true if any one of [`Cmd`](Style::Cmd) matched.
+    /// Return true if no [`Cmd`](Style::Cmd) exists.
     fn cmd_check(&self, set: &mut S) -> Result<bool, Error> {
         let mut names = vec![];
         let mut valid = false;
@@ -196,6 +199,7 @@ where
         Ok(true)
     }
 
+    /// Call [`valid`](crate::opt::Opt::valid) on options those style are [`Main`](Style::Main).
     fn post_check(&self, set: &mut S) -> Result<bool, Error> {
         trace_log!("Post Check, call valid on Main ...");
         Ok(set

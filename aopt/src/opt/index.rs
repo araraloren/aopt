@@ -22,7 +22,7 @@ use crate::Error;
 ///         option -a and its value
 /// ```
 ///
-/// For option check, see [`SetChecker`](crate::parser::SetChecker) for more information.
+/// For option check, see [`SetChecker`](crate::set::SetChecker) for more information.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Index {

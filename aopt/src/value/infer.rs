@@ -13,7 +13,9 @@ use crate::opt::Cmd;
 use crate::opt::ConfigValue;
 use crate::opt::Index;
 use crate::opt::Main;
+use crate::opt::MutOpt;
 use crate::opt::Pos;
+use crate::opt::RefOpt;
 use crate::opt::Style;
 use crate::prelude::SetValueFindExt;
 use crate::trace_log;
@@ -128,12 +130,14 @@ pub trait Infer {
     }
 }
 
+/// Using for generate code for procedural macro.
 pub trait InferValueRef<'a> {
     fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error>
     where
         Self: Sized;
 }
 
+/// Using for generate code for procedural macro.
 pub trait InferValueMut<'a> {
     fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
     where
@@ -441,6 +445,35 @@ where
         Self: Sized,
     {
         Ok(Main::new(<T as InferValueRef>::infer_fetch(name, set)?))
+    }
+}
+
+impl<T: ErasedTy + RawValParser> Infer for MutOpt<T> {
+    type Val = T;
+}
+
+impl<'a, T: ErasedTy> InferValueMut<'a> for MutOpt<T> {
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        Ok(MutOpt(set.take_val::<T>(name)?))
+    }
+}
+
+impl<'a, T: ErasedTy + RawValParser> Infer for RefOpt<'a, T> {
+    type Val = T;
+}
+
+impl<'a, 'b, T: ErasedTy> InferValueRef<'a> for RefOpt<'b, T>
+where
+    'a: 'b,
+{
+    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error>
+    where
+        Self: Sized,
+    {
+        Ok(RefOpt(set.find_val::<T>(name)?))
     }
 }
 

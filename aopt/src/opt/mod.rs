@@ -46,6 +46,33 @@ pub const BOOL_TRUE: &str = "true";
 
 pub const BOOL_FALSE: &str = "false";
 
+/// Cmd represents a sub command flag wrapped the `bool` option, it is force required in default.
+///
+/// See [`cmd_check`](crate::set::SetChecker::cmd_check) of
+/// [`DefaultSetChecker`](crate::parser::DefaultSetChecker) for default checking behavior.
+///
+/// # Example
+///
+/// ```rust
+/// # use aopt::prelude::*;
+/// # use aopt::opt::Cmd;
+/// #
+/// # fn main() -> Result<(), aopt::Error> {
+///     
+/// let mut parser = AFwdParser::default();
+///
+/// // `Cmd` has a default position `@1`.
+/// parser.add_opt_i::<Cmd>("list: Set the list sub command")?;
+///
+/// parser.init()?;
+/// parser.parse(ARef::new(Args::from_array(["app", "list"])))?;
+///
+/// // Get the value by `Infer::Val` type of `bool`.
+/// assert_eq!(parser.find_val::<bool>("list")?, &true);
+///
+/// # Ok(())
+/// # }
+/// ```
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Cmd(pub bool);
@@ -70,6 +97,33 @@ impl DerefMut for Cmd {
     }
 }
 
+/// Pos is a position option wrapper, it is matching based on position.
+///
+/// See [`pos_check`](crate::set::SetChecker::pos_check) of
+/// [`DefaultSetChecker`](crate::parser::DefaultSetChecker) for default checking behavior.
+///
+/// # Example
+///
+/// ```rust
+/// # use aopt::prelude::*;
+/// # use aopt::opt::Pos;
+/// #
+/// # fn main() -> Result<(), aopt::Error> {
+///     
+/// let mut parser = AFwdParser::default();
+///
+/// // Name is not important.
+/// parser.add_opt_i::<Pos<String>>("pos_accept_string@1: Set the string value")?;
+///
+/// parser.init()?;
+/// parser.parse(ARef::new(Args::from_array(["app", "value"])))?;
+///
+/// // Get the value by `Infer::Val` type of `String`.
+/// assert_eq!(parser.find_val::<String>("pos_accept_string")?, &String::from("value"));
+///
+/// # Ok(())
+/// # }
+/// ```
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Pos<T = bool>(pub T);
@@ -94,6 +148,39 @@ impl<T> DerefMut for Pos<T> {
     }
 }
 
+/// Main are always matched; it is using for running logical before [`Policy`](crate::parser::Policy) ending.
+///
+/// See [`post_check`](crate::set::SetChecker::post_check) of
+/// [`DefaultSetChecker`](crate::parser::DefaultSetChecker) for default checking behavior.
+/// # Example
+///
+/// ```rust
+/// # use aopt::prelude::*;
+/// # use aopt::opt::Main;
+/// # use std::ops::Deref;
+/// #
+/// # fn main() -> Result<(), aopt::Error> {
+///     
+/// let mut parser = AFwdParser::default();
+///
+/// // `Main` has a default position `@*`.
+/// parser.add_opt_i::<Main>("main_function: Call the main function")?
+///       // Main do nothing in default, you must change the `Action` if you want save value
+///       .set_action(Action::Set)
+///       .on(|_: &mut ASet, _: &mut ASer, val: ctx::RawVal|{
+///             assert_eq!(val.deref(), &RawVal::from("app"));
+///             Ok(Some(String::from("main_function called")))
+///       })?;
+///
+/// parser.init()?;
+/// parser.parse(ARef::new(Args::from_array(["app", "list"])))?;
+///
+/// // Get the value of main function returned.
+/// assert_eq!(parser.find_val::<String>("main_function")?, &String::from("main_function called"));
+///
+/// # Ok(())
+/// # }
+/// ```
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Main<T = ()>(pub T);
@@ -115,6 +202,129 @@ impl<T> Deref for Main<T> {
 impl<T> DerefMut for Main<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+/// Simple option type wrapper, implemented
+/// [`Infer`](crate::value::Infer) and [`InferValueMut`](crate::value::InferValueMut).
+/// It works with the types are implemented [`RawValParser`](crate::value::RawValParser).
+///
+/// # Example
+///
+/// ```rust
+/// # use aopt::Error;
+/// # use aopt::value::raw2str;
+/// # use aopt::prelude::*;
+/// # use std::ops::Deref;
+///
+/// #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+/// pub struct Name(String);
+///
+/// impl RawValParser for Name {
+///     type Error = Error;
+///
+///     fn parse(arg: Option<&RawVal>, _: &Ctx) -> Result<Self, Self::Error> {
+///         Ok(Name(raw2str(arg)?.to_owned()))
+///     }
+/// }
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let mut parser = AFwdParser::default();
+///
+/// // add the option wrap with `MutOpt`
+/// parser.add_opt_i::<MutOpt<Name>>("-e: Set the name")?;
+///
+/// parser.init()?;
+/// parser.parse(ARef::new(Args::from_array(["app", "-e=foo"])))?;
+///
+/// // Get the value through value type `Name`
+/// assert_eq!(parser.find_val::<Name>("-e")?, &Name("foo".to_owned()));
+///
+/// #    Ok(())
+/// # }
+/// ```
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct MutOpt<T>(pub T);
+
+impl<T> MutOpt<T> {
+    pub fn new(value: T) -> Self {
+        Self(value)
+    }
+}
+
+impl<T> Deref for MutOpt<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> DerefMut for MutOpt<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+/// Simple option type wrapper, implemented
+/// [`Infer`](crate::value::Infer) and [`InferValueRef`](crate::value::InferValueRef).
+/// It works with the types are implemented [`RawValParser`](crate::value::RawValParser).
+///
+/// # Example
+///
+/// ```rust
+/// # use aopt::Error;
+/// # use aopt::value::raw2str;
+/// # use aopt::prelude::*;
+/// # use std::ops::Deref;
+///
+/// #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+/// pub struct Name(String);
+///
+/// impl RawValParser for Name {
+///     type Error = Error;
+///
+///     fn parse(arg: Option<&RawVal>, _: &Ctx) -> Result<Self, Self::Error> {
+///         Ok(Name(raw2str(arg)?.to_owned()))
+///     }
+/// }
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let mut parser = AFwdParser::default();
+///
+/// // add the option wrap with `RefOpt`
+/// parser.add_opt_i::<RefOpt<'_, Name>>("-e: Set the name")?;
+///
+/// parser.init()?;
+/// parser.parse(ARef::new(Args::from_array(["app", "-e=foo"])))?;
+///
+/// // Get the value through value type `Name`
+/// // When using `cote-derive` crate, struct can support reference member such as:
+/// // #[derive(Debug, Cote)]
+/// // pub struct Example<'b> {
+/// //    #[arg(alias = "-e", refopt)]
+/// //    name: RefOpt<'b, Name>,
+/// // }
+/// assert_eq!(parser.find_val::<Name>("-e")?, &Name("foo".to_owned()));
+///
+/// #    Ok(())
+/// # }
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct RefOpt<'a, T>(pub &'a T);
+
+impl<'a, T> RefOpt<'a, T> {
+    pub fn new(value: &'a T) -> Self {
+        Self(value)
+    }
+}
+
+impl<'a, T> Deref for RefOpt<'a, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
