@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::args::Args;
 use crate::opt::Style;
 use crate::parser::ReturnVal;
@@ -115,6 +117,21 @@ impl InnerCtx {
     pub fn set_arg(&mut self, argument: Option<ARef<RawVal>>) -> &mut Self {
         self.arg = argument;
         self
+    }
+}
+
+impl Display for InnerCtx {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "InnerCtx {{ uid: {}, name: {}, style: {}, arg: {}, index: {}, total: {} }}",
+            self.uid,
+            crate::display_option(&self.name),
+            self.style,
+            crate::display_option(&self.arg),
+            self.index,
+            self.total,
+        )
     }
 }
 

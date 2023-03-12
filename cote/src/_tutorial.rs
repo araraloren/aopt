@@ -16,25 +16,25 @@
 //!
 //! #[derive(Debug, Cote)]
 //! #[cote(
-//!     name = "cli", //! set the name of usage
-//!     help, //! generate help and display help when `--help` set
-//!     aborthelp, //! display help if any error raised
+//!     name = "cli", // set the name of usage
+//!     help, // generate help and display help when `--help` set
+//!     aborthelp, // display help if any error raised
 //!     width = 50
 //! )]
 //! pub struct Cli {
-//!     ///! Print debug message
+//!     /// Print debug message
 //!     #[arg(alias = "-d")]
 //!     debug: bool,
 //!
-//!     ///! Set the configuration path
+//!     /// Set the configuration path
 //!     #[arg(alias = "-c", value = "default.json", hint = "-c,--config [CFG]")]
 //!     config: Option<PathBuf>,
 //!
-//!     ///! Search the given directory
+//!     /// Search the given directory
 //!     #[sub(name = "se")]
 //!     search: Option<Search>,
 //!
-//!     ///! List the given directory
+//!     /// List the given directory
 //!     #[sub(name = "ls", head = "List the given directory")]
 //!     list: Option<List>,
 //! }
@@ -42,8 +42,8 @@
 //! #[derive(Debug, Cote)]
 //! #[cote(help)]
 //! pub struct Search {
-//!     ///! Set the depth of search
-//!     depth: usize, //! without `Option` mean force required
+//!     /// Set the depth of search
+//!     depth: usize, // without `Option` mean force required
 //!
 //!     #[arg(index = "1", value = ".", help = "Set the clean directory")]
 //!     dest: Option<Pos<PathBuf>>,
@@ -52,7 +52,7 @@
 //! #[derive(Debug, Cote)]
 //! #[cote(help)]
 //! pub struct List {
-//!     ///! Enable recursive mode
+//!     /// Enable recursive mode
 //!     recursive: bool,
 //!     #[arg(index = "1", value = ".", help = "Set the clean directory")]
 //!     dest: Option<Pos<PathBuf>>,
@@ -85,7 +85,7 @@
 //!     Ok(())
 //! }
 //! ```
-//! 
+//!
 //! ### Help message generate
 //!
 //! - Output of `cli --help`:
@@ -123,48 +123,56 @@
 //!
 //! Create by araraloren <blackcatoverwall@gmail.com> v0.1.8
 //! ```
-//! 
+//!
 //! ### Running
-//! 
+//!
 //! Output of `cli se --depth 2`:
-//! 
+//!
 //! ```!
 //! loading config from "default.json"
 //! search the file under directory `Some(".")` with depth 2
 //! ```
-//! 
+//!
 //! #### `aborthelp`
-//! 
+//!
 //! If code generate with cote configuration `aborthelp`.
 //! When the option match failed, program will first
 //! print help message, then display the error message.
-//! 
+//!
 //! Output of `cli se --depth www` or `cli se --depth`:
-//! 
+//!
 //! ```!
 //! Usage: cli [-h,-?,--help] [-d,--debug] [-c,--config [CFG]] <COMMAND>
-//! 
+//!
 //! Generate help message for command line program
-//! 
+//!
 //! Commands:
 //!   se       Search the given directory
 //!   ls       List the given directory
-//! 
+//!
 //! Options:
 //!   -h,-?,--help           Display help message
 //!   -d,--debug             Print debug message
 //!   -c,--config [CFG]      Set the configuration path ["default.json"]
-//! 
+//!
 //! Create by araraloren <blackcatoverwall@gmail.com> v0.1.8
 //! Error:
 //!    0: failed at sub command `Search` with args `Args { inner: [RawVal("cli"), RawVal("--depth")] }: OptionNotFound("--depth")
-//! 
+//!
 //! Location:
 //!    src\main.rs:56
-//! 
+//!
 //! Backtrace omitted.
 //! Run with RUST_BACKTRACE=1 environment variable to display it.
 //! Run with RUST_BACKTRACE=full to include source snippets.
 //! error: process didn't exit successfully: `cli se --depth` (exit code: 1)
 //! ```
-//! 
+//!
+//! ## Configuration on struct
+//!
+//! ## Configuration on field
+//!
+//! ### Add option
+//!
+//! ### Add sub command
+//!

@@ -211,8 +211,12 @@ impl<'a> Analyzer<'a> {
                     let inner_ctx = ctx.inner_ctx().ok();
                     let e = ret.failure();
                     Err(aopt::Error::raise_error(
-                        format!("Parsing arguments `{:?}` failed: {:?}, inner_ctx = {:?}",
-                            args, e.display(), inner_ctx)))
+                        format!("Parsing arguments `{}` failed: {}, inner_ctx = {}",
+                            args, e.display(), if let Some(inner_ctx) = inner_ctx {
+                                format!("{}", inner_ctx)
+                            } else {
+                                format!("None")
+                            })))
                 }
             }
 
@@ -930,23 +934,34 @@ impl<'a> FieldMeta<'a> {
                         #pass_help_to_next
 
                         let args = aopt::ARef::new(aopt::prelude::Args::from_vec(args));
-                        let dbg_args = args.clone();
                         let mut parser = <#unwrap_ty as cote::IntoParserDerive<#policy_ty>>::into_parser()?;
 
                         parser.set_app_data(ser_names.clone())?;
                         parser.init()?;
+
                         let ret = parser.parse(args).map_err(Into::into);
 
                         #may_be_display_help
-                        match ret?.ok() {
-                            Ok(_) => {
-                                Ok(<#unwrap_ty>::try_extract(parser.optset_mut()).ok())
-                            }
-                            Err(e) => {
-                                Err(aopt::Error::raise_error(
-                                    format!("failed at sub command `{}` with args `{:?}: {:?}",
-                                        stringify!(#unwrap_ty), dbg_args, e)))
-                            }
+
+                        let ret = ret?;
+                        let ret_ctx = ret.ctx();
+                        let ret_args = ret_ctx.args();
+                        let ret_inner_ctx = ret_ctx.inner_ctx().ok();
+                        let ret_e = ret.failure();
+
+                        if ret.status() {
+                            Ok(<#unwrap_ty>::try_extract(parser.optset_mut()).ok())
+                        }
+                        else {
+                            Err(aopt::Error::raise_error(
+                                format!("Failed at command `{}` with `{}`: {}, inner_ctx = {}",
+                                stringify!(#unwrap_ty), ret_args, ret_e.display(),
+                                if let Some(inner_ctx) = ret_inner_ctx {
+                                    format!("{}", inner_ctx)
+                                } else {
+                                    format!("None")
+                                }
+                            )))
                         }
                     }
                 );

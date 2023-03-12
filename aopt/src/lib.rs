@@ -33,6 +33,14 @@ pub(crate) mod log {
     }
 }
 
+pub(crate) fn display_option<T: Display>(option_value: &Option<T>) -> String {
+    if let Some(value) = option_value {
+        format!("Some({value})")
+    } else {
+        format!("None")
+    }
+}
+
 pub use crate::err::Error;
 pub use crate::err::Result;
 pub use crate::str::astr;
@@ -40,6 +48,7 @@ pub use crate::str::Str;
 pub use crate::str::StrJoin;
 
 use std::any::TypeId;
+use std::fmt::Display;
 
 /// Get the [`TypeId`](std::any::TypeId) of type `T`.
 pub(crate) fn typeid<T: 'static>() -> TypeId {

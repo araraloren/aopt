@@ -2,6 +2,7 @@
 #[cfg_attr(unix, path = "args/unix.rs")]
 pub(crate) mod osstr_ext;
 
+use std::fmt::Display;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
@@ -99,6 +100,20 @@ impl Deref for Args {
 impl DerefMut for Args {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
+    }
+}
+
+impl Display for Args {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Args {{[{}]}}",
+            self.inner
+                .iter()
+                .map(|v| format!("{}", v))
+                .collect::<Vec<String>>()
+                .join(", ")
+        )
     }
 }
 
