@@ -30,7 +30,7 @@ use crate::Error;
 /// [`PrePolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
 /// [`PrePolicy`] will skip any special [`Error`] during [`parse`](Policy::parse) process.
 /// [`PrePolicy`] will return Some([`ReturnVal`]) if match successful.
-/// [`PrePolicy`] don't consume the `NOA` when process [`NOAMatch`](crate::proc::NOAMatch).
+/// [`PrePolicy`] doesn’t consume the `NOA` when process [`NOAMatch`](crate::proc::NOAMatch).
 ///
 /// # Example
 /// ```rust

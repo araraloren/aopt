@@ -29,7 +29,7 @@ use crate::ARef;
 use crate::Error;
 
 /// [`FwdPolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
-/// The option will match failed if any special [`Error`] raised during option processing.
+/// The option would match failed if any special [`Error`] raised during option processing.
 /// [`FwdPolicy`] will return Some([`ReturnVal`]) if match successful.
 /// [`FwdPolicy`] process the option before any
 /// NOA([`Cmd`](crate::opt::Style::Cmd), [`Pos`](crate::opt::Style::Pos) and [`Main`](crate::opt::Style::Main)).

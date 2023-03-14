@@ -273,7 +273,7 @@ macro_rules! impl_pos_type {
         ///     |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
         ///         let val = raw.is_some();
         ///
-        ///         trace_log!("Cmd value storer, parsing {:?} -> {:?}", raw, val);
+        ///         trace_log!("Pos value storer, parsing {:?} -> {:?}", raw, val);
         ///         act.store1(Some(val), handler);
         ///         Ok(())
         ///     },
@@ -296,7 +296,7 @@ macro_rules! impl_pos_type {
                         |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
                             let val = raw.is_some();
 
-                            trace_log!("Cmd value storer, parsing {:?} -> {:?}", raw, val);
+                            trace_log!("Pos value storer, parsing {:?} -> {:?}", raw, val);
                             act.store1(Some(val), handler);
                             Ok(())
                         },

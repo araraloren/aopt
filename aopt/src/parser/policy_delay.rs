@@ -34,9 +34,9 @@ use crate::Error;
 use crate::Str;
 
 /// [`DelayPolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
-/// The option will match failed if any special [`Error`] raised during option processing.
+/// The option would match failed if any special [`Error`] raised during option processing.
 /// [`DelayPolicy`] will return Some([`ReturnVal`]) if match successful.
-/// [`DelayPolicy`] process the option first, but not invoke the handler of option.
+/// [`DelayPolicy`] processes the option first but does not invoke the handler of option.
 /// The handler will be called after [`Cmd`](crate::opt::Style::Cmd) NOA and [`Pos`](crate::opt::Style::Pos) NOA processed.
 /// In last, [`DelayPolicy`] will process [`Main`](crate::opt::Style::Main) NOA.
 /// During parsing, you can't get the value of any option in the handler of NOA.

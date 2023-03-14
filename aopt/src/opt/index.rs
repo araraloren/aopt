@@ -269,7 +269,44 @@ impl Index {
     }
 
     pub fn to_help(&self) -> String {
-        String::default()
+        match self {
+            Index::Forward(offset) => {
+                format!("{}", offset)
+            }
+            Index::Backward(offset) => {
+                format!("-{}", offset)
+            }
+            Index::List(list) => {
+                format!(
+                    "[{}]",
+                    list.iter()
+                        .map(|v| v.to_string())
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )
+            }
+            Index::Except(list) => {
+                format!(
+                    "-[{}]",
+                    list.iter()
+                        .map(|v| v.to_string())
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )
+            }
+            Index::Range(start, None) => {
+                format!("{}..", start)
+            }
+            Index::Range(start, Some(end)) => {
+                format!("{}..{}", start, end)
+            }
+            Index::AnyWhere => {
+                format!("*")
+            }
+            Index::Null => {
+                format!("")
+            }
+        }
     }
 
     pub fn forward(index: usize) -> Self {
