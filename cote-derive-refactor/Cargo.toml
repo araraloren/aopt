@@ -1,0 +1,16 @@
+[package]
+name = "cote-derive"
+version = "0.1.5"
+authors = ["lance"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+syn = { version = "1.0", features = [ "extra-traits", "full" ] }
+proc-macro-error = "1.0"
+proc-macro2 = "1.0"
+quote = "1.0"
+
+[lib]
+proc-macro = true
