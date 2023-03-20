@@ -1,7 +1,8 @@
 //!
 //! # Documentation: Cote Tutorial
 //!
-//! 1. [Quick Start](#qucik-start)
+//! 1. [Quick Start](#quick-start)
+//! 2. [Configurating Struct](#configurating-struct)
 //!
 //!
 //! ## Quick Start
@@ -168,7 +169,157 @@
 //! error: process didn't exit successfully: `cli se --depth` (exit code: 1)
 //! ```
 //!
-//! ## Configuration on struct
+//! ## Configurating Struct
+//!
+//! ### Configurating Policy
+//!
+//! Cote has three policy type built-in: [`fwd`](aopt::prelude::AFwdPolicy)、[`pre`](aopt::prelude::APrePolicy)
+//! and [`delay`](aopt::prelude::ADelayPolicy).
+//! If no `policy` configuration specific, [`fwd`](aopt::prelude::AFwdPolicy) will be using if no sub command.
+//! Otherwise [`pre`](aopt::prelude::APrePolicy) will be used.
+//!
+//! ```rust
+//! use cote::prelude::*;
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(policy = delay)] // set policy to delay
+//! pub struct Cli {
+//!     debug: bool,
+//! }
+//!
+//! fn main() -> color_eyre::Result<()> {
+//!     color_eyre::install()?;
+//!
+//!     let GetoptRes { ret: _, mut parser } = Cli::parse_env_args()?;
+//!     
+//!     // `no_delay` only available in `ADelayPolicy`
+//!     assert_eq!(parser.policy().no_delay().len(), 0);
+//!     assert_eq!(Cli::try_extract(parser.optset_mut())?, Cli { debug: false });
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ### Configurating Help
+//!
+//! ```rust
+//! use cote::prelude::*;
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(help, // Generate help for current struct
+//!     aborthelp, // Display help when error raised
+//!     name = "app", // Set the usage name
+//!     width = 50, // Set the maximum width of option help message
+//!     usagew = 3, // Set the maximum count of item in usage
+//!     head = "The head message display in help message",
+//!     foot = "The foot message display in help message",
+//! )]
+//! pub struct Cli {
+//!     /// Print debug message.
+//!     debug: bool,
+//!
+//!     /// Set the name of client.
+//!     name: String,
+//!
+//!     /// Switch to foo sub command.
+//!     foo: Cmd,
+//!
+//!     /// Switch to bar sub command.
+//!     bar: Cmd,
+//!
+//!     /// The second position argument.
+//!     #[arg(index = "2")]
+//!     arg: Pos<String>,
+//!
+//!     /// Collection of arguments start from position 3.
+//!     #[arg(index = "3..")]
+//!     args: Pos<Vec<String>>,
+//! }
+//!
+//! fn main() -> color_eyre::Result<()> {
+//!     color_eyre::install()?;
+//!
+//!     // pass `--help` to program display help message
+//!     Cli::parse(Args::from_array(["app", "--help"]))?;
+//!     Ok(())
+//! }
+//! ```
+//!
+//! The help message output like this:
+//!
+//! ```!
+//! Usage: app [-h,-?,--help] [--debug] <--name>
+//!        <COMMAND> [ARGS]
+//!
+//! The head message display in help message
+//!
+//! Commands:
+//!   foo@1      Switch to foo sub command.
+//!   bar@1      Switch to bar sub command.
+//!
+//! Options:
+//!   -h,-?,--help      Display help message
+//!   --debug           Print debug message.
+//!   --name            Set the name of client.
+//!
+//! Args:
+//!   arg@2         The second position argument.
+//!   args@3..      Collection of arguments start from position 3.
+//!
+//! The foot message display in help message
+//! ```
+//!
+//! ### Configurating style
+//!
+//! - Add support for [`CombinedOption`](aopt::parser::UserStyle::CombinedOption).
+//!
+//! ```rust
+//! use cote::prelude::*;
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(combine)]
+//! pub struct Cli {
+//!     #[arg(alias = "-d")]
+//!     debug: bool,
+//!
+//!     #[arg(alias = "-r")]
+//!     recursive: bool,
+//!
+//!     #[arg(alias = "-f")]
+//!     force: bool,
+//! }
+//!
+//! fn main() -> Result<(), aopt::Error> {
+//!     // set three options in one item
+//!     let cli = Cli::parse(Args::from_array(["app", "-rdf"]))?;
+//!
+//!     assert!(cli.debug);
+//!     assert!(cli.recursive);
+//!     assert!(cli.force);
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
+//! - Add support for [`EmbeddedValuePlus`](aopt::parser::UserStyle::EmbeddedValuePlus).
+//!
+//! ```rust
+//! use cote::prelude::*;
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(embedded)]
+//! pub struct Cli {
+//!     foo: String,
+//! }
+//!
+//! fn main() -> Result<(), aopt::Error> {
+//!     let cli = Cli::parse(Args::from_array(["app", "--foobar"]))?;
+//!
+//!     assert_eq!(cli.foo, "bar");
+//!
+//!     Ok(())
+//! }
+//! ```
 //!
 //! ## Configuration on field
 //!

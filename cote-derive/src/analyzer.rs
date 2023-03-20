@@ -700,8 +700,8 @@ impl<'a> StructMeta<'a> {
             let policy_name = policy_ty.value.to_token_stream().to_string();
             let policy = generate_default_policy(&policy_name);
 
-            if has_sub_command && policy.is_some() {
-                generate_default_policy("pre").unwrap()
+            if let Some(policy) = policy {
+                policy
             } else {
                 policy_ty.value.to_token_stream()
             }
