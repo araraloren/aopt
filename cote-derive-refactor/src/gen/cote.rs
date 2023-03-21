@@ -98,6 +98,10 @@ impl<'a> CoteGenerator<'a> {
         &self.ident
     }
 
+    pub fn get_generics(&self) -> &'a Generics {
+        self.generics
+    }
+
     pub fn has_lifetime_ident(&self, other: &Ident) -> bool {
         for ident in &self.lifetimes {
             if ident == &other {
@@ -107,12 +111,8 @@ impl<'a> CoteGenerator<'a> {
         false
     }
 
-    pub fn gen_where_clause(&self, has_zlifetime: bool) -> TokenStream {
-        let where_predicate = if has_zlifetime {
-            self.gen_where_predicate_zlifetime()
-        } else {
-            self.gen_where_predicate()
-        };
+    pub fn gen_into_parser_where_clause(&self, has_zlifetime: bool) -> TokenStream {
+        let where_predicate = self.gen_where_predicate(has_zlifetime);
 
         quote! {
             where
@@ -201,9 +201,13 @@ impl<'a> CoteGenerator<'a> {
         }
     }
 
-    pub fn gen_where_predicate(&self) -> Option<TokenStream> {
-        self.predicates
-            .map(|where_predicates| quote! { #where_predicates })
+    pub fn gen_where_predicate(&self, has_zlifetime: bool) -> Option<TokenStream> {
+        if has_zlifetime {
+            self.gen_where_predicate_zlifetime()
+        } else {
+            self.predicates
+                .map(|where_predicates| quote! { #where_predicates })
+        }
     }
 
     pub fn gen_policy_type(&self, has_sub_command: bool) -> syn::Result<TokenStream> {

@@ -19,7 +19,7 @@ pub fn parser(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
             e
         }
     });
-    let impl_for_struct = analyzer.gen_impl_for_struct().unwrap_or_else(|e| {
+    let impl_for_struct = analyzer.gen_all().unwrap_or_else(|e| {
         abort! {
             input,
             "Failed to generate code for struct: {:?}",

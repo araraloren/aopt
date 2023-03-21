@@ -75,6 +75,41 @@ impl<'a> SubGenerator<'a> {
         })
     }
 
+    pub fn gen_field_extract(&self) -> syn::Result<(bool, TokenStream)> {
+        let is_refopt = self.configs.find_cfg(SubKind::Ref).is_some();
+        let is_mutopt = self.configs.find_cfg(SubKind::Mut).is_some();
+        let ident = self.ident;
+        let name = &self.name;
+
+        if is_refopt && is_mutopt {
+            abort! {
+                ident,
+                "can not set both mut and ref on arg"
+            }
+        } else if is_refopt {
+            Ok((
+                true,
+                quote! {
+                    #ident: set.find_val(#name).ok(),
+                },
+            ))
+        } else if is_mutopt {
+            Ok((
+                false,
+                quote! {
+                    #ident: set.take_val(#name).ok(),
+                },
+            ))
+        } else {
+            Ok((
+                false,
+                quote! {
+                    #ident: set.take_val(#name).ok(),
+                },
+            ))
+        }
+    }
+
     pub fn gen_option_update(&self, idx: usize) -> syn::Result<OptUpdate> {
         let ident = gen_option_ident(idx, self.ident.span());
         let uid = gen_option_uid_ident(idx, self.ident.span());
