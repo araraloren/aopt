@@ -21,15 +21,11 @@ use super::gen_help_display_call;
 use super::gen_option_ident;
 use super::gen_option_uid_ident;
 use super::OptUpdate;
-use super::Update;
 use super::HELP_OPTION_HELP;
-use super::HELP_OPTION_IDENT;
 use super::HELP_OPTION_NAME;
 use super::HELP_OPTION_Q;
 use super::HELP_OPTION_SHORT;
-use super::HELP_OPTION_UID;
 use super::MAIN_OPTION_IDENT;
-use super::MAIN_OPTION_UID;
 use super::POLICY_FWD;
 use super::POLICY_PRE;
 

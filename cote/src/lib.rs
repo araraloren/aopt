@@ -12,7 +12,6 @@ use std::ops::DerefMut;
 use aopt::prelude::*;
 use aopt::value::Placeholder;
 use aopt::Error;
-use aopt::HashMap;
 use aopt::RawVal;
 use aopt_help::prelude::Block;
 use aopt_help::prelude::Store;

@@ -10,18 +10,14 @@ use syn::Type;
 
 use crate::config::ArgKind;
 use crate::config::Configs;
-use crate::config::SubKind;
 use crate::gen::gen_elision_lifetime_ty;
 
 use super::check_in_path;
 use super::filter_comment_doc;
-use super::gen_default_policy_ty;
 use super::gen_option_ident;
 use super::gen_option_uid_ident;
-use super::gen_ty_without_option;
 use super::CoteGenerator;
 use super::OptUpdate;
-use super::POLICY_FWD;
 
 #[derive(Debug)]
 pub struct ArgGenerator<'a> {
