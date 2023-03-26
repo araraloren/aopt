@@ -5,6 +5,7 @@ use quote::quote;
 use quote::ToTokens;
 use syn::spanned::Spanned;
 use syn::Field;
+use syn::Lifetime;
 use syn::Lit;
 use syn::Type;
 
@@ -23,6 +24,8 @@ use super::POLICY_FWD;
 
 #[derive(Debug)]
 pub struct SubGenerator<'a> {
+    sub_id: usize,
+
     ty: &'a Type,
 
     name: TokenStream,
@@ -63,6 +66,7 @@ impl<'a> SubGenerator<'a> {
         };
 
         Ok(Self {
+            sub_id: 0,
             ty,
             name,
             ident,
@@ -71,6 +75,50 @@ impl<'a> SubGenerator<'a> {
             elision_lifetime_ty,
             without_option_ty,
         })
+    }
+
+    pub fn get_name(&self) -> &TokenStream {
+        &self.name
+    }
+
+    pub fn with_sub_parser_id(mut self, id: usize) -> Self {
+        self.sub_id = id;
+        self
+    }
+
+    pub fn get_without_option_type(&self) -> &Type {
+        &self.without_option_ty
+    }
+
+    pub fn gen_policy_type(&self) -> syn::Result<TokenStream> {
+        let policy_ty = self.configs.find_cfg(SubKind::Policy);
+
+        Ok(if let Some(policy_ty) = policy_ty {
+            let policy_name = policy_ty.value().to_token_stream().to_string();
+            let policy = gen_default_policy_ty(&policy_name);
+
+            if let Some(policy) = policy {
+                policy
+            } else {
+                policy_ty.value().to_token_stream()
+            }
+        } else {
+            gen_default_policy_ty(POLICY_FWD).unwrap()
+        })
+    }
+
+    pub fn gen_app_type(&self, lifetime: Option<Lifetime>) -> syn::Result<TokenStream> {
+        let policy_ty = self.gen_policy_type()?;
+
+        if let Some(lifetime) = lifetime {
+            Ok(quote! {
+                cote::CoteApp<#lifetime, #policy_ty>
+            })
+        } else {
+            Ok(quote! {
+                cote::CoteApp<'_, #policy_ty>
+            })
+        }
     }
 
     pub fn gen_field_extract(&self) -> syn::Result<(bool, TokenStream)> {
@@ -251,5 +299,27 @@ impl<'a> SubGenerator<'a> {
                 }
             );
         })
+    }
+
+    pub fn gen_sub_help_context(&self) -> TokenStream {
+        let without_option_ty = &self.without_option_ty;
+        let mut ret = quote!{ let context = <#without_option_ty>::into_struct_help_info(); };
+
+        if let Some(head_cfg) = self.configs.find_cfg(SubKind::Head) {
+            let value = head_cfg.value();
+
+            ret.extend(quote! {
+                context = context.with_head(String::from(#value));
+            })
+        }
+        if let Some(foot_cfg) = self.configs.find_cfg(SubKind::Foot) {
+            let value = foot_cfg.value();
+
+            ret.extend(quote! {
+                context = context.with_foot(String::from(#value));
+            })
+        }
+        ret.extend(quote!{ context });
+        ret
     }
 }

@@ -56,14 +56,15 @@ impl<'a> ArgGenerator<'a> {
                     }
                 });
                 let ident = ident.to_string();
-
-                if is_position {
-                    quote! { String::from(#ident) }
+                let name = if is_position {
+                    ident
                 } else if ident.chars().count() >= 2 {
-                    quote! { format!("--{}", ident_str) }
+                    format!("--{}", ident)
                 } else {
-                    quote! { format!("-{}", ident_str) }
-                }
+                    format!("-{}", ident)
+                };
+
+                quote! { #name }
             }
         };
 
@@ -82,6 +83,16 @@ impl<'a> ArgGenerator<'a> {
         self.configs.has_cfg(ArgKind::On)
             || self.configs.has_cfg(ArgKind::Then)
             || self.configs.has_cfg(ArgKind::Fallback)
+    }
+
+    pub fn gen_nodelay_setting(&self) -> Option<TokenStream> {
+        self.configs.find_cfg(ArgKind::NoDelay).map(|_| {
+            let name = &self.name;
+
+            quote! {
+                parser.policy_mut().set_no_delay(#name);
+            }
+        })
     }
 
     pub fn gen_field_extract(&self) -> syn::Result<(bool, TokenStream)> {

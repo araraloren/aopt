@@ -127,14 +127,22 @@ where
             parser: Parser::new(policy),
         }
     }
+
+    pub fn new_with_parser<S: Into<String>>(name: S, parser: Parser<'a, P>) -> Self {
+        Self {
+            name: name.into(),
+
+            parser,
+        }
+    }
 }
 
 impl<'a, P> CoteApp<'a, P>
 where
     P: Policy,
 {
-    pub fn inner_parser(&mut self) -> &mut Parser<'a, P> {
-        &mut self.parser
+    pub fn inner_parser(&self) -> &Parser<'a, P> {
+        &self.parser
     }
 
     pub fn inner_parser_mut(&mut self) -> &mut Parser<'a, P> {
