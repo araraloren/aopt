@@ -84,7 +84,7 @@ impl<'a> Analyzer<'a> {
                 for field in fields.named.iter() {
                     if check_if_has_sub_cfg(field)? {
                         sub_generator.push(
-                            SubGenerator::new(field, &cote_generator)?.with_sub_parser_id(idx),
+                            SubGenerator::new(field, &cote_generator)?.with_sub_id(idx),
                         );
                         cote_generator.set_has_sub_command(true);
                     } else {
@@ -249,6 +249,33 @@ impl<'a> Analyzer<'a> {
         Ok(ret)
     }
 
+    pub fn gen_sub_app_match(&self) -> syn::Result<TokenStream> {
+        let sub_app_type = self.gen_sub_app_type(None)?;
+        let mut sub_app_match = quote! {
+            let sub_apps = app.inner_parser()
+                             .app_data::<#sub_app_type>()?;
+        };
+
+        for sub_generator in self.sub_generator.iter() {
+            let sub_help_context_gen = sub_generator.gen_sub_help_context();
+            let idx = sub_generator.get_sub_id() - 1;
+
+            sub_app_match.extend(quote! {
+                if sub_app_name == sub_apps.#idx.name() {
+                    let sub_help_context = { #sub_help_context_gen };
+
+                    return cote::simple_display_set_help(
+                        app.inner_parser().optset(),
+                        name, sub_help_context.head, sub_help_context.foot,
+                        sub_help_context.width, sub_help_context.usagew
+                    ).map_err(|e| aopt::Error::raise_error(format!("Can not display help message: {:?}", e)))
+                }
+            });
+        }
+
+        Ok(sub_app_match)
+    }
+
     pub fn gen_sub_app_type(&self, lifetime: Option<Lifetime>) -> syn::Result<TokenStream> {
         let mut inner_app_ty = quote! {};
 
@@ -273,7 +300,7 @@ impl<'a> Analyzer<'a> {
             let sub_name = sub_generator.get_name();
 
             inner_app_ty.extend(quote! {
-                #without_option_ty::into_app()?.with_name(#sub_name),
+                <#without_option_ty>::into_app()?.with_name(#sub_name),
             });
         }
 
@@ -302,11 +329,10 @@ impl<'a> Analyzer<'a> {
         let policy_ty = self.cote_generator.gen_policy_type()?;
         let app_lifetime = Lifetime::new("'z", self.cote_generator.get_ident().span());
         let insert_sub_apps = self.gen_insert_sub_apps()?;
-        let sub_app_tuple_ty = self.gen_sub_app_type(Some(app_lifetime.clone()))?;
-        let sub_app_tuple_ty_ = self.gen_sub_app_type(None)?;
         let parser_settings = self.gen_parser_settings();
         let app_name = self.cote_generator.get_name();
         let help_context = self.cote_generator.gen_help_context();
+        let sub_app_match = self.gen_sub_app_match()?;
         let where_predicate_withz = if let Some(where_predicate) = self
             .cote_generator
             .gen_where_predicate_with(vec![app_lifetime])
@@ -328,23 +354,45 @@ impl<'a> Analyzer<'a> {
                 Ok(cote::CoteApp::new_with_parser(#app_name, parser))
             }
 
-            pub fn into_struct_help_info() -> StructHelpInfo {
+            pub fn into_help_context() -> cote::HelpContext {
                 #help_context
             }
 
             pub fn display_help(app: &cote::CoteApp<'_, #policy_ty>) -> Result<(), aopt::Error> {
-                let context = Self::into_struct_help_info();
+                Self::display_help_with(app, Self::into_help_context())
+            }
+
+            pub fn display_help_with(app: &cote::CoteApp<'_, #policy_ty>, context: cote::HelpContext) -> Result<(), aopt::Error> {
+                let name = context.generate_name();
 
                 cote::simple_display_set_help(
                     app.inner_parser().optset(), 
-                    context.name, context.head, context.foot, 
+                    name, context.head, context.foot,
                     context.width, context.usagew
                 ).map_err(|e| aopt::Error::raise_error(format!("Can not display help message: {:?}", e)))
             }
 
-            // pub fn sub_parsers_mut<'x, 'y, 'z>(app: &'x mut cote::CoteApp<'y, #policy_ty>) -> Result<&'x mut #sub_app_tuple_ty, aopt::Error> {
-            //     app.inner_parser_mut().app_data_mut::<#sub_app_tuple_ty_>()
-            // }
+            pub fn display_sub_help_idx(app: &cote::CoteApp<'_, #policy_ty>, subnames: Vec<String>, idx: usize) -> Result<(), aopt::Error> {
+                let len = subnames.len();
+                
+                if len >= 1 {
+                    let name_matched = &subnames[idx] == app.name();
+
+                    if idx == len - 1 && len == 1 {
+                        return Self::display_help(app)
+                    }
+                    else if idx == len - 2 && name_matched {
+                        let sub_app_name = &subnames[idx + 1];
+                        let name = subnames.join(" ");
+                        
+                        #sub_app_match
+                    }
+                    else if idx < subnames.len() && name_matched {
+                        return Self::display_sub_help_idx(app, subnames, idx + 1)
+                    }
+                }
+                Err(aopt::Error::raise_error(format!("Can not display help message of subnames: {:?}", subnames)))
+            }
         })
     }
 }

@@ -81,9 +81,13 @@ impl<'a> SubGenerator<'a> {
         &self.name
     }
 
-    pub fn with_sub_parser_id(mut self, id: usize) -> Self {
+    pub fn with_sub_id(mut self, id: usize) -> Self {
         self.sub_id = id;
         self
+    }
+
+    pub fn get_sub_id(&self) -> usize {
+        self.sub_id
     }
 
     pub fn get_without_option_type(&self) -> &Type {
@@ -303,7 +307,7 @@ impl<'a> SubGenerator<'a> {
 
     pub fn gen_sub_help_context(&self) -> TokenStream {
         let without_option_ty = &self.without_option_ty;
-        let mut ret = quote!{ let context = <#without_option_ty>::into_struct_help_info(); };
+        let mut ret = quote!{ let context = <#without_option_ty>::into_help_context(); };
 
         if let Some(head_cfg) = self.configs.find_cfg(SubKind::Head) {
             let value = head_cfg.value();
