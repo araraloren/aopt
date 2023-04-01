@@ -324,7 +324,7 @@ impl<'a, T> Deref for RefOpt<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        self.0
     }
 }
 

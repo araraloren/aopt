@@ -47,7 +47,7 @@ impl<'a> SubGenerator<'a> {
         let attrs = &field.attrs;
         let docs = filter_comment_doc(attrs);
         let configs = Configs::parse_attrs("sub", attrs);
-        let without_option_ty = gen_ty_without_option(&field_ty)?;
+        let without_option_ty = gen_ty_without_option(field_ty)?;
         let name = {
             if let Some(cfg) = configs.find_cfg(SubKind::Name) {
                 cfg.value().to_token_stream()
@@ -139,13 +139,6 @@ impl<'a> SubGenerator<'a> {
                 true,
                 quote! {
                     #ident: set.find_val(#name).ok(),
-                },
-            ))
-        } else if is_mutopt {
-            Ok((
-                false,
-                quote! {
-                    #ident: set.take_val(#name).ok(),
                 },
             ))
         } else {
@@ -255,7 +248,7 @@ impl<'a> SubGenerator<'a> {
         sub_parser_tuple_ty: &TokenStream,
     ) -> syn::Result<TokenStream> {
         let without_option_ty = &self.without_option_ty;
-        let sub_id = self.get_sub_id() - 1;
+        let sub_id = self.get_sub_id();
         let sub_id = Index::from(sub_id);
 
         Ok(quote! {
@@ -318,14 +311,11 @@ impl<'a> SubGenerator<'a> {
     pub fn gen_struct_app_type(&self) -> syn::Result<Ident> {
         let ident = gen_subapp_without_option(&self.without_option_ty)?;
 
-        Ok(Ident::new(
-            &format!("{}App", ident.to_string()),
-            ident.span(),
-        ))
+        Ok(Ident::new(&format!("{}App", ident), ident.span()))
     }
 
     pub fn gen_sub_help_context(&self) -> syn::Result<TokenStream> {
-        let idx = self.get_sub_id() - 1;
+        let idx = self.get_sub_id();
         let idx = Index::from(idx);
         let mut ret = quote! { let context = sub_parser_tuple.#idx.gen_help_display_ctx(); };
 

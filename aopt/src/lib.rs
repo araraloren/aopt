@@ -37,7 +37,7 @@ pub(crate) fn display_option<T: Display>(option_value: &Option<T>) -> String {
     if let Some(value) = option_value {
         format!("Some({value})")
     } else {
-        format!("None")
+        "None".to_owned()
     }
 }
 

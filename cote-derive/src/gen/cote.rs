@@ -106,7 +106,7 @@ impl<'a> CoteGenerator<'a> {
     }
 
     pub fn get_ident(&self) -> &Ident {
-        &self.ident
+        self.ident
     }
 
     pub fn get_name(&self) -> &TokenStream {
@@ -137,7 +137,7 @@ impl<'a> CoteGenerator<'a> {
     pub fn gen_struct_app_type(&self) -> Ident {
         let ident = self.ident;
 
-        Ident::new(&format!("{}App", ident.to_string()), ident.span())
+        Ident::new(&format!("{}App", ident), ident.span())
     }
 
     pub fn gen_style_settings_for_parser(&self) -> Option<TokenStream> {
@@ -263,12 +263,10 @@ impl<'a> CoteGenerator<'a> {
             } else {
                 policy_ty.value().to_token_stream()
             }
+        } else if self.has_sub_command() {
+            gen_default_policy_ty(POLICY_PRE).unwrap()
         } else {
-            if self.has_sub_command() {
-                gen_default_policy_ty(POLICY_PRE).unwrap()
-            } else {
-                gen_default_policy_ty(POLICY_FWD).unwrap()
-            }
+            gen_default_policy_ty(POLICY_FWD).unwrap()
         })
     }
 

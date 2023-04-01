@@ -75,10 +75,10 @@ impl<'a> Analyzer<'a> {
                     if check_if_has_sub_cfg(field)? {
                         sub_generator.push(SubGenerator::new(field)?.with_sub_id(idx));
                         cote_generator.set_has_sub_command(true);
+                        idx += 1;
                     } else {
                         arg_generator.push(ArgGenerator::new(field)?);
                     }
-                    idx += 1;
                 }
                 Ok(Self {
                     arg_generator,
@@ -338,7 +338,7 @@ impl<'a> Analyzer<'a> {
 
         for sub_generator in self.sub_generator.iter() {
             let sub_help_context_gen = sub_generator.gen_sub_help_context()?;
-            let idx = sub_generator.get_sub_id() - 1;
+            let idx = sub_generator.get_sub_id();
             let idx = Index::from(idx);
 
             sub_parser_tuple_mat.extend(quote! {
@@ -700,13 +700,10 @@ pub fn gen_ty_without_option(ty: &Type) -> syn::Result<Type> {
             let ident_str = segment.ident.to_string();
 
             if ident_str == "Option" {
-                match &segment.arguments {
-                    PathArguments::AngleBracketed(ab) => {
-                        if let Some(GenericArgument::Type(next_ty)) = ab.args.first().as_ref() {
-                            return Ok(next_ty.clone());
-                        }
+                if let PathArguments::AngleBracketed(ab) = &segment.arguments {
+                    if let Some(GenericArgument::Type(next_ty)) = ab.args.first().as_ref() {
+                        return Ok(next_ty.clone());
                     }
-                    _ => {}
                 }
             }
         }

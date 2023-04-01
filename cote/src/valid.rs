@@ -14,7 +14,7 @@ where
     T: ErasedTy,
     K: ErasedTy + PartialEq<T>,
 {
-    ValValidator::from_fn(move |val| vals.iter().any(|v| PartialEq::eq(v, &val)))
+    ValValidator::from_fn(move |val| vals.iter().any(|v| PartialEq::eq(v, val)))
 }
 
 pub fn vector<K, T>(vals: Vec<K>) -> ValValidator<T>
@@ -22,7 +22,7 @@ where
     T: ErasedTy,
     K: ErasedTy + PartialEq<T>,
 {
-    ValValidator::from_fn(move |val| vals.iter().any(|v| PartialEq::eq(v, &val)))
+    ValValidator::from_fn(move |val| vals.iter().any(|v| PartialEq::eq(v, val)))
 }
 
 pub fn range<K, T>(start: K, end: K) -> ValValidator<T>

@@ -300,11 +300,11 @@ where
     Chk: SetChecker<Set>,
     Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
 {
-    pub(crate) fn parse_impl<'a>(
+    pub(crate) fn parse_impl(
         &mut self,
         ctx: &mut Ctx,
         set: &mut <Self as Policy>::Set,
-        inv: &mut <Self as Policy>::Inv<'a>,
+        inv: &mut <Self as Policy>::Inv<'_>,
         ser: &mut <Self as Policy>::Ser,
     ) -> Result<(), <Self as Policy>::Error> {
         self.checker().pre_check(set).map_err(|e| e.into())?;
@@ -480,10 +480,10 @@ where
 
     type Error = Error;
 
-    fn parse<'a>(
+    fn parse(
         &mut self,
         set: &mut Self::Set,
-        inv: &mut Self::Inv<'a>,
+        inv: &mut Self::Inv<'_>,
         ser: &mut Self::Ser,
         args: ARef<Args>,
     ) -> Result<Self::Ret, Self::Error> {

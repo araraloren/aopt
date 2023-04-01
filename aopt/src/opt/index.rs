@@ -24,7 +24,7 @@ use crate::Error;
 ///
 /// For option check, see [`SetChecker`](crate::set::SetChecker) for more information.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub enum Index {
     /// The forward index of NOA, fixed position.
     ///
@@ -108,6 +108,7 @@ pub enum Index {
     /// `@*` will matching `"app"`, `"pos1"`, `"pos2"` or `"pos3"`.
     AnyWhere,
 
+    #[default]
     Null,
 }
 
@@ -300,12 +301,8 @@ impl Index {
             Index::Range(start, Some(end)) => {
                 format!("{}..{}", start, end)
             }
-            Index::AnyWhere => {
-                format!("*")
-            }
-            Index::Null => {
-                format!("")
-            }
+            Index::AnyWhere => "*".to_string(),
+            Index::Null => String::default(),
         }
     }
 
@@ -396,12 +393,6 @@ impl Index {
             _ => {}
         }
         None
-    }
-}
-
-impl Default for Index {
-    fn default() -> Self {
-        Self::Null
     }
 }
 

@@ -166,10 +166,8 @@ where
             if !opt.ignore_name() {
                 matched = opt.mat_name(self.name());
             }
-            if !opt.ignore_alias() {
-                if opt.alias().is_some() {
-                    matched = matched || opt.mat_alias(&self.name)
-                }
+            if !opt.ignore_alias() && opt.alias().is_some() {
+                matched = matched || opt.mat_alias(&self.name)
             }
             if !opt.ignore_index() {
                 matched = matched && {

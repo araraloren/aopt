@@ -53,7 +53,7 @@ impl<T: ErasedTy> ValValidator<T> {
         K: ErasedTy + PartialEq<T>,
     {
         Self(Box::new(move |inner_val| {
-            vals.iter().any(|v| PartialEq::eq(v, &inner_val))
+            vals.iter().any(|v| PartialEq::eq(v, inner_val))
         }))
     }
 }

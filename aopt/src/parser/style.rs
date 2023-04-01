@@ -273,12 +273,12 @@ where
                         let opt_validator = cfg.opt_validator();
                         let splited = opt_validator.split(name).map_err(Into::into)?;
                         let prefix_len = splited.0.len();
-                        let mut char_indices = splited.1.char_indices().skip(2);
+                        let char_indices = splited.1.char_indices().skip(2);
 
                         // make sure we using `chars.count`, not len()
                         // check the name start 3th letter
                         // for `--opt42` check the option like `--op t42`, `--opt 42`, `--opt4 2`
-                        while let Some((i, _)) = char_indices.next() {
+                        for (i, _) in char_indices {
                             let name_value = name.split_at(prefix_len + i);
 
                             matches.push(

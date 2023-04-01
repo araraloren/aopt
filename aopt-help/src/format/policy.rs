@@ -108,12 +108,10 @@ impl<'a> DefaultPolicy<'a, Command<'a>> {
 
             if !block_usages.is_empty() {
                 for mut usage in block_usages {
-                    if self.usage_new_line > 0 {
-                        if (usages.len() + 1) % self.usage_new_line == 0 {
-                            // add more space
-                            // same length as `Usage: `
-                            usage.push_str("\n      ");
-                        }
+                    if self.usage_new_line > 0 && (usages.len() + 1) % self.usage_new_line == 0 {
+                        // add more space
+                        // same length as `Usage: `
+                        usage.push_str("\n      ");
                     }
                     usages.push(usage);
                 }
@@ -155,11 +153,9 @@ impl<'a> DefaultPolicy<'a, Command<'a>> {
                 ret += &block_hint;
                 ret += " ";
             }
-        } else {
-            if !args.is_empty() {
-                ret += &args;
-                ret += " ";
-            }
+        } else if !args.is_empty() {
+            ret += &args;
+            ret += " ";
         }
         ret.into()
     }
@@ -356,12 +352,10 @@ impl<'a, W: Write> DefaultAppPolicy<'a, AppHelp<'a, W>> {
 
             if !block_usages.is_empty() {
                 for mut usage in block_usages {
-                    if self.usage_new_line > 0 {
-                        if (usages.len() + 1) % self.usage_new_line == 0 {
-                            // add more space
-                            // same length as `Usage: `
-                            usage.push_str("\n      ");
-                        }
+                    if self.usage_new_line > 0 && (usages.len() + 1) % self.usage_new_line == 0 {
+                        // add more space
+                        // same length as `Usage: `
+                        usage.push_str("\n      ");
                     }
                     usages.push(usage);
                 }
@@ -397,7 +391,7 @@ impl<'a, W: Write> DefaultAppPolicy<'a, AppHelp<'a, W>> {
             ret += " ";
         }
         if !command_usage.is_empty() {
-            ret += &command_usage;
+            ret += command_usage;
             ret += " ";
         }
         if self.hiding_pos {
@@ -405,11 +399,9 @@ impl<'a, W: Write> DefaultAppPolicy<'a, AppHelp<'a, W>> {
                 ret += &block_hint;
                 ret += " ";
             }
-        } else {
-            if !args.is_empty() {
-                ret += &args;
-                ret += " ";
-            }
+        } else if !args.is_empty() {
+            ret += &args;
+            ret += " ";
         }
         ret.into()
     }

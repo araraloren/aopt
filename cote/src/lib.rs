@@ -252,7 +252,7 @@ where
     ///
     pub fn add_opt_meta(
         &mut self,
-        mut meta: impl IntoConfig<Ret = SetCfg<P::Set>>,
+        meta: impl IntoConfig<Ret = SetCfg<P::Set>>,
     ) -> Result<ParserCommit<'a, '_, P::Inv<'a>, P::Set, P::Ser, Placeholder>, Error> {
         let set = self.parser.optset();
         let config = meta.into_config(set)?;

@@ -104,13 +104,6 @@ impl<'a> ArgGenerator<'a> {
                     #ident: aopt::prelude::InferValueRef::infer_fetch(#name, set)?,
                 },
             ))
-        } else if is_mutopt {
-            Ok((
-                false,
-                quote! {
-                    #ident: aopt::prelude::InferValueMut::infer_fetch(#name, set)?,
-                },
-            ))
         } else {
             Ok((
                 false,

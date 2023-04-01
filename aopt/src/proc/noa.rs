@@ -180,11 +180,9 @@ where
             if !opt.ignore_name() {
                 matched = matched && opt.mat_name(self.name());
             }
-            if !opt.ignore_alias() {
-                if opt.alias().is_some() {
-                    if let Some(name) = &self.name {
-                        matched = matched || opt.mat_alias(name);
-                    }
+            if !opt.ignore_alias() && opt.alias().is_some() {
+                if let Some(name) = &self.name {
+                    matched = matched || opt.mat_alias(name);
                 }
             }
             if !opt.ignore_index() {

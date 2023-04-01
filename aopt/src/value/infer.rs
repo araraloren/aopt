@@ -566,7 +566,7 @@ impl<'a> InferValueMut<'a> for Stdin {
     where
         Self: Sized,
     {
-        Ok(set.take_val::<Stdin>(name)?)
+        set.take_val::<Stdin>(name)
     }
 }
 
