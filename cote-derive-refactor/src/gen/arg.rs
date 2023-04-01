@@ -10,18 +10,16 @@ use syn::Type;
 
 use crate::config::ArgKind;
 use crate::config::Configs;
-use crate::gen::gen_elision_lifetime_ty;
 
 use super::check_in_path;
 use super::filter_comment_doc;
 use super::gen_option_ident;
 use super::gen_option_uid_ident;
-use super::CoteGenerator;
 use super::OptUpdate;
 
 #[derive(Debug)]
 pub struct ArgGenerator<'a> {
-    ty: &'a Type,
+    field_ty: &'a Type,
 
     name: TokenStream,
 
@@ -29,22 +27,17 @@ pub struct ArgGenerator<'a> {
 
     docs: Vec<Lit>,
 
-    is_reference: bool,
-
-    elision_lifetime_ty: Type,
-
     configs: Configs<ArgKind>,
 }
 
 impl<'a> ArgGenerator<'a> {
-    pub fn new(field: &'a Field, cote: &CoteGenerator<'a>) -> syn::Result<Self> {
-        let ty = &field.ty;
+    pub fn new(field: &'a Field) -> syn::Result<Self> {
+        let field_ty = &field.ty;
         let ident = field.ident.as_ref();
         let attrs = &field.attrs;
         let docs = filter_comment_doc(attrs);
         let configs = Configs::parse_attrs("arg", attrs);
-        let is_position = check_in_path(ty, "Pos") || check_in_path(ty, "Cmd");
-        let (is_reference, elision_lifetime_ty) = gen_elision_lifetime_ty(cote, ty);
+        let is_position = check_in_path(field_ty, "Pos")? || check_in_path(field_ty, "Cmd")?;
         let name = {
             if let Some(cfg) = configs.find_cfg(ArgKind::Name) {
                 cfg.value().to_token_stream()
@@ -69,13 +62,11 @@ impl<'a> ArgGenerator<'a> {
         };
 
         Ok(Self {
-            ty,
+            field_ty,
             name,
             ident,
             configs,
             docs,
-            is_reference,
-            elision_lifetime_ty,
         })
     }
 
@@ -85,7 +76,7 @@ impl<'a> ArgGenerator<'a> {
             || self.configs.has_cfg(ArgKind::Fallback)
     }
 
-    pub fn gen_nodelay_setting(&self) -> Option<TokenStream> {
+    pub fn gen_nodelay_for_delay_parser(&self) -> Option<TokenStream> {
         self.configs.find_cfg(ArgKind::NoDelay).map(|_| {
             let name = &self.name;
 
@@ -95,7 +86,7 @@ impl<'a> ArgGenerator<'a> {
         })
     }
 
-    pub fn gen_field_extract(&self) -> syn::Result<(bool, TokenStream)> {
+    pub fn gen_value_extract(&self) -> syn::Result<(bool, TokenStream)> {
         let is_refopt = self.configs.find_cfg(ArgKind::Ref).is_some();
         let is_mutopt = self.configs.find_cfg(ArgKind::Mut).is_some();
         let ident = self.ident;
@@ -118,13 +109,6 @@ impl<'a> ArgGenerator<'a> {
                 false,
                 quote! {
                     #ident: aopt::prelude::InferValueMut::infer_fetch(#name, set)?,
-                },
-            ))
-        } else if self.is_reference {
-            Ok((
-                true,
-                quote! {
-                    #ident: aopt::prelude::InferValueRef::infer_fetch(#name, set)?,
                 },
             ))
         } else {
@@ -199,7 +183,7 @@ impl<'a> ArgGenerator<'a> {
     }
 
     pub fn gen_option_config_new(&self, ident: &Ident) -> syn::Result<TokenStream> {
-        let elision_ty = &self.elision_lifetime_ty;
+        let ty = &self.field_ty;
         let name = &self.name;
         let mut codes = vec![];
         let mut value = None;
@@ -271,7 +255,7 @@ impl<'a> ArgGenerator<'a> {
                             let token = cfg.value().to_token_stream();
 
                             quote! {
-                                config.set_storer(aopt::prelude::ValStorer::new_validator::<#elision_ty>(#token));
+                                config.set_storer(aopt::prelude::ValStorer::new_validator::<#ty>(#token));
                             }
                         }
                         _ => {
@@ -322,12 +306,12 @@ impl<'a> ArgGenerator<'a> {
             })
         }
         codes.push(quote! {
-            <#elision_ty as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
+            <#ty as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
             config
         });
         if value.is_some() {
             config.extend(quote! {
-                 type ValueType = <#elision_ty as aopt::prelude::Infer>::Val;
+                 type ValueType = <#ty as aopt::prelude::Infer>::Val;
             });
         }
         config.extend(codes.into_iter());

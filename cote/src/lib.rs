@@ -34,8 +34,8 @@ pub mod prelude {
     pub use crate::valid;
     pub use crate::CoteApp;
     pub use crate::ExtractFromSetDerive;
+    pub use crate::HelpDisplayCtx;
     pub use crate::IntoParserDerive;
-    pub use crate::HelpContext;
 }
 
 pub trait IntoParserDerive<'zlifetime, P>
@@ -621,7 +621,7 @@ where
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct HelpContext {
+pub struct HelpDisplayCtx {
     name: String,
 
     head: String,
@@ -637,7 +637,7 @@ pub struct HelpContext {
     submode: bool,
 }
 
-impl HelpContext {
+impl HelpDisplayCtx {
     pub fn with_name(mut self, name: impl Into<String>) -> Self {
         self.name = name.into();
         self
@@ -669,6 +669,41 @@ impl HelpContext {
     }
 
     pub fn with_submode(mut self, submode: bool) -> Self {
+        self.submode = submode;
+        self
+    }
+
+    pub fn set_name(&mut self, name: impl Into<String>) -> &mut Self {
+        self.name = name.into();
+        self
+    }
+
+    pub fn set_head(&mut self, head: impl Into<String>) -> &mut Self {
+        self.head = head.into();
+        self
+    }
+
+    pub fn set_foot(&mut self, foot: impl Into<String>) -> &mut Self {
+        self.foot = foot.into();
+        self
+    }
+
+    pub fn set_width(&mut self, width: usize) -> &mut Self {
+        self.width = width;
+        self
+    }
+
+    pub fn set_usagew(&mut self, usagew: usize) -> &mut Self {
+        self.usagew = usagew;
+        self
+    }
+
+    pub fn set_subnames(&mut self, subnames: Vec<String>) -> &mut Self {
+        self.subnames = subnames;
+        self
+    }
+
+    pub fn set_submode(&mut self, submode: bool) -> &mut Self {
         self.submode = submode;
         self
     }
@@ -705,16 +740,99 @@ impl HelpContext {
         if self.submode {
             std::iter::once(self.name())
                 .chain(self.subnames().iter())
-                .map(|v|v.as_str())
-                .collect::<Vec<&str>>().join(" ")
-        }
-        else {
+                .map(|v| v.as_str())
+                .collect::<Vec<&str>>()
+                .join(" ")
+        } else {
             self.subnames()
                 .iter()
                 .chain(std::iter::once(self.name()))
-                .map(|v|v.as_str())
-                .collect::<Vec<&str>>().join(" ")
+                .map(|v| v.as_str())
+                .collect::<Vec<&str>>()
+                .join(" ")
         }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct AppRunningCtx {
+    names: Vec<String>,
+
+    display_help: bool,
+
+    display_sub_help: bool,
+
+    exit: bool,
+}
+
+impl AppRunningCtx {
+    pub fn with_names(mut self, names: Vec<String>) -> Self {
+        self.names = names;
+        self
+    }
+
+    pub fn with_display_help(mut self, display_help: bool) -> Self {
+        self.display_help = display_help;
+        self
+    }
+
+    pub fn with_display_sub_help(mut self, display_sub_help: bool) -> Self {
+        self.display_sub_help = display_sub_help;
+        self
+    }
+
+    pub fn with_exit(mut self, exit: bool) -> Self {
+        self.exit = exit;
+        self
+    }
+
+    pub fn set_names(&mut self, names: Vec<String>) -> &mut Self {
+        self.names = names;
+        self
+    }
+
+    pub fn set_display_help(&mut self, display_help: bool) -> &mut Self {
+        self.display_help = display_help;
+        self
+    }
+
+    pub fn set_display_sub_help(&mut self, display_sub_help: bool) -> &mut Self {
+        self.display_sub_help = display_sub_help;
+        self
+    }
+
+    pub fn set_exit(&mut self, exit: bool) -> &mut Self {
+        self.exit = exit;
+        self
+    }
+
+    pub fn names(&self) -> &[String] {
+        &self.names
+    }
+
+    pub fn display_help(&self) -> bool {
+        self.display_help
+    }
+
+    pub fn display_sub_help(&self) -> bool {
+        self.display_sub_help
+    }
+
+    pub fn exit(&self) -> bool {
+        self.exit
+    }
+
+    pub fn add_name(&mut self, name: String) -> &mut Self {
+        self.names.push(name);
+        self
+    }
+
+    pub fn append_ctx(&mut self, mut ctx: Self) -> &mut Self {
+        self.names.append(&mut ctx.names);
+        self.display_help = self.display_help() || ctx.display_help();
+        self.display_sub_help = self.display_sub_help() || ctx.display_sub_help();
+        self.exit = self.exit() || ctx.exit();
+        self
     }
 }
 

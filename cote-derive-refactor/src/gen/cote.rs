@@ -4,22 +4,16 @@ use proc_macro_error::abort;
 use quote::quote;
 use quote::ToTokens;
 use syn::punctuated::Punctuated;
-use syn::spanned::Spanned;
 use syn::DeriveInput;
 use syn::GenericParam;
 use syn::Generics;
-use syn::Lifetime;
 use syn::Token;
 use syn::WherePredicate;
 
 use crate::config::Configs;
 use crate::config::CoteKind;
-use crate::config::SubKind;
-use crate::gen::HELP_OPTION_WIDTH;
-use crate::gen::HELP_USAGE_WIDTH;
 
 use super::gen_default_policy_ty;
-use super::gen_help_display_call;
 use super::gen_option_ident;
 use super::gen_option_uid_ident;
 use super::OptUpdate;
@@ -41,11 +35,7 @@ pub struct CoteGenerator<'a> {
 
     generics: &'a Generics,
 
-    lifetimes: Vec<&'a Ident>,
-
     has_sub_command: bool,
-
-    predicates: Option<&'a Punctuated<WherePredicate, Token![,]>>,
 }
 
 impl<'a> CoteGenerator<'a> {
@@ -53,7 +43,6 @@ impl<'a> CoteGenerator<'a> {
         let ident = &input.ident;
         let generics = &input.generics;
         let params = &generics.params;
-        let predicates = generics.where_clause.as_ref().map(|v| &v.predicates);
         let configs = Configs::<CoteKind>::parse_attrs("cote", &input.attrs);
         let name = if let Some(cfg) = configs.find_cfg(CoteKind::Name) {
             let value = cfg.value();
@@ -66,13 +55,16 @@ impl<'a> CoteGenerator<'a> {
                 String::from(env!("CARGO_PKG_NAME"))
             }
         };
-        let mut lifetimes = vec![];
-
+        // Check the lifetime in type parameters
         for param in params {
             match param {
                 GenericParam::Type(_) => {}
                 GenericParam::Lifetime(lifetime) => {
-                    lifetimes.push(&lifetime.lifetime.ident);
+                    abort! {
+                        input,
+                        "Cote not support struct with lifetime `{}`",
+                        lifetime.to_token_stream().to_string()
+                    }
                 }
                 GenericParam::Const(const_param) => {
                     abort! {
@@ -89,10 +81,20 @@ impl<'a> CoteGenerator<'a> {
             ident,
             configs,
             generics,
-            lifetimes,
-            predicates,
             has_sub_command: false,
         })
+    }
+
+    pub fn split_for_impl(
+        &self,
+    ) -> (
+        &Punctuated<GenericParam, Token![,]>,
+        Option<&Punctuated<WherePredicate, Token![,]>>,
+    ) {
+        let params = &self.generics.params;
+        let where_predicate = self.generics.where_clause.as_ref().map(|v| &v.predicates);
+
+        (params, where_predicate)
     }
 
     pub fn set_has_sub_command(&mut self, sub_command: bool) -> &mut Self {
@@ -108,39 +110,37 @@ impl<'a> CoteGenerator<'a> {
         &self.ident
     }
 
-    pub fn get_generics(&self) -> &'a Generics {
-        self.generics
-    }
-
     pub fn get_name(&self) -> &TokenStream {
         &self.name
     }
 
-    pub fn has_lifetime_ident(&self, other: &Ident) -> bool {
-        for ident in &self.lifetimes {
-            if ident == &other {
-                return true;
+    pub fn gen_new_app_define(&self, ident: &Ident) -> TokenStream {
+        quote! {
+            pub struct #ident<'a, P: Policy>(cote::CoteApp<'a, P>);
+
+            impl<'a, P: Policy> std::ops::Deref for #ident<'a, P> {
+                type Target = cote::CoteApp<'a, P>;
+
+                fn deref(&self) -> &Self::Target {
+                    &self.0
+                }
+            }
+
+            impl<'a, P: Policy> std::ops::DerefMut for #ident<'a, P> {
+                fn deref_mut(&mut self) -> &mut Self::Target {
+                    &mut self.0
+                }
             }
         }
-        false
     }
 
-    pub fn gen_into_parser_where_clause(&self, has_zlifetime: bool) -> TokenStream {
-        let where_predicate = self.gen_where_predicate(has_zlifetime);
+    pub fn gen_struct_app_type(&self) -> Ident {
+        let ident = self.ident;
 
-        quote! {
-            where
-            P::Ser: aopt::ser::ServicesValExt + 'zlifetime,
-            P::Error: Into<aopt::Error>,
-            P::Set: aopt::prelude::Set + aopt::set::SetValueFindExt + 'zlifetime,
-            P::Inv<'zlifetime>: aopt::ctx::HandlerCollection<'zlifetime, P::Set, P::Ser>,
-            P: aopt::prelude::Policy + aopt::prelude::APolicyExt<P> + Default + 'zlifetime,
-            aopt::prelude::SetCfg<P::Set>: aopt::prelude::Config + aopt::prelude::ConfigValue + Default,
-            #where_predicate
-        }
+        Ident::new(&format!("{}App", ident.to_string()), ident.span())
     }
 
-    pub fn gen_style_settings(&self) -> Option<TokenStream> {
+    pub fn gen_style_settings_for_parser(&self) -> Option<TokenStream> {
         let has_combine = self.configs.has_cfg(CoteKind::Combine);
         let has_embedded = self.configs.has_cfg(CoteKind::EmbeddedPlus);
 
@@ -162,90 +162,46 @@ impl<'a> CoteGenerator<'a> {
         }
     }
 
-    pub fn gen_help_display(&self) -> TokenStream {
-        let head = if let Some(head_cfg) = self.configs.find_cfg(CoteKind::Head) {
-            let value = head_cfg.value();
-    
-            quote! {
-                String::from(#value)
-            }
-        } else {
-            quote! {
-                String::from(env!("CARGO_PKG_DESCRIPTION"))
-            }
-        };
-        let foot = if let Some(foot_cfg) = self.configs.find_cfg(CoteKind::Foot) {
-            let value = foot_cfg.value();
-    
-            quote! {
-                String::from(#value)
-            }
-        } else {
-            quote! {
-                format!("Create by {} v{}", env!("CARGO_PKG_AUTHORS"), env!("CARGO_PKG_VERSION"))
-            }
-        };
-        let width = if let Some(head_cfg) = self.configs.find_cfg(CoteKind::HelpWidth) {
-            let value = head_cfg.value();
-    
-            quote! {
-                #value
-            }
-        } else {
-            quote! { #HELP_OPTION_WIDTH }
-        };
-        let usage_width = if let Some(head_cfg) = self.configs.find_cfg(CoteKind::UsageWidth) {
-            let value = head_cfg.value();
-    
-            quote! {
-                #value
-            }
-        } else {
-            quote! { #HELP_USAGE_WIDTH }
-        };
-        let name = &self.name;
-    
-        quote! {
-            cote::simple_display_set_help(app.inner_parser().optset(), #name, #head, #foot, #width, #usage_width)
-                        .map_err(|e| aopt::Error::raise_error(format!("Can not display help message: {:?}", e)))
+    pub fn gen_sync_running_ctx(&self) -> TokenStream {
+        let mut ret = quote! {};
+
+        if self.configs.has_cfg(CoteKind::AbortHelp) {
+            ret.extend(quote! {
+                if ret.is_err() ||
+                    !ret.as_ref().map(|v|v.status()).unwrap_or(true) {
+                    let running_ctx = self.inner_parser_mut().app_data_mut::<cote::AppRunningCtx>()?;
+                    if sub_parser {
+                        running_ctx.set_display_sub_help(true);
+                    }
+                    else {
+                        running_ctx.set_display_help(true);
+                    }
+                    running_ctx.set_exit(false);
+                }
+            })
         }
-
-        // let help_handler = gen_help_display_call(&self.name, &self.configs, sub_configs);
-        // let gen_abort_help = self.configs.has_cfg(CoteKind::AbortHelp);
-        // let gen_help = self.configs.has_cfg(CoteKind::Help);
-
-        // if gen_abort_help && gen_help {
-        //     Some(quote! {
-        //         let has_help_set = parser.find_val::<bool>(#HELP_OPTION_NAME).unwrap_or(&false) == &true;
-        //         if ret.is_err() || !ret.as_ref().unwrap().status() || has_help_set  {
-        //             #help_handler
-        //             if has_help_set {
-        //                 std::process::exit(0)
-        //             }
-        //         }
-        //     })
-        // } else if gen_help {
-        //     Some(quote! {
-        //         if parser.find_val::<bool>(#HELP_OPTION_NAME).unwrap_or(&false) == &true  {
-        //             #help_handler
-        //             std::process::exit(0)
-        //         }
-        //     })
-        // } else if gen_abort_help {
-        //     Some(quote! {
-        //         if ret.is_err() || !ret.as_ref().unwrap().status() {
-        //             #help_handler
-        //         }
-        //     })
-        // } else {
-        //     None
-        // }
+        if self.configs.has_cfg(CoteKind::Help) {
+            ret.extend(quote! {
+                let parser = self.inner_parser();
+                if parser.find_val::<bool>(#HELP_OPTION_NAME)? == &true {
+                    let running_ctx = self.inner_parser_mut().app_data_mut::<cote::AppRunningCtx>()?;
+                    if sub_parser {
+                        running_ctx.set_display_sub_help(true);
+                    }
+                    else {
+                        running_ctx.set_display_help(true);
+                    }
+                    running_ctx.set_exit(true);
+                }
+            })
+        }
+        ret
     }
 
-    pub fn gen_help_context(&self) -> TokenStream {
+    pub fn gen_help_display_ctx(&self) -> TokenStream {
         let head = if let Some(head_cfg) = self.configs.find_cfg(CoteKind::Head) {
             let value = head_cfg.value();
-    
+
             quote! {
                 String::from(#value)
             }
@@ -256,7 +212,7 @@ impl<'a> CoteGenerator<'a> {
         };
         let foot = if let Some(foot_cfg) = self.configs.find_cfg(CoteKind::Foot) {
             let value = foot_cfg.value();
-    
+
             quote! {
                 String::from(#value)
             }
@@ -267,66 +223,31 @@ impl<'a> CoteGenerator<'a> {
         };
         let width = if let Some(head_cfg) = self.configs.find_cfg(CoteKind::HelpWidth) {
             let value = head_cfg.value();
-    
+
             quote! {
                 #value
             }
         } else {
-            quote! { #HELP_OPTION_WIDTH }
+            quote! { 40 }
         };
         let usage_width = if let Some(head_cfg) = self.configs.find_cfg(CoteKind::UsageWidth) {
             let value = head_cfg.value();
-    
+
             quote! {
                 #value
             }
         } else {
-            quote! { #HELP_USAGE_WIDTH }
+            quote! { 10 }
         };
         let name = &self.name;
-    
+
         quote! {
-            cote::HelpContext::default()
+            cote::HelpDisplayCtx::default()
                 .with_name(#name)
                 .with_head(#head)
                 .with_foot(#foot)
                 .with_width(#width)
                 .with_usagew(#usage_width)
-        }
-    }
-
-    pub fn gen_where_predicate_zlifetime(&self) -> Option<TokenStream> {
-        let zlifetime = Lifetime::new("'zlifetime", self.ident.span());
-        self.gen_where_predicate_with(vec![zlifetime])
-    }
-
-    pub fn gen_where_predicate_with(&self, lifetimes: Vec<Lifetime>) -> Option<TokenStream> {
-        let mut code = quote! {};
-
-        for lifetime in self.lifetimes.iter() {
-            let lifetime = Lifetime::new(&format!("'{}", lifetime), lifetime.span());
-
-            for new_lifetime in lifetimes.iter() {
-                code.extend(quote! {
-                    #new_lifetime: #lifetime,
-                });
-            }
-        }
-        if let Some(where_predicates) = self.predicates {
-            Some(quote! { #code #where_predicates })
-        } else if !self.lifetimes.is_empty() {
-            Some(quote! { #code })
-        } else {
-            None
-        }
-    }
-
-    pub fn gen_where_predicate(&self, has_zlifetime: bool) -> Option<TokenStream> {
-        if has_zlifetime {
-            self.gen_where_predicate_zlifetime()
-        } else {
-            self.predicates
-                .map(|where_predicates| quote! { #where_predicates })
         }
     }
 
@@ -349,20 +270,6 @@ impl<'a> CoteGenerator<'a> {
                 gen_default_policy_ty(POLICY_FWD).unwrap()
             }
         })
-    }
-
-    pub fn gen_app_type(&self, lifetime: Option<Lifetime>) -> syn::Result<TokenStream> {
-        let policy_ty = self.gen_policy_type()?;
-
-        if let Some(lifetime) = lifetime {
-            Ok(quote! {
-                cote::CoteApp<#lifetime, #policy_ty>
-            })
-        } else {
-            Ok(quote! {
-                cote::CoteApp<'_, #policy_ty>
-            })
-        }
     }
 
     pub fn gen_main_option_update(&self, idx: usize) -> Option<OptUpdate> {

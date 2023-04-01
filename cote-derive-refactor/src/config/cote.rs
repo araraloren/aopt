@@ -43,7 +43,7 @@ impl Kind for CoteKind {
             "policy" => (Self::Policy, true),
             "name" => (Self::Name, true),
             "hint" => (Self::Hint, true),
-            "help" => (Self::Help, true),
+            "help" => (Self::Help, false),
             "head" => (Self::Head, true),
             "foot" => (Self::Foot, true),
             "width" => (Self::HelpWidth, true),
