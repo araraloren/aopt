@@ -1,9 +1,18 @@
+use std::iter::FromIterator;
+
 use proc_macro_error::abort;
-use quote::{quote, ToTokens};
-use syn::{parenthesized, parse::Parse, punctuated::Punctuated, token::Paren, Expr, Lit, Token};
+use quote::quote;
+use quote::ToTokens;
+use syn::parenthesized;
+use syn::parse::Parse;
+use syn::punctuated::Punctuated;
+use syn::token::Paren;
+use syn::Expr;
+use syn::Lit;
+use syn::Token;
 
 #[derive(Debug, Clone)]
-pub(crate) enum CfgValue {
+pub enum Value {
     Literal(Lit),
 
     Expr(Expr),
@@ -13,7 +22,7 @@ pub(crate) enum CfgValue {
     Null,
 }
 
-impl ToTokens for CfgValue {
+impl ToTokens for Value {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         match self {
             Self::Literal(t) => t.to_tokens(tokens),
@@ -27,13 +36,13 @@ impl ToTokens for CfgValue {
     }
 }
 
-impl Default for CfgValue {
+impl Default for Value {
     fn default() -> Self {
         Self::Null
     }
 }
 
-impl Parse for CfgValue {
+impl Parse for Value {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         if input.peek(Token![=]) {
             let assign_token = input.parse::<Token![=]>()?;
@@ -42,7 +51,7 @@ impl Parse for CfgValue {
                 Ok(Self::Literal(input.parse()?))
             } else {
                 match input.parse::<Expr>() {
-                    Ok(expr) => Ok(CfgValue::Expr(expr)),
+                    Ok(expr) => Ok(Value::Expr(expr)),
                     Err(e) => abort! {
                         assign_token,
                         "excepted `string literal` or `expression` after `=`: {:?}", e
