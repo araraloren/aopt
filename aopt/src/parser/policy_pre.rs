@@ -11,9 +11,9 @@ use super::NOAGuess;
 use super::OptGuess;
 use super::OptStyleManager;
 use super::Policy;
+use super::PolicySettings;
 use super::ReturnVal;
 use super::UserStyle;
-use super::UserStyleManager;
 use crate::args::ArgParser;
 use crate::args::Args;
 use crate::ctx::Ctx;
@@ -26,6 +26,7 @@ use crate::set::SetChecker;
 use crate::set::SetOpt;
 use crate::ARef;
 use crate::Error;
+use crate::Str;
 
 /// [`PrePolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
 /// [`PrePolicy`] will skip any special [`Error`] during [`parse`](Policy::parse) process.
@@ -171,23 +172,9 @@ impl<Set, Ser, Chk> PrePolicy<Set, Ser, Chk> {
         self
     }
 
-    pub fn set_strict(&mut self, strict: bool) -> &mut Self {
-        self.strict = strict;
-        self
-    }
-
-    pub fn set_styles(&mut self, styles: Vec<UserStyle>) -> &mut Self {
-        self.style_manager.set(styles);
-        self
-    }
-
     pub fn set_checker(&mut self, checker: Chk) -> &mut Self {
         self.checker = checker;
         self
-    }
-
-    pub fn strict(&self) -> bool {
-        self.strict
     }
 
     pub fn checker(&self) -> &Chk {
@@ -225,13 +212,39 @@ impl<Set, Ser, Chk> PrePolicy<Set, Ser, Chk> {
     }
 }
 
-impl<Set, Ser, Chk> UserStyleManager for PrePolicy<Set, Ser, Chk> {
+impl<Set, Ser, Chk> PolicySettings for PrePolicy<Set, Ser, Chk> {
     fn style_manager(&self) -> &OptStyleManager {
         &self.style_manager
     }
 
     fn style_manager_mut(&mut self) -> &mut OptStyleManager {
         &mut self.style_manager
+    }
+
+    fn strict(&self) -> bool {
+        self.strict
+    }
+
+    fn styles(&self) -> &[UserStyle] {
+        &self.style_manager
+    }
+
+    fn no_delay(&self) -> Option<&[Str]> {
+        None
+    }
+
+    fn set_strict(&mut self, strict: bool) -> &mut Self {
+        self.strict = strict;
+        self
+    }
+
+    fn set_styles(&mut self, styles: Vec<UserStyle>) -> &mut Self {
+        self.style_manager.set(styles);
+        self
+    }
+
+    fn set_no_delay(&mut self, _: impl Into<Str>) -> &mut Self {
+        self
     }
 }
 

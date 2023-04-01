@@ -59,6 +59,7 @@ impl<'a> SubGenerator<'a> {
                             "`arg` or `sub` not support empty field name"
                         }
                     })
+                    .to_string()
                     .to_token_stream()
             }
         };
@@ -298,7 +299,8 @@ impl<'a> SubGenerator<'a> {
                         Ok(<#without_option_ty>::try_extract(sub_app.inner_parser_mut().optset_mut()).ok())
                     }
                     else {
-                        Err(aopt::Error::raise_error(
+                        // return failure with more detail error message
+                        Err(aopt::Error::raise_failure(
                             format!("Failed at command `{}` with `{}`: {}, inner_ctx = {}",
                             stringify!(#without_option_ty), ret_args, ret_e.display(),
                             if let Some(inner_ctx) = ret_inner_ctx {

@@ -30,10 +30,6 @@ const HELP_OPTION_HELP: &str = "Display help message";
 const POLICY_PRE: &str = "pre";
 const POLICY_FWD: &str = "fwd";
 const POLICY_DELAY: &str = "delay";
-const MAIN_OPTION_IDENT: &str = "main_option";
-// const HELP_OPTION_IDENT: &str = "help_option";
-// const HELP_OPTION_UID: &str = "help_option_uid";
-// const MAIN_OPTION_UID: &str = "main_option_uid";
 
 pub use self::arg::ArgGenerator;
 pub use self::cote::CoteGenerator;
@@ -386,7 +382,7 @@ impl<'a> Analyzer<'a> {
             let sub_policy_ty = sub_generator.gen_policy_type()?;
 
             inner_app_ty.extend(quote! {
-                <#without_option_ty>::into_app::<'_, #sub_policy_ty>()?,
+                <#without_option_ty>::into_app_with::<'_, #sub_policy_ty>()?,
             });
         }
 
@@ -418,7 +414,7 @@ impl<'a> Analyzer<'a> {
             P::Error: Into<aopt::Error>,
             P::Set: aopt::prelude::Set + aopt::set::SetValueFindExt + 'z,
             P::Inv<'z>: aopt::ctx::HandlerCollection<'z, P::Set, P::Ser>,
-            P: aopt::prelude::Policy + aopt::prelude::APolicyExt<P> + aopt::prelude::UserStyleManager + Default + 'z,
+            P: aopt::prelude::Policy + aopt::prelude::APolicyExt<P> + aopt::prelude::PolicySettings + Default + 'z,
             aopt::prelude::SetCfg<P::Set>: aopt::prelude::Config + aopt::prelude::ConfigValue + Default,
         }
     }
@@ -431,7 +427,7 @@ impl<'a> Analyzer<'a> {
             P::Error: Into<aopt::Error>,
             P::Set: aopt::prelude::Set + std::fmt::Debug + aopt::set::SetValueFindExt + 'z,
             P::Inv<'z>: aopt::ctx::HandlerCollection<'z, P::Set, P::Ser> + std::fmt::Debug,
-            P: aopt::prelude::Policy + aopt::prelude::APolicyExt<P> + aopt::prelude::UserStyleManager + Default + std::fmt::Debug + 'z,
+            P: aopt::prelude::Policy + aopt::prelude::APolicyExt<P> + aopt::prelude::PolicySettings + Default + std::fmt::Debug + 'z,
             aopt::prelude::SetCfg<P::Set>: aopt::prelude::Config + aopt::prelude::ConfigValue + Default,
         }
     }
@@ -445,11 +441,19 @@ impl<'a> Analyzer<'a> {
         let where_clause = Self::where_clause_for_policy();
 
         Ok(quote! {
-            pub fn into_app<'z, P>() -> Result<#struct_app_ty<'z, P>, aopt::Error> #where_clause {
-                Ok(#struct_app_ty::new(Self::into_cote_app()?))
+            pub fn into_app<'z>() -> Result<#struct_app_ty<'z, #policy_ty>, aopt::Error> {
+                Self::into_app_with()
             }
 
-            pub fn into_cote_app<'z, P>() -> Result<cote::CoteApp<'z, P>, aopt::Error> #where_clause {
+            pub fn into_cote_app<'z>() -> Result<cote::CoteApp<'z, #policy_ty>, aopt::Error> {
+                Self::into_cote_app_with()
+            }
+
+            pub fn into_app_with<'z, P>() -> Result<#struct_app_ty<'z, P>, aopt::Error> #where_clause {
+                Ok(#struct_app_ty::new(Self::into_cote_app_with()?))
+            }
+
+            pub fn into_cote_app_with<'z, P>() -> Result<cote::CoteApp<'z, P>, aopt::Error> #where_clause {
                 let mut parser = <Self as cote::IntoParserDerive<P>>::into_parser()?;
 
                 #parser_settings
@@ -458,11 +462,13 @@ impl<'a> Analyzer<'a> {
                 Ok(cote::CoteApp::new_with_parser(#parser_app_name, parser))
             }
 
-            /// Parsing the given arguments and generate a .
-            pub fn parse(args: aopt::prelude::Args) -> Result<Self, aopt::Error> {
-                let mut app = Self::into_app::<'_, #policy_ty>()?.with_default_running_ctx()?;
+            /// Parsing the given arguments and return the [`GetoptRes`](aopt::GetoptRes).
+            pub fn parse_args<'z>(args: aopt::prelude::Args)
+                -> Result<aopt::GetoptRes<<#policy_ty as aopt::prelude::Policy>::Ret, #struct_app_ty<'z, #policy_ty>>, aopt::Error> {
+                let app: #struct_app_ty<'_, #policy_ty> = Self::into_app_with()?;
+                let mut app = app.with_default_running_ctx()?;
                 let parser = app.inner_parser_mut();
-                
+
                 parser.init()?;
                 let ret = parser.parse(aopt::ARef::new(Args::from(args))).map_err(Into::into);
 
@@ -481,17 +487,29 @@ impl<'a> Analyzer<'a> {
                         std::process::exit(0)
                     }
                 }
-                let ret = ret?;
+                Ok(aopt::GetoptRes{ ret: ret?, parser: app })
+            }
+
+            /// Parsing arguments returned from [`from_env`](aopt::prelude::Args::from_env) and return the [`GetoptRes`](aopt::GetoptRes).
+            pub fn parse_env_args<'z>()
+            -> Result<aopt::GetoptRes<<#policy_ty as aopt::prelude::Policy>::Ret, #struct_app_ty<'z, #policy_ty>>, aopt::Error> {
+                Self::parse_args(aopt::prelude::Args::from_env())
+            }
+
+            /// Parsing the given arguments and generate a .
+            pub fn parse(args: aopt::prelude::Args) -> Result<Self, aopt::Error> {
+                let GetoptRes { mut ret, mut parser } = Self::parse_args(args)?;
 
                 if ret.status() {
-                    Self::try_extract(app.inner_parser_mut().optset_mut())
+                    Self::try_extract(parser.inner_parser_mut().optset_mut())
                 }
                 else {
                     let ctx = ret.ctx();
                     let args = ctx.args();
                     let inner_ctx = ctx.inner_ctx().ok();
                     let e = ret.failure();
-                    Err(aopt::Error::raise_error(
+                    // return failure with more detail error message
+                    Err(aopt::Error::raise_failure(
                         format!("Parsing arguments `{}` failed: {}, inner_ctx = {}",
                             args, e.display(), if let Some(inner_ctx) = inner_ctx {
                                 format!("{}", inner_ctx)

@@ -21,7 +21,6 @@ pub use self::style::NOAGuess;
 pub use self::style::OptGuess;
 pub use self::style::OptStyleManager;
 pub use self::style::UserStyle;
-pub use self::style::UserStyleManager;
 
 pub(crate) use self::process::invoke_callback_opt;
 pub(crate) use self::process::process_non_opt;
@@ -116,6 +115,24 @@ pub trait Policy {
         ser: &mut Self::Ser,
         args: ARef<Args>,
     ) -> Result<Self::Ret, Self::Error>;
+}
+
+pub trait PolicySettings {
+    fn style_manager(&self) -> &OptStyleManager;
+
+    fn style_manager_mut(&mut self) -> &mut OptStyleManager;
+
+    fn strict(&self) -> bool;
+
+    fn styles(&self) -> &[UserStyle];
+
+    fn no_delay(&self) -> Option<&[Str]>;
+
+    fn set_strict(&mut self, strict: bool) -> &mut Self;
+
+    fn set_styles(&mut self, styles: Vec<UserStyle>) -> &mut Self;
+
+    fn set_no_delay(&mut self, name: impl Into<Str>) -> &mut Self;
 }
 
 /// Parser manage the components are using in [`parse`](Policy::parse) of [`Policy`].
@@ -667,9 +684,9 @@ where
     }
 }
 
-impl<'a, P> UserStyleManager for Parser<'a, P>
+impl<'a, P> PolicySettings for Parser<'a, P>
 where
-    P: Policy + UserStyleManager,
+    P: Policy + PolicySettings,
 {
     fn style_manager(&self) -> &OptStyleManager {
         self.policy().style_manager()
@@ -678,11 +695,38 @@ where
     fn style_manager_mut(&mut self) -> &mut OptStyleManager {
         self.policy_mut().style_manager_mut()
     }
+
+    fn strict(&self) -> bool {
+        self.policy().strict()
+    }
+
+    fn styles(&self) -> &[UserStyle] {
+        self.policy.styles()
+    }
+
+    fn no_delay(&self) -> Option<&[Str]> {
+        self.policy().no_delay()
+    }
+
+    fn set_strict(&mut self, strict: bool) -> &mut Self {
+        self.policy_mut().set_strict(strict);
+        self
+    }
+
+    fn set_styles(&mut self, styles: Vec<UserStyle>) -> &mut Self {
+        self.policy_mut().set_styles(styles);
+        self
+    }
+
+    fn set_no_delay(&mut self, name: impl Into<Str>) -> &mut Self {
+        self.policy_mut().set_no_delay(name);
+        self
+    }
 }
 
 impl<'a, P> Parser<'a, P>
 where
-    P: Policy + UserStyleManager,
+    P: Policy + PolicySettings,
 {
     /// Enable [`CombinedOption`](UserStyle::CombinedOption) option set style.
     /// This can support option style like `-abc` which set `-a`, `-b` and `-c` both.

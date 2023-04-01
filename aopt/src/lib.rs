@@ -280,10 +280,10 @@ pub mod prelude {
     pub use crate::parser::ParserCommit;
     pub use crate::parser::ParserCommitWithValue;
     pub use crate::parser::Policy;
+    pub use crate::parser::PolicySettings;
     pub use crate::parser::PrePolicy;
     pub use crate::parser::ReturnVal;
     pub use crate::parser::UserStyle;
-    pub use crate::parser::UserStyleManager;
     pub use crate::proc::Match;
     pub use crate::proc::NOAMatch;
     pub use crate::proc::NOAProcess;

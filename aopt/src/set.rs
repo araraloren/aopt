@@ -14,6 +14,7 @@ pub use self::optset::OptSet;
 pub use self::optvalid::OptValidator;
 pub use self::optvalid::PrefixOptValidator;
 
+use std::any::type_name;
 use std::fmt::Debug;
 use std::slice::Iter;
 use std::slice::IterMut;
@@ -222,11 +223,16 @@ where
     }
 
     fn take_val<U: ErasedTy>(&mut self, opt: impl Into<Str>) -> Result<U, Error> {
-        let opt = self.find_uid(opt)?;
+        let name: Str = opt.into();
+        let opt = self.find_uid(name.clone())?;
         let vals = self.opt_mut(opt)?.vals_mut::<U>()?;
 
         vals.pop().ok_or_else(|| {
-            Error::raise_error(format!("Not enough value can take from option `{}`", opt))
+            Error::raise_error(format!(
+                "Not enough value({}) can take from option `{}`",
+                type_name::<U>(),
+                name
+            ))
         })
     }
 }

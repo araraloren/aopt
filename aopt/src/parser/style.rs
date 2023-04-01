@@ -48,12 +48,6 @@ pub enum UserStyle {
     Boolean,
 }
 
-pub trait UserStyleManager {
-    fn style_manager(&self) -> &OptStyleManager;
-
-    fn style_manager_mut(&mut self) -> &mut OptStyleManager;
-}
-
 /// Manage the support option set style[`UserStyle`].
 #[derive(Debug, Clone)]
 pub struct OptStyleManager {

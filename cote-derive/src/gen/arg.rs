@@ -208,7 +208,7 @@ impl<'a> ArgGenerator<'a> {
 
                             value = Some(token.clone());
                             quote! {
-                                config.set_initializer(aopt::prelude::ValInitializer::new_value(<<ValueType>::from(#token)));
+                                config.set_initializer(aopt::prelude::ValInitializer::new_value(<ValueType>::from(#token)));
                             }
                         }
                         ArgKind::Values => {
@@ -216,7 +216,7 @@ impl<'a> ArgGenerator<'a> {
 
                             value = Some(token.clone());
                             quote! {
-                                let values = #token.into_iter().map(|v|<ValueType>::from(v)).collect::<Vec<ValueType>();
+                                let values = #token.into_iter().map(|v|<ValueType>::from(v)).collect::<Vec<ValueType>>();
                                 config.set_initializer(aopt::prelude::ValInitializer::new_values(values));
                             }
                         }
@@ -266,7 +266,7 @@ impl<'a> ArgGenerator<'a> {
         }
         let help = if let Some(cfg) = self.configs.find_cfg(ArgKind::Help) {
             let value = cfg.value();
-            Some(quote! { let mut message = String::from(#value.trim()) })
+            Some(quote! { let mut message = String::from(#value.trim()); })
         } else if !self.docs.is_empty() {
             Some({
                 let mut code = quote! {

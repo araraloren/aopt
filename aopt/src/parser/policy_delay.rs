@@ -13,9 +13,9 @@ use super::NOAGuess;
 use super::OptGuess;
 use super::OptStyleManager;
 use super::Policy;
+use super::PolicySettings;
 use super::ReturnVal;
 use super::UserStyle;
-use super::UserStyleManager;
 use crate::args::ArgParser;
 use crate::args::Args;
 use crate::astr;
@@ -186,32 +186,9 @@ impl<Set, Ser, Chk> DelayPolicy<Set, Ser, Chk> {
         self
     }
 
-    pub fn set_strict(&mut self, strict: bool) -> &mut Self {
-        self.strict = strict;
-        self
-    }
-
-    pub fn set_styles(&mut self, styles: Vec<UserStyle>) -> &mut Self {
-        self.style_manager.set(styles);
-        self
-    }
-
-    pub fn set_no_delay(&mut self, name: impl Into<Str>) -> &mut Self {
-        self.no_delay_opt.push(name.into());
-        self
-    }
-
     pub fn set_checker(&mut self, checker: Chk) -> &mut Self {
         self.checker = checker;
         self
-    }
-
-    pub fn strict(&self) -> bool {
-        self.strict
-    }
-
-    pub fn no_delay(&self) -> &[Str] {
-        &self.no_delay_opt
     }
 
     pub fn checker(&self) -> &Chk {
@@ -235,13 +212,40 @@ impl<Set, Ser, Chk> DelayPolicy<Set, Ser, Chk> {
     }
 }
 
-impl<Set, Ser, Chk> UserStyleManager for DelayPolicy<Set, Ser, Chk> {
+impl<Set, Ser, Chk> PolicySettings for DelayPolicy<Set, Ser, Chk> {
     fn style_manager(&self) -> &OptStyleManager {
         &self.style_manager
     }
 
     fn style_manager_mut(&mut self) -> &mut OptStyleManager {
         &mut self.style_manager
+    }
+
+    fn strict(&self) -> bool {
+        self.strict
+    }
+
+    fn styles(&self) -> &[UserStyle] {
+        &self.style_manager
+    }
+
+    fn no_delay(&self) -> Option<&[Str]> {
+        Some(&self.no_delay_opt)
+    }
+
+    fn set_strict(&mut self, strict: bool) -> &mut Self {
+        self.strict = strict;
+        self
+    }
+
+    fn set_styles(&mut self, styles: Vec<UserStyle>) -> &mut Self {
+        self.style_manager.set(styles);
+        self
+    }
+
+    fn set_no_delay(&mut self, name: impl Into<Str>) -> &mut Self {
+        self.no_delay_opt.push(name.into());
+        self
     }
 }
 

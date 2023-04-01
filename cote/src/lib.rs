@@ -978,7 +978,7 @@ mod test {
         assert_eq!(example.foo, true);
         assert_eq!(example.bar.0, 42);
 
-        let parser = Example::into_parser().unwrap();
+        let parser = Example::into_app().unwrap();
 
         assert_eq!(parser["--foo"].help(), &aopt::astr("a flag argument"));
         assert_eq!(parser["bar"].help(), &aopt::astr("a position argument"));
@@ -1175,16 +1175,9 @@ mod test {
 
         let args = Args::from_array(["app", "list", "--all", "--depth=6", "."]);
 
-        let app = App::parse(args)?;
+        let app = App::parse(args);
 
-        assert_eq!(
-            app,
-            App {
-                count: Some(vec![1, 2, 3]),
-                list: None,
-                find: None,
-            }
-        );
+        assert!(app.is_err());
 
         let args = Args::from_array(["app", "--count=8", "find", "something"]);
 
@@ -1204,23 +1197,20 @@ mod test {
 
         let args = Args::from_array(["app", "--count", "42"]);
 
-        let app = App::parse(args)?;
+        let app = App::parse(args);
 
-        assert_eq!(
-            app,
-            App {
-                count: Some(vec![1, 2, 3, 42]),
-                list: None,
-                find: None,
-            }
-        );
+        assert!(app.is_err());
 
         let args = Args::from_array(["app", "--count=42", "list"]);
 
-        let app = App::parse(args)?;
+        let GetoptRes {
+            ret,
+            parser: mut app,
+        } = App::parse_args(args)?;
 
+        assert_eq!(ret.status(), false);
         assert_eq!(
-            app,
+            app.extract_type::<App>()?,
             App {
                 count: Some(vec![1, 2, 3, 42]),
                 list: None,
