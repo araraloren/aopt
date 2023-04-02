@@ -28,16 +28,23 @@ pub struct ArgGenerator<'a> {
     docs: Vec<Lit>,
 
     configs: Configs<ArgKind>,
+
+    pos_id: Option<usize>,
 }
 
 impl<'a> ArgGenerator<'a> {
-    pub fn new(field: &'a Field) -> syn::Result<Self> {
+    pub fn new(field: &'a Field, pos_id: usize) -> syn::Result<Self> {
         let field_ty = &field.ty;
         let ident = field.ident.as_ref();
         let attrs = &field.attrs;
         let docs = filter_comment_doc(attrs);
         let configs = Configs::parse_attrs("arg", attrs);
-        let is_position = check_in_path(field_ty, "Pos")? || check_in_path(field_ty, "Cmd")?;
+        let is_pos_ty = check_in_path(field_ty, "Pos")?;
+        let is_cmd_ty = check_in_path(field_ty, "Cmd")?;
+        let is_main_ty = check_in_path(field_ty, "Main")?;
+        let has_index = configs.has_cfg(ArgKind::Index);
+        let is_position =  is_pos_ty || is_cmd_ty || is_main_ty || has_index;
+        let pos_id = if is_pos_ty && !has_index { Some(pos_id) } else { None };
         let name = {
             if let Some(cfg) = configs.find_cfg(ArgKind::Name) {
                 cfg.value().to_token_stream()
@@ -67,7 +74,12 @@ impl<'a> ArgGenerator<'a> {
             ident,
             configs,
             docs,
+            pos_id,
         })
+    }
+
+    pub fn has_pos_id(&self) -> bool {
+        self.pos_id.is_some()
     }
 
     pub fn has_handler(&self) -> bool {
@@ -297,6 +309,22 @@ impl<'a> ArgGenerator<'a> {
             codes.push(quote! {
                 config.set_help({ #help message });
             })
+        }
+        if let Some(pos_id) = self.pos_id {
+            if !self.configs.has_cfg(ArgKind::Index) {
+                codes.push(
+                    quote! {
+                        config.set_index(aopt::prelude::Index::forward(#pos_id));
+                    }
+                )
+            }
+            else {
+                abort! {
+                    ty,
+                    "Can not have both auto increment Pos id and index configuration `{:?}`",
+                    self.configs.find_cfg(ArgKind::Index)
+                }
+            }
         }
         codes.push(quote! {
             <#ty as aopt::prelude::Infer>::infer_fill_info(&mut config, true);

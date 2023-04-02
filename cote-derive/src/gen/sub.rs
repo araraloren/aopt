@@ -42,7 +42,7 @@ pub struct SubGenerator<'a> {
 }
 
 impl<'a> SubGenerator<'a> {
-    pub fn new(field: &'a Field) -> syn::Result<Self> {
+    pub fn new(field: &'a Field, sub_id: usize) -> syn::Result<Self> {
         let field_ty = &field.ty;
         let ident = field.ident.as_ref();
         let attrs = &field.attrs;
@@ -66,7 +66,7 @@ impl<'a> SubGenerator<'a> {
         };
 
         Ok(Self {
-            sub_id: 0,
+            sub_id,
             field_ty,
             name,
             ident,
@@ -74,11 +74,6 @@ impl<'a> SubGenerator<'a> {
             configs,
             without_option_ty,
         })
-    }
-
-    pub fn with_sub_id(mut self, id: usize) -> Self {
-        self.sub_id = id;
-        self
     }
 
     pub fn name(&self) -> &TokenStream {

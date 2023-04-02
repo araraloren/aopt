@@ -69,15 +69,21 @@ impl<'a> Analyzer<'a> {
                 let mut cote_generator = CoteGenerator::new(input)?;
                 let mut arg_generator = vec![];
                 let mut sub_generator = vec![];
-                let mut idx = 0;
+                let mut sub_app_idx = 0;
+                let mut pos_arg_idx = 1;
 
                 for field in fields.named.iter() {
                     if check_if_has_sub_cfg(field)? {
-                        sub_generator.push(SubGenerator::new(field)?.with_sub_id(idx));
+                        sub_generator.push(SubGenerator::new(field, sub_app_idx)?);
                         cote_generator.set_has_sub_command(true);
-                        idx += 1;
+                        sub_app_idx += 1;
                     } else {
-                        arg_generator.push(ArgGenerator::new(field)?);
+                        let arg = ArgGenerator::new(field, pos_arg_idx)?;
+
+                        if arg.has_pos_id() {
+                            pos_arg_idx += 1;
+                        }
+                        arg_generator.push(arg);
                     }
                 }
                 Ok(Self {
