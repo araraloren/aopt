@@ -2,7 +2,12 @@
 //! # Documentation: Cote Tutorial
 //!
 //! 1. [Quick Start](#quick-start)
+//!     1. [Help message generate](#help-message-generate)
+//!     2. [Running](#running)
 //! 2. [Configurating Struct](#configurating-struct)
+//!     1. [Configurating Policy](#configurating-policy)
+//!     2. [Configurating Help](#configurating-help)
+//!     3. [Configurating User Style](#configurating-user-style)
 //!
 //!
 //! ## Quick Start
@@ -191,8 +196,7 @@
 //!
 //!     let GetoptRes { ret: _, mut parser } = Cli::parse_env_args()?;
 //!     
-//!     // `no_delay` only available in `ADelayPolicy`
-//!     assert_eq!(parser.policy().no_delay().len(), 0);
+//!     assert_eq!(parser.policy().no_delay().map(|v|v.len()), Some(0));
 //!     assert_eq!(Cli::try_extract(parser.optset_mut())?, Cli { debug: false });
 //!
 //!     Ok(())
@@ -268,7 +272,7 @@
 //! The foot message display in help message
 //! ```
 //!
-//! ### Configurating style
+//! ### Configurating User Style
 //!
 //! - Add support for [`CombinedOption`](aopt::parser::UserStyle::CombinedOption).
 //!
@@ -322,7 +326,37 @@
 //!
 //! ## Configuration on field
 //!
-//! ### Add option
+//! ### `arg`
+//! 
+//! #### Options
+//! 
+//! In default, the fields of struct are generated into `Options`.
+//! 
+//! ```rust
+//! use cote::prelude::*;
+//! 
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! pub struct Cli {
+//!     foo: Option<String>,
+//! }
+//! 
+//! fn main() -> Result<(), aopt::Error> {
+//!     let cli = Cli::parse(Args::from_array(["app"]))?;
+//! 
+//!     assert_eq!(cli.foo.as_deref(), None);
+//! 
+//!     let cli = Cli::parse(Args::from_array(["app", "--foo", "bar"]))?;
+//! 
+//!     assert_eq!(cli.foo.as_deref(), Some("bar"));
+//! 
+//!     let cli = Cli::parse(Args::from_array(["app", "--foo=bar"]))?;
+//! 
+//!     assert_eq!(cli.foo.as_deref(), Some("bar"));
+//!     Ok(())
+//! }
+//! ```
+//! 
+//! #### Positionals
 //!
-//! ### Add sub command
+//! ### `sub`
 //!
