@@ -20,6 +20,7 @@ use super::gen_option_uid_ident;
 use super::gen_subapp_without_option;
 use super::gen_ty_without_option;
 use super::OptUpdate;
+use super::HELP_OPTION_NAME;
 use super::POLICY_FWD;
 
 #[derive(Debug)]
@@ -78,6 +79,10 @@ impl<'a> SubGenerator<'a> {
     pub fn with_sub_id(mut self, id: usize) -> Self {
         self.sub_id = id;
         self
+    }
+
+    pub fn name(&self) -> &TokenStream {
+        &self.name
     }
 
     pub fn get_sub_id(&self) -> usize {
@@ -155,6 +160,8 @@ impl<'a> SubGenerator<'a> {
         &self,
         idx: usize,
         sub_parser_tuple_ty: &TokenStream,
+        is_process_help: bool,
+        help_uid: Option<&Ident>,
     ) -> syn::Result<OptUpdate> {
         let ident = gen_option_ident(idx, self.ident.span());
         let uid = gen_option_uid_ident(idx, self.ident.span());
@@ -162,7 +169,12 @@ impl<'a> SubGenerator<'a> {
         Ok((
             Some(self.gen_option_config_new(&ident)?),
             Some(self.gen_option_config_insert(&uid, &ident)),
-            Some(self.gen_option_handler_insert(&uid, sub_parser_tuple_ty)?),
+            Some(self.gen_option_handler_insert(
+                &uid,
+                sub_parser_tuple_ty,
+                is_process_help,
+                help_uid,
+            )?),
         ))
     }
 
@@ -246,10 +258,30 @@ impl<'a> SubGenerator<'a> {
         &self,
         uid: &Ident,
         sub_parser_tuple_ty: &TokenStream,
+        is_process_help: bool,
+        help_uid: Option<&Ident>,
     ) -> syn::Result<TokenStream> {
         let without_option_ty = &self.without_option_ty;
         let sub_id = self.get_sub_id();
         let sub_id = Index::from(sub_id);
+        let pass_help_to_next = if is_process_help {
+            let help_uid = help_uid.unwrap_or_else(|| {
+                abort! {
+                    uid,
+                    "Failed generate help handler, found None of help uid"
+                }
+            });
+            quote! {
+                if let Ok(value) = set.opt(#help_uid)?.val::<bool>() {
+                    if *value {
+                        // pass a fake flag to next sub command
+                        args.push(aopt::RawVal::from(#HELP_OPTION_NAME));
+                    }
+                }
+            }
+        } else {
+            quote! {}
+        };
 
         Ok(quote! {
             parser.entry(#uid)?.on(
@@ -257,13 +289,14 @@ impl<'a> SubGenerator<'a> {
                     use std::ops::Deref;
 
                     let mut args = args.deref().clone().into_inner();
-                    let mut next_ctx = ser.sve_val::<cote::AppRunningCtx>()?.clone();
+                    let mut next_ctx = cote::AppRunningCtx::default();
                     let current_cmd = args.remove(*index.deref());
                     let current_cmd = current_cmd.get_str();
 
                     next_ctx.add_name(current_cmd.ok_or_else(||
                         aopt::Error::raise_error(format!("can not convert `{:?}` to str", current_cmd)))?.to_owned()
                     );
+                    #pass_help_to_next
 
                     let args = aopt::ARef::new(aopt::prelude::Args::from_vec(args));
                     let mut sub_app = &mut ser.sve_val_mut::<#sub_parser_tuple_ty>()?.#sub_id;
@@ -276,10 +309,6 @@ impl<'a> SubGenerator<'a> {
                     let ret = parser.parse(args).map_err(Into::into);
 
                     sub_app.sync_running_ctx(&ret, true)?;
-                    let running_ctx = sub_app.take_running_ctx()?;
-
-                    ser.sve_val_mut::<cote::AppRunningCtx>()?.append_ctx(running_ctx);
-
                     let ret = ret?;
                     let ret_ctx = ret.ctx();
                     let ret_args = ret_ctx.args();
@@ -287,6 +316,9 @@ impl<'a> SubGenerator<'a> {
                     let ret_e = ret.failure();
 
                     if ret.status() {
+                        let running_ctx = sub_app.take_running_ctx()?;
+
+                        ser.sve_val_mut::<cote::AppRunningCtx>()?.append_ctx(running_ctx);
                         let mut sub_app = &mut ser.sve_val_mut::<#sub_parser_tuple_ty>()?.#sub_id;
 
                         Ok(<#without_option_ty>::try_extract(sub_app.inner_parser_mut().optset_mut()).ok())
@@ -317,7 +349,7 @@ impl<'a> SubGenerator<'a> {
     pub fn gen_sub_help_context(&self) -> syn::Result<TokenStream> {
         let idx = self.get_sub_id();
         let idx = Index::from(idx);
-        let mut ret = quote! { let context = sub_parser_tuple.#idx.gen_help_display_ctx(); };
+        let mut ret = quote! { let mut context = sub_parser_tuple.#idx.gen_help_display_ctx(); };
 
         if let Some(head_cfg) = self.configs.find_cfg(SubKind::Head) {
             let value = head_cfg.value();

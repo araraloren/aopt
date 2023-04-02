@@ -105,6 +105,10 @@ impl<'a> CoteGenerator<'a> {
         self.has_sub_command
     }
 
+    pub fn is_process_help(&self) -> bool {
+        self.configs.has_cfg(CoteKind::Help) || self.configs.has_cfg(CoteKind::AbortHelp)
+    }
+
     pub fn get_ident(&self) -> &Ident {
         self.ident
     }
@@ -298,31 +302,34 @@ impl<'a> CoteGenerator<'a> {
         })
     }
 
-    pub fn gen_help_option_update(&self, idx: usize) -> Option<OptUpdate> {
+    pub fn gen_help_option_update(&self, idx: usize) -> Option<(Ident, OptUpdate)> {
         let ident = self.ident;
         self.configs.find_cfg(CoteKind::Help).map(|_| {
             let ident = gen_option_ident(idx, ident.span());
             let uid = gen_option_uid_ident(idx, ident.span());
 
             (
-                Some(quote! {
-                    let #ident = {
-                        ctor.new_with({
-                            let mut config = aopt::prelude::SetCfg::<P::Set>::default();
-                            config.set_name(#HELP_OPTION_NAME);
-                            config.add_alias(#HELP_OPTION_SHORT);
-                            config.add_alias(#HELP_OPTION_Q);
-                            config.set_help(#HELP_OPTION_HELP);
-                            <bool>::infer_fill_info(&mut config, true);
-                            config
-                        }).map_err(Into::into)?
-                    };
-                }),
-                Some(quote! {
-                    #[allow(unused)]
-                    let #uid = set.insert(#ident);
-                }),
-                None,
+                uid.clone(),
+                (
+                    Some(quote! {
+                        let #ident = {
+                            ctor.new_with({
+                                let mut config = aopt::prelude::SetCfg::<P::Set>::default();
+                                config.set_name(#HELP_OPTION_NAME);
+                                config.add_alias(#HELP_OPTION_SHORT);
+                                config.add_alias(#HELP_OPTION_Q);
+                                config.set_help(#HELP_OPTION_HELP);
+                                <bool>::infer_fill_info(&mut config, true);
+                                config
+                            }).map_err(Into::into)?
+                        };
+                    }),
+                    Some(quote! {
+                        #[allow(unused)]
+                        let #uid = set.insert(#ident);
+                    }),
+                    None,
+                ),
             )
         })
     }

@@ -12,7 +12,6 @@
 //! ```rust
 //! use std::path::PathBuf;
 //! use aopt::opt::Pos;
-//! use aopt::Error;
 //! use cote::prelude::*;
 //!
 //! #[derive(Debug, Cote)]

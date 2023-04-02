@@ -297,6 +297,8 @@ impl<'a> Analyzer<'a> {
         let mut handler = vec![];
         let mut option_id = 0;
         let sub_parser_tuple_ty = self.gen_sub_parser_tuple_ty(None)?;
+        let is_process_help = self.cote_generator.is_process_help();
+        let mut help_uid = None;
 
         let mut append = |(c, i, h): OptUpdate| {
             c.into_iter().for_each(|v| create.push(v));
@@ -308,7 +310,8 @@ impl<'a> Analyzer<'a> {
             append(update);
             option_id += 1;
         }
-        if let Some(update) = self.cote_generator.gen_help_option_update(option_id) {
+        if let Some((uid, update)) = self.cote_generator.gen_help_option_update(option_id) {
+            help_uid = Some(uid);
             append(update);
             option_id += 1;
         }
@@ -317,7 +320,12 @@ impl<'a> Analyzer<'a> {
             option_id += 1;
         }
         for field in self.sub_generator.iter() {
-            append(field.gen_option_update(option_id, &sub_parser_tuple_ty)?);
+            append(field.gen_option_update(
+                option_id,
+                &sub_parser_tuple_ty,
+                is_process_help,
+                help_uid.as_ref(),
+            )?);
             option_id += 1;
         }
         ret.extend(create.into_iter());
@@ -380,9 +388,14 @@ impl<'a> Analyzer<'a> {
         for sub_generator in self.sub_generator.iter() {
             let without_option_ty = sub_generator.get_without_option_type();
             let sub_policy_ty = sub_generator.gen_policy_type()?;
+            let sub_app_name = sub_generator.name();
 
             inner_app_ty.extend(quote! {
-                <#without_option_ty>::into_app_with::<'_, #sub_policy_ty>()?,
+                {
+                    let mut sub_app = <#without_option_ty>::into_app_policy::<'_, #sub_policy_ty>()?;
+                    sub_app.set_name(#sub_app_name);
+                    sub_app
+                },
             });
         }
 
@@ -442,18 +455,18 @@ impl<'a> Analyzer<'a> {
 
         Ok(quote! {
             pub fn into_app<'z>() -> Result<#struct_app_ty<'z, #policy_ty>, aopt::Error> {
-                Self::into_app_with()
+                Self::into_app_policy()
             }
 
             pub fn into_cote_app<'z>() -> Result<cote::CoteApp<'z, #policy_ty>, aopt::Error> {
-                Self::into_cote_app_with()
+                Self::into_cote_app_policy()
             }
 
-            pub fn into_app_with<'z, P>() -> Result<#struct_app_ty<'z, P>, aopt::Error> #where_clause {
-                Ok(#struct_app_ty::new(Self::into_cote_app_with()?))
+            pub fn into_app_policy<'z, P>() -> Result<#struct_app_ty<'z, P>, aopt::Error> #where_clause {
+                Ok(#struct_app_ty::new(Self::into_cote_app_policy()?))
             }
 
-            pub fn into_cote_app_with<'z, P>() -> Result<cote::CoteApp<'z, P>, aopt::Error> #where_clause {
+            pub fn into_cote_app_policy<'z, P>() -> Result<cote::CoteApp<'z, P>, aopt::Error> #where_clause {
                 let mut parser = <Self as cote::IntoParserDerive<P>>::into_parser()?;
 
                 #parser_settings
@@ -465,8 +478,10 @@ impl<'a> Analyzer<'a> {
             /// Parsing the given arguments and return the [`GetoptRes`](aopt::GetoptRes).
             pub fn parse_args<'z>(args: aopt::prelude::Args)
                 -> Result<aopt::GetoptRes<<#policy_ty as aopt::prelude::Policy>::Ret, #struct_app_ty<'z, #policy_ty>>, aopt::Error> {
-                let app: #struct_app_ty<'_, #policy_ty> = Self::into_app_with()?;
+                let app: #struct_app_ty<'_, #policy_ty> = Self::into_app_policy()?;
                 let mut app = app.with_default_running_ctx()?;
+
+                app.get_running_ctx_mut()?.add_name(#parser_app_name);
                 let parser = app.inner_parser_mut();
 
                 parser.init()?;
@@ -564,6 +579,10 @@ impl<'a> Analyzer<'a> {
                     self.inner_parser().app_data::<cote::AppRunningCtx>()
                 }
 
+                pub fn get_running_ctx_mut(&mut self) -> Result<&mut cote::AppRunningCtx, aopt::Error> {
+                    self.inner_parser_mut().app_data_mut::<cote::AppRunningCtx>()
+                }
+
                 pub fn take_running_ctx(&mut self) -> Result<cote::AppRunningCtx, aopt::Error> {
                     Ok(std::mem::take(self.inner_parser_mut().app_data_mut::<cote::AppRunningCtx>()?))
                 }
@@ -608,7 +627,7 @@ impl<'a> Analyzer<'a> {
                         else if idx == len - 2 && name_matched {
                             #sub_parser_help_call
                         }
-                        else if idx < subnames.len() && name_matched {
+                        else if idx < len && name_matched {
                             return self.display_sub_help_idx(subnames, idx + 1)
                         }
                     }
