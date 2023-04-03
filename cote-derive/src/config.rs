@@ -97,3 +97,14 @@ impl<T> Deref for Configs<T> {
         &self.0
     }
 }
+
+pub fn find_cfg_name<'a>(names: &[&'a str], attrs: &[Attribute]) -> Option<&'a str> {
+    for attr in attrs {
+        for name in names {
+            if attr.path.is_ident(*name) {
+                return Some(*name);
+            }
+        }
+    }
+    None
+}

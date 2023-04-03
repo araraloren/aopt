@@ -327,35 +327,35 @@
 //! ## Configuration on field
 //!
 //! ### `arg`
-//! 
+//!
 //! #### Options
-//! 
+//!
 //! In default, the fields of struct are generated into `Options`.
-//! 
+//!
 //! ```rust
 //! use cote::prelude::*;
-//! 
+//!
 //! #[derive(Debug, Cote, PartialEq, Eq)]
 //! pub struct Cli {
 //!     foo: Option<String>,
 //! }
-//! 
+//!
 //! fn main() -> Result<(), aopt::Error> {
 //!     let cli = Cli::parse(Args::from_array(["app"]))?;
-//! 
+//!
 //!     assert_eq!(cli.foo.as_deref(), None);
-//! 
+//!
 //!     let cli = Cli::parse(Args::from_array(["app", "--foo", "bar"]))?;
-//! 
+//!
 //!     assert_eq!(cli.foo.as_deref(), Some("bar"));
-//! 
+//!
 //!     let cli = Cli::parse(Args::from_array(["app", "--foo=bar"]))?;
-//! 
+//!
 //!     assert_eq!(cli.foo.as_deref(), Some("bar"));
 //!     Ok(())
 //! }
 //! ```
-//! 
+//!
 //! #### Positionals
 //!
 //! ### `sub`

@@ -30,6 +30,9 @@ const HELP_OPTION_HELP: &str = "Display help message";
 const POLICY_PRE: &str = "pre";
 const POLICY_FWD: &str = "fwd";
 const POLICY_DELAY: &str = "delay";
+const CONFIG_ARG: &str = "arg";
+const CONFIG_POS: &str = "pos";
+const CONFIG_CMD: &str = "cmd";
 
 pub use self::arg::ArgGenerator;
 pub use self::cote::CoteGenerator;
@@ -212,7 +215,7 @@ impl<'a> Analyzer<'a> {
                 }
             },
             if let Some(where_predicate) = where_predicate {
-                quote! { #where_predicate }
+                quote! { where #where_predicate }
             } else {
                 quote! {}
             },
@@ -224,7 +227,7 @@ impl<'a> Analyzer<'a> {
         where_predicate: Option<&Punctuated<WherePredicate, Token![,]>>,
     ) -> TokenStream {
         let default_where = quote! {
-            where S: aopt::prelude::SetValueFindExt
+            where S: aopt::prelude::SetValueFindExt,
         };
         if let Some(where_predicate) = where_predicate {
             quote! {
@@ -655,9 +658,11 @@ pub fn gen_option_uid_ident(idx: usize, span: Span) -> Ident {
 pub fn check_if_has_sub_cfg(field: &Field) -> syn::Result<bool> {
     let attrs = &field.attrs;
     let has_sub_cfg = attrs.iter().any(|v| v.path.is_ident("sub"));
-    let has_arg_cfg = attrs.iter().any(|v| v.path.is_ident("arg"));
+    let has_arg_cfg = attrs.iter().any(|v| v.path.is_ident(CONFIG_ARG));
+    let has_cmd_cfg = attrs.iter().any(|v| v.path.is_ident(CONFIG_CMD));
+    let has_pos_cfg = attrs.iter().any(|v| v.path.is_ident(CONFIG_POS));
 
-    if has_arg_cfg && has_sub_cfg {
+    if (has_arg_cfg || has_cmd_cfg || has_pos_cfg) && has_sub_cfg {
         abort! {
             field,
             "can not have both `sub` and `arg` configuration on same field"
@@ -737,6 +742,21 @@ pub fn gen_ty_without_option(ty: &Type) -> syn::Result<Type> {
         ty,
         "`sub` configuration only support `Option<T>`"
     }
+}
+
+pub fn is_option_ty(ty: &Type) -> bool {
+    if let Type::Path(path) = ty {
+        if let Some(segment) = path.path.segments.last() {
+            let ident_str = segment.ident.to_string();
+
+            if ident_str == "Option" {
+                if let PathArguments::AngleBracketed(_) = &segment.arguments {
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }
 
 pub fn gen_subapp_without_option(ty: &Type) -> syn::Result<&Ident> {

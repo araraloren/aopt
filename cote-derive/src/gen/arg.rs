@@ -8,6 +8,7 @@ use syn::Field;
 use syn::Lit;
 use syn::Type;
 
+use crate::config;
 use crate::config::ArgKind;
 use crate::config::Configs;
 
@@ -15,7 +16,11 @@ use super::check_in_path;
 use super::filter_comment_doc;
 use super::gen_option_ident;
 use super::gen_option_uid_ident;
+use super::is_option_ty;
 use super::OptUpdate;
+use super::CONFIG_ARG;
+use super::CONFIG_CMD;
+use super::CONFIG_POS;
 
 #[derive(Debug)]
 pub struct ArgGenerator<'a> {
@@ -30,6 +35,8 @@ pub struct ArgGenerator<'a> {
     configs: Configs<ArgKind>,
 
     pos_id: Option<usize>,
+
+    cfg_name: &'static str,
 }
 
 impl<'a> ArgGenerator<'a> {
@@ -38,13 +45,24 @@ impl<'a> ArgGenerator<'a> {
         let ident = field.ident.as_ref();
         let attrs = &field.attrs;
         let docs = filter_comment_doc(attrs);
-        let configs = Configs::parse_attrs("arg", attrs);
+        let cfg_name = config::find_cfg_name(&[CONFIG_ARG, CONFIG_POS, CONFIG_CMD], &attrs)
+            .unwrap_or(CONFIG_ARG);
+        let configs = Configs::parse_attrs(cfg_name, attrs);
         let is_pos_ty = check_in_path(field_ty, "Pos")?;
         let is_cmd_ty = check_in_path(field_ty, "Cmd")?;
         let is_main_ty = check_in_path(field_ty, "Main")?;
         let has_index = configs.has_cfg(ArgKind::Index);
-        let is_position =  is_pos_ty || is_cmd_ty || is_main_ty || has_index;
-        let pos_id = if is_pos_ty && !has_index { Some(pos_id) } else { None };
+        let is_position = is_pos_ty
+            || is_cmd_ty
+            || is_main_ty
+            || has_index
+            || cfg_name == CONFIG_POS
+            || cfg_name == CONFIG_CMD;
+        let pos_id = if (is_pos_ty || cfg_name == CONFIG_POS) && !has_index {
+            Some(pos_id)
+        } else {
+            None
+        };
         let name = {
             if let Some(cfg) = configs.find_cfg(ArgKind::Name) {
                 cfg.value().to_token_stream()
@@ -52,7 +70,7 @@ impl<'a> ArgGenerator<'a> {
                 let ident = ident.unwrap_or_else(|| {
                     abort! {
                         ident,
-                        "`arg` or `sub` not support empty field name"
+                        "`arg`, `pos` or `cmd` not support empty field name"
                     }
                 });
                 let ident = ident.to_string();
@@ -68,6 +86,12 @@ impl<'a> ArgGenerator<'a> {
             }
         };
 
+        if (cfg_name == CONFIG_CMD || is_cmd_ty || is_main_ty) && has_index {
+            abort! {
+                field_ty,
+                "`cmd` has default position, please remove the `index` attribute"
+            }
+        }
         Ok(Self {
             field_ty,
             name,
@@ -75,6 +99,7 @@ impl<'a> ArgGenerator<'a> {
             configs,
             docs,
             pos_id,
+            cfg_name,
         })
     }
 
@@ -189,6 +214,7 @@ impl<'a> ArgGenerator<'a> {
 
     pub fn gen_option_config_new(&self, ident: &Ident) -> syn::Result<TokenStream> {
         let ty = &self.field_ty;
+        let is_option = is_option_ty(self.field_ty);
         let name = &self.name;
         let mut codes = vec![];
         let mut value = None;
@@ -312,13 +338,10 @@ impl<'a> ArgGenerator<'a> {
         }
         if let Some(pos_id) = self.pos_id {
             if !self.configs.has_cfg(ArgKind::Index) {
-                codes.push(
-                    quote! {
-                        config.set_index(aopt::prelude::Index::forward(#pos_id));
-                    }
-                )
-            }
-            else {
+                codes.push(quote! {
+                    config.set_index(aopt::prelude::Index::forward(#pos_id));
+                })
+            } else {
                 abort! {
                     ty,
                     "Can not have both auto increment Pos id and index configuration `{:?}`",
@@ -326,10 +349,44 @@ impl<'a> ArgGenerator<'a> {
                 }
             }
         }
-        codes.push(quote! {
-            <#ty as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
-            config
-        });
+        match self.cfg_name {
+            CONFIG_CMD => {
+                codes.push(if is_option {
+                    quote! {
+                        <Option<aopt::opt::Cmd<#ty>> as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
+                        config.set_type::<#ty>();
+                        config
+                    }
+                } else {
+                    quote! {
+                        <aopt::opt::Cmd<#ty> as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
+                        config.set_type::<#ty>();
+                        config
+                    }
+                });
+            }
+            CONFIG_POS => {
+                codes.push(if is_option {
+                    quote! {
+                        <Option<aopt::opt::Pos<#ty>> as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
+                        config.set_type::<#ty>();
+                        config
+                    }
+                } else {
+                    quote! {
+                        <aopt::opt::Pos<#ty> as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
+                        config.set_type::<#ty>();
+                        config
+                    }
+                });
+            }
+            _ => {
+                codes.push(quote! {
+                    <#ty as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
+                    config
+                });
+            }
+        }
         if value.is_some() {
             config.extend(quote! {
                  type ValueType = <#ty as aopt::prelude::Infer>::Val;
