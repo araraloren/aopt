@@ -763,6 +763,10 @@ pub struct AppRunningCtx {
     display_sub_help: bool,
 
     exit: bool,
+
+    exit_sub: bool,
+
+    failed_info: Option<String>,
 }
 
 impl AppRunningCtx {
@@ -786,6 +790,16 @@ impl AppRunningCtx {
         self
     }
 
+    pub fn with_exit_sub(mut self, exit_sub: bool) -> Self {
+        self.exit_sub = exit_sub;
+        self
+    }
+
+    pub fn with_failed_info(mut self, failed_info: String) -> Self {
+        self.failed_info = Some(failed_info);
+        self
+    }
+
     pub fn set_names(&mut self, names: Vec<String>) -> &mut Self {
         self.names = names;
         self
@@ -806,6 +820,16 @@ impl AppRunningCtx {
         self
     }
 
+    pub fn set_exit_sub(&mut self, exit_sub: bool) -> &mut Self {
+        self.exit_sub = exit_sub;
+        self
+    }
+
+    pub fn set_failed_info(&mut self, failed_info: String) -> &mut Self {
+        self.failed_info = Some(failed_info);
+        self
+    }
+
     pub fn names(&self) -> &[String] {
         &self.names
     }
@@ -822,6 +846,14 @@ impl AppRunningCtx {
         self.exit
     }
 
+    pub fn exit_sub(&self) -> bool {
+        self.exit_sub
+    }
+
+    pub fn failed_info(&self) -> Option<&String> {
+        self.failed_info.as_ref()
+    }
+
     pub fn add_name(&mut self, name: String) -> &mut Self {
         self.names.push(name);
         self
@@ -832,6 +864,8 @@ impl AppRunningCtx {
         self.display_help = self.display_help() || ctx.display_help();
         self.display_sub_help = self.display_sub_help() || ctx.display_sub_help();
         self.exit = self.exit() || ctx.exit();
+        self.exit_sub = self.exit_sub() || ctx.exit_sub();
+        self.failed_info = ctx.failed_info;
         self
     }
 }

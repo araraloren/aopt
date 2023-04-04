@@ -287,10 +287,10 @@ impl<'a> SubGenerator<'a> {
                     let mut next_ctx = cote::AppRunningCtx::default();
                     let current_cmd = args.remove(*index.deref());
                     let current_cmd = current_cmd.get_str();
+                    let current_cmd = current_cmd.ok_or_else(||
+                        aopt::Error::raise_error(format!("can not convert `{:?}` to str", current_cmd)))?;
 
-                    next_ctx.add_name(current_cmd.ok_or_else(||
-                        aopt::Error::raise_error(format!("can not convert `{:?}` to str", current_cmd)))?.to_owned()
-                    );
+                    next_ctx.add_name(current_cmd.to_owned());
                     #pass_help_to_next
 
                     let args = aopt::ARef::new(aopt::prelude::Args::from_vec(args));
@@ -304,31 +304,33 @@ impl<'a> SubGenerator<'a> {
                     let ret = parser.parse(args).map_err(Into::into);
 
                     sub_app.sync_running_ctx(&ret, true)?;
+                    let running_ctx = sub_app.take_running_ctx()?;
+
+                    ser.sve_val_mut::<cote::AppRunningCtx>()?.append_ctx(running_ctx);
                     let ret = ret?;
-                    let ret_ctx = ret.ctx();
-                    let ret_args = ret_ctx.args();
-                    let ret_inner_ctx = ret_ctx.inner_ctx().ok();
-                    let ret_e = ret.failure();
 
                     if ret.status() {
-                        let running_ctx = sub_app.take_running_ctx()?;
-
-                        ser.sve_val_mut::<cote::AppRunningCtx>()?.append_ctx(running_ctx);
                         let mut sub_app = &mut ser.sve_val_mut::<#sub_parser_tuple_ty>()?.#sub_id;
 
                         Ok(<#without_option_ty>::try_extract(sub_app.inner_parser_mut().optset_mut()).ok())
                     }
                     else {
-                        // return failure with more detail error message
-                        Err(aopt::Error::raise_failure(
+                        let ret_ctx = ret.ctx();
+                        let ret_args = ret_ctx.args();
+                        let ret_inner_ctx = ret_ctx.inner_ctx().ok();
+                        let ret_e = ret.failure();
+
+                        // return failed message
+                        ser.sve_val_mut::<cote::AppRunningCtx>()?.set_failed_info(
                             format!("Failed at command `{}` with `{}`: {}, inner_ctx = {}",
-                            stringify!(#without_option_ty), ret_args, ret_e.display(),
+                            current_cmd, ret_args, ret_e.display(),
                             if let Some(inner_ctx) = ret_inner_ctx {
                                 format!("{}", inner_ctx)
                             } else {
                                 format!("None")
                             }
-                        )))
+                        ));
+                        Ok(None)
                     }
                 }
             );

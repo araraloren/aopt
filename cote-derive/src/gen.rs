@@ -528,18 +528,27 @@ impl<'a> Analyzer<'a> {
                     Self::try_extract(parser.inner_parser_mut().optset_mut())
                 }
                 else {
-                    let ctx = ret.ctx();
-                    let args = ctx.args();
-                    let inner_ctx = ctx.inner_ctx().ok();
-                    let e = ret.failure();
-                    // return failure with more detail error message
-                    Err(aopt::Error::raise_failure(
-                        format!("Parsing arguments `{}` failed: {}, inner_ctx = {}",
-                            args, e.display(), if let Some(inner_ctx) = inner_ctx {
-                                format!("{}", inner_ctx)
-                            } else {
-                                format!("None")
-                            })))
+                    let running_ctx = parser.get_running_ctx()?;
+
+                    Err(
+                        if let Some(failed_info) = running_ctx.failed_info() {
+                            aopt::Error::raise_failure(failed_info)
+                        }
+                        else {
+                            let ctx = ret.ctx();
+                            let args = ctx.args();
+                            let inner_ctx = ctx.inner_ctx().ok();
+                            let e = ret.failure();
+                            // return failure with more detail error message
+                            aopt::Error::raise_failure(
+                                format!("Parsing arguments `{}` failed: {}, inner_ctx = {}",
+                                    args, e.display(), if let Some(inner_ctx) = inner_ctx {
+                                        format!("{}", inner_ctx)
+                                    } else {
+                                        format!("None")
+                                    }))
+                        }
+                    )
                 }
             }
 

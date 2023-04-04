@@ -176,11 +176,12 @@ impl<'a> CoteGenerator<'a> {
                     let running_ctx = self.inner_parser_mut().app_data_mut::<cote::AppRunningCtx>()?;
                     if sub_parser {
                         running_ctx.set_display_sub_help(true);
+                        running_ctx.set_exit_sub(false);
                     }
                     else {
                         running_ctx.set_display_help(true);
+                        running_ctx.set_exit(false);
                     }
-                    running_ctx.set_exit(false);
                 }
             })
         }
@@ -191,11 +192,12 @@ impl<'a> CoteGenerator<'a> {
                     let running_ctx = self.inner_parser_mut().app_data_mut::<cote::AppRunningCtx>()?;
                     if sub_parser {
                         running_ctx.set_display_sub_help(true);
+                        running_ctx.set_exit_sub(false);
                     }
                     else {
                         running_ctx.set_display_help(true);
+                        running_ctx.set_exit(false);
                     }
-                    running_ctx.set_exit(true);
                 }
             })
         }
