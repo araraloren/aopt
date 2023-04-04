@@ -203,6 +203,8 @@ pub struct OptProcess<S> {
     consume_arg: bool,
 
     any_match: bool,
+
+    failed_info: Option<String>,
 }
 
 impl<S> Debug for OptProcess<S> {
@@ -211,6 +213,7 @@ impl<S> Debug for OptProcess<S> {
             .field("matches", &self.matches)
             .field("consume_arg", &self.consume_arg)
             .field("any_match", &self.any_match)
+            .field("failed_info", &self.failed_info)
             .finish()
     }
 }
@@ -221,12 +224,22 @@ impl<S> OptProcess<S> {
             matches,
             consume_arg: false,
             any_match: false,
+            failed_info: None,
         }
     }
 
     pub fn set_any_match(&mut self, any_match: bool) -> &mut Self {
         self.any_match = any_match;
         self
+    }
+
+    pub fn set_failed_info(&mut self, failed_info: String) -> &mut Self {
+        self.failed_info = Some(failed_info);
+        self
+    }
+
+    pub fn take_failed_info(self) -> Option<String> {
+        self.failed_info
     }
 }
 

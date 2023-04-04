@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use super::invoke_callback_opt;
-use super::process::ProcessCtx;
+use super::process_callback_ret;
 use super::process_non_opt;
 use super::process_opt;
 use super::CtxSaver;
@@ -14,6 +14,7 @@ use super::OptGuess;
 use super::OptStyleManager;
 use super::Policy;
 use super::PolicySettings;
+use super::ProcessCtx;
 use super::ReturnVal;
 use super::UserStyle;
 use crate::args::ArgParser;
@@ -256,6 +257,7 @@ where
     Chk: SetChecker<Set>,
     Set: crate::set::Set + OptParser + Debug + 'static,
 {
+    // ignore failure
     pub fn invoke_opt_callback(
         &mut self,
         ctx: &mut Ctx,
@@ -267,7 +269,11 @@ where
         let uid = saver.uid;
 
         ctx.set_inner_ctx(Some(saver.ctx));
-        if !invoke_callback_opt(uid, ctx, set, inv, ser)? {
+        if !process_callback_ret(
+            invoke_callback_opt(uid, ctx, set, inv, ser),
+            |_| Ok(()),
+            |_| Ok(()),
+        )? {
             set.opt_mut(uid)?.set_matched(false);
         }
         Ok(())
@@ -328,6 +334,8 @@ where
             if let Ok(clopt) = opt.parse_arg() {
                 if let Some(name) = clopt.name() {
                     if set.check(name.as_str()).map_err(Into::into)? {
+                        let mut why_match_failed = None;
+
                         for style in opt_styles.iter() {
                             if let Some(mut proc) = OptGuess::new().guess(
                                 style,
@@ -357,16 +365,18 @@ where
                                 }
                                 if matched {
                                     break;
+                                } else {
+                                    why_match_failed = proc.take_failed_info();
                                 }
                             }
                         }
                         if !matched && self.strict() {
                             let default_str = astr("");
 
-                            return Err(Error::sp_option_not_found(format!(
-                                "{}",
-                                clopt.name().unwrap_or(&default_str)
-                            )));
+                            return Err(Error::sp_option_not_found(
+                                format!("{}", clopt.name().unwrap_or(&default_str),),
+                                why_match_failed.unwrap_or_default(),
+                            ));
                         }
                     }
                 }

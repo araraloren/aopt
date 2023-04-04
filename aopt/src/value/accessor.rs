@@ -59,10 +59,7 @@ use crate::RawVal;
 ///
 ///     let raw_value2 = RawVal::from("-66");
 ///
-///     assert_eq!(
-///         value.store_all(Some(&raw_value2), &ctx, &Action::App)?,
-///         false
-///     );
+///     assert!(value.store_all(Some(&raw_value2), &ctx, &Action::App).is_err());
 ///     assert_eq!(value.pop::<i32>(), Some(4));
 ///     assert_eq!(value.rawval()?, &raw_value1);
 /// }
@@ -82,10 +79,7 @@ use crate::RawVal;
 ///
 ///     let raw_value2 = RawVal::from("-20");
 ///
-///     assert_eq!(
-///         value.store_all(Some(&raw_value2), &ctx, &Action::App)?,
-///         false
-///     );
+///     assert!(value.store_all(Some(&raw_value2), &ctx, &Action::App).is_err());
 ///     assert_eq!(value.pop::<i32>(), None);
 ///     assert_eq!(value.rawval()?, &raw_value1);
 /// }
@@ -179,13 +173,7 @@ impl ValAccessor {
                 }
                 Ok(true)
             }
-            Err(e) => {
-                if e.is_failure() {
-                    Ok(false)
-                } else {
-                    Err(e)
-                }
-            }
+            Err(e) => Err(e),
         }
     }
 }

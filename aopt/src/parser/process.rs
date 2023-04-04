@@ -39,7 +39,7 @@ where
     Ser: 'static,
     Set: crate::set::Set + 'static,
 {
-    let ret = match inv.has(uid) {
+    match inv.has(uid) {
         true => {
             trace_log!("Invoke callback of {}", uid);
             inv.invoke(set, ser, ctx)
@@ -48,12 +48,22 @@ where
             trace_log!("Invoke default callback of {}", uid);
             inv.invoke_default(set, ser, ctx)
         }
-    };
+    }
+}
 
+pub fn process_callback_ret(
+    ret: Result<bool, Error>,
+    mut func_ret: impl FnMut(bool) -> Result<(), Error>,
+    mut func_fail: impl FnMut(&Error) -> Result<(), Error>,
+) -> Result<bool, Error> {
     match ret {
-        Ok(ret) => Ok(ret),
+        Ok(ret) => {
+            (func_ret)(ret)?;
+            Ok(ret)
+        }
         Err(e) => {
             if e.is_failure() {
+                (func_fail)(&e)?;
                 Ok(false)
             } else {
                 Err(e)
@@ -107,6 +117,8 @@ where
             Err(e) => {
                 if !e.is_failure() {
                     return Err(e);
+                } else {
+                    proc.set_failed_info(e.display());
                 }
             }
         }
@@ -117,7 +129,14 @@ where
 
             ctx.set_inner_ctx(Some(saver.ctx));
             // undo the process if option callback return None
-            if !invoke_callback_opt(uid, ctx, set, inv, ser)? {
+            if !process_callback_ret(
+                invoke_callback_opt(uid, ctx, set, inv, ser),
+                |_| Ok(()),
+                |e: &Error| {
+                    proc.set_failed_info(e.display());
+                    Ok(())
+                },
+            )? {
                 proc.undo(set)?;
                 break;
             }
@@ -166,10 +185,14 @@ where
                             .with_uid(uid), // current uid == uid in matcher
                     ));
 
-                    let ret = invoke_callback_opt(uid, ctx, set, inv, ser)?;
-
-                    // return false means NOA not match
-                    if !ret {
+                    if !process_callback_ret(
+                        invoke_callback_opt(uid, ctx, set, inv, ser),
+                        |_| Ok(()),
+                        |e: &Error| {
+                            proc.set_failed_info(e.display());
+                            Ok(())
+                        },
+                    )? {
                         proc.undo(set)?;
                     }
                     proc.reset();
@@ -178,6 +201,8 @@ where
             Err(e) => {
                 if !e.is_failure() {
                     return Err(e);
+                } else {
+                    proc.set_failed_info(e.to_string());
                 }
             }
         }

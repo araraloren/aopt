@@ -1,7 +1,6 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-use super::process::ProcessCtx;
 use super::process_non_opt;
 use super::process_opt;
 use super::Guess;
@@ -12,6 +11,7 @@ use super::OptGuess;
 use super::OptStyleManager;
 use super::Policy;
 use super::PolicySettings;
+use super::ProcessCtx;
 use super::ReturnVal;
 use super::UserStyle;
 use crate::args::ArgParser;
@@ -116,7 +116,7 @@ use crate::Str;
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct PrePolicy<Set, Ser, Chk> {
     strict: bool,
 
@@ -125,6 +125,19 @@ pub struct PrePolicy<Set, Ser, Chk> {
     checker: Chk,
 
     marker_s: PhantomData<(Set, Ser)>,
+}
+
+impl<Set, Ser, Chk> Debug for PrePolicy<Set, Ser, Chk>
+where
+    Chk: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PrePolicy")
+            .field("strict", &self.strict)
+            .field("style_manager", &self.style_manager)
+            .field("checker", &self.checker)
+            .finish()
+    }
 }
 
 impl<Set, Ser, Chk> Default for PrePolicy<Set, Ser, Chk>

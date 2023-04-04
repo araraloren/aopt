@@ -1,7 +1,6 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-use super::process::ProcessCtx;
 use super::process_non_opt;
 use super::process_opt;
 use super::Guess;
@@ -12,6 +11,7 @@ use super::OptGuess;
 use super::OptStyleManager;
 use super::Policy;
 use super::PolicySettings;
+use super::ProcessCtx;
 use super::ReturnVal;
 use super::UserStyle;
 use crate::args::ArgParser;
@@ -261,6 +261,8 @@ where
             if let Ok(clopt) = opt.parse_arg() {
                 if let Some(name) = clopt.name() {
                     if set.check(name.as_str()).map_err(Into::into)? {
+                        let mut why_match_failed = None;
+
                         for style in opt_styles.iter() {
                             if let Some(mut proc) = OptGuess::new().guess(
                                 style,
@@ -286,16 +288,20 @@ where
                                 }
                                 if matched {
                                     break;
+                                } else {
+                                    if let Some(failed_info) = proc.take_failed_info() {
+                                        why_match_failed = Some(failed_info);
+                                    }
                                 }
                             }
                         }
                         if !matched && self.strict() {
                             let default_str = astr("");
 
-                            return Err(Error::sp_option_not_found(format!(
-                                "{}",
-                                clopt.name().unwrap_or(&default_str)
-                            )));
+                            return Err(Error::sp_option_not_found(
+                                format!("{}", clopt.name().unwrap_or(&default_str)),
+                                why_match_failed.unwrap_or_default(),
+                            ));
                         }
                     }
                 }
