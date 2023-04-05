@@ -18,9 +18,10 @@ where
 
 /// Convert raw value to &[`str`].
 pub fn raw2str(raw: Option<&RawVal>) -> Result<&str, Error> {
-    raw.ok_or_else(|| Error::raise_failure("unexcepted empty value"))?
-        .get_str()
-        .ok_or_else(|| Error::raise_failure(format!("can't convert value `{:?}` to str", raw)))
+    let raw = raw.ok_or_else(|| Error::raise_failure("Unexcepted empty value in raw2str"))?;
+
+    raw.get_str()
+        .ok_or_else(|| Error::raise_failure(format!("Can't convert value `{}` to str", raw)))
 }
 
 impl RawValParser for () {
@@ -41,8 +42,8 @@ macro_rules! impl_raw_val_parser {
 
                 val.parse::<$int>().map_err(|e| {
                     Error::raise_failure(format!(
-                        "Can not convert value `{:?}` to {}: {:?}",
-                        raw,
+                        "Can not convert value `{}` to {}: {:?}",
+                        val,
                         stringify!($int),
                         e
                     ))
@@ -82,7 +83,7 @@ impl RawValParser for OsString {
 
     fn parse(raw: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(Self::clone(raw.ok_or_else(|| {
-            Error::raise_failure("unexcepted empty value")
+            Error::raise_failure("Unexcepted empty value")
         })?))
     }
 }
@@ -102,7 +103,7 @@ impl RawValParser for OsString {
 
     fn parse(raw: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
         let raw: &std::ffi::OsStr = raw
-            .ok_or_else(|| Error::raise_failure("unexcepted empty value"))?
+            .ok_or_else(|| Error::raise_failure("Unexcepted empty value"))?
             .as_ref();
         Ok(raw.to_owned())
     }
