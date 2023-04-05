@@ -14,9 +14,8 @@
 //!
 //! Using [`Cote`](crate::cote_derive::Cote) derive you can quick setup a application.
 //!
-//! ```rust
+//! ```no_run
 //! use std::path::PathBuf;
-//! use aopt::opt::Pos;
 //! use cote::prelude::*;
 //!
 //! #[derive(Debug, Cote)]
@@ -50,8 +49,8 @@
 //!     /// Set the depth of search
 //!     depth: usize, // without `Option` mean force required
 //!
-//!     #[arg(index = "1", value = ".", help = "Set the clean directory")]
-//!     dest: Option<Pos<PathBuf>>,
+//!     #[pos(value = ".", help = "Set the clean directory")]
+//!     dest: Option<PathBuf>,
 //! }
 //!
 //! #[derive(Debug, Cote)]
@@ -59,8 +58,8 @@
 //! pub struct List {
 //!     /// Enable recursive mode
 //!     recursive: bool,
-//!     #[arg(index = "1", value = ".", help = "Set the clean directory")]
-//!     dest: Option<Pos<PathBuf>>,
+//!     #[pos(value = ".", help = "Set the clean directory")]
+//!     dest: Option<PathBuf>,
 //! }
 //!
 //! fn main() -> color_eyre::Result<()> {
@@ -101,8 +100,8 @@
 //! Generate help message for command line program
 //!
 //! Commands:
-//!  se       Search the given directory
-//!  ls       List the given directory
+//!  se@1       Search the given directory
+//!  ls@1       List the given directory
 //!
 //! Options:
 //!   -h,-?,--help           Display help message
@@ -124,7 +123,7 @@
 //!   --recursive       Enable recursive mode
 //!
 //! Args:
-//!   dest      Set the list directory ["."]
+//!   dest@1      Set the list directory ["."]
 //!
 //! Create by araraloren <blackcatoverwall@gmail.com> v0.1.8
 //! ```
@@ -152,8 +151,8 @@
 //! Generate help message for command line program
 //!
 //! Commands:
-//!   se       Search the given directory
-//!   ls       List the given directory
+//!   se@1       Search the given directory
+//!   ls@1       List the given directory
 //!
 //! Options:
 //!   -h,-?,--help           Display help message
@@ -162,7 +161,9 @@
 //!
 //! Create by araraloren <blackcatoverwall@gmail.com> v0.1.8
 //! Error:
-//!    0: failed at sub command `Search` with args `Args { inner: [RawVal("cli"), RawVal("--depth")] }: OptionNotFound("--depth")
+//!    0: Failed at command `se` with `["--depth", "www"]`: Can not find option `--depth`: 
+//! Can not convert value `www` to usize: ParseIntError { kind: InvalidDigit }, 
+//! inner_ctx = InnerCtx { uid: 1, name: Some(--depth), style: Style::Argument, arg: Some("www"), index: 1, total: 3 }
 //!
 //! Location:
 //!    src\main.rs:56
@@ -231,12 +232,12 @@
 //!     bar: Cmd,
 //!
 //!     /// The second position argument.
-//!     #[arg(index = "2")]
-//!     arg: Pos<String>,
+//!     #[pos(index = "2")]
+//!     arg: String,
 //!
 //!     /// Collection of arguments start from position 3.
-//!     #[arg(index = "3..")]
-//!     args: Pos<Vec<String>>,
+//!     #[pos(index = "3..")]
+//!     args: Vec<String>,
 //! }
 //!
 //! fn main() -> color_eyre::Result<()> {
@@ -330,7 +331,7 @@
 //!
 //! #### Options
 //!
-//! In default, the fields of struct are generated into `Options`.
+//! In default, the fields of struct are generated into options.
 //!
 //! ```rust
 //! use cote::prelude::*;
