@@ -154,6 +154,22 @@ impl ValAccessor {
         self
     }
 
+    pub fn storer(&self) -> &ValStorer {
+        &self.storer
+    }
+
+    pub fn initializer(&self) -> &ValInitializer {
+        &self.initializer
+    }
+
+    pub fn storer_mut(&mut self) -> &mut ValStorer {
+        &mut self.storer
+    }
+
+    pub fn initializer_mut(&mut self) -> &mut ValInitializer {
+        &mut self.initializer
+    }
+
     pub fn handlers(&mut self) -> (&mut Vec<RawVal>, &mut AnyValue) {
         (&mut self.rawval, &mut self.any_value)
     }
