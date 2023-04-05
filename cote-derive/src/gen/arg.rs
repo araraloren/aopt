@@ -352,14 +352,13 @@ impl<'a> ArgGenerator<'a> {
         match self.cfg_name {
             CONFIG_CMD => {
                 codes.push(if is_option {
-                    quote! {
-                        <Option<aopt::opt::Cmd<#ty>> as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
-                        config.set_type::<#ty>();
-                        config
+                    abort! {
+                        ty,
+                        "Cmd always force required, please remove Option from type"
                     }
                 } else {
                     quote! {
-                        <aopt::opt::Cmd<#ty> as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
+                        <aopt::opt::Cmd as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
                         config.set_type::<#ty>();
                         config
                     }
