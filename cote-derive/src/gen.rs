@@ -536,7 +536,11 @@ impl<'a> Analyzer<'a> {
                         }
                         else {
                             let ctx = ret.ctx();
-                            let args = ctx.args();
+                            let args = ctx.orig_args()[1..]
+                                        .iter()
+                                        .map(ToString::to_string)
+                                        .collect::<Vec<_>>()
+                                        .join(", ");
                             let inner_ctx = ctx.inner_ctx().ok();
                             let e = ret.failure();
                             // return failure with more detail error message
