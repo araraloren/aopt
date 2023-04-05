@@ -501,7 +501,7 @@ impl<'a> Analyzer<'a> {
 
                 if running_ctx.display_sub_help() {
                     app.display_sub_help(running_ctx.names())?;
-                    if running_ctx.exit() {
+                    if running_ctx.exit_sub() {
                         std::process::exit(0)
                     }
                 }
