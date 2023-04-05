@@ -161,8 +161,8 @@
 //!
 //! Create by araraloren <blackcatoverwall@gmail.com> v0.1.8
 //! Error:
-//!    0: Failed at command `se` with `["--depth", "www"]`: Can not find option `--depth`: 
-//! Can not convert value `www` to usize: ParseIntError { kind: InvalidDigit }, 
+//!    0: Failed at command `se` with `["--depth", "www"]`: Can not find option `--depth`:
+//! Can not convert value `www` to usize: ParseIntError { kind: InvalidDigit },
 //! inner_ctx = InnerCtx { uid: 1, name: Some(--depth), style: Style::Argument, arg: Some("www"), index: 1, total: 3 }
 //!
 //! Location:
@@ -327,37 +327,154 @@
 //!
 //! ## Configuration on field
 //!
-//! ### `arg`
+//! ### Options
 //!
-//! #### Options
-//!
-//! In default, the fields of struct are generated into options.
+//! Specific the attribute `arg`, the fields of struct are generated into options.
 //!
 //! ```rust
 //! use cote::prelude::*;
 //!
 //! #[derive(Debug, Cote, PartialEq, Eq)]
 //! pub struct Cli {
-//!     foo: Option<String>,
+//!     foo: Option<String>, // In default, it is generated into options.
+//!
+//!     #[arg(name = "b")]
+//!     bar: Option<String>,
 //! }
 //!
 //! fn main() -> Result<(), aopt::Error> {
 //!     let cli = Cli::parse(Args::from_array(["app"]))?;
 //!
 //!     assert_eq!(cli.foo.as_deref(), None);
+//!     assert_eq!(cli.bar.as_deref(), None);
 //!
-//!     let cli = Cli::parse(Args::from_array(["app", "--foo", "bar"]))?;
-//!
-//!     assert_eq!(cli.foo.as_deref(), Some("bar"));
-//!
-//!     let cli = Cli::parse(Args::from_array(["app", "--foo=bar"]))?;
+//!     let cli = Cli::parse(Args::from_array(["app", "--foo", "bar", "-b=foo"]))?;
 //!
 //!     assert_eq!(cli.foo.as_deref(), Some("bar"));
+//!     assert_eq!(cli.bar.as_deref(), Some("foo"));
+//!
+//!     let cli = Cli::parse(Args::from_array(["app", "-b", "foo", "--foo=bar", ]))?;
+//!
+//!     assert_eq!(cli.foo.as_deref(), Some("bar"));
+//!     assert_eq!(cli.bar.as_deref(), Some("foo"));
 //!     Ok(())
 //! }
 //! ```
 //!
-//! #### Positionals
+//! ### Positionals
 //!
-//! ### `sub`
+//! Specific the attribute `pos` if you want to match the command line arguments by position.
+//!
+//! ```
+//! use cote::prelude::*;
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! pub struct Cli {
+//!     #[pos()]
+//!     foo: Option<String>, // if not specific, index will automate generated base on field index
+//!
+//!     #[pos(index = "2")]
+//!     bar: Option<String>,
+//! }
+//!
+//! fn main() -> Result<(), aopt::Error> {
+//!     let app = Cli::into_app()?;
+//!
+//!     assert_eq!(app["foo"].index(), Some(&Index::forward(1)));
+//!     assert_eq!(app["bar"].index(), Some(&Index::forward(2)));
+//!
+//!     let cli = Cli::parse(Args::from_array(["app"]))?;
+//!
+//!     assert_eq!(cli.foo.as_deref(), None);
+//!     assert_eq!(cli.bar.as_deref(), None);
+//!
+//!     let cli = Cli::parse(Args::from_array(["app", "42", "foo"]))?;
+//!
+//!     assert_eq!(cli.foo.as_deref(), Some("42"));
+//!     assert_eq!(cli.bar.as_deref(), Some("foo"));
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ### Commands
+//!
+//! Specific the attribute `cmd` will let you create a sub command flag.
+//!
+//! ```rust
+//! use cote::prelude::*;
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! pub struct Cli {
+//!     #[cmd()]
+//!     foo: bool, // Command has a fixed position 1,
+//!                // and it's always force required
+//!
+//!     #[pos(index = "2")]
+//!     bar: Option<String>,
+//! }
+//!
+//! fn main() -> Result<(), aopt::Error> {
+//!     let app = Cli::into_app()?;
+//!
+//!     assert_eq!(app["foo"].index(), Some(&Index::forward(1)));
+//!     assert_eq!(app["bar"].index(), Some(&Index::forward(2)));
+//!
+//!     let cli = Cli::parse(Args::from_array(["app", "foo", "42"]))?;
+//!
+//!     assert_eq!(cli.bar.as_deref(), Some("42"));
+//!
+//!     assert!(Cli::parse(Args::from_array(["app", "42", "foo"])).is_err());
+//!     assert!(Cli::parse(Args::from_array(["app", "42"])).is_err());
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ### Configurations of attribute `arg`, `pos` and `cmd`.
+//!
+//! #### Configure the name and alias.
+//!
+//! ```rust
+//! use cote::prelude::*;
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! pub struct Cli {
+//!     #[cmd(name = "foo", alias = "f")]
+//!     cmd: bool,
+//!
+//!     //! set the name of position, for access the option from index operator
+//!     #[pos(name = "bar", index = "2")]
+//!     pos: usize,
+//!
+//!     //! set the option name with prefix
+//!     #[arg(name = "--baz", alias = "-b")]
+//!     opt: String,
+//! }
+//!
+//! fn main() -> color_eyre::Result<()> {
+//!     color_eyre::install()?;
+//!
+//!     let app = Cli::into_app()?;
+//!
+//!     assert_eq!(app["foo"].name(), "foo");
+//!     assert_eq!(app["bar"].name(), "bar");
+//!     assert_eq!(app["--baz"].name(), "--baz");
+//!     assert_eq!(app["-b"].name(), "--baz");
+//!
+//!     let cli = Cli::parse(Args::from_array(["app", "--baz", "qux", "foo", "42"]))?;
+//!
+//!     assert_eq!(cli.cmd, true);
+//!     assert_eq!(cli.pos, 42);
+//!     assert_eq!(cli.opt, "qux");
+//!
+//!     let cli = Cli::parse(Args::from_array(["app", "f", "-b=quux", "88"]))?;
+//!
+//!     assert_eq!(cli.cmd, true);
+//!     assert_eq!(cli.pos, 88);
+//!     assert_eq!(cli.opt, "quux");
+//!
+//!     Ok(())
+//! }
+//! ```
+//! 
+//! #### Configure the hint, help and default value.
 //!
