@@ -509,11 +509,6 @@
 //! 
 //!     let mut app = Cli::into_app()?;
 //! 
-//!     assert_eq!(app["foo"].name(), "foo");
-//!     assert_eq!(app["bar"].name(), "bar");
-//!     assert_eq!(app["--baz"].name(), "--baz");
-//!     assert_eq!(app["-b"].name(), "--baz");
-//! 
 //!     assert_eq!(app["foo"].hint(), "foo@1");
 //!     assert_eq!(app["bar"].hint(), "[BAR]");
 //!     assert_eq!(app["--baz"].hint(), "-b,--baz");
@@ -532,6 +527,96 @@
 //!     // Currently only display default values are set in the attribute
 //!     Cli::parse(Args::from_array(["app", "--help"]))?;
 //! 
+//!     Ok(())
+//! }
+//! ```
+//! 
+//! #### Configure the index.
+//! 
+//! For more informations about index, reference [`Index`](aopt::prelude::Index).
+//! 
+//! ##### Example1
+//! 
+//! ```rust
+//! use cote::prelude::*;
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(help)]
+//! pub struct Cli {
+//!     // `cmd` has a fixed position in default, you can't change it
+//!     // and you can't both have a `cmd` and a `pos` at index 1
+//!     #[cmd()]
+//!     foo: bool, 
+//!
+//!     // `bar` has a index 2
+//!     #[pos(index = "2", value = 42usize, hint = "[BAR]")]
+//!     bar: Option<usize>,
+//!
+//!     // option ignore the index value when matching with command line arguments
+//!     #[arg(alias = "-b", help = "Set the string value of baz")]
+//!     baz: String,
+//!
+//!     // `quux` can accept position arguments at range from 3 to infinite
+//!     #[pos(index = "3..", values = ["corge", "grault"])]
+//!     quux: Vec<String>,
+//! }
+//! fn main() -> color_eyre::Result<()> {
+//!     color_eyre::install()?;
+//!
+//!     let app = Cli::into_app()?;
+//!
+//!     assert_eq!(app["foo"].index(), Some(&Index::forward(1)));
+//!     assert_eq!(app["bar"].index(), Some(&Index::forward(2)));
+//!     assert_eq!(app["--baz"].index(), None);
+//!     assert_eq!(app["quux"].index(), Some(&Index::range(Some(3), None)));
+//!
+//!     Ok(())
+//! }
+//! ```
+//! 
+//! ##### Example2
+//! 
+//! ```rust
+//! use cote::prelude::*;
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(help)]
+//! pub struct Cli {
+//!     // `bar` has an index 1, it is automated generate by derive macro
+//!     #[pos(value = 42usize)]
+//!     bar: Option<usize>,
+//!
+//!     // option ignore the index value when matching with command line arguments
+//!     #[arg(alias = "-b", help = "Set the string value of baz")]
+//!     baz: String,
+//!
+//!     // `quux` can accept position arguments at range 3 or 4
+//!     #[pos(index = "3..5")]
+//!     quux: Vec<String>,
+//! }
+//! fn main() -> color_eyre::Result<()> {
+//!     color_eyre::install()?;
+//!
+//!     let app = Cli::into_app()?;
+//!
+//!     assert_eq!(app["bar"].index(), Some(&Index::forward(1)));
+//!     assert_eq!(app["--baz"].index(), None);
+//!     assert_eq!(app["quux"].index(), Some(&Index::range(Some(3), Some(5))));
+//!
+//!     let app = Cli::parse(Args::from_array([
+//!         "app", // index 0
+//!         "88", // index 1
+//!         "--baz", // option --baz
+//!         "foo", // value of option --baz
+//!         "ignore", // index 2
+//!         "what", // index 3 
+//!         "where", // index 4
+//!     ]))?;
+//!
+//!     assert_eq!(app.bar, Some(88));
+//!     assert_eq!(app.baz, "foo");
+//!     assert_eq!(app.quux, vec!["what".to_owned(), "where".to_owned()]);
+//!
 //!     Ok(())
 //! }
 //! ```
