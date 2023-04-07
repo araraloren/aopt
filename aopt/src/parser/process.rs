@@ -118,7 +118,7 @@ where
                 if !e.is_failure() {
                     return Err(e);
                 } else {
-                    proc.set_failed_info(e.display());
+                    proc.app_failed_info(e);
                 }
             }
         }
@@ -133,7 +133,7 @@ where
                 invoke_callback_opt(uid, ctx, set, inv, ser),
                 |_| Ok(()),
                 |e: &Error| {
-                    proc.set_failed_info(e.display());
+                    proc.app_failed_info(e.clone());
                     Ok(())
                 },
             )? {
@@ -189,7 +189,7 @@ where
                         invoke_callback_opt(uid, ctx, set, inv, ser),
                         |_| Ok(()),
                         |e: &Error| {
-                            proc.set_failed_info(e.display());
+                            proc.app_failed_info(e.clone());
                             Ok(())
                         },
                     )? {
@@ -202,7 +202,7 @@ where
                 if !e.is_failure() {
                     return Err(e);
                 } else {
-                    proc.set_failed_info(e.to_string());
+                    proc.app_failed_info(e);
                 }
             }
         }

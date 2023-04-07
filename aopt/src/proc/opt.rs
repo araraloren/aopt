@@ -204,7 +204,7 @@ pub struct OptProcess<S> {
 
     any_match: bool,
 
-    failed_info: Option<String>,
+    failed_info: Vec<Error>,
 }
 
 impl<S> Debug for OptProcess<S> {
@@ -224,7 +224,7 @@ impl<S> OptProcess<S> {
             matches,
             consume_arg: false,
             any_match: false,
-            failed_info: None,
+            failed_info: vec![],
         }
     }
 
@@ -233,12 +233,16 @@ impl<S> OptProcess<S> {
         self
     }
 
-    pub fn set_failed_info(&mut self, failed_info: String) -> &mut Self {
-        self.failed_info = Some(failed_info);
+    pub fn app_failed_info(&mut self, failed_info: Error) -> &mut Self {
+        self.failed_info.push(failed_info);
         self
     }
 
-    pub fn take_failed_info(self) -> Option<String> {
+    pub fn failed_info(&self) -> &[Error] {
+        &self.failed_info
+    }
+
+    pub fn take_failed_info(self) -> Vec<Error> {
         self.failed_info
     }
 }

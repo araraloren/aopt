@@ -118,6 +118,8 @@ pub struct DelayPolicy<Set, Ser, Chk> {
 
     no_delay_opt: Vec<Str>,
 
+    failed_info: Vec<Error>,
+
     marker_s: PhantomData<(Set, Ser)>,
 }
 
@@ -147,6 +149,7 @@ where
             checker: Chk::default(),
             style_manager: OptStyleManager::default(),
             no_delay_opt: vec![],
+            failed_info: vec![],
             marker_s: PhantomData::default(),
         }
     }
@@ -334,8 +337,6 @@ where
             if let Ok(clopt) = opt.parse_arg() {
                 if let Some(name) = clopt.name() {
                     if set.check(name.as_str()).map_err(Into::into)? {
-                        let mut why_match_failed = None;
-
                         for style in opt_styles.iter() {
                             if let Some(mut proc) = OptGuess::new().guess(
                                 style,
@@ -366,17 +367,17 @@ where
                                 if matched {
                                     break;
                                 } else {
-                                    why_match_failed = proc.take_failed_info();
+                                    self.failed_info.append(&mut proc.take_failed_info());
                                 }
                             }
                         }
                         if !matched && self.strict() {
                             let default_str = astr("");
 
-                            return Err(Error::sp_option_not_found(
-                                format!("{}", clopt.name().unwrap_or(&default_str),),
-                                why_match_failed.unwrap_or_default(),
-                            ));
+                            return Err(Error::sp_option_not_found(format!(
+                                "{}",
+                                clopt.name().unwrap_or(&default_str)
+                            )));
                         }
                     }
                 }
@@ -505,7 +506,17 @@ where
                 if e.is_failure() {
                     Ok(ReturnVal::new(ctx).with_failure(e))
                 } else {
-                    Err(e)
+                    if self.failed_info.is_empty() {
+                        Err(e)
+                    } else {
+                        let last_error = self.failed_info.last();
+
+                        Err(Error::raise_error(format!(
+                            "{}: {}",
+                            e.display(),
+                            last_error.map(|v| v.display()).unwrap_or_default()
+                        )))
+                    }
                 }
             }
         }

@@ -63,13 +63,22 @@ impl ValStorer {
             move |raw: Option<&RawVal>, ctx: &Ctx, act: &Action, handler: &mut AnyValue| {
                 let val = U::parse(raw, ctx).map_err(Into::into)?;
 
-                trace_log!("Validator value storer, parsing {:?} -> {:?}", raw, val);
                 if !validator.invoke(&val) {
+                    trace_log!(
+                        "Validator value storer failed, parsing {:?} -> {:?}",
+                        raw,
+                        val
+                    );
                     Err(Error::raise_failure(format!(
                         "Value check failed for option Ctx {{ `{:?}` }}",
                         ctx,
                     )))
                 } else {
+                    trace_log!(
+                        "Validator value storer okay, parsing {:?} -> {:?}",
+                        raw,
+                        val
+                    );
                     act.store1(Some(val), handler);
                     Ok(())
                 }

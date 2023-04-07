@@ -216,7 +216,7 @@ pub struct NOAProcess<S> {
 
     consume_arg: bool,
 
-    failed_info: Option<String>,
+    failed_info: Vec<Error>,
 }
 
 impl<S> Debug for NOAProcess<S> {
@@ -234,17 +234,21 @@ impl<S> NOAProcess<S> {
         Self {
             matches,
             consume_arg: false,
-            failed_info: None,
+            failed_info: vec![],
         }
     }
 
-    pub fn set_failed_info(&mut self, failed_info: String) -> &mut Self {
-        self.failed_info = Some(failed_info);
+    pub fn app_failed_info(&mut self, failed_info: Error) -> &mut Self {
+        self.failed_info.push(failed_info);
         self
     }
 
-    pub fn failed_info(&self) -> Option<&String> {
-        self.failed_info.as_ref()
+    pub fn failed_info(&self) -> &[Error] {
+        &self.failed_info
+    }
+
+    pub fn take_failed_info(self) -> Vec<Error> {
+        self.failed_info
     }
 }
 

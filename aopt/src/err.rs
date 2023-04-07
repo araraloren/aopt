@@ -15,7 +15,7 @@ pub enum Error {
     PosForceRequired(String),
     OptForceRequired(String),
     CmdForceRequired(String),
-    OptionNotFound { opt: String, why: String },
+    OptionNotFound { opt: String },
     ExtractValueError(String),
 }
 
@@ -45,7 +45,7 @@ impl Error {
             self,
             Error::Failure(_)
                 | Error::ExtractValueError(_)
-                | Error::OptionNotFound { opt: _, why: _ }
+                | Error::OptionNotFound { opt: _ }
                 | Error::CmdForceRequired(_)
                 | Error::PosForceRequired(_)
                 | Error::OptForceRequired(_)
@@ -100,11 +100,8 @@ impl Error {
         Self::CmdForceRequired(options.into())
     }
 
-    pub fn sp_option_not_found<T: Into<String>>(opt: T, why: T) -> Self {
-        Self::OptionNotFound {
-            opt: opt.into(),
-            why: why.into(),
-        }
+    pub fn sp_option_not_found<T: Into<String>>(opt: T) -> Self {
+        Self::OptionNotFound { opt: opt.into() }
     }
 
     pub fn sp_raise_extract_error<T: Into<String>>(msg: T) -> Self {
@@ -145,8 +142,8 @@ impl Error {
             Error::CmdForceRequired(options) => {
                 format!("Cmd `{}` are force required", options)
             }
-            Error::OptionNotFound { opt, why } => {
-                format!("Can not find option `{}`: {}", opt, why)
+            Error::OptionNotFound { opt } => {
+                format!("Can not find option `{}`", opt)
             }
             Error::ExtractValueError(msg) => {
                 format!("Extract value failed: {}", msg)

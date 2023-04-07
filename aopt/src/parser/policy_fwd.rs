@@ -107,6 +107,8 @@ pub struct FwdPolicy<Set, Ser, Chk> {
 
     style_manager: OptStyleManager,
 
+    failed_info: Vec<Error>,
+
     marker_s: PhantomData<(Set, Ser)>,
 }
 
@@ -132,6 +134,7 @@ where
             strict: true,
             style_manager: OptStyleManager::default(),
             checker: Chk::default(),
+            failed_info: vec![],
             marker_s: PhantomData::default(),
         }
     }
@@ -261,8 +264,6 @@ where
             if let Ok(clopt) = opt.parse_arg() {
                 if let Some(name) = clopt.name() {
                     if set.check(name.as_str()).map_err(Into::into)? {
-                        let mut why_match_failed = None;
-
                         for style in opt_styles.iter() {
                             if let Some(mut proc) = OptGuess::new().guess(
                                 style,
@@ -289,19 +290,17 @@ where
                                 if matched {
                                     break;
                                 } else {
-                                    if let Some(failed_info) = proc.take_failed_info() {
-                                        why_match_failed = Some(failed_info);
-                                    }
+                                    self.failed_info.append(&mut proc.take_failed_info());
                                 }
                             }
                         }
                         if !matched && self.strict() {
                             let default_str = astr("");
 
-                            return Err(Error::sp_option_not_found(
-                                format!("{}", clopt.name().unwrap_or(&default_str)),
-                                why_match_failed.unwrap_or_default(),
-                            ));
+                            return Err(Error::sp_option_not_found(format!(
+                                "{}",
+                                clopt.name().unwrap_or(&default_str)
+                            )));
                         }
                     }
                 }
@@ -339,6 +338,7 @@ where
                     },
                     &mut proc,
                 )?;
+                self.failed_info.append(&mut proc.take_failed_info());
             }
 
             self.checker().cmd_check(set).map_err(|e| e.into())?;
@@ -359,6 +359,7 @@ where
                         },
                         &mut proc,
                     )?;
+                    self.failed_info.append(&mut proc.take_failed_info());
                 }
             }
         } else {
@@ -385,6 +386,7 @@ where
                 },
                 &mut proc,
             )?;
+            self.failed_info.append(&mut proc.take_failed_info());
         }
 
         self.checker().post_check(set).map_err(|e| e.into())?;
@@ -425,7 +427,17 @@ where
                 if e.is_failure() {
                     Ok(ReturnVal::new(ctx).with_failure(e))
                 } else {
-                    Err(e)
+                    if self.failed_info.is_empty() {
+                        Err(e)
+                    } else {
+                        let last_error = self.failed_info.last();
+
+                        Err(Error::raise_error(format!(
+                            "{}: {}",
+                            e.display(),
+                            last_error.map(|v| v.display()).unwrap_or_default()
+                        )))
+                    }
                 }
             }
         }
