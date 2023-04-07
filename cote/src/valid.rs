@@ -1,3 +1,5 @@
+use std::ops::RangeBounds;
+
 pub use aopt::prelude::ErasedTy;
 pub use aopt::prelude::ValValidator;
 
@@ -25,12 +27,12 @@ where
     ValValidator::from_fn(move |val| vals.iter().any(|v| PartialEq::eq(v, val)))
 }
 
-pub fn range<K, T>(start: K, end: K) -> ValValidator<T>
+pub fn range<K, T>(range: impl RangeBounds<K> + ErasedTy) -> ValValidator<T>
 where
-    T: ErasedTy,
+    T: ErasedTy + PartialOrd<K>,
     K: ErasedTy + PartialOrd<T>,
 {
-    ValValidator::from_fn(move |val| &start <= val && &end > val)
+    ValValidator::from_fn(move |val| range.contains(val))
 }
 
 pub fn greater<K, T>(start: K) -> ValValidator<T>

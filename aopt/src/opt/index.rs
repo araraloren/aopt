@@ -1,3 +1,11 @@
+use std::ops::Range;
+use std::ops::RangeBounds;
+use std::ops::RangeFrom;
+use std::ops::RangeFull;
+use std::ops::RangeInclusive;
+use std::ops::RangeTo;
+use std::ops::RangeToInclusive;
+
 use regex::Regex;
 
 use crate::Error;
@@ -332,6 +340,59 @@ impl Index {
         }
     }
 
+    pub(crate) fn from_range(range: &impl RangeBounds<usize>) -> Result<Self, Error> {
+        match (range.start_bound(), range.end_bound()) {
+            (std::ops::Bound::Included(s), std::ops::Bound::Included(e)) => {
+                Ok(Self::range(Some(*s), Some(e + 1)))
+            }
+            (std::ops::Bound::Included(s), std::ops::Bound::Excluded(e)) => {
+                Ok(Self::range(Some(*s), Some(*e)))
+            }
+            (std::ops::Bound::Included(s), std::ops::Bound::Unbounded) => {
+                Ok(Self::range(Some(*s), None))
+            }
+            (std::ops::Bound::Excluded(s), std::ops::Bound::Included(e)) => {
+                if *s == 0 {
+                    Err(Error::raise_error(format!(
+                        "start position of Index can't be negative: {:?}",
+                        range.start_bound()
+                    )))
+                } else {
+                    Ok(Self::range(Some(*s - 1), Some(e + 1)))
+                }
+            }
+            (std::ops::Bound::Excluded(s), std::ops::Bound::Excluded(e)) => {
+                if *s == 0 {
+                    Err(Error::raise_error(format!(
+                        "start position of Index can't be negative: {:?}",
+                        range.start_bound()
+                    )))
+                } else {
+                    Ok(Self::range(Some(*s - 1), Some(*e)))
+                }
+            }
+            (std::ops::Bound::Excluded(s), std::ops::Bound::Unbounded) => {
+                if *s == 0 {
+                    Err(Error::raise_error(format!(
+                        "start position of Index can't be negative: {:?}",
+                        range.start_bound()
+                    )))
+                } else {
+                    Ok(Self::range(Some(*s - 1), None))
+                }
+            }
+            (std::ops::Bound::Unbounded, std::ops::Bound::Included(e)) => {
+                Ok(Self::range(Some(0), Some(*e - 1)))
+            }
+            (std::ops::Bound::Unbounded, std::ops::Bound::Excluded(e)) => {
+                Ok(Self::range(Some(0), Some(*e)))
+            }
+            (std::ops::Bound::Unbounded, std::ops::Bound::Unbounded) => {
+                panic!("start and end of Index can't both unbounded")
+            }
+        }
+    }
+
     pub fn anywhere() -> Self {
         Self::AnyWhere
     }
@@ -424,5 +485,129 @@ impl ToString for Index {
                 format!("-[{}]", strs.join(", "))
             }
         }
+    }
+}
+
+impl TryFrom<String> for Index {
+    type Error = Error;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::parse(&value)
+    }
+}
+
+impl<'a> TryFrom<&'a str> for Index {
+    type Error = Error;
+
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+        Self::parse(value)
+    }
+}
+
+impl TryFrom<crate::Str> for Index {
+    type Error = Error;
+
+    fn try_from(value: crate::Str) -> Result<Self, Self::Error> {
+        Self::parse(value.as_str())
+    }
+}
+
+macro_rules! impl_range_for {
+    ($range:ty) => {
+        impl TryFrom<$range> for Index {
+            type Error = Error;
+
+            fn try_from(value: $range) -> Result<Self, Self::Error> {
+                Self::from_range(&value)
+            }
+        }
+
+        impl<'a> TryFrom<&'a $range> for Index {
+            type Error = Error;
+
+            fn try_from(value: &'a $range) -> Result<Self, Self::Error> {
+                Self::from_range(value)
+            }
+        }
+    };
+}
+
+impl_range_for!(Range<usize>);
+
+impl_range_for!(RangeFrom<usize>);
+
+impl_range_for!(RangeInclusive<usize>);
+
+impl_range_for!(RangeTo<usize>);
+
+impl_range_for!(RangeToInclusive<usize>);
+
+impl_range_for!(RangeFull);
+
+macro_rules! impl_signed_ty_for {
+    ($int:ty) => {
+        impl TryFrom<$int> for Index {
+            type Error = Error;
+
+            fn try_from(value: $int) -> Result<Self, Self::Error> {
+                Ok(if value >= 0 {
+                    Self::forward(value as usize)
+                } else {
+                    Self::backward((-value) as usize)
+                })
+            }
+        }
+    };
+}
+
+impl_signed_ty_for!(isize);
+
+impl_signed_ty_for!(i128);
+
+impl_signed_ty_for!(i64);
+
+impl_signed_ty_for!(i32);
+
+impl_signed_ty_for!(i16);
+
+impl_signed_ty_for!(i8);
+
+macro_rules! impl_unsigned_ty_for {
+    ($int:ty) => {
+        impl TryFrom<$int> for Index {
+            type Error = Error;
+
+            fn try_from(value: $int) -> Result<Self, Self::Error> {
+                Ok(Self::forward(value as usize))
+            }
+        }
+    };
+}
+
+impl_unsigned_ty_for!(usize);
+
+impl_unsigned_ty_for!(u128);
+
+impl_unsigned_ty_for!(u64);
+
+impl_unsigned_ty_for!(u32);
+
+impl_unsigned_ty_for!(u16);
+
+impl_unsigned_ty_for!(u8);
+
+impl TryFrom<Vec<usize>> for Index {
+    type Error = Error;
+
+    fn try_from(value: Vec<usize>) -> Result<Self, Self::Error> {
+        Ok(Self::list(value))
+    }
+}
+
+impl<const N: usize> TryFrom<[usize; N]> for Index {
+    type Error = Error;
+
+    fn try_from(value: [usize; N]) -> Result<Self, Self::Error> {
+        Ok(Self::list(Vec::from(value)))
     }
 }

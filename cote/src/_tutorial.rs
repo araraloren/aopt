@@ -429,9 +429,9 @@
 //! }
 //! ```
 //!
-//! ### Configurations of attribute `arg`, `pos` and `cmd`.
+//! ### Configurations of attribute `arg`, `pos` and `cmd`
 //!
-//! #### Configure the name and alias.
+//! #### Configure the name and alias
 //!
 //! ```rust
 //! use cote::prelude::*;
@@ -475,12 +475,12 @@
 //!     Ok(())
 //! }
 //! ```
-//! 
-//! #### Configure the hint, help and default value.
+//!
+//! #### Configure the hint, help and default value
 //!
 //! ```rust
 //! use cote::prelude::*;
-//! 
+//!
 //! #[derive(Debug, Cote, PartialEq, Eq)]
 //! #[cote(help)]
 //! pub struct Cli {
@@ -491,7 +491,7 @@
 //!     /// Set the value of bar
 //!     #[pos(index = "2", value = 42usize, hint = "[BAR]")]
 //!     bar: Option<usize>,
-//! 
+//!
 //!     #[arg(alias = "-b", help = "Set the string value of baz")]
 //!     baz: String,
 //!
@@ -503,40 +503,40 @@
 //! fn default_value<T: ErasedTy>(opt: &mut AOpt) -> Result<Option<Vec<T>>, aopt::Error> {
 //!     opt.accessor_mut().initializer_mut().values::<T>()
 //! }
-//! 
+//!
 //! fn main() -> color_eyre::Result<()> {
 //!     color_eyre::install()?;
-//! 
+//!
 //!     let mut app = Cli::into_app()?;
-//! 
+//!
 //!     assert_eq!(app["foo"].hint(), "foo@1");
 //!     assert_eq!(app["bar"].hint(), "[BAR]");
 //!     assert_eq!(app["--baz"].hint(), "-b,--baz");
-//! 
+//!
 //!     assert_eq!(app["foo"].help(), "Switch the mode to foo command");
 //!     assert_eq!(app["bar"].help(), "Set the value of bar [42usize]");
 //!     assert_eq!(app["--baz"].help(), "Set the string value of baz");
-//! 
+//!
 //!     assert_eq!(default_value::<String>(&mut app["--baz"])?, None);
 //!     assert_eq!(default_value::<usize>(&mut app["bar"])?, Some(vec![42]));
 //!     assert_eq!(
 //!         default_value::<String>(&mut app["quux"])?,
 //!         Some(vec!["corge".to_owned(), "grault".to_owned()])
 //!     );
-//! 
+//!
 //!     // Currently only display default values are set in the attribute
 //!     Cli::parse(Args::from_array(["app", "--help"]))?;
-//! 
+//!
 //!     Ok(())
 //! }
 //! ```
-//! 
-//! #### Configure the index.
-//! 
+//!
+//! #### Configure the index
+//!
 //! For more informations about index, reference [`Index`](aopt::prelude::Index).
-//! 
+//!
 //! ##### Example1
-//! 
+//!
 //! ```rust
 //! use cote::prelude::*;
 //!
@@ -546,7 +546,7 @@
 //!     // `cmd` has a fixed position in default, you can't change it
 //!     // and you can't both have a `cmd` and a `pos` at index 1
 //!     #[cmd()]
-//!     foo: bool, 
+//!     foo: bool,
 //!
 //!     // `bar` has a index 2
 //!     #[pos(index = "2", value = 42usize, hint = "[BAR]")]
@@ -573,9 +573,9 @@
 //!     Ok(())
 //! }
 //! ```
-//! 
+//!
 //! ##### Example2
-//! 
+//!
 //! ```rust
 //! use cote::prelude::*;
 //!
@@ -609,13 +609,56 @@
 //!         "--baz", // option --baz
 //!         "foo", // value of option --baz
 //!         "ignore", // index 2
-//!         "what", // index 3 
+//!         "what", // index 3
 //!         "where", // index 4
 //!     ]))?;
 //!
 //!     assert_eq!(app.bar, Some(88));
 //!     assert_eq!(app.baz, "foo");
 //!     assert_eq!(app.quux, vec!["what".to_owned(), "where".to_owned()]);
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
+//! #### Make the option force required
+//!
+//! ```rust
+//! use cote::prelude::*;
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(help)]
+//! pub struct Cli {
+//!     // `cmd` is force required in default, you can't change it
+//!     #[cmd()]
+//!     foo: bool,
+//!
+//!     // `Option` make the `pos` optional in default
+//!     #[pos(index = "2", value = 42usize)]
+//!     bar: Option<usize>,
+//!
+//!     // Without `Option`, `--baz` is force required
+//!     #[arg(alias = "-b", help = "Set the string value of baz")]
+//!     baz: String,
+//!
+//!     // Using `force` you can force set the option to force required
+//!     #[arg(force)]
+//!     qux: Option<i64>,
+//!
+//!     // Using `noforce` you can force set `--quux` to optional in `arg`.
+//!     // But the parse will raise error when extract `Cli` from `CoteApp`
+//!     // if the option has no default value
+//!     #[arg(noforce, values = ["need"])]
+//!     quux: Vec<String>,
+//! }
+//! fn main() -> color_eyre::Result<()> {
+//!     color_eyre::install()?;
+//!
+//!     assert!(Cli::parse(Args::from_array(["app", "--baz=6"])).is_err());
+//!
+//!     assert!(Cli::parse(Args::from_array(["app", "foo", "--baz=6"])).is_err());
+//!
+//!     assert!(Cli::parse(Args::from_array(["app", "--qux", "-5", "foo", "--baz=6"])).is_ok());
 //!
 //!     Ok(())
 //! }

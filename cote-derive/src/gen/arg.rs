@@ -262,7 +262,7 @@ impl<'a> ArgGenerator<'a> {
                             let token = cfg.value().to_token_stream();
 
                             quote! {
-                                config.set_index(aopt::prelude::Index::parse(#token)?);
+                                config.set_index(aopt::prelude::Index::try_from(#token)?);
                             }
                         }
                         ArgKind::Force => {
