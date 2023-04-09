@@ -755,7 +755,7 @@ impl HelpDisplayCtx {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct AppRunningCtx {
+pub struct AppRunningCtx<T = (String, aopt::prelude::ReturnVal)> {
     names: Vec<String>,
 
     display_help: bool,
@@ -766,10 +766,10 @@ pub struct AppRunningCtx {
 
     exit_sub: bool,
 
-    failed_info: Option<String>,
+    failed_info: Option<T>,
 }
 
-impl AppRunningCtx {
+impl<T> AppRunningCtx<T> {
     pub fn with_names(mut self, names: Vec<String>) -> Self {
         self.names = names;
         self
@@ -795,7 +795,7 @@ impl AppRunningCtx {
         self
     }
 
-    pub fn with_failed_info(mut self, failed_info: String) -> Self {
+    pub fn with_failed_info(mut self, failed_info: T) -> Self {
         self.failed_info = Some(failed_info);
         self
     }
@@ -825,7 +825,7 @@ impl AppRunningCtx {
         self
     }
 
-    pub fn set_failed_info(&mut self, failed_info: String) -> &mut Self {
+    pub fn set_failed_info(&mut self, failed_info: T) -> &mut Self {
         self.failed_info = Some(failed_info);
         self
     }
@@ -850,8 +850,12 @@ impl AppRunningCtx {
         self.exit_sub
     }
 
-    pub fn failed_info(&self) -> Option<&String> {
+    pub fn failed_info(&self) -> Option<&T> {
         self.failed_info.as_ref()
+    }
+
+    pub fn take_failed_info(&mut self) -> Option<T> {
+        self.failed_info.take()
     }
 
     pub fn add_name(&mut self, name: String) -> &mut Self {

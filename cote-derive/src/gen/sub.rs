@@ -315,25 +315,7 @@ impl<'a> SubGenerator<'a> {
                         Ok(<#without_option_ty>::try_extract(sub_app.inner_parser_mut().optset_mut()).ok())
                     }
                     else {
-                        let ret_ctx = ret.ctx();
-                        let sub_args = ret_ctx.orig_args()[1..]
-                                                .iter()
-                                                .map(ToString::to_string)
-                                                .collect::<Vec<_>>()
-                                                .join(", ");
-                        let ret_inner_ctx = ret_ctx.inner_ctx().ok();
-                        let ret_e = ret.failure();
-
-                        // return failed message
-                        ser.sve_val_mut::<cote::AppRunningCtx>()?.set_failed_info(
-                            format!("Failed at command `{}` with sub args `[{}]`: {}, inner_ctx = {}",
-                            current_cmd, sub_args, ret_e.display(),
-                            if let Some(inner_ctx) = ret_inner_ctx {
-                                format!("{}", inner_ctx)
-                            } else {
-                                format!("None")
-                            }
-                        ));
+                        ser.sve_val_mut::<cote::AppRunningCtx>()?.set_failed_info((current_cmd.to_owned(), ret));
                         Ok(None)
                     }
                 }

@@ -528,31 +528,35 @@ impl<'a> Analyzer<'a> {
                     Self::try_extract(parser.inner_parser_mut().optset_mut())
                 }
                 else {
-                    let running_ctx = parser.get_running_ctx()?;
-
-                    Err(
-                        if let Some(failed_info) = running_ctx.failed_info() {
-                            aopt::Error::raise_failure(failed_info)
+                    let mut rctx = parser.take_running_ctx()?;
+                    let finfo = rctx.take_failed_info();
+                    let (command, mut ret) = finfo.map(|v|(Some(v.0), v.1)).unwrap_or((None, ret));
+                    let e = {
+                        let ctx = ret.take_ctx();
+                        let failure = ret.take_failure();
+                        let args = ctx.orig_args()[1..]
+                                    .iter()
+                                    .map(ToString::to_string)
+                                    .collect::<Vec<_>>()
+                                    .join(", ");
+                        let inner_ctx = ctx.inner_ctx().ok();
+                        let failed_msg = if let Some(command) = command {
+                            format!("Parsing command `{}`", command)
                         }
                         else {
-                            let ctx = ret.ctx();
-                            let args = ctx.orig_args()[1..]
-                                        .iter()
-                                        .map(ToString::to_string)
-                                        .collect::<Vec<_>>()
-                                        .join(", ");
-                            let inner_ctx = ctx.inner_ctx().ok();
-                            let e = ret.failure();
-                            // return failure with more detail error message
-                            aopt::Error::raise_failure(
-                                format!("Parsing arguments `{}` failed: {}, inner_ctx = {}",
-                                    args, e.display(), if let Some(inner_ctx) = inner_ctx {
-                                        format!("{}", inner_ctx)
-                                    } else {
-                                        format!("None")
-                                    }))
-                        }
-                    )
+                            format!("Parsing arguments `{}`", args)
+                        };
+                        let inner_ctx = if let Some(inner_ctx) = inner_ctx {
+                            format!("{}", inner_ctx)
+                        } else {
+                            "None".to_owned()
+                        };
+
+                        // return failure with more detail error message
+                        aopt::raise_failure!("{} failed: {}", failed_msg, inner_ctx).cause_by(failure)
+                    };
+
+                    Err(e)
                 }
             }
 
