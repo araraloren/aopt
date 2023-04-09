@@ -1,5 +1,6 @@
 use crate::map::Entry;
 use crate::map::ErasedTy;
+use crate::raise_error;
 use crate::value::ErasedValue;
 use crate::Error;
 use crate::RawVal;
@@ -30,48 +31,58 @@ pub trait OptValueExt {
 
 impl<O: Opt> OptValueExt for O {
     fn val<T: ErasedTy>(&self) -> Result<&T, Error> {
+        let uid = self.uid();
+
         self.accessor().val().map_err(|e| {
-            Error::raise_error(format!(
-                "Can not find value(ref) of `{}`({}): {:?}",
+            e.cause(raise_error!(
+                "Can not find value(ref) of `{}`({})",
                 self.hint(),
                 self.action(),
-                e
             ))
+            .with_uid(uid)
         })
     }
 
     fn val_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
         let hint = self.hint().clone();
         let action = *self.action();
+        let uid = self.uid();
 
         self.accessor_mut().val_mut().map_err(|e| {
-            Error::raise_error(format!(
-                "Can not find value(mut) of `{}`({}): {:?}",
-                hint, action, e
+            e.cause(raise_error!(
+                "Can not find value(mut) of `{}`({})",
+                hint,
+                action
             ))
+            .with_uid(uid)
         })
     }
 
     fn vals<T: ErasedTy>(&self) -> Result<&Vec<T>, Error> {
+        let uid = self.uid();
+
         self.accessor().vals().map_err(|e| {
-            Error::raise_error(format!(
-                "Can not find values(ref) of `{}`({}): {:?}",
+            e.cause(raise_error!(
+                "Can not find values(ref) of `{}`({})",
                 self.hint(),
                 self.action(),
-                e
             ))
+            .with_uid(uid)
         })
     }
 
     fn vals_mut<T: ErasedTy>(&mut self) -> Result<&mut Vec<T>, Error> {
         let hint = self.hint().clone();
         let action = *self.action();
+        let uid = self.uid();
 
         self.accessor_mut().vals_mut().map_err(|e| {
-            Error::raise_error(format!(
-                "Can not find value(mut) of `{}`({}): {:?}",
-                hint, action, e
+            e.cause(raise_error!(
+                "Can not find value(mut) of `{}`({})",
+                hint,
+                action
             ))
+            .with_uid(uid)
         })
     }
 
@@ -80,44 +91,43 @@ impl<O: Opt> OptValueExt for O {
     }
 
     fn rawval(&self) -> Result<&RawVal, Error> {
+        let uid = self.uid();
+
         self.accessor().rawval().map_err(|e| {
-            Error::raise_error(format!(
-                "Can not find raw value(ref) of `{}`: {:?}",
+            e.cause(raise_error!(
+                "Can not find raw value(ref) of `{}`",
                 self.hint(),
-                e
             ))
+            .with_uid(uid)
         })
     }
 
     fn rawval_mut(&mut self) -> Result<&mut RawVal, Error> {
         let hint = self.hint().clone();
+        let uid = self.uid();
 
         self.accessor_mut().rawval_mut().map_err(|e| {
-            Error::raise_error(format!(
-                "Can not find raw value(mut) of `{}`: {:?}",
-                hint, e
-            ))
+            e.cause(raise_error!("Can not find raw value(mut) of `{}`", hint))
+                .with_uid(uid)
         })
     }
 
     fn rawvals(&self) -> Result<&Vec<RawVal>, Error> {
         self.accessor().rawvals().map_err(|e| {
-            Error::raise_error(format!(
-                "Can not find raw values(ref) of `{}`: {:?}",
+            e.cause(raise_error!(
+                "Can not find raw values(ref) of `{}`",
                 self.hint(),
-                e
             ))
         })
     }
 
     fn rawvals_mut(&mut self) -> Result<&mut Vec<RawVal>, Error> {
         let hint = self.hint().clone();
+        let uid = self.uid();
 
         self.accessor_mut().rawvals_mut().map_err(|e| {
-            Error::raise_error(format!(
-                "Can not find raw values(mut) of `{}`: {:?}",
-                hint, e
-            ))
+            e.cause(raise_error!("Can not find raw values(mut) of `{}`", hint,))
+                .with_uid(uid)
         })
     }
 

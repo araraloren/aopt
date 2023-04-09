@@ -1,5 +1,6 @@
 pub(crate) mod checker;
 pub(crate) mod commit;
+pub(crate) mod failure;
 pub(crate) mod policy_delay;
 pub(crate) mod policy_fwd;
 pub(crate) mod policy_pre;
@@ -10,6 +11,7 @@ pub(crate) mod style;
 pub use self::checker::DefaultSetChecker;
 pub use self::commit::ParserCommit;
 pub use self::commit::ParserCommitWithValue;
+pub use self::failure::FailManager;
 pub use self::policy_delay::DelayPolicy;
 pub use self::policy_fwd::FwdPolicy;
 pub use self::policy_pre::PrePolicy;

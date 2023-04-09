@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 
 use super::process_non_opt;
 use super::process_opt;
+use super::FailManager;
 use super::Guess;
 use super::GuessNOACfg;
 use super::GuessOptCfg;
@@ -107,8 +108,6 @@ pub struct FwdPolicy<Set, Ser, Chk> {
 
     style_manager: OptStyleManager,
 
-    failed_info: Vec<Error>,
-
     marker_s: PhantomData<(Set, Ser)>,
 }
 
@@ -134,7 +133,6 @@ where
             strict: true,
             style_manager: OptStyleManager::default(),
             checker: Chk::default(),
-            failed_info: vec![],
             marker_s: PhantomData::default(),
         }
     }
@@ -254,6 +252,7 @@ where
         let args_len = args.len();
         let mut noa_args = Args::default();
         let mut iter = args.guess_iter().enumerate();
+        let mut opt_fail = FailManager::default();
 
         ctx.set_args(args.clone());
         while let Some((idx, (opt, arg))) = iter.next() {
@@ -279,6 +278,7 @@ where
                                         tot: args_len,
                                     },
                                     &mut proc,
+                                    &mut opt_fail,
                                     true,
                                 )?;
                                 if proc.status() {
@@ -289,18 +289,16 @@ where
                                 }
                                 if matched {
                                     break;
-                                } else {
-                                    self.failed_info.append(&mut proc.take_failed_info());
                                 }
                             }
                         }
                         if !matched && self.strict() {
                             let default_str = astr("");
 
-                            return Err(Error::sp_option_not_found(format!(
+                            return Err(opt_fail.cause(Error::sp_option_not_found(format!(
                                 "{}",
                                 clopt.name().unwrap_or(&default_str)
-                            )));
+                            ))));
                         }
                     }
                 }
@@ -315,10 +313,12 @@ where
             }
         }
 
-        self.checker().opt_check(set).map_err(|e| e.into())?;
+        opt_fail.process(self.checker().opt_check(set))?;
 
         let noa_args = ARef::new(noa_args);
         let noa_len = noa_args.len();
+        let mut pos_fail = FailManager::default();
+        let mut cmd_fail = FailManager::default();
 
         ctx.set_args(noa_args.clone());
         // when style is pos, noa index is [1..=len]
@@ -337,12 +337,10 @@ where
                         idx: Self::noa_cmd(),
                     },
                     &mut proc,
+                    &mut cmd_fail,
                 )?;
-                self.failed_info.append(&mut proc.take_failed_info());
             }
-
-            self.checker().cmd_check(set).map_err(|e| e.into())?;
-
+            cmd_fail.process(self.checker().cmd_check(set))?;
             for idx in 1..noa_len {
                 if let Some(mut proc) = NOAGuess::new().guess(
                     &UserStyle::Pos,
@@ -358,17 +356,19 @@ where
                             idx: Self::noa_pos(idx),
                         },
                         &mut proc,
+                        &mut pos_fail,
                     )?;
-                    self.failed_info.append(&mut proc.take_failed_info());
                 }
             }
         } else {
-            self.checker().cmd_check(set).map_err(|e| e.into())?;
+            cmd_fail.process(self.checker().cmd_check(set))?;
         }
-        self.checker().pos_check(set).map_err(|e| e.into())?;
+
+        pos_fail.process(self.checker().pos_check(set))?;
 
         let main_args = noa_args;
         let main_len = main_args.len();
+        let mut main_fail = FailManager::default();
 
         ctx.set_args(main_args.clone());
         if let Some(mut proc) = NOAGuess::new().guess(
@@ -385,12 +385,10 @@ where
                     idx: Self::noa_main(),
                 },
                 &mut proc,
+                &mut main_fail,
             )?;
-            self.failed_info.append(&mut proc.take_failed_info());
         }
-
-        self.checker().post_check(set).map_err(|e| e.into())?;
-
+        main_fail.process(self.checker().post_check(set))?;
         Ok(())
     }
 }
@@ -427,17 +425,7 @@ where
                 if e.is_failure() {
                     Ok(ReturnVal::new(ctx).with_failure(e))
                 } else {
-                    if self.failed_info.is_empty() {
-                        Err(e)
-                    } else {
-                        let last_error = self.failed_info.last();
-
-                        Err(Error::raise_error(format!(
-                            "{}: {}",
-                            e.display(),
-                            last_error.map(|v| v.display()).unwrap_or_default()
-                        )))
-                    }
+                    Err(e)
                 }
             }
         }

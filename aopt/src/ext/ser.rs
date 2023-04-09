@@ -98,11 +98,10 @@ impl<T: ErasedTy> Value<T> {
         Ok(ser
             .sve_val::<Value<T>>()
             .map_err(|e| {
-                Error::sp_raise_extract_error(format!(
-                    "can not get value of type {}: {:?}",
+                e.cause(Error::sp_raise_extract_error(format!(
+                    "can not get value of type {}",
                     std::any::type_name::<Value<T>>(),
-                    e
-                ))
+                )))
             })?
             .clone())
     }

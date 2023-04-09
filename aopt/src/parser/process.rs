@@ -12,6 +12,8 @@ use crate::trace_log;
 use crate::Error;
 use crate::Uid;
 
+use super::FailManager;
+
 pub struct ProcessCtx<'a, 'b, Set, Ser> {
     pub idx: usize,
 
@@ -82,6 +84,7 @@ pub fn process_opt<Set, Ser>(
         ser,
     }: ProcessCtx<Set, Ser>,
     proc: &mut OptProcess<Set>,
+    manager: &mut FailManager,
     invoke: bool,
 ) -> Result<Vec<CtxSaver>, Error>
 where
@@ -118,7 +121,7 @@ where
                 if !e.is_failure() {
                     return Err(e);
                 } else {
-                    proc.app_failed_info(e);
+                    manager.push(e);
                 }
             }
         }
@@ -133,7 +136,7 @@ where
                 invoke_callback_opt(uid, ctx, set, inv, ser),
                 |_| Ok(()),
                 |e: &Error| {
-                    proc.app_failed_info(e.clone());
+                    manager.push(e.clone());
                     Ok(())
                 },
             )? {
@@ -159,6 +162,7 @@ pub fn process_non_opt<Set, Ser>(
         ser,
     }: ProcessCtx<Set, Ser>,
     proc: &mut NOAProcess<Set>,
+    manager: &mut FailManager,
 ) -> Result<Vec<CtxSaver>, Error>
 where
     SetOpt<Set>: Opt,
@@ -189,7 +193,7 @@ where
                         invoke_callback_opt(uid, ctx, set, inv, ser),
                         |_| Ok(()),
                         |e: &Error| {
-                            proc.app_failed_info(e.clone());
+                            manager.push(e.clone());
                             Ok(())
                         },
                     )? {
@@ -202,7 +206,7 @@ where
                 if !e.is_failure() {
                     return Err(e);
                 } else {
-                    proc.app_failed_info(e);
+                    manager.push(e);
                 }
             }
         }

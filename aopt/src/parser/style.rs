@@ -118,9 +118,9 @@ pub trait Guess {
 }
 
 pub fn valueof(name: &str, value: &Option<Str>) -> Result<Str, Error> {
-    let string = value.as_ref().ok_or_else(|| {
-        Error::raise_error(format!("No value of {name}, please check your option"))
-    })?;
+    let string = value
+        .as_ref()
+        .ok_or_else(|| crate::raise_error!("No value of {name}, please check your option"))?;
     Ok(string.clone())
 }
 

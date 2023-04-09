@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 
 use super::process_non_opt;
 use super::process_opt;
+use super::FailManager;
 use super::Guess;
 use super::GuessNOACfg;
 use super::GuessOptCfg;
@@ -282,6 +283,7 @@ where
         let args_len = args.len();
         let mut noa_args = Args::default();
         let mut iter = args.guess_iter().enumerate();
+        let mut opt_fail = FailManager::default();
 
         ctx.set_args(args.clone());
         while let Some((idx, (opt, arg))) = iter.next() {
@@ -314,6 +316,7 @@ where
                                             tot: args_len,
                                         },
                                         &mut proc,
+                                        &mut opt_fail,
                                         true,
                                     ))?
                                     .is_some()
@@ -344,11 +347,12 @@ where
                 noa_args.push(args[idx].clone());
             }
         }
-
-        self.checker().opt_check(set).map_err(|e| e.into())?;
+        opt_fail.process(self.checker().opt_check(set))?;
 
         let noa_args = ARef::new(noa_args);
         let noa_len = noa_args.len();
+        let mut pos_fail = FailManager::default();
+        let mut cmd_fail = FailManager::default();
 
         ctx.set_args(noa_args.clone());
         if noa_len > 0 {
@@ -366,11 +370,10 @@ where
                         idx: Self::noa_cmd(),
                     },
                     &mut proc,
+                    &mut cmd_fail,
                 ))?;
             }
-
-            self.checker().cmd_check(set).map_err(|e| e.into())?;
-
+            cmd_fail.process(self.checker().cmd_check(set))?;
             for idx in 1..noa_len {
                 if let Some(mut proc) = NOAGuess::new().guess(
                     &UserStyle::Pos,
@@ -386,17 +389,18 @@ where
                             idx: Self::noa_pos(idx),
                         },
                         &mut proc,
+                        &mut pos_fail,
                     ))?;
                 }
             }
         } else {
-            self.checker().cmd_check(set).map_err(|e| e.into())?;
+            cmd_fail.process(self.checker().cmd_check(set))?;
         }
-
-        self.checker().pos_check(set).map_err(|e| e.into())?;
+        pos_fail.process(self.checker().pos_check(set))?;
 
         let main_args = noa_args;
         let main_len = main_args.len();
+        let mut main_fail = FailManager::default();
 
         // set 0 for Main's index
         if let Some(mut proc) = NOAGuess::new().guess(
@@ -413,11 +417,10 @@ where
                     idx: Self::noa_main(),
                 },
                 &mut proc,
+                &mut main_fail,
             ))?;
         }
-
-        self.checker().post_check(set).map_err(|e| e.into())?;
-
+        main_fail.process(self.checker().post_check(set))?;
         Ok(())
     }
 }

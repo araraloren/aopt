@@ -10,6 +10,7 @@ use super::ValValidator;
 use crate::ctx::Ctx;
 use crate::map::ErasedTy;
 use crate::opt::Action;
+use crate::raise_error;
 use crate::Error;
 use crate::RawVal;
 
@@ -22,7 +23,7 @@ use crate::RawVal;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<(), Error> {
-/// let ctx = Ctx::default();
+/// let ctx = Ctx::default().with_inner_ctx(InnerCtx::default());
 /// {
 ///     let mut value = ValAccessor::fallback::<i32>();
 ///     let raw_value = RawVal::from("123");
@@ -253,13 +254,13 @@ impl ErasedValue for ValAccessor {
     fn rawval(&self) -> Result<&RawVal, Error> {
         self.rawval
             .last()
-            .ok_or_else(|| Error::raise_error("No more raw value in current accessor"))
+            .ok_or_else(|| raise_error!("No more raw value in current accessor"))
     }
 
     fn rawval_mut(&mut self) -> Result<&mut RawVal, Error> {
         self.rawval
             .last_mut()
-            .ok_or_else(|| Error::raise_error("No more raw value in current accessor"))
+            .ok_or_else(|| raise_error!("No more raw value in current accessor"))
     }
 
     fn rawvals(&self) -> Result<&Vec<RawVal>, Error> {

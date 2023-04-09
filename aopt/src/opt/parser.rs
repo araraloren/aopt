@@ -127,7 +127,9 @@ impl StrParser {
                     ))
                 }
             })
-            .map_err(|e| Error::raise_error(format!("can not access str parser regex: {:?}", e)))?
+            .map_err(|e| {
+                Error::local_access("can not access str parser regex").cause_by(e.into())
+            })?
     }
 }
 

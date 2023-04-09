@@ -15,7 +15,7 @@ impl ReturnVal {
     pub fn new(ctx: Ctx) -> Self {
         Self {
             ctx,
-            failure: Error::Null,
+            failure: Error::default(),
         }
     }
 

@@ -206,7 +206,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 );
                 Ok(Some(val.take()))
             } else {
-                Err(Error::raise_error("command not matched"))
+                Err(aopt::raise_error!("command not matched"))
             }
         },
     )?;

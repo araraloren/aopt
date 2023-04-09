@@ -203,8 +203,6 @@ pub struct OptProcess<S> {
     consume_arg: bool,
 
     any_match: bool,
-
-    failed_info: Vec<Error>,
 }
 
 impl<S> Debug for OptProcess<S> {
@@ -213,7 +211,6 @@ impl<S> Debug for OptProcess<S> {
             .field("matches", &self.matches)
             .field("consume_arg", &self.consume_arg)
             .field("any_match", &self.any_match)
-            .field("failed_info", &self.failed_info)
             .finish()
     }
 }
@@ -224,26 +221,12 @@ impl<S> OptProcess<S> {
             matches,
             consume_arg: false,
             any_match: false,
-            failed_info: vec![],
         }
     }
 
     pub fn set_any_match(&mut self, any_match: bool) -> &mut Self {
         self.any_match = any_match;
         self
-    }
-
-    pub fn app_failed_info(&mut self, failed_info: Error) -> &mut Self {
-        self.failed_info.push(failed_info);
-        self
-    }
-
-    pub fn failed_info(&self) -> &[Error] {
-        &self.failed_info
-    }
-
-    pub fn take_failed_info(self) -> Vec<Error> {
-        self.failed_info
     }
 }
 

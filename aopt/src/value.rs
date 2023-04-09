@@ -28,6 +28,7 @@ use crate::map::AnyMap;
 use crate::map::Entry;
 use crate::map::ErasedTy;
 use crate::opt::Action;
+use crate::raise_error;
 use crate::Error;
 use crate::RawVal;
 
@@ -148,40 +149,40 @@ impl AnyValue {
     /// Get the last value reference of type T.
     pub fn val<T: ErasedTy>(&self) -> Result<&T, Error> {
         self.inner().and_then(|v| v.last()).ok_or_else(|| {
-            Error::raise_error(format!(
-                "Can not find value for type {{{:?}}} in ErasedVal(val)",
+            raise_error!(
+                "Can not find value for type `{:?}` in ErasedVal(val)",
                 type_name::<T>()
-            ))
+            )
         })
     }
 
     /// Get the last value mutable reference of type T.
     pub fn val_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
         self.inner_mut().and_then(|v| v.last_mut()).ok_or_else(|| {
-            Error::raise_error(format!(
-                "Can not find value for type {{{:?}}} in ErasedVal(val_mut)",
+            raise_error!(
+                "Can not find value for type `{:?}` in ErasedVal(val_mut)",
                 type_name::<T>()
-            ))
+            )
         })
     }
 
     /// Get the values of type T.
     pub fn vals<T: ErasedTy>(&self) -> Result<&Vec<T>, Error> {
         self.inner().ok_or_else(|| {
-            Error::raise_error(format!(
-                "Can not find value for type {{{:?}}} in ErasedVal(vals)",
+            raise_error!(
+                "Can not find value for type `{:?}` in ErasedVal(vals)",
                 type_name::<T>()
-            ))
+            )
         })
     }
 
     /// Get the values of type T.
     pub fn vals_mut<T: ErasedTy>(&mut self) -> Result<&mut Vec<T>, Error> {
         self.inner_mut().ok_or_else(|| {
-            Error::raise_error(format!(
-                "Can not find value for type {{{:?}}} in ErasedVal(vals_mut)",
+            raise_error!(
+                "Can not find value for type `{:?}` in ErasedVal(vals_mut)",
                 type_name::<T>()
-            ))
+            )
         })
     }
 }

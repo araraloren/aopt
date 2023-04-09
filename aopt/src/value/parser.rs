@@ -3,6 +3,7 @@ use std::io::Stdin;
 use std::path::PathBuf;
 
 use crate::ctx::Ctx;
+use crate::raise_failure;
 use crate::Error;
 use crate::RawVal;
 
@@ -18,10 +19,10 @@ where
 
 /// Convert raw value to &[`str`].
 pub fn raw2str(raw: Option<&RawVal>) -> Result<&str, Error> {
-    let raw = raw.ok_or_else(|| Error::raise_failure("Unexcepted empty value in raw2str"))?;
+    let raw = raw.ok_or_else(|| raise_failure!("Unexcepted empty value in raw2str"))?;
 
     raw.get_str()
-        .ok_or_else(|| Error::raise_failure(format!("Can't convert value `{}` to str", raw)))
+        .ok_or_else(|| raise_failure!("Can't convert value `{}` to str", raw))
 }
 
 impl RawValParser for () {
@@ -37,16 +38,18 @@ macro_rules! impl_raw_val_parser {
         impl RawValParser for $int {
             type Error = Error;
 
-            fn parse(raw: Option<&RawVal>, _ctx: &Ctx) -> Result<$int, Self::Error> {
+            fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<$int, Self::Error> {
                 let val = $crate::value::parser::raw2str(raw)?;
+                let uid = ctx.uid()?;
 
                 val.parse::<$int>().map_err(|e| {
-                    Error::raise_failure(format!(
-                        "Can not convert value `{}` to {}: {:?}",
+                    $crate::raise_failure!(
+                        "Can not convert value `{}` to {}",
                         val,
                         stringify!($int),
-                        e
-                    ))
+                    )
+                    .with_uid(uid)
+                    .cause_by(e.into())
                 })
             }
         }
@@ -81,9 +84,10 @@ impl RawValParser for String {
 impl RawValParser for OsString {
     type Error = Error;
 
-    fn parse(raw: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error> {
+        let uid = ctx.uid()?;
         Ok(Self::clone(raw.ok_or_else(|| {
-            Error::raise_failure("Unexcepted empty value")
+            raise_failure!("Unexcepted empty value").with_uid(uid)
         })?))
     }
 }
@@ -101,9 +105,10 @@ impl RawValParser for String {
 impl RawValParser for OsString {
     type Error = Error;
 
-    fn parse(raw: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error> {
+        let uid = ctx.uid()?;
         let raw: &std::ffi::OsStr = raw
-            .ok_or_else(|| Error::raise_failure("Unexcepted empty value"))?
+            .ok_or_else(|| raise_failure!("Unexcepted empty value").with_uid(uid))?
             .as_ref();
         Ok(raw.to_owned())
     }
@@ -112,16 +117,16 @@ impl RawValParser for OsString {
 impl RawValParser for bool {
     type Error = Error;
 
-    fn parse(raw: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error> {
         let val = raw2str(raw)?;
 
         match val {
             crate::opt::BOOL_TRUE => Ok(true),
             crate::opt::BOOL_FALSE => Ok(false),
-            _ => Err(Error::raise_failure(format!(
-                "Except true or false, found value: {}",
-                val
-            ))),
+            _ => {
+                Err(raise_failure!("Except true or false, found value: {}", val)
+                    .with_uid(ctx.uid()?))
+            }
         }
     }
 }
@@ -137,7 +142,7 @@ impl RawValParser for PathBuf {
 impl RawValParser for Stdin {
     type Error = Error;
 
-    fn parse(raw: Option<&RawVal>, _: &Ctx) -> Result<Self, Self::Error> {
+    fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error> {
         const STDIN: &str = "-";
 
         if let Some(raw) = raw {
@@ -145,9 +150,6 @@ impl RawValParser for Stdin {
                 return Ok(std::io::stdin());
             }
         }
-        Err(Error::raise_failure(format!(
-            "Stdin value only support value `-`: {:?}",
-            raw
-        )))
+        Err(raise_failure!("Stdin value only support value `-`: {:?}", raw).with_uid(ctx.uid()?))
     }
 }

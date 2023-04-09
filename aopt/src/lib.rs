@@ -29,7 +29,7 @@ pub(crate) use tracing::trace as trace_log;
 pub(crate) mod log {
     #[macro_export]
     macro_rules! trace_log {
-        ($($_:stmt),+) => {};
+        ($($arg:tt)*) => {};
     }
 }
 
@@ -160,7 +160,7 @@ macro_rules! getopt {
                 { p }
             fn __check_a(a: $crate::prelude::Args) -> $crate::prelude::Args { a }
 
-            let mut ret = Err($crate::err::Error::Null);
+            let mut ret = Err($crate::err::Error::default());
             let args = $crate::ARef::new(__check_a($args));
 
             loop {
@@ -199,7 +199,7 @@ macro_rules! getopt {
                 { p }
             fn __check_a(a: $crate::prelude::Args) -> $crate::prelude::Args { a }
 
-            let mut ret = Err($crate::err::Error::Null);
+            let mut ret = Err($crate::err::Error::default());
             let args = $crate::ARef::new(__check_a($args));
 
             loop {

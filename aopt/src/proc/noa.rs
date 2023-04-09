@@ -215,8 +215,6 @@ pub struct NOAProcess<S> {
     matches: Option<NOAMatch<S>>,
 
     consume_arg: bool,
-
-    failed_info: Vec<Error>,
 }
 
 impl<S> Debug for NOAProcess<S> {
@@ -224,7 +222,6 @@ impl<S> Debug for NOAProcess<S> {
         f.debug_struct("NOAProcess")
             .field("matches", &self.matches)
             .field("consume_arg", &self.consume_arg)
-            .field("failed_info", &self.failed_info)
             .finish()
     }
 }
@@ -234,21 +231,7 @@ impl<S> NOAProcess<S> {
         Self {
             matches,
             consume_arg: false,
-            failed_info: vec![],
         }
-    }
-
-    pub fn app_failed_info(&mut self, failed_info: Error) -> &mut Self {
-        self.failed_info.push(failed_info);
-        self
-    }
-
-    pub fn failed_info(&self) -> &[Error] {
-        &self.failed_info
-    }
-
-    pub fn take_failed_info(self) -> Vec<Error> {
-        self.failed_info
     }
 }
 
