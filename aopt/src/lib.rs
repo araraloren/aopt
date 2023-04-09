@@ -71,7 +71,7 @@ pub struct GetoptRes<R, T> {
 /// For style `getopt!(..., "first" => &mut parser1, "second" => &mut parser2)`,
 /// will return an Ok([`GetoptRes`]\(T is the literal type\)) if any [`Parser`](crate::parser::Parser) parsing successed.
 ///
-/// Will return Err([`Error::Null`]) if all [`Parser`](crate::parser::Parser) parsing failed, otherwise return Err(_).
+/// Will return Err([`Error::default()`]) if all [`Parser`](crate::parser::Parser) parsing failed, otherwise return Err(_).
 /// # Example
 ///
 /// ```rust
