@@ -151,8 +151,8 @@
 //! Generate help message for command line program
 //!
 //! Commands:
-//!   se@1       Search the given directory
-//!   ls@1       List the given directory
+//!   se@1      Search the given directory
+//!   ls@1      List the given directory
 //!
 //! Options:
 //!   -h,-?,--help           Display help message
@@ -161,17 +161,17 @@
 //!
 //! Create by araraloren <blackcatoverwall@gmail.com> v0.1.8
 //! Error:
-//!    0: Failed at command `se` with `["--depth", "www"]`: Can not find option `--depth`:
-//! Can not convert value `www` to usize: ParseIntError { kind: InvalidDigit },
-//! inner_ctx = InnerCtx { uid: 1, name: Some(--depth), style: Style::Argument, arg: Some("www"), index: 1, total: 3 }
+//!    0: Parsing command `se` failed: InnerCtx { uid: 1, name: Some(--depth), style: Style::Argument, arg: Some("www"), index: 1, total: 3 }
+//!    1: Can not find option `--depth`
+//!    2: Can not convert value `www` to usize
+//!    3: invalid digit found in string
 //!
 //! Location:
-//!    src\main.rs:56
+//!    src\main.rs:82
 //!
 //! Backtrace omitted.
 //! Run with RUST_BACKTRACE=1 environment variable to display it.
 //! Run with RUST_BACKTRACE=full to include source snippets.
-//! error: process didn't exit successfully: `cli se --depth` (exit code: 1)
 //! ```
 //!
 //! ## Configurating Struct
@@ -659,6 +659,39 @@
 //!     assert!(Cli::parse(Args::from_array(["app", "foo", "--baz=6"])).is_err());
 //!
 //!     assert!(Cli::parse(Args::from_array(["app", "--qux", "-5", "foo", "--baz=6"])).is_ok());
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
+//! #### Configure action
+//!
+//! The type that implements [`Infer`](aopt::prelude::Infer) has different [`Action`](aopt::prelude::Action).
+//! The [`Action`](aopt::prelude::Action) defines the behavior when saving the value.
+//! See [`Action::process`](aopt::prelude::Action#method.process) and [`AOpt`](aopt::prelude::AOpt).
+//!
+//! ```rust
+//! use cote::prelude::*;
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(help)]
+//! pub struct Cli {
+//!     // bool default has Action::Set
+//!     #[arg(ty = bool, action = Action::Cnt)]
+//!     foo: u64,
+//!
+//!     // usize default has Action::App
+//!     #[arg(action = Action::Set)]
+//!     bar: usize,
+//! }
+//!
+//! fn main() -> color_eyre::Result<()> {
+//!     color_eyre::install()?;
+//!
+//!     let cli = Cli::parse(Args::from_array(["app", "--foo", "--foo", "--bar=42", "--bar=88"]))?;
+//!
+//!     assert_eq!(cli.foo, 2);
+//!     assert_eq!(cli.bar, 88);
 //!
 //!     Ok(())
 //! }

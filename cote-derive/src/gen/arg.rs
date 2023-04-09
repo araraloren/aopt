@@ -349,41 +349,51 @@ impl<'a> ArgGenerator<'a> {
                 }
             }
         }
-        match self.cfg_name {
-            CONFIG_CMD => {
-                codes.push(if is_option {
-                    abort! {
-                        ty,
-                        "Cmd always force required, please remove Option from type"
-                    }
-                } else {
-                    quote! {
-                        <aopt::opt::Cmd as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
-                        config.set_type::<#ty>();
+        if let Some(cfg) = self.configs.find_cfg(ArgKind::Type) {
+            let spec_ty = cfg.value();
+
+            codes.push(quote! {
+                <#spec_ty as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
+                config
+            });
+        }
+        else {
+            match self.cfg_name {
+                CONFIG_CMD => {
+                    codes.push(if is_option {
+                        abort! {
+                            ty,
+                            "Cmd always force required, please remove Option from type"
+                        }
+                    } else {
+                        quote! {
+                            <aopt::opt::Cmd as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
+                            config.set_type::<#ty>();
+                            config
+                        }
+                    });
+                }
+                CONFIG_POS => {
+                    codes.push(if is_option {
+                        quote! {
+                            <Option<aopt::opt::Pos<#ty>> as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
+                            config.set_type::<#ty>();
+                            config
+                        }
+                    } else {
+                        quote! {
+                            <aopt::opt::Pos<#ty> as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
+                            config.set_type::<#ty>();
+                            config
+                        }
+                    });
+                }
+                _ => {
+                    codes.push(quote! {
+                        <#ty as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
                         config
-                    }
-                });
-            }
-            CONFIG_POS => {
-                codes.push(if is_option {
-                    quote! {
-                        <Option<aopt::opt::Pos<#ty>> as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
-                        config.set_type::<#ty>();
-                        config
-                    }
-                } else {
-                    quote! {
-                        <aopt::opt::Pos<#ty> as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
-                        config.set_type::<#ty>();
-                        config
-                    }
-                });
-            }
-            _ => {
-                codes.push(quote! {
-                    <#ty as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
-                    config
-                });
+                    });
+                }
             }
         }
         if value.is_some() {

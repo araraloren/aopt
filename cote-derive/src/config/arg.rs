@@ -7,6 +7,8 @@ use super::Kind;
 pub enum ArgKind {
     Name,
 
+    Type,
+
     Hint,
 
     Help,
@@ -47,6 +49,7 @@ impl Kind for ArgKind {
 
         Ok(match kind_str.as_str() {
             "name" => (Self::Name, true),
+            "ty" => (Self::Type, true),
             "hint" => (Self::Hint, true),
             "help" => (Self::Help, true),
             "value" => (Self::Value, true),
