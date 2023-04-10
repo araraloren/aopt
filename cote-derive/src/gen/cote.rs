@@ -13,6 +13,7 @@ use syn::WherePredicate;
 use crate::config::Configs;
 use crate::config::CoteKind;
 
+use super::APP_POSTFIX;
 use super::gen_default_policy_ty;
 use super::gen_option_ident;
 use super::gen_option_uid_ident;
@@ -141,7 +142,7 @@ impl<'a> CoteGenerator<'a> {
     pub fn gen_struct_app_type(&self) -> Ident {
         let ident = self.ident;
 
-        Ident::new(&format!("{}App", ident), ident.span())
+        Ident::new(&format!("{}{}", ident, APP_POSTFIX), ident.span())
     }
 
     pub fn gen_style_settings_for_parser(&self) -> Option<TokenStream> {

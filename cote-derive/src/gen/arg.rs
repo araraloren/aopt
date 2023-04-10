@@ -356,8 +356,7 @@ impl<'a> ArgGenerator<'a> {
                 <#spec_ty as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
                 config
             });
-        }
-        else {
+        } else {
             match self.cfg_name {
                 CONFIG_CMD => {
                     codes.push(if is_option {

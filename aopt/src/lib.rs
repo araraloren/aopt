@@ -51,7 +51,7 @@ use std::any::TypeId;
 use std::fmt::Display;
 
 /// Get the [`TypeId`](std::any::TypeId) of type `T`.
-pub(crate) fn typeid<T: 'static>() -> TypeId {
+pub(crate) fn typeid<T: ?Sized + 'static>() -> TypeId {
     TypeId::of::<T>()
 }
 

@@ -13,6 +13,7 @@ use syn::Type;
 use crate::config::Configs;
 use crate::config::SubKind;
 
+use super::APP_POSTFIX;
 use super::filter_comment_doc;
 use super::gen_default_policy_ty;
 use super::gen_option_ident;
@@ -210,6 +211,11 @@ impl<'a> SubGenerator<'a> {
                         config.set_help(#token);
                     }
                 }
+                SubKind::NoForce => {
+                    quote! {
+                        config.set_force(false);
+                    }
+                }
                 _ => {
                     quote! {}
                 }
@@ -326,7 +332,7 @@ impl<'a> SubGenerator<'a> {
     pub fn gen_struct_app_type(&self) -> syn::Result<Ident> {
         let ident = gen_subapp_without_option(&self.without_option_ty)?;
 
-        Ok(Ident::new(&format!("{}App", ident), ident.span()))
+        Ok(Ident::new(&format!("{}{}", ident, APP_POSTFIX), ident.span()))
     }
 
     pub fn gen_sub_help_context(&self) -> syn::Result<TokenStream> {
