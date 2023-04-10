@@ -13,11 +13,11 @@ use syn::WherePredicate;
 use crate::config::Configs;
 use crate::config::CoteKind;
 
-use super::APP_POSTFIX;
 use super::gen_default_policy_ty;
 use super::gen_option_ident;
 use super::gen_option_uid_ident;
 use super::OptUpdate;
+use super::APP_POSTFIX;
 use super::HELP_OPTION_HELP;
 use super::HELP_OPTION_NAME;
 use super::HELP_OPTION_Q;
@@ -279,12 +279,15 @@ impl<'a> CoteGenerator<'a> {
 
     pub fn gen_main_option_update(&self, idx: usize) -> Option<OptUpdate> {
         let ident = self.ident;
-        self.configs.find_cfg(CoteKind::On).map(|cfg| {
-            let value = cfg.value();
+        let then_config = self.configs.find_cfg(CoteKind::Then);
+        let on_config = self.configs.find_cfg(CoteKind::On);
+        let fallback_config = self.configs.find_cfg(CoteKind::Fallback);
+
+        if on_config.is_some() || fallback_config.is_some() {
             let ident = gen_option_ident(idx, ident.span());
             let uid = gen_option_uid_ident(idx, ident.span());
 
-            (
+            Some((
                 Some(quote! {
                     let #ident = {
                         ctor.new_with({
@@ -298,11 +301,43 @@ impl<'a> CoteGenerator<'a> {
                 Some(quote! {
                     let #uid = set.insert(#ident);
                 }),
-                Some(quote! {
-                    parser.entry(#uid)?.on(#value);
+                Some({
+                    if let Some(on_config) = on_config {
+                        let value = on_config.value();
+
+                        if let Some(then_config) = then_config {
+                            let then = then_config.value();
+
+                            quote! {
+                                parser.entry(#uid)?.fallback(#value).then(#then);
+                            }
+                        } else {
+                            quote! {
+                                parser.entry(#uid)?.fallback(#value);
+                            }
+                        }
+                    } else if let Some(fallback_config) = fallback_config {
+                        let value = fallback_config.value();
+
+                        if let Some(then_config) = then_config {
+                            let then = then_config.value();
+
+                            quote! {
+                                parser.entry(#uid)?.on(#value).then(#then);
+                            }
+                        } else {
+                            quote! {
+                                parser.entry(#uid)?.on(#value);
+                            }
+                        }
+                    } else {
+                        panic!("can not go here")
+                    }
                 }),
-            )
-        })
+            ))
+        } else {
+            None
+        }
     }
 
     pub fn gen_help_option_update(&self, idx: usize) -> Option<(Ident, OptUpdate)> {

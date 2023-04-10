@@ -13,7 +13,6 @@ use syn::Type;
 use crate::config::Configs;
 use crate::config::SubKind;
 
-use super::APP_POSTFIX;
 use super::filter_comment_doc;
 use super::gen_default_policy_ty;
 use super::gen_option_ident;
@@ -21,6 +20,7 @@ use super::gen_option_uid_ident;
 use super::gen_subapp_without_option;
 use super::gen_ty_without_option;
 use super::OptUpdate;
+use super::APP_POSTFIX;
 use super::HELP_OPTION_NAME;
 use super::POLICY_FWD;
 
@@ -332,7 +332,10 @@ impl<'a> SubGenerator<'a> {
     pub fn gen_struct_app_type(&self) -> syn::Result<Ident> {
         let ident = gen_subapp_without_option(&self.without_option_ty)?;
 
-        Ok(Ident::new(&format!("{}{}", ident, APP_POSTFIX), ident.span()))
+        Ok(Ident::new(
+            &format!("{}{}", ident, APP_POSTFIX),
+            ident.span(),
+        ))
     }
 
     pub fn gen_sub_help_context(&self) -> syn::Result<TokenStream> {

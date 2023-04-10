@@ -158,15 +158,15 @@ impl<'a> ArgGenerator<'a> {
         Ok((
             Some(self.gen_option_config_new(&ident)?),
             Some(self.gen_option_config_insert(&uid, &ident)),
-            self.gen_option_handler_insert(&uid),
+            self.gen_option_handler_insert(&uid)?,
         ))
     }
 
-    pub fn gen_option_handler_insert(&self, uid: &Ident) -> Option<TokenStream> {
+    pub fn gen_option_handler_insert(&self, uid: &Ident) -> syn::Result<Option<TokenStream>> {
         if let Some(cfg) = self.configs.find_cfg(ArgKind::On) {
             let value = cfg.value();
 
-            Some(
+            Ok(Some(
                 if let Some(then_cfg) = self.configs.find_cfg(ArgKind::Then) {
                     let then = then_cfg.value();
 
@@ -178,11 +178,11 @@ impl<'a> ArgGenerator<'a> {
                         parser.entry(#uid)?.on(#value);
                     }
                 },
-            )
+            ))
         } else if let Some(cfg) = self.configs.find_cfg(ArgKind::Fallback) {
             let value = cfg.value();
 
-            Some(
+            Ok(Some(
                 if let Some(fallback) = self.configs.find_cfg(ArgKind::Then) {
                     let then = fallback.value();
 
@@ -194,9 +194,14 @@ impl<'a> ArgGenerator<'a> {
                         parser.entry(#uid)?.fallback(#value);
                     }
                 },
-            )
+            ))
+        } else if self.configs.has_cfg(ArgKind::Then) {
+            abort! {
+                self.field_ty,
+                "`then` must use with `on` or `fallback` together"
+            }
         } else {
-            None
+            Ok(None)
         }
     }
 
