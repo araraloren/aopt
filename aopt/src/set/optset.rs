@@ -334,6 +334,20 @@ where
             .map(|v| v.uid())
             .ok_or_else(|| raise_error!("Can not find option `{}` in option set", opt))
     }
+
+    fn find_opt<S: Into<Str>>(&self, opt: S) -> Result<&SetOpt<Self>, Error> {
+        let opt: Str = opt.into();
+
+        self.find(opt.clone())?
+            .ok_or_else(|| raise_error!("Can not find option(ref) `{}` in option set", opt))
+    }
+
+    fn find_opt_mut<S: Into<Str>>(&mut self, opt: S) -> Result<&mut SetOpt<Self>, Error> {
+        let opt: Str = opt.into();
+
+        self.find_mut(opt.clone())?
+            .ok_or_else(|| raise_error!("Can not find option(mut) `{}` in option set", opt))
+    }
 }
 
 impl<P, C, V, I: SetIndex<OptSet<P, C, V>>> std::ops::Index<I> for OptSet<P, C, V>

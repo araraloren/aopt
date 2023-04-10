@@ -207,6 +207,14 @@ where
 {
     fn find_uid<S: Into<Str>>(&self, opt: S) -> Result<Uid, Error>;
 
+    fn find_opt<S: Into<Str>>(&self, opt: S) -> Result<&SetOpt<Self>, Error> {
+        self.opt(self.find_uid(opt)?)
+    }
+
+    fn find_opt_mut<S: Into<Str>>(&mut self, opt: S) -> Result<&mut SetOpt<Self>, Error> {
+        self.opt_mut(self.find_uid(opt)?)
+    }
+
     fn find_val<U: ErasedTy>(&self, opt: impl Into<Str>) -> Result<&U, Error> {
         self.opt(self.find_uid(opt)?)?.val::<U>()
     }
