@@ -279,11 +279,11 @@ impl<'a> CoteGenerator<'a> {
 
     pub fn gen_main_option_update(&self, idx: usize) -> Option<OptUpdate> {
         let ident = self.ident;
-        let then_config = self.configs.find_cfg(CoteKind::Then);
-        let on_config = self.configs.find_cfg(CoteKind::On);
-        let fallback_config = self.configs.find_cfg(CoteKind::Fallback);
+        let then = self.configs.find_cfg(CoteKind::Then);
+        let on = self.configs.find_cfg(CoteKind::On);
+        let fallback = self.configs.find_cfg(CoteKind::Fallback);
 
-        if on_config.is_some() || fallback_config.is_some() {
+        if on.is_some() || fallback.is_some() {
             let ident = gen_option_ident(idx, ident.span());
             let uid = gen_option_uid_ident(idx, ident.span());
 
@@ -302,24 +302,10 @@ impl<'a> CoteGenerator<'a> {
                     let #uid = set.insert(#ident);
                 }),
                 Some({
-                    if let Some(on_config) = on_config {
+                    if let Some(on_config) = on {
                         let value = on_config.value();
 
-                        if let Some(then_config) = then_config {
-                            let then = then_config.value();
-
-                            quote! {
-                                parser.entry(#uid)?.fallback(#value).then(#then);
-                            }
-                        } else {
-                            quote! {
-                                parser.entry(#uid)?.fallback(#value);
-                            }
-                        }
-                    } else if let Some(fallback_config) = fallback_config {
-                        let value = fallback_config.value();
-
-                        if let Some(then_config) = then_config {
+                        if let Some(then_config) = then {
                             let then = then_config.value();
 
                             quote! {
@@ -328,6 +314,20 @@ impl<'a> CoteGenerator<'a> {
                         } else {
                             quote! {
                                 parser.entry(#uid)?.on(#value);
+                            }
+                        }
+                    } else if let Some(fallback_config) = fallback {
+                        let value = fallback_config.value();
+
+                        if let Some(then_config) = then {
+                            let then = then_config.value();
+
+                            quote! {
+                                parser.entry(#uid)?.fallback(#value).then(#then);
+                            }
+                        } else {
+                            quote! {
+                                parser.entry(#uid)?.fallback(#value);
                             }
                         }
                     } else {
