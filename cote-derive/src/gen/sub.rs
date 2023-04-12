@@ -191,29 +191,31 @@ impl<'a> SubGenerator<'a> {
         for cfg in self.configs.iter() {
             codes.push(match cfg.kind() {
                 SubKind::Alias => {
-                    let token = cfg.value().to_token_stream();
+                    let token = cfg.value();
 
                     quote! {
                         config.add_alias(#token);
                     }
                 }
                 SubKind::Hint => {
-                    let token = cfg.value().to_token_stream();
+                    let token = cfg.value();
 
                     quote! {
                         config.set_hint(#token);
                     }
                 }
                 SubKind::Help => {
-                    let token = cfg.value().to_token_stream();
+                    let token = cfg.value();
 
                     quote! {
                         config.set_help(#token);
                     }
                 }
-                SubKind::NoForce => {
+                SubKind::Force => {
+                    let token = cfg.value();
+
                     quote! {
-                        config.set_force(false);
+                        config.set_force(#token);
                     }
                 }
                 _ => {

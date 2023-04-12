@@ -23,8 +23,6 @@ pub enum ArgKind {
 
     Force,
 
-    NoForce,
-
     Action,
 
     Validator,
@@ -56,8 +54,7 @@ impl Kind for ArgKind {
             "values" => (Self::Values, true),
             "alias" => (Self::Alias, true),
             "index" => (Self::Index, true),
-            "force" => (Self::Force, false),
-            "noforce" => (Self::NoForce, false),
+            "force" => (Self::Force, true),
             "action" => (Self::Action, true),
             "valid" => (Self::Validator, true),
             "on" => (Self::On, true),

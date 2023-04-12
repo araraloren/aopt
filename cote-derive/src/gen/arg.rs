@@ -233,14 +233,14 @@ impl<'a> ArgGenerator<'a> {
             codes.push(
                     match cfg.kind() {
                         ArgKind::Hint => {
-                            let token = cfg.value().to_token_stream();
+                            let token = cfg.value();
 
                             quote! {
                                 config.set_hint(#token);
                             }
                         }
                         ArgKind::Value => {
-                            let token = cfg.value().to_token_stream();
+                            let token = cfg.value();
 
                             value = Some(token.clone());
                             quote! {
@@ -248,7 +248,7 @@ impl<'a> ArgGenerator<'a> {
                             }
                         }
                         ArgKind::Values => {
-                            let token = cfg.value().to_token_stream();
+                            let token = cfg.value();
 
                             value = Some(token.clone());
                             quote! {
@@ -257,38 +257,35 @@ impl<'a> ArgGenerator<'a> {
                             }
                         }
                         ArgKind::Alias => {
-                            let token = cfg.value().to_token_stream();
+                            let token = cfg.value();
 
                             quote! {
                                 config.add_alias(#token);
                             }
                         }
                         ArgKind::Index => {
-                            let token = cfg.value().to_token_stream();
+                            let token = cfg.value();
 
                             quote! {
                                 config.set_index(aopt::prelude::Index::try_from(#token)?);
                             }
                         }
                         ArgKind::Force => {
+                            let token = cfg.value();
+
                             quote! {
-                                config.set_force(true);
-                            }
-                        }
-                        ArgKind::NoForce => {
-                            quote! {
-                                config.set_force(false);
+                                config.set_force(#token);
                             }
                         }
                         ArgKind::Action => {
-                            let token = cfg.value().to_token_stream();
+                            let token = cfg.value();
 
                             quote! {
                                 config.set_action(#token);
                             }
                         }
                         ArgKind::Validator => {
-                            let token = cfg.value().to_token_stream();
+                            let token = cfg.value();
 
                             quote! {
                                 config.set_storer(aopt::prelude::ValStorer::new_validator::<#ty>(#token));
@@ -328,7 +325,7 @@ impl<'a> ArgGenerator<'a> {
         };
         if let Some(mut help) = help {
             if let Some(value) = &value {
-                let value_string = value.to_string();
+                let value_string = value.to_token_stream().to_string();
 
                 help.extend(quote! {
                     message.push_str(" ");

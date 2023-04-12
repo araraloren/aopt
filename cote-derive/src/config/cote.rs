@@ -33,6 +33,8 @@ pub enum CoteKind {
 
     Then,
 
+    Strict,
+
     Combine,
 
     EmbeddedPlus,
@@ -58,6 +60,7 @@ impl Kind for CoteKind {
             "on" => (Self::On, true),
             "fallback" => (Self::Fallback, true),
             "then" => (Self::Then, true),
+            "strict" => (Self::Strict, true),
             "combine" => (Self::Combine, false),
             "embedded" => (Self::EmbeddedPlus, false),
             _ => {

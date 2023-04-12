@@ -642,13 +642,13 @@
 //!     baz: String,
 //!
 //!     // Using `force` you can force set the option to force required
-//!     #[arg(force)]
+//!     #[arg(force = true)]
 //!     qux: Option<i64>,
 //!
-//!     // Using `noforce` you can force set `--quux` to optional in `arg`.
+//!     // Using `force` you can force set `--quux` to optional in `arg`.
 //!     // But the parse will raise error when extract `Cli` from `CoteApp`
 //!     // if the option has no default value
-//!     #[arg(noforce, values = ["need"])]
+//!     #[arg(force = false, values = ["need"])]
 //!     quux: Vec<String>,
 //! }
 //! fn main() -> color_eyre::Result<()> {
@@ -740,17 +740,17 @@
 //!     #[arg(on = empty_handler::<P>, then = foo_storer::<P>)]
 //!     foo: u64,
 //!
-//!     #[sub(noforce)]
+//!     #[sub(force = false)]
 //!     bar: Option<Bar>,
 //!
-//!     #[sub(noforce)]
+//!     #[sub(force = false)]
 //!     qux: Option<Qux>,
 //! }
 //!
 //! #[derive(Debug, Cote, PartialEq, Eq)]
 //! #[cote(help)]
 //! pub struct Bar {
-//!     #[arg(noforce, fallback = debug_of_bar::<P>)]
+//!     #[arg(force = false, fallback = debug_of_bar::<P>)]
 //!     debug: bool,
 //!
 //!     #[pos()]
@@ -866,3 +866,45 @@
 //!     unreachable!("Never go here")
 //! }
 //! ```
+//!
+//! - Output of command line `cli --foo 6`:
+//!
+//! ```!
+//! Saving the value of `--foo` to 7
+//! Got client: Cli { foo: 7, bar: None, qux: None }
+//! ```
+//!
+//! - Output of command line `cli --foo 8 bar a2i`:
+//!
+//! ```!
+//! Saving the value of `--foo` to 9
+//! Got client: Cli { foo: 9, bar: Some(Bar { debug: false, quux: "a2i" }), qux: None }
+//! ```
+//!
+//! - Output of command line `cli --foo 8 bar a2i --debug`:
+//!
+//! ```!
+//! Saving the value of `--foo` to 9
+//! Got value of `--debug`: RawVal("true") --> true
+//! Got client: Cli { foo: 9, bar: Some(Bar { debug: false, quux: "a2i" }), qux: None }
+//! ```
+//!
+//! - Output of command line `cli --foo 9 qux c`:
+//!
+//! ```!
+//! Saving the value of `--foo` to 10
+//! return Ok(None) call the default handler of Qux
+//! Got client: Cli { foo: 9, bar: None, qux: Some(Qux { corge: true, grault: None }) }
+//! ```
+//!
+//! - Output of command line `cli --foo 9 qux c --grault=42`:
+//!
+//! ```!
+//! Saving the value of `--foo` to 10
+//! return Ok(None) call the default handler of Qux
+//! Got client: Cli { foo: 9, bar: None, qux: Some(Qux { corge: true, grault: Some(42) }) }
+//! ```
+//!
+//! #### Validate values
+//!
+//!

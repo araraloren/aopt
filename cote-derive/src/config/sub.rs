@@ -23,7 +23,7 @@ pub enum SubKind {
 
     Mut,
 
-    NoForce,
+    Force,
 }
 
 impl Kind for SubKind {
@@ -41,7 +41,7 @@ impl Kind for SubKind {
             "foot" => (Self::Foot, true),
             "refopt" => (Self::Ref, false),
             "mutopt" => (Self::Mut, false),
-            "noforce" => (Self::NoForce, false),
+            "force" => (Self::Force, true),
             _ => {
                 abort! {
                     ident,

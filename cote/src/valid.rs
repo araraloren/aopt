@@ -35,6 +35,20 @@ where
     ValValidator::from_fn(move |val| range.contains(val))
 }
 
+pub fn range_opt<K, T>(range: impl RangeBounds<K> + ErasedTy) -> ValValidator<Option<T>>
+where
+    T: ErasedTy + PartialOrd<K>,
+    K: ErasedTy + PartialOrd<T>,
+{
+    ValValidator::from_fn(move |val: &Option<T>| {
+        if let Some(val) = val.as_ref() {
+            range.contains(val)
+        } else {
+            false
+        }
+    })
+}
+
 pub fn greater<K, T>(start: K) -> ValValidator<T>
 where
     T: ErasedTy,
@@ -75,4 +89,51 @@ pub fn valid<T: ErasedTy>(func: impl Fn(&T) -> bool + Send + Sync + 'static) -> 
 #[cfg(not(feature = "sync"))]
 pub fn valid<T: ErasedTy>(func: impl Fn(&T) -> bool + 'static) -> ValValidator<T> {
     ValValidator::from_fn(move |val| func(val))
+}
+
+#[macro_export]
+macro_rules! valid {
+    ($value:literal) => {
+        $crate::valid::value($value)
+    };
+
+    ([$($value:literal),+]) => {
+        $crate::valid::array([$($value),+])
+    };
+
+    (vec![$($value:literal),+]) => {
+        $crate::valid::vector(vec![$($value),+])
+    };
+
+    ($start:literal .. $end:literal) => {
+        $crate::valid::range($start .. $end)
+    };
+
+    ($start:literal ..) => {
+        $crate::valid::range($start ..)
+    };
+
+    ($start:literal ..= $end:literal) => {
+        $crate::valid::range($start ..= $end)
+    };
+
+    (> $value:literal) => {
+        $crate::valid::greater($value)
+    };
+
+    (< $value:literal) => {
+        $crate::valid::less($value)
+    };
+
+    (>= $value:literal) => {
+        $crate::valid::greater_or_eq($value)
+    };
+
+    (>= $value:literal) => {
+        $crate::valid::less_or_eq($value)
+    };
+
+    ($func:expr) => {
+        $crate::valid::valid($func)
+    };
 }
