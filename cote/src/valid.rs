@@ -1,275 +1,208 @@
-use std::ops::RangeBounds;
+use std::{marker::PhantomData, ops::RangeBounds};
 
 pub use aopt::prelude::ErasedTy;
-pub use aopt::prelude::ValValidator;
+use aopt::value::ValidatorHandler;
 
-pub fn value<K, T>(val: K) -> ValValidator<T>
+pub trait Validate<T>
+where
+    T: ErasedTy,
+{
+    fn check(&self, value: &T) -> bool;
+
+    fn check_opt(&self, value: &Option<T>) -> bool {
+        value.as_ref().map(|v| self.check(v)).unwrap_or_default()
+    }
+}
+
+pub struct Value<K>(K);
+
+impl<K> Value<K> {
+    pub fn new(value: K) -> Self {
+        Self(value)
+    }
+}
+
+impl<T, K> Validate<T> for Value<K>
 where
     T: ErasedTy,
     K: ErasedTy + PartialEq<T>,
 {
-    ValValidator::from_fn(move |inner_val| &val == inner_val)
+    fn check(&self, value: &T) -> bool {
+        &self.0 == value
+    }
 }
 
-pub fn value_opt<K, T>(val: K) -> ValValidator<Option<T>>
+pub struct GreaterEqual<K>(K);
+
+impl<K> GreaterEqual<K> {
+    pub fn new(value: K) -> Self {
+        Self(value)
+    }
+}
+
+impl<T, K> Validate<T> for GreaterEqual<K>
+where
+    T: ErasedTy,
+    K: ErasedTy + PartialOrd<T>,
+{
+    fn check(&self, value: &T) -> bool {
+        &self.0 >= value
+    }
+}
+
+pub struct LessEqual<K>(K);
+
+impl<K> LessEqual<K> {
+    pub fn new(value: K) -> Self {
+        Self(value)
+    }
+}
+
+impl<T, K> Validate<T> for LessEqual<K>
+where
+    T: ErasedTy,
+    K: ErasedTy + PartialOrd<T>,
+{
+    fn check(&self, value: &T) -> bool {
+        &self.0 <= value
+    }
+}
+
+pub struct Array<const N: usize, K>([K; N]);
+
+impl<const N: usize, K> Array<N, K> {
+    pub fn new(value: [K; N]) -> Self {
+        Self(value)
+    }
+}
+
+impl<const N: usize, T, K> Validate<T> for Array<N, K>
 where
     T: ErasedTy,
     K: ErasedTy + PartialEq<T>,
 {
-    ValValidator::from_fn(move |inner_val: &Option<T>| {
-        inner_val
-            .as_ref()
-            .map(|inner_val| &val == inner_val)
-            .unwrap_or_default()
-    })
+    fn check(&self, value: &T) -> bool {
+        self.0.iter().any(|v| PartialEq::eq(v, value))
+    }
 }
 
-pub fn array<const N: usize, K, T>(vals: [K; N]) -> ValValidator<T>
+pub struct Vector<K>(Vec<K>);
+
+impl<K> Vector<K> {
+    pub fn new(value: Vec<K>) -> Self {
+        Self(value)
+    }
+}
+
+impl<T, K> Validate<T> for Vector<K>
 where
     T: ErasedTy,
     K: ErasedTy + PartialEq<T>,
 {
-    ValValidator::from_fn(move |val| vals.iter().any(|v| PartialEq::eq(v, val)))
+    fn check(&self, value: &T) -> bool {
+        self.0.iter().any(|v| PartialEq::eq(v, value))
+    }
 }
 
-pub fn array_opt<const N: usize, K, T>(vals: [K; N]) -> ValValidator<Option<T>>
+pub struct Range<K, R>(R, PhantomData<K>);
+
+impl<K, R> Range<K, R>
 where
-    T: ErasedTy,
-    K: ErasedTy + PartialEq<T>,
+    R: RangeBounds<K> + ErasedTy,
 {
-    ValValidator::from_fn(move |val: &Option<T>| {
-        val.as_ref()
-            .map(|val| vals.iter().any(|v| PartialEq::eq(v, val)))
-            .unwrap_or_default()
-    })
+    pub fn new(value: R) -> Self {
+        Self(value, PhantomData::default())
+    }
 }
 
-pub fn vector<K, T>(vals: Vec<K>) -> ValValidator<T>
-where
-    T: ErasedTy,
-    K: ErasedTy + PartialEq<T>,
-{
-    ValValidator::from_fn(move |val| vals.iter().any(|v| PartialEq::eq(v, val)))
-}
-
-pub fn vector_opt<K, T>(vals: Vec<K>) -> ValValidator<Option<T>>
-where
-    T: ErasedTy,
-    K: ErasedTy + PartialEq<T>,
-{
-    ValValidator::from_fn(move |val: &Option<T>| {
-        val.as_ref()
-            .map(|val| vals.iter().any(|v| PartialEq::eq(v, val)))
-            .unwrap_or_default()
-    })
-}
-
-pub fn range<K, T>(range: impl RangeBounds<K> + ErasedTy) -> ValValidator<T>
+impl<T, K, R> Validate<T> for Range<K, R>
 where
     T: ErasedTy + PartialOrd<K>,
     K: ErasedTy + PartialOrd<T>,
+    R: RangeBounds<K> + ErasedTy,
 {
-    ValValidator::from_fn(move |val| range.contains(val))
+    fn check(&self, value: &T) -> bool {
+        self.0.contains(value)
+    }
 }
 
-pub fn range_opt<K, T>(range: impl RangeBounds<K> + ErasedTy) -> ValValidator<Option<T>>
-where
-    T: ErasedTy + PartialOrd<K>,
-    K: ErasedTy + PartialOrd<T>,
-{
-    ValValidator::from_fn(move |val: &Option<T>| {
-        val.as_ref()
-            .map(|val| range.contains(val))
-            .unwrap_or_default()
-    })
-}
+pub struct Validator<T>(ValidatorHandler<T>);
 
-pub fn greater<K, T>(start: K) -> ValValidator<T>
+impl<T> Validator<T>
 where
     T: ErasedTy,
-    K: ErasedTy + PartialOrd<T>,
 {
-    ValValidator::from_fn(move |val| &start < val)
+    #[cfg(feature = "sync")]
+    pub fn new(func: impl Fn(&T) -> bool + Send + Sync + 'static) -> Self {
+        Self(Box::new(move |val| func(val)))
+    }
+
+    #[cfg(not(feature = "sync"))]
+    pub fn new(func: impl Fn(&T) -> bool + 'static) -> Self {
+        Self(Box::new(move |val| func(val)))
+    }
 }
 
-pub fn greater_opt<K, T>(start: K) -> ValValidator<Option<T>>
+impl<T> Validate<T> for Validator<T>
 where
     T: ErasedTy,
-    K: ErasedTy + PartialOrd<T>,
 {
-    ValValidator::from_fn(move |val: &Option<T>| {
-        val.as_ref().map(|v| &start < v).unwrap_or_default()
-    })
-}
-
-pub fn less<K, T>(end: K) -> ValValidator<T>
-where
-    T: ErasedTy,
-    K: ErasedTy + PartialOrd<T>,
-{
-    ValValidator::from_fn(move |val| &end > val)
-}
-
-pub fn less_opt<K, T>(end: K) -> ValValidator<Option<T>>
-where
-    T: ErasedTy,
-    K: ErasedTy + PartialOrd<T>,
-{
-    ValValidator::from_fn(move |val: &Option<T>| {
-        val.as_ref().map(|val| &end > val).unwrap_or_default()
-    })
-}
-
-pub fn greater_or_eq<K, T>(start: K) -> ValValidator<T>
-where
-    T: ErasedTy,
-    K: ErasedTy + PartialOrd<T>,
-{
-    ValValidator::from_fn(move |val| &start <= val)
-}
-
-pub fn greater_or_eq_opt<K, T>(start: K) -> ValValidator<Option<T>>
-where
-    T: ErasedTy,
-    K: ErasedTy + PartialOrd<T>,
-{
-    ValValidator::from_fn(move |val: &Option<T>| {
-        val.as_ref().map(|val| &start <= val).unwrap_or_default()
-    })
-}
-
-pub fn less_or_eq<K, T>(end: K) -> ValValidator<T>
-where
-    T: ErasedTy,
-    K: ErasedTy + PartialOrd<T>,
-{
-    ValValidator::from_fn(move |val| &end >= val)
-}
-
-pub fn less_or_eq_opt<K, T>(end: K) -> ValValidator<Option<T>>
-where
-    T: ErasedTy,
-    K: ErasedTy + PartialOrd<T>,
-{
-    ValValidator::from_fn(move |val: &Option<T>| {
-        val.as_ref().map(|val| &end >= val).unwrap_or_default()
-    })
-}
-
-#[cfg(feature = "sync")]
-pub fn valid_fn<T: ErasedTy>(func: impl Fn(&T) -> bool + Send + Sync + 'static) -> ValValidator<T> {
-    ValValidator::from_fn(move |val| func(val))
-}
-
-#[cfg(feature = "sync")]
-pub fn valid_opt_fn<T: ErasedTy>(
-    func: impl Fn(&Option<T>) -> bool + Send + Sync + 'static,
-) -> ValValidator<Option<T>> {
-    ValValidator::from_fn(move |val: &Option<T>| func(val))
-}
-
-#[cfg(not(feature = "sync"))]
-pub fn valid_fn<T: ErasedTy>(func: impl Fn(&T) -> bool + 'static) -> ValValidator<T> {
-    ValValidator::from_fn(move |val| func(val))
-}
-
-#[cfg(not(feature = "sync"))]
-pub fn valid_opt_fn<T: ErasedTy>(
-    func: impl Fn(&Option<T>) -> bool + 'static,
-) -> ValValidator<Option<T>> {
-    ValValidator::from_fn(move |val: &Option<T>| func(val))
+    fn check(&self, value: &T) -> bool {
+        (self.0)(value)
+    }
 }
 
 #[macro_export]
 macro_rules! valid {
     ($value:literal) => {
-        $crate::valid::value($value)
+        $crate::valid::Value::new($value)
     };
 
     ([$($value:literal),+]) => {
-        $crate::valid::array([$($value),+])
+        $crate::valid::Array::new([$($value),+])
     };
 
     (vec![$($value:literal),+]) => {
-        $crate::valid::vector(vec![$($value),+])
+        $crate::valid::Vector::new(vec![$($value),+])
     };
 
     ($start:literal .. $end:literal) => {
-        $crate::valid::range($start .. $end)
+        $crate::valid::Range::new($start .. $end)
     };
 
     ($start:literal ..) => {
-        $crate::valid::range($start ..)
+        $crate::valid::Range::new($start ..)
     };
 
     ($start:literal ..= $end:literal) => {
-        $crate::valid::range($start ..= $end)
+        $crate::valid::Range::new($start ..= $end)
+    };
+
+    (.. $end:literal) => {
+        $crate::valid::Range::new($start .. $end)
+    };
+
+    (..= $end:literal) => {
+        $crate::valid::Range::new($start ..= $end)
     };
 
     (> $value:literal) => {
-        $crate::valid::greater($value)
+        $crate::valid::Range::new($value ..)
     };
 
     (< $value:literal) => {
-        $crate::valid::less($value)
+        $crate::valid::Range::new(.. $value)
     };
 
     (>= $value:literal) => {
-        $crate::valid::greater_or_eq($value)
+        $crate::valid::GreaterEqual::new($value)
     };
 
-    (>= $value:literal) => {
-        $crate::valid::less_or_eq($value)
+    (<= $value:literal) => {
+        $crate::valid::Range::new(..= $value)
     };
 
     ($func:expr) => {
-        $crate::valid::valid_fn($func)
-    };
-}
-
-#[macro_export]
-macro_rules! valid_opt {
-    ($value:literal) => {
-        $crate::valid::value_opt($value)
-    };
-
-    ([$($value:literal),+]) => {
-        $crate::valid::array_opt([$($value),+])
-    };
-
-    (vec![$($value:literal),+]) => {
-        $crate::valid::vector_opt(vec![$($value),+])
-    };
-
-    ($start:literal .. $end:literal) => {
-        $crate::valid::range_opt($start .. $end)
-    };
-
-    ($start:literal ..) => {
-        $crate::valid::range_opt($start ..)
-    };
-
-    ($start:literal ..= $end:literal) => {
-        $crate::valid::range_opt($start ..= $end)
-    };
-
-    (> $value:literal) => {
-        $crate::valid::greater_opt($value)
-    };
-
-    (< $value:literal) => {
-        $crate::valid::less_opt($value)
-    };
-
-    (>= $value:literal) => {
-        $crate::valid::greater_or_eq_opt($value)
-    };
-
-    (>= $value:literal) => {
-        $crate::valid::less_or_eq_opt($value)
-    };
-
-    ($func:expr) => {
-        $crate::valid::valid_opt_fn($func)
+        $crate::valid::Validator::new($func)
     };
 }
