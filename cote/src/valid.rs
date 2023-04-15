@@ -1,7 +1,7 @@
 use std::{marker::PhantomData, ops::RangeBounds};
 
 pub use aopt::prelude::ErasedTy;
-use aopt::value::ValidatorHandler;
+use aopt::value::{ValValidator, ValidatorHandler};
 
 pub trait Validate<T>
 where
@@ -149,6 +149,15 @@ where
 {
     fn check(&self, value: &T) -> bool {
         (self.0)(value)
+    }
+}
+
+impl<T> From<Validator<T>> for ValValidator<T>
+where
+    T: ErasedTy,
+{
+    fn from(value: Validator<T>) -> Self {
+        ValValidator::new(value.0)
     }
 }
 

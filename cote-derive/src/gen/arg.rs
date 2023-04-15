@@ -45,7 +45,7 @@ impl<'a> ArgGenerator<'a> {
         let ident = field.ident.as_ref();
         let attrs = &field.attrs;
         let docs = filter_comment_doc(attrs);
-        let cfg_name = config::find_cfg_name(&[CONFIG_ARG, CONFIG_POS, CONFIG_CMD], &attrs)
+        let cfg_name = config::find_cfg_name(&[CONFIG_ARG, CONFIG_POS, CONFIG_CMD], attrs)
             .unwrap_or(CONFIG_ARG);
         let configs = Configs::parse_attrs(cfg_name, attrs);
         let is_pos_ty = check_in_path(field_ty, "Pos")?;
@@ -286,9 +286,24 @@ impl<'a> ArgGenerator<'a> {
                         }
                         ArgKind::Validator => {
                             let token = cfg.value();
+                            let check = if is_option {
+                                quote!{
+                                    use cote::valid::Validate;
+                                    #token.check_opt(v)
+                                }
+                            }
+                            else {
+                                quote!{
+                                    use cote::valid::Validate;
+                                    #token.check(v)
+                                }
+                            };
 
                             quote! {
-                                config.set_storer(aopt::prelude::ValStorer::new_validator::<#ty>(#token));
+                                let validator = cote::valid::Validator::new(|v| {
+                                    #check
+                                });
+                                config.set_storer(aopt::prelude::ValStorer::new_validator::<#ty>(validator.into()));
                             }
                         }
                         _ => {

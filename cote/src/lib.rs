@@ -1178,7 +1178,7 @@ mod test {
             #[arg(help = "list all the file")]
             all: bool,
 
-            #[arg(valid = valid::array([1, 42, 68]))]
+            #[arg(valid = valid!([1, 42, 68]))]
             depth: usize,
 
             #[arg(index = "1")]
