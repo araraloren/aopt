@@ -4,8 +4,6 @@ use std::num::ParseIntError;
 use std::ops::Deref;
 use std::thread::AccessError;
 
-use ahash::HashSet;
-
 use crate::Uid;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -87,7 +85,7 @@ impl std::error::Error for Internal {}
 pub struct Error {
     inner: Internal,
 
-    uids: HashSet<Uid>,
+    uids: Vec<Uid>,
 
     cause: Option<Box<Error>>,
 }
@@ -110,7 +108,7 @@ impl Error {
     pub fn new(error: Internal) -> Self {
         Self {
             inner: error,
-            uids: HashSet::default(),
+            uids: vec![],
             cause: None,
         }
     }
@@ -154,21 +152,28 @@ impl Error {
     }
 
     pub fn with_uid(mut self, uid: Uid) -> Self {
-        self.uids = {
-            let mut set = HashSet::default();
-            set.insert(uid);
-            set
-        };
+        self.uids = vec![uid];
         self
     }
 
     pub fn with_uids(mut self, uids: Vec<Uid>) -> Self {
-        self.uids = HashSet::from_iter(uids.into_iter());
+        self.uids = uids;
         self
     }
 
-    pub fn uids(&self) -> &HashSet<Uid> {
+    pub fn uids(&self) -> &[Uid] {
         &self.uids
+    }
+
+    pub fn intersection(&self, other: &Self) -> bool {
+        for uid in self.uids.iter() {
+            for other_uid in other.uids.iter() {
+                if uid == other_uid {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     pub fn from<E: std::error::Error + Display>(error: E) -> Self {

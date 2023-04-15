@@ -129,16 +129,17 @@ where
     if proc.status() && invoke {
         for saver in savers {
             let uid = saver.uid;
+            let fail = |e: &Error| {
+                manager.push(e.clone());
+                Ok(())
+            };
 
             ctx.set_inner_ctx(Some(saver.ctx));
             // undo the process if option callback return None
             if !process_callback_ret(
                 invoke_callback_opt(uid, ctx, set, inv, ser),
                 |_| Ok(()),
-                |e: &Error| {
-                    manager.push(e.clone());
-                    Ok(())
-                },
+                fail,
             )? {
                 proc.undo(set)?;
                 break;
@@ -178,6 +179,10 @@ where
             Ok(index) => {
                 if let Some(index) = index {
                     let mat = proc.get_match(index).unwrap(); // always true
+                    let fail = |e: &Error| {
+                        manager.push(e.clone());
+                        Ok(())
+                    };
 
                     ctx.set_inner_ctx(Some(
                         InnerCtx::default()
@@ -192,10 +197,7 @@ where
                     if !process_callback_ret(
                         invoke_callback_opt(uid, ctx, set, inv, ser),
                         |_| Ok(()),
-                        |e: &Error| {
-                            manager.push(e.clone());
-                            Ok(())
-                        },
+                        fail,
                     )? {
                         proc.undo(set)?;
                     }

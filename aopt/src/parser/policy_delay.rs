@@ -269,15 +269,16 @@ where
         saver: CtxSaver,
     ) -> Result<(), Error> {
         let uid = saver.uid;
+        let fail = |e: &Error| {
+            manager.push(e.clone());
+            Ok(())
+        };
 
         ctx.set_inner_ctx(Some(saver.ctx));
         if !process_callback_ret(
             invoke_callback_opt(uid, ctx, set, inv, ser),
             |_| Ok(()),
-            |e| {
-                manager.push(e.clone());
-                Ok(())
-            },
+            fail,
         )? {
             set.opt_mut(uid)?.set_matched(false);
         }

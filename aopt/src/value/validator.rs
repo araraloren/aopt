@@ -15,6 +15,10 @@ impl<T> std::fmt::Debug for ValValidator<T> {
 }
 
 impl<T: ErasedTy> ValValidator<T> {
+    pub fn new(handler: ValidatorHandler<T>) -> Self {
+        Self(handler)
+    }
+
     pub fn invoke(&self, val: &T) -> bool {
         (self.0)(val)
     }

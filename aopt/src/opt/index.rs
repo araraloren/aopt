@@ -159,7 +159,7 @@ impl Index {
                 if last == index {
                     return Err(Error::invalid_opt_index(
                         pattern,
-                        &format!("{} not a valid usize number", data),
+                        format!("{} not a valid usize number", data),
                     ));
                 }
                 ret.push(Self::parse_as_usize(pattern, &data[last..index])?);

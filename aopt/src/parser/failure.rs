@@ -31,10 +31,7 @@ impl FailManager {
         if self.is_empty() {
             new_err
         } else {
-            let mut fails = self
-                .fails
-                .into_iter()
-                .filter(|v| new_err.uids().intersection(v.uids()).count() > 0);
+            let mut fails = self.fails.into_iter().filter(|v| new_err.intersection(v));
 
             if let Some(fail) = fails.next() {
                 let mut err = fail;
