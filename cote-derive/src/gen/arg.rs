@@ -286,24 +286,12 @@ impl<'a> ArgGenerator<'a> {
                         }
                         ArgKind::Validator => {
                             let token = cfg.value();
-                            let check = if is_option {
-                                quote!{
-                                    use cote::valid::Validate;
-                                    #token.check_opt(v)
-                                }
-                            }
-                            else {
-                                quote!{
-                                    use cote::valid::Validate;
-                                    #token.check(v)
-                                }
-                            };
-
                             quote! {
-                                let validator = cote::valid::Validator::new(|v| {
-                                    #check
+                                let validator = aopt::prelude::ValValidator::from_fn(|value| {
+                                    use cote::valid::Validate;
+                                    #token.check(value)
                                 });
-                                config.set_storer(aopt::prelude::ValStorer::new_validator::<#ty>(validator.into()));
+                                config.set_storer(aopt::prelude::ValStorer::new_validator::<ValueType>(validator));
                             }
                         }
                         _ => {
@@ -412,11 +400,9 @@ impl<'a> ArgGenerator<'a> {
                 }
             }
         }
-        if value.is_some() {
-            config.extend(quote! {
-                 type ValueType = <#ty as aopt::prelude::Infer>::Val;
-            });
-        }
+        config.extend(quote! {
+             type ValueType = <#ty as aopt::prelude::Infer>::Val;
+        });
         config.extend(codes.into_iter());
 
         Ok(quote! {

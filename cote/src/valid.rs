@@ -8,10 +8,6 @@ where
     T: ErasedTy,
 {
     fn check(&self, value: &T) -> bool;
-
-    fn check_opt(&self, value: &Option<T>) -> bool {
-        value.as_ref().map(|v| self.check(v)).unwrap_or_default()
-    }
 }
 
 pub struct Value<K>(K);
