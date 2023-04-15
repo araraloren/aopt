@@ -244,7 +244,11 @@ impl<'a> ArgGenerator<'a> {
 
                             value = Some(token.clone());
                             quote! {
-                                config.set_initializer(aopt::prelude::ValInitializer::new_value(<ValueType>::from(#token)));
+                                config.set_initializer(
+                                    aopt::prelude::ValInitializer::new_value(
+                                        <<#ty as aopt::prelude::Infer>::Val>::from(#token)
+                                    )
+                                );
                             }
                         }
                         ArgKind::Values => {
@@ -252,7 +256,9 @@ impl<'a> ArgGenerator<'a> {
 
                             value = Some(token.clone());
                             quote! {
-                                let values = #token.into_iter().map(|v|<ValueType>::from(v)).collect::<Vec<ValueType>>();
+                                let values = #token.into_iter().map(
+                                    |v|<<#ty as aopt::prelude::Infer>::Val>::from(v)
+                                ).collect::<Vec<<#ty as aopt::prelude::Infer>::Val>>();
                                 config.set_initializer(aopt::prelude::ValInitializer::new_values(values));
                             }
                         }
@@ -291,7 +297,9 @@ impl<'a> ArgGenerator<'a> {
                                     use cote::valid::Validate;
                                     #token.check(value)
                                 });
-                                config.set_storer(aopt::prelude::ValStorer::new_validator::<ValueType>(validator));
+                                config.set_storer(
+                                    aopt::prelude::ValStorer::new_validator::<<#ty as aopt::prelude::Infer>::Val>(validator)
+                                );
                             }
                         }
                         _ => {
@@ -400,9 +408,6 @@ impl<'a> ArgGenerator<'a> {
                 }
             }
         }
-        config.extend(quote! {
-             type ValueType = <#ty as aopt::prelude::Infer>::Val;
-        });
         config.extend(codes.into_iter());
 
         Ok(quote! {

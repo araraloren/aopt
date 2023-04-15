@@ -157,6 +157,29 @@ where
     }
 }
 
+/// Check the value of option.
+///
+/// # Example
+/// ```rust
+/// # use cote::prelude::*;
+/// # use cote::valid;
+/// #
+/// #[derive(Debug, Cote, PartialEq, Eq)]
+/// #[cote(help)]
+/// pub struct Cli {
+///     #[arg(alias = "v", valid = valid!(42))]
+///     value: u64,
+/// }
+///
+/// fn main() -> Result<(), Box<dyn std::error::Error>> {
+///    
+///     assert!(Cli::parse(Args::from_array(["app", "-v41"])).is_err());
+///
+///     assert!(Cli::parse(Args::from_array(["app", "-v42"])).is_ok());
+///
+///     Ok(())
+/// }
+/// ```
 #[macro_export]
 macro_rules! valid {
     ($value:literal) => {

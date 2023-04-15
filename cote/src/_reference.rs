@@ -8,7 +8,21 @@
 //!     1. [Configurating Policy](#configurating-policy)
 //!     2. [Configurating Help](#configurating-help)
 //!     3. [Configurating User Style](#configurating-user-style)
-//!
+//! 3. [Configurating Field](#configurating-field)
+//!     1. [Options](#options)
+//!     2. [Positionals](#positionals)
+//!     3. [Commands](#commands)
+//!     4. [Sub Commands](#sub-commands)
+//! 4. [Configurating options and positionals](#configurating-options-and-positionals)
+//!     1. [Configurating the name and alias](#configurating-the-name-and-alias)
+//!     2. [Configurating the hint, help and default value](#configurating-the-hint-help-and-default-value)
+//!     3. [Configurating the index](#configurating-the-index)
+//!     4. [Make the option force required](#make-the-option-force-required)
+//!     5. [Configurating action](#configurating-action)
+//!     6. [Configurating handler](#configurating-handler)
+//!     7. [Validate values](#validate-values)
+//!     8. [Add "no delay" option](#add-no-delay-option)
+//! 5. [Configurating commands](#configurating-commands)
 //!
 //! ## Quick Start
 //!
@@ -325,7 +339,7 @@
 //! }
 //! ```
 //!
-//! ## Configuration on field
+//! ## Configurating Field
 //!
 //! ### Options
 //!
@@ -429,9 +443,78 @@
 //! }
 //! ```
 //!
-//! ### Configurations of attribute `arg`, `pos` and `cmd`
+//! ### Sub Commands
 //!
-//! #### Configure the name and alias
+//! Specific the attribute `sub` will let you create a sub commands.
+//!
+//! ```rust
+//! use cote::prelude::*;
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(help, aborthelp)]
+//! pub struct Cli {
+//!     #[arg()]
+//!     bar: usize,
+//!
+//!     #[sub(alias = "z")]
+//!     baz: Option<Baz>,
+//!
+//!     #[sub(alias = "x")]
+//!     qux: Option<Qux>,
+//! }
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(help, aborthelp)]
+//! pub struct Baz {
+//!     grault: bool,
+//!
+//!     waldo: Option<String>,
+//! }
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(help, aborthelp)]
+//! pub struct Qux {
+//!     garply: bool,
+//!
+//!     fred: String,
+//! }
+//!
+//! fn main() -> color_eyre::Result<()> {
+//!     color_eyre::install()?;
+//!
+//!     let cli = Cli::parse(Args::from_array(["app", "--bar=42", "z"]))?;
+//!
+//!     assert_eq!(cli.bar, 42);
+//!     assert_eq!(
+//!         cli.baz,
+//!         Some(Baz {
+//!             grault: false,
+//!             waldo: None
+//!         })
+//!     );
+//!     assert_eq!(cli.qux, None);
+//!
+//!     let cli = Cli::parse(Args::from_array([
+//!         "app", "--bar=42", "x", "--fred", "plugh",
+//!     ]))?;
+//!
+//!     assert_eq!(cli.bar, 42);
+//!     assert_eq!(cli.baz, None);
+//!     assert_eq!(
+//!         cli.qux,
+//!         Some(Qux {
+//!             garply: false,
+//!             fred: "plugh".to_owned()
+//!         })
+//!     );
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ## Configurating options and positionals
+//!
+//! ### Configurating the name and alias
 //!
 //! ```rust
 //! use cote::prelude::*;
@@ -476,7 +559,7 @@
 //! }
 //! ```
 //!
-//! #### Configure the hint, help and default value
+//! ### Configurating the hint, help and default value
 //!
 //! ```rust
 //! use cote::prelude::*;
@@ -531,11 +614,11 @@
 //! }
 //! ```
 //!
-//! #### Configure the index
+//! ### Configurating the index
 //!
 //! For more informations about index, reference [`Index`](aopt::prelude::Index).
 //!
-//! ##### Example1
+//! #### Example1
 //!
 //! ```rust
 //! use cote::prelude::*;
@@ -574,7 +657,7 @@
 //! }
 //! ```
 //!
-//! ##### Example2
+//! #### Example2
 //!
 //! ```rust
 //! use cote::prelude::*;
@@ -621,7 +704,7 @@
 //! }
 //! ```
 //!
-//! #### Make the option force required
+//! ### Make the option force required
 //!
 //! ```rust
 //! use cote::prelude::*;
@@ -664,7 +747,7 @@
 //! }
 //! ```
 //!
-//! #### Configure action
+//! ### Configurating action
 //!
 //! The type that implements [`Infer`](aopt::prelude::Infer) has different [`Action`](aopt::prelude::Action).
 //! The [`Action`](aopt::prelude::Action) defines the behavior when saving the value.
@@ -697,7 +780,7 @@
 //! }
 //! ```
 //!
-//! #### Configure handler
+//! ### Configurating handler
 //!
 //! Using `on`, `fallback` attribute configure the handler which will be called when
 //! option set.
@@ -905,6 +988,128 @@
 //! Got client: Cli { foo: 9, bar: None, qux: Some(Qux { corge: true, grault: Some(42) }) }
 //! ```
 //!
-//! #### Validate values
+//! ### Validate values
 //!
+//! You can using `valid` check the value inside attribute.
+//! Using [`valid!`](crate::valid!) generate struct implemented [`Validate`](crate::valid::Validate)
+//! for the valid attribute.
+//!
+//! ```rust
+//! use cote::prelude::*;
+//! use cote::valid;
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(help)]
+//! pub struct Cli {
+//!     #[arg(valid = valid!(42))]
+//!     foo: u64,
+//!
+//!     #[arg(valid = valid!(["qux", "quux"]))]
+//!     bar: Option<String>,
+//!
+//!     #[pos(valid = valid!(4..42))]
+//!     baz: Option<usize>,
+//! }
+//!
+//! fn main() -> color_eyre::Result<()> {
+//!     color_eyre::install()?;
+//!
+//!     assert!(Cli::parse(Args::from_array(["app", "--bar", "qux"])).is_err());
+//!
+//!     assert!(Cli::parse(Args::from_array(["app", "--bar", "baz", "--foo=0"])).is_err());
+//!
+//!     assert!(Cli::parse(Args::from_array(["app", "--bar", "baz", "68", "--foo=0"])).is_err());
+//!
+//!     let cli = Cli::parse(Args::from_array(["app", "--bar", "qux", "--foo=42"]))?;
+//!
+//!     assert_eq!(cli.foo, 42);
+//!     assert_eq!(cli.bar.as_deref(), Some("qux"));
+//!
+//!     let cli = Cli::parse(Args::from_array(["app", "--bar", "qux", "--foo=42", "6"]))?;
+//!
+//!     assert_eq!(cli.foo, 42);
+//!     assert_eq!(cli.bar.as_deref(), Some("qux"));
+//!     assert_eq!(cli.baz, Some(6));
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ### Add "no delay" option
+//!
+//! When using [`DelayPolicy`](aopt::prelude::DelayPolicy), the option process(invoke handler)
+//! after `Cmd` and `Pos` style.
+//! Sometimes we need the option process like [`FwdPolicy`](aopt::prelude::FwdPolicy) does,
+//! that is process before `Cmd` and `Pos`.
+//!
+//!```rust
+//! use cote::prelude::*;
+//! use std::ops::Deref;
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(policy = delay, help)]
+//! pub struct Cli {
+//!     #[cmd(on = cmd_order::<P>)]
+//!     foo: bool,
+//!
+//!     #[arg(on = assert_order::<P>)]
+//!     bar: usize,
+//!
+//!     #[pos(on = assert_order::<P>, index = 2)]
+//!     baz: usize,
+//!
+//!     #[arg(on = assert_order::<P>, nodelay)]
+//!     qux: usize,
+//! }
+//!
+//! fn cmd_order<P: Policy>(_: &mut P::Set,  ser: &mut P::Ser) -> Result<Option<bool>, aopt::Error>
+//! where
+//!     P::Ser: ServicesValExt,
+//! {
+//!     let order = ser.sve_val_mut::<usize>()?;
+//!     *order += 1;
+//!     let order = *order;
+//!     assert_eq!(order, 2);
+//!     println!("Order {}", order);
+//!     Ok(Some(true))
+//! }
+//!
+//! fn assert_order<P: Policy>(
+//!     _: &mut P::Set,
+//!     ser: &mut P::Ser,
+//!     mut val: ctx::Value<usize>,
+//! ) -> Result<Option<usize>, aopt::Error>
+//! where
+//!     P::Ser: ServicesValExt,
+//! {
+//!     let order = ser.sve_val_mut::<usize>()?;
+//!     *order += 1;
+//!     let order = *order;
+//!     assert_eq!(order, *val.deref());
+//!     println!("Order {}", order);
+//!     Ok(Some(val.take()))
+//! }
+//!
+//! fn main() -> color_eyre::Result<()> {
+//!     color_eyre::install()?;
+//!     let mut app = Cli::into_app()?;
+//!
+//!     app.set_app_data(0usize)?;
+//!     app.run_mut_with(
+//!         ["app", "foo", "--bar=4", "--qux=1", "3"].into_iter(),
+//!         |_, app| {
+//!             let cli = Cli::try_extract(app.optset_mut())?;
+//!             assert_eq!(cli.foo, true);
+//!             assert_eq!(cli.bar, 4);
+//!             assert_eq!(cli.qux, 1);
+//!             assert_eq!(cli.baz, 3);
+//!             Ok(())
+//!         },
+//!     )?;
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ## Configurating commands
 //!

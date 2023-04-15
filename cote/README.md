@@ -84,7 +84,7 @@ fn main() -> Result<(), Error> {
 }
 ```
 
-See [`tutorial`](crate::_tutorial) for more information.
+See [`tutorial`](crate::_reference) for more information.
 
 ### Using [`CoteApp`](crate::CoteApp) load option from json configuration.
 
