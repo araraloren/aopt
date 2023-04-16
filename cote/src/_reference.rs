@@ -11,9 +11,9 @@
 //! 3. [Configurating Field](#configurating-field)
 //!     1. [Options](#options)
 //!     2. [Positionals](#positionals)
-//!     3. [Commands](#commands)
+//!     3. [Command Flags](#command-flags)
 //!     4. [Sub Commands](#sub-commands)
-//! 4. [Configurating options and positionals](#configurating-options-and-positionals)
+//! 4. [Configurating Options and Positionals](#configurating-options-and-positionals)
 //!     1. [Configurating the name and alias](#configurating-the-name-and-alias)
 //!     2. [Configurating the hint, help and default value](#configurating-the-hint-help-and-default-value)
 //!     3. [Configurating the index](#configurating-the-index)
@@ -22,7 +22,7 @@
 //!     6. [Configurating handler](#configurating-handler)
 //!     7. [Validate values](#validate-values)
 //!     8. [Add "no delay" option](#add-no-delay-option)
-//! 5. [Configurating commands](#configurating-commands)
+//! 5. [Configurating Sub Commands](#configurating-sub-commands)
 //!
 //! ## Quick Start
 //!
@@ -410,7 +410,7 @@
 //! }
 //! ```
 //!
-//! ### Commands
+//! ### Command Flags
 //!
 //! Specific the attribute `cmd` will let you create a sub command flag.
 //!
@@ -420,7 +420,7 @@
 //! #[derive(Debug, Cote, PartialEq, Eq)]
 //! pub struct Cli {
 //!     #[cmd()]
-//!     foo: bool, // Command has a fixed position 1,
+//!     foo: bool, // Command flag has a fixed position 1,
 //!                // and it's always force required
 //!
 //!     #[pos(index = "2")]
@@ -512,7 +512,7 @@
 //! }
 //! ```
 //!
-//! ## Configurating options and positionals
+//! ## Configurating Options and Positionals
 //!
 //! ### Configurating the name and alias
 //!
@@ -1111,5 +1111,8 @@
 //! }
 //! ```
 //!
-//! ## Configurating commands
-//!
+//! ## Configurating Sub Commands
+//! 
+//! ### Configurating Policy
+//! 
+//!  
