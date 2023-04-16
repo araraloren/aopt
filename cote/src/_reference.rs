@@ -1112,7 +1112,7 @@
 //! ```
 //!
 //! ## Configurating Sub Commands
-//! 
+//!
 //! ### Configurating Policy
-//! 
+//!
 //!  

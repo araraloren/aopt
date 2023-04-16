@@ -345,7 +345,7 @@ impl<'a> Analyzer<'a> {
         Ok(ret)
     }
 
-    pub fn gen_sub_parser_help_call(&self) -> syn::Result<TokenStream> {
+    pub fn gen_sub_app_display_call(&self) -> syn::Result<TokenStream> {
         let sub_parser_tuple_ty = self.gen_sub_parser_tuple_ty(None)?;
         let mut sub_parser_tuple_mat = quote! {
             let sub_app_name = &subnames[idx + 1];
@@ -369,6 +369,30 @@ impl<'a> Analyzer<'a> {
                         &name, sub_help_context.head(), sub_help_context.foot(),
                         sub_help_context.width(), sub_help_context.usagew()
                     ).map_err(|e| aopt::Error::raise_error(format!("Can not display help message: {:?}", e)))
+                }
+            });
+        }
+
+        Ok(sub_parser_tuple_mat)
+    }
+
+    pub fn gen_sub_app_help_call(&self) -> syn::Result<TokenStream> {
+        let sub_parser_tuple_ty = self.gen_sub_parser_tuple_ty(None)?;
+        let mut sub_parser_tuple_mat = quote! {
+            let sub_app_name = &subnames[idx + 1];
+            let sub_app_name = app.find_opt(sub_app_name.as_str())?.name();
+            let name = subnames.join(" ");
+            let sub_parser_tuple = app.inner_parser()
+                             .app_data::<#sub_parser_tuple_ty>()?;
+        };
+
+        for sub_generator in self.sub_generator.iter() {
+            let idx = sub_generator.get_sub_id();
+            let idx = Index::from(idx);
+
+            sub_parser_tuple_mat.extend(quote! {
+                if sub_app_name == sub_parser_tuple.#idx.name() {
+                    return sub_parser_tuple.#idx.display_sub_help_idx(subnames, idx + 1);
                 }
             });
         }
@@ -572,7 +596,8 @@ impl<'a> Analyzer<'a> {
         let new_app_type = self.cote_generator.gen_struct_app_type();
         let new_app_define = self.cote_generator.gen_new_app_define(&new_app_type);
         let help_context = self.cote_generator.gen_help_display_ctx();
-        let sub_parser_help_call = self.gen_sub_parser_help_call()?;
+        let sub_app_display_call = self.gen_sub_app_display_call()?;
+        let sub_app_help_call = self.gen_sub_app_help_call()?;
         let sync_main_running_ctx = self.cote_generator.gen_sync_running_ctx();
         let where_clause = Self::where_clause_for_policy();
         let where_clause_debug = Self::where_clause_for_policy_debug();
@@ -672,10 +697,10 @@ impl<'a> Analyzer<'a> {
                             return self.display_help()
                         }
                         else if idx == len - 2 && name_matched {
-                            #sub_parser_help_call
+                            #sub_app_display_call
                         }
                         else if idx < len && name_matched {
-                            return self.display_sub_help_idx(subnames, idx + 1)
+                            #sub_app_help_call
                         }
                     }
                     Err(aopt::Error::raise_error(format!("Can not display help message of subnames: {:?}", subnames)))
