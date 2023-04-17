@@ -23,6 +23,8 @@
 //!     7. [Validate values](#validate-values)
 //!     8. [Add "no delay" option](#add-no-delay-option)
 //! 5. [Configurating Sub Commands](#configurating-sub-commands)
+//!     1. [Configurating Policy](#configurating-policy)
+//!     2. [Configurating name and alias](#configurating-name-and-alias)
 //!
 //! ## Quick Start
 //!
@@ -1113,6 +1115,114 @@
 //!
 //! ## Configurating Sub Commands
 //!
+//! Using `sub` attribute define sub command.
+//!
+//! ```rust
+//! use cote::prelude::*;
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(help, aborthelp)]
+//! pub struct Cli {
+//!     #[arg(alias = "-g")]
+//!     age: usize,
+//!
+//!     #[sub()]
+//!     eat: Option<Eat>,
+//!
+//!     #[sub(policy = pre)]
+//!     sport: Option<Sport>,
+//! }
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(help, aborthelp)]
+//! pub struct Eat {
+//!     #[arg(alias = "-m")]
+//!     meal: String,
+//!
+//!     #[pos(value = "rice")]
+//!     what: Option<String>,
+//! }
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(help, aborthelp)]
+//! pub struct Sport {
+//!     /// Go for a walk.
+//!     #[sub()]
+//!     walk: Option<Walk>,
+//!
+//!     /// Play some games.
+//!     #[sub()]
+//!     play: Option<Play>,
+//! }
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(help, aborthelp)]
+//! pub struct Walk {
+//!     #[arg(name = "-d", value = 3usize)]
+//!     distance: usize,
+//! }
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(help, aborthelp)]
+//! pub struct Play {
+//!     /// Which game do you want to play?
+//!     #[pos(value = "Mario")]
+//!     game: String,
+//! }
+//!
+//! fn main() -> color_eyre::Result<()> {
+//!     color_eyre::install()?;
+//!
+//!     let cli = Cli::parse_env()?;
+//!
+//!     println!("You age is set to {}", cli.age);
+//!     if let Some(eat) = cli.eat {
+//!         println!("You {} are going to eat {}", eat.meal, eat.what.unwrap());
+//!     } else if let Some(sport) = cli.sport {
+//!         if let Some(walk) = sport.walk {
+//!             println!("You are going to walk {} kilometers", walk.distance);
+//!         } else if let Some(play) = sport.play {
+//!             println!("You are going to play game {}", play.game);
+//!         }
+//!     }
+//!     Ok(())
+//! }
+//! ```
+//!
 //! ### Configurating Policy
 //!
-//!  
+//! The default [`Policy`](aopt::prelude::Policy) of sub command is [`FwdPolicy`](aopt::prelude::FwdPolicy).
+//! For the sub commands to have sub commands, you should use [`PrePolicy`](aopt::prelude::PrePolicy) instead.
+//! For example, `sport` sub command does have two sub commands, it is configured with `#[sub(policy = pre)]`.
+//! Without `policy = pre`, you will got output when running `cli -g=42 sport walk -d 4`:
+//!
+//! ```!
+//! Usage: cli sport [-h,-?,--help] <COMMAND>
+//! Generate help message for command line program
+//!
+//! Commands:
+//!   walk@1      Go for a walk.
+//!   play@1      Play some games.
+//!
+//! Options:
+//!   -h,-?,--help      Display help message
+//!
+//! Create by araraloren <blackcatoverwall@gmail.com> v0.1.8
+//! Error:
+//!    0: Parsing command `sport` failed: None
+//!    1: Can not find option `-d`
+//!
+//! Location:
+//!    src\main.rs:90
+//!
+//! Backtrace omitted.
+//! Run with RUST_BACKTRACE=1 environment variable to display it.
+//! Run with RUST_BACKTRACE=full to include source snippets.
+//! ```
+//! And the right output should be:
+//! ```!
+//! You age is set to 42
+//! You are going to walk 4 kilometers
+//! ```
+//!
+//! ### Configurating name and alias
