@@ -766,7 +766,7 @@ pub struct AppRunningCtx<T = (String, aopt::prelude::ReturnVal)> {
 
     exit_sub: bool,
 
-    failed_info: Option<T>,
+    failed_info: Vec<T>,
 }
 
 impl<T> AppRunningCtx<T> {
@@ -795,11 +795,6 @@ impl<T> AppRunningCtx<T> {
         self
     }
 
-    pub fn with_failed_info(mut self, failed_info: T) -> Self {
-        self.failed_info = Some(failed_info);
-        self
-    }
-
     pub fn set_names(&mut self, names: Vec<String>) -> &mut Self {
         self.names = names;
         self
@@ -825,8 +820,8 @@ impl<T> AppRunningCtx<T> {
         self
     }
 
-    pub fn set_failed_info(&mut self, failed_info: T) -> &mut Self {
-        self.failed_info = Some(failed_info);
+    pub fn add_failed_info(&mut self, failed_info: T) -> &mut Self {
+        self.failed_info.push(failed_info);
         self
     }
 
@@ -850,12 +845,16 @@ impl<T> AppRunningCtx<T> {
         self.exit_sub
     }
 
-    pub fn failed_info(&self) -> Option<&T> {
-        self.failed_info.as_ref()
+    pub fn failed_info(&self) -> &[T] {
+        &self.failed_info
     }
 
-    pub fn take_failed_info(&mut self) -> Option<T> {
-        self.failed_info.take()
+    pub fn take_failed_info(&mut self) -> Vec<T> {
+        std::mem::take(&mut self.failed_info)
+    }
+
+    pub fn clear_failed_info(&mut self) {
+        self.failed_info.clear();
     }
 
     pub fn add_name(&mut self, name: String) -> &mut Self {
@@ -863,14 +862,36 @@ impl<T> AppRunningCtx<T> {
         self
     }
 
-    pub fn append_ctx(&mut self, mut ctx: Self) -> &mut Self {
+    pub fn sync_ctx(&mut self, ctx: &mut Self) -> &mut Self {
         self.names.append(&mut ctx.names);
         self.display_help = self.display_help() || ctx.display_help();
         self.display_sub_help = self.display_sub_help() || ctx.display_sub_help();
         self.exit = self.exit() || ctx.exit();
         self.exit_sub = self.exit_sub() || ctx.exit_sub();
-        self.failed_info = ctx.failed_info;
         self
+    }
+
+    pub fn sync_failed_info(&mut self, ctx: &mut Self) -> &mut Self {
+        self.failed_info.extend(ctx.take_failed_info());
+        self
+    }
+}
+
+impl AppRunningCtx<(String, aopt::prelude::ReturnVal)> {
+    pub fn chain_error(&mut self) -> Option<aopt::Error> {
+        let mut iter = self.failed_info.iter_mut();
+
+        if let Some(failed_info) = iter.next() {
+            let mut error = failed_info.1.take_failure();
+
+            for failed_info in iter {
+                error = error.cause(failed_info.1.take_failure());
+            }
+            Some(error)
+        }
+        else {
+            None
+        }
     }
 }
 

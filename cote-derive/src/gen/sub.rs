@@ -302,28 +302,29 @@ impl<'a> SubGenerator<'a> {
                     #pass_help_to_next
 
                     let args = aopt::ARef::new(aopt::prelude::Args::from_vec(args));
-                    let mut sub_app = &mut ser.sve_val_mut::<#sub_parser_tuple_ty>()?.#sub_id;
+                    let mut sub = &mut ser.sve_val_mut::<#sub_parser_tuple_ty>()?.#sub_id;
 
-                    sub_app.set_running_ctx(next_ctx)?;
-                    let parser = sub_app.inner_parser_mut();
+                    sub.set_running_ctx(next_ctx)?;
+                    let parser = sub.inner_parser_mut();
 
                     // initialize the option value
                     parser.init()?;
                     let ret = parser.parse(args).map_err(Into::into);
 
-                    sub_app.sync_running_ctx(&ret, true)?;
-                    let running_ctx = sub_app.take_running_ctx()?;
+                    sub.sync_running_ctx(&ret, true)?;
+                    let mut sub_ctx = sub.take_running_ctx()?;
 
-                    ser.sve_val_mut::<cote::AppRunningCtx>()?.append_ctx(running_ctx);
+                    ser.sve_val_mut::<cote::AppRunningCtx>()?.sync_ctx(&mut sub_ctx);
                     let ret = ret?;
 
                     if ret.status() {
-                        let mut sub_app = &mut ser.sve_val_mut::<#sub_parser_tuple_ty>()?.#sub_id;
-
-                        Ok(<#without_option_ty>::try_extract(sub_app.inner_parser_mut().optset_mut()).ok())
+                        ser.sve_val_mut::<cote::AppRunningCtx>()?.clear_failed_info();
+                        let mut sub = &mut ser.sve_val_mut::<#sub_parser_tuple_ty>()?.#sub_id;
+                        Ok(<#without_option_ty>::try_extract(sub.inner_parser_mut().optset_mut()).ok())
                     }
                     else {
-                        ser.sve_val_mut::<cote::AppRunningCtx>()?.set_failed_info((current_cmd.to_owned(), ret));
+                        ser.sve_val_mut::<cote::AppRunningCtx>()?.sync_failed_info(&mut sub_ctx);
+                        ser.sve_val_mut::<cote::AppRunningCtx>()?.add_failed_info((current_cmd.to_owned(), ret));
                         Ok(None)
                     }
                 }
