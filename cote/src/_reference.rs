@@ -25,6 +25,7 @@
 //! 5. [Configurating Sub Commands](#configurating-sub-commands)
 //!     1. [Configurating Policy](#configurating-policy)
 //!     2. [Configurating name and alias](#configurating-name-and-alias)
+//!     3. [Configurating help message](#configurating-help-message)
 //!
 //! ## Quick Start
 //!
@@ -194,7 +195,7 @@
 //!
 //! ### Configurating Policy
 //!
-//! Cote has three policy type built-in: [`fwd`](aopt::prelude::AFwdPolicy)、[`pre`](aopt::prelude::APrePolicy)
+//! Cote has three policy types built-in: [`fwd`](aopt::prelude::AFwdPolicy)、[`pre`](aopt::prelude::APrePolicy)
 //! and [`delay`](aopt::prelude::ADelayPolicy).
 //! If no `policy` configuration specific, [`fwd`](aopt::prelude::AFwdPolicy) will be using if no sub command.
 //! Otherwise [`pre`](aopt::prelude::APrePolicy) will be used.
@@ -221,6 +222,12 @@
 //! ```
 //!
 //! ### Configurating Help
+//! 
+//! Specify `help` in `cote` attribute will automate generate help message for current application.
+//! And `aborthelp` will automate display the help message if any error raised.
+//! 
+//! The default name of the application is the name of the current package, use `name` custom it.
+//! The default maximum length of the option help message is 40, use `width` custom it.
 //!
 //! ```rust
 //! use cote::prelude::*;
@@ -1126,9 +1133,11 @@
 //!     #[arg(alias = "-g")]
 //!     age: usize,
 //!
+//!     /// Help message of eat sub command
 //!     #[sub()]
 //!     eat: Option<Eat>,
 //!
+//!     /// Help message of sport sub command
 //!     #[sub(policy = pre)]
 //!     sport: Option<Sport>,
 //! }
@@ -1136,9 +1145,12 @@
 //! #[derive(Debug, Cote, PartialEq, Eq)]
 //! #[cote(help, aborthelp)]
 //! pub struct Eat {
+//!     
+//!     /// Which meal did you have?
 //!     #[arg(alias = "-m")]
 //!     meal: String,
 //!
+//!     /// What did you wat?
 //!     #[pos(value = "rice")]
 //!     what: Option<String>,
 //! }
@@ -1226,3 +1238,46 @@
 //! ```
 //!
 //! ### Configurating name and alias
+//! 
+//! Using `name` and `alias` you can configure the name and alias of sub commands in `sub` attribute.
+//! The name and alias will affect how to set the sub command and help message of sub command.
+//! With follow change:
+//! 
+//! ```no_run
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(help, aborthelp)]
+//! pub struct Cli {
+//!     #[arg(alias = "-g")]
+//!     age: usize,
+//!
+//!     /// Help message of eat sub command
+//!     #[sub(alias = "e")]
+//!     eat: Option<Eat>,
+//!
+//!     /// Help message of sport sub command
+//!     #[sub(name = "sp", policy = pre)]
+//!     sport: Option<Sport>,
+//! }
+//! ```
+//! 
+//! The output of commands `cli -g22 e --help` is:
+//! 
+//! ```!
+//! Usage: cli e [-h,-?,--help] <-m,--meal> [ARGS]
+//!
+//! Generate help message for command line program
+//!
+//! Options:
+//!   -h,-?,--help      Display help message
+//!   -m,--meal         Which meal did you have?
+//!
+//! Args:
+//!   what@1      What did you wat? ["rice"]
+//!
+//! Create by araraloren <blackcatoverwall@gmail.com> v0.1.8
+//! ```
+//! 
+//! ### Configurating help message
+//! 
+//! Using `hint`, `help`, `head`, `foot` you can configure the help message of sub commands.
+//! 
