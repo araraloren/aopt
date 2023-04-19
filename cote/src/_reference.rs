@@ -226,9 +226,20 @@
 //! Specify `help` in `cote` attribute will automate generate help message for current application.
 //! And `aborthelp` will automate display the help message if any error raised.
 //! 
-//! The default name of the application is the name of the current package, use `name` custom it.
+//! The default name of the application is the name of the current package, use `name` custom it,
+//! i.e., the result of `String::from(env!("CARGO_PKG_NAME"))`.
+//! 
 //! The default maximum length of the option help message is 40, use `width` custom it.
-//!
+//! The default maximum count of usage option item is 10, use `usagew` custom it.
+//! 
+//! The text set by `head` will display after usage, in default it is description of package,
+//! i.e., the result of `String::from(env!("CARGO_PKG_DESCRIPTION"))`.
+//! 
+//! The text set by `foot` will display at the bottom, in default it is result of
+//! `format!("Create by {} v{}", env!("CARGO_PKG_AUTHORS"), env!("CARGO_PKG_VERSION"))`.
+//! 
+//! #### Example
+//! 
 //! ```rust
 //! use cote::prelude::*;
 //!
@@ -297,8 +308,29 @@
 //! ```
 //!
 //! ### Configurating User Style
+//! 
+//! The option styles support by default are:
+//! 
+//! - [`EqualWithValue`](aopt::parser::UserStyle::EqualWithValue)
+//! 
+//! Options such as `--opt=value`, the value of option is set after `=`.
+//! 
+//! - [`Argument`](aopt::parser::UserStyle::Argument)
+//! 
+//! Options such as `--opt value`, the value of option is next argument.
+//! 
+//! - [`EmbeddedValue`](aopt::parser::UserStyle::EmbeddedValue)
+//! 
+//! Options such as `-o42`, the value `42` of option is embedded in string. 
+//! The style only support one letter option.
+//! 
+//! - [`Boolean`](aopt::parser::UserStyle::Boolean)
+//! 
+//! Options such as `--opt`, in general, it is named flag, the value type of option is always `bool`.
 //!
 //! - Add support for [`CombinedOption`](aopt::parser::UserStyle::CombinedOption).
+//! 
+//! Options such as `-abcd`, thus set both boolean options `-a`, `-b`, `-c` and `-d`.
 //!
 //! ```rust
 //! use cote::prelude::*;
@@ -329,6 +361,9 @@
 //! ```
 //!
 //! - Add support for [`EmbeddedValuePlus`](aopt::parser::UserStyle::EmbeddedValuePlus).
+//! 
+//! Options such as `--opt42`, the value `42` of option is embedded in string.
+//! The style only supports options which name lengths bigger than 2.
 //!
 //! ```rust
 //! use cote::prelude::*;
@@ -352,7 +387,7 @@
 //!
 //! ### Options
 //!
-//! Specific the attribute `arg`, the fields of struct are generated into options.
+//! In default or specific the attribute `arg`, the fields of struct are generated into options.
 //!
 //! ```rust
 //! use cote::prelude::*;
