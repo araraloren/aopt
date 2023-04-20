@@ -790,6 +790,10 @@
 //! ```
 //!
 //! ### Make the option force required
+//! 
+//! In default, options, positionals and command flags is force required.
+//! Wrap the type with `Option` can make the item optional.
+//! Using `force` you can configure the positionals and options force required.
 //!
 //! ```rust
 //! use cote::prelude::*;
@@ -836,7 +840,7 @@
 //!
 //! The type that implements [`Infer`](aopt::prelude::Infer) has different [`Action`](aopt::prelude::Action).
 //! The [`Action`](aopt::prelude::Action) defines the behavior when saving the value.
-//! See [`Action::process`](aopt::prelude::Action#method.process) and [`AOpt`](aopt::prelude::AOpt).
+//! For more information, see [`Action::process`](aopt::prelude::Action#method.process) and [`AOpt`](aopt::prelude::AOpt).
 //!
 //! ```rust
 //! use cote::prelude::*;
