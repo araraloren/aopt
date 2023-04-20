@@ -13,7 +13,7 @@
 //!     2. [Positionals](#positionals)
 //!     3. [Command Flags](#command-flags)
 //!     4. [Sub Commands](#sub-commands)
-//! 4. [Configurating Options and Positionals](#configurating-options-and-positionals)
+//! 4. [Configurating Options, Command flags and Positionals](#configurating-options-command-flags-and-positionals)
 //!     1. [Configurating the name and alias](#configurating-the-name-and-alias)
 //!     2. [Configurating the hint, help and default value](#configurating-the-hint-help-and-default-value)
 //!     3. [Configurating the index](#configurating-the-index)
@@ -556,10 +556,17 @@
 //! }
 //! ```
 //!
-//! ## Configurating Options and Positionals
+//! ## Configurating Options, Command flags and Positionals
 //!
 //! ### Configurating the name and alias
-//!
+//! 
+//! The default name of positionals and command flags is the name of the field.
+//! 
+//! The default name of options consists of prefixs and identifiers of the field. 
+//! The default prefix is `--` if count of characters bigger than 1, otherwise `-` is using.
+//! You can use `name` or `alias` configure the name and alias of the option.
+//! For prefix information reference [`PrefixOptValidator`](aopt::prelude::PrefixOptValidator).
+//! 
 //! ```rust
 //! use cote::prelude::*;
 //!
@@ -604,6 +611,14 @@
 //! ```
 //!
 //! ### Configurating the hint, help and default value
+//! 
+//! Hint is displayed on usage or the left side of item information. 
+//! In default, hint message is generated from the name and alias of item,
+//! use `hint` custom the hint information of item.
+//! Help is displayed on the right side of item information.
+//! Use `help` configure the help information of item.
+//! The default values will be display in help message if it is set.
+//! 
 //!
 //! ```rust
 //! use cote::prelude::*;
@@ -657,9 +672,32 @@
 //!     Ok(())
 //! }
 //! ```
+//! 
+//! Running the code, it's output should be:
+//! 
+//! ```!
+//! Usage: cli [-h,-?,--help] <-b,--baz> <COMMAND> [ARGS] 
+//!
+//! Generate help message for command line program
+//! 
+//! Commands:
+//!   foo@1      Switch the mode to foo command
+//! 
+//! Options:
+//!   -h,-?,--help      Display help message
+//!   -b,--baz          Set the string value of baz
+//! 
+//! Args:
+//!   [BAR]         Set the value of bar [42usize]
+//!   quux@3..
+//!
+//! Create by araraloren <blackcatoverwall@gmail.com> v0.1.8
+//! ```
 //!
 //! ### Configurating the index
 //!
+//! Index is only support positions and command flags.
+//! For command flags, the index is fixed position `@1` by default.
 //! For more informations about index, reference [`Index`](aopt::prelude::Index).
 //!
 //! #### Example1
@@ -702,6 +740,9 @@
 //! ```
 //!
 //! #### Example2
+//! 
+//! For the item configured by `pos`, the index is automating generated start form 1 
+//! if no index set.
 //!
 //! ```rust
 //! use cote::prelude::*;
