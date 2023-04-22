@@ -202,7 +202,7 @@ impl<'a> InferValueMut<'a> for Vec<bool> {
     where
         Self: Sized,
     {
-        Ok(std::mem::take(set.find_vals_mut::<bool>(name)?))
+        Ok(set.take_vals::<bool>(name)?)
     }
 }
 
@@ -621,7 +621,7 @@ macro_rules! impl_infer_for {
 
         impl<'a> InferValueMut<'a> for std::vec::Vec<$name> {
             fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error> where Self: Sized {
-                Ok(std::mem::take(set.find_vals_mut::<$name>(name)?))
+                Ok(set.take_vals::<$name>(name)?)
             }
         }
 
@@ -631,7 +631,7 @@ macro_rules! impl_infer_for {
 
         impl<'a> InferValueMut<'a> for std::option::Option<std::vec::Vec<$name>> {
             fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error> where Self: Sized {
-                Ok(set.find_vals_mut::<$name>(name).ok().map(|v|std::mem::take(v)))
+                Ok(set.take_vals::<$name>(name).ok())
             }
         }
     };
@@ -780,7 +780,7 @@ macro_rules! impl_infer_for {
 
         impl<'a> InferValueMut<'a> for std::vec::Vec<$name> {
             fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error> where Self: Sized {
-                Ok(std::mem::take(set.find_vals_mut::<$name>(name)?))
+                Ok(set.take_vals::<$name>(name)?)
             }
         }
 
@@ -794,7 +794,7 @@ macro_rules! impl_infer_for {
 
         impl<'a> InferValueMut<'a> for std::option::Option<std::vec::Vec<$name>> {
             fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error> where Self: Sized {
-                Ok(set.find_vals_mut::<$name>(name).ok().map(|v|std::mem::take(v)))
+                Ok(set.take_vals::<$name>(name).ok())
             }
         }
     };

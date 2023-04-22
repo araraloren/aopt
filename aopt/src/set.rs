@@ -245,6 +245,22 @@ where
             .with_uid(opt)
         })
     }
+
+    fn take_vals<U: ErasedTy>(&mut self, opt: impl Into<Str>) -> Result<Vec<U>, Error> {
+        let name: Str = opt.into();
+        let uid = self.find_uid(name.clone())?;
+        let vals = self.find_vals_mut::<U>(name.clone());
+
+        Ok(std::mem::take(vals.map_err(|e| {
+            raise_error!(
+                "Can not take values({}) of option `{}`",
+                type_name::<U>(),
+                name
+            )
+            .with_uid(uid)
+            .cause_by(e)
+        })?))
+    }
 }
 
 pub trait Commit<S: Set>
