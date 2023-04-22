@@ -888,8 +888,7 @@ impl AppRunningCtx<(String, aopt::prelude::ReturnVal)> {
                 error = error.cause(failed_info.1.take_failure());
             }
             Some(error)
-        }
-        else {
+        } else {
             None
         }
     }

@@ -17,7 +17,7 @@
 //!     1. [Configurating the name and alias](#configurating-the-name-and-alias)
 //!     2. [Configurating the hint, help and default value](#configurating-the-hint-help-and-default-value)
 //!     3. [Configurating the index](#configurating-the-index)
-//!     4. [Make the option force required](#make-the-option-force-required)
+//!     4. [Force required Positionals and Options](#force-required-positionals-and-options)
 //!     5. [Configurating action](#configurating-action)
 //!     6. [Configurating handler](#configurating-handler)
 //!     7. [Validate values](#validate-values)
@@ -26,6 +26,7 @@
 //!     1. [Configurating Policy](#configurating-policy)
 //!     2. [Configurating name and alias](#configurating-name-and-alias)
 //!     3. [Configurating help message](#configurating-help-message)
+//!     4. [Optional Sub commands](#optional-sub-commands)
 //!
 //! ## Quick Start
 //!
@@ -222,24 +223,24 @@
 //! ```
 //!
 //! ### Configurating Help
-//! 
+//!
 //! Specify `help` in `cote` attribute will automate generate help message for current application.
 //! And `aborthelp` will automate display the help message if any error raised.
-//! 
+//!
 //! The default name of the application is the name of the current package, use `name` custom it,
 //! i.e., the result of `String::from(env!("CARGO_PKG_NAME"))`.
-//! 
+//!
 //! The default maximum length of the option help message is 40, use `width` custom it.
 //! The default maximum count of usage option item is 10, use `usagew` custom it.
-//! 
+//!
 //! The text set by `head` will display after usage, in default it is description of package,
 //! i.e., the result of `String::from(env!("CARGO_PKG_DESCRIPTION"))`.
-//! 
+//!
 //! The text set by `foot` will display at the bottom, in default it is result of
 //! `format!("Create by {} v{}", env!("CARGO_PKG_AUTHORS"), env!("CARGO_PKG_VERSION"))`.
-//! 
+//!
 //! #### Example
-//! 
+//!
 //! ```rust
 //! use cote::prelude::*;
 //!
@@ -308,28 +309,28 @@
 //! ```
 //!
 //! ### Configurating User Style
-//! 
+//!
 //! The option styles support by default are:
-//! 
+//!
 //! - [`EqualWithValue`](aopt::parser::UserStyle::EqualWithValue)
-//! 
+//!
 //! Options such as `--opt=value`, the value of option is set after `=`.
-//! 
+//!
 //! - [`Argument`](aopt::parser::UserStyle::Argument)
-//! 
+//!
 //! Options such as `--opt value`, the value of option is next argument.
-//! 
+//!
 //! - [`EmbeddedValue`](aopt::parser::UserStyle::EmbeddedValue)
-//! 
-//! Options such as `-o42`, the value `42` of option is embedded in string. 
+//!
+//! Options such as `-o42`, the value `42` of option is embedded in string.
 //! The style only support one letter option.
-//! 
+//!
 //! - [`Boolean`](aopt::parser::UserStyle::Boolean)
-//! 
+//!
 //! Options such as `--opt`, in general, it is named flag, the value type of option is always `bool`.
 //!
 //! - Add support for [`CombinedOption`](aopt::parser::UserStyle::CombinedOption).
-//! 
+//!
 //! Options such as `-abcd`, thus set both boolean options `-a`, `-b`, `-c` and `-d`.
 //!
 //! ```rust
@@ -361,7 +362,7 @@
 //! ```
 //!
 //! - Add support for [`EmbeddedValuePlus`](aopt::parser::UserStyle::EmbeddedValuePlus).
-//! 
+//!
 //! Options such as `--opt42`, the value `42` of option is embedded in string.
 //! The style only supports options which name lengths bigger than 2.
 //!
@@ -559,14 +560,14 @@
 //! ## Configurating Options, Command flags and Positionals
 //!
 //! ### Configurating the name and alias
-//! 
+//!
 //! The default name of positionals and command flags is the name of the field.
-//! 
-//! The default name of options consists of prefixs and identifiers of the field. 
+//!
+//! The default name of options consists of prefixs and identifiers of the field.
 //! The default prefix is `--` if count of characters bigger than 1, otherwise `-` is using.
 //! You can use `name` or `alias` configure the name and alias of the option.
 //! For prefix information reference [`PrefixOptValidator`](aopt::prelude::PrefixOptValidator).
-//! 
+//!
 //! ```rust
 //! use cote::prelude::*;
 //!
@@ -611,14 +612,14 @@
 //! ```
 //!
 //! ### Configurating the hint, help and default value
-//! 
-//! Hint is displayed on usage or the left side of item information. 
+//!
+//! Hint is displayed on usage or the left side of item information.
 //! In default, hint message is generated from the name and alias of item,
 //! use `hint` custom the hint information of item.
 //! Help is displayed on the right side of item information.
 //! Use `help` configure the help information of item.
 //! The default values will be display in help message if it is set.
-//! 
+//!
 //!
 //! ```rust
 //! use cote::prelude::*;
@@ -672,21 +673,21 @@
 //!     Ok(())
 //! }
 //! ```
-//! 
+//!
 //! Running the code, it's output should be:
-//! 
+//!
 //! ```!
-//! Usage: cli [-h,-?,--help] <-b,--baz> <COMMAND> [ARGS] 
+//! Usage: cli [-h,-?,--help] <-b,--baz> <COMMAND> [ARGS]
 //!
 //! Generate help message for command line program
-//! 
+//!
 //! Commands:
 //!   foo@1      Switch the mode to foo command
-//! 
+//!
 //! Options:
 //!   -h,-?,--help      Display help message
 //!   -b,--baz          Set the string value of baz
-//! 
+//!
 //! Args:
 //!   [BAR]         Set the value of bar [42usize]
 //!   quux@3..
@@ -740,8 +741,8 @@
 //! ```
 //!
 //! #### Example2
-//! 
-//! For the item configured by `pos`, the index is automating generated start form 1 
+//!
+//! For the item configured by `pos`, the index is automating generated start form 1
 //! if no index set.
 //!
 //! ```rust
@@ -789,8 +790,8 @@
 //! }
 //! ```
 //!
-//! ### Make the option force required
-//! 
+//! ### Force required Positionals and Options
+//!
 //! In default, options, positionals and command flags is force required.
 //! Wrap the type with `Option` can make the item optional.
 //! Using `force` you can configure the positionals and options force required.
@@ -1318,11 +1319,11 @@
 //! ```
 //!
 //! ### Configurating name and alias
-//! 
+//!
 //! Using `name` and `alias` you can configure the name and alias of sub commands in `sub` attribute.
 //! The name and alias will affect how to set the sub command and help message of sub command.
 //! With follow change:
-//! 
+//!
 //! ```no_run
 //! #[derive(Debug, Cote, PartialEq, Eq)]
 //! #[cote(help, aborthelp)]
@@ -1339,9 +1340,9 @@
 //!     sport: Option<Sport>,
 //! }
 //! ```
-//! 
+//!
 //! The output of commands `cli -g22 e --help` is:
-//! 
+//!
 //! ```!
 //! Usage: cli e [-h,-?,--help] <-m,--meal> [ARGS]
 //!
@@ -1356,8 +1357,85 @@
 //!
 //! Create by araraloren <blackcatoverwall@gmail.com> v0.1.8
 //! ```
-//! 
+//!
 //! ### Configurating help message
-//! 
+//!
 //! Using `hint`, `help`, `head`, `foot` you can configure the help message of sub commands.
-//! 
+//! Just like those configures how work in `cote` attribute, they can tweak the help message of sub commands.
+//!
+//! ```no_run
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(help, aborthelp)]
+//! pub struct Cli {
+//!     #[arg(alias = "-g")]
+//!     age: usize,
+//!
+//!     /// Help message of eat sub command
+//!     #[sub(alias = "e")]
+//!     eat: Option<Eat>,
+//!
+//!     /// Help message of sport sub command
+//!     #[sub(policy = pre,
+//!        head = "This is head message of sport sub command.",
+//!        foot = "This is foot message of sport sub command."
+//!     )]
+//!     sport: Option<Sport>,
+//! }
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(help, aborthelp)]
+//! pub struct Sport {
+//!     /// Go for a walk.
+//!     #[sub(hint = "[walk]")]
+//!     walk: Option<Walk>,
+//!
+//!     /// Play some games.
+//!     #[sub(hint = "[play]")]
+//!     play: Option<Play>,
+//! }
+//! ```
+//!
+//! The output of commands `cli -g8 sport --help` is:
+//!
+//! ```!
+//! Usage: cli sport [-h,-?,--help] <COMMAND>
+//!
+//! This is head message of sport sub command.
+//!
+//! Commands:
+//!   [walk]      Go for a walk.
+//!   [play]      Play some games.
+//!
+//! Options:
+//!   -h,-?,--help      Display help message
+//!
+//! This is foot message of sport sub command.
+//!
+//! ```
+//!
+//! ### Optional Sub commands
+//!
+//! The sub commands are force required in default.
+//! Cote will raised an error if no sub command set.
+//! Using `force` make all sub commands optional avoid this error.
+//!
+//! ```no_run
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(help, aborthelp)]
+//! pub struct Sport {
+//!     /// Go for a walk.
+//!     #[sub(force = false)]
+//!     walk: Option<Walk>,
+//!
+//!     /// Play some games.
+//!     #[sub(force = false)]
+//!     play: Option<Play>,
+//! }
+//! ```
+//!
+//! Instead display the help and error message, the output of commands `cli -g8 sport` is:
+//!
+//! ```!
+//! You age is set to 8
+//!
+//! ```
