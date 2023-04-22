@@ -169,7 +169,7 @@ impl<'a> CoteGenerator<'a> {
     }
 
     pub fn gen_tweak_on_app(&self) -> TokenStream {
-        let mut ret = quote!{};
+        let mut ret = quote! {};
 
         for config in self.configs.iter() {
             match config.kind() {
@@ -177,7 +177,7 @@ impl<'a> CoteGenerator<'a> {
                     let method = Ident::new(&method, self.ident.span());
                     let args = config.value();
 
-                    ret.extend(quote!{
+                    ret.extend(quote! {
                         app.#method(#args);
                     });
                 }

@@ -2,6 +2,7 @@
 pub mod _reference;
 pub mod meta;
 pub mod valid;
+pub mod wrap;
 
 use std::borrow::Cow;
 use std::fmt::Debug;

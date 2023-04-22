@@ -27,6 +27,7 @@
 //!     2. [Configurating name and alias](#configurating-name-and-alias)
 //!     3. [Configurating help message](#configurating-help-message)
 //!     4. [Optional Sub commands](#optional-sub-commands)
+//! 6. [How it works]
 //!
 //! ## Quick Start
 //!
@@ -1438,4 +1439,62 @@
 //! ```!
 //! You age is set to 8
 //!
+//! ```
+//!
+//! ## [How it works]
+//!
+//! Implement follow traits, you can using the type in the struct filed.
+//!
+//! - [`Infer`](aopt::prelude::Infer)
+//!
+//! `Cote` using [`infer_fill_info`](aopt::prelude::Infer::infer_fill_info) inference the default settings of
+//! given type.
+//!
+//! - [`InferValueMut`](aopt::prelude::InferValueMut)
+//!
+//! `Cote` using [`infer_fetch`](aopt::prelude::InferValueMut::infer_fetch) fetch the value from [`Set`](aopt::set::Set).
+//!
+//! - [`RawValParser`](aopt::prelude::RawValParser)
+//!
+//! `Cote` using [`parse`](aopt::prelude::RawValParser::parse) parsing the value from command line arguments.
+//!
+//! # Example
+//!
+//! The type `Speed` base on the type `i32` which already implemented [`RawValParser`](aopt::prelude::RawValParser).
+//!
+//! ```rust
+//! use cote::prelude::*;
+//!
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(help, aborthelp)]
+//! pub struct Cli {
+//!     #[arg(alias = "-s")]
+//!     speed: Speed,
+//! }
+//!
+//! #[derive(Debug, PartialEq, Eq)]
+//! pub struct Speed(i32);
+//!
+//! impl Infer for Speed {
+//!     type Val = i32;
+//! }
+//!
+//! impl<'a> InferValueMut<'a> for Speed {
+//!     fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
+//!     where
+//!         Self: Sized,
+//!     {
+//!         Ok(Speed(set.take_val(name)?))
+//!     }
+//! }
+//!
+//! fn main() -> color_eyre::Result<()> {
+//!     color_eyre::install()?;
+//!
+//!     let cli = Cli::parse_env()?;
+//!
+//!     println!("Set the speed to {} km/h", cli.speed.0);
+//!
+//!     Ok(())
+//! }
 //! ```
