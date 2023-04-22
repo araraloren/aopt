@@ -217,6 +217,13 @@ impl<'a> SubGenerator<'a> {
                     quote! {
                         config.set_force(#token);
                     }
+                }                        SubKind::RawCall(method) => {
+                    let method = Ident::new(&method, ident.span());
+                    let args = cfg.value();
+
+                    quote!{
+                        config.#method(#args);
+                    }
                 }
                 _ => {
                     quote! {}

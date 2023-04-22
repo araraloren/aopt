@@ -1,9 +1,8 @@
 use proc_macro2::Ident;
-use proc_macro_error::abort;
 
 use super::Kind;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SubKind {
     Policy,
 
@@ -24,6 +23,8 @@ pub enum SubKind {
     Mut,
 
     Force,
+
+    RawCall(String),
 }
 
 impl Kind for SubKind {
@@ -42,12 +43,7 @@ impl Kind for SubKind {
             "refopt" => (Self::Ref, false),
             "mutopt" => (Self::Mut, false),
             "force" => (Self::Force, true),
-            _ => {
-                abort! {
-                    ident,
-                    "invalid configuration name `{}` in `arg`", kind_str
-                }
-            }
+            call => (Self::RawCall(call.to_owned()), true),
         })
     }
 }

@@ -20,7 +20,6 @@ use super::OptUpdate;
 use super::APP_POSTFIX;
 use super::HELP_OPTION_HELP;
 use super::HELP_OPTION_NAME;
-use super::HELP_OPTION_Q;
 use super::HELP_OPTION_SHORT;
 use super::POLICY_FWD;
 use super::POLICY_PRE;
@@ -167,6 +166,25 @@ impl<'a> CoteGenerator<'a> {
             ret.extend(for_strict.into_iter());
             Some(ret)
         }
+    }
+
+    pub fn gen_tweak_on_app(&self) -> TokenStream {
+        let mut ret = quote!{};
+
+        for config in self.configs.iter() {
+            match config.kind() {
+                CoteKind::RawCall(method) => {
+                    let method = Ident::new(&method, self.ident.span());
+                    let args = config.value();
+
+                    ret.extend(quote!{
+                        app.#method(#args);
+                    });
+                }
+                _ => {}
+            }
+        }
+        ret
     }
 
     pub fn gen_sync_running_ctx(&self) -> TokenStream {
@@ -357,7 +375,6 @@ impl<'a> CoteGenerator<'a> {
                                 let mut config = aopt::prelude::SetCfg::<P::Set>::default();
                                 config.set_name(#HELP_OPTION_NAME);
                                 config.add_alias(#HELP_OPTION_SHORT);
-                                config.add_alias(#HELP_OPTION_Q);
                                 config.set_help(#HELP_OPTION_HELP);
                                 <bool>::infer_fill_info(&mut config, true);
                                 config

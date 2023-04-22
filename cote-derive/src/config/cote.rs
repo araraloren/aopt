@@ -1,9 +1,8 @@
 use proc_macro2::Ident;
-use proc_macro_error::abort;
 
 use super::Kind;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CoteKind {
     Policy,
 
@@ -38,6 +37,8 @@ pub enum CoteKind {
     Combine,
 
     EmbeddedPlus,
+
+    RawCall(String),
 }
 
 impl Kind for CoteKind {
@@ -63,12 +64,7 @@ impl Kind for CoteKind {
             "strict" => (Self::Strict, true),
             "combine" => (Self::Combine, false),
             "embedded" => (Self::EmbeddedPlus, false),
-            _ => {
-                abort! {
-                    ident,
-                    "invalid configuration name `{}` in `arg`", kind_str
-                }
-            }
+            call => (Self::RawCall(call.to_owned()), true),
         })
     }
 }

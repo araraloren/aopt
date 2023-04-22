@@ -23,7 +23,6 @@ use syn::Token;
 use syn::Type;
 use syn::WherePredicate;
 
-const HELP_OPTION_Q: &str = "-?";
 const HELP_OPTION_SHORT: &str = "-h";
 const HELP_OPTION_NAME: &str = "--help";
 const HELP_OPTION_HELP: &str = "Display help message";
@@ -485,6 +484,7 @@ impl<'a> Analyzer<'a> {
         let policy_ty = self.cote_generator.gen_policy_type()?;
         let insert_sub_apps = self.gen_insert_sub_apps()?;
         let parser_settings = self.gen_parser_settings();
+        let app_raw_tweaks = self.cote_generator.gen_tweak_on_app();
         let parser_app_name = self.cote_generator.get_name();
         let where_clause = Self::where_clause_for_policy();
 
@@ -516,6 +516,7 @@ impl<'a> Analyzer<'a> {
                 let app: #struct_app_ty<'_, #policy_ty> = Self::into_app_policy()?;
                 let mut app = app.with_default_running_ctx()?;
 
+                #app_raw_tweaks
                 app.get_running_ctx_mut()?.add_name(#parser_app_name);
                 let parser = app.inner_parser_mut();
 
@@ -555,7 +556,7 @@ impl<'a> Analyzer<'a> {
                 }
                 else {
                     let mut rctx = parser.take_running_ctx()?;
-                    let error = rctx.chain_error().unwrap_or(aopt::Error::null());
+                    let error = rctx.chain_error();
                     let mut finfo = rctx.take_failed_info();
                     let (command, ret) = finfo.first_mut().map(|v|(Some(v.0.as_str()), &mut v.1)).unwrap_or((None, &mut ret));
                     let e = {
@@ -578,8 +579,14 @@ impl<'a> Analyzer<'a> {
                             "None".to_owned()
                         };
 
-                        // return failure with more detail error message
-                        aopt::raise_failure!("{} failed: {}", failed_msg, inner_ctx).cause_by(error)
+                        if let Some(error) = error {
+                            // return failure with more detail error message
+                            aopt::raise_failure!("{} failed: {}", failed_msg, inner_ctx).cause_by(error)
+                        }
+                        else {
+                            // return failure with more detail error message
+                            aopt::raise_failure!("{} failed: {}", failed_msg, inner_ctx)
+                        }
                     };
 
                     Err(e)

@@ -302,8 +302,16 @@ impl<'a> ArgGenerator<'a> {
                                 );
                             }
                         }
+                        ArgKind::RawCall(method) => {
+                            let method = Ident::new(&method, ty.span());
+                            let args = cfg.value();
+
+                            quote!{
+                                config.#method(#args);
+                            }
+                        }
                         _ => {
-                            quote!{ }
+                            quote!{}
                         }
                     }
                )
