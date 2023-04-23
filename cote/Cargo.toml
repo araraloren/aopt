@@ -1,6 +1,6 @@
 [package]
 name = "cote"
-version = "0.3.1"
+version = "0.3.11"
 authors = ["araraloren <blackcatoverwall@gmail.com>"]
 edition = "2021"
 license = "MPL-2.0"
@@ -13,8 +13,8 @@ categories = ["command-line-interface"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aopt = { path = "../aopt", features = ["serde"] }
-cote-derive = { path = "../cote-derive" }
+aopt = { version = "^0.9.20", features = ["serde"] }
+cote-derive = "^0.1.11"
 aopt-help = "0.3"
 serde = { version = "1.0", features = [ "derive" ] }
 tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }
