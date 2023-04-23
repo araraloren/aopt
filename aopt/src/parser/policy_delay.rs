@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use super::invoke_callback_opt;
-use super::process::ProcessCtx;
+use super::process_callback_ret;
 use super::process_non_opt;
 use super::process_opt;
 use super::CtxSaver;
@@ -13,9 +13,10 @@ use super::NOAGuess;
 use super::OptGuess;
 use super::OptStyleManager;
 use super::Policy;
+use super::PolicySettings;
+use super::ProcessCtx;
 use super::ReturnVal;
 use super::UserStyle;
-use super::UserStyleManager;
 use crate::args::ArgParser;
 use crate::args::Args;
 use crate::astr;
@@ -23,6 +24,7 @@ use crate::ctx::Ctx;
 use crate::ctx::Invoker;
 use crate::opt::Opt;
 use crate::opt::OptParser;
+use crate::parser::FailManager;
 use crate::prelude::SetExt;
 use crate::proc::Process;
 use crate::set::OptValidator;
@@ -66,7 +68,7 @@ use crate::Str;
 ///         Ok(Some(
 ///             path.read_dir()
 ///                 .map_err(|e| {
-///                     Error::raise_failure(format!("Can not read directory {:?}: {:?}", path, e))
+///                     aopt::raise_failure!("Can not read directory {:?}: {:?}", path, e)
 ///                 })?
 ///                 .map(|v| v.unwrap().path())
 ///                 .collect::<Vec<PathBuf>>(),
@@ -186,32 +188,9 @@ impl<Set, Ser, Chk> DelayPolicy<Set, Ser, Chk> {
         self
     }
 
-    pub fn set_strict(&mut self, strict: bool) -> &mut Self {
-        self.strict = strict;
-        self
-    }
-
-    pub fn set_styles(&mut self, styles: Vec<UserStyle>) -> &mut Self {
-        self.style_manager.set(styles);
-        self
-    }
-
-    pub fn set_no_delay(&mut self, name: impl Into<Str>) -> &mut Self {
-        self.no_delay_opt.push(name.into());
-        self
-    }
-
     pub fn set_checker(&mut self, checker: Chk) -> &mut Self {
         self.checker = checker;
         self
-    }
-
-    pub fn strict(&self) -> bool {
-        self.strict
-    }
-
-    pub fn no_delay(&self) -> &[Str] {
-        &self.no_delay_opt
     }
 
     pub fn checker(&self) -> &Chk {
@@ -235,13 +214,40 @@ impl<Set, Ser, Chk> DelayPolicy<Set, Ser, Chk> {
     }
 }
 
-impl<Set, Ser, Chk> UserStyleManager for DelayPolicy<Set, Ser, Chk> {
+impl<Set, Ser, Chk> PolicySettings for DelayPolicy<Set, Ser, Chk> {
     fn style_manager(&self) -> &OptStyleManager {
         &self.style_manager
     }
 
     fn style_manager_mut(&mut self) -> &mut OptStyleManager {
         &mut self.style_manager
+    }
+
+    fn strict(&self) -> bool {
+        self.strict
+    }
+
+    fn styles(&self) -> &[UserStyle] {
+        &self.style_manager
+    }
+
+    fn no_delay(&self) -> Option<&[Str]> {
+        Some(&self.no_delay_opt)
+    }
+
+    fn set_strict(&mut self, strict: bool) -> &mut Self {
+        self.strict = strict;
+        self
+    }
+
+    fn set_styles(&mut self, styles: Vec<UserStyle>) -> &mut Self {
+        self.style_manager.set(styles);
+        self
+    }
+
+    fn set_no_delay(&mut self, name: impl Into<Str>) -> &mut Self {
+        self.no_delay_opt.push(name.into());
+        self
     }
 }
 
@@ -252,18 +258,28 @@ where
     Chk: SetChecker<Set>,
     Set: crate::set::Set + OptParser + Debug + 'static,
 {
+    // ignore failure
     pub fn invoke_opt_callback(
         &mut self,
         ctx: &mut Ctx,
         set: &mut Set,
         inv: &mut Invoker<Set, Ser>,
         ser: &mut Ser,
+        manager: &mut FailManager,
         saver: CtxSaver,
     ) -> Result<(), Error> {
         let uid = saver.uid;
+        let fail = |e: &Error| {
+            manager.push(e.clone());
+            Ok(())
+        };
 
         ctx.set_inner_ctx(Some(saver.ctx));
-        if !invoke_callback_opt(uid, ctx, set, inv, ser)? {
+        if !process_callback_ret(
+            invoke_callback_opt(uid, ctx, set, inv, ser),
+            |_| Ok(()),
+            fail,
+        )? {
             set.opt_mut(uid)?.set_matched(false);
         }
         Ok(())
@@ -275,12 +291,13 @@ where
         set: &mut Set,
         inv: &mut Invoker<Set, Ser>,
         ser: &mut Ser,
+        manager: &mut FailManager,
         saver: CtxSaver,
     ) -> Result<(), Error> {
         let name = set.opt(saver.uid)?.name();
 
         if self.no_delay_opt.contains(name) {
-            return self.invoke_opt_callback(ctx, set, inv, ser, saver);
+            return self.invoke_opt_callback(ctx, set, inv, ser, manager, saver);
         } else {
             self.contexts.push(saver);
         }
@@ -296,11 +313,11 @@ where
     Chk: SetChecker<Set>,
     Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
 {
-    pub(crate) fn parse_impl<'a>(
+    pub(crate) fn parse_impl(
         &mut self,
         ctx: &mut Ctx,
         set: &mut <Self as Policy>::Set,
-        inv: &mut <Self as Policy>::Inv<'a>,
+        inv: &mut <Self as Policy>::Inv<'_>,
         ser: &mut <Self as Policy>::Ser,
     ) -> Result<(), <Self as Policy>::Error> {
         self.checker().pre_check(set).map_err(|e| e.into())?;
@@ -311,6 +328,7 @@ where
         let args_len = args.len();
         let mut noa_args = Args::default();
         let mut iter = args.guess_iter().enumerate();
+        let mut opt_fail = FailManager::default();
 
         trace_log!("Parsing {ctx:?} using delay policy");
         // set option args, and args length
@@ -339,12 +357,20 @@ where
                                         tot: args_len,
                                     },
                                     &mut proc,
+                                    &mut opt_fail,
                                     false,
                                 )?;
 
                                 if proc.status() {
                                     for saver in ret {
-                                        self.save_or_call(ctx, set, inv, ser, saver)?;
+                                        self.save_or_call(
+                                            ctx,
+                                            set,
+                                            inv,
+                                            ser,
+                                            &mut opt_fail,
+                                            saver,
+                                        )?;
                                     }
                                     matched = true;
                                 }
@@ -359,10 +385,10 @@ where
                         if !matched && self.strict() {
                             let default_str = astr("");
 
-                            return Err(Error::sp_option_not_found(format!(
+                            return Err(opt_fail.cause(Error::sp_option_not_found(format!(
                                 "{}",
                                 clopt.name().unwrap_or(&default_str)
-                            )));
+                            ))));
                         }
                     }
                 }
@@ -379,6 +405,8 @@ where
 
         let noa_args = ARef::new(noa_args);
         let noa_len = noa_args.len();
+        let mut pos_fail = FailManager::default();
+        let mut cmd_fail = FailManager::default();
 
         ctx.set_args(noa_args.clone());
         // when style is pos, noa index is [1..=len]
@@ -397,11 +425,10 @@ where
                         idx: Self::noa_cmd(),
                     },
                     &mut proc,
+                    &mut cmd_fail,
                 )?;
             }
-
-            self.checker().cmd_check(set).map_err(|e| e.into())?;
-
+            cmd_fail.process(self.checker().cmd_check(set))?;
             for idx in 1..noa_len {
                 if let Some(mut proc) = NOAGuess::new().guess(
                     &UserStyle::Pos,
@@ -417,24 +444,25 @@ where
                             idx: Self::noa_pos(idx),
                         },
                         &mut proc,
+                        &mut pos_fail,
                     )?;
                 }
             }
         } else {
-            self.checker().cmd_check(set).map_err(|e| e.into())?;
+            cmd_fail.process(self.checker().cmd_check(set))?;
         }
 
         // after cmd and pos callback invoked, invoke the callback of option
         for saver in std::mem::take(&mut self.contexts) {
-            self.invoke_opt_callback(ctx, set, inv, ser, saver)?;
+            self.invoke_opt_callback(ctx, set, inv, ser, &mut opt_fail, saver)?;
         }
 
-        self.checker().opt_check(set).map_err(|e| e.into())?;
-
-        self.checker().pos_check(set).map_err(|e| e.into())?;
+        opt_fail.process(self.checker().opt_check(set))?;
+        pos_fail.process(self.checker().pos_check(set))?;
 
         let main_args = noa_args;
         let main_len = main_args.len();
+        let mut main_fail = FailManager::default();
 
         ctx.set_args(main_args.clone());
         if let Some(mut proc) = NOAGuess::new().guess(
@@ -451,10 +479,10 @@ where
                     idx: Self::noa_main(),
                 },
                 &mut proc,
+                &mut main_fail,
             )?;
         }
-
-        self.checker().post_check(set).map_err(|e| e.into())?;
+        main_fail.process(self.checker().post_check(set))?;
         Ok(())
     }
 }
@@ -476,10 +504,10 @@ where
 
     type Error = Error;
 
-    fn parse<'a>(
+    fn parse(
         &mut self,
         set: &mut Self::Set,
-        inv: &mut Self::Inv<'a>,
+        inv: &mut Self::Inv<'_>,
         ser: &mut Self::Ser,
         args: ARef<Args>,
     ) -> Result<Self::Ret, Self::Error> {

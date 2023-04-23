@@ -6,6 +6,7 @@ use std::ops::DerefMut;
 use crate::map::AnyMap;
 use crate::map::Entry;
 use crate::map::ErasedTy;
+use crate::raise_error;
 use crate::Error;
 
 /// Some convenient function access the [`AppServices`](crate::ser::AppServices).
@@ -92,10 +93,10 @@ impl ServicesValExt for AppServices {
 
     fn sve_take_val<T: ErasedTy>(&mut self) -> Result<T, Error> {
         self.0.remove::<T>().ok_or_else(|| {
-            Error::raise_error(format!(
-                "Can not take value type {} from AppServices",
+            raise_error!(
+                "Can not take value type `{}` from AppServices",
                 type_name::<T>()
-            ))
+            )
         })
     }
 }
@@ -198,19 +199,19 @@ impl UsrValService {
 
     pub fn val<T: ErasedTy>(&self) -> Result<&T, Error> {
         self.get::<T>().ok_or_else(|| {
-            Error::raise_error(format!(
-                "Can not find reference for type {{{:?}}} in UsrValService",
+            raise_error!(
+                "Can not find reference for type `{:?}` in UsrValService",
                 type_name::<T>()
-            ))
+            )
         })
     }
 
     pub fn val_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
         self.get_mut::<T>().ok_or_else(|| {
-            Error::raise_error(format!(
-                "Can not find mutable reference for type {{{:?}}} in UsrValService",
+            raise_error!(
+                "Can not find mutable reference for type `{:?}` in UsrValService",
                 type_name::<T>()
-            ))
+            )
         })
     }
 

@@ -15,6 +15,10 @@ impl<T> std::fmt::Debug for ValValidator<T> {
 }
 
 impl<T: ErasedTy> ValValidator<T> {
+    pub fn new(handler: ValidatorHandler<T>) -> Self {
+        Self(handler)
+    }
+
     pub fn invoke(&self, val: &T) -> bool {
         (self.0)(val)
     }
@@ -53,7 +57,7 @@ impl<T: ErasedTy> ValValidator<T> {
         K: ErasedTy + PartialEq<T>,
     {
         Self(Box::new(move |inner_val| {
-            vals.iter().any(|v| PartialEq::eq(v, &inner_val))
+            vals.iter().any(|v| PartialEq::eq(v, inner_val))
         }))
     }
 }

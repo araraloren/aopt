@@ -11,6 +11,7 @@ use crate::opt::Main;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::opt::Pos;
+use crate::raise_error;
 use crate::set::Ctor;
 use crate::set::Filter;
 use crate::set::FilterMatcher;
@@ -329,9 +330,23 @@ where
     fn find_uid<S: Into<Str>>(&self, opt: S) -> Result<Uid, Error> {
         let opt: Str = opt.into();
 
-        self.find(opt.clone())?.map(|v| v.uid()).ok_or_else(|| {
-            Error::raise_error(format!("Can not find option `{}` in option set", opt))
-        })
+        self.find(opt.clone())?
+            .map(|v| v.uid())
+            .ok_or_else(|| raise_error!("Can not find option `{}` in option set", opt))
+    }
+
+    fn find_opt<S: Into<Str>>(&self, opt: S) -> Result<&SetOpt<Self>, Error> {
+        let opt: Str = opt.into();
+
+        self.find(opt.clone())?
+            .ok_or_else(|| raise_error!("Can not find option(ref) `{}` in option set", opt))
+    }
+
+    fn find_opt_mut<S: Into<Str>>(&mut self, opt: S) -> Result<&mut SetOpt<Self>, Error> {
+        let opt: Str = opt.into();
+
+        self.find_mut(opt.clone())?
+            .ok_or_else(|| raise_error!("Can not find option(mut) `{}` in option set", opt))
     }
 }
 
@@ -376,12 +391,12 @@ where
 {
     fn ref_from<'a>(&self, set: &'a OptSet<P, C, V>) -> Result<&'a C::Opt, Error> {
         set.find(*self)?
-            .ok_or_else(|| Error::raise_error(format!("Can not find option {}", *self)))
+            .ok_or_else(|| raise_error!("Can not find option {}", *self))
     }
 
     fn mut_from<'a>(&self, set: &'a mut OptSet<P, C, V>) -> Result<&'a mut C::Opt, Error> {
         set.find_mut(*self)?
-            .ok_or_else(|| Error::raise_error(format!("Can not find option {}", *self)))
+            .ok_or_else(|| raise_error!("Can not find option {}", *self))
     }
 }
 

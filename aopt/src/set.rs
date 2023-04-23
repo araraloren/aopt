@@ -14,6 +14,7 @@ pub use self::optset::OptSet;
 pub use self::optvalid::OptValidator;
 pub use self::optvalid::PrefixOptValidator;
 
+use std::any::type_name;
 use std::fmt::Debug;
 use std::slice::Iter;
 use std::slice::IterMut;
@@ -24,6 +25,7 @@ use crate::opt::ConfigValue;
 use crate::opt::Index;
 use crate::opt::Opt;
 use crate::opt::OptValueExt;
+use crate::raise_error;
 use crate::value::ValInitializer;
 use crate::value::ValStorer;
 use crate::Error;
@@ -180,22 +182,22 @@ pub trait SetExt<C: Ctor> {
 impl<S: Set> SetExt<S::Ctor> for S {
     fn opt(&self, uid: Uid) -> Result<&<S::Ctor as Ctor>::Opt, Error> {
         self.get(uid)
-            .ok_or_else(|| Error::raise_error(format!("Can not find option `{}` by uid", uid)))
+            .ok_or_else(|| raise_error!("Can not find option `{}` by uid", uid).with_uid(uid))
     }
 
     fn opt_mut(&mut self, uid: Uid) -> Result<&mut <S::Ctor as Ctor>::Opt, Error> {
         self.get_mut(uid)
-            .ok_or_else(|| Error::raise_error(format!("Can not find option `{}` by uid", uid)))
+            .ok_or_else(|| raise_error!("Can not find option `{}` by uid", uid).with_uid(uid))
     }
 
     fn ctor(&self, name: &Str) -> Result<&S::Ctor, Error> {
         self.get_ctor(name)
-            .ok_or_else(|| Error::raise_error(format!("Can not find option `{}` by name", name)))
+            .ok_or_else(|| raise_error!("Can not find option `{}` by name", name))
     }
 
     fn ctor_mut(&mut self, name: &Str) -> Result<&mut S::Ctor, Error> {
         self.get_ctor_mut(name)
-            .ok_or_else(|| Error::raise_error(format!("Can not find option `{}` by name", name)))
+            .ok_or_else(|| raise_error!("Can not find option `{}` by name", name))
     }
 }
 
@@ -204,6 +206,14 @@ where
     Self: Set + Sized,
 {
     fn find_uid<S: Into<Str>>(&self, opt: S) -> Result<Uid, Error>;
+
+    fn find_opt<S: Into<Str>>(&self, opt: S) -> Result<&SetOpt<Self>, Error> {
+        self.opt(self.find_uid(opt)?)
+    }
+
+    fn find_opt_mut<S: Into<Str>>(&mut self, opt: S) -> Result<&mut SetOpt<Self>, Error> {
+        self.opt_mut(self.find_uid(opt)?)
+    }
 
     fn find_val<U: ErasedTy>(&self, opt: impl Into<Str>) -> Result<&U, Error> {
         self.opt(self.find_uid(opt)?)?.val::<U>()
@@ -222,12 +232,34 @@ where
     }
 
     fn take_val<U: ErasedTy>(&mut self, opt: impl Into<Str>) -> Result<U, Error> {
-        let opt = self.find_uid(opt)?;
+        let name: Str = opt.into();
+        let opt = self.find_uid(name.clone())?;
         let vals = self.opt_mut(opt)?.vals_mut::<U>()?;
 
         vals.pop().ok_or_else(|| {
-            Error::raise_error(format!("Not enough value can take from option `{}`", opt))
+            raise_error!(
+                "Not enough value({}) can take from option `{}`",
+                type_name::<U>(),
+                name
+            )
+            .with_uid(opt)
         })
+    }
+
+    fn take_vals<U: ErasedTy>(&mut self, opt: impl Into<Str>) -> Result<Vec<U>, Error> {
+        let name: Str = opt.into();
+        let uid = self.find_uid(name.clone())?;
+        let vals = self.find_vals_mut::<U>(name.clone());
+
+        Ok(std::mem::take(vals.map_err(|e| {
+            raise_error!(
+                "Can not take values({}) of option `{}`",
+                type_name::<U>(),
+                name
+            )
+            .with_uid(uid)
+            .cause_by(e)
+        })?))
     }
 }
 

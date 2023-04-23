@@ -1,6 +1,10 @@
 
 # Relase note
 
+## 0.9.20
+
+- Moving the InferValueMut to cote
+
 ## 0.9.13
 
 - Improve the error message, remove unused function

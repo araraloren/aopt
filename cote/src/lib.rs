@@ -1,7 +1,8 @@
 #![doc = include_str!("../README.md")]
-pub mod _tutorial;
+pub mod _reference;
 pub mod meta;
 pub mod valid;
+pub mod value;
 
 use std::borrow::Cow;
 use std::fmt::Debug;
@@ -12,7 +13,6 @@ use std::ops::DerefMut;
 use aopt::prelude::*;
 use aopt::value::Placeholder;
 use aopt::Error;
-use aopt::HashMap;
 use aopt::RawVal;
 use aopt_help::prelude::Block;
 use aopt_help::prelude::Store;
@@ -33,8 +33,11 @@ pub mod prelude {
     pub use crate::meta::OptionMeta;
     pub use crate::simple_display_set_help;
     pub use crate::valid;
+    pub use crate::value;
+    pub use crate::value::InferValueMut;
     pub use crate::CoteApp;
     pub use crate::ExtractFromSetDerive;
+    pub use crate::HelpDisplayCtx;
     pub use crate::IntoParserDerive;
 }
 
@@ -128,14 +131,22 @@ where
             parser: Parser::new(policy),
         }
     }
+
+    pub fn new_with_parser<S: Into<String>>(name: S, parser: Parser<'a, P>) -> Self {
+        Self {
+            name: name.into(),
+
+            parser,
+        }
+    }
 }
 
 impl<'a, P> CoteApp<'a, P>
 where
     P: Policy,
 {
-    pub fn inner_parser(&mut self) -> &mut Parser<'a, P> {
-        &mut self.parser
+    pub fn inner_parser(&self) -> &Parser<'a, P> {
+        &self.parser
     }
 
     pub fn inner_parser_mut(&mut self) -> &mut Parser<'a, P> {
@@ -244,7 +255,7 @@ where
     ///
     pub fn add_opt_meta(
         &mut self,
-        mut meta: impl IntoConfig<Ret = SetCfg<P::Set>>,
+        meta: impl IntoConfig<Ret = SetCfg<P::Set>>,
     ) -> Result<ParserCommit<'a, '_, P::Inv<'a>, P::Set, P::Ser, Placeholder>, Error> {
         let set = self.parser.optset();
         let config = meta.into_config(set)?;
@@ -612,6 +623,280 @@ where
     }
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct HelpDisplayCtx {
+    name: String,
+
+    head: String,
+
+    foot: String,
+
+    width: usize,
+
+    usagew: usize,
+
+    subnames: Vec<String>,
+
+    submode: bool,
+}
+
+impl HelpDisplayCtx {
+    pub fn with_name(mut self, name: impl Into<String>) -> Self {
+        self.name = name.into();
+        self
+    }
+
+    pub fn with_head(mut self, head: impl Into<String>) -> Self {
+        self.head = head.into();
+        self
+    }
+
+    pub fn with_foot(mut self, foot: impl Into<String>) -> Self {
+        self.foot = foot.into();
+        self
+    }
+
+    pub fn with_width(mut self, width: usize) -> Self {
+        self.width = width;
+        self
+    }
+
+    pub fn with_usagew(mut self, usagew: usize) -> Self {
+        self.usagew = usagew;
+        self
+    }
+
+    pub fn with_subnames(mut self, subnames: Vec<String>) -> Self {
+        self.subnames = subnames;
+        self
+    }
+
+    pub fn with_submode(mut self, submode: bool) -> Self {
+        self.submode = submode;
+        self
+    }
+
+    pub fn set_name(&mut self, name: impl Into<String>) -> &mut Self {
+        self.name = name.into();
+        self
+    }
+
+    pub fn set_head(&mut self, head: impl Into<String>) -> &mut Self {
+        self.head = head.into();
+        self
+    }
+
+    pub fn set_foot(&mut self, foot: impl Into<String>) -> &mut Self {
+        self.foot = foot.into();
+        self
+    }
+
+    pub fn set_width(&mut self, width: usize) -> &mut Self {
+        self.width = width;
+        self
+    }
+
+    pub fn set_usagew(&mut self, usagew: usize) -> &mut Self {
+        self.usagew = usagew;
+        self
+    }
+
+    pub fn set_subnames(&mut self, subnames: Vec<String>) -> &mut Self {
+        self.subnames = subnames;
+        self
+    }
+
+    pub fn set_submode(&mut self, submode: bool) -> &mut Self {
+        self.submode = submode;
+        self
+    }
+
+    pub fn name(&self) -> &String {
+        &self.name
+    }
+
+    pub fn head(&self) -> &String {
+        &self.head
+    }
+
+    pub fn foot(&self) -> &String {
+        &self.foot
+    }
+
+    pub fn width(&self) -> usize {
+        self.width
+    }
+
+    pub fn usagew(&self) -> usize {
+        self.usagew
+    }
+
+    pub fn subnames(&self) -> &[String] {
+        &self.subnames
+    }
+
+    pub fn submode(&self) -> bool {
+        self.submode
+    }
+
+    pub fn generate_name(&self) -> String {
+        if self.submode {
+            std::iter::once(self.name())
+                .chain(self.subnames().iter())
+                .map(|v| v.as_str())
+                .collect::<Vec<&str>>()
+                .join(" ")
+        } else {
+            self.subnames()
+                .iter()
+                .chain(std::iter::once(self.name()))
+                .map(|v| v.as_str())
+                .collect::<Vec<&str>>()
+                .join(" ")
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct AppRunningCtx<T = (String, aopt::prelude::ReturnVal)> {
+    names: Vec<String>,
+
+    display_help: bool,
+
+    display_sub_help: bool,
+
+    exit: bool,
+
+    exit_sub: bool,
+
+    failed_info: Vec<T>,
+}
+
+impl<T> AppRunningCtx<T> {
+    pub fn with_names(mut self, names: Vec<String>) -> Self {
+        self.names = names;
+        self
+    }
+
+    pub fn with_display_help(mut self, display_help: bool) -> Self {
+        self.display_help = display_help;
+        self
+    }
+
+    pub fn with_display_sub_help(mut self, display_sub_help: bool) -> Self {
+        self.display_sub_help = display_sub_help;
+        self
+    }
+
+    pub fn with_exit(mut self, exit: bool) -> Self {
+        self.exit = exit;
+        self
+    }
+
+    pub fn with_exit_sub(mut self, exit_sub: bool) -> Self {
+        self.exit_sub = exit_sub;
+        self
+    }
+
+    pub fn set_names(&mut self, names: Vec<String>) -> &mut Self {
+        self.names = names;
+        self
+    }
+
+    pub fn set_display_help(&mut self, display_help: bool) -> &mut Self {
+        self.display_help = display_help;
+        self
+    }
+
+    pub fn set_display_sub_help(&mut self, display_sub_help: bool) -> &mut Self {
+        self.display_sub_help = display_sub_help;
+        self
+    }
+
+    pub fn set_exit(&mut self, exit: bool) -> &mut Self {
+        self.exit = exit;
+        self
+    }
+
+    pub fn set_exit_sub(&mut self, exit_sub: bool) -> &mut Self {
+        self.exit_sub = exit_sub;
+        self
+    }
+
+    pub fn add_failed_info(&mut self, failed_info: T) -> &mut Self {
+        self.failed_info.push(failed_info);
+        self
+    }
+
+    pub fn names(&self) -> &[String] {
+        &self.names
+    }
+
+    pub fn display_help(&self) -> bool {
+        self.display_help
+    }
+
+    pub fn display_sub_help(&self) -> bool {
+        self.display_sub_help
+    }
+
+    pub fn exit(&self) -> bool {
+        self.exit
+    }
+
+    pub fn exit_sub(&self) -> bool {
+        self.exit_sub
+    }
+
+    pub fn failed_info(&self) -> &[T] {
+        &self.failed_info
+    }
+
+    pub fn take_failed_info(&mut self) -> Vec<T> {
+        std::mem::take(&mut self.failed_info)
+    }
+
+    pub fn clear_failed_info(&mut self) {
+        self.failed_info.clear();
+    }
+
+    pub fn add_name(&mut self, name: String) -> &mut Self {
+        self.names.push(name);
+        self
+    }
+
+    pub fn sync_ctx(&mut self, ctx: &mut Self) -> &mut Self {
+        self.names.append(&mut ctx.names);
+        self.display_help = self.display_help() || ctx.display_help();
+        self.display_sub_help = self.display_sub_help() || ctx.display_sub_help();
+        self.exit = self.exit() || ctx.exit();
+        self.exit_sub = self.exit_sub() || ctx.exit_sub();
+        self
+    }
+
+    pub fn sync_failed_info(&mut self, ctx: &mut Self) -> &mut Self {
+        self.failed_info.extend(ctx.take_failed_info());
+        self
+    }
+}
+
+impl AppRunningCtx<(String, aopt::prelude::ReturnVal)> {
+    pub fn chain_error(&mut self) -> Option<aopt::Error> {
+        let mut iter = self.failed_info.iter_mut();
+
+        if let Some(failed_info) = iter.next() {
+            let mut error = failed_info.1.take_failure();
+
+            for failed_info in iter {
+                error = error.cause(failed_info.1.take_failure());
+            }
+            Some(error)
+        } else {
+            None
+        }
+    }
+}
+
 pub fn simple_display_set_help<'a, T: Set, S: Into<Cow<'a, str>>>(
     set: &T,
     name: S,
@@ -754,7 +1039,7 @@ mod test {
         assert_eq!(example.foo, true);
         assert_eq!(example.bar.0, 42);
 
-        let parser = Example::into_parser().unwrap();
+        let parser = Example::into_app().unwrap();
 
         assert_eq!(parser["--foo"].help(), &aopt::astr("a flag argument"));
         assert_eq!(parser["bar"].help(), &aopt::astr("a position argument"));
@@ -783,7 +1068,7 @@ mod test {
 
             /// Specify path to copy
             #[arg(index = "2..")]
-            sources: Pos<Vec<PathBuf>>,
+            sources: Vec<Pos<PathBuf>>,
         }
 
         let example = CopyTool::parse(Args::from_array(["app", "--force"]));
@@ -799,11 +1084,11 @@ mod test {
         assert_eq!(example.recursive, false);
         assert_eq!(example.destination.0, String::from("."));
         assert_eq!(
-            example.sources.0,
+            example.sources,
             ["../foo", "../bar/", "other"]
                 .into_iter()
-                .map(|v| PathBuf::from(v))
-                .collect::<Vec<PathBuf>>()
+                .map(|v| Pos::new(PathBuf::from(v)))
+                .collect::<Vec<_>>()
         );
     }
 
@@ -837,7 +1122,7 @@ mod test {
             size: Option<usize>,
 
             #[arg(index = "1", help = "Search starting point", fallback = search::<P>, then = VecStore)]
-            destination: Pos<Vec<String>>,
+            destination: Vec<Pos<String>>,
         }
 
         fn search<P: Policy>(
@@ -865,11 +1150,11 @@ mod test {
             assert_eq!(tool.name, Some("foo".to_owned()));
             assert_eq!(tool.size, Some(42));
             assert_eq!(
-                tool.destination.0,
+                tool.destination,
                 ["file1", "file2", "dir1", "dir2"]
                     .into_iter()
-                    .map(|v| v.to_string())
-                    .collect::<Vec<String>>()
+                    .map(|v| Pos::new(v.to_string()))
+                    .collect::<Vec<_>>()
             );
 
             Ok(Some(()))
@@ -916,7 +1201,7 @@ mod test {
             #[arg(help = "list all the file")]
             all: bool,
 
-            #[arg(valid = valid::array([1, 42, 68]))]
+            #[arg(valid = valid!([1, 42, 68]))]
             depth: usize,
 
             #[arg(index = "1")]
@@ -951,16 +1236,9 @@ mod test {
 
         let args = Args::from_array(["app", "list", "--all", "--depth=6", "."]);
 
-        let app = App::parse(args)?;
+        let app = App::parse(args);
 
-        assert_eq!(
-            app,
-            App {
-                count: Some(vec![1, 2, 3]),
-                list: None,
-                find: None,
-            }
-        );
+        assert!(app.is_err());
 
         let args = Args::from_array(["app", "--count=8", "find", "something"]);
 
@@ -980,23 +1258,20 @@ mod test {
 
         let args = Args::from_array(["app", "--count", "42"]);
 
-        let app = App::parse(args)?;
+        let app = App::parse(args);
 
-        assert_eq!(
-            app,
-            App {
-                count: Some(vec![1, 2, 3, 42]),
-                list: None,
-                find: None,
-            }
-        );
+        assert!(app.is_err());
 
         let args = Args::from_array(["app", "--count=42", "list"]);
 
-        let app = App::parse(args)?;
+        let GetoptRes {
+            ret,
+            parser: mut app,
+        } = App::parse_args(args)?;
 
+        assert_eq!(ret.status(), false);
         assert_eq!(
-            app,
+            app.extract_type::<App>()?,
             App {
                 count: Some(vec![1, 2, 3, 42]),
                 list: None,

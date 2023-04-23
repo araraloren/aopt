@@ -40,9 +40,7 @@ mod __raw_utf8 {
             Ok(Self(
                 value
                     .to_str()
-                    .ok_or_else(|| {
-                        crate::Error::raise_error(format!("failed convert `{:?}` to str", &value))
-                    })?
+                    .ok_or_else(|| crate::raise_error!("failed convert `{:?}` to str", &value))?
                     .to_owned(),
             ))
         }

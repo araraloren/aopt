@@ -161,15 +161,14 @@ where
         opt: &mut <<Self::Set as Set>::Ctor as Ctor>::Opt,
     ) -> Result<bool, Self::Error> {
         let mut matched = opt.mat_style(self.style);
+        let uid = opt.uid();
 
         if matched {
             if !opt.ignore_name() {
                 matched = opt.mat_name(self.name());
             }
-            if !opt.ignore_alias() {
-                if opt.alias().is_some() {
-                    matched = matched || opt.mat_alias(&self.name)
-                }
+            if !opt.ignore_alias() && opt.alias().is_some() {
+                matched = matched || opt.mat_alias(&self.name)
             }
             if !opt.ignore_index() {
                 matched = matched && {
@@ -183,10 +182,10 @@ where
         }
         if matched {
             if self.is_consume() && self.argument.is_none() {
-                return Err(Error::sp_missing_opt_value(opt.hint()));
+                return Err(Error::sp_missing_opt_value(opt.hint()).with_uid(uid));
             }
             opt.set_matched(true);
-            self.matched_uid = Some(opt.uid());
+            self.matched_uid = Some(uid);
         }
         crate::trace_log!(
             "Matching {{{:?}}} with Opt{{{}}}: {}",

@@ -1,5 +1,14 @@
+use std::ops::Range;
+use std::ops::RangeBounds;
+use std::ops::RangeFrom;
+use std::ops::RangeFull;
+use std::ops::RangeInclusive;
+use std::ops::RangeTo;
+use std::ops::RangeToInclusive;
+
 use regex::Regex;
 
+use crate::raise_error;
 use crate::Error;
 
 /// Index using for option match.
@@ -24,7 +33,7 @@ use crate::Error;
 ///
 /// For option check, see [`SetChecker`](crate::set::SetChecker) for more information.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub enum Index {
     /// The forward index of NOA, fixed position.
     ///
@@ -108,6 +117,7 @@ pub enum Index {
     /// `@*` will matching `"app"`, `"pos1"`, `"pos2"` or `"pos3"`.
     AnyWhere,
 
+    #[default]
     Null,
 }
 
@@ -128,7 +138,7 @@ impl Index {
     // the index number is small in generally
     pub(crate) fn parse_as_usize(pattern: &str, data: &str) -> Result<usize, Error> {
         data.parse::<usize>().map_err(|e| {
-            Error::invalid_opt_index(pattern, &format!("invalid usize number: {:?}", e))
+            Error::invalid_opt_index(pattern, "invalid usize number").cause_by(e.into())
         })
     }
 
@@ -149,7 +159,7 @@ impl Index {
                 if last == index {
                     return Err(Error::invalid_opt_index(
                         pattern,
-                        &format!("{} not a valid usize number", data),
+                        format!("{} not a valid usize number", data),
                     ));
                 }
                 ret.push(Self::parse_as_usize(pattern, &data[last..index])?);
@@ -159,12 +169,12 @@ impl Index {
         Ok(ret)
     }
 
-    pub fn parse(pattern: &str) -> Result<Self, Error> {
+    pub fn parse(pat: &str) -> Result<Self, Error> {
         IDX_PARSER
             .try_with(|regex| {
-                if let Some(cap) = regex.captures(pattern) {
+                if let Some(cap) = regex.captures(pat) {
                     if let Some(value) = cap.get(IDX_INDEX) {
-                        let index = Self::parse_as_usize(pattern, value.as_str())?;
+                        let index = Self::parse_as_usize(pat, value.as_str())?;
                         let sign = cap
                             .get(IDX_INDEX_SIGN)
                             .map(|sign| sign.as_str() == "-")
@@ -181,35 +191,32 @@ impl Index {
 
                         match (range_beg, range_end) {
                             (None, None) => {
-                                return Err(Error::invalid_opt_index(
-                                    pattern,
-                                    "index can not be empty",
-                                ))
+                                return Err(Error::invalid_opt_index(pat, "index can not be empty"))
                             }
                             (None, Some(end)) => Ok(Self::range(
                                 None,
-                                Some(Self::parse_as_usize(pattern, end.as_str())?),
+                                Some(Self::parse_as_usize(pat, end.as_str())?),
                             )),
                             (Some(beg), None) => Ok(Self::range(
-                                Some(Self::parse_as_usize(pattern, beg.as_str())?),
+                                Some(Self::parse_as_usize(pat, beg.as_str())?),
                                 None,
                             )),
                             (Some(beg), Some(end)) => {
-                                let beg = Self::parse_as_usize(pattern, beg.as_str())?;
-                                let end = Self::parse_as_usize(pattern, end.as_str())?;
+                                let beg = Self::parse_as_usize(pat, beg.as_str())?;
+                                let end = Self::parse_as_usize(pat, end.as_str())?;
 
                                 if beg <= end {
                                     Ok(Self::range(Some(beg), Some(end)))
                                 } else {
                                     return Err(Error::invalid_opt_index(
-                                        pattern,
+                                        pat,
                                         "assert failed on (beg <= end)",
                                     ));
                                 }
                             }
                         }
                     } else if let Some(value) = cap.get(IDX_SEQUENCE) {
-                        let list = Self::parse_as_usize_sequence(pattern, value.as_str())?;
+                        let list = Self::parse_as_usize_sequence(pat, value.as_str())?;
                         let sign = cap
                             .get(IDX_SEQUENCE_SIGN)
                             .map(|sign| sign.as_str() == "-")
@@ -223,20 +230,17 @@ impl Index {
                     } else if cap.get(IDX_ANYWHERE).is_some() {
                         Ok(Self::anywhere())
                     } else {
-                        Err(Error::invalid_opt_index(
-                            pattern,
-                            "invalid index create string",
-                        ))
+                        Err(Error::invalid_opt_index(pat, "invalid index create string"))
                     }
                 } else {
                     Err(Error::invalid_opt_index(
-                        pattern,
+                        pat,
                         "index create string parsing failed",
                     ))
                 }
             })
             .map_err(|e| {
-                Error::raise_error(format!("can not access index parsing regex: {:?}", e))
+                Error::local_access("can not access index parsing regex").cause_by(e.into())
             })?
     }
 
@@ -300,12 +304,8 @@ impl Index {
             Index::Range(start, Some(end)) => {
                 format!("{}..{}", start, end)
             }
-            Index::AnyWhere => {
-                format!("*")
-            }
-            Index::Null => {
-                format!("")
-            }
+            Index::AnyWhere => "*".to_string(),
+            Index::Null => String::default(),
         }
     }
 
@@ -332,6 +332,59 @@ impl Index {
             }
             (None, _) => Self::Range(0, end),
             (Some(start), _) => Self::Range(start, end),
+        }
+    }
+
+    pub(crate) fn from_range(range: &impl RangeBounds<usize>) -> Result<Self, Error> {
+        match (range.start_bound(), range.end_bound()) {
+            (std::ops::Bound::Included(s), std::ops::Bound::Included(e)) => {
+                Ok(Self::range(Some(*s), Some(e + 1)))
+            }
+            (std::ops::Bound::Included(s), std::ops::Bound::Excluded(e)) => {
+                Ok(Self::range(Some(*s), Some(*e)))
+            }
+            (std::ops::Bound::Included(s), std::ops::Bound::Unbounded) => {
+                Ok(Self::range(Some(*s), None))
+            }
+            (std::ops::Bound::Excluded(s), std::ops::Bound::Included(e)) => {
+                if *s == 0 {
+                    Err(raise_error!(
+                        "start position of Index can't be negative: {:?}",
+                        range.start_bound()
+                    ))
+                } else {
+                    Ok(Self::range(Some(*s - 1), Some(e + 1)))
+                }
+            }
+            (std::ops::Bound::Excluded(s), std::ops::Bound::Excluded(e)) => {
+                if *s == 0 {
+                    Err(raise_error!(
+                        "start position of Index can't be negative: {:?}",
+                        range.start_bound()
+                    ))
+                } else {
+                    Ok(Self::range(Some(*s - 1), Some(*e)))
+                }
+            }
+            (std::ops::Bound::Excluded(s), std::ops::Bound::Unbounded) => {
+                if *s == 0 {
+                    Err(raise_error!(
+                        "start position of Index can't be negative: {:?}",
+                        range.start_bound()
+                    ))
+                } else {
+                    Ok(Self::range(Some(*s - 1), None))
+                }
+            }
+            (std::ops::Bound::Unbounded, std::ops::Bound::Included(e)) => {
+                Ok(Self::range(Some(0), Some(*e - 1)))
+            }
+            (std::ops::Bound::Unbounded, std::ops::Bound::Excluded(e)) => {
+                Ok(Self::range(Some(0), Some(*e)))
+            }
+            (std::ops::Bound::Unbounded, std::ops::Bound::Unbounded) => {
+                panic!("start and end of Index can't both unbounded")
+            }
         }
     }
 
@@ -399,12 +452,6 @@ impl Index {
     }
 }
 
-impl Default for Index {
-    fn default() -> Self {
-        Self::Null
-    }
-}
-
 impl ToString for Index {
     fn to_string(&self) -> String {
         match self {
@@ -433,5 +480,129 @@ impl ToString for Index {
                 format!("-[{}]", strs.join(", "))
             }
         }
+    }
+}
+
+impl TryFrom<String> for Index {
+    type Error = Error;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::parse(&value)
+    }
+}
+
+impl<'a> TryFrom<&'a str> for Index {
+    type Error = Error;
+
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+        Self::parse(value)
+    }
+}
+
+impl TryFrom<crate::Str> for Index {
+    type Error = Error;
+
+    fn try_from(value: crate::Str) -> Result<Self, Self::Error> {
+        Self::parse(value.as_str())
+    }
+}
+
+macro_rules! impl_range_for {
+    ($range:ty) => {
+        impl TryFrom<$range> for Index {
+            type Error = Error;
+
+            fn try_from(value: $range) -> Result<Self, Self::Error> {
+                Self::from_range(&value)
+            }
+        }
+
+        impl<'a> TryFrom<&'a $range> for Index {
+            type Error = Error;
+
+            fn try_from(value: &'a $range) -> Result<Self, Self::Error> {
+                Self::from_range(value)
+            }
+        }
+    };
+}
+
+impl_range_for!(Range<usize>);
+
+impl_range_for!(RangeFrom<usize>);
+
+impl_range_for!(RangeInclusive<usize>);
+
+impl_range_for!(RangeTo<usize>);
+
+impl_range_for!(RangeToInclusive<usize>);
+
+impl_range_for!(RangeFull);
+
+macro_rules! impl_signed_ty_for {
+    ($int:ty) => {
+        impl TryFrom<$int> for Index {
+            type Error = Error;
+
+            fn try_from(value: $int) -> Result<Self, Self::Error> {
+                Ok(if value >= 0 {
+                    Self::forward(value as usize)
+                } else {
+                    Self::backward((-value) as usize)
+                })
+            }
+        }
+    };
+}
+
+impl_signed_ty_for!(isize);
+
+impl_signed_ty_for!(i128);
+
+impl_signed_ty_for!(i64);
+
+impl_signed_ty_for!(i32);
+
+impl_signed_ty_for!(i16);
+
+impl_signed_ty_for!(i8);
+
+macro_rules! impl_unsigned_ty_for {
+    ($int:ty) => {
+        impl TryFrom<$int> for Index {
+            type Error = Error;
+
+            fn try_from(value: $int) -> Result<Self, Self::Error> {
+                Ok(Self::forward(value as usize))
+            }
+        }
+    };
+}
+
+impl_unsigned_ty_for!(usize);
+
+impl_unsigned_ty_for!(u128);
+
+impl_unsigned_ty_for!(u64);
+
+impl_unsigned_ty_for!(u32);
+
+impl_unsigned_ty_for!(u16);
+
+impl_unsigned_ty_for!(u8);
+
+impl TryFrom<Vec<usize>> for Index {
+    type Error = Error;
+
+    fn try_from(value: Vec<usize>) -> Result<Self, Self::Error> {
+        Ok(Self::list(value))
+    }
+}
+
+impl<const N: usize> TryFrom<[usize; N]> for Index {
+    type Error = Error;
+
+    fn try_from(value: [usize; N]) -> Result<Self, Self::Error> {
+        Ok(Self::list(Vec::from(value)))
     }
 }

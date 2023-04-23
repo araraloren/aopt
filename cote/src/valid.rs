@@ -1,76 +1,236 @@
+use std::{marker::PhantomData, ops::RangeBounds};
+
 pub use aopt::prelude::ErasedTy;
-pub use aopt::prelude::ValValidator;
+use aopt::value::{ValValidator, ValidatorHandler};
 
-pub fn value<K, T>(val: K) -> ValValidator<T>
+pub trait Validate<T>
+where
+    T: ErasedTy,
+{
+    fn check(&self, value: &T) -> bool;
+}
+
+pub struct Value<K>(K);
+
+impl<K> Value<K> {
+    pub fn new(value: K) -> Self {
+        Self(value)
+    }
+}
+
+impl<T, K> Validate<T> for Value<K>
 where
     T: ErasedTy,
     K: ErasedTy + PartialEq<T>,
 {
-    ValValidator::from_fn(move |inner_val| &val == inner_val)
+    fn check(&self, value: &T) -> bool {
+        &self.0 == value
+    }
 }
 
-pub fn array<const N: usize, K, T>(vals: [K; N]) -> ValValidator<T>
+pub struct GreaterEqual<K>(K);
+
+impl<K> GreaterEqual<K> {
+    pub fn new(value: K) -> Self {
+        Self(value)
+    }
+}
+
+impl<T, K> Validate<T> for GreaterEqual<K>
+where
+    T: ErasedTy,
+    K: ErasedTy + PartialOrd<T>,
+{
+    fn check(&self, value: &T) -> bool {
+        &self.0 >= value
+    }
+}
+
+pub struct LessEqual<K>(K);
+
+impl<K> LessEqual<K> {
+    pub fn new(value: K) -> Self {
+        Self(value)
+    }
+}
+
+impl<T, K> Validate<T> for LessEqual<K>
+where
+    T: ErasedTy,
+    K: ErasedTy + PartialOrd<T>,
+{
+    fn check(&self, value: &T) -> bool {
+        &self.0 <= value
+    }
+}
+
+pub struct Array<const N: usize, K>([K; N]);
+
+impl<const N: usize, K> Array<N, K> {
+    pub fn new(value: [K; N]) -> Self {
+        Self(value)
+    }
+}
+
+impl<const N: usize, T, K> Validate<T> for Array<N, K>
 where
     T: ErasedTy,
     K: ErasedTy + PartialEq<T>,
 {
-    ValValidator::from_fn(move |val| vals.iter().any(|v| PartialEq::eq(v, &val)))
+    fn check(&self, value: &T) -> bool {
+        self.0.iter().any(|v| PartialEq::eq(v, value))
+    }
 }
 
-pub fn vector<K, T>(vals: Vec<K>) -> ValValidator<T>
+pub struct Vector<K>(Vec<K>);
+
+impl<K> Vector<K> {
+    pub fn new(value: Vec<K>) -> Self {
+        Self(value)
+    }
+}
+
+impl<T, K> Validate<T> for Vector<K>
 where
     T: ErasedTy,
     K: ErasedTy + PartialEq<T>,
 {
-    ValValidator::from_fn(move |val| vals.iter().any(|v| PartialEq::eq(v, &val)))
+    fn check(&self, value: &T) -> bool {
+        self.0.iter().any(|v| PartialEq::eq(v, value))
+    }
 }
 
-pub fn range<K, T>(start: K, end: K) -> ValValidator<T>
+pub struct Range<K, R>(R, PhantomData<K>);
+
+impl<K, R> Range<K, R>
+where
+    R: RangeBounds<K> + ErasedTy,
+{
+    pub fn new(value: R) -> Self {
+        Self(value, PhantomData::default())
+    }
+}
+
+impl<T, K, R> Validate<T> for Range<K, R>
+where
+    T: ErasedTy + PartialOrd<K>,
+    K: ErasedTy + PartialOrd<T>,
+    R: RangeBounds<K> + ErasedTy,
+{
+    fn check(&self, value: &T) -> bool {
+        self.0.contains(value)
+    }
+}
+
+pub struct Validator<T>(ValidatorHandler<T>);
+
+impl<T> Validator<T>
 where
     T: ErasedTy,
-    K: ErasedTy + PartialOrd<T>,
 {
-    ValValidator::from_fn(move |val| &start <= val && &end > val)
+    #[cfg(feature = "sync")]
+    pub fn new(func: impl Fn(&T) -> bool + Send + Sync + 'static) -> Self {
+        Self(Box::new(move |val| func(val)))
+    }
+
+    #[cfg(not(feature = "sync"))]
+    pub fn new(func: impl Fn(&T) -> bool + 'static) -> Self {
+        Self(Box::new(move |val| func(val)))
+    }
 }
 
-pub fn greater<K, T>(start: K) -> ValValidator<T>
+impl<T> Validate<T> for Validator<T>
 where
     T: ErasedTy,
-    K: ErasedTy + PartialOrd<T>,
 {
-    ValValidator::from_fn(move |val| &start < val)
+    fn check(&self, value: &T) -> bool {
+        (self.0)(value)
+    }
 }
 
-pub fn less<K, T>(end: K) -> ValValidator<T>
+impl<T> From<Validator<T>> for ValValidator<T>
 where
     T: ErasedTy,
-    K: ErasedTy + PartialOrd<T>,
 {
-    ValValidator::from_fn(move |val| &end > val)
+    fn from(value: Validator<T>) -> Self {
+        ValValidator::new(value.0)
+    }
 }
 
-pub fn greater_or_eq<K, T>(start: K) -> ValValidator<T>
-where
-    T: ErasedTy,
-    K: ErasedTy + PartialOrd<T>,
-{
-    ValValidator::from_fn(move |val| &start <= val)
-}
+/// Check the value of option.
+///
+/// # Example
+/// ```rust
+/// # use cote::prelude::*;
+/// # use cote::valid;
+/// #
+/// #[derive(Debug, Cote, PartialEq, Eq)]
+/// #[cote(help)]
+/// pub struct Cli {
+///     #[arg(alias = "-v", valid = valid!(42))]
+///     value: u64,
+/// }
+///
+/// fn main() -> Result<(), Box<dyn std::error::Error>> {
+///    
+///     assert!(Cli::parse(Args::from_array(["app", "-v41"])).is_err());
+///
+///     assert!(Cli::parse(Args::from_array(["app", "-v42"])).is_ok());
+///
+///     Ok(())
+/// }
+/// ```
+#[macro_export]
+macro_rules! valid {
+    ($value:literal) => {
+        $crate::valid::Value::new($value)
+    };
 
-pub fn less_or_eq<K, T>(end: K) -> ValValidator<T>
-where
-    T: ErasedTy,
-    K: ErasedTy + PartialOrd<T>,
-{
-    ValValidator::from_fn(move |val| &end >= val)
-}
+    ([$($value:literal),+]) => {
+        $crate::valid::Array::new([$($value),+])
+    };
 
-#[cfg(feature = "sync")]
-pub fn valid<T: ErasedTy>(func: impl Fn(&T) -> bool + Send + Sync + 'static) -> ValValidator<T> {
-    ValValidator::from_fn(move |val| func(val))
-}
+    (vec![$($value:literal),+]) => {
+        $crate::valid::Vector::new(vec![$($value),+])
+    };
 
-#[cfg(not(feature = "sync"))]
-pub fn valid<T: ErasedTy>(func: impl Fn(&T) -> bool + 'static) -> ValValidator<T> {
-    ValValidator::from_fn(move |val| func(val))
+    ($start:literal .. $end:literal) => {
+        $crate::valid::Range::new($start .. $end)
+    };
+
+    ($start:literal ..) => {
+        $crate::valid::Range::new($start ..)
+    };
+
+    ($start:literal ..= $end:literal) => {
+        $crate::valid::Range::new($start ..= $end)
+    };
+
+    (.. $end:literal) => {
+        $crate::valid::Range::new($start .. $end)
+    };
+
+    (..= $end:literal) => {
+        $crate::valid::Range::new($start ..= $end)
+    };
+
+    (> $value:literal) => {
+        $crate::valid::Range::new($value ..)
+    };
+
+    (< $value:literal) => {
+        $crate::valid::Range::new(.. $value)
+    };
+
+    (>= $value:literal) => {
+        $crate::valid::GreaterEqual::new($value)
+    };
+
+    (<= $value:literal) => {
+        $crate::valid::Range::new(..= $value)
+    };
+
+    ($func:expr) => {
+        $crate::valid::Validator::new($func)
+    };
 }

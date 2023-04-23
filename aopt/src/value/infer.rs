@@ -17,7 +17,6 @@ use crate::opt::MutOpt;
 use crate::opt::Pos;
 use crate::opt::RefOpt;
 use crate::opt::Style;
-use crate::prelude::SetValueFindExt;
 use crate::trace_log;
 use crate::typeid;
 use crate::value::ValInitializer;
@@ -130,20 +129,6 @@ pub trait Infer {
     }
 }
 
-/// Using for generate code for procedural macro.
-pub trait InferValueRef<'a> {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error>
-    where
-        Self: Sized;
-}
-
-/// Using for generate code for procedural macro.
-pub trait InferValueMut<'a> {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
-    where
-        Self: Sized;
-}
-
 macro_rules! impl_for_bool {
     () => {
         fn infer_act() -> Action {
@@ -167,43 +152,16 @@ impl Infer for bool {
     }
 }
 
-impl<'a> InferValueMut<'a> for bool {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        set.take_val::<bool>(name)
-    }
-}
-
 impl Infer for Option<bool> {
     type Val = bool;
 
     impl_for_bool!();
 }
 
-impl<'a> InferValueMut<'a> for Option<bool> {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        Ok(set.take_val::<bool>(name).ok())
-    }
-}
-
 impl Infer for Vec<bool> {
     type Val = bool;
 
     impl_for_bool!();
-}
-
-impl<'a> InferValueMut<'a> for Vec<bool> {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        Ok(std::mem::take(set.find_vals_mut::<bool>(name)?))
-    }
 }
 
 impl Infer for Cmd {
@@ -235,15 +193,6 @@ impl Infer for Cmd {
 
     fn infer_type_id() -> TypeId {
         typeid::<Self>()
-    }
-}
-
-impl<'a> InferValueMut<'a> for Cmd {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        Ok(Cmd::new(set.take_val::<bool>(name)?))
     }
 }
 
@@ -324,30 +273,6 @@ where
     impl_pos_type!();
 }
 
-impl<'a, T> InferValueMut<'a> for Pos<T>
-where
-    T: ErasedTy + InferValueMut<'a>,
-{
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        Ok(Pos::new(<T as InferValueMut>::infer_fetch(name, set)?))
-    }
-}
-
-impl<'a, T> InferValueRef<'a> for Pos<T>
-where
-    T: ErasedTy + InferValueRef<'a>,
-{
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        Ok(Pos::new(<T as InferValueRef>::infer_fetch(name, set)?))
-    }
-}
-
 impl<T> Infer for Option<Pos<T>>
 where
     T: Infer + ErasedTy,
@@ -359,34 +284,6 @@ where
     }
 
     impl_pos_type!();
-}
-
-impl<'a, T> InferValueMut<'a> for Option<Pos<T>>
-where
-    T: InferValueMut<'a> + ErasedTy,
-{
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        Ok(<T as InferValueMut>::infer_fetch(name, set)
-            .ok()
-            .map(|v| Pos::new(v)))
-    }
-}
-
-impl<'a, T> InferValueRef<'a> for Option<Pos<T>>
-where
-    T: InferValueRef<'a> + ErasedTy,
-{
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        Ok(<T as InferValueRef>::infer_fetch(name, set)
-            .ok()
-            .map(|v| Pos::new(v)))
-    }
 }
 
 impl<T> Infer for Main<T>
@@ -424,57 +321,12 @@ where
     }
 }
 
-impl<'a, T> InferValueMut<'a> for Main<T>
-where
-    T: InferValueMut<'a> + ErasedTy,
-{
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        Ok(Main::new(<T as InferValueMut>::infer_fetch(name, set)?))
-    }
-}
-
-impl<'a, T> InferValueRef<'a> for Main<T>
-where
-    T: InferValueRef<'a> + ErasedTy,
-{
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        Ok(Main::new(<T as InferValueRef>::infer_fetch(name, set)?))
-    }
-}
-
 impl<T: ErasedTy + RawValParser> Infer for MutOpt<T> {
     type Val = T;
 }
 
-impl<'a, T: ErasedTy> InferValueMut<'a> for MutOpt<T> {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        Ok(MutOpt(set.take_val::<T>(name)?))
-    }
-}
-
 impl<'a, T: ErasedTy + RawValParser> Infer for RefOpt<'a, T> {
     type Val = T;
-}
-
-impl<'a, 'b, T: ErasedTy> InferValueRef<'a> for RefOpt<'b, T>
-where
-    'a: 'b,
-{
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        Ok(RefOpt(set.find_val::<T>(name)?))
-    }
 }
 
 impl<T> Infer for Any<T>
@@ -504,30 +356,6 @@ where
 
     fn infer_type_id() -> TypeId {
         typeid::<Self>()
-    }
-}
-
-impl<'a, T> InferValueMut<'a> for Any<T>
-where
-    T: InferValueMut<'a> + ErasedTy,
-{
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        Ok(Any::new(<T as InferValueMut>::infer_fetch(name, set)?))
-    }
-}
-
-impl<'a, T> InferValueRef<'a> for Any<T>
-where
-    T: InferValueRef<'a> + ErasedTy,
-{
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        Ok(Any::new(<T as InferValueRef>::infer_fetch(name, set)?))
     }
 }
 
@@ -561,28 +389,10 @@ impl Infer for Stdin {
     impl_for_stdin!();
 }
 
-impl<'a> InferValueMut<'a> for Stdin {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        Ok(set.take_val::<Stdin>(name)?)
-    }
-}
-
 impl Infer for Option<Stdin> {
     type Val = Stdin;
 
     impl_for_stdin!();
-}
-
-impl<'a> InferValueMut<'a> for Option<Stdin> {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        Ok(set.take_val::<Stdin>(name).ok())
-    }
 }
 
 macro_rules! impl_infer_for {
@@ -595,20 +405,8 @@ macro_rules! impl_infer_for {
             }
         }
 
-        impl<'a> InferValueMut<'a> for $name {
-            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error> where Self: Sized {
-                set.take_val::<$name>(name)
-            }
-        }
-
         impl Infer for std::option::Option<$name> {
             type Val = $name;
-        }
-
-        impl<'a> InferValueMut<'a> for std::option::Option<$name> {
-            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error> where Self: Sized {
-                Ok(set.take_val::<$name>(name).ok())
-            }
         }
 
         impl Infer for std::vec::Vec<$name> {
@@ -619,20 +417,8 @@ macro_rules! impl_infer_for {
             }
         }
 
-        impl<'a> InferValueMut<'a> for std::vec::Vec<$name> {
-            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error> where Self: Sized {
-                Ok(std::mem::take(set.find_vals_mut::<$name>(name)?))
-            }
-        }
-
         impl Infer for std::option::Option<std::vec::Vec<$name>> {
             type Val = $name;
-        }
-
-        impl<'a> InferValueMut<'a> for std::option::Option<std::vec::Vec<$name>> {
-            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error> where Self: Sized {
-                Ok(set.find_vals_mut::<$name>(name).ok().map(|v|std::mem::take(v)))
-            }
         }
     };
     (&$a:lifetime $name:path) => {
@@ -644,20 +430,8 @@ macro_rules! impl_infer_for {
             }
         }
 
-        impl<$a> InferValueRef<$a> for &$a $name {
-            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error> where Self: Sized {
-                set.find_val::<$name>(name)
-            }
-        }
-
         impl<$a> Infer for std::option::Option<&$a $name> {
             type Val = $name;
-        }
-
-        impl<$a> InferValueRef<$a> for std::option::Option<&$a $name> {
-            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error> where Self: Sized {
-                Ok(set.find_val::<$name>(name).ok())
-            }
         }
 
         impl<$a> Infer for &$a std::vec::Vec<$name> {
@@ -668,20 +442,8 @@ macro_rules! impl_infer_for {
             }
         }
 
-        impl<$a> InferValueRef<$a> for &$a std::vec::Vec<$name> {
-            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error> where Self: Sized {
-                set.find_vals::<$name>(name)
-            }
-        }
-
         impl<$a> Infer for Option<&$a std::vec::Vec<$name>> {
             type Val = $name;
-        }
-
-        impl<$a> InferValueRef<$a> for Option<&$a std::vec::Vec<$name>> {
-            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error> where Self: Sized {
-                Ok(set.find_vals::<$name>(name).ok())
-            }
         }
     };
     (&$a:lifetime $name:path, $inner_type:path) => {
@@ -693,20 +455,8 @@ macro_rules! impl_infer_for {
             }
         }
 
-        impl<$a> InferValueRef<$a> for &$a $name {
-            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error> where Self: Sized {
-                set.find_val::<$inner_type>(name).map(|v| v.as_ref())
-            }
-        }
-
         impl<$a> Infer for std::option::Option<&$a $name> {
             type Val = $inner_type;
-        }
-
-        impl<$a> InferValueRef<$a> for std::option::Option<&$a $name> {
-            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error> where Self: Sized {
-                Ok(set.find_val::<$inner_type>(name).map(|v| v.as_ref()).ok())
-            }
         }
 
         impl<$a> Infer for std::vec::Vec<&$a $name> {
@@ -717,20 +467,8 @@ macro_rules! impl_infer_for {
             }
         }
 
-        impl<$a> InferValueRef<$a> for std::vec::Vec<&$a $name> {
-            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error> where Self: Sized {
-                Ok(set.find_vals::<$inner_type>(name)?.iter().map(|v|v.as_ref()).collect())
-            }
-        }
-
         impl<$a> Infer for Option<std::vec::Vec<&$a $name>> {
             type Val = $inner_type;
-        }
-
-        impl<$a> InferValueRef<$a> for Option<std::vec::Vec<&$a $name>> {
-            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a S) -> Result<Self, crate::Error> where Self: Sized {
-                Ok(Some(set.find_vals::<$inner_type>(name)?.iter().map(|v|v.as_ref()).collect()))
-            }
         }
     };
     ($name:path, $force:literal { type Val = $val_type:ty; $( fn $fn_name:ident() -> $ret_type:ty $fn_block:block )+ }) => {
@@ -746,24 +484,12 @@ macro_rules! impl_infer_for {
             }
         }
 
-        impl<'a> InferValueMut<'a> for $name {
-            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error> where Self: Sized {
-                set.take_val::<$name>(name)
-            }
-        }
-
         impl Infer for std::option::Option<$name> {
             type Val = $val_type;
 
             $(
                 fn $fn_name() -> $ret_type $fn_block
             )+
-        }
-
-        impl<'a> InferValueMut<'a> for std::option::Option<$name> {
-            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error> where Self: Sized {
-                Ok(set.take_val::<$name>(name).ok())
-            }
         }
 
         impl Infer for std::vec::Vec<$name> {
@@ -778,24 +504,12 @@ macro_rules! impl_infer_for {
             }
         }
 
-        impl<'a> InferValueMut<'a> for std::vec::Vec<$name> {
-            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error> where Self: Sized {
-                Ok(std::mem::take(set.find_vals_mut::<$name>(name)?))
-            }
-        }
-
         impl Infer for std::option::Option<std::vec::Vec<$name>> {
             type Val = $val_type;
 
             $(
                 fn $fn_name() -> $ret_type $fn_block
             )+
-        }
-
-        impl<'a> InferValueMut<'a> for std::option::Option<std::vec::Vec<$name>> {
-            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, crate::Error> where Self: Sized {
-                Ok(set.find_vals_mut::<$name>(name).ok().map(|v|std::mem::take(v)))
-            }
         }
     };
 }
@@ -858,33 +572,6 @@ impl Infer for Placeholder {
     }
 }
 
-impl<'a> InferValueMut<'a> for Placeholder {
-    fn infer_fetch<S: SetValueFindExt>(_: &str, _: &'a mut S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        Ok(Placeholder {})
-    }
-}
-
 impl Infer for () {
     type Val = ();
-}
-
-impl<'a> InferValueMut<'a> for () {
-    fn infer_fetch<S: SetValueFindExt>(_: &str, _: &'a mut S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        Ok(())
-    }
-}
-
-impl<'a> InferValueRef<'a> for () {
-    fn infer_fetch<S: SetValueFindExt>(_: &str, _: &'a S) -> Result<Self, crate::Error>
-    where
-        Self: Sized,
-    {
-        Ok(())
-    }
 }

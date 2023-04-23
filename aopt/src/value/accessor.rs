@@ -10,6 +10,7 @@ use super::ValValidator;
 use crate::ctx::Ctx;
 use crate::map::ErasedTy;
 use crate::opt::Action;
+use crate::raise_error;
 use crate::Error;
 use crate::RawVal;
 
@@ -22,7 +23,7 @@ use crate::RawVal;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<(), Error> {
-/// let ctx = Ctx::default();
+/// let ctx = Ctx::default().with_inner_ctx(InnerCtx::default());
 /// {
 ///     let mut value = ValAccessor::fallback::<i32>();
 ///     let raw_value = RawVal::from("123");
@@ -59,10 +60,7 @@ use crate::RawVal;
 ///
 ///     let raw_value2 = RawVal::from("-66");
 ///
-///     assert_eq!(
-///         value.store_all(Some(&raw_value2), &ctx, &Action::App)?,
-///         false
-///     );
+///     assert!(value.store_all(Some(&raw_value2), &ctx, &Action::App).is_err());
 ///     assert_eq!(value.pop::<i32>(), Some(4));
 ///     assert_eq!(value.rawval()?, &raw_value1);
 /// }
@@ -82,10 +80,7 @@ use crate::RawVal;
 ///
 ///     let raw_value2 = RawVal::from("-20");
 ///
-///     assert_eq!(
-///         value.store_all(Some(&raw_value2), &ctx, &Action::App)?,
-///         false
-///     );
+///     assert!(value.store_all(Some(&raw_value2), &ctx, &Action::App).is_err());
 ///     assert_eq!(value.pop::<i32>(), None);
 ///     assert_eq!(value.rawval()?, &raw_value1);
 /// }
@@ -160,6 +155,22 @@ impl ValAccessor {
         self
     }
 
+    pub fn storer(&self) -> &ValStorer {
+        &self.storer
+    }
+
+    pub fn initializer(&self) -> &ValInitializer {
+        &self.initializer
+    }
+
+    pub fn storer_mut(&mut self) -> &mut ValStorer {
+        &mut self.storer
+    }
+
+    pub fn initializer_mut(&mut self) -> &mut ValInitializer {
+        &mut self.initializer
+    }
+
     pub fn handlers(&mut self) -> (&mut Vec<RawVal>, &mut AnyValue) {
         (&mut self.rawval, &mut self.any_value)
     }
@@ -179,13 +190,7 @@ impl ValAccessor {
                 }
                 Ok(true)
             }
-            Err(e) => {
-                if e.is_failure() {
-                    Ok(false)
-                } else {
-                    Err(e)
-                }
-            }
+            Err(e) => Err(e),
         }
     }
 }
@@ -249,13 +254,13 @@ impl ErasedValue for ValAccessor {
     fn rawval(&self) -> Result<&RawVal, Error> {
         self.rawval
             .last()
-            .ok_or_else(|| Error::raise_error("No more raw value in current accessor"))
+            .ok_or_else(|| raise_error!("No more raw value in current accessor"))
     }
 
     fn rawval_mut(&mut self) -> Result<&mut RawVal, Error> {
         self.rawval
             .last_mut()
-            .ok_or_else(|| Error::raise_error("No more raw value in current accessor"))
+            .ok_or_else(|| raise_error!("No more raw value in current accessor"))
     }
 
     fn rawvals(&self) -> Result<&Vec<RawVal>, Error> {

@@ -29,7 +29,7 @@ pub(crate) use tracing::trace as trace_log;
 pub(crate) mod log {
     #[macro_export]
     macro_rules! trace_log {
-        ($($_:stmt),+) => {};
+        ($($arg:tt)*) => {};
     }
 }
 
@@ -37,7 +37,7 @@ pub(crate) fn display_option<T: Display>(option_value: &Option<T>) -> String {
     if let Some(value) = option_value {
         format!("Some({value})")
     } else {
-        format!("None")
+        "None".to_owned()
     }
 }
 
@@ -51,7 +51,7 @@ use std::any::TypeId;
 use std::fmt::Display;
 
 /// Get the [`TypeId`](std::any::TypeId) of type `T`.
-pub(crate) fn typeid<T: 'static>() -> TypeId {
+pub(crate) fn typeid<T: ?Sized + 'static>() -> TypeId {
     TypeId::of::<T>()
 }
 
@@ -71,7 +71,7 @@ pub struct GetoptRes<R, T> {
 /// For style `getopt!(..., "first" => &mut parser1, "second" => &mut parser2)`,
 /// will return an Ok([`GetoptRes`]\(T is the literal type\)) if any [`Parser`](crate::parser::Parser) parsing successed.
 ///
-/// Will return Err([`Error::Null`]) if all [`Parser`](crate::parser::Parser) parsing failed, otherwise return Err(_).
+/// Will return Err([`Error::default()`]) if all [`Parser`](crate::parser::Parser) parsing failed, otherwise return Err(_).
 /// # Example
 ///
 /// ```rust
@@ -160,7 +160,7 @@ macro_rules! getopt {
                 { p }
             fn __check_a(a: $crate::prelude::Args) -> $crate::prelude::Args { a }
 
-            let mut ret = Err($crate::err::Error::Null);
+            let mut ret = Err($crate::err::Error::default());
             let args = $crate::ARef::new(__check_a($args));
 
             loop {
@@ -199,7 +199,7 @@ macro_rules! getopt {
                 { p }
             fn __check_a(a: $crate::prelude::Args) -> $crate::prelude::Args { a }
 
-            let mut ret = Err($crate::err::Error::Null);
+            let mut ret = Err($crate::err::Error::default());
             let args = $crate::ARef::new(__check_a($args));
 
             loop {
@@ -268,8 +268,6 @@ pub mod prelude {
     pub use crate::opt::Serde;
     pub use crate::opt::StrParser;
     pub use crate::opt::Style;
-    pub use crate::value::InferValueMut;
-    pub use crate::value::InferValueRef;
     // pub use crate::parser::BoxedPolicy;
     pub use crate::ctx::HandlerCollection;
     pub use crate::parser::DefaultSetChecker;
@@ -280,10 +278,10 @@ pub mod prelude {
     pub use crate::parser::ParserCommit;
     pub use crate::parser::ParserCommitWithValue;
     pub use crate::parser::Policy;
+    pub use crate::parser::PolicySettings;
     pub use crate::parser::PrePolicy;
     pub use crate::parser::ReturnVal;
     pub use crate::parser::UserStyle;
-    pub use crate::parser::UserStyleManager;
     pub use crate::proc::Match;
     pub use crate::proc::NOAMatch;
     pub use crate::proc::NOAProcess;

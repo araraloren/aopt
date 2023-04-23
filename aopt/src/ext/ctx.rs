@@ -867,11 +867,8 @@ impl<Set: crate::set::Set, Ser, T: RawValParser> Extract<Set, Ser> for Value<T> 
         let uid = ctx.uid()?;
 
         Ok(Value(T::parse(arg, ctx).map_err(|e| {
-            Error::sp_raise_extract_error(format!(
-                "failed parsing raw value of {{{}}}: {}",
-                uid,
-                e.into()
-            ))
+            Error::sp_raise_extract_error(format!("failed parsing raw value of {{{}}}", uid,))
+                .cause_by(e.into())
         })?))
     }
 }

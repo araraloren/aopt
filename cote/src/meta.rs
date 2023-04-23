@@ -4,7 +4,7 @@ use aopt::Error;
 pub trait IntoConfig {
     type Ret: Config + ConfigValue;
 
-    fn into_config<Parser>(&mut self, parser: &Parser) -> Result<Self::Ret, Error>
+    fn into_config<Parser>(self, parser: &Parser) -> Result<Self::Ret, Error>
     where
         Parser: OptParser,
         Parser::Output: Information;
@@ -187,7 +187,7 @@ where
 impl<T: ErasedTy + Clone> IntoConfig for OptionMeta<T> {
     type Ret = OptConfig;
 
-    fn into_config<Parser>(&mut self, parser: &Parser) -> Result<Self::Ret, Error>
+    fn into_config<Parser>(mut self, parser: &Parser) -> Result<Self::Ret, Error>
     where
         Parser: OptParser,
         Parser::Output: Information,

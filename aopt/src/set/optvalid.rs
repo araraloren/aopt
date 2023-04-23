@@ -1,4 +1,4 @@
-use crate::Error;
+use crate::{raise_error, Error};
 
 pub trait OptValidator {
     type Error: Into<Error>;
@@ -72,9 +72,9 @@ impl OptValidator for PrefixOptValidator {
                 return Ok(name.split_at(prefix.len()));
             }
         }
-        Err(Error::raise_error(format!(
+        Err(raise_error!(
             "can not split the {}: invalid option name string",
             name
-        )))
+        ))
     }
 }

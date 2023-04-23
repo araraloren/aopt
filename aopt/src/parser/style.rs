@@ -48,12 +48,6 @@ pub enum UserStyle {
     Boolean,
 }
 
-pub trait UserStyleManager {
-    fn style_manager(&self) -> &OptStyleManager;
-
-    fn style_manager_mut(&mut self) -> &mut OptStyleManager;
-}
-
 /// Manage the support option set style[`UserStyle`].
 #[derive(Debug, Clone)]
 pub struct OptStyleManager {
@@ -124,9 +118,9 @@ pub trait Guess {
 }
 
 pub fn valueof(name: &str, value: &Option<Str>) -> Result<Str, Error> {
-    let string = value.as_ref().ok_or_else(|| {
-        Error::raise_error(format!("No value of {name}, please check your option"))
-    })?;
+    let string = value
+        .as_ref()
+        .ok_or_else(|| crate::raise_error!("No value of {name}, please check your option"))?;
     Ok(string.clone())
 }
 
@@ -279,12 +273,12 @@ where
                         let opt_validator = cfg.opt_validator();
                         let splited = opt_validator.split(name).map_err(Into::into)?;
                         let prefix_len = splited.0.len();
-                        let mut char_indices = splited.1.char_indices().skip(2);
+                        let char_indices = splited.1.char_indices().skip(2);
 
                         // make sure we using `chars.count`, not len()
                         // check the name start 3th letter
                         // for `--opt42` check the option like `--op t42`, `--opt 42`, `--opt4 2`
-                        while let Some((i, _)) = char_indices.next() {
+                        for (i, _) in char_indices {
                             let name_value = name.split_at(prefix_len + i);
 
                             matches.push(

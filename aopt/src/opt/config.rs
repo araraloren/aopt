@@ -257,33 +257,33 @@ impl OptConfig {
             .name
             .as_ref()
             .ok_or_else(|| {
-                Error::raise_error("Incomplete option configuration: missing option name")
+                crate::raise_error!("Incomplete option configuration: missing option name")
             })?
             .clone())
     }
 
     pub fn gen_type(&mut self) -> Result<TypeId, Error> {
         self.r#type.take().ok_or_else(|| {
-            Error::raise_error("Incomplete option configuration: missing option value type")
+            crate::raise_error!("Incomplete option configuration: missing option value type")
         })
     }
 
     pub fn gen_storer(&mut self) -> Result<ValStorer, Error> {
-        self.storer
-            .take()
-            .ok_or_else(|| Error::raise_error("Incomplete option configuration: missing ValStorer"))
+        self.storer.take().ok_or_else(|| {
+            crate::raise_error!("Incomplete option configuration: missing ValStorer")
+        })
     }
 
     pub fn gen_initializer(&mut self) -> Result<ValInitializer, Error> {
         self.initializer.take().ok_or_else(|| {
-            Error::raise_error("Incomplete option configuration: missing ValInitializer")
+            crate::raise_error!("Incomplete option configuration: missing ValInitializer")
         })
     }
 
     pub fn gen_styles(&mut self) -> Result<Vec<Style>, Error> {
         self.styles
             .take()
-            .ok_or_else(|| Error::raise_error("Incomplete option configuration: missing Style"))
+            .ok_or_else(|| crate::raise_error!("Incomplete option configuration: missing Style"))
     }
 
     pub fn gen_opt_help(&self) -> Result<Help, Error> {

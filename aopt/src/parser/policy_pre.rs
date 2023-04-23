@@ -1,9 +1,9 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-use super::process::ProcessCtx;
 use super::process_non_opt;
 use super::process_opt;
+use super::FailManager;
 use super::Guess;
 use super::GuessNOACfg;
 use super::GuessOptCfg;
@@ -11,9 +11,10 @@ use super::NOAGuess;
 use super::OptGuess;
 use super::OptStyleManager;
 use super::Policy;
+use super::PolicySettings;
+use super::ProcessCtx;
 use super::ReturnVal;
 use super::UserStyle;
-use super::UserStyleManager;
 use crate::args::ArgParser;
 use crate::args::Args;
 use crate::ctx::Ctx;
@@ -26,6 +27,7 @@ use crate::set::SetChecker;
 use crate::set::SetOpt;
 use crate::ARef;
 use crate::Error;
+use crate::Str;
 
 /// [`PrePolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
 /// [`PrePolicy`] will skip any special [`Error`] during [`parse`](Policy::parse) process.
@@ -115,7 +117,7 @@ use crate::Error;
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct PrePolicy<Set, Ser, Chk> {
     strict: bool,
 
@@ -124,6 +126,19 @@ pub struct PrePolicy<Set, Ser, Chk> {
     checker: Chk,
 
     marker_s: PhantomData<(Set, Ser)>,
+}
+
+impl<Set, Ser, Chk> Debug for PrePolicy<Set, Ser, Chk>
+where
+    Chk: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PrePolicy")
+            .field("strict", &self.strict)
+            .field("style_manager", &self.style_manager)
+            .field("checker", &self.checker)
+            .finish()
+    }
 }
 
 impl<Set, Ser, Chk> Default for PrePolicy<Set, Ser, Chk>
@@ -171,23 +186,9 @@ impl<Set, Ser, Chk> PrePolicy<Set, Ser, Chk> {
         self
     }
 
-    pub fn set_strict(&mut self, strict: bool) -> &mut Self {
-        self.strict = strict;
-        self
-    }
-
-    pub fn set_styles(&mut self, styles: Vec<UserStyle>) -> &mut Self {
-        self.style_manager.set(styles);
-        self
-    }
-
     pub fn set_checker(&mut self, checker: Chk) -> &mut Self {
         self.checker = checker;
         self
-    }
-
-    pub fn strict(&self) -> bool {
-        self.strict
     }
 
     pub fn checker(&self) -> &Chk {
@@ -225,13 +226,39 @@ impl<Set, Ser, Chk> PrePolicy<Set, Ser, Chk> {
     }
 }
 
-impl<Set, Ser, Chk> UserStyleManager for PrePolicy<Set, Ser, Chk> {
+impl<Set, Ser, Chk> PolicySettings for PrePolicy<Set, Ser, Chk> {
     fn style_manager(&self) -> &OptStyleManager {
         &self.style_manager
     }
 
     fn style_manager_mut(&mut self) -> &mut OptStyleManager {
         &mut self.style_manager
+    }
+
+    fn strict(&self) -> bool {
+        self.strict
+    }
+
+    fn styles(&self) -> &[UserStyle] {
+        &self.style_manager
+    }
+
+    fn no_delay(&self) -> Option<&[Str]> {
+        None
+    }
+
+    fn set_strict(&mut self, strict: bool) -> &mut Self {
+        self.strict = strict;
+        self
+    }
+
+    fn set_styles(&mut self, styles: Vec<UserStyle>) -> &mut Self {
+        self.style_manager.set(styles);
+        self
+    }
+
+    fn set_no_delay(&mut self, _: impl Into<Str>) -> &mut Self {
+        self
     }
 }
 
@@ -242,11 +269,11 @@ where
     Chk: SetChecker<Set>,
     Set: crate::set::Set + OptParser + OptValidator + 'static,
 {
-    pub(crate) fn parse_impl<'a>(
+    pub(crate) fn parse_impl(
         &mut self,
         ctx: &mut Ctx,
         set: &mut <Self as Policy>::Set,
-        inv: &mut <Self as Policy>::Inv<'a>,
+        inv: &mut <Self as Policy>::Inv<'_>,
         ser: &mut <Self as Policy>::Ser,
     ) -> Result<(), <Self as Policy>::Error> {
         self.checker().pre_check(set).map_err(|e| e.into())?;
@@ -256,6 +283,7 @@ where
         let args_len = args.len();
         let mut noa_args = Args::default();
         let mut iter = args.guess_iter().enumerate();
+        let mut opt_fail = FailManager::default();
 
         ctx.set_args(args.clone());
         while let Some((idx, (opt, arg))) = iter.next() {
@@ -288,6 +316,7 @@ where
                                             tot: args_len,
                                         },
                                         &mut proc,
+                                        &mut opt_fail,
                                         true,
                                     ))?
                                     .is_some()
@@ -318,11 +347,12 @@ where
                 noa_args.push(args[idx].clone());
             }
         }
-
-        self.checker().opt_check(set).map_err(|e| e.into())?;
+        opt_fail.process(self.checker().opt_check(set))?;
 
         let noa_args = ARef::new(noa_args);
         let noa_len = noa_args.len();
+        let mut pos_fail = FailManager::default();
+        let mut cmd_fail = FailManager::default();
 
         ctx.set_args(noa_args.clone());
         if noa_len > 0 {
@@ -340,11 +370,10 @@ where
                         idx: Self::noa_cmd(),
                     },
                     &mut proc,
+                    &mut cmd_fail,
                 ))?;
             }
-
-            self.checker().cmd_check(set).map_err(|e| e.into())?;
-
+            cmd_fail.process(self.checker().cmd_check(set))?;
             for idx in 1..noa_len {
                 if let Some(mut proc) = NOAGuess::new().guess(
                     &UserStyle::Pos,
@@ -360,17 +389,18 @@ where
                             idx: Self::noa_pos(idx),
                         },
                         &mut proc,
+                        &mut pos_fail,
                     ))?;
                 }
             }
         } else {
-            self.checker().cmd_check(set).map_err(|e| e.into())?;
+            cmd_fail.process(self.checker().cmd_check(set))?;
         }
-
-        self.checker().pos_check(set).map_err(|e| e.into())?;
+        pos_fail.process(self.checker().pos_check(set))?;
 
         let main_args = noa_args;
         let main_len = main_args.len();
+        let mut main_fail = FailManager::default();
 
         // set 0 for Main's index
         if let Some(mut proc) = NOAGuess::new().guess(
@@ -387,11 +417,10 @@ where
                     idx: Self::noa_main(),
                 },
                 &mut proc,
+                &mut main_fail,
             ))?;
         }
-
-        self.checker().post_check(set).map_err(|e| e.into())?;
-
+        main_fail.process(self.checker().post_check(set))?;
         Ok(())
     }
 }
@@ -413,10 +442,10 @@ where
 
     type Error = Error;
 
-    fn parse<'a>(
+    fn parse(
         &mut self,
         set: &mut Self::Set,
-        inv: &mut Self::Inv<'a>,
+        inv: &mut Self::Inv<'_>,
         ser: &mut Self::Ser,
         args: ARef<Args>,
     ) -> Result<Self::Ret, Self::Error> {

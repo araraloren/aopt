@@ -12,7 +12,7 @@ use super::Opt;
 /// The default action type for option value saving, see [`Action::process`].
 #[non_exhaustive]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub enum Action {
     Set,
 
@@ -24,6 +24,7 @@ pub enum Action {
 
     Clr,
 
+    #[default]
     Null,
 }
 
@@ -55,9 +56,10 @@ impl Action {
     /// Save the value in [`handler`](AnyValue).
     pub fn store1<U: ErasedTy>(&self, val: Option<U>, handler: &mut AnyValue) -> bool {
         crate::trace_log!(
-            "Saving value {:?}({:?}) [ty = {:?}] in store1",
+            "Saving value {:?}({:?}) [ty = {}] = {:?} in store1",
             val,
             self,
+            std::any::type_name::<U>(),
             crate::typeid::<Vec<U>>()
         );
         if let Some(val) = val {
@@ -104,12 +106,6 @@ impl Action {
             }
         }
         ret
-    }
-}
-
-impl Default for Action {
-    fn default() -> Self {
-        Action::Null
     }
 }
 

@@ -99,6 +99,13 @@ impl ValInitializer {
     pub fn invoke(&mut self, arg: &mut AnyValue) -> Result<(), Error> {
         (self.0)(arg)
     }
+
+    /// Get the default value.
+    pub fn values<T: ErasedTy>(&mut self) -> Result<Option<Vec<T>>, Error> {
+        let mut any_value = AnyValue::new();
+        self.invoke(&mut any_value)?;
+        Ok(any_value.remove())
+    }
 }
 
 #[cfg(not(feature = "sync"))]

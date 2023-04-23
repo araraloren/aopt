@@ -68,7 +68,7 @@ where
 
                         if index == 1 && opt.force() {
                             // if we have cmd, can not have force required POS @1
-                            return Err(Error::unexcepted_pos_if_has_cmd());
+                            return Err(Error::unexcepted_pos_if_has_cmd().with_uid(opt.uid()));
                         }
                     }
                 }
@@ -88,7 +88,7 @@ where
                 || opt.mat_style(Style::Combined)
         }) {
             if !opt.valid() {
-                return Err(Error::sp_opt_force_require(opt.hint()));
+                return Err(Error::sp_opt_force_require(opt.hint()).with_uid(opt.uid()));
             }
         }
         Ok(true)
@@ -144,11 +144,11 @@ where
         let mut names = vec![];
 
         trace_log!("Pos Check, index: {{{index_map:?}}}, float: {{{float_vec:?}}}");
-        for (_, uids) in index_map.iter() {
+        for (_, uids) in index_map {
             // if any of POS is force required, then it must set by user
             let mut pos_valid = true;
 
-            for uid in uids {
+            for uid in uids.iter() {
                 let opt = Self::opt(set, uid);
                 let opt_valid = opt.valid();
 
@@ -158,7 +158,7 @@ where
                 }
             }
             if !pos_valid {
-                return Err(Error::sp_pos_force_require(names.join(" | ")));
+                return Err(Error::sp_pos_force_require(names.join(" | ")).with_uids(uids));
             }
             names.clear();
         }
@@ -170,7 +170,7 @@ where
                     names.push(Self::opt(set, uid).hint().clone());
                 });
             if !names.is_empty() {
-                return Err(Error::sp_pos_force_require(names.join(" | ")));
+                return Err(Error::sp_pos_force_require(names.join(" | ")).with_uids(float_vec));
             }
         }
         Ok(true)
@@ -181,6 +181,7 @@ where
     fn cmd_check(&self, set: &mut S) -> Result<bool, Error> {
         let mut names = vec![];
         let mut valid = false;
+        let mut uids = vec![];
 
         for opt in set.iter() {
             if opt.mat_style(Style::Cmd) {
@@ -188,13 +189,14 @@ where
                 if valid {
                     break;
                 } else {
+                    uids.push(opt.uid());
                     names.push(opt.hint().to_owned());
                 }
             }
         }
         trace_log!("Cmd Check, any one of the cmd matched: {}", valid);
         if !valid && !names.is_empty() {
-            return Err(Error::sp_cmd_force_require(names.join(" | ")));
+            return Err(Error::sp_cmd_force_require(names.join(" | ")).with_uids(uids));
         }
         Ok(true)
     }

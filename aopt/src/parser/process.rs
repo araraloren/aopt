@@ -12,6 +12,8 @@ use crate::trace_log;
 use crate::Error;
 use crate::Uid;
 
+use super::FailManager;
+
 pub struct ProcessCtx<'a, 'b, Set, Ser> {
     pub idx: usize,
 
@@ -39,7 +41,7 @@ where
     Ser: 'static,
     Set: crate::set::Set + 'static,
 {
-    let ret = match inv.has(uid) {
+    match inv.has(uid) {
         true => {
             trace_log!("Invoke callback of {}", uid);
             inv.invoke(set, ser, ctx)
@@ -48,12 +50,22 @@ where
             trace_log!("Invoke default callback of {}", uid);
             inv.invoke_default(set, ser, ctx)
         }
-    };
+    }
+}
 
+pub fn process_callback_ret(
+    ret: Result<bool, Error>,
+    mut func_ret: impl FnMut(bool) -> Result<(), Error>,
+    mut func_fail: impl FnMut(&Error) -> Result<(), Error>,
+) -> Result<bool, Error> {
     match ret {
-        Ok(ret) => Ok(ret),
+        Ok(ret) => {
+            (func_ret)(ret)?;
+            Ok(ret)
+        }
         Err(e) => {
             if e.is_failure() {
+                (func_fail)(&e)?;
                 Ok(false)
             } else {
                 Err(e)
@@ -72,6 +84,7 @@ pub fn process_opt<Set, Ser>(
         ser,
     }: ProcessCtx<Set, Ser>,
     proc: &mut OptProcess<Set>,
+    manager: &mut FailManager,
     invoke: bool,
 ) -> Result<Vec<CtxSaver>, Error>
 where
@@ -107,6 +120,8 @@ where
             Err(e) => {
                 if !e.is_failure() {
                     return Err(e);
+                } else {
+                    manager.push(e);
                 }
             }
         }
@@ -114,10 +129,18 @@ where
     if proc.status() && invoke {
         for saver in savers {
             let uid = saver.uid;
+            let fail = |e: &Error| {
+                manager.push(e.clone());
+                Ok(())
+            };
 
             ctx.set_inner_ctx(Some(saver.ctx));
             // undo the process if option callback return None
-            if !invoke_callback_opt(uid, ctx, set, inv, ser)? {
+            if !process_callback_ret(
+                invoke_callback_opt(uid, ctx, set, inv, ser),
+                |_| Ok(()),
+                fail,
+            )? {
                 proc.undo(set)?;
                 break;
             }
@@ -140,6 +163,7 @@ pub fn process_non_opt<Set, Ser>(
         ser,
     }: ProcessCtx<Set, Ser>,
     proc: &mut NOAProcess<Set>,
+    manager: &mut FailManager,
 ) -> Result<Vec<CtxSaver>, Error>
 where
     SetOpt<Set>: Opt,
@@ -155,6 +179,10 @@ where
             Ok(index) => {
                 if let Some(index) = index {
                     let mat = proc.get_match(index).unwrap(); // always true
+                    let fail = |e: &Error| {
+                        manager.push(e.clone());
+                        Ok(())
+                    };
 
                     ctx.set_inner_ctx(Some(
                         InnerCtx::default()
@@ -166,10 +194,11 @@ where
                             .with_uid(uid), // current uid == uid in matcher
                     ));
 
-                    let ret = invoke_callback_opt(uid, ctx, set, inv, ser)?;
-
-                    // return false means NOA not match
-                    if !ret {
+                    if !process_callback_ret(
+                        invoke_callback_opt(uid, ctx, set, inv, ser),
+                        |_| Ok(()),
+                        fail,
+                    )? {
                         proc.undo(set)?;
                     }
                     proc.reset();
@@ -178,6 +207,8 @@ where
             Err(e) => {
                 if !e.is_failure() {
                     return Err(e);
+                } else {
+                    manager.push(e);
                 }
             }
         }

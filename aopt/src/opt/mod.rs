@@ -205,8 +205,7 @@ impl<T> DerefMut for Main<T> {
     }
 }
 
-/// Simple option type wrapper, implemented
-/// [`Infer`](crate::value::Infer) and [`InferValueMut`](crate::value::InferValueMut).
+/// Simple option type wrapper, implemented [`Infer`](crate::value::Infer).
 /// It works with the types are implemented [`RawValParser`](crate::value::RawValParser).
 ///
 /// # Example
@@ -267,8 +266,7 @@ impl<T> DerefMut for MutOpt<T> {
     }
 }
 
-/// Simple option type wrapper, implemented
-/// [`Infer`](crate::value::Infer) and [`InferValueRef`](crate::value::InferValueRef).
+/// Simple option type wrapper, implemented [`Infer`](crate::value::Infer).
 /// It works with the types are implemented [`RawValParser`](crate::value::RawValParser).
 ///
 /// # Example
@@ -300,12 +298,6 @@ impl<T> DerefMut for MutOpt<T> {
 /// parser.parse(ARef::new(Args::from_array(["app", "-e=foo"])))?;
 ///
 /// // Get the value through value type `Name`
-/// // When using `cote-derive` crate, struct can support reference member such as:
-/// // #[derive(Debug, Cote)]
-/// // pub struct Example<'b> {
-/// //    #[arg(alias = "-e", refopt)]
-/// //    name: RefOpt<'b, Name>,
-/// // }
 /// assert_eq!(parser.find_val::<Name>("-e")?, &Name("foo".to_owned()));
 ///
 /// #    Ok(())
@@ -324,7 +316,7 @@ impl<'a, T> Deref for RefOpt<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        self.0
     }
 }
 
