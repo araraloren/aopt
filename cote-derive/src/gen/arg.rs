@@ -381,11 +381,9 @@ impl<'a> ArgGenerator<'a> {
             }
         }
         let force_setting = if self.configs.has_cfg(ArgKind::Force) {
-            quote!{
-
-            }
+            quote! {}
         } else {
-            quote!{
+            quote! {
                 config.set_force(false);
             }
         };
