@@ -16,7 +16,7 @@ fn main() -> color_eyre::Result<()> {
     let mut parser = ADelayParser::default();
 
     parser
-        .add_opt("directory=p@1")?
+        .add_opt("directory=p!@1")?
         .set_help("The target directory will be search")
         .on(|_: &mut ASet, _: &mut ASer, dir: ctx::Value<String>| {
             if !dir.is_empty() {

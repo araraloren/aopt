@@ -5,6 +5,12 @@ members = [
     "aopt-help",
     "cote",
     "cote-derive",
+    "index-constituent",
     "simple-find-file",
     "snowball-follow",
 ]
+
+[patch.crates-io]
+cote = {path = "cote"}
+aopt = { path = "aopt" }
+cote-derive = { path = "cote-derive" }

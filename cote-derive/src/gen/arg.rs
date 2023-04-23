@@ -81,7 +81,7 @@ impl<'a> ArgGenerator<'a> {
                 let name = if is_position {
                     ident
                 } else if ident.chars().count() >= 2 {
-                    format!("--{}", ident)
+                    format!("--{}", ident.replace("_", "-"))
                 } else {
                     format!("-{}", ident)
                 };
