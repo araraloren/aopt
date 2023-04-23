@@ -268,8 +268,6 @@ pub mod prelude {
     pub use crate::opt::Serde;
     pub use crate::opt::StrParser;
     pub use crate::opt::Style;
-    pub use crate::value::InferValueMut;
-    pub use crate::value::InferValueRef;
     // pub use crate::parser::BoxedPolicy;
     pub use crate::ctx::HandlerCollection;
     pub use crate::parser::DefaultSetChecker;
