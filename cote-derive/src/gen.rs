@@ -816,20 +816,20 @@ pub fn gen_ty_without_option(ty: &Type) -> syn::Result<Type> {
     }
 }
 
-pub fn is_option_ty(ty: &Type) -> bool {
-    if let Type::Path(path) = ty {
-        if let Some(segment) = path.path.segments.last() {
-            let ident_str = segment.ident.to_string();
+// pub fn is_option_ty(ty: &Type) -> bool {
+//     if let Type::Path(path) = ty {
+//         if let Some(segment) = path.path.segments.last() {
+//             let ident_str = segment.ident.to_string();
 
-            if ident_str == "Option" {
-                if let PathArguments::AngleBracketed(_) = &segment.arguments {
-                    return true;
-                }
-            }
-        }
-    }
-    false
-}
+//             if ident_str == "Option" {
+//                 if let PathArguments::AngleBracketed(_) = &segment.arguments {
+//                     return true;
+//                 }
+//             }
+//         }
+//     }
+//     false
+// }
 
 pub fn gen_subapp_without_option(ty: &Type) -> syn::Result<&Ident> {
     if let Type::Path(path) = ty {

@@ -32,10 +32,6 @@ pub enum ArgKind {
 
     Then,
 
-    Ref,
-
-    Mut,
-
     NoDelay,
 
     RawCall(String),
@@ -61,8 +57,6 @@ impl Kind for ArgKind {
             "on" => (Self::On, true),
             "fallback" => (Self::Fallback, true),
             "then" => (Self::Then, true),
-            "refopt" => (Self::Ref, false),
-            "mutopt" => (Self::Mut, false),
             "nodelay" => (Self::NoDelay, false),
             call => (Self::RawCall(call.to_owned()), true),
         })

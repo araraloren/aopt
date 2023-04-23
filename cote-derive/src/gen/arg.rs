@@ -5,7 +5,9 @@ use quote::quote;
 use quote::ToTokens;
 use syn::spanned::Spanned;
 use syn::Field;
+use syn::GenericArgument;
 use syn::Lit;
+use syn::PathArguments;
 use syn::Type;
 
 use crate::config;
@@ -16,7 +18,6 @@ use super::check_in_path;
 use super::filter_comment_doc;
 use super::gen_option_ident;
 use super::gen_option_uid_ident;
-use super::is_option_ty;
 use super::OptUpdate;
 use super::CONFIG_ARG;
 use super::CONFIG_CMD;
@@ -37,6 +38,8 @@ pub struct ArgGenerator<'a> {
     pos_id: Option<usize>,
 
     cfg_name: &'static str,
+
+    type_hint: TypeHint<'a>,
 }
 
 impl<'a> ArgGenerator<'a> {
@@ -48,6 +51,7 @@ impl<'a> ArgGenerator<'a> {
         let cfg_name = config::find_cfg_name(&[CONFIG_ARG, CONFIG_POS, CONFIG_CMD], attrs)
             .unwrap_or(CONFIG_ARG);
         let configs = Configs::parse_attrs(cfg_name, attrs);
+        let type_hint = TypeHint::new(field_ty);
         let is_pos_ty = check_in_path(field_ty, "Pos")?;
         let is_cmd_ty = check_in_path(field_ty, "Cmd")?;
         let is_main_ty = check_in_path(field_ty, "Main")?;
@@ -100,6 +104,7 @@ impl<'a> ArgGenerator<'a> {
             docs,
             pos_id,
             cfg_name,
+            type_hint,
         })
     }
 
@@ -124,30 +129,35 @@ impl<'a> ArgGenerator<'a> {
     }
 
     pub fn gen_value_extract(&self) -> syn::Result<(bool, TokenStream)> {
-        let is_refopt = self.configs.find_cfg(ArgKind::Ref).is_some();
-        let is_mutopt = self.configs.find_cfg(ArgKind::Mut).is_some();
         let ident = self.ident;
         let name = &self.name;
+        let hint = self.type_hint;
 
-        if is_refopt && is_mutopt {
-            abort! {
-                ident,
-                "can not set both mut and ref on arg"
-            }
-        } else if is_refopt {
-            Ok((
-                true,
-                quote! {
-                    #ident: aopt::prelude::InferValueRef::infer_fetch(#name, set)?,
-                },
-            ))
-        } else {
-            Ok((
+        match hint {
+            TypeHint::Opt(_) => Ok((
                 false,
                 quote! {
-                    #ident: aopt::prelude::InferValueMut::infer_fetch(#name, set)?,
+                    #ident: cote::value::InferValueMut::infer_fetch(#name, set).ok(),
                 },
-            ))
+            )),
+            TypeHint::Vec(_) => Ok((
+                false,
+                quote! {
+                    #ident: cote::value::InferValueMut::infer_fetch_vec(#name, set)?,
+                },
+            )),
+            TypeHint::OptVec(_) => Ok((
+                false,
+                quote! {
+                    #ident: cote::value::InferValueMut::infer_fetch_vec(#name, set).ok(),
+                },
+            )),
+            TypeHint::Null => Ok((
+                false,
+                quote! {
+                    #ident: cote::value::InferValueMut::infer_fetch(#name, set)?,
+                },
+            )),
         }
     }
 
@@ -219,7 +229,7 @@ impl<'a> ArgGenerator<'a> {
 
     pub fn gen_option_config_new(&self, ident: &Ident) -> syn::Result<TokenStream> {
         let ty = &self.field_ty;
-        let is_option = is_option_ty(self.field_ty);
+        let type_hint = self.type_hint;
         let name = &self.name;
         let mut codes = vec![];
         let mut value = None;
@@ -370,6 +380,16 @@ impl<'a> ArgGenerator<'a> {
                 }
             }
         }
+        let force_setting = if self.configs.has_cfg(ArgKind::Force) {
+            quote!{
+
+            }
+        } else {
+            quote!{
+                config.set_force(false);
+            }
+        };
+
         if let Some(cfg) = self.configs.find_cfg(ArgKind::Type) {
             let spec_ty = cfg.value();
 
@@ -380,39 +400,97 @@ impl<'a> ArgGenerator<'a> {
         } else {
             match self.cfg_name {
                 CONFIG_CMD => {
-                    codes.push(if is_option {
+                    codes.push(if !type_hint.is_null() {
                         abort! {
                             ty,
-                            "Cmd always force required, please remove Option from type"
+                            "Cmd always force required, please remove Option or Vec from type"
                         }
                     } else {
                         quote! {
                             <aopt::opt::Cmd as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
                             config.set_type::<#ty>();
+                            config.set_action(aopt::prelude::Action::Set);
                             config
                         }
                     });
                 }
                 CONFIG_POS => {
-                    codes.push(if is_option {
-                        quote! {
-                            <Option<aopt::opt::Pos<#ty>> as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
-                            config.set_type::<#ty>();
-                            config
-                        }
-                    } else {
-                        quote! {
-                            <aopt::opt::Pos<#ty> as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
-                            config.set_type::<#ty>();
-                            config
-                        }
+                    codes.push(match type_hint {
+                        TypeHint::Opt(inner_ty) => {
+                            quote! {
+                                // using information of Pos<T>
+                                <aopt::opt::Pos<#inner_ty> as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
+                                config.set_type::<#inner_ty>();
+                                #force_setting
+                                config.set_action(aopt::prelude::Action::Set);
+                                config
+                            }
+                        },
+                        TypeHint::Vec(inner_ty) => {
+                            quote! {
+                                // using information of Pos<T>
+                                <aopt::opt::Pos<#inner_ty> as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
+                                config.set_type::<#inner_ty>();
+                                config.set_action(aopt::prelude::Action::App);
+                                config
+                            }
+                        },
+                        TypeHint::OptVec(inner_ty) => {
+                            quote! {
+                                // using information of Pos<T>
+                                <aopt::opt::Pos<#inner_ty> as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
+                                config.set_type::<#inner_ty>();
+                                #force_setting
+                                config.set_action(aopt::prelude::Action::App);
+                                config
+                            }
+                        },
+                        TypeHint::Null => {
+                            quote! {
+                                // using information of Pos<T>
+                                <aopt::opt::Pos<#ty> as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
+                                config.set_type::<#ty>();
+                                config.set_action(aopt::prelude::Action::Set);
+                                config
+                            }
+                        },
                     });
                 }
                 _ => {
-                    codes.push(quote! {
-                        <#ty as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
-                        config
-                    });
+                    codes.push(
+                        match type_hint {
+                            TypeHint::Opt(inner_ty) => {
+                                quote! {
+                                    <#inner_ty as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
+                                    #force_setting
+                                    config.set_action(aopt::prelude::Action::Set);
+                                    config
+                                }
+                            },
+                            TypeHint::Vec(inner_ty) => {
+                                quote! {
+                                    <#inner_ty as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
+                                    config.set_action(aopt::prelude::Action::App);
+                                    config
+                                }
+                            },
+                            TypeHint::OptVec(inner_ty) => {
+                                quote! {
+                                    <#inner_ty as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
+                                    #force_setting
+                                    config.set_action(aopt::prelude::Action::App);
+                                    config
+                                }
+                            },
+                            TypeHint::Null => {
+                                quote! {
+                                    <#ty as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
+                                    config.set_action(aopt::prelude::Action::Set);
+                                    config
+                                }
+                            },
+                        }
+                        );
                 }
             }
         }
@@ -424,4 +502,51 @@ impl<'a> ArgGenerator<'a> {
             };
         })
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum TypeHint<'a> {
+    Opt(&'a Type),
+
+    Vec(&'a Type),
+
+    OptVec(&'a Type),
+
+    Null,
+}
+
+impl<'a> TypeHint<'a> {
+    pub fn new(ty: &'a Type) -> Self {
+        match check_segment_ty(ty, "Option") {
+            (true, inner_ty) => match check_segment_ty(inner_ty, "Vec") {
+                (true, inner_ty) => Self::OptVec(inner_ty),
+                (false, inner_ty) => Self::Opt(inner_ty),
+            },
+            (false, inner_ty) => match check_segment_ty(inner_ty, "Vec") {
+                (true, inner_ty) => Self::Vec(inner_ty),
+                (false, _) => Self::Null,
+            },
+        }
+    }
+
+    pub fn is_null(&self) -> bool {
+        matches!(self, Self::Null)
+    }
+}
+
+pub fn check_segment_ty<'a>(ty: &'a Type, name: &str) -> (bool, &'a Type) {
+    if let Type::Path(path) = ty {
+        if let Some(segment) = path.path.segments.last() {
+            let ident_str = segment.ident.to_string();
+
+            if ident_str == name {
+                if let PathArguments::AngleBracketed(ab) = &segment.arguments {
+                    if let Some(GenericArgument::Type(next_ty)) = ab.args.first().as_ref() {
+                        return (true, next_ty);
+                    }
+                }
+            }
+        }
+    }
+    (false, ty)
 }
