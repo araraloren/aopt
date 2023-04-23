@@ -2,7 +2,7 @@
 pub mod _reference;
 pub mod meta;
 pub mod valid;
-pub mod wrap;
+pub mod value;
 
 use std::borrow::Cow;
 use std::fmt::Debug;
@@ -33,6 +33,8 @@ pub mod prelude {
     pub use crate::meta::OptionMeta;
     pub use crate::simple_display_set_help;
     pub use crate::valid;
+    pub use crate::value;
+    pub use crate::value::InferValueMut;
     pub use crate::CoteApp;
     pub use crate::ExtractFromSetDerive;
     pub use crate::HelpDisplayCtx;
@@ -1066,7 +1068,7 @@ mod test {
 
             /// Specify path to copy
             #[arg(index = "2..")]
-            sources: Pos<Vec<PathBuf>>,
+            sources: Vec<Pos<PathBuf>>,
         }
 
         let example = CopyTool::parse(Args::from_array(["app", "--force"]));
@@ -1082,11 +1084,11 @@ mod test {
         assert_eq!(example.recursive, false);
         assert_eq!(example.destination.0, String::from("."));
         assert_eq!(
-            example.sources.0,
+            example.sources,
             ["../foo", "../bar/", "other"]
                 .into_iter()
-                .map(|v| PathBuf::from(v))
-                .collect::<Vec<PathBuf>>()
+                .map(|v| Pos::new(PathBuf::from(v)))
+                .collect::<Vec<_>>()
         );
     }
 
@@ -1120,7 +1122,7 @@ mod test {
             size: Option<usize>,
 
             #[arg(index = "1", help = "Search starting point", fallback = search::<P>, then = VecStore)]
-            destination: Pos<Vec<String>>,
+            destination: Vec<Pos<String>>,
         }
 
         fn search<P: Policy>(
@@ -1148,11 +1150,11 @@ mod test {
             assert_eq!(tool.name, Some("foo".to_owned()));
             assert_eq!(tool.size, Some(42));
             assert_eq!(
-                tool.destination.0,
+                tool.destination,
                 ["file1", "file2", "dir1", "dir2"]
                     .into_iter()
-                    .map(|v| v.to_string())
-                    .collect::<Vec<String>>()
+                    .map(|v| Pos::new(v.to_string()))
+                    .collect::<Vec<_>>()
             );
 
             Ok(Some(()))

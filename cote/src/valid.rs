@@ -167,7 +167,7 @@ where
 /// #[derive(Debug, Cote, PartialEq, Eq)]
 /// #[cote(help)]
 /// pub struct Cli {
-///     #[arg(alias = "v", valid = valid!(42))]
+///     #[arg(alias = "-v", valid = valid!(42))]
 ///     value: u64,
 /// }
 ///

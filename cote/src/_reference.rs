@@ -27,7 +27,7 @@
 //!     2. [Configurating name and alias](#configurating-name-and-alias)
 //!     3. [Configurating help message](#configurating-help-message)
 //!     4. [Optional Sub commands](#optional-sub-commands)
-//! 6. [How it works]
+//! 6. [How it works](#how-it-works)
 //!
 //! ## Quick Start
 //!
@@ -903,7 +903,7 @@
 //! Using with `on` and `fallback`, do nothing without `on` and `fallback`.
 //! It will responded for saving the raw value and value.
 //!
-//! ```rust
+//! ```no_run
 //! use std::{fmt::Debug, ops::Deref};
 //! use cote::prelude::*;
 //!
@@ -943,7 +943,7 @@
 //! fn main() -> color_eyre::Result<()> {
 //!     color_eyre::install()?;
 //!
-//!     //! unwrap the failure of return value
+//!     // unwrap the failure of return value
 //!     Cli::parse_env_args()?.ret.unwrap();
 //!
 //!     Ok(())
@@ -1206,7 +1206,7 @@
 //!
 //! Using `sub` attribute define sub command.
 //!
-//! ```rust
+//! ```no_run
 //! use cote::prelude::*;
 //!
 //! #[derive(Debug, Cote, PartialEq, Eq)]
@@ -1325,7 +1325,7 @@
 //! The name and alias will affect how to set the sub command and help message of sub command.
 //! With follow change:
 //!
-//! ```no_run
+//! ```ignore
 //! #[derive(Debug, Cote, PartialEq, Eq)]
 //! #[cote(help, aborthelp)]
 //! pub struct Cli {
@@ -1364,7 +1364,7 @@
 //! Using `hint`, `help`, `head`, `foot` you can configure the help message of sub commands.
 //! Just like those configures how work in `cote` attribute, they can tweak the help message of sub commands.
 //!
-//! ```no_run
+//! ```ignore
 //! #[derive(Debug, Cote, PartialEq, Eq)]
 //! #[cote(help, aborthelp)]
 //! pub struct Cli {
@@ -1420,7 +1420,7 @@
 //! Cote will raised an error if no sub command set.
 //! Using `force` make all sub commands optional avoid this error.
 //!
-//! ```no_run
+//! ```ignore
 //! #[derive(Debug, Cote, PartialEq, Eq)]
 //! #[cote(help, aborthelp)]
 //! pub struct Sport {
@@ -1441,24 +1441,36 @@
 //!
 //! ```
 //!
-//! ## [How it works]
+//! ## How it works
 //!
 //! Implement follow traits, you can using the type in the struct filed.
+//! 
+//! dsadasdadasdad
 //!
 //! - [`Infer`](aopt::prelude::Infer)
 //!
 //! `Cote` using [`infer_fill_info`](aopt::prelude::Infer::infer_fill_info) inference the default settings of
 //! given type.
+//! 
+//! - [`InferValueMut`](crate::prelude::InferValueMut)
 //!
-//! - [`InferValueMut`](aopt::prelude::InferValueMut)
-//!
-//! `Cote` using [`infer_fetch`](aopt::prelude::InferValueMut::infer_fetch) fetch the value from [`Set`](aopt::set::Set).
+//! `Cote` using [`infer_fetch`](crate::prelude::InferValueMut::infer_fetch) fetch the value from [`Set`](aopt::set::Set).
 //!
 //! - [`RawValParser`](aopt::prelude::RawValParser)
 //!
 //! `Cote` using [`parse`](aopt::prelude::RawValParser::parse) parsing the value from command line arguments.
+//! 
+//! - Modify action or optional using Option or Vec
+//! 
+//!| type | action | optional |
+//!|------|--------|----------|
+//!| `T` | [`Action::Set`](aopt::prelude::Action::Set) | [`Default force of T`](aopt::prelude::Infer#method.infer_force) |
+//!| `Option<T>` | [`Action::Set`](aopt::prelude::Action::Set) | `false` |
+//!| `Vec<T>` | [`Action::App`](aopt::prelude::Action::App) | [`Default force of T`](aopt::prelude::Infer#method.infer_force) |
+//!| `Option<Vec<T>>` | [`Action::App`](aopt::prelude::Action::App) | `false` |
+//!| `Pos<T>` | [`Action::Set`](aopt::prelude::Action::Set) | [`Default force of Pos<T>`](aopt::prelude::Pos#method.infer_force) |
 //!
-//! # Example
+//! ### Example
 //!
 //! The type `Speed` base on the type `i32` which already implemented [`RawValParser`](aopt::prelude::RawValParser).
 //!
@@ -1491,9 +1503,122 @@
 //! fn main() -> color_eyre::Result<()> {
 //!     color_eyre::install()?;
 //!
-//!     let cli = Cli::parse_env()?;
+//!     let cli = Cli::parse(Args::from_array(["app", "--speed", "65"]))?;
 //!
-//!     println!("Set the speed to {} km/h", cli.speed.0);
+//!     assert_eq!(cli.speed.0, 65);
+//!
+//!     Ok(())
+//! }
+//! ```
+//! 
+//! ### Example
+//! 
+//! ```rust
+//! use cote::{aopt::value::raw2str, prelude::*};
+//! #[derive(Debug, Cote, PartialEq, Eq)]
+//! #[cote(help, aborthelp)]
+//! pub struct Cli {
+//!     #[arg(alias = "-s")]
+//!     speed: Speed,
+//!
+//!     #[arg(alias = "-d")]
+//!     direction: Direction,
+//!
+//!     #[pos()]
+//!     way: Way,
+//! }
+//!
+//! #[derive(Debug, PartialEq, Eq)]
+//! pub struct Speed(i32);
+//!
+//! impl Infer for Speed {
+//!     type Val = i32;
+//! }
+//!
+//! impl<'a> InferValueMut<'a> for Speed {
+//!     fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
+//!     where
+//!         Self: Sized,
+//!     {
+//!         Ok(Speed(set.take_val(name)?))
+//!     }
+//! }
+//!
+//! #[derive(Debug, PartialEq, Eq)]
+//! pub enum Direction {
+//!     Up,
+//!     Down,
+//!     Left,
+//!     Right,
+//! }
+//!
+//! impl Infer for Direction {
+//!     type Val = Direction;
+//! }
+//!
+//! impl<'a> InferValueMut<'a> for Direction {
+//!     fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
+//!     where
+//!         Self: Sized,
+//!     {
+//!         Ok(set.take_val(name)?)
+//!     }
+//! }
+//!
+//! impl RawValParser for Direction {
+//!     type Error = aopt::Error;
+//!
+//!     fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error> {
+//!         let name = raw2str(raw)?.to_lowercase();
+//!         let uid = ctx.uid()?;
+//!
+//!         match name.as_str() {
+//!             "up" => Ok(Direction::Up),
+//!             "down" => Ok(Direction::Down),
+//!             "left" => Ok(Direction::Left),
+//!             "right" => Ok(Direction::Right),
+//!             _ => Err(aopt::raise_failure!("Unknow value for Direction: {}", name).with_uid(uid)),
+//!         }
+//!     }
+//! }
+//!
+//! #[derive(Debug, PartialEq, Eq)]
+//! pub enum Way {
+//!     Walk,
+//!     Bike,
+//!     Roll,
+//! }
+//!
+//! impl Infer for Way {
+//!     type Val = Way;
+//! }
+//!
+//! cote::cote_value_mut_impl!(Way);
+//!
+//! impl RawValParser for Way {
+//!     type Error = aopt::Error;
+//!
+//!     fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error> {
+//!         let name = raw2str(raw)?.to_lowercase();
+//!         let uid = ctx.uid()?;
+//!
+//!         match name.as_str() {
+//!             "walk" => Ok(Way::Walk),
+//!             "bike" => Ok(Way::Bike),
+//!             "roll" => Ok(Way::Roll),
+//!             _ => Err(aopt::raise_failure!("Unknow value for Way: {}", name).with_uid(uid)),
+//!         }
+//!     }
+//! }
+//!
+//! fn main() -> color_eyre::Result<()> {
+//!     color_eyre::install()?;
+//!
+//!     let cli = Cli::parse(Args::from_array(["app", "-s", "40", "-d=Left", "bike"]))?;
+//!
+//!     assert_eq!(cli.speed.0, 40);
+//!     assert_eq!(cli.direction, Direction::Left);
+//!     assert_eq!(cli.way, Way::Bike);
 //!
 //!     Ok(())
 //! }

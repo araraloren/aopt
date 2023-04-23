@@ -59,8 +59,8 @@ fn main() -> Result<(), Error> {
         from: Pos<String>,
 
         /// A positon option collect argument start from 2
-        #[arg(index = "2..")]
-        to: Pos<Vec<String>>,
+        #[pos(index = "2..")]
+        to: Vec<String>,
     }
     let cli = Cli::parse(Args::from_array(["app", "-nLily", "src", "foo", "bar"]))?;
 
@@ -68,7 +68,7 @@ fn main() -> Result<(), Error> {
     assert_eq!(cli.name, String::from("Lily"));
     assert_eq!(cli.nick, None);
     assert_eq!(cli.from, Pos(String::from("src")));
-    assert_eq!(cli.to, Pos(vec![String::from("foo"), String::from("bar")]));
+    assert_eq!(cli.to, vec![String::from("foo"), String::from("bar")]);
 
     let cli = Cli::parse(Args::from_array(["app", "--name", "Lily", "src", "foo", "bar"]))?;
 
@@ -76,7 +76,7 @@ fn main() -> Result<(), Error> {
     assert_eq!(cli.name, String::from("Lily"));
     assert_eq!(cli.nick, None);
     assert_eq!(cli.from, Pos(String::from("src")));
-    assert_eq!(cli.to, Pos(vec![String::from("foo"), String::from("bar")]));
+    assert_eq!(cli.to, vec![String::from("foo"), String::from("bar")]);
 
     assert!(Cli::parse(Args::from_array(["app", "--nick", "Lily", "src", "foo", "bar"])).is_err());
 
