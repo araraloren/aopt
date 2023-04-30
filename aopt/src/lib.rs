@@ -62,16 +62,16 @@ pub struct GetoptRes<R, T> {
     pub parser: T,
 }
 
-/// Parse the string sequence with given [`Parser`](crate::parser::Parser).
+/// Parse the string sequence with given [`PolicyParser`](crate::parser::PolicyParser).
 ///
 /// # Returns
 ///
 /// For style `getopt!(..., &mut parser1, &mut parser2)`,
-/// will return an Ok([`GetoptRes`]\(T is the type of matched [`Parser`](crate::parser::Parser)\)) if any [`Parser`](crate::parser::Parser) parsing successed.
+/// will return an Ok([`GetoptRes`]\(T is the type of matched [`PolicyParser`](crate::parser::PolicyParser)\)) if any [`PolicyParser`](crate::parser::PolicyParser) parsing successed.
 /// For style `getopt!(..., "first" => &mut parser1, "second" => &mut parser2)`,
-/// will return an Ok([`GetoptRes`]\(T is the literal type\)) if any [`Parser`](crate::parser::Parser) parsing successed.
+/// will return an Ok([`GetoptRes`]\(T is the literal type\)) if any [`PolicyParser`](crate::parser::PolicyParser) parsing successed.
 ///
-/// Will return Err([`Error::default()`]) if all [`Parser`](crate::parser::Parser) parsing failed, otherwise return Err(_).
+/// Will return Err([`Error::default()`]) if all [`PolicyParser`](crate::parser::PolicyParser) parsing failed, otherwise return Err(_).
 /// # Example
 ///
 /// ```rust
@@ -156,7 +156,7 @@ macro_rules! getopt {
     ($args:expr, $(&mut $parser_left:path),+) => {
         {
             fn __check_p<'a, 'b, P: $crate::prelude::Policy<Error = $crate::Error>>
-                (p: &'b mut $crate::prelude::Parser<'a, P>) -> &'b mut $crate::prelude::Parser<'a, P>
+                (p: &'b mut $crate::prelude::PolicyParser<'a, P>) -> &'b mut $crate::prelude::PolicyParser<'a, P>
                 { p }
             fn __check_a(a: $crate::prelude::Args) -> $crate::prelude::Args { a }
 
@@ -195,7 +195,7 @@ macro_rules! getopt {
     ($args:expr, $($parser_name:literal => &mut $parser_left:path),+) => {
         {
             fn __check_p<'a, 'b, P: $crate::prelude::Policy<Error = $crate::Error>>
-                (p: &'b mut $crate::prelude::Parser<'a, P>) -> &'b mut $crate::prelude::Parser<'a, P>
+                (p: &'b mut $crate::prelude::PolicyParser<'a, P>) -> &'b mut $crate::prelude::PolicyParser<'a, P>
                 { p }
             fn __check_a(a: $crate::prelude::Args) -> $crate::prelude::Args { a }
 
@@ -274,7 +274,7 @@ pub mod prelude {
     pub use crate::parser::DelayPolicy;
     pub use crate::parser::FwdPolicy;
     pub use crate::parser::OptStyleManager;
-    pub use crate::parser::Parser;
+    pub use crate::parser::PolicyParser;
     pub use crate::parser::ParserCommit;
     pub use crate::parser::ParserCommitWithValue;
     pub use crate::parser::Policy;

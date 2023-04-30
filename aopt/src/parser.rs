@@ -139,7 +139,7 @@ pub trait PolicySettings {
     fn set_no_delay(&mut self, name: impl Into<Str>) -> &mut Self;
 }
 
-/// Parser manage the components are using in [`parse`](Policy::parse) of [`Policy`].
+/// PolicyParser manage the components are using in [`parse`](Policy::parse) of [`Policy`].
 ///
 /// # Example
 ///
@@ -150,12 +150,12 @@ pub trait PolicySettings {
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<(), Error> {
-/// let mut parser1 = Parser::new(AFwdPolicy::default());
+/// let mut parser1 = PolicyParser::new(AFwdPolicy::default());
 ///
 /// parser1.add_opt("Where=c")?;
 /// parser1.add_opt("question=m")?.on(question)?;
 ///
-/// let mut parser2 = Parser::new(AFwdPolicy::default());
+/// let mut parser2 = PolicyParser::new(AFwdPolicy::default());
 ///
 /// parser2.add_opt("Who=c")?;
 /// parser2.add_opt("question=m")?.on(question)?;
@@ -182,7 +182,7 @@ pub trait PolicySettings {
 /// assert_eq!(
 ///     parser[0].name(),
 ///     "Where",
-///     "Parser with `Where` cmd matched"
+///     "PolicyParser with `Where` cmd matched"
 /// );
 /// #
 /// # Ok(())
@@ -190,16 +190,16 @@ pub trait PolicySettings {
 /// ```
 ///
 /// Using it with macro [`getopt`](crate::getopt),
-/// which can process multiple [`Parser`] with same type [`Policy`].
+/// which can process multiple [`PolicyParser`] with same type [`Policy`].
 #[derive(Debug)]
-pub struct Parser<'a, P: Policy> {
+pub struct PolicyParser<'a, P: Policy> {
     policy: P,
     optset: P::Set,
     invoker: P::Inv<'a>,
     appser: P::Ser,
 }
 
-impl<'a, P: Policy> Default for Parser<'a, P>
+impl<'a, P: Policy> Default for PolicyParser<'a, P>
 where
     P::Set: Default,
     P::Inv<'a>: Default,
@@ -217,7 +217,7 @@ where
     }
 }
 
-impl<'a, P: Policy> Deref for Parser<'a, P> {
+impl<'a, P: Policy> Deref for PolicyParser<'a, P> {
     type Target = P::Set;
 
     fn deref(&self) -> &Self::Target {
@@ -225,13 +225,13 @@ impl<'a, P: Policy> Deref for Parser<'a, P> {
     }
 }
 
-impl<'a, P: Policy> DerefMut for Parser<'a, P> {
+impl<'a, P: Policy> DerefMut for PolicyParser<'a, P> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.optset
     }
 }
 
-impl<'a, P> Parser<'a, P>
+impl<'a, P> PolicyParser<'a, P>
 where
     P: Policy + APolicyExt<P>,
 {
@@ -249,7 +249,7 @@ where
     }
 }
 
-impl<'a, P: Policy> Parser<'a, P> {
+impl<'a, P: Policy> PolicyParser<'a, P> {
     pub fn new_with(policy: P, optset: P::Set, invoker: P::Inv<'a>, valser: P::Ser) -> Self {
         Self {
             optset,
@@ -312,7 +312,7 @@ impl<'a, P: Policy> Parser<'a, P> {
     }
 }
 
-impl<'a, P> Parser<'a, P>
+impl<'a, P> PolicyParser<'a, P>
 where
     P::Set: Set,
     P::Ser: ServicesValExt,
@@ -348,7 +348,7 @@ where
     /// #[derive(Debug)]
     /// struct Int(i64);
     ///
-    /// let mut parser = Parser::new(AFwdPolicy::default());
+    /// let mut parser = PolicyParser::new(AFwdPolicy::default());
     ///
     /// // Register a value can access in handler parameter.
     /// parser.set_app_data(ser::Value::new(Int(42)))?;
@@ -383,7 +383,7 @@ where
     /// #[derive(Debug)]
     /// struct Int(i64);
     ///
-    /// let mut parser = Parser::new(AFwdPolicy::default());
+    /// let mut parser = PolicyParser::new(AFwdPolicy::default());
     ///
     /// // Register a value can access in handler parameter.
     /// parser.set_app_data(Int(42))?;
@@ -412,7 +412,7 @@ where
     }
 }
 
-impl<'a, P> Parser<'a, P>
+impl<'a, P> PolicyParser<'a, P>
 where
     P::Set: Set,
     P: Policy,
@@ -428,7 +428,7 @@ where
     }
 }
 
-impl<'a, P> Parser<'a, P>
+impl<'a, P> PolicyParser<'a, P>
 where
     P::Set: Set,
     P: Policy,
@@ -442,7 +442,7 @@ where
         self.policy.parse(optset, invser, valser, args)
     }
 
-    /// Call [`parse`](Parser::parse) parsing the [`Args`](Args::from_env).
+    /// Call [`parse`](PolicyParser::parse) parsing the [`Args`](Args::from_env).
     ///
     /// The [`status`](ReturnVal::status) is true if parsing successes
     /// otherwise it will be false if any [`failure`](Error::is_failure) raised.
@@ -456,7 +456,7 @@ where
     }
 }
 
-impl<'a, P> Parser<'a, P>
+impl<'a, P> PolicyParser<'a, P>
 where
     P: Policy,
     SetOpt<P::Set>: Opt,
@@ -481,7 +481,7 @@ where
     /// # use std::ops::Deref;
     /// #
     /// # fn main() -> Result<(), Error> {
-    /// let mut parser1 = Parser::new(AFwdPolicy::default());
+    /// let mut parser1 = PolicyParser::new(AFwdPolicy::default());
     ///
     /// // Add an option `--count` with type `i`.
     /// parser1.add_opt("--count=i")?;
@@ -653,7 +653,7 @@ where
     }
 }
 
-impl<'a, P> Parser<'a, P>
+impl<'a, P> PolicyParser<'a, P>
 where
     P::Set: Set,
     P: Policy,
@@ -688,7 +688,7 @@ where
     }
 }
 
-impl<'a, P> PolicySettings for Parser<'a, P>
+impl<'a, P> PolicySettings for PolicyParser<'a, P>
 where
     P: Policy + PolicySettings,
 {
@@ -728,7 +728,7 @@ where
     }
 }
 
-impl<'a, P> Parser<'a, P>
+impl<'a, P> PolicyParser<'a, P>
 where
     P: Policy + PolicySettings,
 {

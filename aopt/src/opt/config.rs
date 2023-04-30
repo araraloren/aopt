@@ -15,11 +15,11 @@ use crate::Str;
 use super::Style;
 
 pub trait Config {
-    fn new<Parser>(parser: &Parser, pattern: Str) -> Result<Self, Error>
+    fn new<PolicyParser>(parser: &PolicyParser, pattern: Str) -> Result<Self, Error>
     where
         Self: Sized,
-        Parser: OptParser,
-        Parser::Output: Information;
+        PolicyParser: OptParser,
+        PolicyParser::Output: Information;
 }
 
 pub trait ConfigValue {
@@ -322,11 +322,11 @@ impl OptConfig {
 }
 
 impl Config for OptConfig {
-    fn new<Parser>(parser: &Parser, pattern: Str) -> Result<Self, Error>
+    fn new<PolicyParser>(parser: &PolicyParser, pattern: Str) -> Result<Self, Error>
     where
         Self: Sized,
-        Parser: OptParser,
-        Parser::Output: Information,
+        PolicyParser: OptParser,
+        PolicyParser::Output: Information,
     {
         let mut output = parser.parse(pattern).map_err(|e| e.into())?;
         let mut ret = Self::default();

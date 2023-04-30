@@ -25,7 +25,7 @@ A flexible and typed getopt like command line framwork for rust.
 - Callback support
 
     Can set callback which will called during parsing,
-    see [`Parser`](crate::parser::Parser) and [`Invoker`](crate::ctx::Invoker).
+    see [`PolicyParser`](crate::parser::PolicyParser) and [`Invoker`](crate::ctx::Invoker).
 
 - Value support
 
