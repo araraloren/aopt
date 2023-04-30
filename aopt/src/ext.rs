@@ -7,9 +7,10 @@ use crate::opt::StrParser;
 use crate::parser::DefaultSetChecker;
 use crate::parser::DelayPolicy;
 use crate::parser::FwdPolicy;
-use crate::parser::PolicyParser;
 use crate::parser::Policy;
+use crate::parser::PolicyParser;
 use crate::parser::PrePolicy;
+use crate::prelude::Parser;
 use crate::prelude::SetChecker;
 use crate::ser::AppServices;
 use crate::set::OptSet;
@@ -38,6 +39,8 @@ pub type AFwdPolicy = FwdPolicy<ASet, ASer, DefaultSetChecker<ASet>>;
 pub type APrePolicy = PrePolicy<ASet, ASer, DefaultSetChecker<ASet>>;
 
 pub type ADelayPolicy = DelayPolicy<ASet, ASer, DefaultSetChecker<ASet>>;
+
+pub type AParser<'a> = Parser<ASet, Invoker<'a, ASet, ASer>, ASer>;
 
 pub type AFwdParser<'a> = PolicyParser<'a, AFwdPolicy>;
 

@@ -139,198 +139,115 @@ pub trait PolicySettings {
     fn set_no_delay(&mut self, name: impl Into<Str>) -> &mut Self;
 }
 
-/// PolicyParser manage the components are using in [`parse`](Policy::parse) of [`Policy`].
-///
-/// # Example
-///
-/// ```rust
-/// # use aopt::getopt;
-/// # use aopt::prelude::*;
-/// # use aopt::ARef;
-/// # use aopt::Error;
-/// #
-/// # fn main() -> Result<(), Error> {
-/// let mut parser1 = PolicyParser::new(AFwdPolicy::default());
-///
-/// parser1.add_opt("Where=c")?;
-/// parser1.add_opt("question=m")?.on(question)?;
-///
-/// let mut parser2 = PolicyParser::new(AFwdPolicy::default());
-///
-/// parser2.add_opt("Who=c")?;
-/// parser2.add_opt("question=m")?.on(question)?;
-///
-/// fn question(_: &mut ASet, _: &mut ASer, args: ctx::Args) -> Result<Option<()>, Error> {
-///     // Output: The question is: Where are you from ?
-///     println!(
-///         "The question is: {}",
-///         args.iter().skip(1)
-///             .map(|v| v.get_str().unwrap().to_owned())
-///             .collect::<Vec<String>>()
-///             .join(" ")
-///     );
-///     Ok(Some(()))
-/// }
-///
-/// let ret = getopt!(
-///     Args::from_array(["app", "Where", "are", "you", "from", "?"]),
-///     &mut parser1,
-///     &mut parser2
-/// )?;
-/// let parser = ret.parser;
-///
-/// assert_eq!(
-///     parser[0].name(),
-///     "Where",
-///     "PolicyParser with `Where` cmd matched"
-/// );
-/// #
-/// # Ok(())
-/// # }
-/// ```
-///
-/// Using it with macro [`getopt`](crate::getopt),
-/// which can process multiple [`PolicyParser`] with same type [`Policy`].
-#[derive(Debug)]
-pub struct PolicyParser<'a, P: Policy> {
-    policy: P,
-    optset: P::Set,
-    invoker: P::Inv<'a>,
-    appser: P::Ser,
+#[derive(Debug, Default)]
+pub struct Parser<Set, Inv, Ser> {
+    set: Set,
+    inv: Inv,
+    ser: Ser,
 }
 
-impl<'a, P: Policy> Default for PolicyParser<'a, P>
-where
-    P::Set: Default,
-    P::Inv<'a>: Default,
-    P::Ser: Default,
-    P: Default + Policy + APolicyExt<P>,
-{
-    fn default() -> Self {
-        let policy = P::default();
-        Self {
-            optset: policy.default_set(),
-            invoker: policy.default_inv(),
-            appser: policy.default_ser(),
-            policy,
-        }
-    }
-}
-
-impl<'a, P: Policy> Deref for PolicyParser<'a, P> {
-    type Target = P::Set;
+impl<Set, Inv, Ser> Deref for Parser<Set, Inv, Ser> {
+    type Target = Set;
 
     fn deref(&self) -> &Self::Target {
-        &self.optset
+        &self.set
     }
 }
 
-impl<'a, P: Policy> DerefMut for PolicyParser<'a, P> {
+impl<Set, Inv, Ser> DerefMut for Parser<Set, Inv, Ser> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.optset
+        &mut self.set
     }
 }
 
-impl<'a, P> PolicyParser<'a, P>
+impl<Set, Inv, Ser> Parser<Set, Inv, Ser> {
+    pub fn new(set: Set, inv: Inv, ser: Ser) -> Self {
+        Self { set, inv, ser }
+    }
+
+    pub fn new_with<'a, P>(policy: &P) -> Self
+    where
+        P: Policy<Set = Set, Inv<'a> = Inv, Ser = Ser> + APolicyExt<P>,
+    {
+        let set = policy.default_set();
+        let ser = policy.default_ser();
+        let inv = policy.default_inv();
+
+        Self::new(set, inv, ser)
+    }
+
+    pub fn invoker(&self) -> &Inv {
+        &self.inv
+    }
+
+    pub fn invoker_mut(&mut self) -> &mut Inv {
+        &mut self.inv
+    }
+
+    pub fn set_invoker(&mut self, inv: Inv) -> &mut Self {
+        self.inv = inv;
+        self
+    }
+
+    pub fn service(&self) -> &Ser {
+        &self.ser
+    }
+
+    pub fn service_mut(&mut self) -> &mut Ser {
+        &mut self.ser
+    }
+
+    pub fn set_service(&mut self, ser: Ser) -> &mut Self {
+        self.ser = ser;
+        self
+    }
+
+    pub fn optset(&self) -> &Set {
+        &self.set
+    }
+
+    pub fn optset_mut(&mut self) -> &mut Set {
+        &mut self.set
+    }
+
+    pub fn set_optset(&mut self, set: Set) -> &mut Self {
+        self.set = set;
+        self
+    }
+}
+
+impl<Set, Inv, Ser> Parser<Set, Inv, Ser>
 where
-    P: Policy + APolicyExt<P>,
-{
-    pub fn new(policy: P) -> Self {
-        let optset = policy.default_set();
-        let valser = policy.default_ser();
-        let invoker = policy.default_inv();
-
-        Self {
-            optset,
-            policy,
-            invoker,
-            appser: valser,
-        }
-    }
-}
-
-impl<'a, P: Policy> PolicyParser<'a, P> {
-    pub fn new_with(policy: P, optset: P::Set, invoker: P::Inv<'a>, valser: P::Ser) -> Self {
-        Self {
-            optset,
-            policy,
-            invoker,
-            appser: valser,
-        }
-    }
-
-    pub fn policy(&self) -> &P {
-        &self.policy
-    }
-
-    pub fn policy_mut(&mut self) -> &mut P {
-        &mut self.policy
-    }
-
-    pub fn set_policy(&mut self, policy: P) -> &mut Self {
-        self.policy = policy;
-        self
-    }
-
-    pub fn invoker(&self) -> &P::Inv<'a> {
-        &self.invoker
-    }
-
-    pub fn invoker_mut(&mut self) -> &mut P::Inv<'a> {
-        &mut self.invoker
-    }
-
-    pub fn set_invoker(&mut self, invser: P::Inv<'a>) -> &mut Self {
-        self.invoker = invser;
-        self
-    }
-
-    pub fn service(&self) -> &P::Ser {
-        &self.appser
-    }
-
-    pub fn service_mut(&mut self) -> &mut P::Ser {
-        &mut self.appser
-    }
-
-    pub fn set_service(&mut self, valser: P::Ser) -> &mut Self {
-        self.appser = valser;
-        self
-    }
-
-    pub fn optset(&self) -> &P::Set {
-        &self.optset
-    }
-
-    pub fn optset_mut(&mut self) -> &mut P::Set {
-        &mut self.optset
-    }
-
-    pub fn set_optset(&mut self, optset: P::Set) -> &mut Self {
-        self.optset = optset;
-        self
-    }
-}
-
-impl<'a, P> PolicyParser<'a, P>
-where
-    P::Set: Set,
-    P::Ser: ServicesValExt,
-    P: Policy,
+    Set: crate::set::Set,
 {
     /// Reset the option set.
     pub fn reset(&mut self) -> Result<&mut Self, Error> {
-        self.optset.reset();
+        self.set.reset();
         // ignore invoker, it is stateless
         Ok(self)
     }
 
+    /// Call the [`init`](crate::opt::Opt::init) of [`Opt`] initialize the option value.
+    pub fn init(&mut self) -> Result<(), Error> {
+        let set = &mut self.set;
+
+        for opt in set.iter_mut() {
+            opt.init()?;
+        }
+        Ok(())
+    }
+}
+
+impl<Set, Inv, Ser> Parser<Set, Inv, Ser>
+where
+    Ser: ServicesValExt,
+{
     pub fn app_data<T: ErasedTy>(&self) -> Result<&T, Error> {
-        self.appser.sve_val()
+        self.ser.sve_val()
     }
 
     pub fn app_data_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
-        self.appser.sve_val_mut()
+        self.ser.sve_val_mut()
     }
 
     /// Set the value that can access in option handler.
@@ -408,62 +325,80 @@ where
     /// # }
     ///```
     pub fn set_app_data<T: ErasedTy>(&mut self, val: T) -> Result<Option<T>, Error> {
-        Ok(self.appser.sve_insert(val))
+        Ok(self.ser.sve_insert(val))
     }
 }
 
-impl<'a, P> PolicyParser<'a, P>
+impl<Set, Inv, Ser> Parser<Set, Inv, Ser>
 where
-    P::Set: Set,
-    P: Policy,
-{
-    /// Call the [`init`](crate::opt::Opt::init) of [`Opt`] initialize the option value.
-    pub fn init(&mut self) -> Result<(), Error> {
-        let optset = &mut self.optset;
-
-        for opt in optset.iter_mut() {
-            opt.init()?;
-        }
-        Ok(())
-    }
-}
-
-impl<'a, P> PolicyParser<'a, P>
-where
-    P::Set: Set,
-    P: Policy,
+    Set: crate::set::Set,
 {
     /// Call [`parse`](Policy::parse) parsing the given arguments.
-    pub fn parse(&mut self, args: ARef<Args>) -> Result<P::Ret, P::Error> {
-        let optset = &mut self.optset;
-        let valser = &mut self.appser;
-        let invser = &mut self.invoker;
+    pub fn parse<'a, P>(&mut self, args: ARef<Args>) -> Result<P::Ret, Error>
+    where
+        P: Policy<Set = Set, Inv<'a> = Inv, Ser = Ser> + Default,
+    {
+        let set = &mut self.set;
+        let ser = &mut self.ser;
+        let inv = &mut self.inv;
+        let mut policy = P::default();
 
-        self.policy.parse(optset, invser, valser, args)
+        policy.parse(set, inv, ser, args).map_err(Into::into)
     }
 
-    /// Call [`parse`](PolicyParser::parse) parsing the [`Args`](Args::from_env).
+    /// Call [`parse`](Policy::parse) parsing the given arguments.
+    pub fn parse_with<'a, P>(&mut self, args: ARef<Args>, policy: &mut P) -> Result<P::Ret, Error>
+    where
+        P: Policy<Set = Set, Inv<'a> = Inv, Ser = Ser>,
+    {
+        let set = &mut self.set;
+        let ser = &mut self.ser;
+        let inv = &mut self.inv;
+
+        policy.parse(set, inv, ser, args).map_err(Into::into)
+    }
+
+    /// Call [`parse`](Parser::parse) parsing the [`Args`](Args::from_env).
     ///
     /// The [`status`](ReturnVal::status) is true if parsing successes
     /// otherwise it will be false if any [`failure`](Error::is_failure) raised.
-    pub fn parse_env(&mut self) -> Result<P::Ret, P::Error> {
-        let optset = &mut self.optset;
-        let valser = &mut self.appser;
-        let invser = &mut self.invoker;
+    pub fn parse_env<'a, P>(&mut self) -> Result<P::Ret, Error>
+    where
+        P: Policy<Set = Set, Inv<'a> = Inv, Ser = Ser> + Default,
+    {
+        let set = &mut self.set;
+        let ser = &mut self.ser;
+        let inv = &mut self.inv;
+        let mut policy = P::default();
         let args = crate::ARef::new(Args::from_env());
 
-        self.policy.parse(optset, invser, valser, args)
+        policy.parse(set, inv, ser, args).map_err(Into::into)
+    }
+
+    /// Call [`parse`](Parser::parse) parsing the [`Args`](Args::from_env).
+    ///
+    /// The [`status`](ReturnVal::status) is true if parsing successes
+    /// otherwise it will be false if any [`failure`](Error::is_failure) raised.
+    pub fn parse_with_env<'a, P>(&mut self, policy: &mut P) -> Result<P::Ret, Error>
+    where
+        P: Policy<Set = Set, Inv<'a> = Inv, Ser = Ser>,
+    {
+        let set = &mut self.set;
+        let ser = &mut self.ser;
+        let inv = &mut self.inv;
+        let args = crate::ARef::new(Args::from_env());
+
+        policy.parse(set, inv, ser, args).map_err(Into::into)
     }
 }
 
-impl<'a, P> PolicyParser<'a, P>
+impl<'a, Set, Inv, Ser> Parser<Set, Inv, Ser>
 where
-    P: Policy,
-    SetOpt<P::Set>: Opt,
-    <P::Set as OptParser>::Output: Information,
-    SetCfg<P::Set>: Config + ConfigValue + Default,
-    P::Set: Set + OptParser + OptValidator + 'a,
-    P::Inv<'a>: HandlerCollection<'a, P::Set, P::Ser>,
+    SetOpt<Set>: Opt,
+    SetCfg<Set>: Config + ConfigValue + Default,
+    <Set as OptParser>::Output: Information,
+    Set: crate::set::Set + OptParser + OptValidator,
+    Inv: HandlerCollection<'a, Set, Ser>,
 {
     /// Add an option to the [`Set`](Policy::Set), return a [`ParserCommit`].
     ///
@@ -547,29 +482,29 @@ where
     pub fn add_opt(
         &mut self,
         opt: impl Into<Str>,
-    ) -> Result<ParserCommit<'a, '_, P::Inv<'a>, P::Set, P::Ser, Placeholder>, Error> {
-        let info = <SetCfg<P::Set>>::new(&self.optset, opt.into())?;
+    ) -> Result<ParserCommit<'a, '_, Inv, Set, Ser, Placeholder>, Error> {
+        let info = <SetCfg<Set>>::new(&self.set, opt.into())?;
 
         Ok(ParserCommit::new(
-            SetCommit::new_placeholder(&mut self.optset, info),
-            &mut self.invoker,
+            SetCommit::new_placeholder(&mut self.set, info),
+            &mut self.inv,
         ))
     }
 
     pub fn add_opt_i<U>(
         &mut self,
         opt: impl Into<Str>,
-    ) -> Result<ParserCommit<'a, '_, P::Inv<'a>, P::Set, P::Ser, U>, Error>
+    ) -> Result<ParserCommit<'a, '_, Inv, Set, Ser, U>, Error>
     where
         U: Infer + 'static,
         U::Val: RawValParser,
     {
-        let mut info = <SetCfg<P::Set>>::new(&self.optset, opt.into())?;
+        let mut info = <SetCfg<Set>>::new(&self.set, opt.into())?;
 
         U::infer_fill_info(&mut info, true);
         Ok(ParserCommit::new(
-            SetCommit::new(&mut self.optset, info),
-            &mut self.invoker,
+            SetCommit::new(&mut self.set, info),
+            &mut self.inv,
         ))
     }
 
@@ -627,18 +562,18 @@ where
     ///```
     pub fn add_opt_cfg(
         &mut self,
-        config: impl Into<SetCfg<P::Set>>,
-    ) -> Result<ParserCommit<'a, '_, P::Inv<'a>, P::Set, P::Ser, Placeholder>, Error> {
+        config: impl Into<SetCfg<Set>>,
+    ) -> Result<ParserCommit<'a, '_, Inv, Set, Ser, Placeholder>, Error> {
         Ok(ParserCommit::new(
-            SetCommit::new_placeholder(&mut self.optset, config.into()),
-            &mut self.invoker,
+            SetCommit::new_placeholder(&mut self.set, config.into()),
+            &mut self.inv,
         ))
     }
 
     pub fn add_opt_cfg_i<U>(
         &mut self,
-        config: impl Into<SetCfg<P::Set>>,
-    ) -> Result<ParserCommit<'a, '_, P::Inv<'a>, P::Set, P::Ser, U>, Error>
+        config: impl Into<SetCfg<Set>>,
+    ) -> Result<ParserCommit<'a, '_, Inv, Set, Ser, U>, Error>
     where
         U: Infer + 'static,
         U::Val: RawValParser,
@@ -647,30 +582,29 @@ where
 
         U::infer_fill_info(&mut info, true);
         Ok(ParserCommit::new(
-            SetCommit::new(&mut self.optset, info),
-            &mut self.invoker,
+            SetCommit::new(&mut self.set, info),
+            &mut self.inv,
         ))
     }
 }
 
-impl<'a, P> PolicyParser<'a, P>
+impl<'a, Set, Inv, Ser> Parser<Set, Inv, Ser>
 where
-    P::Set: Set,
-    P: Policy,
-    P::Inv<'a>: HandlerCollection<'a, P::Set, P::Ser>,
+    Set: crate::set::Set,
+    Inv: HandlerCollection<'a, Set, Ser>,
 {
     #[cfg(feature = "sync")]
     #[allow(clippy::type_complexity)]
     pub fn entry<A, O, H>(
         &mut self,
         uid: Uid,
-    ) -> Result<HandlerEntry<'a, '_, P::Inv<'a>, P::Set, P::Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntry<'a, '_, Inv, Set, Ser, H, A, O>, Error>
     where
         O: ErasedTy,
-        H: Handler<P::Set, P::Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
-        A: Extract<P::Set, P::Ser, Error = Error> + Send + Sync + 'a,
+        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
+        A: Extract<Set, Ser, Error = Error> + Send + Sync + 'a,
     {
-        Ok(HandlerEntry::new(&mut self.invoker, uid))
+        Ok(HandlerEntry::new(&mut self.inv, uid))
     }
 
     #[cfg(not(feature = "sync"))]
@@ -678,13 +612,169 @@ where
     pub fn entry<A, O, H>(
         &mut self,
         uid: Uid,
-    ) -> Result<HandlerEntry<'a, '_, P::Inv<'a>, P::Set, P::Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntry<'a, '_, Inv, Set, Ser, H, A, O>, Error>
     where
         O: ErasedTy,
-        H: Handler<P::Set, P::Ser, A, Output = Option<O>, Error = Error> + 'a,
-        A: Extract<P::Set, P::Ser, Error = Error> + 'a,
+        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
+        A: Extract<Set, Ser, Error = Error> + 'a,
     {
-        Ok(HandlerEntry::new(&mut self.invoker, uid))
+        Ok(HandlerEntry::new(&mut self.inv, uid))
+    }
+}
+
+/// PolicyParser manage the components are using in [`parse`](Policy::parse) of [`Policy`].
+///
+/// # Example
+///
+/// ```rust
+/// # use aopt::getopt;
+/// # use aopt::prelude::*;
+/// # use aopt::ARef;
+/// # use aopt::Error;
+/// #
+/// # fn main() -> Result<(), Error> {
+/// let mut parser1 = PolicyParser::new(AFwdPolicy::default());
+///
+/// parser1.add_opt("Where=c")?;
+/// parser1.add_opt("question=m")?.on(question)?;
+///
+/// let mut parser2 = PolicyParser::new(AFwdPolicy::default());
+///
+/// parser2.add_opt("Who=c")?;
+/// parser2.add_opt("question=m")?.on(question)?;
+///
+/// fn question(_: &mut ASet, _: &mut ASer, args: ctx::Args) -> Result<Option<()>, Error> {
+///     // Output: The question is: Where are you from ?
+///     println!(
+///         "The question is: {}",
+///         args.iter().skip(1)
+///             .map(|v| v.get_str().unwrap().to_owned())
+///             .collect::<Vec<String>>()
+///             .join(" ")
+///     );
+///     Ok(Some(()))
+/// }
+///
+/// let ret = getopt!(
+///     Args::from_array(["app", "Where", "are", "you", "from", "?"]),
+///     &mut parser1,
+///     &mut parser2
+/// )?;
+/// let parser = ret.parser;
+///
+/// assert_eq!(
+///     parser[0].name(),
+///     "Where",
+///     "PolicyParser with `Where` cmd matched"
+/// );
+/// #
+/// # Ok(())
+/// # }
+/// ```
+///
+/// Using it with macro [`getopt`](crate::getopt),
+/// which can process multiple [`PolicyParser`] with same type [`Policy`].
+#[derive(Debug)]
+pub struct PolicyParser<'a, P: Policy> {
+    policy: P,
+    parser: Parser<P::Set, P::Inv<'a>, P::Ser>,
+}
+
+impl<'a, P: Policy> Default for PolicyParser<'a, P>
+where
+    P::Set: Default,
+    P::Inv<'a>: Default,
+    P::Ser: Default,
+    P: Default + Policy + APolicyExt<P>,
+{
+    fn default() -> Self {
+        let policy = P::default();
+        let parser = Parser::new_with(&policy);
+
+        Self { policy, parser }
+    }
+}
+
+impl<'a, P: Policy> Deref for PolicyParser<'a, P> {
+    type Target = Parser<P::Set, P::Inv<'a>, P::Ser>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.parser
+    }
+}
+
+impl<'a, P: Policy> DerefMut for PolicyParser<'a, P> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.parser
+    }
+}
+
+impl<'a, P> PolicyParser<'a, P>
+where
+    P: Policy + APolicyExt<P>,
+{
+    pub fn new(policy: P) -> Self {
+        let parser = Parser::new_with::<P>(&policy);
+
+        Self { policy, parser }
+    }
+}
+
+impl<'a, P: Policy> PolicyParser<'a, P> {
+    pub fn new_with(policy: P, set: P::Set, inv: P::Inv<'a>, ser: P::Ser) -> Self {
+        Self {
+            policy,
+            parser: Parser::new(set, inv, ser),
+        }
+    }
+
+    pub fn policy(&self) -> &P {
+        &self.policy
+    }
+
+    pub fn policy_mut(&mut self) -> &mut P {
+        &mut self.policy
+    }
+
+    pub fn set_policy(&mut self, policy: P) -> &mut Self {
+        self.policy = policy;
+        self
+    }
+}
+
+impl<'a, P> PolicyParser<'a, P>
+where
+    P::Set: Set,
+    P: Policy,
+{
+    /// Reset the option set.
+    pub fn reset(&mut self) -> Result<&mut Self, Error> {
+        self.parser.reset()?;
+        Ok(self)
+    }
+
+    /// Call the [`init`](crate::opt::Opt::init) of [`Opt`] initialize the option value.
+    pub fn init(&mut self) -> Result<(), Error> {
+        self.parser.init()
+    }
+}
+
+impl<'a, P> PolicyParser<'a, P>
+where
+    P::Set: Set,
+    P: Policy,
+{
+    /// Call [`parse`](Policy::parse) parsing the given arguments.
+    pub fn parse(&mut self, args: ARef<Args>) -> Result<P::Ret, Error> {
+        self.parser.parse_with(args, &mut self.policy)
+    }
+
+    /// Call [`parse`](PolicyParser::parse) parsing the [`Args`](Args::from_env).
+    ///
+    /// The [`status`](ReturnVal::status) is true if parsing successes
+    /// otherwise it will be false if any [`failure`](Error::is_failure) raised.
+    pub fn parse_env(&mut self) -> Result<P::Ret, Error> {
+        self.parser.parse_with_env(&mut self.policy)
     }
 }
 

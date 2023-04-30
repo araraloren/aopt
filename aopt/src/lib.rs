@@ -274,10 +274,11 @@ pub mod prelude {
     pub use crate::parser::DelayPolicy;
     pub use crate::parser::FwdPolicy;
     pub use crate::parser::OptStyleManager;
-    pub use crate::parser::PolicyParser;
+    pub use crate::parser::Parser;
     pub use crate::parser::ParserCommit;
     pub use crate::parser::ParserCommitWithValue;
     pub use crate::parser::Policy;
+    pub use crate::parser::PolicyParser;
     pub use crate::parser::PolicySettings;
     pub use crate::parser::PrePolicy;
     pub use crate::parser::ReturnVal;
