@@ -1,6 +1,18 @@
 
 # Relase note
 
+## 0.10.0
+
+- Rename Parser to PolicyParser
+
+- Add Parser without policy
+
+- Add `*` for optional to option create string regex
+
+- Change the default settings of Infer implementations.
+    Remove the implementation for Option and Vec, cause you can't implement Option and Vec in other crates.
+    Make the force default to false.
+
 ## 0.9.20
 
 - Moving the InferValueMut to cote

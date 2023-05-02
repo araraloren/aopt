@@ -99,9 +99,9 @@ macro_rules! add_interface {
             mut self,
         ) -> ParserCommit<'a, 'b, I, S, Ser, $ty> where T::Val: RawValParser + Clone, T: ErasedTy + Infer {
             let inner = self.inner.take().unwrap();
-        let inv_ser = self.inv_ser.take().unwrap();
+            let inv_ser = self.inv_ser.take().unwrap();
 
-        ParserCommit::new(inner.$name2::<T>(), inv_ser)
+            ParserCommit::new(inner.$name2::<T>(), inv_ser)
         }
     }
 }
@@ -113,7 +113,7 @@ where
     SetCfg<S>: ConfigValue + Default,
     I: HandlerCollection<'a, S, Ser>,
 {
-    add_interface!(Option<Pos<T>>, set_pos_type_only, set_pos_type);
+    add_interface!(Pos<T>, set_pos_type_only, set_pos_type);
 
     add_interface!(Main<T>, set_main_type_only, set_main_type);
 
