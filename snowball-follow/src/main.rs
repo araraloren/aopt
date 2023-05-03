@@ -322,7 +322,7 @@ fn display_help<S: Set>(set: &S) -> Result<(), aopt_help::Error> {
                     Cow::from(opt.hint().as_str()),
                     Cow::from(opt.help().as_str()),
                     Cow::default(),
-                    opt.force(),
+                    !opt.force(),
                     true,
                 ),
             )?;
@@ -337,7 +337,7 @@ fn display_help<S: Set>(set: &S) -> Result<(), aopt_help::Error> {
                     Cow::from(opt.hint().as_str()),
                     Cow::from(opt.help().as_str()),
                     Cow::default(),
-                    opt.force(),
+                    !opt.force(),
                     false,
                 ),
             )?;
