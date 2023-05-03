@@ -214,6 +214,13 @@ impl<Set, Inv, Ser> Parser<Set, Inv, Ser> {
         self.set = set;
         self
     }
+
+    pub fn set_policy<'a, P>(self, policy: P) -> PolicyParser<'a, P>
+    where
+        P: Policy<Set = Set, Inv<'a> = Inv, Ser = Ser>,
+    {
+        PolicyParser::new_with(policy, self.set, self.inv, self.ser)
+    }
 }
 
 impl<Set, Inv, Ser> Parser<Set, Inv, Ser>
