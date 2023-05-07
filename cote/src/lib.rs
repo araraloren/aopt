@@ -444,7 +444,7 @@ where
     where
         'c: 'b,
         I: Into<RawVal>,
-        F: FnMut(P::Ret, &'b mut CoteApp<'a, P>) -> Result<R, Error>,
+        F: FnMut(P::Ret, &'b mut Self) -> Result<R, Error>,
     {
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
@@ -461,7 +461,7 @@ where
     pub fn run_mut<'c, 'b, R, F>(&'c mut self, r: F) -> Result<R, Error>
     where
         'c: 'b,
-        F: FnMut(P::Ret, &'b mut CoteApp<'a, P>) -> Result<R, Error>,
+        F: FnMut(P::Ret, &'b mut Self) -> Result<R, Error>,
     {
         let args = Args::from_env().into_inner();
         self.run_mut_with(args.into_iter(), r)
@@ -507,7 +507,7 @@ where
         'c: 'b,
         I: Into<RawVal>,
         FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b mut CoteApp<'a, P>) -> FUT,
+        F: FnMut(P::Ret, &'b mut Self) -> FUT,
     {
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
@@ -533,7 +533,7 @@ where
     where
         'c: 'b,
         FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b mut CoteApp<'a, P>) -> FUT,
+        F: FnMut(P::Ret, &'b mut Self) -> FUT,
     {
         let args = Args::from_env().into_inner();
         self.run_async_mut_with(args.into_iter(), r).await
@@ -576,7 +576,7 @@ where
     where
         'c: 'b,
         I: Into<RawVal>,
-        F: FnMut(P::Ret, &'b CoteApp<'a, P>) -> Result<R, Error>,
+        F: FnMut(P::Ret, &'b Self) -> Result<R, Error>,
     {
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
@@ -593,7 +593,7 @@ where
     pub fn run<'c, 'b, R, F>(&'c mut self, r: F) -> Result<R, Error>
     where
         'c: 'b,
-        F: FnMut(P::Ret, &'b CoteApp<'a, P>) -> Result<R, Error>,
+        F: FnMut(P::Ret, &'b Self) -> Result<R, Error>,
     {
         let args = Args::from_env().into_inner();
         self.run_with(args.into_iter(), r)
@@ -639,7 +639,7 @@ where
         'c: 'b,
         I: Into<RawVal>,
         FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b CoteApp<'a, P>) -> FUT,
+        F: FnMut(P::Ret, &'b Self) -> FUT,
     {
         let args = iter.map(|v| v.into());
         let parser = &mut self.parser;
@@ -665,7 +665,7 @@ where
     where
         'c: 'b,
         FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b CoteApp<'a, P>) -> FUT,
+        F: FnMut(P::Ret, &'b Self) -> FUT,
     {
         let args = Args::from_env().into_inner();
         self.run_async_with(args.into_iter(), r).await
