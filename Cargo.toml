@@ -3,7 +3,7 @@
 members = [
     "aopt",
     # "aopt-help",
-    # "cote",
+    "cote",
     # "cote-derive",
     # "index-constituent",
     "simple-find-file",

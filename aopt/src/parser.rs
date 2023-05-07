@@ -404,8 +404,8 @@ where
     SetOpt<Set>: Opt,
     SetCfg<Set>: Config + ConfigValue + Default,
     <Set as OptParser>::Output: Information,
-    Set: crate::set::Set + OptParser + OptValidator,
     Inv: HandlerCollection<'a, Set, Ser>,
+    Set: crate::set::Set + OptParser + OptValidator,
 {
     /// Add an option to the [`Set`](Policy::Set), return a [`ParserCommit`].
     ///
