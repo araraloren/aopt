@@ -10,6 +10,14 @@ pub struct CoteService {
 }
 
 impl CoteService {
+    pub fn rctx(&self) -> Result<&RunningCtx, aopt::Error> {
+        self.service.sve_val()
+    }
+
+    pub fn rctx_mut(&mut self) -> Result<&mut RunningCtx, aopt::Error> {
+        self.service.sve_val_mut()
+    }
+
     pub fn with_rctx(mut self, ctx: RunningCtx) -> Self {
         self.set_rctx(ctx);
         self
@@ -22,14 +30,6 @@ impl CoteService {
 
     pub fn take_rctx(&mut self) -> Result<RunningCtx, aopt::Error> {
         Ok(std::mem::take(self.rctx_mut()?))
-    }
-
-    pub fn rctx(&self) -> Result<&RunningCtx, aopt::Error> {
-        self.service.sve_val()
-    }
-
-    pub fn rctx_mut(&mut self) -> Result<&mut RunningCtx, aopt::Error> {
-        self.service.sve_val_mut()
     }
 
     fn inner_parsers<Sub: ErasedTy>(&self) -> Result<&HashMap<String, Sub>, aopt::Error> {
