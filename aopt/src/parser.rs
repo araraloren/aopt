@@ -747,6 +747,19 @@ impl<'a, P: Policy> PolicyParser<'a, P> {
         self.policy = policy;
         self
     }
+
+    pub fn parser(&self) -> &Parser<P::Set, P::Inv<'a>, P::Ser> {
+        &self.parser
+    }
+
+    pub fn parser_mut(&mut self) -> &mut Parser<P::Set, P::Inv<'a>, P::Ser> {
+        &mut self.parser
+    }
+
+    pub fn set_parser(&mut self, parser: Parser<P::Set, P::Inv<'a>, P::Ser>) -> &mut Self {
+        self.parser = parser;
+        self
+    }
 }
 
 impl<'a, P> PolicyParser<'a, P>

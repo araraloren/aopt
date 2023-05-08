@@ -38,11 +38,11 @@ where
     fn update(parser: &mut Parser<Set, Inv, Ser>) -> Result<(), Error>;
 }
 
-pub trait ExtractFromSetDerive<'a, S>
+pub trait ExtractFromSetDerive<'a, Set>
 where
-    S: SetValueFindExt,
+    Set: SetValueFindExt,
 {
-    fn try_extract(set: &'a mut S) -> Result<Self, aopt::Error>
+    fn try_extract(set: &'a mut Set) -> Result<Self, aopt::Error>
     where
         Self: Sized;
 }
@@ -407,6 +407,22 @@ where
     SetCfg<P::Set>: Config + ConfigValue + Default,
     P::Inv<'a>: HandlerCollection<'a, P::Set, P::Ser>,
 {
+    pub fn add_opt_meta(
+        &mut self,
+        meta: impl IntoConfig<Ret = SetCfg<P::Set>>,
+    ) -> Result<ParserCommit<'a, '_, P::Inv<'a>, P::Set, P::Ser, Placeholder>, aopt::Error> {
+        let set = self.parser.optset();
+        let config = meta.into_config(set)?;
+
+        self.parser.add_opt_cfg(config)
+    }
+
+    /// This function will insert help option `--help;-h;-?: Display help message`.
+    pub fn add_help_option(&mut self) -> Result<&mut Self, aopt::Error> {
+        self.add_opt_i::<bool>("--help;-h;-?: Display help message")?;
+        Ok(self)
+    }
+
     /// Running function after parsing.
     ///
     /// # Example

@@ -2,11 +2,40 @@ use crate::ctx::RunningCtx;
 use aopt::prelude::AppServices;
 use aopt::prelude::ErasedTy;
 use aopt::prelude::ServicesValExt;
+use aopt::ser::ServicesExt;
 use std::collections::HashMap;
 
 #[derive(Debug, Default)]
 pub struct CoteService {
     service: AppServices,
+}
+
+impl ServicesExt for CoteService {
+    fn ser_app(&self) -> &AppServices {
+        &self.service
+    }
+
+    fn ser_app_mut(&mut self) -> &mut AppServices {
+        &mut self.service
+    }
+}
+
+impl ServicesValExt for CoteService {
+    fn sve_insert<T: ErasedTy>(&mut self, val: T) -> Option<T> {
+        self.service.sve_insert(val)
+    }
+
+    fn sve_val<T: ErasedTy>(&self) -> Result<&T, aopt::Error> {
+        self.service.sve_val()
+    }
+
+    fn sve_val_mut<T: ErasedTy>(&mut self) -> Result<&mut T, aopt::Error> {
+        self.service.sve_val_mut()
+    }
+
+    fn sve_take_val<T: ErasedTy>(&mut self) -> Result<T, aopt::Error> {
+        self.service.sve_take_val()
+    }
 }
 
 impl CoteService {
