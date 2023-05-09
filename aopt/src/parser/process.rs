@@ -38,8 +38,7 @@ pub fn invoke_callback_opt<Set, Ser>(
 ) -> Result<bool, Error>
 where
     SetOpt<Set>: Opt,
-    Ser: 'static,
-    Set: crate::set::Set + 'static,
+    Set: crate::set::Set,
 {
     match inv.has(uid) {
         true => {
@@ -89,8 +88,7 @@ pub fn process_opt<Set, Ser>(
 ) -> Result<Vec<CtxSaver>, Error>
 where
     SetOpt<Set>: Opt,
-    Ser: 'static,
-    Set: crate::set::Set + 'static,
+    Set: crate::set::Set,
 {
     // copy the uid of option, avoid borrow the set
     let keys: Vec<Uid> = set.keys();
@@ -167,8 +165,7 @@ pub fn process_non_opt<Set, Ser>(
 ) -> Result<Vec<CtxSaver>, Error>
 where
     SetOpt<Set>: Opt,
-    Ser: 'static,
-    Set: crate::set::Set + 'static,
+    Set: crate::set::Set,
 {
     // copy the uid of option, avoid borrow the set
     let keys: Vec<Uid> = set.keys().to_vec();

@@ -117,8 +117,7 @@ impl<'a, Set, Ser> Invoker<'a, Set, Ser> {
 
 impl<'a, Set, Ser> Invoker<'a, Set, Ser>
 where
-    Ser: 'a,
-    Set: crate::set::Set + 'a,
+    Set: crate::set::Set,
 {
     pub fn set_raw<
         H: FnMut(&mut Set, &mut Ser, &mut Ctx) -> Result<bool, Error> + Send + Sync + 'a,
@@ -238,8 +237,7 @@ pub trait HandlerCollection<'a, Set, Ser> {
 
 impl<'a, Set, Ser> HandlerCollection<'a, Set, Ser> for Invoker<'a, Set, Ser>
 where
-    Ser: 'a,
-    Set: crate::set::Set + 'a,
+    Set: crate::set::Set,
 {
     fn register_handler<
         H: FnMut(&mut Set, &mut Ser, &mut Ctx) -> Result<bool, Error> + Send + Sync + 'a,
@@ -255,8 +253,7 @@ where
 pub struct HandlerEntry<'a, 'b, I, Set, Ser, H, A, O>
 where
     O: ErasedTy,
-    Ser: 'a,
-    Set: crate::set::Set + 'a,
+    Set: crate::set::Set,
     SetOpt<Set>: Opt,
     I: HandlerCollection<'a, Set, Ser>,
     H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
@@ -278,8 +275,7 @@ where
 impl<'a, 'b, I, Set, Ser, H, A, O> HandlerEntry<'a, 'b, I, Set, Ser, H, A, O>
 where
     O: ErasedTy,
-    Ser: 'a,
-    Set: crate::set::Set + 'a,
+    Set: crate::set::Set,
     SetOpt<Set>: Opt,
     I: HandlerCollection<'a, Set, Ser>,
     H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
@@ -352,8 +348,7 @@ where
 impl<'a, 'b, I, Set, Ser, H, A, O> Drop for HandlerEntry<'a, 'b, I, Set, Ser, H, A, O>
 where
     O: ErasedTy,
-    Ser: 'a,
-    Set: crate::set::Set + 'a,
+    Set: crate::set::Set,
     SetOpt<Set>: Opt,
     I: HandlerCollection<'a, Set, Ser>,
     H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,

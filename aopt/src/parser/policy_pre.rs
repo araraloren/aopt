@@ -265,9 +265,8 @@ impl<Set, Ser, Chk> PolicySettings for PrePolicy<Set, Ser, Chk> {
 impl<Set, Ser, Chk> PrePolicy<Set, Ser, Chk>
 where
     SetOpt<Set>: Opt,
-    Ser: 'static,
     Chk: SetChecker<Set>,
-    Set: crate::set::Set + OptParser + OptValidator + 'static,
+    Set: crate::set::Set + OptParser + OptValidator,
 {
     pub(crate) fn parse_impl(
         &mut self,
@@ -428,9 +427,8 @@ where
 impl<Set, Ser, Chk> Policy for PrePolicy<Set, Ser, Chk>
 where
     SetOpt<Set>: Opt,
-    Ser: 'static,
     Chk: SetChecker<Set>,
-    Set: crate::set::Set + OptParser + OptValidator + 'static,
+    Set: crate::set::Set + OptParser + OptValidator,
 {
     type Ret = ReturnVal;
 

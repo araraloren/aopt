@@ -47,7 +47,7 @@ pub type ADelayParser<'a> = Parser<'a, ADelayPolicy>;
 
 impl<Ser, Chk> APolicyExt<FwdPolicy<ASet, Ser, Chk>> for FwdPolicy<ASet, Ser, Chk>
 where
-    Ser: Default + 'static,
+    Ser: Default,
     Chk: SetChecker<ASet>,
 {
     fn default_set(&self) -> ASet {
@@ -65,7 +65,7 @@ where
 
 impl<Ser, Chk> APolicyExt<PrePolicy<ASet, Ser, Chk>> for PrePolicy<ASet, Ser, Chk>
 where
-    Ser: Default + 'static,
+    Ser: Default,
     Chk: SetChecker<ASet>,
 {
     fn default_set(&self) -> ASet {
@@ -83,7 +83,7 @@ where
 
 impl<Ser, Chk> APolicyExt<DelayPolicy<ASet, Ser, Chk>> for DelayPolicy<ASet, Ser, Chk>
 where
-    Ser: Default + 'static,
+    Ser: Default,
     Chk: SetChecker<ASet>,
 {
     fn default_set(&self) -> ASet {

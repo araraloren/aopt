@@ -44,7 +44,7 @@ where
 
     inv_ser: Option<&'b mut I>,
 
-    marker: PhantomData<&'a Ser>,
+    marker: PhantomData<(&'a (), Ser)>,
 }
 
 impl<'a, 'b, I, S, Ser, U> Debug for ParserCommit<'a, 'b, I, S, Ser, U>
@@ -386,7 +386,7 @@ where
 
     inv_ser: Option<&'b mut I>,
 
-    marker: PhantomData<&'a Ser>,
+    marker: PhantomData<(&'a (), Ser)>,
 }
 
 impl<'a, 'b, I, S, Ser, U, T> Debug for ParserCommitWithValue<'a, 'b, I, S, Ser, U, T>

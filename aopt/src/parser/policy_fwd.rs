@@ -234,9 +234,8 @@ impl<Set, Ser, Chk> PolicySettings for FwdPolicy<Set, Ser, Chk> {
 impl<Set, Ser, Chk> FwdPolicy<Set, Ser, Chk>
 where
     SetOpt<Set>: Opt,
-    Ser: 'static,
     Chk: SetChecker<Set>,
-    Set: crate::set::Set + OptParser + OptValidator + 'static,
+    Set: crate::set::Set + OptParser + OptValidator,
 {
     pub(crate) fn parse_impl(
         &mut self,
@@ -396,9 +395,8 @@ where
 impl<Set, Ser, Chk> Policy for FwdPolicy<Set, Ser, Chk>
 where
     SetOpt<Set>: Opt,
-    Ser: 'static,
     Chk: SetChecker<Set>,
-    Set: crate::set::Set + OptParser + OptValidator + 'static,
+    Set: crate::set::Set + OptParser + OptValidator,
 {
     type Ret = ReturnVal;
 

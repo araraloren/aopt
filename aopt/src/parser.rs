@@ -462,7 +462,7 @@ where
     SetOpt<P::Set>: Opt,
     <P::Set as OptParser>::Output: Information,
     SetCfg<P::Set>: Config + ConfigValue + Default,
-    P::Set: Set + OptParser + OptValidator + 'a,
+    P::Set: Set + OptParser + OptValidator,
     P::Inv<'a>: HandlerCollection<'a, P::Set, P::Ser>,
 {
     /// Add an option to the [`Set`](Policy::Set), return a [`ParserCommit`].

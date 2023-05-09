@@ -43,8 +43,7 @@ pub mod prelude {
 
 pub trait IntoParserDerive<'zlifetime, P>
 where
-    P::Ser: 'zlifetime,
-    P::Set: Set + 'zlifetime,
+    P::Set: Set,
     P::Error: Into<aopt::Error>,
     P: Policy + APolicyExt<P> + Default,
     SetCfg<P::Set>: Config + ConfigValue + Default,
@@ -177,10 +176,9 @@ where
 
 impl<'a, P> CoteApp<'a, P>
 where
-    P::Ser: 'a,
     P: Policy,
     SetOpt<P::Set>: Opt,
-    P::Set: Set + OptValidator + OptParser + 'a,
+    P::Set: Set + OptValidator + OptParser,
     <P::Set as OptParser>::Output: Information,
     SetCfg<P::Set>: Config + ConfigValue + Default,
     P::Inv<'a>: HandlerCollection<'a, P::Set, P::Ser>,

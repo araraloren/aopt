@@ -30,10 +30,10 @@ pub trait InferValueMut<'a> {
 #[macro_export]
 macro_rules! cote_value_mut_impl {
     ($name:path) => {
-        impl<'a> InferValueMut<'a> for $name {}
+        impl<'a> $crate::value::InferValueMut<'a> for $name {}
     };
     ($name:path, $map:expr) => {
-        impl<'a, T> InferValueMut<'a> for $name
+        impl<'a, T> $crate::value::InferValueMut<'a> for $name
         where
             T: aopt::prelude::ErasedTy,
         {
@@ -42,7 +42,7 @@ macro_rules! cote_value_mut_impl {
                 set: &'a mut S,
             ) -> Result<Self, aopt::Error>
             where
-                Self: Sized,
+                Self: ErasedTy + Sized,
             {
                 set.take_val::<T>(name).map(|v| $map(v))
             }
@@ -60,13 +60,13 @@ macro_rules! cote_value_mut_impl {
         }
     };
     ($name:path, $inner_type:path, $map:expr) => {
-        impl<'a> InferValueMut<'a> for $name {
+        impl<'a> $crate::value::InferValueMut<'a> for $name {
             fn infer_fetch<S: aopt::prelude::SetValueFindExt>(
                 name: &str,
                 set: &'a mut S,
             ) -> Result<Self, aopt::Error>
             where
-                Self: Sized,
+                Self: aopt::prelude::ErasedTy + Sized,
             {
                 set.take_val::<$inner_type>(name).map(|v| $map(v))
             }
@@ -84,23 +84,27 @@ macro_rules! cote_value_mut_impl {
         }
     };
     (&$a:lifetime $name:path) => {
-        impl<$a> InferValueMut<$a> for &$a $name {
-            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &$a mut S) -> Result<Self, aopt::Error> where Self: Sized {
+        impl<$a> $crate::value::InferValueMut<$a> for &$a $name {
+            fn infer_fetch<S: aopt::prelude::SetValueFindExt>(name: &str, set: &$a mut S) -> Result<Self, aopt::Error>
+            where Self: ErasedTy + Sized {
                 set.find_val::<$name>(name)
             }
 
-            fn infer_fetch_vec<S: SetValueFindExt>(name: &str, set: &$a mut S) -> Result<Vec<Self>, aopt::Error> where Self: Sized {
+            fn infer_fetch_vec<S: aopt::prelude::SetValueFindExt>(name: &str, set: &$a mut S) -> Result<Vec<Self>, aopt::Error>
+            where Self: aopt::prelude::ErasedTy + Sized {
                 Ok(set.find_vals::<$name>(name)?.iter().collect())
             }
         }
     };
     (&$a:lifetime $name:path, $inner:path, $map:expr) => {
-        impl<$a> InferValueMut<$a> for &$a $name {
-            fn infer_fetch<S: SetValueFindExt>(name: &str, set: &$a mut S) -> Result<Self, aopt::Error> where Self: Sized {
+        impl<$a> $crate::value::InferValueMut<$a> for &$a $name {
+            fn infer_fetch<S: aopt::prelude::SetValueFindExt>(name: &str, set: &$a mut S) -> Result<Self, aopt::Error>
+            where Self: aopt::prelude::ErasedTy + Sized {
                 set.find_val::<$inner>(name).map(|v|$map(v))
             }
 
-            fn infer_fetch_vec<S: SetValueFindExt>(name: &str, set: &$a mut S) -> Result<Vec<Self>, aopt::Error> where Self: Sized {
+            fn infer_fetch_vec<S: aopt::prelude::SetValueFindExt>(name: &str, set: &$a mut S) -> Result<Vec<Self>, aopt::Error>
+            where Self: aopt::prelude::ErasedTy + Sized {
                 Ok(set.find_vals::<$inner>(name)?.iter().map(|v|$map(v)).collect())
             }
         }
@@ -109,9 +113,9 @@ macro_rules! cote_value_mut_impl {
 
 macro_rules! cote_inner_fetch {
     ($name:path, $map:expr) => {
-        impl<'a, T> InferValueMut<'a> for $name
+        impl<'a, T> $crate::value::InferValueMut<'a> for $name
         where
-            T: aopt::prelude::ErasedTy + InferValueMut<'a>,
+            T: aopt::prelude::ErasedTy + $crate::value::InferValueMut<'a>,
         {
             fn infer_fetch<S: aopt::prelude::SetValueFindExt>(
                 name: &str,
@@ -120,7 +124,7 @@ macro_rules! cote_inner_fetch {
             where
                 Self: aopt::prelude::ErasedTy + Sized,
             {
-                <T as InferValueMut>::infer_fetch(name, set).map(|v| $map(v))
+                <T as $crate::value::InferValueMut>::infer_fetch(name, set).map(|v| $map(v))
             }
 
             fn infer_fetch_vec<S: aopt::prelude::SetValueFindExt>(
@@ -130,21 +134,22 @@ macro_rules! cote_inner_fetch {
             where
                 Self: aopt::prelude::ErasedTy + Sized,
             {
-                <T as InferValueMut>::infer_fetch_vec(name, set)
+                <T as $crate::value::InferValueMut>::infer_fetch_vec(name, set)
                     .map(|v| v.into_iter().map(|v| $map(v)).collect())
             }
         }
     };
     ($name:path, $inner_type:path, $map:expr) => {
-        impl<'a> InferValueMut<'a> for $name {
+        impl<'a> $crate::value::InferValueMut<'a> for $name {
             fn infer_fetch<S: aopt::prelude::SetValueFindExt>(
                 name: &str,
                 set: &'a mut S,
             ) -> Result<Self, aopt::Error>
             where
-                Self: Sized,
+                Self: aopt::prelude::ErasedTy + Sized,
             {
-                <$inner_type as InferValueMut>::infer_fetch(name, set).map(|v| $map(v))
+                <$inner_type as $crate::value::InferValueMut>::infer_fetch(name, set)
+                    .map(|v| $map(v))
             }
 
             fn infer_fetch_vec<S: aopt::prelude::SetValueFindExt>(
@@ -154,7 +159,7 @@ macro_rules! cote_inner_fetch {
             where
                 Self: aopt::prelude::ErasedTy + Sized,
             {
-                <$inner_type as InferValueMut>::infer_fetch_vec(name, set)
+                <$inner_type as $crate::value::InferValueMut>::infer_fetch_vec(name, set)
                     .map(|v| v.into_iter().map(|v| $map(v)).collect())
             }
         }
@@ -242,7 +247,7 @@ where
 {
     fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
     where
-        Self: Sized,
+        Self: ErasedTy + Sized,
     {
         Ok(RefOpt::new(set.find_val::<T>(name)?))
     }
