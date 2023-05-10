@@ -283,10 +283,10 @@ where
                                 if proc.status() {
                                     matched = true;
                                 }
-                                if proc.is_consume() {
-                                    consume = true;
-                                }
                                 if matched {
+                                    if proc.is_consume() {
+                                        consume = true;
+                                    }
                                     break;
                                 }
                             }
