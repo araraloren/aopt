@@ -556,11 +556,12 @@ impl<'a> Analyzer<'a> {
                 }
                 else {
                     let mut rctx = parser.take_running_ctx()?;
-                    let error = rctx.chain_error();
+                    let rctx_error = rctx.chain_error();
                     let mut finfo = rctx.take_failed_info();
                     let (command, ret) = finfo.first_mut().map(|v|(Some(v.0.as_str()), &mut v.1)).unwrap_or((None, &mut ret));
                     let e = {
                         let ctx = ret.take_ctx();
+                        let failure = ret.take_failure();
                         let args = ctx.orig_args()[1..]
                                     .iter()
                                     .map(ToString::to_string)
@@ -579,13 +580,16 @@ impl<'a> Analyzer<'a> {
                             "None".to_owned()
                         };
 
-                        if let Some(error) = error {
+                        if let Some(rctx_error) = rctx_error {
                             // return failure with more detail error message
-                            aopt::raise_failure!("{} failed: {}", failed_msg, inner_ctx).cause_by(error)
+                            aopt::raise_failure!("{} failed: {}", failed_msg, inner_ctx)
+                                .cause_by(failure)
+                                .cause_by(rctx_error)
                         }
                         else {
                             // return failure with more detail error message
                             aopt::raise_failure!("{} failed: {}", failed_msg, inner_ctx)
+                                .cause_by(failure)
                         }
                     };
 
