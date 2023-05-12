@@ -13,6 +13,20 @@ use aopt::value::Placeholder;
 use aopt::Error;
 use aopt::RawVal;
 
+pub mod prelude {
+    pub use crate::meta::IntoConfig;
+    pub use crate::meta::OptionMeta;
+    pub use crate::valid;
+    pub use crate::value;
+    pub use crate::value::InferValueMut;
+    pub use crate::CoteApp;
+    pub use crate::CoteParser;
+    pub use crate::ExtractFromSetDerive;
+    pub use crate::IntoParserDerive;
+    pub use aopt;
+    pub use aopt::prelude::*;
+}
+
 use crate::meta::IntoConfig;
 
 pub trait IntoParserDerive<Set, Inv, Ser>
@@ -117,6 +131,70 @@ where
     SetCfg<Set>: Config + ConfigValue + Default,
     Inv: HandlerCollection<'a, Set, Ser>,
 {
+    /// Add option by option configuration generated from [`OptionMeta`](crate::meta::OptionMeta).
+    ///
+    /// # Example load option from json configuration.
+    /// ```rust
+    /// # use aopt::Error;
+    /// # use cote::prelude::*;
+    /// #
+    /// # fn main() -> Result<(), Error> {
+    ///     let mut policy = AFwdPolicy::default();
+    ///     let mut parser = CoteParser::new_with("example".to_owned(), &policy);
+    ///
+    ///     let config: OptionMeta<String> = serde_json::from_str(
+    ///         r#"
+    ///             {
+    ///                 "id": "-c",
+    ///                 "option": "-c=s",
+    ///                 "hint": "-c <str>",
+    ///                 "help": "This is a help for option c",
+    ///                 "action": "App",
+    ///                 "alias": null,
+    ///                 "value": [
+    ///                 "we",
+    ///                 "it"
+    ///                 ]
+    ///             }
+    ///         "#,
+    ///     )
+    ///     .unwrap();
+    ///
+    ///     parser.add_opt_meta(config)?;
+    ///
+    ///     let config: OptionMeta<i64> = serde_json::from_str(
+    ///         r#"
+    ///             {
+    ///                 "id": "-p",
+    ///                 "option": "--point=i",
+    ///                 "hint": "--point <int>",
+    ///                 "help": "This is a help for option",
+    ///                 "action": "App",
+    ///                 "alias": [
+    ///                     "-p"
+    ///                 ]
+    ///             }
+    ///         "#,
+    ///     )
+    ///     .unwrap();
+    ///
+    ///     parser.add_opt_meta(config)?;
+    ///
+    ///     parser.run_with(["-p", "256"].into_iter(), &mut policy, |ret, cote| {
+    ///         if ret.status() {
+    ///             assert_eq!(
+    ///                 &vec!["we".to_owned(), "it".to_owned()],
+    ///                 cote.find_vals::<String>("-c")?
+    ///             );
+    ///             assert_eq!(&256, cote.find_val::<i64>("--point")?);
+    ///             println!("cote parser running okay!!!");
+    ///         }
+    ///         Ok(())
+    ///     })?;
+    /// #
+    /// #    Ok(())
+    /// # }
+    /// ```
     pub fn add_opt_meta(
         &mut self,
         meta: impl IntoConfig<Ret = SetCfg<Set>>,
