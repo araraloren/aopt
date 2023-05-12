@@ -147,8 +147,10 @@ impl<'a> CoteGenerator<'a> {
     pub fn gen_style_settings_for_parser(&self) -> Option<TokenStream> {
         let has_combine = self.configs.has_cfg(CoteKind::Combine);
         let has_embedded = self.configs.has_cfg(CoteKind::EmbeddedPlus);
+        let has_flag = self.configs.has_cfg(CoteKind::Flag);
         let for_combine = has_combine.then_some(quote! {parser.enable_combined();});
         let for_embedded_plus = has_embedded.then_some(quote! {parser.enable_embedded_plus();});
+        let for_flag = has_flag.then_some(quote! {parser.enable_flag();});
         let for_strict = self.configs.find_cfg(CoteKind::Strict).map(|v| {
             let value = v.value();
             quote! {
@@ -156,13 +158,17 @@ impl<'a> CoteGenerator<'a> {
             }
         });
 
-        if for_combine.is_none() && for_embedded_plus.is_none() && for_strict.is_none() {
+        if for_combine.is_none() && 
+            for_embedded_plus.is_none() && 
+            for_strict.is_none() &&
+            for_flag.is_none() {
             None
         } else {
             let mut ret = quote! {};
 
             ret.extend(for_combine.into_iter());
             ret.extend(for_embedded_plus.into_iter());
+            ret.extend(for_flag.into_iter());
             ret.extend(for_strict.into_iter());
             Some(ret)
         }

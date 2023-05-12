@@ -747,4 +747,13 @@ where
         self.style_manager_mut().push(UserStyle::EmbeddedValuePlus);
         self
     }
+
+    /// Enable [`Optional`](UserStyle::Optional) option set style.
+    /// This can support option style like `--opt42` which set `--opt` value to 42.
+    /// In default the [`Optional`](UserStyle::Optional) style only support
+    /// one letter option such as `-i`.
+    pub fn enable_flag(&mut self) -> &mut Self {
+        self.style_manager_mut().push(UserStyle::Flag);
+        self
+    }
 }

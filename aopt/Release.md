@@ -1,6 +1,12 @@
 
 # Relase note
 
+## 0.9.23
+
+- Fix the consume issue in policy
+
+- Add `Style::Flag` support for None value option
+
 ## 0.9.20
 
 - Moving the InferValueMut to cote

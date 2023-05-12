@@ -46,6 +46,9 @@ pub enum UserStyle {
 
     /// Option set style like `--bool`, only support boolean option.
     Boolean,
+
+    /// Option set style like `--flag`, but the value will be set to None.
+    Flag,
 }
 
 /// Manage the support option set style[`UserStyle`].
@@ -327,8 +330,20 @@ where
                     );
                 }
             }
+            UserStyle::Flag => {
+                if clopt.value.is_none() {
+                    matches.push(
+                        OptMatch::default()
+                            .with_idx(index)
+                            .with_total(count)
+                            .with_arg(None)
+                            .with_style(Style::Flag)
+                            .with_name(valueof("name", &clopt.name)?),
+                    );
+                }
+            }
             _ => {
-                unimplemented!("Unsupport generate Process for NOA Style")
+                unimplemented!("Unsupport generate Process for OptGuess")
             }
         }
 
@@ -431,7 +446,7 @@ where
                 );
             }
             _ => {
-                unimplemented!("Unsupport generate Process for Opt Style")
+                unimplemented!("Unsupport generate Process for NOAGuess")
             }
         }
 

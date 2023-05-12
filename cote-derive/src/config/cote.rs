@@ -38,6 +38,8 @@ pub enum CoteKind {
 
     EmbeddedPlus,
 
+    Flag,
+
     RawCall(String),
 }
 
@@ -64,6 +66,7 @@ impl Kind for CoteKind {
             "strict" => (Self::Strict, true),
             "combine" => (Self::Combine, false),
             "embedded" => (Self::EmbeddedPlus, false),
+            "flag" => (Self::Flag, false),
             call => (Self::RawCall(call.to_owned()), true),
         })
     }

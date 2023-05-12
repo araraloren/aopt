@@ -16,6 +16,7 @@ pub enum Style {
     Main,
 
     /// The style indicate option don't need argument, such as `--boolean`, `-b` or with no prefix `b`.
+    /// Using it with [`Boolean`](crate::parser::UserStyle::Boolean).
     Boolean,
 
     /// The style indicate the option need an argument, such as `--int=42`, `-i 42` or `--str=foo`.
@@ -23,6 +24,10 @@ pub enum Style {
 
     /// The style indicate option support set multiple option in one string, such as `-ade` means set `-a`, `-d` and `-e`.
     Combined,
+
+    /// The style indicate option don't need argument, such as `--boolean`, `-b` or with no prefix `b`.
+    /// Using it with [`Flag`](crate::parser::UserStyle::Flag).
+    Flag,
 }
 
 impl Default for Style {
@@ -55,6 +60,9 @@ impl std::fmt::Display for Style {
             Style::Combined => {
                 write!(f, "Style::Combined")
             }
+            Style::Flag => {
+                write!(f, "Style::Flag")
+            },
         }
     }
 }
