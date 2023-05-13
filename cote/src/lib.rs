@@ -1,6 +1,6 @@
 pub mod ctx;
 pub mod meta;
-pub mod services;
+pub mod ser;
 pub mod valid;
 pub mod value;
 
@@ -23,6 +23,7 @@ pub mod prelude {
     pub use crate::CoteParser;
     pub use crate::ExtractFromSetDerive;
     pub use crate::IntoParserDerive;
+    pub use crate::ser::CoteServiceExt;
     pub use aopt;
     pub use aopt::prelude::*;
 }
@@ -211,6 +212,37 @@ where
         Ok(self)
     }
 
+    /// Running function after parsing.
+    ///
+    /// # Example
+    ///
+    ///```rust
+    /// # use aopt::Error;
+    /// # use cote::prelude::*;
+    /// #
+    /// # fn main() -> Result<(), Error> {
+    ///     let mut policy = AFwdPolicy::default();
+    ///     let mut parser = CoteParser::new_with("example".to_owned(), &policy);
+    ///
+    ///     parser.add_opt_i::<bool>("-a!")?;
+    ///     parser.add_opt_i::<i64>("-b")?;
+    ///
+    ///     parser.run_mut_with(
+    ///         ["-a", "-b", "42"].into_iter(),
+    ///         &mut policy,
+    ///         |ret, parser| {
+    ///             if ret.status() {
+    ///                 assert_eq!(parser.find_val::<bool>("-a")?, &true);
+    ///                 assert_eq!(parser.find_val::<i64>("-b")?, &42);
+    ///             }
+    ///             Ok(())
+    ///         },
+    ///     )?;
+    ///     println!("{} running over!", parser.name());
+    /// #
+    /// # Ok(())
+    /// # }
+    ///```
     pub fn run_mut_with<'c, 'b, I, R, F, P>(
         &'c mut self,
         iter: impl Iterator<Item = I>,
@@ -234,7 +266,7 @@ where
         r(ret, self)
     }
 
-    /// Running with default arguments [`args()`](std::env::args).
+    /// Call [`run_mut_with`](CoteParser::run_mut_with) with default arguments [`args()`](std::env::args).
     pub fn run_mut<'c, 'b, R, F, P>(&'c mut self, policy: &mut P, r: F) -> Result<R, Error>
     where
         'c: 'b,
@@ -245,6 +277,39 @@ where
         self.run_mut_with(args.into_iter(), policy, r)
     }
 
+    /// Running async function after parsing.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use aopt::Error;
+    /// # use cote::prelude::*;
+    /// #
+    /// #[tokio::main]
+    /// # async fn main() -> Result<(), Error> {
+    ///     let mut policy = AFwdPolicy::default();
+    ///     let mut parser = CoteParser::new_with("example".to_owned(), &policy);
+    ///
+    ///     parser.add_opt_i::<bool>("-a!")?;
+    ///     parser.add_opt_i::<i64>("-b")?;
+    ///
+    ///     parser
+    ///         .run_async_mut_with(
+    ///             ["-a", "-b", "42"].into_iter(),
+    ///             &mut policy,
+    ///             |ret, parser| async move {
+    ///                 if ret.status() {
+    ///                     assert_eq!(parser.find_val::<bool>("-a")?, &true);
+    ///                     assert_eq!(parser.find_val::<i64>("-b")?, &42);
+    ///                 }
+    ///                 Ok(())
+    ///             },
+    ///         )
+    ///         .await?;
+    ///     println!("{} running over!", parser.name());
+    /// # Ok(())
+    /// # }
+    ///```
     pub async fn run_async_mut_with<'c, 'b, I, R, FUT, F, P>(
         &'c mut self,
         iter: impl Iterator<Item = I>,
@@ -277,7 +342,7 @@ where
         async_ret
     }
 
-    /// Running with default arguments [`args()`](std::env::args).
+    /// Call [`run_async_mut_with`](Self::run_async_mut_with) with default arguments [`args()`](std::env::args).
     pub async fn run_async_mut<'c, 'b, R, FUT, F, P>(
         &'c mut self,
         policy: &mut P,
@@ -293,6 +358,37 @@ where
         self.run_async_mut_with(args.into_iter(), policy, r).await
     }
 
+    /// Running function after parsing.
+    ///
+    /// # Example
+    ///
+    ///```rust
+    /// # use aopt::Error;
+    /// # use cote::prelude::*;
+    /// #
+    /// # fn main() -> Result<(), Error> {
+    ///     let mut policy = AFwdPolicy::default();
+    ///     let mut parser = CoteParser::new_with("example".to_owned(), &policy);
+    ///
+    ///     parser.add_opt_i::<bool>("-a!")?;
+    ///     parser.add_opt_i::<i64>("-b")?;
+    ///
+    ///     parser.run_with(
+    ///         ["-a", "-b", "42"].into_iter(),
+    ///         &mut policy,
+    ///         |ret, parser| {
+    ///             if ret.status() {
+    ///                 assert_eq!(parser.find_val::<bool>("-a")?, &true);
+    ///                 assert_eq!(parser.find_val::<i64>("-b")?, &42);
+    ///             }
+    ///             Ok(())
+    ///         },
+    ///     )?;
+    ///     println!("{} running over!", parser.name());
+    /// #
+    /// # Ok(())
+    /// # }
+    ///```
     pub fn run_with<'c, 'b, I, R, F, P>(
         &'c mut self,
         iter: impl Iterator<Item = I>,
@@ -316,7 +412,7 @@ where
         r(ret, self)
     }
 
-    /// Running with default arguments [`args()`](std::env::args).
+    /// Call [`run_with`](Self::run_with) with default arguments [`args()`](std::env::args).
     pub fn run<'c, 'b, R, F, P>(&'c mut self, policy: &mut P, r: F) -> Result<R, Error>
     where
         'c: 'b,
@@ -327,6 +423,39 @@ where
         self.run_with(args.into_iter(), policy, r)
     }
 
+    /// Running async function after parsing.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use aopt::Error;
+    /// # use cote::prelude::*;
+    /// #
+    /// #[tokio::main]
+    /// # async fn main() -> Result<(), Error> {
+    ///     let mut policy = AFwdPolicy::default();
+    ///     let mut parser = CoteParser::new_with("example".to_owned(), &policy);
+    ///
+    ///     parser.add_opt_i::<bool>("-a!")?;
+    ///     parser.add_opt_i::<i64>("-b")?;
+    ///
+    ///     parser
+    ///         .run_async_with(
+    ///             ["-a", "-b", "42"].into_iter(),
+    ///             &mut policy,
+    ///             |ret, parser| async move {
+    ///                 if ret.status() {
+    ///                     assert_eq!(parser.find_val::<bool>("-a")?, &true);
+    ///                     assert_eq!(parser.find_val::<i64>("-b")?, &42);
+    ///                 }
+    ///                 Ok(())
+    ///             },
+    ///         )
+    ///         .await?;
+    ///     println!("{} running over!", parser.name());
+    /// # Ok(())
+    /// # }
+    ///```
     pub async fn run_async_with<'c, 'b, I, R, FUT, F, P>(
         &'c mut self,
         iter: impl Iterator<Item = I>,
@@ -359,7 +488,7 @@ where
         async_ret
     }
 
-    /// Running with default arguments [`args()`](std::env::args).
+    /// Call [`run_async_with`](Self::run_async_with) with default arguments [`args()`](std::env::args).
     pub async fn run_async<'c, 'b, R, FUT, F, P>(
         &'c mut self,
         policy: &mut P,
