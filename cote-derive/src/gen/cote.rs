@@ -311,7 +311,7 @@ impl<'a> CoteGenerator<'a> {
                 Some(quote! {
                     let #ident = {
                         ctor.new_with({
-                            let mut config = aopt::prelude::SetCfg::<P::Set>::default();
+                            let mut config = aopt::prelude::SetCfg::<Set>::default();
                             config.set_name(format!("main_option_{}", #idx));
                             <aopt::opt::Main>::infer_fill_info(&mut config, true);
                             config
@@ -372,7 +372,7 @@ impl<'a> CoteGenerator<'a> {
                     Some(quote! {
                         let #ident = {
                             ctor.new_with({
-                                let mut config = aopt::prelude::SetCfg::<P::Set>::default();
+                                let mut config = aopt::prelude::SetCfg::<Set>::default();
                                 config.set_name(#HELP_OPTION_NAME);
                                 config.add_alias(#HELP_OPTION_SHORT);
                                 config.set_help(#HELP_OPTION_HELP);

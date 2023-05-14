@@ -184,7 +184,7 @@ impl<'a> SubGenerator<'a> {
         let name = &self.name;
         let mut codes = vec![];
         let mut config = quote! {
-            let mut config = aopt::prelude::SetCfg::<P::Set>::default();
+            let mut config = aopt::prelude::SetCfg::<Set>::default();
             config.set_name(#name);
         };
 

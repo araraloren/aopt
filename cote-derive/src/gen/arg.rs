@@ -234,7 +234,7 @@ impl<'a> ArgGenerator<'a> {
         let mut codes = vec![];
         let mut value = None;
         let mut config = quote! {
-            let mut config = aopt::prelude::SetCfg::<P::Set>::default();
+            let mut config = aopt::prelude::SetCfg::<Set>::default();
             config.set_name(#name);
         };
 

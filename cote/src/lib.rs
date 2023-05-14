@@ -20,6 +20,7 @@ use help::HelpDisplayCtx;
 use ser::CoteServiceExt;
 
 pub mod prelude {
+    pub use crate::help::HelpDisplayCtx;
     pub use crate::meta::IntoConfig;
     pub use crate::meta::OptionMeta;
     pub use crate::ser::CoteServiceExt;
@@ -32,6 +33,7 @@ pub mod prelude {
     pub use crate::IntoParserDerive;
     pub use aopt;
     pub use aopt::prelude::*;
+    pub use cote_derive::Cote;
 }
 
 use crate::meta::IntoConfig;
@@ -687,6 +689,20 @@ where
             }
         }
         Ok(false)
+    }
+}
+
+impl<'a, Set, Inv, Ser> CoteParser<Set, Inv, Ser>
+where
+    Set: SetValueFindExt,
+{
+    pub fn extract_type<T>(&'a mut self) -> Result<T, Error>
+    where
+        T: ExtractFromSetDerive<'a, Set>,
+    {
+        let set = self.parser.optset_mut();
+
+        T::try_extract(set)
     }
 }
 

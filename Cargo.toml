@@ -2,9 +2,9 @@
 
 members = [
     "aopt",
-    # "aopt-help",
+    "aopt-help",
     "cote",
-    # "cote-derive",
+    "cote-derive",
     # "index-constituent",
     "simple-find-file",
     "snowball-follow",
