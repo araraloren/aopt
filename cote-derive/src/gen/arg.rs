@@ -123,7 +123,7 @@ impl<'a> ArgGenerator<'a> {
             let name = &self.name;
 
             quote! {
-                parser.policy_mut().set_no_delay(#name);
+                policy.set_no_delay(#name);
             }
         })
     }

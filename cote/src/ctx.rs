@@ -1,5 +1,28 @@
+use std::ops::{Deref, DerefMut};
+
+
+#[derive(Debug, Clone,)]
+pub struct FailedInfo {
+    pub name: String,
+    pub retval: aopt::prelude::ReturnVal,
+}
+
+impl Deref for FailedInfo {
+    type Target = aopt::prelude::ReturnVal;
+
+    fn deref(&self) -> &Self::Target {
+        &self.retval
+    }
+}
+
+impl DerefMut for FailedInfo {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.retval
+    }
+}
+
 #[derive(Debug, Clone, Default)]
-pub struct RunningCtx<T = (String, aopt::prelude::ReturnVal)> {
+pub struct RunningCtx {
     names: Vec<String>,
 
     display_help: bool,
@@ -10,10 +33,10 @@ pub struct RunningCtx<T = (String, aopt::prelude::ReturnVal)> {
 
     exit_sub: bool,
 
-    failed_info: Vec<T>,
+    failed_info: Vec<FailedInfo>,
 }
 
-impl<T> RunningCtx<T> {
+impl RunningCtx {
     pub fn with_names(mut self, names: Vec<String>) -> Self {
         self.names = names;
         self
@@ -64,7 +87,7 @@ impl<T> RunningCtx<T> {
         self
     }
 
-    pub fn add_failed_info(&mut self, failed_info: T) -> &mut Self {
+    pub fn add_failed_info(&mut self, failed_info: FailedInfo) -> &mut Self {
         self.failed_info.push(failed_info);
         self
     }
@@ -89,11 +112,11 @@ impl<T> RunningCtx<T> {
         self.exit_sub
     }
 
-    pub fn failed_info(&self) -> &[T] {
+    pub fn failed_info(&self) -> &[FailedInfo] {
         &self.failed_info
     }
 
-    pub fn take_failed_info(&mut self) -> Vec<T> {
+    pub fn take_failed_info(&mut self) -> Vec<FailedInfo> {
         std::mem::take(&mut self.failed_info)
     }
 
@@ -119,17 +142,15 @@ impl<T> RunningCtx<T> {
         self.failed_info.extend(ctx.take_failed_info());
         self
     }
-}
 
-impl RunningCtx<(String, aopt::prelude::ReturnVal)> {
     pub fn chain_error(&mut self) -> Option<aopt::Error> {
         let mut iter = self.failed_info.iter_mut();
 
         if let Some(failed_info) = iter.next() {
-            let mut error = failed_info.1.take_failure();
+            let mut error = failed_info.take_failure();
 
             for failed_info in iter {
-                error = error.cause(failed_info.1.take_failure());
+                error = error.cause(failed_info.take_failure());
             }
             Some(error)
         } else {

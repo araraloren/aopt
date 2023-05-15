@@ -144,15 +144,20 @@ impl<'a> CoteGenerator<'a> {
         Ident::new(&format!("{}{}", ident, APP_POSTFIX), ident.span())
     }
 
-    pub fn gen_style_settings_for_parser(&self) -> Option<TokenStream> {
+    pub fn gen_style_settings_for_policy(&self) -> Option<TokenStream> {
+        // policy.style_manager_mut().push(aopt::parser::UserStyle::CombinedOption);
         let has_combine = self.configs.has_cfg(CoteKind::Combine);
         let has_embedded = self.configs.has_cfg(CoteKind::EmbeddedPlus);
-        let for_combine = has_combine.then_some(quote! {parser.enable_combined();});
-        let for_embedded_plus = has_embedded.then_some(quote! {parser.enable_embedded_plus();});
+        let for_combine = has_combine.then_some(quote! {
+            policy.style_manager_mut().push(aopt::parser::UserStyle::CombinedOption);
+        });
+        let for_embedded_plus = has_embedded.then_some(quote! {
+            policy.style_manager_mut().push(aopt::parser::UserStyle::EmbeddedValuePlus)
+        });
         let for_strict = self.configs.find_cfg(CoteKind::Strict).map(|v| {
             let value = v.value();
             quote! {
-                parser.set_strict(#value);
+                policy.set_strict(#value);
             }
         });
 
@@ -178,7 +183,7 @@ impl<'a> CoteGenerator<'a> {
                     let args = config.value();
 
                     ret.extend(quote! {
-                        app.#method(#args);
+                        parser.#method(#args);
                     });
                 }
                 _ => {}

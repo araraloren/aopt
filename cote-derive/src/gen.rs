@@ -440,10 +440,10 @@ impl<'a> Analyzer<'a> {
         }
     }
 
-    pub fn gen_parser_settings(&self) -> TokenStream {
+    pub fn gen_policy_settings(&self) -> TokenStream {
         let mut ret = quote! {};
 
-        if let Some(style_settings) = self.cote_generator.gen_style_settings_for_parser() {
+        if let Some(style_settings) = self.cote_generator.gen_style_settings_for_policy() {
             ret.extend(style_settings);
         }
         for arg in self.arg_generator.iter() {
@@ -491,48 +491,43 @@ impl<'a> Analyzer<'a> {
         let struct_app_ty = self.cote_generator.gen_struct_app_type();
         let policy_ty = self.cote_generator.gen_policy_type()?;
         let insert_sub_apps = self.gen_insert_sub_apps()?;
-        let parser_settings = self.gen_parser_settings();
+        let policy_settings = self.gen_policy_settings();
         let app_raw_tweaks = self.cote_generator.gen_tweak_on_app();
         let parser_app_name = self.cote_generator.get_name();
         let where_clause = Self::where_clause_for_policy();
         let where_clause_parser = Self::where_clause_for_parser();
 
         Ok(quote! {
-            pub fn into_cote_parser<Set, Inv, Ser>() ->
+            pub fn gen_parser<Set, Inv, Ser>(set: Set, inv: Inv, ser: Ser,) ->
                 Result<cote::CoteParser<Set, Inv, Ser>, aopt::Error> #where_clause_parser {
-                let parser = <Self  as cote::IntoParserDerive<Set, Inv, Ser>>::into_parser()?;
+                let parser = <Self  as cote::IntoParserDerive<Set, Inv, Ser>>::into_parser(set, inv, ser)?;
                 Ok(cote::CoteParser::new_with_parser(#parser_app_name, parser))
             }
 
-            pub fn into_app<'z>() -> Result<#struct_app_ty<'z, #policy_ty>, aopt::Error> {
-                Self::into_app_policy()
+            pub fn gen_parser_with<'a, P>(policy: &P) ->
+                Result<cote::CoteParser<P::Set, P::Inv<'a>, P::Ser>, aopt::Error> #where_clause_parser {
+                let parser = <Self  as cote::IntoParserDerive<P::Set, P::Inv<'a>, P::Ser>>::into_parser_with(policy)?;
+                Ok(cote::CoteParser::new_with_parser(#parser_app_name, parser))
             }
 
-            pub fn into_cote_app<'z>() -> Result<cote::CoteApp<'z, #policy_ty>, aopt::Error> {
-                Self::into_cote_app_policy()
+            pub fn gen_policy<P>() -> P where P: aopt::prelude::PolicySettings + Default {
+                let mut policy = P::default();
+                #policy_settings
+                policy
             }
 
-            pub fn into_app_policy<'z, P>() -> Result<#struct_app_ty<'z, P>, aopt::Error> #where_clause {
-                Ok(#struct_app_ty::new(Self::into_cote_app_policy()?))
-            }
-
-            pub fn into_cote_app_policy<'z, P>() -> Result<cote::CoteApp<'z, P>, aopt::Error> #where_clause {
-                let mut parser = <Self as cote::IntoParserDerive<P>>::into_parser()?;
-
-                #parser_settings
-                #insert_sub_apps
-
-                Ok(cote::CoteApp::new_with_parser(#parser_app_name, parser))
+            pub fn gen_default_policy() -> #policy_ty {
+                Self::gen_policy::<#policy_ty>()
             }
 
             /// Parsing the given arguments and return the [`GetoptRes`](aopt::GetoptRes).
-            pub fn parse_args<'z>(args: aopt::prelude::Args)
-                -> Result<aopt::GetoptRes<<#policy_ty as aopt::prelude::Policy>::Ret, #struct_app_ty<'z, #policy_ty>>, aopt::Error> {
-                let app: #struct_app_ty<'_, #policy_ty> = Self::into_app_policy()?;
-                let mut app = app.with_default_running_ctx()?;
-
-                #app_raw_tweaks
-                app.get_running_ctx_mut()?.add_name(#parser_app_name);
+            pub fn parse_args_with<'a, P>(policy: &mut P, args: aopt::prelude::Args)
+                -> Result<aopt::GetoptRes<<P as aopt::prelude::Policy>::Ret, cote::CoteParser<P::Set, P::Inv<'a>, P::Ser>, aopt::Error> {
+                let mut parser = Self::gen_parser_with(policy)?;
+                
+                parser.service_mut().set_rctx(cote::RunningCtx::default());
+                parser.service_mut().rctx_mut()?.add_name(#parser_app_name);
+                // todo
                 let parser = app.inner_parser_mut();
 
                 parser.init()?;
