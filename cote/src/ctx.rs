@@ -1,7 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-
-#[derive(Debug, Clone,)]
+#[derive(Debug, Clone)]
 pub struct FailedInfo {
     pub name: String,
     pub retval: aopt::prelude::ReturnVal,

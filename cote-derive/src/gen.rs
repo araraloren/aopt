@@ -504,9 +504,9 @@ impl<'a> Analyzer<'a> {
                 Ok(cote::CoteParser::new_with_parser(#parser_app_name, parser))
             }
 
-            pub fn gen_parser_with<'a, P>(policy: &P) ->
-                Result<cote::CoteParser<P::Set, P::Inv<'a>, P::Ser>, aopt::Error> #where_clause_parser {
-                let parser = <Self  as cote::IntoParserDerive<P::Set, P::Inv<'a>, P::Ser>>::into_parser_with(policy)?;
+            pub fn gen_parser_with<'z, P>(policy: &P) ->
+                Result<cote::CoteParser<P::Set, P::Inv<'z>, P::Ser>, aopt::Error> #where_clause {
+                let parser = <Self  as cote::IntoParserDerive<P::Set, P::Inv<'z>, P::Ser>>::into_parser_with(policy)?;
                 Ok(cote::CoteParser::new_with_parser(#parser_app_name, parser))
             }
 
@@ -521,40 +521,40 @@ impl<'a> Analyzer<'a> {
             }
 
             /// Parsing the given arguments and return the [`GetoptRes`](aopt::GetoptRes).
-            pub fn parse_args_with<'a, P>(policy: &mut P, args: aopt::prelude::Args)
-                -> Result<aopt::GetoptRes<<P as aopt::prelude::Policy>::Ret, cote::CoteParser<P::Set, P::Inv<'a>, P::Ser>, aopt::Error> {
+            pub fn parse_args_with<'z, P>(policy: &mut P, args: aopt::prelude::Args)
+                -> Result<aopt::GetoptRes<<P as aopt::prelude::Policy>::Ret,
+                    cote::CoteParser<<P as aopt::prelude::Policy>::Set, <P as aopt::prelude::Policy>::Inv<'z>,
+                    <P as aopt::prelude::Policy>::Ser>>, aopt::Error>
+                where P: aopt::prelude::Policy {
                 let mut parser = Self::gen_parser_with(policy)?;
-                
+
                 parser.service_mut().set_rctx(cote::RunningCtx::default());
                 parser.service_mut().rctx_mut()?.add_name(#parser_app_name);
-                // todo
-                let parser = app.inner_parser_mut();
-
                 parser.init()?;
-                let ret = parser.parse(aopt::ARef::new(aopt::prelude::Args::from(args))).map_err(Into::into);
 
-                app.sync_running_ctx(&ret, false)?;
-                let running_ctx = app.get_running_ctx()?;
+                let ret = parser.parse(aopt::ARef::new(aopt::prelude::Args::from(args)), policy);
+                let running_ctx = parser.service_mut().rctx()?;
 
                 if running_ctx.display_sub_help() {
-                    app.display_sub_help(running_ctx.names())?;
                     if running_ctx.exit_sub() {
                         std::process::exit(0)
                     }
                 }
                 else if running_ctx.display_help() {
-                    app.display_help()?;
                     if running_ctx.exit() {
                         std::process::exit(0)
                     }
                 }
-                Ok(aopt::GetoptRes{ ret: ret?, parser: app })
+                Ok(aopt::GetoptRes{ ret: ret?, parser })
             }
 
-            /// Parsing arguments returned from [`from_env`](aopt::prelude::Args::from_env) and return the [`GetoptRes`](aopt::GetoptRes).
-            pub fn parse_env_args<'z>()
-            -> Result<aopt::GetoptRes<<#policy_ty as aopt::prelude::Policy>::Ret, #struct_app_ty<'z, #policy_ty>>, aopt::Error> {
-                Self::parse_args(aopt::prelude::Args::from_env())
+            /// Parsing the given arguments and return the [`GetoptRes`](aopt::GetoptRes).
+            pub fn parse_args<'z>(args: aopt::prelude::Args)
+                -> Result<aopt::GetoptRes<<#policy_ty as aopt::prelude::Policy>::Ret,
+                cote::CoteParser<<#policy_ty as aopt::prelude::Policy>::Set, <#policy_ty as aopt::prelude::Policy>::Inv<'z>,
+                    <#policy_ty as aopt::prelude::Policy>::Ser>>, aopt::Error> {
+                let mut policy = Self::gen_default_policy();
+                Self::parse_args_with(args, &mut policy)
             }
 
             /// Parsing the given arguments and generate a .
@@ -601,6 +601,29 @@ impl<'a> Analyzer<'a> {
 
                     Err(e)
                 }
+            }
+
+            /// Parsing the given arguments and return the [`GetoptRes`](aopt::GetoptRes).
+            pub fn parse_env_args_with<'z, P>(policy: &mut P)
+                -> Result<aopt::GetoptRes<<P as aopt::prelude::Policy>::Ret,
+                    cote::CoteParser<<P as aopt::prelude::Policy>::Set, <P as aopt::prelude::Policy>::Inv<'z>,
+                    <P as aopt::prelude::Policy>::Ser>>, aopt::Error>
+                where P: aopt::prelude::Policy {
+                    Self::parse_args_with(aopt::prelude::Args::from_env(), policy)
+            }
+
+            /// Parsing the given arguments and return the [`GetoptRes`](aopt::GetoptRes).
+            pub fn parse_env_args<'z>(args: aopt::prelude::Args)
+                -> Result<aopt::GetoptRes<<#policy_ty as aopt::prelude::Policy>::Ret,
+                cote::CoteParser<<#policy_ty as aopt::prelude::Policy>::Set, <#policy_ty as aopt::prelude::Policy>::Inv<'z>,
+                    <#policy_ty as aopt::prelude::Policy>::Ser>>, aopt::Error> {
+                        Self::parse_args(aopt::prelude::Args::from_env())
+            }
+
+            /// Parsing arguments returned from [`from_env`](aopt::prelude::Args::from_env) and return the [`GetoptRes`](aopt::GetoptRes).
+            pub fn parse_env_args<'z>()
+            -> Result<aopt::GetoptRes<<#policy_ty as aopt::prelude::Policy>::Ret, #struct_app_ty<'z, #policy_ty>>, aopt::Error> {
+
             }
 
             pub fn parse_env() -> Result<Self, aopt::Error> {
