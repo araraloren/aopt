@@ -498,12 +498,6 @@ impl<'a> Analyzer<'a> {
         let where_clause_parser = Self::where_clause_for_parser();
 
         Ok(quote! {
-            pub fn gen_parser<Set, Inv, Ser>(set: Set, inv: Inv, ser: Ser,) ->
-                Result<cote::CoteParser<Set, Inv, Ser>, aopt::Error> #where_clause_parser {
-                let parser = <Self  as cote::IntoParserDerive<Set, Inv, Ser>>::into_parser(set, inv, ser)?;
-                Ok(cote::CoteParser::new_with_parser(#parser_app_name, parser))
-            }
-
             pub fn gen_parser_with<'z, P>(policy: &P) ->
                 Result<cote::CoteParser<P::Set, P::Inv<'z>, P::Ser>, aopt::Error> #where_clause {
                 let parser = <Self  as cote::IntoParserDerive<P::Set, P::Inv<'z>, P::Ser>>::into_parser_with(policy)?;
