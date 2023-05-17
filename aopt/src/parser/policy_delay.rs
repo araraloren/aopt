@@ -617,9 +617,9 @@ mod test {
         }
 
         let mut policy = ADelayPolicy::default();
-        let mut ser = policy.default_ser();
-        let mut inv = policy.default_inv();
-        let mut set = policy.default_set();
+        let mut set = crate::aset!();
+        let mut inv = AInvoker::default();
+        let mut ser = ASer::default();
 
         let args = Args::from_array([
             "app",

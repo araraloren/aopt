@@ -96,68 +96,109 @@ impl<O: Opt, C, E: Into<Error>> Ctor for Creator<O, C, E> {
     }
 }
 
-const BUILTIN_CTOR_INT: &str = "i";
-const BUILTIN_CTOR_BOOL: &str = "b";
-const BUILTIN_CTOR_UINT: &str = "u";
-const BUILTIN_CTOR_STR: &str = "s";
-const BUILTIN_CTOR_FLT: &str = "f";
-const BUILTIN_CTOR_CMD: &str = "c";
-const BUILTIN_CTOR_POS: &str = "p";
-const BUILTIN_CTOR_MAIN: &str = "m";
-const BUILTIN_CTOR_ANY: &str = "a";
-const BUILTIN_CTOR_RAW: &str = "r";
+const BUILTIN_CTOR_INT_SHORT: &str = "i";
+const BUILTIN_CTOR_INT_LONG: &str = "int";
+const BUILTIN_CTOR_INT_TYPE: &str = "i64";
+const BUILTIN_CTOR_BOOL_SHORT: &str = "b";
+const BUILTIN_CTOR_BOOL_LONG: &str = "boolean";
+const BUILTIN_CTOR_BOOL_TYPE: &str = "bool";
+const BUILTIN_CTOR_UINT_SHORT: &str = "u";
+const BUILTIN_CTOR_UINT_LONG: &str = "uint";
+const BUILTIN_CTOR_UINT_TYPE: &str = "u64";
+const BUILTIN_CTOR_STR_SHORT: &str = "s";
+const BUILTIN_CTOR_STR_LONG: &str = "str";
+const BUILTIN_CTOR_STR_TYPE: &str = "string";
+const BUILTIN_CTOR_FLT_SHORT: &str = "f";
+const BUILTIN_CTOR_FLT_LONG: &str = "flt";
+const BUILTIN_CTOR_FLT_TYPE: &str = "f64";
+const BUILTIN_CTOR_CMD_SHORT: &str = "c";
+const BUILTIN_CTOR_CMD_LONG: &str = "cmd";
+const BUILTIN_CTOR_POS_SHORT: &str = "p";
+const BUILTIN_CTOR_POS_LONG: &str = "pos";
+const BUILTIN_CTOR_MAIN_SHORT: &str = "m";
+const BUILTIN_CTOR_MAIN_LONG: &str = "main";
+const BUILTIN_CTOR_ANY_SHORT: &str = "a";
+const BUILTIN_CTOR_ANY_LONG: &str = "any";
+const BUILTIN_CTOR_RAW_SHORT: &str = "r";
+const BUILTIN_CTOR_RAW_LONG: &str = "raw";
+const BUILTIN_CTOR_FALLBACK: &str = "fallback";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum BuiltInCtor {
+    /// Create names: `i`, `int`, `i64`
     Int,
 
+    /// Create names: `s`, `str`, `string`
     Str,
 
+    /// Create names: `f`, `flt`, `f64`
     Flt,
 
+    /// Create names: `u`, `uint`, `u64`
     Uint,
 
+    /// Create names: `b`, `boolean`, `bool`
     Bool,
 
+    /// Create names: `c`, `cmd`
     Cmd,
 
+    /// Create names: `p`, `pos`
     Pos,
 
+    /// Create names: `m`, `main`
     Main,
 
+    /// Create names: `a`, `any`
     Any,
 
+    /// Create names: `r`, `raw`
     Raw,
+
+    /// Create names: `fallback`
+    Fallback,
 }
 
 impl BuiltInCtor {
     pub fn name(&self) -> &str {
         match self {
-            BuiltInCtor::Int => BUILTIN_CTOR_INT,
-            BuiltInCtor::Str => BUILTIN_CTOR_STR,
-            BuiltInCtor::Flt => BUILTIN_CTOR_FLT,
-            BuiltInCtor::Uint => BUILTIN_CTOR_UINT,
-            BuiltInCtor::Bool => BUILTIN_CTOR_BOOL,
-            BuiltInCtor::Cmd => BUILTIN_CTOR_CMD,
-            BuiltInCtor::Pos => BUILTIN_CTOR_POS,
-            BuiltInCtor::Main => BUILTIN_CTOR_MAIN,
-            BuiltInCtor::Any => BUILTIN_CTOR_ANY,
-            BuiltInCtor::Raw => BUILTIN_CTOR_RAW,
+            BuiltInCtor::Int => BUILTIN_CTOR_INT_SHORT,
+            BuiltInCtor::Str => BUILTIN_CTOR_STR_SHORT,
+            BuiltInCtor::Flt => BUILTIN_CTOR_FLT_SHORT,
+            BuiltInCtor::Uint => BUILTIN_CTOR_UINT_SHORT,
+            BuiltInCtor::Bool => BUILTIN_CTOR_BOOL_SHORT,
+            BuiltInCtor::Cmd => BUILTIN_CTOR_CMD_SHORT,
+            BuiltInCtor::Pos => BUILTIN_CTOR_POS_SHORT,
+            BuiltInCtor::Main => BUILTIN_CTOR_MAIN_SHORT,
+            BuiltInCtor::Any => BUILTIN_CTOR_ANY_SHORT,
+            BuiltInCtor::Raw => BUILTIN_CTOR_RAW_SHORT,
+            BuiltInCtor::Fallback => BUILTIN_CTOR_FALLBACK,
         }
     }
 
-    pub fn from_name(ctor: &Str) -> Self {
-        match ctor.as_str() {
-            BUILTIN_CTOR_INT => BuiltInCtor::Int,
-            BUILTIN_CTOR_STR => BuiltInCtor::Str,
-            BUILTIN_CTOR_FLT => BuiltInCtor::Flt,
-            BUILTIN_CTOR_UINT => BuiltInCtor::Uint,
-            BUILTIN_CTOR_BOOL => BuiltInCtor::Bool,
-            BUILTIN_CTOR_CMD => BuiltInCtor::Cmd,
-            BUILTIN_CTOR_POS => BuiltInCtor::Pos,
-            BUILTIN_CTOR_MAIN => BuiltInCtor::Main,
-            BUILTIN_CTOR_ANY => BuiltInCtor::Any,
-            BUILTIN_CTOR_RAW => BuiltInCtor::Raw,
+    pub fn from_name<S: AsRef<str>>(ctor: &S) -> Self {
+        match ctor.as_ref() {
+            BUILTIN_CTOR_INT_SHORT | BUILTIN_CTOR_INT_LONG | BUILTIN_CTOR_INT_TYPE => {
+                BuiltInCtor::Int
+            }
+            BUILTIN_CTOR_STR_SHORT | BUILTIN_CTOR_STR_LONG | BUILTIN_CTOR_STR_TYPE => {
+                BuiltInCtor::Str
+            }
+            BUILTIN_CTOR_FLT_SHORT | BUILTIN_CTOR_FLT_LONG | BUILTIN_CTOR_FLT_TYPE => {
+                BuiltInCtor::Flt
+            }
+            BUILTIN_CTOR_UINT_SHORT | BUILTIN_CTOR_UINT_LONG | BUILTIN_CTOR_UINT_TYPE => {
+                BuiltInCtor::Uint
+            }
+            BUILTIN_CTOR_BOOL_SHORT | BUILTIN_CTOR_BOOL_LONG | BUILTIN_CTOR_BOOL_TYPE => {
+                BuiltInCtor::Bool
+            }
+            BUILTIN_CTOR_CMD_SHORT | BUILTIN_CTOR_CMD_LONG => BuiltInCtor::Cmd,
+            BUILTIN_CTOR_POS_SHORT | BUILTIN_CTOR_POS_LONG => BuiltInCtor::Pos,
+            BUILTIN_CTOR_MAIN_SHORT | BUILTIN_CTOR_MAIN_LONG => BuiltInCtor::Main,
+            BUILTIN_CTOR_ANY_SHORT | BUILTIN_CTOR_ANY_LONG => BuiltInCtor::Any,
+            BUILTIN_CTOR_RAW_SHORT | BUILTIN_CTOR_RAW_LONG => BuiltInCtor::Raw,
+            BUILTIN_CTOR_FALLBACK => BuiltInCtor::Fallback,
             name => {
                 panic!("Unknow creator name: {}", name)
             }
@@ -235,10 +276,16 @@ impl Creator<AOpt, OptConfig, Error> {
             BuiltInCtor::Main => Main::<()>::infer_fill_info(info, false),
             BuiltInCtor::Any => Any::<()>::infer_fill_info(info, false),
             BuiltInCtor::Raw => <OsString>::infer_fill_info(info, false),
+            BuiltInCtor::Fallback => {
+                unreachable!("Fallback creator can't infer any type")
+            }
         }
     }
 
     pub fn new_type_ctor(ctor: BuiltInCtor) -> Self {
+        if ctor == BuiltInCtor::Fallback {
+            return Self::fallback();
+        }
         let name = Str::from(ctor.name());
 
         Self::new(name, move |mut config: OptConfig| {

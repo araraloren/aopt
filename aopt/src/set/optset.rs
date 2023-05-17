@@ -236,6 +236,9 @@ where
                 BuiltInCtor::Main => cfg.set_type::<Main>(),
                 BuiltInCtor::Any => cfg.set_type::<Any>(),
                 BuiltInCtor::Raw => cfg.set_type::<OsString>(),
+                BuiltInCtor::Fallback => {
+                    unreachable!("Fallback creator can't infer any type")
+                }
             }
         } else {
             cfg
@@ -513,7 +516,7 @@ mod test {
     }
 
     fn test_add_option_impl() -> Result<(), Error> {
-        let mut set = aset_with_default_creators();
+        let mut set = crate::aset!();
 
         assert!(set.add_opt("set;s=c")?.run().is_ok());
         assert!(set.add_opt_i::<Cmd>("g;get")?.run().is_ok());

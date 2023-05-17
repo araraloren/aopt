@@ -165,17 +165,6 @@ impl<Set, Inv, Ser> Parser<Set, Inv, Ser> {
         Self { set, inv, ser }
     }
 
-    pub fn new_with<'a, P>(policy: &P) -> Self
-    where
-        P: Policy<Set = Set, Inv<'a> = Inv, Ser = Ser> + APolicyExt<P>,
-    {
-        let set = policy.default_set();
-        let ser = policy.default_ser();
-        let inv = policy.default_inv();
-
-        Self::new(set, inv, ser)
-    }
-
     pub fn invoker(&self) -> &Inv {
         &self.inv
     }
@@ -272,7 +261,7 @@ where
     /// #[derive(Debug)]
     /// struct Int(i64);
     ///
-    /// let mut parser = PolicyParser::new(AFwdPolicy::default());
+    /// let mut parser = PolicyParser::new_policy(AFwdPolicy::default());
     ///
     /// // Register a value can access in handler parameter.
     /// parser.set_app_data(ser::Value::new(Int(42)))?;
@@ -307,7 +296,7 @@ where
     /// #[derive(Debug)]
     /// struct Int(i64);
     ///
-    /// let mut parser = PolicyParser::new(AFwdPolicy::default());
+    /// let mut parser = PolicyParser::new_policy(AFwdPolicy::default());
     ///
     /// // Register a value can access in handler parameter.
     /// parser.set_app_data(Int(42))?;
@@ -423,7 +412,7 @@ where
     /// # use std::ops::Deref;
     /// #
     /// # fn main() -> Result<(), Error> {
-    /// let mut parser1 = PolicyParser::new(AFwdPolicy::default());
+    /// let mut parser1 = PolicyParser::new_policy(AFwdPolicy::default());
     ///
     /// // Add an option `--count` with type `i`.
     /// parser1.add_opt("--count=i")?;
@@ -640,12 +629,12 @@ where
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<(), Error> {
-/// let mut parser1 = PolicyParser::new(AFwdPolicy::default());
+/// let mut parser1 = PolicyParser::new_policy(AFwdPolicy::default());
 ///
 /// parser1.add_opt("Where=c")?;
 /// parser1.add_opt("question=m")?.on(question)?;
 ///
-/// let mut parser2 = PolicyParser::new(AFwdPolicy::default());
+/// let mut parser2 = PolicyParser::new_policy(AFwdPolicy::default());
 ///
 /// parser2.add_opt("Who=c")?;
 /// parser2.add_opt("question=m")?.on(question)?;
@@ -681,25 +670,10 @@ where
 ///
 /// Using it with macro [`getopt`](crate::getopt),
 /// which can process multiple [`PolicyParser`] with same type [`Policy`].
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct PolicyParser<'a, P: Policy> {
     policy: P,
     parser: Parser<P::Set, P::Inv<'a>, P::Ser>,
-}
-
-impl<'a, P: Policy> Default for PolicyParser<'a, P>
-where
-    P::Set: Default,
-    P::Inv<'a>: Default,
-    P::Ser: Default,
-    P: Default + Policy + APolicyExt<P>,
-{
-    fn default() -> Self {
-        let policy = P::default();
-        let parser = Parser::new_with(&policy);
-
-        Self { policy, parser }
-    }
 }
 
 impl<'a, P: Policy> Deref for PolicyParser<'a, P> {
@@ -716,18 +690,24 @@ impl<'a, P: Policy> DerefMut for PolicyParser<'a, P> {
     }
 }
 
-impl<'a, P> PolicyParser<'a, P>
-where
-    P: Policy + APolicyExt<P>,
-{
-    pub fn new(policy: P) -> Self {
-        let parser = Parser::new_with::<P>(&policy);
+impl<'a, P: Policy> PolicyParser<'a, P> where P: APolicyExt<P> {
+    pub fn new_policy(policy: P) -> Self {
+        let set = policy.default_set();
+        let ser = policy.default_ser();
+        let inv = policy.default_inv();
 
-        Self { policy, parser }
+        Self {
+            policy,
+            parser: Parser::new(set, inv, ser),
+        }
     }
 }
 
 impl<'a, P: Policy> PolicyParser<'a, P> {
+    pub fn new(policy: P, parser: Parser<P::Set, P::Inv<'a>, P::Ser>) -> Self {
+        Self { policy, parser }
+    }
+
     pub fn new_with(policy: P, set: P::Set, inv: P::Inv<'a>, ser: P::Ser) -> Self {
         Self {
             policy,
