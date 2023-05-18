@@ -27,6 +27,35 @@ use crate::Str;
 pub mod ctx;
 pub mod ser;
 
+/// Generate default value for type.
+pub trait ANewDefault {
+    fn new_default() -> Self;
+}
+
+impl ANewDefault for ASet {
+    fn new_default() -> Self {
+        crate::aset!()
+    }
+}
+
+impl ANewDefault for ASer {
+    fn new_default() -> Self {
+        ASer::default()
+    }
+}
+
+impl<'a> ANewDefault for AInvoker<'a> {
+    fn new_default() -> Self {
+        AInvoker::default()
+    }
+}
+
+impl ANewDefault for AFwdPolicy {
+    fn new_default() -> Self {
+        AFwdPolicy::default()
+    }
+}
+
 pub trait APolicyExt<P: Policy> {
     fn default_ser(&self) -> P::Ser;
 
