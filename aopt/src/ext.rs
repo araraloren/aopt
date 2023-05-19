@@ -6,6 +6,7 @@ use crate::ctx::Invoker;
 use crate::opt::AOpt;
 use crate::opt::Creator;
 use crate::opt::OptConfig;
+use crate::opt::OptParser;
 use crate::opt::StrParser;
 use crate::parser::DefaultSetChecker;
 use crate::parser::DelayPolicy;
@@ -17,10 +18,11 @@ use crate::parser::PolicyParser;
 use crate::parser::PolicySettings;
 use crate::parser::PrePolicy;
 use crate::parser::UserStyle;
-use crate::set::SetChecker;
 use crate::ser::AppServices;
 use crate::set::OptSet;
+use crate::set::OptValidator;
 use crate::set::PrefixOptValidator;
+use crate::set::SetChecker;
 use crate::Error;
 use crate::Str;
 
@@ -28,32 +30,8 @@ pub mod ctx;
 pub mod ser;
 
 /// Generate default value for type.
-pub trait ANewDefault {
-    fn new_default() -> Self;
-}
-
-impl ANewDefault for ASet {
-    fn new_default() -> Self {
-        crate::aset!()
-    }
-}
-
-impl ANewDefault for ASer {
-    fn new_default() -> Self {
-        ASer::default()
-    }
-}
-
-impl<'a> ANewDefault for AInvoker<'a> {
-    fn new_default() -> Self {
-        AInvoker::default()
-    }
-}
-
-impl ANewDefault for AFwdPolicy {
-    fn new_default() -> Self {
-        AFwdPolicy::default()
-    }
+pub trait ADefaultVal {
+    fn a_default_val() -> Self;
 }
 
 pub trait APolicyExt<P: Policy> {
@@ -64,57 +42,60 @@ pub trait APolicyExt<P: Policy> {
     fn default_inv<'a>(&self) -> P::Inv<'a>;
 }
 
-impl<Ser, Chk> APolicyExt<FwdPolicy<ASet, Ser, Chk>> for FwdPolicy<ASet, Ser, Chk>
+impl<Set, Ser, Chk> APolicyExt<FwdPolicy<Set, Ser, Chk>> for FwdPolicy<Set, Ser, Chk>
 where
+    Chk: SetChecker<Set>,
     Ser: Default + 'static,
-    Chk: SetChecker<ASet>,
+    Set: crate::set::Set + OptParser + OptValidator + ADefaultVal + 'static,
 {
-    fn default_set(&self) -> ASet {
-        crate::aset!()
+    fn default_set(&self) -> Set {
+        Set::a_default_val()
     }
 
     fn default_ser(&self) -> Ser {
         Ser::default()
     }
 
-    fn default_inv<'a>(&self) -> <FwdPolicy<ASet, Ser, Chk> as Policy>::Inv<'a> {
-        Invoker::<ASet, Ser>::default()
+    fn default_inv<'a>(&self) -> <FwdPolicy<Set, Ser, Chk> as Policy>::Inv<'a> {
+        Invoker::<Set, Ser>::default()
     }
 }
 
-impl<Ser, Chk> APolicyExt<PrePolicy<ASet, Ser, Chk>> for PrePolicy<ASet, Ser, Chk>
+impl<Set, Ser, Chk> APolicyExt<PrePolicy<Set, Ser, Chk>> for PrePolicy<Set, Ser, Chk>
 where
     Ser: Default + 'static,
-    Chk: SetChecker<ASet>,
+    Chk: SetChecker<Set>,
+    Set: crate::set::Set + OptParser + OptValidator + ADefaultVal + 'static,
 {
-    fn default_set(&self) -> ASet {
-        crate::aset!()
+    fn default_set(&self) -> Set {
+        Set::a_default_val()
     }
 
     fn default_ser(&self) -> Ser {
         Ser::default()
     }
 
-    fn default_inv<'a>(&self) -> <PrePolicy<ASet, Ser, Chk> as Policy>::Inv<'a> {
-        Invoker::<ASet, Ser>::default()
+    fn default_inv<'a>(&self) -> <PrePolicy<Set, Ser, Chk> as Policy>::Inv<'a> {
+        Invoker::<Set, Ser>::default()
     }
 }
 
-impl<Ser, Chk> APolicyExt<DelayPolicy<ASet, Ser, Chk>> for DelayPolicy<ASet, Ser, Chk>
+impl<Set, Ser, Chk> APolicyExt<DelayPolicy<Set, Ser, Chk>> for DelayPolicy<Set, Ser, Chk>
 where
     Ser: Default + 'static,
-    Chk: SetChecker<ASet>,
+    Chk: SetChecker<Set>,
+    Set: crate::set::Set + OptParser + OptValidator + ADefaultVal + 'static,
 {
-    fn default_set(&self) -> ASet {
-        crate::aset!()
+    fn default_set(&self) -> Set {
+        Set::a_default_val()
     }
 
     fn default_ser(&self) -> Ser {
         Ser::default()
     }
 
-    fn default_inv<'a>(&self) -> <DelayPolicy<ASet, Ser, Chk> as Policy>::Inv<'a> {
-        Invoker::<ASet, Ser>::default()
+    fn default_inv<'a>(&self) -> <DelayPolicy<Set, Ser, Chk> as Policy>::Inv<'a> {
+        Invoker::<Set, Ser>::default()
     }
 }
 
@@ -286,4 +267,96 @@ macro_rules! aset {
             set
         }
     };
+}
+
+impl ADefaultVal for ASet {
+    fn a_default_val() -> Self {
+        crate::aset!()
+    }
+}
+
+impl ADefaultVal for ASer {
+    fn a_default_val() -> Self {
+        ASer::default()
+    }
+}
+
+impl<'a, Set, Ser> ADefaultVal for Invoker<'a, Set, Ser> {
+    fn a_default_val() -> Self {
+        Invoker::default()
+    }
+}
+
+impl<Set, Ser, Chk> ADefaultVal for FwdPolicy<Set, Ser, Chk>
+where
+    Chk: Default,
+{
+    fn a_default_val() -> Self {
+        FwdPolicy::default()
+    }
+}
+
+impl<Set, Ser, Chk> ADefaultVal for DelayPolicy<Set, Ser, Chk>
+where
+    Chk: Default,
+{
+    fn a_default_val() -> Self {
+        DelayPolicy::default()
+    }
+}
+
+impl<Set, Ser, Chk> ADefaultVal for PrePolicy<Set, Ser, Chk>
+where
+    Chk: Default,
+{
+    fn a_default_val() -> Self {
+        PrePolicy::default()
+    }
+}
+
+impl<'a, Set, Inv, Ser> ADefaultVal for Parser<Set, Inv, Ser>
+where
+    Set: ADefaultVal,
+    Inv: ADefaultVal,
+    Ser: ADefaultVal,
+{
+    fn a_default_val() -> Self {
+        Parser::new(
+            Set::a_default_val(),
+            Inv::a_default_val(),
+            Ser::a_default_val(),
+        )
+    }
+}
+
+impl<'a, P> ADefaultVal for PolicyParser<'a, P>
+where
+    P: Policy + ADefaultVal,
+    P::Set: ADefaultVal,
+    P::Inv<'a>: ADefaultVal,
+    P::Ser: ADefaultVal,
+{
+    fn a_default_val() -> Self {
+        let set = <P::Set>::a_default_val();
+        let ser = <P::Ser>::a_default_val();
+        let inv = <P::Inv<'_>>::a_default_val();
+
+        PolicyParser::new_with(P::a_default_val(), set, inv, ser)
+    }
+}
+
+impl<'a, P> ADefaultVal for APolicyParser<'a, P>
+where
+    P: Policy + ADefaultVal,
+    P::Set: ADefaultVal,
+    P::Inv<'a>: ADefaultVal,
+    P::Ser: ADefaultVal,
+{
+    fn a_default_val() -> Self {
+        let set = <P::Set>::a_default_val();
+        let ser = <P::Ser>::a_default_val();
+        let inv = <P::Inv<'_>>::a_default_val();
+
+        Self(PolicyParser::new_with(P::a_default_val(), set, inv, ser))
+    }
 }

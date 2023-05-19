@@ -256,7 +256,7 @@ where
     SetOpt<Set>: Opt,
     Ser: 'static,
     Chk: SetChecker<Set>,
-    Set: crate::set::Set + OptParser + Debug + 'static,
+    Set: crate::set::Set + OptParser + 'static,
 {
     // ignore failure
     pub fn invoke_opt_callback(
@@ -311,7 +311,7 @@ where
     SetOpt<Set>: Opt,
     Ser: 'static,
     Chk: SetChecker<Set>,
-    Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
+    Set: crate::set::Set + OptParser + OptValidator + 'static,
 {
     pub(crate) fn parse_impl(
         &mut self,
@@ -492,7 +492,7 @@ where
     SetOpt<Set>: Opt,
     Ser: 'static,
     Chk: SetChecker<Set>,
-    Set: crate::set::Set + OptParser + OptValidator + Debug + 'static,
+    Set: crate::set::Set + OptParser + OptValidator + 'static,
 {
     type Ret = ReturnVal;
 

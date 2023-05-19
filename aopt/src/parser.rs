@@ -690,7 +690,10 @@ impl<'a, P: Policy> DerefMut for PolicyParser<'a, P> {
     }
 }
 
-impl<'a, P: Policy> PolicyParser<'a, P> where P: APolicyExt<P> {
+impl<'a, P: Policy> PolicyParser<'a, P>
+where
+    P: APolicyExt<P>,
+{
     pub fn new_policy(policy: P) -> Self {
         let set = policy.default_set();
         let ser = policy.default_ser();
