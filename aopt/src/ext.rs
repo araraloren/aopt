@@ -4,6 +4,7 @@ use std::ops::DerefMut;
 
 use crate::ctx::Invoker;
 use crate::opt::AOpt;
+use crate::opt::BuiltInCtor;
 use crate::opt::Creator;
 use crate::opt::OptConfig;
 use crate::opt::OptParser;
@@ -19,6 +20,7 @@ use crate::parser::PolicySettings;
 use crate::parser::PrePolicy;
 use crate::parser::UserStyle;
 use crate::ser::AppServices;
+use crate::set::Ctor;
 use crate::set::OptSet;
 use crate::set::OptValidator;
 use crate::set::PrefixOptValidator;
@@ -123,6 +125,18 @@ pub type ADelayParser<'a> = APolicyParser<'a, ADelayPolicy>;
 
 pub struct APolicyParser<'a, P: Policy>(PolicyParser<'a, P>);
 
+impl<'a, P> Default for APolicyParser<'a, P>
+where
+    P: Policy + ADefaultVal,
+    P::Set: ADefaultVal,
+    P::Inv<'a>: ADefaultVal,
+    P::Ser: ADefaultVal,
+{
+    fn default() -> Self {
+        Self::a_default_val()
+    }
+}
+
 impl<'a, P: Policy> std::fmt::Debug for APolicyParser<'a, P>
 where
     P::Set: Debug,
@@ -146,41 +160,6 @@ impl<'a, P: Policy> Deref for APolicyParser<'a, P> {
 impl<'a, P: Policy> DerefMut for APolicyParser<'a, P> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
-    }
-}
-
-impl<'a> Default for APolicyParser<'a, AFwdPolicy> {
-    fn default() -> Self {
-        let set = crate::aset!();
-        let ser = ASer::default();
-        let inv = Invoker::default();
-
-        Self(PolicyParser::new_with(AFwdPolicy::default(), set, inv, ser))
-    }
-}
-
-impl<'a> Default for APolicyParser<'a, ADelayPolicy> {
-    fn default() -> Self {
-        let set = crate::aset!();
-        let ser = ASer::default();
-        let inv = Invoker::default();
-
-        Self(PolicyParser::new_with(
-            ADelayPolicy::default(),
-            set,
-            inv,
-            ser,
-        ))
-    }
-}
-
-impl<'a> Default for APolicyParser<'a, APrePolicy> {
-    fn default() -> Self {
-        let set = crate::aset!();
-        let ser = ASer::default();
-        let inv = Invoker::default();
-
-        Self(PolicyParser::new_with(APrePolicy::default(), set, inv, ser))
     }
 }
 
@@ -267,11 +246,47 @@ macro_rules! aset {
             set
         }
     };
+    ($parser:ident, $ctor:ident, $validator:ident { }) => {
+        $crate::aset!(
+            $parser, $ctor, $validator {
+            fallback,
+            int,
+            bool,
+            flt,
+            str,
+            uint,
+            cmd,
+            pos,
+            main,
+            any,
+            raw
+        }
+        )
+    };
+    ($parser:ident, $ctor:ident, $validator:ident { $($creator:ident),+ }) => {
+        {
+            let mut set = <$crate::set::OptSet<$parser, $ctor, $validator>>::default();
+            $(
+                set = set.with_creator(
+                    <$ctor>::from(
+                        $crate::opt::BuiltInCtor::from_name(
+                            &stringify!($creator)
+                        )));
+            )+
+            set
+        }
+    };
 }
 
-impl ADefaultVal for ASet {
+impl<P, C, V> ADefaultVal for OptSet<P, C, V>
+where
+    C: Ctor + From<BuiltInCtor>,
+    C::Opt: crate::opt::Opt,
+    P: OptParser + Default,
+    V: OptValidator + Default,
+{
     fn a_default_val() -> Self {
-        crate::aset!()
+        crate::aset!(P, C, V {})
     }
 }
 

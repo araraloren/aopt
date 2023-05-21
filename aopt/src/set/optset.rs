@@ -122,7 +122,6 @@ where
     C::Opt: Opt,
     C: Ctor,
     P: OptParser,
-    C::Config: Config,
     V: OptValidator,
 {
     pub fn with_creator(mut self, creator: C) -> Self {

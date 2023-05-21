@@ -39,7 +39,7 @@ use crate::Uid;
 /// | [`usize`] | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | None | None |
 /// | [`isize`] | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | None | None |
 /// | [`String`]| [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | `s`  | [`String`] |
-/// | [`OsString`](std::ffi::OsString) | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | `r` | [`OsString`] |
+/// | [`OsString`](std::ffi::OsString) | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | `r` | [`OsString`](std::ffi::OsString) |
 /// | [`Cmd`] | [`Action::Set`] | `false` | [`Style::Cmd`] | [`Forward(1)`](Index::Forward)  | true  |false | `c` | [`Cmd`] |
 /// | [`Pos`] | [`Action::App`] | `true` | [`Style::Pos`] | yes | false | None | `p` | [`Pos`] |
 /// | [`Main`] | [`Action::Null`] | `true` | [`Style::Main`] | [`AnyWhere`](Index::AnyWhere) | false | None | `m` | [`Main`] |
