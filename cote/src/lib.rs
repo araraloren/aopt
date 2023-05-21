@@ -43,17 +43,21 @@ where
     Set: aopt::prelude::Set,
     SetCfg<Set>: Config + ConfigValue,
 {
-    fn into_parser(set: Set, inv: Inv, ser: Ser) -> Result<Parser<Set, Inv, Ser>, Error> {
-        let mut parser = Parser::new(set, inv, ser);
-        Self::update(&mut parser)?;
-        Ok(parser)
+    fn into_parser() -> Result<Parser<Set, Inv, Ser>, Error>
+    where
+        Set: ADefaultVal,
+        Ser: ADefaultVal,
+        Inv: ADefaultVal,
+    {
+        Self::into_parser_with(
+            Set::a_default_val(),
+            Inv::a_default_val(),
+            Ser::a_default_val(),
+        )
     }
 
-    fn into_parser_with<'a, P>(policy: &P) -> Result<Parser<Set, Inv, Ser>, Error>
-    where
-        P: Policy<Set = Set, Inv<'a> = Inv, Ser = Ser> + APolicyExt<P>,
-    {
-        let mut parser = Parser::new_with(policy);
+    fn into_parser_with(set: Set, inv: Inv, ser: Ser) -> Result<Parser<Set, Inv, Ser>, Error> {
+        let mut parser = Parser::new(set, inv, ser);
         Self::update(&mut parser)?;
         Ok(parser)
     }
@@ -92,20 +96,27 @@ impl<Set, Inv, Ser> DerefMut for CoteParser<Set, Inv, Ser> {
 }
 
 impl<Set, Inv, Ser> CoteParser<Set, Inv, Ser> {
+    pub fn new_with_policy<'a, P>(name: impl Into<String>) -> Self
+    where
+        Set: ADefaultVal,
+        Ser: ADefaultVal,
+        Inv: ADefaultVal,
+        P: Policy<Set = Set, Inv<'a> = Inv, Ser = Ser>,
+    {
+        Self::new(
+            name,
+            Set::a_default_val(),
+            Inv::a_default_val(),
+            Ser::a_default_val(),
+        )
+    }
+}
+
+impl<Set, Inv, Ser> CoteParser<Set, Inv, Ser> {
     pub fn new(name: impl Into<String>, set: Set, inv: Inv, ser: Ser) -> Self {
         Self {
             name: name.into(),
             parser: Parser::new(set, inv, ser),
-        }
-    }
-
-    pub fn new_with<'a, P>(name: impl Into<String>, policy: &P) -> Self
-    where
-        P: Policy<Set = Set, Inv<'a> = Inv, Ser = Ser> + APolicyExt<P>,
-    {
-        Self {
-            name: name.into(),
-            parser: Parser::new_with(policy),
         }
     }
 
@@ -732,14 +743,14 @@ where
 
 impl<'a, P: Policy> Default for CoteApp<'a, P>
 where
-    P::Set: Default,
-    P::Inv<'a>: Default,
-    P::Ser: Default,
-    P: Default + Policy + APolicyExt<P>,
+    P::Set: ADefaultVal,
+    P::Ser: ADefaultVal,
+    P::Inv<'a>: ADefaultVal,
+    P: Policy + ADefaultVal,
 {
     fn default() -> Self {
-        let policy = P::default();
-        let parser = CoteParser::new_with("CoteApp".to_owned(), &policy);
+        let policy = P::a_default_val();
+        let parser = CoteParser::new_with_policy::<P>("CoteApp".to_owned());
 
         Self { policy, parser }
     }
@@ -761,16 +772,19 @@ impl<'a, P: Policy> DerefMut for CoteApp<'a, P> {
 
 impl<'a, P> CoteApp<'a, P>
 where
-    P: Policy + APolicyExt<P>,
+    P::Set: ADefaultVal,
+    P::Ser: ADefaultVal,
+    P::Inv<'a>: ADefaultVal,
+    P: Policy,
 {
-    pub fn new(name: impl Into<String>, policy: P) -> Self {
-        let parser = CoteParser::new_with(name.into(), &policy);
+    pub fn new_with_policy(name: impl Into<String>, policy: P) -> Self {
+        let parser = CoteParser::new_with_policy::<P>(name.into());
         Self { policy, parser }
     }
 }
 
 impl<'a, P: Policy> CoteApp<'a, P> {
-    pub fn new_with(
+    pub fn new(
         name: impl Into<String>,
         policy: P,
         set: P::Set,

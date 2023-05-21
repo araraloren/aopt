@@ -498,20 +498,69 @@ impl<'a> Analyzer<'a> {
         let where_clause_parser = Self::where_clause_for_parser();
 
         Ok(quote! {
-            pub fn gen_parser_with<'z, P>(policy: &P) ->
+            pub fn gen_parser<'z>() ->
+                Result<cote::CoteParser<
+                        <#policy_ty as aopt::prelude::Policy>::Set,
+                        <#policy_ty as aopt::prelude::Policy>::Inv<'z>,
+                        <#policy_ty as aopt::prelude::Policy>::Ser>, aopt::Error> {
+                Self::gen_parser_with()
+            }
+
+            pub fn gen_parser_with<'z, P>() ->
                 Result<cote::CoteParser<P::Set, P::Inv<'z>, P::Ser>, aopt::Error> #where_clause {
-                let parser = <Self  as cote::IntoParserDerive<P::Set, P::Inv<'z>, P::Ser>>::into_parser_with(policy)?;
+                let parser = <Self  as cote::IntoParserDerive<P::Set, P::Inv<'z>, P::Ser>>::gen_parser()?;
                 Ok(cote::CoteParser::new_with_parser(#parser_app_name, parser))
             }
 
-            pub fn gen_policy<P>() -> P where P: aopt::prelude::PolicySettings + Default {
+            pub fn gen_cote_app<'z>() -> Result<cote::CoteApp<'a, #policy_ty>, aopt::Error> {
+                Self::gen_cote_app_with()
+            }
+
+            pub fn gen_cote_app_with<'z, P>() -> Result<cote::CoteApp<'z, P>, aopt::Error> #where_clause {
+                Ok(cote::CoteApp::new_with_parser(Self::gen_parser_with()))
+            }
+
+            pub fn gen_policy_with<P>() -> P where P: aopt::prelude::PolicySettings + Default {
                 let mut policy = P::default();
                 #policy_settings
                 policy
             }
 
-            pub fn gen_default_policy() -> #policy_ty {
-                Self::gen_policy::<#policy_ty>()
+            pub fn gen_policy() -> #policy_ty {
+                Self::gen_policy_with()
+            }
+
+            /// Parsing the given arguments and return the [`GetoptRes`](aopt::GetoptRes).
+            pub fn parse_args<'z, P>(args: aopt::prelude::Args)
+                -> Result<aopt::GetoptRes<
+                    <P as aopt::prelude::Policy>::Ret, cote::CoteParser<P::Set, P::Inv<'z>, P::Ser>>, aopt::Error> #where_clause {
+                let mut parser = Self::gen_parser_with()?;
+                let mut policy = Self::gen_policy_with();
+                let mut app = app.with_default_running_ctx()?;
+
+                #app_raw_tweaks
+                app.get_running_ctx_mut()?.add_name(#parser_app_name);
+                let parser = app.inner_parser_mut();
+
+                parser.init()?;
+                let ret = parser.parse(aopt::ARef::new(aopt::prelude::Args::from(args))).map_err(Into::into);
+
+                app.sync_running_ctx(&ret, false)?;
+                let running_ctx = app.get_running_ctx()?;
+
+                if running_ctx.display_sub_help() {
+                    app.display_sub_help(running_ctx.names())?;
+                    if running_ctx.exit_sub() {
+                        std::process::exit(0)
+                    }
+                }
+                else if running_ctx.display_help() {
+                    app.display_help()?;
+                    if running_ctx.exit() {
+                        std::process::exit(0)
+                    }
+                }
+                Ok(aopt::GetoptRes{ ret: ret?, parser: app })
             }
 
             /// Parsing the given arguments and return the [`GetoptRes`](aopt::GetoptRes).
