@@ -16,6 +16,7 @@ use aopt::Error;
 use aopt::RawVal;
 use aopt_help::prelude::Block;
 use aopt_help::prelude::Store;
+use ctx::RunningCtx;
 use help::HelpDisplayCtx;
 use ser::CoteServiceExt;
 
@@ -577,6 +578,19 @@ where
             .sub_parsers_mut()?
             .iter_mut()
             .find(|v| v.name() == name))
+    }
+
+    pub fn rctx(&self) -> Result<&RunningCtx, aopt::Error> {
+        self.service().rctx()
+    }
+
+    pub fn rctx_mut(&mut self) -> Result<&mut RunningCtx, aopt::Error> {
+        self.service_mut().rctx_mut()
+    }
+
+    pub fn set_rctx(&mut self, ctx: RunningCtx) -> &mut Self {
+        self.service_mut().set_rctx(ctx);
+        self
     }
 }
 

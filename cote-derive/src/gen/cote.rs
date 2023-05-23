@@ -197,9 +197,8 @@ impl<'a> CoteGenerator<'a> {
 
         if self.configs.has_cfg(CoteKind::AbortHelp) {
             ret.extend(quote! {
-                if ret.is_err() ||
-                    !ret.as_ref().map(|v|v.status()).unwrap_or(true) {
-                    let running_ctx = self.inner_parser_mut().app_data_mut::<cote::AppRunningCtx>()?;
+                if ret.is_err() || !ret.as_ref().map(|v|bool::from(v)).unwrap_or(true) {
+                    let running_ctx = parser.rctx_mut()?;
                     if sub_parser {
                         running_ctx.set_display_sub_help(true);
                         running_ctx.set_exit_sub(false);
@@ -213,9 +212,8 @@ impl<'a> CoteGenerator<'a> {
         }
         if self.configs.has_cfg(CoteKind::Help) {
             ret.extend(quote! {
-                let parser = self.inner_parser();
                 if parser.find_val::<bool>(#HELP_OPTION_NAME)? == &true {
-                    let running_ctx = self.inner_parser_mut().app_data_mut::<cote::AppRunningCtx>()?;
+                    let running_ctx = parser.rctx_mut()?;
                     if sub_parser {
                         running_ctx.set_display_sub_help(true);
                         running_ctx.set_exit_sub(true);

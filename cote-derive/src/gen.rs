@@ -495,6 +495,7 @@ impl<'a> Analyzer<'a> {
         let app_raw_tweaks = self.cote_generator.gen_tweak_on_app();
         let parser_app_name = self.cote_generator.get_name();
         let where_clause = Self::where_clause_for_policy();
+        let sync_running_ctx = self.cote_generator.gen_sync_running_ctx();
         let where_clause_parser = Self::where_clause_for_parser();
 
         Ok(quote! {
@@ -530,25 +531,33 @@ impl<'a> Analyzer<'a> {
                 Self::gen_policy_with()
             }
 
+            pub fn sync_running_ctx<'z, P>(parser: &mut cote::CoteParser<P::Set, P::Inv<'z>, P::Ser>,
+                ret: &Result<P::Ret, aopt::Error>, sub_parser: bool) #where_clause, P::Ret: Into<bool> {
+                #sync_running_ctx
+            }
+
             /// Parsing the given arguments and return the [`GetoptRes`](aopt::GetoptRes).
             pub fn parse_args<'z, P>(args: aopt::prelude::Args)
                 -> Result<aopt::GetoptRes<
                     <P as aopt::prelude::Policy>::Ret, cote::CoteParser<P::Set, P::Inv<'z>, P::Ser>>, aopt::Error> #where_clause {
+                // cote context variable
                 let mut parser = Self::gen_parser_with()?;
+                // cote context variable
                 let mut policy = Self::gen_policy_with();
-                let mut app = app.with_default_running_ctx()?;
-
+                let mut rctx = cote::ctx::RunningCtx::default();
+                
                 #app_raw_tweaks
-                app.get_running_ctx_mut()?.add_name(#parser_app_name);
-                let parser = app.inner_parser_mut();
-
+                rctx.add_name(#parser_app_name);
+                parser.set_rctx(rctx);
                 parser.init()?;
-                let ret = parser.parse(aopt::ARef::new(aopt::prelude::Args::from(args))).map_err(Into::into);
 
-                app.sync_running_ctx(&ret, false)?;
-                let running_ctx = app.get_running_ctx()?;
+                let ret = parser.parse_with(aopt::ARef::new(args), &mut policy);
+
+                Self::sync_running_ctx(&mut parser, &ret, false)?;
+                let running_ctx = parser.rctx()?;
 
                 if running_ctx.display_sub_help() {
+                    // todo
                     app.display_sub_help(running_ctx.names())?;
                     if running_ctx.exit_sub() {
                         std::process::exit(0)
