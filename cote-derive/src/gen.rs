@@ -700,15 +700,16 @@ impl<'a> Analyzer<'a> {
         Ok(quote! {
             #new_app_define
 
-            impl<'z, P: Policy> std::fmt::Debug for #new_app_type<'z, P> #where_clause_debug {
+            impl<Set, Inv, Ser> std::fmt::Debug for #new_app_type<Set, Inv, Ser> 
+                where Set: std::fmt::Debug, Inv: std::fmt::Debug, Ser: std::fmt::Debug {
                 fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                     f.debug_struct(stringify!(#new_app_type))
-                        .field("app", &self.0)
+                        .field("parser", &self.0)
                         .finish()
                 }
             }
 
-            impl<'z, P: Policy> #new_app_type<'z, P> #where_clause {
+            impl<Set, Inv, Ser> #new_app_type<Set, Inv, Ser> #where_clause {
                 pub fn new(app: cote::CoteApp<'z, P>) -> Self {
                     Self(app)
                 }
