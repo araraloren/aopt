@@ -139,7 +139,7 @@ pub trait PolicySettings {
     fn set_no_delay(&mut self, name: impl Into<Str>) -> &mut Self;
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Parser<Set, Inv, Ser> {
     set: Set,
     inv: Inv,

@@ -559,7 +559,7 @@ mod test {
             "-olily",
             "program",  // 5
             "software", // 6
-            "反转",   //7
+            "反转",     //7
             "--值=恍恍惚惚",
             "--qopt",
             "rust",

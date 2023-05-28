@@ -349,10 +349,8 @@ impl<'a> SubGenerator<'a> {
         ))
     }
 
-    pub fn gen_sub_help_context(&self) -> syn::Result<TokenStream> {
-        let idx = self.get_sub_id();
-        let idx = Index::from(idx);
-        let mut ret = quote! { let mut context = sub_parser_tuple.#idx.gen_help_display_ctx(); };
+    pub fn gen_update_help_context(&self) -> syn::Result<TokenStream> {
+        let mut ret = quote! {};
 
         if let Some(head_cfg) = self.configs.find_cfg(SubKind::Head) {
             let value = head_cfg.value();

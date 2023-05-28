@@ -343,41 +343,60 @@ impl<'a> Analyzer<'a> {
     }
 
     pub fn gen_sub_app_display_call(&self) -> syn::Result<TokenStream> {
-        let sub_parser_tuple_ty = self.gen_sub_parser_tuple_ty(None)?;
-        let mut sub_parser_tuple_mat = quote! {
-            let sub_app_name = &subnames[idx + 1];
-            let sub_app_name = app.find_opt(sub_app_name.as_str())?.name();
-            let name = subnames.join(" ");
-            let sub_parser_tuple = app.inner_parser()
-                             .app_data::<#sub_parser_tuple_ty>()?;
-        };
+        let mut display_sub = quote! {};
+        let mut display_call = quote! {};
 
         for sub_generator in self.sub_generator.iter() {
-            let sub_help_context_gen = sub_generator.gen_sub_help_context()?;
+            let sub_help_context_gen = sub_generator.gen_update_help_context()?;
+            let ty = sub_generator.gen_struct_app_type()?;
             let idx = sub_generator.get_sub_id();
             let idx = Index::from(idx);
 
-            sub_parser_tuple_mat.extend(quote! {
-                if sub_app_name == sub_parser_tuple.#idx.name() {
+            display_sub.extend(quote! {
+                if sub_name = sub_parsers[#idx].name() {
+                    let mut sub_parser_helper = sub_parsers[#idx].app_data::<#ty>()?;
+                    let mut context = sub_parser_helper.display_ctx();
                     let sub_help_context = { #sub_help_context_gen };
+                    let name_of_help = names.join(" ");
 
                     return cote::simple_display_set_help(
-                        sub_parser_tuple.#idx.inner_parser().optset(),
-                        &name, sub_help_context.head(), sub_help_context.foot(),
+                        sub_parsers[#idx].optset(),
+                        &name_of_help, sub_help_context.head(), sub_help_context.foot(),
                         sub_help_context.width(), sub_help_context.usagew()
                     ).map_err(|e| aopt::Error::raise_error(format!("Can not display help message: {:?}", e)))
                 }
             });
+            display_call.extend(quote! {
+                if sub_name = sub_parsers[#idx].name() {
+                    let mut sub_parser_helper = sub_parsers[#idx].app_data::<#ty>()?;
+                    return sub_parser_helper.display_sub_help_idx(subnames, idx + 1);
+                }
+            });
         }
 
-        Ok(sub_parser_tuple_mat)
+        if self.sub_generator.is_empty() {
+            Ok(quote! {})
+        } else {
+            Ok(quote! {
+                let sub_name = &names[idx + 1];
+                let sub_name = inner_parser.find_opt(sub_name.as_str())?.name();
+                let sub_parsers = self.parsers()?;
+
+                if idx == len - 2 {
+                    #display_sub
+                }
+                else {
+                    #display_call
+                }
+            })
+        }
     }
 
     pub fn gen_sub_app_help_call(&self) -> syn::Result<TokenStream> {
         let sub_parser_tuple_ty = self.gen_sub_parser_tuple_ty(None)?;
         let mut sub_parser_tuple_mat = quote! {
             let sub_app_name = &subnames[idx + 1];
-            let sub_app_name = app.find_opt(sub_app_name.as_str())?.name();
+            let sub_app_name = parser.find_opt(sub_app_name.as_str())?.name();
             let name = subnames.join(" ");
             let sub_parser_tuple = app.inner_parser()
                              .app_data::<#sub_parser_tuple_ty>()?;
@@ -414,28 +433,31 @@ impl<'a> Analyzer<'a> {
         })
     }
 
+    pub fn gen_insert_app_ty(&self, ident: &Ident) -> syn::Result<TokenStream> {
+        Ok(quote! {
+            parser.set_app_data(<#ident>::<'_, Set, Inv, Ser>::default())?;
+        })
+    }
+
     pub fn gen_insert_sub_apps(&self) -> syn::Result<TokenStream> {
         let mut inner_app_ty = quote! {};
 
         for sub_generator in self.sub_generator.iter() {
             let without_option_ty = sub_generator.get_without_option_type();
-            let sub_policy_ty = sub_generator.gen_policy_type()?;
             let sub_app_name = sub_generator.name();
 
-            inner_app_ty.extend(quote! {
-                {
-                    let mut sub_app = <#without_option_ty>::into_app_policy::<'_, #sub_policy_ty>()?;
-                    sub_app.set_name(#sub_app_name);
-                    sub_app
-                },
-            });
+            inner_app_ty.extend(quote! { {
+                let mut sub_parser = <#without_option_ty>::gen_parser_with::<Set, Inv, Ser>()?;
+                sub_parser.set_name(#sub_app_name);
+                sub_parser
+            }, });
         }
 
         if self.sub_generator.is_empty() {
             Ok(quote! {})
         } else {
             Ok(quote! {
-                parser.set_app_data((#inner_app_ty))?;
+                parser.set_app_data(vec![#inner_app_ty])?;
             })
         }
     }
@@ -480,17 +502,18 @@ impl<'a> Analyzer<'a> {
     pub fn where_clause_for_parser() -> TokenStream {
         quote! {
             where
-            Ser: aopt::ser::ServicesValExt + std::fmt::Debug,
-            Set: aopt::prelude::Set + std::fmt::Debug + aopt::set::SetValueFindExt,
-            Inv: for<'z> aopt::ctx::HandlerCollection<'z, Set, Ser> + std::fmt::Debug,
+            Ser: aopt::ser::ServicesValExt,
+            Set: aopt::prelude::Set + aopt::set::SetValueFindExt,
+            Inv: for<'z> aopt::ctx::HandlerCollection<'z, Set, Ser>,
             aopt::prelude::SetCfg<Set>: aopt::prelude::Config + aopt::prelude::ConfigValue + Default,
         }
     }
 
     pub fn gen_parser_interface(&self) -> syn::Result<TokenStream> {
         let struct_app_ty = self.cote_generator.gen_struct_app_type();
+        let insert_app_ty = self.gen_insert_app_ty(&struct_app_ty)?;
         let policy_ty = self.cote_generator.gen_policy_type()?;
-        let insert_sub_apps = self.gen_insert_sub_apps()?;
+        let insert_sub_parsers = self.gen_insert_sub_apps()?;
         let policy_settings = self.gen_policy_settings();
         let app_raw_tweaks = self.cote_generator.gen_tweak_on_app();
         let parser_app_name = self.cote_generator.get_name();
@@ -507,10 +530,13 @@ impl<'a> Analyzer<'a> {
                 Self::gen_parser_with()
             }
 
-            pub fn gen_parser_with<'z, P>() ->
-                Result<cote::CoteParser<P::Set, P::Inv<'z>, P::Ser>, aopt::Error> #where_clause {
-                let parser = <Self  as cote::IntoParserDerive<P::Set, P::Inv<'z>, P::Ser>>::gen_parser()?;
-                Ok(cote::CoteParser::new_with_parser(#parser_app_name, parser))
+            pub fn gen_parser_with<Set, Inv, Ser>() -> Result<cote::CoteParser<Set, Inv, Ser>, aopt::Error>
+                #where_clause_parser {
+                let parser = <Self  as cote::IntoParserDerive<Set, Inv, Ser>>::into_parser()?;
+                let mut parser = cote::CoteParser::new_with_parser(#parser_app_name, parser);
+                #insert_app_ty
+                #insert_sub_parsers
+                Ok(parser)
             }
 
             pub fn gen_cote_app<'z>() -> Result<cote::CoteApp<'a, #policy_ty>, aopt::Error> {
@@ -518,7 +544,7 @@ impl<'a> Analyzer<'a> {
             }
 
             pub fn gen_cote_app_with<'z, P>() -> Result<cote::CoteApp<'z, P>, aopt::Error> #where_clause {
-                Ok(cote::CoteApp::new_with_parser(Self::gen_parser_with()))
+                Ok(cote::CoteApp::new_with_parser(Self::gen_parser_with::<P::Set, P::Inv<'z>, P::Ser>()))
             }
 
             pub fn gen_policy_with<P>() -> P where P: aopt::prelude::PolicySettings + Default {
@@ -531,41 +557,35 @@ impl<'a> Analyzer<'a> {
                 Self::gen_policy_with()
             }
 
-            pub fn sync_running_ctx<'z, P>(parser: &mut cote::CoteParser<P::Set, P::Inv<'z>, P::Ser>,
-                ret: &Result<P::Ret, aopt::Error>, sub_parser: bool) #where_clause, P::Ret: Into<bool> {
-                #sync_running_ctx
-            }
-
             /// Parsing the given arguments and return the [`GetoptRes`](aopt::GetoptRes).
-            pub fn parse_args<'z, P>(args: aopt::prelude::Args)
-                -> Result<aopt::GetoptRes<
-                    <P as aopt::prelude::Policy>::Ret, cote::CoteParser<P::Set, P::Inv<'z>, P::Ser>>, aopt::Error> #where_clause {
+            pub fn parse_args_with<'z, P>(policy: &mut P, args: aopt::prelude::Args)
+                -> Result<aopt::GetoptRes<<P as aopt::prelude::Policy>::Ret,
+                    cote::CoteParser<
+                        <P as aopt::prelude::Policy>::Set,
+                        <P as aopt::prelude::Policy>::Inv<'z>,
+                        <P as aopt::prelude::Policy>::Ser>
+                    >, aopt::Error> #where_clause {
                 // cote context variable
                 let mut parser = Self::gen_parser_with()?;
-                // cote context variable
-                let mut policy = Self::gen_policy_with();
-                let mut rctx = cote::ctx::RunningCtx::default();
-                
-                #app_raw_tweaks
-                rctx.add_name(#parser_app_name);
-                parser.set_rctx(rctx);
-                parser.init()?;
+                let mut helper = parser.app_data::<<#struct_app_ty>::<'_, P::Set, P::Inv<'z>, P::Ser>>()?.clone();
 
-                let ret = parser.parse_with(aopt::ARef::new(args), &mut policy);
+                helper.set_inner_parser(&parser);
+                helper.set_default_rctx()?;
+                helper.rctx_mut()?.add_name(#parser_app_name);
+                let ret = helper.parse_with(aopt::ARef::new(args), policy);
 
-                Self::sync_running_ctx(&mut parser, &ret, false)?;
-                let running_ctx = parser.rctx()?;
+                helper.sync_rctx(&ret, false)?;
+                let rctx = helper.rctx()?;
 
-                if running_ctx.display_sub_help() {
-                    // todo
-                    app.display_sub_help(running_ctx.names())?;
-                    if running_ctx.exit_sub() {
+                if rctx.display_sub_help() {
+                    helper.display_sub_help(rctx.names())?;
+                    if rctx.exit_sub() {
                         std::process::exit(0)
                     }
                 }
-                else if running_ctx.display_help() {
-                    app.display_help()?;
-                    if running_ctx.exit() {
+                else if rctx.display_help() {
+                    helper.display_help()?;
+                    if rctx.exit() {
                         std::process::exit(0)
                     }
                 }
@@ -573,39 +593,12 @@ impl<'a> Analyzer<'a> {
             }
 
             /// Parsing the given arguments and return the [`GetoptRes`](aopt::GetoptRes).
-            pub fn parse_args_with<'z, P>(policy: &mut P, args: aopt::prelude::Args)
-                -> Result<aopt::GetoptRes<<P as aopt::prelude::Policy>::Ret,
-                    cote::CoteParser<<P as aopt::prelude::Policy>::Set, <P as aopt::prelude::Policy>::Inv<'z>,
-                    <P as aopt::prelude::Policy>::Ser>>, aopt::Error>
-                where P: aopt::prelude::Policy {
-                let mut parser = Self::gen_parser_with(policy)?;
-
-                parser.service_mut().set_rctx(cote::RunningCtx::default());
-                parser.service_mut().rctx_mut()?.add_name(#parser_app_name);
-                parser.init()?;
-
-                let ret = parser.parse(aopt::ARef::new(aopt::prelude::Args::from(args)), policy);
-                let running_ctx = parser.service_mut().rctx()?;
-
-                if running_ctx.display_sub_help() {
-                    if running_ctx.exit_sub() {
-                        std::process::exit(0)
-                    }
-                }
-                else if running_ctx.display_help() {
-                    if running_ctx.exit() {
-                        std::process::exit(0)
-                    }
-                }
-                Ok(aopt::GetoptRes{ ret: ret?, parser })
-            }
-
-            /// Parsing the given arguments and return the [`GetoptRes`](aopt::GetoptRes).
             pub fn parse_args<'z>(args: aopt::prelude::Args)
                 -> Result<aopt::GetoptRes<<#policy_ty as aopt::prelude::Policy>::Ret,
                 cote::CoteParser<<#policy_ty as aopt::prelude::Policy>::Set, <#policy_ty as aopt::prelude::Policy>::Inv<'z>,
                     <#policy_ty as aopt::prelude::Policy>::Ser>>, aopt::Error> {
-                let mut policy = Self::gen_default_policy();
+                let mut policy = Self::gen_policy();
+
                 Self::parse_args_with(args, &mut policy)
             }
 
@@ -665,17 +658,11 @@ impl<'a> Analyzer<'a> {
             }
 
             /// Parsing the given arguments and return the [`GetoptRes`](aopt::GetoptRes).
-            pub fn parse_env_args<'z>(args: aopt::prelude::Args)
+            pub fn parse_env_args<'z>()
                 -> Result<aopt::GetoptRes<<#policy_ty as aopt::prelude::Policy>::Ret,
                 cote::CoteParser<<#policy_ty as aopt::prelude::Policy>::Set, <#policy_ty as aopt::prelude::Policy>::Inv<'z>,
                     <#policy_ty as aopt::prelude::Policy>::Ser>>, aopt::Error> {
-                        Self::parse_args(aopt::prelude::Args::from_env())
-            }
-
-            /// Parsing arguments returned from [`from_env`](aopt::prelude::Args::from_env) and return the [`GetoptRes`](aopt::GetoptRes).
-            pub fn parse_env_args<'z>()
-            -> Result<aopt::GetoptRes<<#policy_ty as aopt::prelude::Policy>::Ret, #struct_app_ty<'z, #policy_ty>>, aopt::Error> {
-
+                    Self::parse_args(aopt::prelude::Args::from_env())
             }
 
             pub fn parse_env() -> Result<Self, aopt::Error> {
@@ -687,82 +674,108 @@ impl<'a> Analyzer<'a> {
     pub fn gen_new_app_for_struct(&self) -> syn::Result<TokenStream> {
         let new_app_type = self.cote_generator.gen_struct_app_type();
         let new_app_define = self.cote_generator.gen_new_app_define(&new_app_type);
-        let help_context = self.cote_generator.gen_help_display_ctx();
+        let help_display_ctx = self.cote_generator.gen_help_display_ctx();
         let sub_app_display_call = self.gen_sub_app_display_call()?;
-        let sub_app_help_call = self.gen_sub_app_help_call()?;
         let sync_main_running_ctx = self.cote_generator.gen_sync_running_ctx();
-        let where_clause = Self::where_clause_for_policy();
-        let where_clause_debug = Self::where_clause_for_policy_debug();
         let static_lifetime = Lifetime::new("'static", new_app_type.span());
+        let where_clause = Self::where_clause_for_policy();
+        let insert_sub_parsers = self.gen_insert_sub_apps()?;
+        let where_clause_debug = Self::where_clause_for_policy_debug();
         let sub_apps_tuple_ty = self.gen_sub_parser_tuple_ty(Some(static_lifetime))?;
         let override_run = gen_run_override(&new_app_type);
 
         Ok(quote! {
             #new_app_define
 
-            impl<Set, Inv, Ser> std::fmt::Debug for #new_app_type<Set, Inv, Ser> 
-                where Set: std::fmt::Debug, Inv: std::fmt::Debug, Ser: std::fmt::Debug {
-                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                    f.debug_struct(stringify!(#new_app_type))
-                        .field("parser", &self.0)
-                        .finish()
-                }
-            }
-
-            impl<Set, Inv, Ser> #new_app_type<Set, Inv, Ser> #where_clause {
-                pub fn new(app: cote::CoteApp<'z, P>) -> Self {
-                    Self(app)
+            impl<'a, Set, Inv, Ser> #new_app_type<'a, Set, Inv, Ser> #where_clause {
+                pub fn parsers(&self) -> Result<&'a Vec<cote::CoteParser<Set, Inv, Ser>>, aopt::Error> {
+                    self.inner_parser()?
+                        .service()
+                        .sub_parsers()
                 }
 
-                pub fn sub_apps(&self) -> Result<&#sub_apps_tuple_ty, aopt::Error> {
-                    self.inner_parser().app_data::<#sub_apps_tuple_ty>()
+                pub fn parsers_mut(&mut self) -> Result<&'a mut Vec<cote::CoteParser<Set, Inv, Ser>>, aopt::Error> {
+                    self.inner_parser_mut()?
+                        .service_mut()
+                        .sub_parsers_mut()
                 }
 
-                pub fn sub_apps_mut(&mut self) -> Result<&mut #sub_apps_tuple_ty, aopt::Error> {
-                    self.inner_parser_mut().app_data_mut::<#sub_apps_tuple_ty>()
+                pub fn parser(&self, id: usize) -> Result<&'a cote::CoteParser<Set, Inv, Ser>, aopt::Error> {
+                    self.parsers()?
+                        .get(id)
+                        .ok_or_else(|| aopt::raise_error!("Can not find parser with id {}", id))
                 }
 
-                pub fn sub_apps_of(ser: &P::Ser) -> Result<&#sub_apps_tuple_ty, aopt::Error> {
-                    ser.sve_val::<#sub_apps_tuple_ty>()
+                pub fn parser_mut(&mut self) -> Result<&'a mut cote::CoteParser<Set, Inv, Ser>, aopt::Error> {
+                    self.parsers_mut()?
+                        .get_mut(id)
+                        .ok_or_else(|| aopt::raise_error!("Can not find mutable parser with id {}", id))
                 }
 
-                pub fn sub_apps_mut_of(ser: &mut P::Ser) -> Result<&mut #sub_apps_tuple_ty, aopt::Error> {
-                    ser.sve_val_mut::<#sub_apps_tuple_ty>()
-                }
-
-                pub fn with_default_running_ctx(mut self) -> Result<Self, aopt::Error> {
-                    self.set_running_ctx(cote::AppRunningCtx::default())?;
+                pub fn add_parser(&mut self, parser: cote::CoteParser<Set, Inv, Ser>) -> Result<&mut Self, aopt::Error> {
+                    self.parsers_mut()?
+                        .push(parser);
                     Ok(self)
                 }
 
-                pub fn set_running_ctx(&mut self, ctx: cote::AppRunningCtx) -> Result<&mut Self, aopt::Error> {
-                    self.inner_parser_mut().set_app_data(ctx)?;
+                pub fn rem_parser(&mut self, id: usize) -> Result<&mut Self, aopt::Error> {
+                    self.parsers_mut()?
+                        .remove(id);
                     Ok(self)
                 }
 
-                pub fn get_running_ctx(&self) -> Result<&cote::AppRunningCtx, aopt::Error> {
-                    self.inner_parser().app_data::<cote::AppRunningCtx>()
+                pub fn find_parser(&self, name: &str) -> Result<&'a cote::CoteParser<Set, Inv, Ser>, aopt::Error> {
+                    self.parsers()?
+                        .iter()
+                        .find(|v| v.name() == name)
+                        .ok_or_else(|| aopt::raise_error!("Can not find parser with name {}", name))
                 }
 
-                pub fn get_running_ctx_mut(&mut self) -> Result<&mut cote::AppRunningCtx, aopt::Error> {
-                    self.inner_parser_mut().app_data_mut::<cote::AppRunningCtx>()
+                pub fn find_parser_mut(&mut self, name: &str) -> Result<&'a mut cote::CoteParser<Set, Inv, Ser>, aopt::Error> {
+                    self.parsers_mut()?
+                        .iter_mut()
+                        .find(|v| v.name() == name)
+                        .ok_or_else(|| aopt::raise_error!("Can not find mutable parser with name {}", name))
                 }
 
-                pub fn take_running_ctx(&mut self) -> Result<cote::AppRunningCtx, aopt::Error> {
-                    Ok(std::mem::take(self.inner_parser_mut().app_data_mut::<cote::AppRunningCtx>()?))
+                pub fn set_default_rctx(&mut self) -> Result<&mut Self, aopt::Error> {
+                    self.set_rctx(cote::RunningCtx::default())
                 }
 
-                pub fn sync_running_ctx(&mut self, ret: &Result<aopt::prelude::ReturnVal, aopt::Error>, sub_parser: bool) -> Result<&mut Self, aopt::Error> {
+                pub fn rctx(&self) -> Result<&'a cote::RunningCtx, aopt::Error> {
+                    self.inner_parser()
+                        .service()
+                        .rctx()
+                }
+
+                pub fn rctx_mut(&mut self) -> Result<&'a mut cote::RunningCtx, aopt::Error> {
+                    self.inner_parser_mut()
+                        .service_mut()
+                        .rctx_mut()
+                }
+
+                pub fn set_rctx(&mut self, ctx: cote::RunningCtx) -> Result<&mut Self, aopt::Error> {
+                    self.inner_parser_mut()?
+                        .service_mut()
+                        .set_rctx(ctx);
+                    self
+                }
+
+                pub fn take_rctx(&mut self) -> Result<cote::RunningCtx, aopt::Error> {
+                    Ok(std::mem::take(self.rctx_mut()?))
+                }
+
+                pub fn sync_rctx(&mut self, ret: &Result<aopt::prelude::ReturnVal, aopt::Error>, sub_parser: bool) -> Result<&mut Self, aopt::Error> {
                     #sync_main_running_ctx
                     Ok(self)
                 }
 
-                pub fn gen_help_display_ctx(&self) -> cote::HelpDisplayCtx {
-                    #help_context
+                pub const fn display_ctx(&self) -> cote::HelpDisplayCtx {
+                    #help_display_ctx
                 }
 
                 pub fn display_help(&self) -> Result<(), aopt::Error> {
-                    self.display_help_with(self.gen_help_display_ctx())
+                    self.display_help_with(self.display_ctx())
                 }
 
                 pub fn display_help_with(&self, context: cote::HelpDisplayCtx) -> Result<(), aopt::Error> {
@@ -772,34 +785,48 @@ impl<'a> Analyzer<'a> {
                         self.inner_parser().optset(),
                         &name, context.head(), context.foot(),
                         context.width(), context.usagew()
-                    ).map_err(|e| aopt::Error::raise_error(format!("Can not display help message: {:?}", e)))
+                    ).map_err(|e| aopt::raise_error!("Can not display help message: {:?}", e))
                 }
 
-                pub fn display_sub_help(&self, subnames: &[String]) -> Result<(), aopt::Error> {
-                    self.display_sub_help_idx(subnames, 0)
+                pub fn display_parser_help(&self, names: &[String]) -> Result<(), aopt::Error> {
+                    self.display_sub_help_idx(names, 0)
                 }
 
-                pub fn display_sub_help_idx(&self, subnames: &[String], idx: usize) -> Result<(), aopt::Error> {
-                    let len = subnames.len();
-                    let app = &self.0;
+                pub fn display_sub_help_idx(&self, names: &[String], idx: usize) -> Result<(), aopt::Error> {
+                    let len = names.len();
+                    let inner_parser = self.inner_parser()?;
 
                     if len >= 1 {
-                        let name_matched = &subnames[idx] == app.name();
+                        let name_matched = &names[idx] == inner_parser.name();
 
-                        if idx == len - 1 && len == 1 {
-                            return self.display_help()
-                        }
-                        else if idx == len - 2 && name_matched {
-                            #sub_app_display_call
-                        }
-                        else if idx < len && name_matched {
-                            #sub_app_help_call
+                        if name_matched {
+                            if idx == len - 1 && len == 1 {
+                                let context = self.display_ctx();
+                                // display current help message
+                                return cote::simple_display_set_help(
+                                    inner_parser.optset(), &names[idx],
+                                    context.head(), context.foot(), context.width(), context.usagew()
+                                ).map_err(|e| aopt::raise_error!("Can not display help message: {:?}", e))
+                            }
+                            else if idx < len - 1 {
+                                #sub_app_display_call
+                            }
                         }
                     }
-                    Err(aopt::Error::raise_error(format!("Can not display help message of subnames: {:?}", subnames)))
+                    Err(aopt::Error::raise_error(format!("Can not display help message of subnames: {:?}", names)))
                 }
 
-                #override_run
+                pub fn parse_with<'b, P>(&mut self, args: ARef<Args>, policy: &mut P) -> Result<P::Ret, aopt::Error>
+                where
+                    P: Policy<Set = Set, Inv<'b> = Inv, Ser = Ser>,
+                {
+                    let set = &mut self.set;
+                    let ser = &mut self.ser;
+                    let inv = &mut self.inv;
+
+                    parser.init()?;
+                    policy.parse(set, inv, ser, args).map_err(Into::into)
+                }
             }
         })
     }

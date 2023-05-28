@@ -75,7 +75,7 @@ where
         Self: Sized;
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct CoteParser<Set, Inv, Ser> {
     name: String,
 
@@ -536,61 +536,6 @@ where
     {
         let args = Args::from_env().into_inner();
         self.run_async_with(args.into_iter(), policy, r).await
-    }
-}
-
-impl<Set, Inv, Ser> CoteParser<Set, Inv, Ser>
-where
-    Ser: ServicesValExt,
-    Self: ErasedTy,
-{
-    pub fn sub_parsers(&self) -> Result<&Vec<Self>, Error> {
-        self.service().sub_parsers::<Self>()
-    }
-
-    pub fn sub_parsers_mut(&mut self) -> Result<&mut Vec<Self>, Error> {
-        self.service_mut().sub_parsers_mut::<Self>()
-    }
-
-    pub fn sub_parser(&self, id: usize) -> Result<Option<&Self>, Error> {
-        Ok(self.sub_parsers()?.get(id))
-    }
-
-    pub fn sub_parser_mut(&mut self, id: usize) -> Result<Option<&mut Self>, Error> {
-        Ok(self.sub_parsers_mut()?.get_mut(id))
-    }
-
-    pub fn add_parser(&mut self, parser: Self) -> Result<&mut Self, Error> {
-        self.sub_parsers_mut()?.push(parser);
-        Ok(self)
-    }
-
-    pub fn rem_parser(&mut self, id: usize) -> Result<Self, Error> {
-        Ok(self.sub_parsers_mut()?.remove(id))
-    }
-
-    pub fn find_sub_parser(&self, name: &str) -> Result<Option<&Self>, Error> {
-        Ok(self.sub_parsers()?.iter().find(|v| v.name() == name))
-    }
-
-    pub fn find_sub_parser_mut(&mut self, name: &str) -> Result<Option<&mut Self>, Error> {
-        Ok(self
-            .sub_parsers_mut()?
-            .iter_mut()
-            .find(|v| v.name() == name))
-    }
-
-    pub fn rctx(&self) -> Result<&RunningCtx, aopt::Error> {
-        self.service().rctx()
-    }
-
-    pub fn rctx_mut(&mut self) -> Result<&mut RunningCtx, aopt::Error> {
-        self.service_mut().rctx_mut()
-    }
-
-    pub fn set_rctx(&mut self, ctx: RunningCtx) -> &mut Self {
-        self.service_mut().set_rctx(ctx);
-        self
     }
 }
 
