@@ -369,7 +369,7 @@ impl<'a> Analyzer<'a> {
             display_call.extend(quote! {
                 if sub_name = sub_parsers[#idx].name() {
                     let mut sub_parser_helper = sub_parsers[#idx].app_data::<#ty>()?;
-                    return sub_parser_helper.display_sub_help_idx(subnames, idx + 1);
+                    return sub_parser_helper.display_sub_help_idx(names, idx + 1);
                 }
             });
         }
@@ -392,30 +392,6 @@ impl<'a> Analyzer<'a> {
         }
     }
 
-    pub fn gen_sub_app_help_call(&self) -> syn::Result<TokenStream> {
-        let sub_parser_tuple_ty = self.gen_sub_parser_tuple_ty(None)?;
-        let mut sub_parser_tuple_mat = quote! {
-            let sub_app_name = &subnames[idx + 1];
-            let sub_app_name = parser.find_opt(sub_app_name.as_str())?.name();
-            let name = subnames.join(" ");
-            let sub_parser_tuple = app.inner_parser()
-                             .app_data::<#sub_parser_tuple_ty>()?;
-        };
-
-        for sub_generator in self.sub_generator.iter() {
-            let idx = sub_generator.get_sub_id();
-            let idx = Index::from(idx);
-
-            sub_parser_tuple_mat.extend(quote! {
-                if sub_app_name == sub_parser_tuple.#idx.name() {
-                    return sub_parser_tuple.#idx.display_sub_help_idx(subnames, idx + 1);
-                }
-            });
-        }
-
-        Ok(sub_parser_tuple_mat)
-    }
-
     pub fn gen_sub_parser_tuple_ty(&self, lifetime: Option<Lifetime>) -> syn::Result<TokenStream> {
         let mut inner_app_ty = quote! {};
 
@@ -430,12 +406,6 @@ impl<'a> Analyzer<'a> {
 
         Ok(quote! {
             (#inner_app_ty)
-        })
-    }
-
-    pub fn gen_insert_app_ty(&self, ident: &Ident) -> syn::Result<TokenStream> {
-        Ok(quote! {
-            parser.set_app_data(<#ident>::<'_, Set, Inv, Ser>::default())?;
         })
     }
 
@@ -511,7 +481,6 @@ impl<'a> Analyzer<'a> {
 
     pub fn gen_parser_interface(&self) -> syn::Result<TokenStream> {
         let struct_app_ty = self.cote_generator.gen_struct_app_type();
-        let insert_app_ty = self.gen_insert_app_ty(&struct_app_ty)?;
         let policy_ty = self.cote_generator.gen_policy_type()?;
         let insert_sub_parsers = self.gen_insert_sub_apps()?;
         let policy_settings = self.gen_policy_settings();
@@ -534,12 +503,11 @@ impl<'a> Analyzer<'a> {
                 #where_clause_parser {
                 let parser = <Self  as cote::IntoParserDerive<Set, Inv, Ser>>::into_parser()?;
                 let mut parser = cote::CoteParser::new_with_parser(#parser_app_name, parser);
-                #insert_app_ty
                 #insert_sub_parsers
                 Ok(parser)
             }
 
-            pub fn gen_cote_app<'z>() -> Result<cote::CoteApp<'a, #policy_ty>, aopt::Error> {
+            pub fn gen_cote_app<'z>() -> Result<cote::CoteApp<'z, #policy_ty>, aopt::Error> {
                 Self::gen_cote_app_with()
             }
 
@@ -557,6 +525,10 @@ impl<'a> Analyzer<'a> {
                 Self::gen_policy_with()
             }
 
+            pub fn gen_parser_helper<Set, Inv, Ser>() -> #struct_app_ty<'static, Set, Inv, Ser> {
+                Default::default()
+            }
+
             /// Parsing the given arguments and return the [`GetoptRes`](aopt::GetoptRes).
             pub fn parse_args_with<'z, P>(policy: &mut P, args: aopt::prelude::Args)
                 -> Result<aopt::GetoptRes<<P as aopt::prelude::Policy>::Ret,
@@ -567,7 +539,7 @@ impl<'a> Analyzer<'a> {
                     >, aopt::Error> #where_clause {
                 // cote context variable
                 let mut parser = Self::gen_parser_with()?;
-                let mut helper = parser.app_data::<<#struct_app_ty>::<'_, P::Set, P::Inv<'z>, P::Ser>>()?.clone();
+                let mut helper = Self::gen_parser_helper::<P::Set, P::Inv<'z>, P::Ser>();
 
                 helper.set_inner_parser(&parser);
                 helper.set_default_rctx()?;
@@ -589,7 +561,7 @@ impl<'a> Analyzer<'a> {
                         std::process::exit(0)
                     }
                 }
-                Ok(aopt::GetoptRes{ ret: ret?, parser: app })
+                Ok(aopt::GetoptRes{ ret: ret?, parser: parser })
             }
 
             /// Parsing the given arguments and return the [`GetoptRes`](aopt::GetoptRes).
@@ -678,16 +650,15 @@ impl<'a> Analyzer<'a> {
         let sub_app_display_call = self.gen_sub_app_display_call()?;
         let sync_main_running_ctx = self.cote_generator.gen_sync_running_ctx();
         let static_lifetime = Lifetime::new("'static", new_app_type.span());
-        let where_clause = Self::where_clause_for_policy();
+        let where_clause_for_parser = Self::where_clause_for_parser();
         let insert_sub_parsers = self.gen_insert_sub_apps()?;
         let where_clause_debug = Self::where_clause_for_policy_debug();
         let sub_apps_tuple_ty = self.gen_sub_parser_tuple_ty(Some(static_lifetime))?;
-        let override_run = gen_run_override(&new_app_type);
 
         Ok(quote! {
             #new_app_define
 
-            impl<'a, Set, Inv, Ser> #new_app_type<'a, Set, Inv, Ser> #where_clause {
+            impl<'a, Set, Inv, Ser> #new_app_type<'a, Set, Inv, Ser> #where_clause_for_parser {
                 pub fn parsers(&self) -> Result<&'a Vec<cote::CoteParser<Set, Inv, Ser>>, aopt::Error> {
                     self.inner_parser()?
                         .service()
@@ -706,7 +677,7 @@ impl<'a> Analyzer<'a> {
                         .ok_or_else(|| aopt::raise_error!("Can not find parser with id {}", id))
                 }
 
-                pub fn parser_mut(&mut self) -> Result<&'a mut cote::CoteParser<Set, Inv, Ser>, aopt::Error> {
+                pub fn parser_mut(&mut self, id: usize) -> Result<&'a mut cote::CoteParser<Set, Inv, Ser>, aopt::Error> {
                     self.parsers_mut()?
                         .get_mut(id)
                         .ok_or_else(|| aopt::raise_error!("Can not find mutable parser with id {}", id))
@@ -755,7 +726,7 @@ impl<'a> Analyzer<'a> {
                 }
 
                 pub fn set_rctx(&mut self, ctx: cote::RunningCtx) -> Result<&mut Self, aopt::Error> {
-                    self.inner_parser_mut()?
+                    self.inner_parser_mut()
                         .service_mut()
                         .set_rctx(ctx);
                     self
@@ -813,19 +784,14 @@ impl<'a> Analyzer<'a> {
                             }
                         }
                     }
-                    Err(aopt::Error::raise_error(format!("Can not display help message of subnames: {:?}", names)))
+                    Err(aopt::Error::raise_error(format!("Can not display help message of names: {:?}", names)))
                 }
 
                 pub fn parse_with<'b, P>(&mut self, args: ARef<Args>, policy: &mut P) -> Result<P::Ret, aopt::Error>
                 where
                     P: Policy<Set = Set, Inv<'b> = Inv, Ser = Ser>,
                 {
-                    let set = &mut self.set;
-                    let ser = &mut self.ser;
-                    let inv = &mut self.inv;
-
-                    parser.init()?;
-                    policy.parse(set, inv, ser, args).map_err(Into::into)
+                    self.inner_parser_mut()?.parse_with(args, policy)
                 }
             }
         })
@@ -953,153 +919,5 @@ pub fn gen_subapp_without_option(ty: &Type) -> syn::Result<&Ident> {
     abort! {
         ty,
         "can not generate sub app type"
-    }
-}
-
-pub fn gen_run_override(app: &Ident) -> TokenStream {
-    quote! {
-        pub fn run_mut_with<'c, 'b, I, R, F>(
-            &'c mut self,
-            iter: impl Iterator<Item = I>,
-            mut r: F,
-        ) -> Result<R, aopt::Error>
-        where
-            'c: 'b,
-            I: Into<aopt::prelude::RawVal>,
-            F: FnMut(P::Ret, &'b mut #app<'z, P>) -> Result<R, aopt::Error>,
-        {
-            let args = iter.map(|v| v.into());
-            let parser = self.inner_parser_mut();
-
-            // initialize the option value
-            parser.init()?;
-
-            let ret = parser
-                .parse(aopt::ARef::new(aopt::prelude::Args::from(args)))
-                .map_err(Into::into)?;
-
-            r(ret, self)
-        }
-
-        pub fn run_mut<'c, 'b, R, F>(&'c mut self, r: F) -> Result<R, aopt::Error>
-        where
-            'c: 'b,
-            F: FnMut(P::Ret, &'b mut #app<'z, P>) -> Result<R, aopt::Error>,
-        {
-            let args = aopt::prelude::Args::from_env().into_inner();
-            self.run_mut_with(args.into_iter(), r)
-        }
-
-        pub async fn run_async_mut_with<'c, 'b, I, R, FUT, F>(
-            &'c mut self,
-            iter: impl Iterator<Item = I>,
-            mut r: F,
-        ) -> Result<R, aopt::Error>
-        where
-            'c: 'b,
-            I: Into<aopt::prelude::RawVal>,
-            FUT: std::future::Future<Output = Result<R, aopt::Error>>,
-            F: FnMut(P::Ret, &'b mut #app<'z, P>) -> FUT,
-        {
-            let args = iter.map(|v| v.into());
-            let parser = self.inner_parser_mut();
-            let async_ret;
-
-            // initialize the option value
-            parser.init()?;
-            match parser.parse(aopt::ARef::new(aopt::prelude::Args::from(args))) {
-                Ok(ret) => {
-                    let ret = r(ret, self).await;
-
-                    async_ret = ret;
-                }
-                Err(e) => {
-                    async_ret = Err(e.into());
-                }
-            }
-            async_ret
-        }
-
-        pub async fn run_async_mut<'c, 'b, R, FUT, F>(&'c mut self, r: F) -> Result<R, aopt::Error>
-        where
-            'c: 'b,
-            FUT: std::future::Future<Output = Result<R, aopt::Error>>,
-            F: FnMut(P::Ret, &'b mut #app<'z, P>) -> FUT,
-        {
-            let args = aopt::prelude::Args::from_env().into_inner();
-            self.run_async_mut_with(args.into_iter(), r).await
-        }
-
-        pub fn run_with<'c, 'b, I, R, F>(
-            &'c mut self,
-            iter: impl Iterator<Item = I>,
-            mut r: F,
-        ) -> Result<R, aopt::Error>
-        where
-            'c: 'b,
-            I: Into<aopt::prelude::RawVal>,
-            F: FnMut(P::Ret, &'b #app<'z, P>) -> Result<R, aopt::Error>,
-        {
-            let args = iter.map(|v| v.into());
-            let parser = self.inner_parser_mut();
-
-            // initialize the option value
-            parser.init()?;
-
-            let ret = parser
-                .parse(aopt::ARef::new(aopt::prelude::Args::from(args)))
-                .map_err(Into::into)?;
-
-            r(ret, self)
-        }
-
-        pub fn run<'c, 'b, R, F>(&'c mut self, r: F) -> Result<R, aopt::Error>
-        where
-            'c: 'b,
-            F: FnMut(P::Ret, &'b #app<'z, P>) -> Result<R, aopt::Error>,
-        {
-            let args = aopt::prelude::Args::from_env().into_inner();
-            self.run_with(args.into_iter(), r)
-        }
-
-        pub async fn run_async_with<'c, 'b, I, R, FUT, F>(
-            &'c mut self,
-            iter: impl Iterator<Item = I>,
-            mut r: F,
-        ) -> Result<R, aopt::Error>
-        where
-            'c: 'b,
-            I: Into<aopt::prelude::RawVal>,
-            FUT: std::future::Future<Output = Result<R, aopt::Error>>,
-            F: FnMut(P::Ret, &'b #app<'z, P>) -> FUT,
-        {
-            let args = iter.map(|v| v.into());
-            let parser = self.inner_parser_mut();
-            let async_ret;
-
-            // initialize the option value
-            parser.init()?;
-            match parser.parse(aopt::ARef::new(aopt::prelude::Args::from(args))) {
-                Ok(ret) => {
-                    let ret = r(ret, self).await;
-
-                    async_ret = ret;
-                }
-                Err(e) => {
-                    async_ret = Err(e.into());
-                }
-            }
-            async_ret
-        }
-
-        pub async fn run_async<'c, 'b, R, FUT, F>(&'c mut self, r: F) -> Result<R, aopt::Error>
-        where
-            'c: 'b,
-            FUT: std::future::Future<Output = Result<R, aopt::Error>>,
-            F: FnMut(P::Ret, &'b #app<'z, P>) -> FUT,
-        {
-            let args = aopt::prelude::Args::from_env().into_inner();
-            self.run_async_with(args.into_iter(), r).await
-        }
     }
 }

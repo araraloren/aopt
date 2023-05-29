@@ -273,6 +273,7 @@ impl<'a> SubGenerator<'a> {
         help_uid: Option<&Ident>,
     ) -> syn::Result<TokenStream> {
         let without_option_ty = &self.without_option_ty;
+        let policy_ty = self.gen_policy_type()?;
         let sub_id = self.get_sub_id();
         let sub_id = Index::from(sub_id);
         let pass_help_to_next = if is_process_help {
@@ -296,11 +297,11 @@ impl<'a> SubGenerator<'a> {
 
         Ok(quote! {
             parser.entry(#uid)?.on(
-                move |set: &mut P::Set, ser: &mut P::Ser, args: aopt::prelude::ctx::Args, index: aopt::prelude::ctx::Index| {
+                move |set: &mut Set, ser: &mut Ser, args: aopt::prelude::ctx::Args, index: aopt::prelude::ctx::Index| {
                     use std::ops::Deref;
 
                     let mut args = args.deref().clone().into_inner();
-                    let mut next_ctx = cote::AppRunningCtx::default();
+                    let mut next_ctx = cote::RunningCtx::default();
                     let current_cmd = args.remove(*index.deref());
                     let current_cmd = current_cmd.get_str();
                     let current_cmd = current_cmd.ok_or_else(||
@@ -310,29 +311,29 @@ impl<'a> SubGenerator<'a> {
                     #pass_help_to_next
 
                     let args = aopt::ARef::new(aopt::prelude::Args::from_vec(args));
-                    let mut sub = &mut ser.sve_val_mut::<#sub_parser_tuple_ty>()?.#sub_id;
+                    let sub_parser = ser.sub_parser_mut::<cote::CoteParser<Set, Inv, Ser>>(#sub_id)?;
+                    let mut policy = <#without_option_ty>::gen_policy_with::<#policy_ty>();
+                    let mut helper = <#without_option_ty>::gen_parser_helper::<Set, Inv, Ser>();
 
-                    sub.set_running_ctx(next_ctx)?;
-                    let parser = sub.inner_parser_mut();
+                    helper.set_inner_parser(&sub_parser);
+                    helper.set_rctx(next_ctx)?;
+                    let ret = helper.parse_with(&mut policy).map_err(Into::into);
 
-                    // initialize the option value
-                    parser.init()?;
-                    let ret = parser.parse(args).map_err(Into::into);
+                    helper.sync_rctx(&ret, true)?;
+                    let mut sub_ctx = helper.take_rctx()?;
 
-                    sub.sync_running_ctx(&ret, true)?;
-                    let mut sub_ctx = sub.take_running_ctx()?;
-
-                    ser.sve_val_mut::<cote::AppRunningCtx>()?.sync_ctx(&mut sub_ctx);
+                    ser.sve_val_mut::<cote::RunningCtx>()?.sync_ctx(&mut sub_ctx);
                     let ret = ret?;
 
                     if ret.status() {
-                        ser.sve_val_mut::<cote::AppRunningCtx>()?.clear_failed_info();
-                        let mut sub = &mut ser.sve_val_mut::<#sub_parser_tuple_ty>()?.#sub_id;
-                        Ok(<#without_option_ty>::try_extract(sub.inner_parser_mut().optset_mut()).ok())
+                        let sub_parser = ser.sub_parser_mut::<cote::CoteParser<Set, Inv, Ser>>(#sub_id)?;
+
+                        ser.sve_val_mut::<cote::RunningCtx>()?.clear_failed_info();
+                        Ok(<#without_option_ty>::try_extract(sub_parser.optset_mut()).ok())
                     }
                     else {
-                        ser.sve_val_mut::<cote::AppRunningCtx>()?.sync_failed_info(&mut sub_ctx);
-                        ser.sve_val_mut::<cote::AppRunningCtx>()?.add_failed_info((current_cmd.to_owned(), ret));
+                        ser.sve_val_mut::<cote::RunningCtx>()?.sync_failed_info(&mut sub_ctx);
+                        ser.sve_val_mut::<cote::RunningCtx>()?.add_failed_info((current_cmd.to_owned(), ret));
                         Ok(None)
                     }
                 }

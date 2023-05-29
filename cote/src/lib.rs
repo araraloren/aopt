@@ -16,9 +16,10 @@ use aopt::Error;
 use aopt::RawVal;
 use aopt_help::prelude::Block;
 use aopt_help::prelude::Store;
-use ctx::RunningCtx;
-use help::HelpDisplayCtx;
-use ser::CoteServiceExt;
+
+pub use ctx::RunningCtx;
+pub use help::HelpDisplayCtx;
+pub use ser::CoteServiceExt;
 
 pub mod prelude {
     pub use crate::help::HelpDisplayCtx;
