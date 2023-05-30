@@ -42,8 +42,10 @@ use crate::meta::IntoConfig;
 
 pub trait IntoParserDerive<Set, Inv, Ser>
 where
-    Set: aopt::prelude::Set,
+    Ser: aopt::prelude::ErasedTy,
+    Inv: aopt::prelude::ErasedTy,
     SetCfg<Set>: Config + ConfigValue,
+    Set: aopt::prelude::Set + aopt::prelude::ErasedTy,
 {
     fn into_parser() -> Result<Parser<Set, Inv, Ser>, Error>
     where

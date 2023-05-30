@@ -447,10 +447,10 @@ impl<'a> Analyzer<'a> {
     pub fn where_clause_for_policy() -> TokenStream {
         quote! {
             where
-            P::Ser: aopt::ser::ServicesValExt + 'z,
+            P::Ser: aopt::ser::ServicesValExt + aopt::prelude::ADefaultVal + aopt::prelude::ErasedTy + 'z,
             P::Error: Into<aopt::Error>,
-            P::Set: aopt::prelude::Set + aopt::prelude::ErasedTy + aopt::set::SetValueFindExt + 'z,
-            P::Inv<'z>: aopt::ctx::HandlerCollection<'z, P::Set, P::Ser>,
+            P::Set: aopt::prelude::Set + aopt::prelude::ADefaultVal + aopt::prelude::ErasedTy + aopt::set::SetValueFindExt + 'z,
+            P::Inv<'z>: aopt::ctx::HandlerCollection<'z, P::Set, P::Ser>  + aopt::prelude::ADefaultVal + aopt::prelude::ErasedTy,
             P: aopt::prelude::Policy + aopt::prelude::APolicyExt<P> + aopt::prelude::PolicySettings + Default + 'z,
             aopt::prelude::SetCfg<P::Set>: aopt::prelude::Config + aopt::prelude::ConfigValue + Default,
         }
@@ -472,9 +472,9 @@ impl<'a> Analyzer<'a> {
     pub fn where_clause_for_parser() -> TokenStream {
         quote! {
             where
-            Ser: aopt::ser::ServicesValExt,
-            Set: aopt::prelude::Set + aopt::set::SetValueFindExt,
-            Inv: for<'z> aopt::ctx::HandlerCollection<'z, Set, Ser>,
+            Ser: aopt::ser::ServicesValExt + aopt::prelude::ADefaultVal + aopt::prelude::ErasedTy,
+            Set: aopt::prelude::Set + aopt::set::SetValueFindExt + aopt::prelude::ADefaultVal + aopt::prelude::ErasedTy,
+            Inv: aopt::ctx::HandlerCollection<'z, Set, Ser> + aopt::prelude::ADefaultVal + aopt::prelude::ErasedTy,
             aopt::prelude::SetCfg<Set>: aopt::prelude::Config + aopt::prelude::ConfigValue + Default,
         }
     }
@@ -499,7 +499,7 @@ impl<'a> Analyzer<'a> {
                 Self::gen_parser_with()
             }
 
-            pub fn gen_parser_with<Set, Inv, Ser>() -> Result<cote::CoteParser<Set, Inv, Ser>, aopt::Error>
+            pub fn gen_parser_with<'z, Set, Inv, Ser>() -> Result<cote::CoteParser<Set, Inv, Ser>, aopt::Error>
                 #where_clause_parser {
                 let parser = <Self  as cote::IntoParserDerive<Set, Inv, Ser>>::into_parser()?;
                 let mut parser = cote::CoteParser::new_with_parser(#parser_app_name, parser);
@@ -508,11 +508,11 @@ impl<'a> Analyzer<'a> {
             }
 
             pub fn gen_cote_app<'z>() -> Result<cote::CoteApp<'z, #policy_ty>, aopt::Error> {
-                Self::gen_cote_app_with()
+                Self::gen_cote_app_with(Self::gen_policy())
             }
 
-            pub fn gen_cote_app_with<'z, P>() -> Result<cote::CoteApp<'z, P>, aopt::Error> #where_clause {
-                Ok(cote::CoteApp::new_with_parser(Self::gen_parser_with::<P::Set, P::Inv<'z>, P::Ser>()))
+            pub fn gen_cote_app_with<'z, P>(policy: P) -> Result<cote::CoteApp<'z, P>, aopt::Error> #where_clause {
+                Ok(cote::CoteApp::new_with_parser(policy, Self::gen_parser_with::<P::Set, P::Inv<'z>, P::Ser>()?))
             }
 
             pub fn gen_policy_with<P>() -> P where P: aopt::prelude::PolicySettings + Default {
@@ -530,7 +530,7 @@ impl<'a> Analyzer<'a> {
             }
 
             /// Parsing the given arguments and return the [`GetoptRes`](aopt::GetoptRes).
-            pub fn parse_args_with<'z, P>(policy: &mut P, args: aopt::prelude::Args)
+            pub fn parse_args_with<'z, P>(args: aopt::prelude::Args, policy: &mut P)
                 -> Result<aopt::GetoptRes<<P as aopt::prelude::Policy>::Ret,
                     cote::CoteParser<
                         <P as aopt::prelude::Policy>::Set,
@@ -541,7 +541,7 @@ impl<'a> Analyzer<'a> {
                 let mut parser = Self::gen_parser_with()?;
                 let mut helper = Self::gen_parser_helper::<P::Set, P::Inv<'z>, P::Ser>();
 
-                helper.set_inner_parser(&parser);
+                helper.set_inner_parser(&mut parser);
                 helper.set_default_rctx()?;
                 helper.rctx_mut()?.add_name(#parser_app_name);
                 let ret = helper.parse_with(aopt::ARef::new(args), policy);
@@ -658,26 +658,26 @@ impl<'a> Analyzer<'a> {
         Ok(quote! {
             #new_app_define
 
-            impl<'a, Set, Inv, Ser> #new_app_type<'a, Set, Inv, Ser> #where_clause_for_parser {
-                pub fn parsers(&self) -> Result<&'a Vec<cote::CoteParser<Set, Inv, Ser>>, aopt::Error> {
-                    self.inner_parser()?
+            impl<'a, 'z, Set, Inv, Ser> #new_app_type<'a, Set, Inv, Ser> #where_clause_for_parser {
+                pub fn parsers(&self) -> Result<&Vec<cote::CoteParser<Set, Inv, Ser>>, aopt::Error> {
+                    self.inner_parser()
                         .service()
                         .sub_parsers()
                 }
 
-                pub fn parsers_mut(&mut self) -> Result<&'a mut Vec<cote::CoteParser<Set, Inv, Ser>>, aopt::Error> {
-                    self.inner_parser_mut()?
+                pub fn parsers_mut(&mut self) -> Result<&mut Vec<cote::CoteParser<Set, Inv, Ser>>, aopt::Error> {
+                    self.inner_parser_mut()
                         .service_mut()
                         .sub_parsers_mut()
                 }
 
-                pub fn parser(&self, id: usize) -> Result<&'a cote::CoteParser<Set, Inv, Ser>, aopt::Error> {
+                pub fn parser(&self, id: usize) -> Result<&cote::CoteParser<Set, Inv, Ser>, aopt::Error> {
                     self.parsers()?
                         .get(id)
                         .ok_or_else(|| aopt::raise_error!("Can not find parser with id {}", id))
                 }
 
-                pub fn parser_mut(&mut self, id: usize) -> Result<&'a mut cote::CoteParser<Set, Inv, Ser>, aopt::Error> {
+                pub fn parser_mut(&mut self, id: usize) -> Result<&mut cote::CoteParser<Set, Inv, Ser>, aopt::Error> {
                     self.parsers_mut()?
                         .get_mut(id)
                         .ok_or_else(|| aopt::raise_error!("Can not find mutable parser with id {}", id))
@@ -695,14 +695,14 @@ impl<'a> Analyzer<'a> {
                     Ok(self)
                 }
 
-                pub fn find_parser(&self, name: &str) -> Result<&'a cote::CoteParser<Set, Inv, Ser>, aopt::Error> {
+                pub fn find_parser(&self, name: &str) -> Result<&cote::CoteParser<Set, Inv, Ser>, aopt::Error> {
                     self.parsers()?
                         .iter()
                         .find(|v| v.name() == name)
                         .ok_or_else(|| aopt::raise_error!("Can not find parser with name {}", name))
                 }
 
-                pub fn find_parser_mut(&mut self, name: &str) -> Result<&'a mut cote::CoteParser<Set, Inv, Ser>, aopt::Error> {
+                pub fn find_parser_mut(&mut self, name: &str) -> Result<&mut cote::CoteParser<Set, Inv, Ser>, aopt::Error> {
                     self.parsers_mut()?
                         .iter_mut()
                         .find(|v| v.name() == name)
@@ -713,13 +713,13 @@ impl<'a> Analyzer<'a> {
                     self.set_rctx(cote::RunningCtx::default())
                 }
 
-                pub fn rctx(&self) -> Result<&'a cote::RunningCtx, aopt::Error> {
+                pub fn rctx(&self) -> Result<&cote::RunningCtx, aopt::Error> {
                     self.inner_parser()
                         .service()
                         .rctx()
                 }
 
-                pub fn rctx_mut(&mut self) -> Result<&'a mut cote::RunningCtx, aopt::Error> {
+                pub fn rctx_mut(&mut self) -> Result<&mut cote::RunningCtx, aopt::Error> {
                     self.inner_parser_mut()
                         .service_mut()
                         .rctx_mut()
