@@ -42,17 +42,12 @@ use crate::meta::IntoConfig;
 
 pub trait IntoParserDerive<Set, Inv, Ser>
 where
-    Ser: aopt::prelude::ErasedTy,
-    Inv: aopt::prelude::ErasedTy,
+    Ser: ErasedTy + ADefaultVal,
+    Inv: ErasedTy + ADefaultVal,
     SetCfg<Set>: Config + ConfigValue,
-    Set: aopt::prelude::Set + aopt::prelude::ErasedTy,
+    Set: aopt::prelude::Set + ErasedTy + ADefaultVal,
 {
-    fn into_parser() -> Result<Parser<Set, Inv, Ser>, Error>
-    where
-        Set: ADefaultVal,
-        Ser: ADefaultVal,
-        Inv: ADefaultVal,
-    {
+    fn into_parser() -> Result<Parser<Set, Inv, Ser>, Error> {
         Self::into_parser_with(
             Set::a_default_val(),
             Inv::a_default_val(),
