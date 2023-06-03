@@ -440,10 +440,10 @@ where
 
     type Error = Error;
 
-    fn parse(
+    fn parse<'a>(
         &mut self,
         set: &mut Self::Set,
-        inv: &mut Self::Inv<'_>,
+        inv: &mut Self::Inv<'a>,
         ser: &mut Self::Ser,
         args: ARef<Args>,
     ) -> Result<Self::Ret, Self::Error> {
