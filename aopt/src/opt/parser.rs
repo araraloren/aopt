@@ -10,7 +10,7 @@ use crate::Str;
 /// The struct of the option string are:
 ///
 /// ```!
-/// [--option][=][type][!][@index]
+/// [--option][=][type][!*][@index]
 ///      |     |    |   |   |
 ///      |     |    |   |   |
 ///      |     |    |   |   |
@@ -23,7 +23,7 @@ use crate::Str;
 ///      |     |    |   |   @<3 means position less than 3
 ///      |     |    |   |   @* means all the position
 ///      |     |    |   |
-///      |     |    |   Indicate the option is force required.
+///      |     |    |   Indicate the option wether is force required(!) or not(*).
 ///      |     |    |
 ///      |     |    |
 ///      |     |    |
@@ -67,7 +67,7 @@ use crate::Str;
 pub struct StrParser;
 
 thread_local! {
-    static STR_PARSER: Regex = Regex::new(r"^([^=!@;:]+)?((?:;[^=!@;:]+)+)?(?:=([a-zA-Z])+)?(!)?(@([^@:]+))?(?::(.+))?$").unwrap();
+    static STR_PARSER: Regex = Regex::new(r"^([^=!*@;:]+)?((?:;[^=!*@;:]+)+)?(?:=([a-zA-Z])+)?([!*])?(@([^@:]+))?(?::(.+))?$").unwrap();
 }
 
 impl StrParser {
@@ -86,10 +86,13 @@ impl StrParser {
                     let mut idx = None;
                     let mut alias = None;
 
-                    if let Some(mat) = cap.get(IDX_FORCE) {
+                    if let Some(mat) = cap.get(IDX_OPTIONAL) {
                         match mat.as_str() {
                             "!" => {
                                 force = Some(true);
+                            }
+                            "*" => {
+                                force = Some(false);
                             }
                             _ => {
                                 unreachable!(
@@ -136,7 +139,7 @@ impl StrParser {
 const IDX_NAME: usize = 1;
 const IDX_ALIAS: usize = 2;
 const IDX_CTOR: usize = 3;
-const IDX_FORCE: usize = 4;
+const IDX_OPTIONAL: usize = 4;
 const IDX_INDEX: usize = 6;
 const IDX_HELP: usize = 7;
 
@@ -230,8 +233,8 @@ mod test {
         ];
         let helps = [": This is an option help message", ""];
         let helps_test = [Some(astr("This is an option help message")), None];
-        let forces = ["!", ""];
-        let forces_test = [Some(true), None];
+        let forces = ["!", "*", ""];
+        let forces_test = [Some(true), Some(false), None];
         let positions = [
             "@1",
             "@68",
@@ -276,7 +279,7 @@ mod test {
                             assert_eq!(position_test.as_ref(), cap.index());
                             assert_eq!(option_test.2.as_ref(), cap.ctor());
                         } else {
-                            assert!(option_test.0.is_none());
+                            assert!(option_test.0.is_none(), "{}{}{}{}", option, force, position, help);
                             assert!(option_test.1.is_none());
                         }
                     }
