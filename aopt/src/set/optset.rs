@@ -236,6 +236,9 @@ where
                 BuiltInCtor::Main => cfg.set_type::<Main>(),
                 BuiltInCtor::Any => cfg.set_type::<Any>(),
                 BuiltInCtor::Raw => cfg.set_type::<OsString>(),
+                BuiltInCtor::Fallback => {
+                    unreachable!("Fallback creator can't infer any type")
+                }
             }
         } else {
             cfg
