@@ -266,16 +266,16 @@ impl Creator<AOpt, OptConfig, Error> {
 
     pub(crate) fn guess_default_infer(ctor: BuiltInCtor, info: &mut OptConfig) {
         match ctor {
-            BuiltInCtor::Int => Option::<i64>::infer_fill_info(info, false),
-            BuiltInCtor::Str => Option::<String>::infer_fill_info(info, false),
-            BuiltInCtor::Flt => Option::<f64>::infer_fill_info(info, false),
-            BuiltInCtor::Uint => Option::<u64>::infer_fill_info(info, false),
+            BuiltInCtor::Int => <i64>::infer_fill_info(info, false),
+            BuiltInCtor::Str => <String>::infer_fill_info(info, false),
+            BuiltInCtor::Flt => <f64>::infer_fill_info(info, false),
+            BuiltInCtor::Uint => <u64>::infer_fill_info(info, false),
             BuiltInCtor::Bool => bool::infer_fill_info(info, false),
             BuiltInCtor::Cmd => Cmd::infer_fill_info(info, false),
-            BuiltInCtor::Pos => Option::<Pos<bool>>::infer_fill_info(info, false),
+            BuiltInCtor::Pos => <Pos<bool>>::infer_fill_info(info, false),
             BuiltInCtor::Main => Main::<()>::infer_fill_info(info, false),
             BuiltInCtor::Any => Any::<()>::infer_fill_info(info, false),
-            BuiltInCtor::Raw => Option::<OsString>::infer_fill_info(info, false),
+            BuiltInCtor::Raw => <OsString>::infer_fill_info(info, false),
             BuiltInCtor::Fallback => {
                 unreachable!("Fallback creator can't infer any type")
             }

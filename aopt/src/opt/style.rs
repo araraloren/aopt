@@ -62,7 +62,7 @@ impl std::fmt::Display for Style {
             }
             Style::Flag => {
                 write!(f, "Style::Flag")
-            },
+            }
         }
     }
 }

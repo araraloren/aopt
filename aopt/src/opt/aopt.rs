@@ -31,15 +31,15 @@ use crate::Uid;
 /// |   -- |    --  |    -        |    --  |   -   |   -   |   --          |  -      |    --      |
 /// | [`bool`] | [`Action::Set`] | `false` | [`Style::Combined`] [`Style::Boolean`] | no   | true | false | `b` | [`bool`] |
 /// | [`i32`] | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | None | None |
-/// | [`i64`] | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | `i`  | [`Option<i64>`] |
+/// | [`i64`] | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | `i`  | [`i64`] |
 /// | [`u32`] | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | None | None |
-/// | [`u64`] | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | `u`  | [`Option<u64>`] |
+/// | [`u64`] | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | `u`  | [`u64`] |
 /// | [`f32`] | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | None | None |
-/// | [`f64`] | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | `f`  | [`Option<f64>`] |
+/// | [`f64`] | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | `f`  | [`f64`] |
 /// | [`usize`] | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | None | None |
 /// | [`isize`] | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | None | None |
-/// | [`String`]| [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | `s`  | [`Option<String>`] |
-/// | [`OsString`](std::ffi::OsString) | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | `r` | [`Option<OsString>`] |
+/// | [`String`]| [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | `s`  | [`String`] |
+/// | [`OsString`](std::ffi::OsString) | [`Action::App`] | `false` | [`Style::Argument`] | no | true | None | `r` | [`OsString`] |
 /// | [`Cmd`] | [`Action::Set`] | `false` | [`Style::Cmd`] | [`Forward(1)`](Index::Forward)  | true  |false | `c` | [`Cmd`] |
 /// | [`Pos`] | [`Action::App`] | `true` | [`Style::Pos`] | yes | false | None | `p` | [`Pos`] |
 /// | [`Main`] | [`Action::Null`] | `true` | [`Style::Main`] | [`AnyWhere`](Index::AnyWhere) | false | None | `m` | [`Main`] |

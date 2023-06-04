@@ -530,11 +530,11 @@ mod test {
         assert!(set.add_opt("valg=p!@-1")?.run().is_ok());
         assert!(set
             .add_opt("valh@[1,2,6]")?
-            .set_infer::<Option<Pos<f64>>>()
+            .set_infer::<Pos<f64>>()
             .run()
             .is_ok());
-        assert!(set.add_opt_i::<Option<Pos>>("vali!@*")?.run().is_ok());
-        assert!(set.add_opt_i::<Option<Pos<bool>>>("valj!@1")?.run().is_ok());
+        assert!(set.add_opt_i::<Pos>("vali!@*")?.run().is_ok());
+        assert!(set.add_opt_i::<Pos<bool>>("valj!@1")?.run().is_ok());
 
         assert!(set.add_opt("main=m")?.run().is_ok());
 
@@ -550,50 +550,47 @@ mod test {
         assert!(set.add_opt_i::<bool>("/booli!")?.run().is_ok());
 
         assert!(set.add_opt("--float=f")?.run().is_ok());
-        assert!(set.add_opt_i::<Option<f64>>("-fa;--floata")?.run().is_ok());
+        assert!(set.add_opt_i::<f64>("-fa;--floata")?.run().is_ok());
         assert!(set.add_opt("-fb;--floatb=f")?.run().is_ok());
-        assert!(set
-            .add_opt_i::<Option<f64>>("-fc;--floatc=f")?
-            .run()
-            .is_ok());
+        assert!(set.add_opt_i::<f64>("-fc;--floatc=f")?.run().is_ok());
         assert!(set.add_opt("--floatd=f!")?.run().is_ok());
-        assert!(set.add_opt_i::<Option<f64>>("-fe;--floate!")?.run().is_ok());
+        assert!(set.add_opt_i::<f64>("-fe;--floate!")?.run().is_ok());
 
         assert!(set.add_opt("--int=i")?.run().is_ok());
-        assert!(set.add_opt_i::<Option<i64>>("-i")?.run().is_ok());
+        assert!(set.add_opt_i::<i64>("-i")?.run().is_ok());
         assert!(set.add_opt("-ia;--inta=i")?.run().is_ok());
         assert!(set.add_opt("-ib;--intb=i!")?.run().is_ok());
-        assert!(set.add_opt_i::<Option<i64>>("--intc!")?.run().is_ok());
+        assert!(set.add_opt_i::<i64>("--intc!")?.run().is_ok());
         assert!(set.add_opt("-id;--intd=i!")?.run().is_ok());
 
         assert!(set.add_opt("--uint=u")?.add_alias("-u").run().is_ok());
         assert!(set.add_opt("-ua;--uinta=u")?.run().is_ok());
         assert!(set
             .add_opt("--ub;--uintb")?
-            .set_infer::<Option<u64>>()
+            .set_infer::<u64>()
             .run()
             .is_ok());
         assert!(set
-            .add_opt_i::<Option<u64>>("--uintc=u")?
+            .add_opt_i::<u64>("--uintc=u")?
             .set_force(true)
             .run()
             .is_ok());
         assert!(set
             .add_opt("--uintd")?
-            .set_infer::<Option<u64>>()
+            .set_infer::<u64>()
             .set_force(true)
             .run()
             .is_ok());
         assert!(set.add_opt("--uinte")?.set_force(true).run().is_err());
 
         assert!(set.add_opt("-s=s")?.run().is_ok());
-        assert!(set.add_opt_i::<Option<String>>("--str")?.run().is_ok());
+        assert!(set.add_opt_i::<String>("--str")?.run().is_ok());
         assert!(set
-            .add_opt_i::<Option<String>>("--stra")?
+            .add_opt_i::<String>("--stra")?
             .add_alias("/stra")
             .run()
             .is_ok());
-        assert!(set.add_opt_i::<Option<String>>("--strb!")?.run().is_ok());
+        assert!(set.add_opt_i::<String>("--strb!")?.run().is_ok());
         assert!(set.add_opt("--strc=s")?.add_alias("/strc").run().is_ok());
         assert!(set.add_opt("/stre;--strd")?.set_ctor("s").run().is_ok());
         assert!(set
@@ -604,10 +601,7 @@ mod test {
             .is_ok());
 
         assert!(set.add_opt("--raw=r")?.run().is_ok());
-        assert!(set
-            .add_opt_i::<Option<OsString>>("-raw;--raw-value")?
-            .run()
-            .is_ok());
+        assert!(set.add_opt_i::<OsString>("-raw;--raw-value")?.run().is_ok());
 
         assert_eq!(set.len(), 49);
         assert!(set.find("s=c")?.is_some());
