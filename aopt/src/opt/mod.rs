@@ -349,7 +349,7 @@ pub trait OptParser {
     type Output;
     type Error: Into<Error>;
 
-    fn parse(&self, pattern: Str) -> Result<Self::Output, Self::Error>;
+    fn parse_opt(&self, pattern: Str) -> Result<Self::Output, Self::Error>;
 }
 
 pub trait Opt: Debug {

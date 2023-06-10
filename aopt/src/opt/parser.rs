@@ -43,14 +43,14 @@ use crate::Str;
 /// #
 /// # fn main() -> Result<(), Error> {
 ///     let parser = StrParser::default();
-///     let ret = parser.parse("--aopt=t!".into())?;
+///     let ret = parser.parse_opt("--aopt=t!".into())?;
 ///
 ///     assert_eq!(ret.name() , Some(&astr("--aopt")));
 ///     assert_eq!(ret.ctor(), Some(&astr("t")));
 ///     assert_eq!(ret.force(), Some(true));
 ///     assert_eq!(ret.index(), None);
 ///
-///     let ret = parser.parse("bopt=t@[1,2,3]".into())?;
+///     let ret = parser.parse_opt("bopt=t@[1,2,3]".into())?;
 ///
 ///     assert_eq!(ret.name(), Some(&astr("bopt")));
 ///     assert_eq!(ret.ctor(), Some(&astr("t")));
@@ -148,7 +148,7 @@ impl OptParser for StrParser {
 
     type Error = Error;
 
-    fn parse(&self, pattern: Str) -> Result<Self::Output, Self::Error> {
+    fn parse_opt(&self, pattern: Str) -> Result<Self::Output, Self::Error> {
         if pattern.trim().is_empty() {
             Ok(Self::Output::default())
         } else {
@@ -271,7 +271,7 @@ mod test {
                     for (position, position_test) in positions.iter().zip(positions_test.iter()) {
                         let creator = astr(format!("{}{}{}{}", option, force, position, help));
 
-                        if let Ok(cap) = parser.parse(creator) {
+                        if let Ok(cap) = parser.parse_opt(creator) {
                             assert_eq!(option_test.0.as_ref(), cap.name());
                             assert_eq!(option_test.1.as_ref(), cap.alias());
                             assert_eq!(help_test.as_ref(), cap.help());

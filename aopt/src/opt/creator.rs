@@ -123,6 +123,7 @@ const BUILTIN_CTOR_RAW_SHORT: &str = "r";
 const BUILTIN_CTOR_RAW_LONG: &str = "raw";
 const BUILTIN_CTOR_FALLBACK: &str = "fallback";
 
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum BuiltInCtor {
     /// Create names: `i`, `int`, `i64`
@@ -350,4 +351,49 @@ impl From<BuiltInCtor> for Creator<AOpt, OptConfig, Error> {
     fn from(value: BuiltInCtor) -> Self {
         Self::new_type_ctor(value)
     }
+}
+
+/// Return an array of creators:
+///
+/// * [`Fallback`](BuiltInCtor::Fallback)
+/// * [`Int`](BuiltInCtor::Int)
+/// * [`Bool`](BuiltInCtor::Bool)
+/// * [`Flt`](BuiltInCtor::Flt)
+/// * [`Str`](BuiltInCtor::Str)
+/// * [`Uint`](BuiltInCtor::Uint)
+/// * [`Cmd`](BuiltInCtor::Cmd)
+/// * [`Pos`](BuiltInCtor::Pos)
+/// * [`Main`](BuiltInCtor::Main)
+/// * [`Any`](BuiltInCtor::Any)
+/// * [`Raw`](BuiltInCtor::Raw)
+#[macro_export]
+macro_rules! ctors {
+    ($type:ident) => {
+        $crate::ctors!(
+            $type,
+            fallback,
+            int,
+            bool,
+            flt,
+            str,
+            uint,
+            cmd,
+            pos,
+            main,
+            any,
+            raw
+        )
+    };
+    ($type:ident, $($creator:ident),+) => {
+        {
+            let mut ctors = vec![];
+            $(
+                ctors.push(<$type>::from(
+                    $crate::opt::BuiltInCtor::from_name(
+                        &stringify!($creator)
+                )));
+            )+
+            ctors
+        }
+    };
 }

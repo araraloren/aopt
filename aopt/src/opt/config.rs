@@ -328,7 +328,7 @@ impl Config for OptConfig {
         Parser: OptParser,
         Parser::Output: Information,
     {
-        let mut output = parser.parse(pattern).map_err(|e| e.into())?;
+        let mut output = parser.parse_opt(pattern).map_err(|e| e.into())?;
         let mut ret = Self::default();
 
         if let Some(v) = output.take_name() {

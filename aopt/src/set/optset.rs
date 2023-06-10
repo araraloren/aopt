@@ -103,7 +103,7 @@ where
 
 impl<P, C, V> Default for OptSet<P, C, V>
 where
-    C: Ctor,
+    C: Ctor + From<BuiltInCtor>,
     P: OptParser + Default,
     V: OptValidator + Default,
 {
@@ -112,7 +112,7 @@ where
             parser: P::default(),
             validator: V::default(),
             opts: vec![],
-            creators: vec![],
+            creators: crate::ctors!(C),
         }
     }
 }
@@ -477,8 +477,8 @@ where
 
     type Error = P::Error;
 
-    fn parse(&self, pattern: Str) -> Result<Self::Output, Self::Error> {
-        self.parser().parse(pattern)
+    fn parse_opt(&self, pattern: Str) -> Result<Self::Output, Self::Error> {
+        self.parser().parse_opt(pattern)
     }
 }
 
@@ -516,7 +516,7 @@ mod test {
     }
 
     fn test_add_option_impl() -> Result<(), Error> {
-        let mut set = aset_with_default_creators();
+        let mut set = ASet::default();
 
         assert!(set.add_opt("set;s=c")?.run().is_ok());
         assert!(set.add_opt_i::<Cmd>("g;get")?.run().is_ok());

@@ -255,7 +255,7 @@ impl<Set, Ser, Chk> DelayPolicy<Set, Ser, Chk>
 where
     SetOpt<Set>: Opt,
     Chk: SetChecker<Set>,
-    Set: crate::set::Set + OptParser + Debug,
+    Set: crate::set::Set + OptParser,
 {
     // ignore failure
     pub fn invoke_opt_callback(
@@ -309,7 +309,7 @@ impl<Set, Ser, Chk> DelayPolicy<Set, Ser, Chk>
 where
     SetOpt<Set>: Opt,
     Chk: SetChecker<Set>,
-    Set: crate::set::Set + OptParser + OptValidator + Debug,
+    Set: crate::set::Set + OptParser + OptValidator,
 {
     pub(crate) fn parse_impl(
         &mut self,
@@ -489,7 +489,7 @@ impl<Set, Ser, Chk> Policy for DelayPolicy<Set, Ser, Chk>
 where
     SetOpt<Set>: Opt,
     Chk: SetChecker<Set>,
-    Set: crate::set::Set + OptParser + OptValidator + Debug,
+    Set: crate::set::Set + OptParser + OptValidator,
 {
     type Ret = ReturnVal;
 

@@ -1,5 +1,4 @@
 use crate::ctx::Invoker;
-use crate::opt::creator::BuiltInCtor;
 use crate::opt::AOpt;
 use crate::opt::Creator;
 use crate::opt::OptConfig;
@@ -10,6 +9,8 @@ use crate::parser::FwdPolicy;
 use crate::parser::Parser;
 use crate::parser::Policy;
 use crate::parser::PrePolicy;
+use crate::prelude::OptParser;
+use crate::prelude::OptValidator;
 use crate::prelude::SetChecker;
 use crate::ser::AppServices;
 use crate::set::OptSet;
@@ -33,6 +34,8 @@ pub type ASet = OptSet<StrParser, ACreator, PrefixOptValidator>;
 
 pub type ASer = AppServices;
 
+pub type AInvoker<'a> = Invoker<'a, ASet, ASer>;
+
 pub type AFwdPolicy = FwdPolicy<ASet, ASer, DefaultSetChecker<ASet>>;
 
 pub type APrePolicy = PrePolicy<ASet, ASer, DefaultSetChecker<ASet>>;
@@ -45,83 +48,59 @@ pub type APreParser<'a> = Parser<'a, APrePolicy>;
 
 pub type ADelayParser<'a> = Parser<'a, ADelayPolicy>;
 
-impl<Ser, Chk> APolicyExt<FwdPolicy<ASet, Ser, Chk>> for FwdPolicy<ASet, Ser, Chk>
+impl<Set, Ser, Chk> APolicyExt<FwdPolicy<Set, Ser, Chk>> for FwdPolicy<Set, Ser, Chk>
 where
     Ser: Default,
-    Chk: SetChecker<ASet>,
+    Chk: SetChecker<Set>,
+    Set: crate::set::Set + OptParser + OptValidator + Default,
 {
-    fn default_set(&self) -> ASet {
-        aset_with_default_creators()
+    fn default_set(&self) -> Set {
+        Set::default()
     }
 
     fn default_ser(&self) -> Ser {
         Ser::default()
     }
 
-    fn default_inv<'a>(&self) -> <FwdPolicy<ASet, Ser, Chk> as Policy>::Inv<'a> {
-        Invoker::<ASet, Ser>::default()
+    fn default_inv<'a>(&self) -> <FwdPolicy<Set, Ser, Chk> as Policy>::Inv<'a> {
+        Invoker::<Set, Ser>::default()
     }
 }
 
-impl<Ser, Chk> APolicyExt<PrePolicy<ASet, Ser, Chk>> for PrePolicy<ASet, Ser, Chk>
+impl<Set, Ser, Chk> APolicyExt<PrePolicy<Set, Ser, Chk>> for PrePolicy<Set, Ser, Chk>
 where
     Ser: Default,
-    Chk: SetChecker<ASet>,
+    Chk: SetChecker<Set>,
+    Set: crate::set::Set + OptParser + OptValidator + Default,
 {
-    fn default_set(&self) -> ASet {
-        aset_with_default_creators()
+    fn default_set(&self) -> Set {
+        Set::default()
     }
 
     fn default_ser(&self) -> Ser {
         Ser::default()
     }
 
-    fn default_inv<'a>(&self) -> <PrePolicy<ASet, Ser, Chk> as Policy>::Inv<'a> {
-        Invoker::<ASet, Ser>::default()
+    fn default_inv<'a>(&self) -> <PrePolicy<Set, Ser, Chk> as Policy>::Inv<'a> {
+        Invoker::<Set, Ser>::default()
     }
 }
 
-impl<Ser, Chk> APolicyExt<DelayPolicy<ASet, Ser, Chk>> for DelayPolicy<ASet, Ser, Chk>
+impl<Set, Ser, Chk> APolicyExt<DelayPolicy<Set, Ser, Chk>> for DelayPolicy<Set, Ser, Chk>
 where
     Ser: Default,
-    Chk: SetChecker<ASet>,
+    Chk: SetChecker<Set>,
+    Set: crate::set::Set + OptParser + OptValidator + Default,
 {
-    fn default_set(&self) -> ASet {
-        aset_with_default_creators()
+    fn default_set(&self) -> Set {
+        Set::default()
     }
 
     fn default_ser(&self) -> Ser {
         Ser::default()
     }
 
-    fn default_inv<'a>(&self) -> <DelayPolicy<ASet, Ser, Chk> as Policy>::Inv<'a> {
-        Invoker::<ASet, Ser>::default()
+    fn default_inv<'a>(&self) -> <DelayPolicy<Set, Ser, Chk> as Policy>::Inv<'a> {
+        Invoker::<Set, Ser>::default()
     }
-}
-
-/// Return an [`ASet`](crate::ext::ASet) with below creators:
-///
-/// * [`Int`](BuiltInCtor::Int)
-/// * [`Bool`](BuiltInCtor::Bool)
-/// * [`Flt`](BuiltInCtor::Flt)
-/// * [`Str`](BuiltInCtor::Str)
-/// * [`Uint`](BuiltInCtor::Uint)
-/// * [`Cmd`](BuiltInCtor::Cmd)
-/// * [`Pos`](BuiltInCtor::Pos)
-/// * [`Main`](BuiltInCtor::Main)
-/// * [`Any`](BuiltInCtor::Any)
-/// * [`Raw`](BuiltInCtor::Raw)
-pub fn aset_with_default_creators() -> ASet {
-    ASet::default()
-        .with_creator(Creator::fallback())
-        .with_creator(Creator::from(BuiltInCtor::Int))
-        .with_creator(Creator::from(BuiltInCtor::Bool))
-        .with_creator(Creator::from(BuiltInCtor::Flt))
-        .with_creator(Creator::from(BuiltInCtor::Str))
-        .with_creator(Creator::from(BuiltInCtor::Uint))
-        .with_creator(Creator::from(BuiltInCtor::Cmd))
-        .with_creator(Creator::from(BuiltInCtor::Pos))
-        .with_creator(Creator::from(BuiltInCtor::Main))
-        .with_creator(Creator::from(BuiltInCtor::Any))
-        .with_creator(Creator::from(BuiltInCtor::Raw))
 }

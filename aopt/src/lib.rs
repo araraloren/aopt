@@ -168,7 +168,7 @@ macro_rules! getopt {
                     let parser = __check_p(&mut $parser_left);
 
                     parser.init()?;
-                    match parser.parse(args.clone()) {
+                    match $crate::parser::Parser::parse(parser, args.clone()) {
                         Ok(mut parser_ret) => {
                             if parser_ret.status() {
                                 break Ok($crate::GetoptRes {
@@ -207,7 +207,7 @@ macro_rules! getopt {
                     let parser = __check_p(&mut $parser_left);
 
                     parser.init()?;
-                    match parser.parse(args.clone()) {
+                    match $crate::parser::Parser::parse(parser, args.clone()) {
                         Ok(mut parser_ret) => {
                             if parser_ret.status() {
                                 break Ok($crate::GetoptRes {
@@ -273,11 +273,13 @@ pub mod prelude {
     pub use crate::parser::DefaultSetChecker;
     pub use crate::parser::DelayPolicy;
     pub use crate::parser::FwdPolicy;
+    pub use crate::parser::HCOptSet;
     pub use crate::parser::OptStyleManager;
     pub use crate::parser::Parser;
     pub use crate::parser::ParserCommit;
     pub use crate::parser::ParserCommitWithValue;
     pub use crate::parser::Policy;
+    pub use crate::parser::PolicyParser;
     pub use crate::parser::PolicySettings;
     pub use crate::parser::PrePolicy;
     pub use crate::parser::ReturnVal;
