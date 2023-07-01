@@ -121,7 +121,7 @@ pub trait PolicySettings {
     fn set_no_delay(&mut self, name: impl Into<Str>) -> &mut Self;
 }
 
-pub trait PolicyParser<'a, P>
+pub trait PolicyParser<P>
 where
     P: Policy,
 {

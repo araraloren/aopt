@@ -231,14 +231,14 @@ where
     }
 }
 
-impl<'a, P: Policy> PolicyParser<'a, P> for Parser<'a, P> {
+impl<'a, P: Policy> PolicyParser<P> for Parser<'a, P> {
     type Error = Error;
 
     fn parse(&mut self, args: ARef<Args>) -> Result<<P as Policy>::Ret, Self::Error>
     where
         P: Default,
     {
-        PolicyParser::<'a, P>::parse(&mut self.optset, args)
+        PolicyParser::<P>::parse(&mut self.optset, args)
     }
 
     fn parse_policy(
@@ -246,6 +246,6 @@ impl<'a, P: Policy> PolicyParser<'a, P> for Parser<'a, P> {
         args: ARef<Args>,
         policy: &mut P,
     ) -> Result<<P as Policy>::Ret, Self::Error> {
-        PolicyParser::<'a, P>::parse_policy(&mut self.optset, args, policy)
+        PolicyParser::<P>::parse_policy(&mut self.optset, args, policy)
     }
 }

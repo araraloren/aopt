@@ -500,7 +500,7 @@ where
     }
 }
 
-impl<'a, P: Policy> PolicyParser<'a, P> for HCOptSet<P::Set, P::Inv<'a>, P::Ser> {
+impl<'a, P: Policy> PolicyParser<P> for HCOptSet<P::Set, P::Inv<'a>, P::Ser> {
     type Error = Error;
 
     fn parse(&mut self, args: ARef<Args>) -> Result<<P as Policy>::Ret, Self::Error>
@@ -564,7 +564,7 @@ mod test {
         set.add_opt_i::<Cmd>("ls")?;
 
         set.init()?;
-        PolicyParser::<'_, AFwdPolicy>::parse(
+        PolicyParser::<AFwdPolicy>::parse(
             &mut set,
             ARef::new(Args::from_array(["app", "ls", "--aopt", "--bopt=42"])),
         )?;
