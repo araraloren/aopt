@@ -500,26 +500,19 @@ where
     }
 }
 
-impl<'a, P: Policy> PolicyParser<P> for HCOptSet<P::Set, P::Inv<'a>, P::Ser> {
+impl<'a, P: Policy> PolicyParser<P> for HCOptSet<P::Set, P::Inv<'a>, P::Ser>
+where
+    P::Set: crate::set::Set,
+{
     type Error = Error;
-
-    fn parse(&mut self, args: ARef<Args>) -> Result<<P as Policy>::Ret, Self::Error>
-    where
-        P: Default,
-    {
-        let set = &mut self.set;
-        let ser = &mut self.ser;
-        let inv = &mut self.inv;
-        let mut policy = P::default();
-
-        policy.parse(set, inv, ser, args).map_err(Into::into)
-    }
 
     fn parse_policy(
         &mut self,
         args: ARef<Args>,
         policy: &mut P,
     ) -> Result<<P as Policy>::Ret, Self::Error> {
+        self.init()?;
+
         let set = &mut self.set;
         let ser = &mut self.ser;
         let inv = &mut self.inv;

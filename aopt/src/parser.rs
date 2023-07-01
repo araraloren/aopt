@@ -136,7 +136,11 @@ where
 
     fn parse(&mut self, args: ARef<Args>) -> Result<P::Ret, Self::Error>
     where
-        P: Default;
+        P: Default,
+    {
+        let mut policy = P::default();
+        self.parse_policy(args, &mut policy)
+    }
 
     fn parse_env_args(&mut self) -> Result<P::Ret, Self::Error>
     where

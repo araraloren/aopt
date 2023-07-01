@@ -231,15 +231,11 @@ where
     }
 }
 
-impl<'a, P: Policy> PolicyParser<P> for Parser<'a, P> {
+impl<'a, P: Policy> PolicyParser<P> for Parser<'a, P>
+where
+    P::Set: crate::set::Set,
+{
     type Error = Error;
-
-    fn parse(&mut self, args: ARef<Args>) -> Result<<P as Policy>::Ret, Self::Error>
-    where
-        P: Default,
-    {
-        PolicyParser::<P>::parse(&mut self.optset, args)
-    }
 
     fn parse_policy(
         &mut self,
