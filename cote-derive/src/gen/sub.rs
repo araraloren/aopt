@@ -6,7 +6,6 @@ use quote::ToTokens;
 use syn::spanned::Spanned;
 use syn::Field;
 use syn::Index;
-use syn::Lifetime;
 use syn::Lit;
 use syn::Type;
 
@@ -14,7 +13,7 @@ use crate::config::Configs;
 use crate::config::SubKind;
 
 use super::filter_comment_doc;
-use super::gen_default_policy_ty;
+use super::gen_policy_ty_generics;
 use super::gen_option_ident;
 use super::gen_option_uid_ident;
 use super::gen_subapp_without_option;
@@ -81,7 +80,7 @@ impl<'a> SubGenerator<'a> {
         &self.name
     }
 
-    pub fn get_sub_id(&self) -> usize {
+    pub fn get_sub_index(&self) -> usize {
         self.sub_id
     }
 
@@ -89,12 +88,12 @@ impl<'a> SubGenerator<'a> {
         &self.without_option_ty
     }
 
-    pub fn gen_policy_type(&self) -> syn::Result<TokenStream> {
+    pub fn gen_policy_type_generics(&self) -> syn::Result<TokenStream> {
         let policy_ty = self.configs.find_cfg(SubKind::Policy);
 
         Ok(if let Some(policy_ty) = policy_ty {
             let policy_name = policy_ty.value().to_token_stream().to_string();
-            let policy = gen_default_policy_ty(&policy_name);
+            let policy = gen_policy_ty_generics(&policy_name);
 
             if let Some(policy) = policy {
                 policy
@@ -102,26 +101,8 @@ impl<'a> SubGenerator<'a> {
                 policy_ty.value().to_token_stream()
             }
         } else {
-            gen_default_policy_ty(POLICY_FWD).unwrap()
+            gen_policy_ty_generics(POLICY_FWD).unwrap()
         })
-    }
-
-    pub fn gen_app_type(
-        &self,
-        lifetime: Option<Lifetime>,
-        policy_ty: &TokenStream,
-    ) -> syn::Result<TokenStream> {
-        let sub_struct_app_ty = self.gen_struct_app_type()?;
-
-        if let Some(lifetime) = lifetime {
-            Ok(quote! {
-                #sub_struct_app_ty<#lifetime, #policy_ty>
-            })
-        } else {
-            Ok(quote! {
-                #sub_struct_app_ty<'_, #policy_ty>
-            })
-        }
     }
 
     pub fn gen_field_extract(&self) -> syn::Result<(bool, TokenStream)> {
@@ -155,7 +136,6 @@ impl<'a> SubGenerator<'a> {
     pub fn gen_option_update(
         &self,
         idx: usize,
-        sub_parser_tuple_ty: &TokenStream,
         is_process_help: bool,
         help_uid: Option<&Ident>,
     ) -> syn::Result<OptUpdate> {
@@ -165,12 +145,7 @@ impl<'a> SubGenerator<'a> {
         Ok((
             Some(self.gen_option_config_new(&ident)?),
             Some(self.gen_option_config_insert(&uid, &ident)),
-            Some(self.gen_option_handler_insert(
-                &uid,
-                sub_parser_tuple_ty,
-                is_process_help,
-                help_uid,
-            )?),
+            Some(self.gen_option_handler_insert(&uid, is_process_help, help_uid)?),
         ))
     }
 
@@ -184,7 +159,7 @@ impl<'a> SubGenerator<'a> {
         let name = &self.name;
         let mut codes = vec![];
         let mut config = quote! {
-            let mut config = aopt::prelude::SetCfg::<P::Set>::default();
+            let mut config = cote::SetCfg::<Set>::default();
             config.set_name(#name);
         };
 
@@ -218,12 +193,25 @@ impl<'a> SubGenerator<'a> {
                         config.set_force(#token);
                     }
                 }
-                SubKind::RawCall(method) => {
-                    let method = Ident::new(&method, ident.span());
-                    let args = cfg.value();
+                SubKind::MethodCall(method) => {
+                    let method = Ident::new(method, ident.span());
+                    let value = cfg.value().clone();
+                    let (var, args) = value.split_call_args(ident.span())?;
+                    let var_name = var.to_token_stream().to_string();
 
-                    quote! {
-                        config.#method(#args);
+                    match var_name.as_str() {
+                        "config" => {
+                            quote! {
+                                #var.#method(#args);
+                            }
+                        }
+                        _ => {
+                            let args = cfg.value();
+
+                            quote! {
+                                #method(#args);
+                            }
+                        }
                     }
                 }
                 _ => {
@@ -253,7 +241,7 @@ impl<'a> SubGenerator<'a> {
             })
         }
         codes.push(quote! {
-            aopt::opt::Cmd::infer_fill_info(&mut config, true);
+            cote::Cmd::infer_fill_info(&mut config, true);
             config
         });
         config.extend(codes.into_iter());
@@ -268,12 +256,12 @@ impl<'a> SubGenerator<'a> {
     pub fn gen_option_handler_insert(
         &self,
         uid: &Ident,
-        sub_parser_tuple_ty: &TokenStream,
         is_process_help: bool,
         help_uid: Option<&Ident>,
     ) -> syn::Result<TokenStream> {
         let without_option_ty = &self.without_option_ty;
-        let sub_id = self.get_sub_id();
+        let policy_ty = self.gen_policy_type_generics()?;
+        let sub_id = self.get_sub_index();
         let sub_id = Index::from(sub_id);
         let pass_help_to_next = if is_process_help {
             let help_uid = help_uid.unwrap_or_else(|| {
@@ -286,7 +274,7 @@ impl<'a> SubGenerator<'a> {
                 if let Ok(value) = set.opt(#help_uid)?.val::<bool>() {
                     if *value {
                         // pass a fake flag to next sub command
-                        args.push(aopt::RawVal::from(#HELP_OPTION_NAME));
+                        args.push(cote::RawVal::from(#HELP_OPTION_NAME));
                     }
                 }
             }
@@ -296,43 +284,40 @@ impl<'a> SubGenerator<'a> {
 
         Ok(quote! {
             parser.entry(#uid)?.on(
-                move |set: &mut P::Set, ser: &mut P::Ser, args: aopt::prelude::ctx::Args, index: aopt::prelude::ctx::Index| {
+                move |set: &mut cote::Parser<'inv, Set, Ser>, ser: &mut Ser, args: cote::ctx::Args, index: cote::ctx::Index| {
                     use std::ops::Deref;
 
                     let mut args = args.deref().clone().into_inner();
-                    let mut next_ctx = cote::AppRunningCtx::default();
-                    let current_cmd = args.remove(*index.deref());
-                    let current_cmd = current_cmd.get_str();
-                    let current_cmd = current_cmd.ok_or_else(||
-                        aopt::Error::raise_error(format!("can not convert `{:?}` to str", current_cmd)))?;
+                    let mut next_ctx = cote::RunningCtx::default();
+                    let cmd = args.remove(*index.deref()); // remove current cmd from args
+                    let cmd = cmd.get_str();
+                    let cmd = cmd.ok_or_else(|| cote::raise_error!("can not convert `{:?}` to str", cmd))?;
 
-                    next_ctx.add_name(current_cmd.to_owned());
                     #pass_help_to_next
+                    next_ctx.add_name(cmd.to_owned());
 
-                    let args = aopt::ARef::new(aopt::prelude::Args::from_vec(args));
-                    let mut sub = &mut ser.sve_val_mut::<#sub_parser_tuple_ty>()?.#sub_id;
+                    let args = cote::ARef::new(cote::Args::from_vec(args));
+                    let sub_parser = set.parser_mut(#sub_id)?;
+                    let mut policy = #policy_ty::default();
+                    let mut helper = <#without_option_ty>::into_internal::<'_, 'inv, Set, Ser, #policy_ty>();
 
-                    sub.set_running_ctx(next_ctx)?;
-                    let parser = sub.inner_parser_mut();
+                    helper.set_inner_parser(sub_parser);
+                    helper.set_inner_policy(&mut policy);
+                    helper.set_rctx(next_ctx)?;
 
-                    // initialize the option value
-                    parser.init()?;
-                    let ret = parser.parse(args).map_err(Into::into);
-
-                    sub.sync_running_ctx(&ret, true)?;
-                    let mut sub_ctx = sub.take_running_ctx()?;
-
-                    ser.sve_val_mut::<cote::AppRunningCtx>()?.sync_ctx(&mut sub_ctx);
-                    let ret = ret?;
+                    let ret = helper.parse(args, true)?;
+                    let running_ctx = ser.sve_val_mut::<cote::RunningCtx>()?;
 
                     if ret.status() {
-                        ser.sve_val_mut::<cote::AppRunningCtx>()?.clear_failed_info();
-                        let mut sub = &mut ser.sve_val_mut::<#sub_parser_tuple_ty>()?.#sub_id;
-                        Ok(<#without_option_ty>::try_extract(sub.inner_parser_mut().optset_mut()).ok())
+                        running_ctx.sync_ctx(&mut helper.take_rctx()?, None);
+                        let sub_parser = set.parser_mut(#sub_id)?;
+                        Ok(<#without_option_ty>::try_extract(sub_parser.optset_mut()).ok())
                     }
                     else {
-                        ser.sve_val_mut::<cote::AppRunningCtx>()?.sync_failed_info(&mut sub_ctx);
-                        ser.sve_val_mut::<cote::AppRunningCtx>()?.add_failed_info((current_cmd.to_owned(), ret));
+                        running_ctx.sync_ctx(
+                            &mut helper.take_rctx()?,
+                            Some(cote::FailedInfo { name: cmd.to_owned(), retval: ret})
+                        );
                         Ok(None)
                     }
                 }
@@ -340,7 +325,7 @@ impl<'a> SubGenerator<'a> {
         })
     }
 
-    pub fn gen_struct_app_type(&self) -> syn::Result<Ident> {
+    pub fn gen_internal_ty(&self) -> syn::Result<Ident> {
         let ident = gen_subapp_without_option(&self.without_option_ty)?;
 
         Ok(Ident::new(
@@ -349,10 +334,8 @@ impl<'a> SubGenerator<'a> {
         ))
     }
 
-    pub fn gen_sub_help_context(&self) -> syn::Result<TokenStream> {
-        let idx = self.get_sub_id();
-        let idx = Index::from(idx);
-        let mut ret = quote! { let mut context = sub_parser_tuple.#idx.gen_help_display_ctx(); };
+    pub fn gen_update_help_context(&self) -> syn::Result<TokenStream> {
+        let mut ret = quote! {};
 
         if let Some(head_cfg) = self.configs.find_cfg(SubKind::Head) {
             let value = head_cfg.value();

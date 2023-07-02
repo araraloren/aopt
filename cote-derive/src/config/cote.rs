@@ -1,4 +1,5 @@
-use proc_macro2::Ident;
+use quote::ToTokens;
+use syn::Path;
 
 use super::Kind;
 
@@ -40,34 +41,42 @@ pub enum CoteKind {
 
     Flag,
 
-    RawCall(String),
+    MethodCall(String),
 }
 
 impl Kind for CoteKind {
     fn parse(input: &mut syn::parse::ParseStream) -> syn::Result<(Self, bool)> {
-        let ident: Ident = input.parse()?;
-        let kind_str = ident.to_string();
+        let path: Path = input.parse()?;
 
-        Ok(match kind_str.as_str() {
-            "policy" => (Self::Policy, true),
-            "name" => (Self::Name, true),
-            "hint" => (Self::Hint, true),
-            "help" => (Self::Help, false),
-            "head" => (Self::Head, true),
-            "foot" => (Self::Foot, true),
-            "width" => (Self::HelpWidth, true),
-            "usagew" => (Self::UsageWidth, true),
-            "aborthelp" => (Self::AbortHelp, false),
-            "refopt" => (Self::Ref, false),
-            "mutopt" => (Self::Mut, false),
-            "on" => (Self::On, true),
-            "fallback" => (Self::Fallback, true),
-            "then" => (Self::Then, true),
-            "strict" => (Self::Strict, true),
-            "combine" => (Self::Combine, false),
-            "embedded" => (Self::EmbeddedPlus, false),
-            "flag" => (Self::Flag, false),
-            call => (Self::RawCall(call.to_owned()), true),
-        })
+        if let Some(ident) = path.get_ident() {
+            let kind_str = ident.to_string();
+
+            Ok(match kind_str.as_str() {
+                "policy" => (Self::Policy, true),
+                "name" => (Self::Name, true),
+                "hint" => (Self::Hint, true),
+                "help" => (Self::Help, false),
+                "head" => (Self::Head, true),
+                "foot" => (Self::Foot, true),
+                "width" => (Self::HelpWidth, true),
+                "usagew" => (Self::UsageWidth, true),
+                "aborthelp" => (Self::AbortHelp, false),
+                "refopt" => (Self::Ref, false),
+                "mutopt" => (Self::Mut, false),
+                "on" => (Self::On, true),
+                "fallback" => (Self::Fallback, true),
+                "then" => (Self::Then, true),
+                "strict" => (Self::Strict, true),
+                "combine" => (Self::Combine, false),
+                "embedded" => (Self::EmbeddedPlus, false),
+                "flag" => (Self::Flag, false),
+                method => (Self::MethodCall(method.to_owned()), true),
+            })
+        } else {
+            let method = path.to_token_stream().to_string();
+            let method = method.replace(char::is_whitespace, "");
+
+            Ok((Self::MethodCall(method), true))
+        }
     }
 }

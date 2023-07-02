@@ -1,11 +1,11 @@
-use cote::prelude::*;
+use cote::*;
 use std::{fmt::Debug, ops::Deref};
 
 // The handler must be a generic function.
 #[derive(Debug, Cote, PartialEq, Eq)]
-#[cote(help, on = display_cli::<P>)]
+#[cote(help, on = display_cli)]
 pub struct Cli {
-    #[arg(on = empty_handler::<P>, then = foo_storer::<P>)]
+    #[arg(on = empty_handler, then = foo_storer)]
     foo: u64,
 
     #[sub(force = false)]
@@ -18,7 +18,7 @@ pub struct Cli {
 #[derive(Debug, Cote, PartialEq, Eq)]
 #[cote(help)]
 pub struct Bar {
-    #[arg(force = false, fallback = debug_of_bar::<P>)]
+    #[arg(force = false, fallback = debug_of_bar)]
     debug: bool,
 
     #[pos()]
@@ -26,7 +26,7 @@ pub struct Bar {
 }
 
 #[derive(Debug, Cote, PartialEq, Eq)]
-#[cote(help, fallback = process_qux::<P>, then = unreachable_storer::<P>)]
+#[cote(help, fallback = process_qux, then = unreachable_storer)]
 pub struct Qux {
     #[cmd(name = "c")]
     corge: bool,
@@ -43,36 +43,31 @@ fn main() -> color_eyre::Result<()> {
     Ok(())
 }
 
-fn display_cli<P>(set: &mut P::Set, _: &mut P::Ser) -> Result<Option<()>, aopt::Error>
+fn display_cli<Set, Ser>(set: &mut Set, _: &mut Ser) -> Result<Option<()>, aopt::Error>
 where
-    P: Policy,
-    P::Set: SetValueFindExt + Set,
+    Set: SetValueFindExt + cote::Set,
 {
     println!("Got client: {:?}", Cli::try_extract(set)?);
     Ok(None)
 }
 
-fn empty_handler<P>(
-    _: &mut P::Set,
-    _: &mut P::Ser,
+fn empty_handler<Set, Ser>(
+    _: &mut Set,
+    _: &mut Ser,
     value: Option<ctx::Value<u64>>,
-) -> Result<Option<u64>, aopt::Error>
-where
-    P: Policy,
-{
+) -> Result<Option<u64>, aopt::Error> {
     Ok(value.map(|mut v| v.take()))
 }
 
-fn foo_storer<P>(
+fn foo_storer<Set, Ser>(
     uid: Uid,
-    set: &mut P::Set,
-    _: &mut P::Ser,
+    set: &mut Set,
+    _: &mut Ser,
     raw: Option<&RawVal>,
     val: Option<u64>,
 ) -> Result<bool, aopt::Error>
 where
-    P: Policy,
-    P::Set: SetValueFindExt + Set,
+    Set: SetValueFindExt + cote::Set,
 {
     let has_value = val.is_some();
 
@@ -93,15 +88,12 @@ where
     Ok(has_value)
 }
 
-fn debug_of_bar<P>(
-    _: &mut P::Set,
-    _: &mut P::Ser,
+fn debug_of_bar<Set, Ser>(
+    _: &mut Set,
+    _: &mut Ser,
     raw: ctx::RawVal,
     value: ctx::Value<bool>,
-) -> Result<Option<()>, aopt::Error>
-where
-    P: Policy,
-{
+) -> Result<Option<()>, aopt::Error> {
     println!(
         "Got value of `--debug`: {:?} --> {}",
         raw.deref(),
@@ -111,25 +103,23 @@ where
     Ok(None)
 }
 
-fn process_qux<P>(_: &mut P::Set, _: &mut P::Ser) -> Result<Option<()>, aopt::Error>
+fn process_qux<Set, Ser>(_: &mut Set, _: &mut Ser) -> Result<Option<()>, aopt::Error>
 where
-    P: Policy,
-    P::Set: SetValueFindExt + Set,
+    Set: SetValueFindExt + cote::Set,
 {
     println!("return Ok(None) call the default handler of Qux");
     Ok(None)
 }
 
-fn unreachable_storer<P>(
+fn unreachable_storer<Set, Ser>(
     _: Uid,
-    _: &mut P::Set,
-    _: &mut P::Ser,
+    _: &mut Set,
+    _: &mut Ser,
     _: Option<&RawVal>,
     _: Option<()>,
 ) -> Result<bool, aopt::Error>
 where
-    P: Policy,
-    P::Set: SetValueFindExt + Set,
+    Set: SetValueFindExt + cote::Set,
 {
     unreachable!("Never go here")
 }

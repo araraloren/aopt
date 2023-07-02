@@ -1,4 +1,4 @@
-use cote::prelude::*;
+use cote::*;
 
 #[derive(Debug, Cote, PartialEq, Eq)]
 #[cote(help, // Generate help for current struct

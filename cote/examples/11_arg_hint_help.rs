@@ -1,4 +1,5 @@
-use cote::prelude::*;
+use aopt::prelude::AOpt;
+use cote::*;
 
 #[derive(Debug, Cote, PartialEq, Eq)]
 #[cote(help)]
@@ -26,7 +27,7 @@ fn default_value<T: ErasedTy>(opt: &mut AOpt) -> Result<Option<Vec<T>>, aopt::Er
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
-    let mut app = Cli::into_app()?;
+    let mut app = Cli::into_parser()?;
 
     assert_eq!(app["foo"].hint(), "foo@1");
     assert_eq!(app["bar"].hint(), "[BAR]");

@@ -1,4 +1,5 @@
-use cote::{aopt::value::raw2str, prelude::*};
+use cote::{aopt::value::raw2str, *};
+
 #[derive(Debug, Cote, PartialEq, Eq)]
 #[cote(help, aborthelp)]
 pub struct Cli {

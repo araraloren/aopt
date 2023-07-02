@@ -1,5 +1,6 @@
 use std::iter::FromIterator;
 
+use proc_macro2::Span;
 use proc_macro_error::abort;
 use quote::quote;
 use quote::ToTokens;
@@ -20,6 +21,23 @@ pub enum Value {
     Call(Vec<Expr>),
 
     Null,
+}
+
+impl Value {
+    pub fn split_call_args(self, span: Span) -> syn::Result<(Expr, Self)> {
+        match self {
+            Value::Call(mut args) => {
+                if let Some(variable) = args.pop() {
+                    return Ok((variable, Self::Call(args)));
+                }
+            }
+            _ => {}
+        }
+        abort! {
+            span,
+            "You must specify the context variable name for raw method call"
+        }
+    }
 }
 
 impl ToTokens for Value {

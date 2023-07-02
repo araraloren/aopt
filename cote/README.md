@@ -5,11 +5,11 @@ A simple option manager manage the [`AOpt`](aopt::opt::AOpt), support auto gener
 
 ## Setup
 
-Add following to your `Cargo.toml` file:
+`cargo add cote` or add following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-cote = "0.3.11"
+cote = "0.4"
 ```
 
 ## Enable Features from aopt
@@ -20,7 +20,7 @@ If you want the utils of current crate implement `Send` and `Sync`, you can enab
 
 ```toml
 [dependencies]
-cote = { version = "0.3.11", features = [ "sync" ] }
+cote = { version = "*", features = [ "sync" ] }
 ```
 
 ### Enable `utf8` feature
@@ -29,7 +29,7 @@ By default, the command line parsing support `OsString`, enable `utf8` using `St
 
 ```toml
 [dependencies]
-cote = { version = "0.3.11", features = [ "utf8" ] }
+cote = { version = "*", features = [ "utf8" ] }
 ```
 
 ## Example
@@ -39,7 +39,7 @@ cote = { version = "0.3.11", features = [ "utf8" ] }
 ```rust
 use aopt::opt::Pos;
 use aopt::Error;
-use cote::prelude::*;
+use cote::*;
 
 fn main() -> Result<(), Error> {
     #[derive(Debug, Cote)]
@@ -85,68 +85,6 @@ fn main() -> Result<(), Error> {
 ```
 
 See [`reference`](crate::_reference) for more information.
-
-### Using [`CoteApp`](crate::CoteApp) load option from json configuration.
-
-```rust
-use cote::prelude::*;
-use aopt::Error;
-
-fn main() -> Result<(), Error> {
-    let mut cote = CoteApp::<AFwdPolicy>::default();
-
-    // load option from json
-    cote.add_opt_meta(
-        serde_json::from_str::<'_, OptionMeta<String>>(
-            r#"
-                    {
-                        "id": "s",
-                        "option": "-s=s",
-                        "hint": "-s <str>",
-                        "help": "This is a help for option [-s]",
-                        "value": [
-                        "cote manager"
-                        ]
-                    }
-                    "#,
-        )
-        .unwrap(),
-    )?;
-    cote.add_help_option()?;
-    cote.add_opt("--from=i")?
-        .add_alias("-f")
-        .set_help("The sub string start index");
-    cote.add_opt("--to=i")?
-        .add_alias("-t")
-        .set_help("The sub string end index");
-    cote.run_mut_with(
-        ["-f", "5", "-t", "9"].into_iter(),
-        |_, cote: &mut CoteApp<AFwdPolicy>| {
-            if display_help!(cote)? {
-                std::process::exit(0);
-            }
-            #[derive(Debug, Cote)]
-            pub struct Setting {
-                from: i64,
-
-                to: i64,
-
-                #[arg(name = "-s")]
-                string: String,
-            }
-
-            // You can extract the type from CoteApp
-            let setting = cote.extract_type::<Setting>()?;
-
-            assert_eq!(setting.from, 5);
-            assert_eq!(setting.to, 9);
-            assert_eq!(setting.string, String::from("cote manager"));
-            Ok(())
-        },
-    )?;
-    Ok(())
-}
-```
 
 ## LICENSE
 

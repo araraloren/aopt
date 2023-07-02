@@ -1,5 +1,5 @@
-use cote::prelude::*;
 use cote::valid;
+use cote::*;
 
 #[derive(Debug, Cote, PartialEq, Eq)]
 #[cote(help)]

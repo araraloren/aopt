@@ -3,8 +3,8 @@
 members = [
     "aopt",
     "aopt-help",
-    # "cote",
-    # "cote-derive",
+    "cote",
+    "cote-derive",
     # "index-constituent",
     # "simple-find-file",
     # "snowball-follow",
