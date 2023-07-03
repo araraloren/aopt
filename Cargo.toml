@@ -5,7 +5,7 @@ members = [
     "aopt-help",
     "cote",
     "cote-derive",
-    # "index-constituent",
+    "index-constituent",
     # "simple-find-file",
     # "snowball-follow",
 ]

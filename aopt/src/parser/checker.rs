@@ -86,6 +86,7 @@ where
             opt.mat_style(Style::Argument)
                 || opt.mat_style(Style::Boolean)
                 || opt.mat_style(Style::Combined)
+                || opt.mat_style(Style::Flag)
         }) {
             if !opt.valid() {
                 return Err(Error::sp_opt_force_require(opt.hint()).with_uid(opt.uid()));

@@ -28,7 +28,7 @@ pub struct Stock {
     id_only: bool,
 
     /// Reverse the order of results
-    #[arg(name = "--/reverse", alias = "-/r", value = true)]
+    #[arg(name = "--/reverse", alias = "-/r")]
     reverse: bool,
 
     /// Set the search type

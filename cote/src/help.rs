@@ -189,6 +189,7 @@ pub fn display_set_help<'a, T: Set>(
         } else if opt.mat_style(Style::Argument)
             || opt.mat_style(Style::Boolean)
             || opt.mat_style(Style::Combined)
+            || opt.mat_style(Style::Flag)
         {
             global.add_store(
                 "option",

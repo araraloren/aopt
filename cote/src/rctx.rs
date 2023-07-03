@@ -16,6 +16,10 @@ impl FailedInfo {
     pub fn name(&self) -> &str {
         &self.name
     }
+
+    pub fn retval(&self) -> &ReturnVal {
+        &self.retval
+    }
 }
 
 impl Deref for FailedInfo {

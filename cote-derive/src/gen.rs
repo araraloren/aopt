@@ -492,17 +492,22 @@ impl<'a> Analyzer<'a> {
                 helper.rctx_mut()?.add_name(#major_parser_name);
 
                 let ret = helper.parse(cote::ARef::new(args), false);
-                let rctx = helper.take_rctx()?;
-
+                let rctx = helper.rctx()?;
+                
                 if rctx.display_sub_help() {
-                    helper.display_sub_help(rctx.names())?;
-                    if rctx.exit_sub() {
+                    let names = rctx.names().to_vec();
+                    let sub_exit = rctx.exit_sub();
+
+                    helper.display_sub_help(&names)?;
+                    if sub_exit {
                         std::process::exit(0)
                     }
                 }
                 else if rctx.display_help() {
+                    let major_exit = rctx.exit();
+
                     helper.display_help()?;
-                    if rctx.exit() {
+                    if major_exit {
                         std::process::exit(0)
                     }
                 }
@@ -525,9 +530,13 @@ impl<'a> Analyzer<'a> {
                 }
                 else {
                     let mut rctx = parser.take_rctx()?;
-                    let error = rctx.chain_error();
+                    let mut error = ret.take_failure();
+                    
+                    if let Some(rerror) = rctx.chain_error() {
+                        error = error.cause_by(rerror);
+                    }
                     let mut finfo = rctx.take_failed_info();
-                    let (command, ret) = finfo.first_mut().map(|v|(Some(v.name.as_str()), &mut v.retval)).unwrap_or((None, &mut ret));
+                    let (command, ret) = finfo.last_mut().map(|v|(Some(v.name.as_str()), &mut v.retval)).unwrap_or((None, &mut ret));
                     let e = {
                         let ctx = ret.take_ctx();
                         let args = ctx.orig_args()[1..]
@@ -548,14 +557,8 @@ impl<'a> Analyzer<'a> {
                             "None".to_owned()
                         };
 
-                        if let Some(error) = error {
-                            // return failure with more detail error message
-                            cote::raise_failure!("{} failed: {}", failed_msg, inner_ctx).cause_by(error)
-                        }
-                        else {
-                            // return failure with more detail error message
-                            cote::raise_failure!("{} failed: {}", failed_msg, inner_ctx)
-                        }
+                        // return failure with more detail error message
+                        cote::raise_failure!("{} failed: {}", failed_msg, inner_ctx).cause_by(error)
                     };
 
                     Err(e)

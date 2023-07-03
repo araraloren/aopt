@@ -13,7 +13,7 @@ categories = ["command-line-interface"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aopt = { version = "^0.10.0", features = ["serde"] }
+aopt = { version = "^0.10.0" }
 cote-derive = "^0.2"
 aopt-help = "0.3"
 serde = { version = "1.0", features = [ "derive" ] }
@@ -27,4 +27,5 @@ color-eyre = "0.5"
 [features]
 sync = ["aopt/sync"]
 utf8 = ["aopt/utf8"]
+serde = ["aopt/serde"]
 log = ["aopt/log"]

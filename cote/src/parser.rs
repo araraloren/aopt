@@ -245,9 +245,10 @@ where
         H: Handler<Self, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
         A: Extract<Self, Ser, Error = Error> + Send + Sync + 'a,
     {
-        Ok(HandlerEntry::new(&mut self.inv, uid))
+        Ok(HandlerEntry::new(self.inv.as_mut().unwrap(), uid))
     }
 
+    #[cfg(not(feature = "sync"))]
     #[allow(clippy::type_complexity)]
     pub fn entry<A, O, H>(
         &mut self,
