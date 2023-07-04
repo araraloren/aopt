@@ -81,7 +81,7 @@ impl<'a> ArgGenerator<'a> {
                 let name = if is_position {
                     ident
                 } else if ident.chars().count() >= 2 {
-                    format!("--{}", ident.replace("_", "-"))
+                    format!("--{}", ident.replace('_', "-"))
                 } else {
                     format!("-{}", ident)
                 };
@@ -314,7 +314,7 @@ impl<'a> ArgGenerator<'a> {
                             }
                         }
                         ArgKind::MethodCall(method) => {
-                            let method = Ident::new(&method, inner_ty.span());
+                            let method = Ident::new(method, inner_ty.span());
                             let value = cfg.value().clone();
                             let (var, args) = value.split_call_args(inner_ty.span())?;
                             let var_name = var.to_token_stream().to_string();

@@ -261,7 +261,7 @@ where
     {
         Ok(set
             .find_vals(name)?
-            .into_iter()
+            .iter()
             .map(|v| RefOpt::new(v))
             .collect())
     }

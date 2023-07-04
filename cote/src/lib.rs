@@ -64,6 +64,7 @@ pub use aopt::prelude::Store;
 pub use aopt::prelude::ValInitializer;
 pub use aopt::prelude::ValStorer;
 pub use aopt::prelude::ValValidator;
+pub use aopt::prelude::VecStore;
 pub use aopt::raise_error;
 pub use aopt::raise_failure;
 pub use aopt::Error as CoteError;
@@ -71,7 +72,6 @@ pub use aopt::GetoptRes;
 pub use aopt::RawVal;
 pub use aopt::Uid;
 pub use cote_derive::Cote;
-pub use aopt::prelude::VecStore;
 
 pub use help::display_set_help;
 pub use help::HelpDisplayCtx;
@@ -120,7 +120,7 @@ pub trait ReturnValStatus {
 
 impl ReturnValStatus for ReturnVal {
     fn status(&self) -> bool {
-        ReturnVal::status(&self)
+        ReturnVal::status(self)
     }
 }
 
@@ -162,10 +162,10 @@ impl<Set, Ser> Policy for NullPolicy<Set, Ser> {
 
     type Error = aopt::Error;
 
-    fn parse<'a>(
+    fn parse(
         &mut self,
         _: &mut Self::Set,
-        _: &mut Self::Inv<'a>,
+        _: &mut Self::Inv<'_>,
         _: &mut Self::Ser,
         _: ARef<Args>,
     ) -> Result<Self::Ret, Self::Error> {
@@ -177,8 +177,8 @@ impl<Set, Ser> Policy for NullPolicy<Set, Ser> {
 mod test {
     #[test]
     fn test_example_simple() {
-        use crate::*;
         use crate as cote;
+        use crate::*;
         // macro generate the code depend on crate name
         use aopt::opt::Pos;
 
@@ -286,10 +286,7 @@ mod test {
             destination: Vec<Pos<String>>,
         }
 
-        fn search<Set, Ser>(
-            _: &mut Set,
-            _: &mut Ser,
-        ) -> Result<Option<Vec<String>>, aopt::Error> {
+        fn search<Set, Ser>(_: &mut Set, _: &mut Ser) -> Result<Option<Vec<String>>, aopt::Error> {
             Ok(Some(
                 ["file1", "file2", "dir1", "dir2"]
                     .into_iter()
@@ -299,7 +296,8 @@ mod test {
         }
 
         fn find_main<Set, Ser>(set: &mut Set, _: &mut Ser) -> Result<Option<()>, aopt::Error>
-        where Set: SetValueFindExt,
+        where
+            Set: SetValueFindExt,
         {
             let tool = Find::try_extract(set)?;
 

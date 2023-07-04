@@ -241,29 +241,26 @@ impl<'a> CoteGenerator<'a> {
         let mut ret = quote! {};
 
         for config in self.configs.iter() {
-            match config.kind() {
-                CoteKind::MethodCall(method) => {
-                    let method = Ident::new(method, self.ident.span());
-                    let value = config.value().clone();
-                    let (var, args) = value.split_call_args(self.ident.span())?;
-                    let var_name = var.to_token_stream().to_string();
+            if let CoteKind::MethodCall(method) = config.kind() {
+                let method = Ident::new(method, self.ident.span());
+                let value = config.value().clone();
+                let (var, args) = value.split_call_args(self.ident.span())?;
+                let var_name = var.to_token_stream().to_string();
 
-                    match var_name.as_str() {
-                        "parser" | "policy" => {
-                            ret.extend(quote! {
-                                #var.#method(#args);
-                            });
-                        }
-                        _ => {
-                            let args = config.value();
+                match var_name.as_str() {
+                    "parser" | "policy" => {
+                        ret.extend(quote! {
+                            #var.#method(#args);
+                        });
+                    }
+                    _ => {
+                        let args = config.value();
 
-                            ret.extend(quote! {
-                                #method(#args);
-                            });
-                        }
+                        ret.extend(quote! {
+                            #method(#args);
+                        });
                     }
                 }
-                _ => {}
             }
         }
         Ok(ret)

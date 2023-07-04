@@ -219,7 +219,7 @@ where
         Ok(self)
     }
 
-    /// Call the [`init`](crate::opt::Opt::init) of [`Opt`](crate::opt::Opt) initialize the option value.
+    /// Call the [`init`](crate::Opt::init) of [`Opt`](crate::Opt) initialize the option value.
     pub fn init(&mut self) -> Result<(), Error> {
         let optset = self.optset_mut();
 
@@ -471,7 +471,7 @@ where
         r(ret, self)
     }
 
-    /// Call [`run_mut_with`](CoteParser::run_mut_with) with default arguments [`args()`](std::env::args).
+    /// Call [`run_mut_with`](Parser::run_mut_with) with default arguments [`args()`](std::env::args).
     pub fn run_mut<'c, 'b, R, F, P>(&'c mut self, policy: &mut P, r: F) -> Result<R, Error>
     where
         'c: 'b,
@@ -540,7 +540,7 @@ where
                 async_ret = ret;
             }
             Err(e) => {
-                async_ret = Err(e.into());
+                async_ret = Err(e);
             }
         }
         async_ret
@@ -684,7 +684,7 @@ where
                 async_ret = ret;
             }
             Err(e) => {
-                async_ret = Err(e.into());
+                async_ret = Err(e);
             }
         }
         async_ret
@@ -781,7 +781,7 @@ where
 
                 crate::help::display_set_help(
                     set,
-                    &name,
+                    name,
                     ctx.head(),
                     ctx.foot(),
                     ctx.width(),
