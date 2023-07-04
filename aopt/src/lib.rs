@@ -238,6 +238,7 @@ pub mod prelude {
     pub use crate::ctx::Ctx;
     pub use crate::ctx::Extract;
     pub use crate::ctx::Handler;
+    pub use crate::ctx::HandlerCollection;
     pub use crate::ctx::InnerCtx;
     pub use crate::ctx::Invoker;
     pub use crate::ctx::NullStore;
@@ -268,7 +269,6 @@ pub mod prelude {
     pub use crate::opt::Serde;
     pub use crate::opt::StrParser;
     pub use crate::opt::Style;
-    pub use crate::ctx::HandlerCollection;
     pub use crate::parser::DefaultSetChecker;
     pub use crate::parser::DelayPolicy;
     pub use crate::parser::FwdPolicy;

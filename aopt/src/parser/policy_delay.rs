@@ -501,10 +501,10 @@ where
 
     type Error = Error;
 
-    fn parse<'a>(
+    fn parse(
         &mut self,
         set: &mut Self::Set,
-        inv: &mut Self::Inv<'a>,
+        inv: &mut Self::Inv<'_>,
         ser: &mut Self::Ser,
         args: ARef<Args>,
     ) -> Result<Self::Ret, Self::Error> {

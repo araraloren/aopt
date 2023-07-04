@@ -79,7 +79,8 @@ where
 
     /// Call the [`valid`](crate::opt::Opt::valid) check the
     /// options([`Argument`](crate::opt::Style::Argument),
-    /// [`Boolean`](crate::opt::Style::Boolean), [`Combined`](crate::opt::Style::Combined))
+    /// [`Boolean`](crate::opt::Style::Boolean), [`Combined`](crate::opt::Style::Combined)),
+    /// [`Flag`](crate::opt::Style::Flag)
     fn opt_check(&self, set: &mut S) -> Result<bool, Error> {
         trace_log!("Opt Check, call valid on all Opt ...");
         for opt in set.iter().filter(|opt| {

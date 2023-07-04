@@ -226,7 +226,7 @@ where
     {
         if !cfg.has_storer() {
             let type_id = cfg.r#type();
-            let ctor = cfg.ctor().map(|v| BuiltInCtor::from_name(v));
+            let ctor = cfg.ctor().map(BuiltInCtor::from_name);
             let bool_type = std::any::TypeId::of::<bool>();
 
             // add default storer when value type is bool.

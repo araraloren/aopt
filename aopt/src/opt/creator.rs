@@ -386,14 +386,14 @@ macro_rules! ctors {
     };
     ($type:ident, $($creator:ident),+) => {
         {
-            let mut ctors = vec![];
-            $(
-                ctors.push(<$type>::from(
-                    $crate::opt::BuiltInCtor::from_name(
-                        &stringify!($creator)
-                )));
-            )+
-            ctors
+            vec![
+                $(
+                    <$type>::from(
+                        $crate::opt::BuiltInCtor::from_name(
+                            &stringify!($creator)
+                    )),
+                )+
+            ]
         }
     };
 }
