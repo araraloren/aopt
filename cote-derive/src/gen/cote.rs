@@ -13,10 +13,10 @@ use syn::WherePredicate;
 use crate::config::Configs;
 use crate::config::CoteKind;
 
-use super::gen_ret_default_policy_ty;
-use super::gen_ret_policy_ty_generics;
 use super::gen_option_ident;
 use super::gen_option_uid_ident;
+use super::gen_ret_default_policy_ty;
+use super::gen_ret_policy_ty_generics;
 use super::OptUpdate;
 use super::APP_POSTFIX;
 use super::HELP_OPTION_HELP;

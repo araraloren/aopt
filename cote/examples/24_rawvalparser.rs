@@ -20,7 +20,7 @@ impl Infer for Speed {
     type Val = i32;
 }
 
-impl<'a> InferValueMut<'a> for Speed {
+impl<'a> ValueFetch<'a> for Speed {
     fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
     where
         Self: Sized,
@@ -28,6 +28,8 @@ impl<'a> InferValueMut<'a> for Speed {
         Ok(Speed(set.take_val(name)?))
     }
 }
+
+impl_alter!(Speed);
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Direction {
@@ -41,7 +43,7 @@ impl Infer for Direction {
     type Val = Direction;
 }
 
-impl<'a> InferValueMut<'a> for Direction {
+impl<'a> ValueFetch<'a> for Direction {
     fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
     where
         Self: Sized,
@@ -49,6 +51,8 @@ impl<'a> InferValueMut<'a> for Direction {
         Ok(set.take_val(name)?)
     }
 }
+
+impl_alter!(Direction);
 
 impl RawValParser for Direction {
     type Error = aopt::Error;
@@ -78,7 +82,7 @@ impl Infer for Way {
     type Val = Way;
 }
 
-cote::cote_value_mut_impl!(Way);
+cote::impl_value_fetch!(Way);
 
 impl RawValParser for Way {
     type Error = aopt::Error;
@@ -95,6 +99,8 @@ impl RawValParser for Way {
         }
     }
 }
+
+impl_alter!(Way);
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;

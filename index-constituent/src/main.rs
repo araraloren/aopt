@@ -2,7 +2,7 @@ mod spyder;
 
 use aopt::Error;
 use cote::aopt::raise_failure;
-use cote::prelude::*;
+use cote::*;
 use spyder::cnindex::CNIndex;
 use spyder::csindex::CSIndex;
 use spyder::Spyder;
@@ -67,7 +67,7 @@ impl Infer for SearchType {
     }
 }
 
-impl<'a> InferValueMut<'a> for SearchType {
+impl<'a> ValueFetch<'a> for SearchType {
     fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
     where
         Self: ErasedTy + Sized,
@@ -80,6 +80,8 @@ impl<'a> InferValueMut<'a> for SearchType {
         }
     }
 }
+
+impl_alter!(SearchType);
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {

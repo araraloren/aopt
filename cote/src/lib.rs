@@ -1,5 +1,6 @@
 #![doc = include_str!("../README.md")]
 pub mod _reference;
+pub mod alter;
 pub mod help;
 pub mod meta;
 pub mod parser;
@@ -14,9 +15,12 @@ pub use aopt_help;
 pub use cote_derive;
 
 pub use aopt::ext::ctx;
+pub use aopt::opt::Any;
 pub use aopt::opt::Cmd;
 pub use aopt::opt::Main;
+pub use aopt::opt::MutOpt;
 pub use aopt::opt::Pos;
+pub use aopt::opt::RefOpt;
 pub use aopt::parser::UserStyle;
 pub use aopt::prelude::ctor_default_name;
 pub use aopt::prelude::APolicyExt;
@@ -67,6 +71,7 @@ pub use aopt::prelude::ValValidator;
 pub use aopt::prelude::VecStore;
 pub use aopt::raise_error;
 pub use aopt::raise_failure;
+pub use aopt::value::Placeholder;
 pub use aopt::Error as CoteError;
 pub use aopt::GetoptRes;
 pub use aopt::RawVal;
@@ -80,7 +85,9 @@ pub use meta::OptionMeta;
 pub use parser::Parser;
 pub use rctx::FailedInfo;
 pub use rctx::RunningCtx;
-pub use value::InferValueMut;
+pub use value::ValueFetch;
+pub use alter::Alter;
+pub use alter::Hint;
 
 pub trait IntoParserDerive<'inv, Set, Ser>
 where

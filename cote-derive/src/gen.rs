@@ -493,7 +493,7 @@ impl<'a> Analyzer<'a> {
 
                 let ret = helper.parse(cote::ARef::new(args), false);
                 let rctx = helper.rctx()?;
-                
+
                 if rctx.display_sub_help() {
                     let names = rctx.names().to_vec();
                     let sub_exit = rctx.exit_sub();
@@ -531,7 +531,7 @@ impl<'a> Analyzer<'a> {
                 else {
                     let mut rctx = parser.take_rctx()?;
                     let mut error = ret.take_failure();
-                    
+
                     if let Some(rerror) = rctx.chain_error() {
                         error = error.cause_by(rerror);
                     }

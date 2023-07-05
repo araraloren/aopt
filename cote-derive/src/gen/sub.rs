@@ -13,9 +13,9 @@ use crate::config::Configs;
 use crate::config::SubKind;
 
 use super::filter_comment_doc;
-use super::gen_policy_ty_generics;
 use super::gen_option_ident;
 use super::gen_option_uid_ident;
+use super::gen_policy_ty_generics;
 use super::gen_subapp_without_option;
 use super::gen_ty_without_option;
 use super::OptUpdate;

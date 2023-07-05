@@ -137,25 +137,25 @@ impl<'a> ArgGenerator<'a> {
             TypeHint::Opt(_) => Ok((
                 false,
                 quote! {
-                    #ident: cote::value::InferValueMut::infer_fetch(#name, set).ok(),
+                    #ident: cote::value::ValueFetch::infer_fetch(#name, set).ok(),
                 },
             )),
             TypeHint::Vec(_) => Ok((
                 false,
                 quote! {
-                    #ident: cote::value::InferValueMut::infer_fetch_vec(#name, set)?,
+                    #ident: cote::value::ValueFetch::infer_fetch_vec(#name, set)?,
                 },
             )),
             TypeHint::OptVec(_) => Ok((
                 false,
                 quote! {
-                    #ident: cote::value::InferValueMut::infer_fetch_vec(#name, set).ok(),
+                    #ident: cote::value::ValueFetch::infer_fetch_vec(#name, set).ok(),
                 },
             )),
             TypeHint::Null(_) => Ok((
                 false,
                 quote! {
-                    #ident: cote::value::InferValueMut::infer_fetch(#name, set)?,
+                    #ident: cote::value::ValueFetch::infer_fetch(#name, set)?,
                 },
             )),
         }
@@ -415,7 +415,7 @@ impl<'a> ArgGenerator<'a> {
                         quote! {
                             <cote::Cmd as cote::Infer>::infer_fill_info(&mut config, true);
                             config.set_type::<#inner_ty>();
-                            config.set_action(cote::Action::Set);
+                            <cote::Cmd as cote::Alter>::alter(cote::Hint::Null, #has_force, &mut config);
                             config
                         }
                     });
@@ -423,46 +423,38 @@ impl<'a> ArgGenerator<'a> {
                 CONFIG_POS => {
                     codes.push(match type_hint {
                         TypeHint::Opt(inner_ty) => {
-                            let force_settings = if has_force { quote!{} } else { quote!{ config.set_force(false); } };
                             quote! {
                                 // using information of Pos<T>
                                 <cote::Pos<#inner_ty> as cote::Infer>::infer_fill_info(&mut config, true);
                                 config.set_type::<#inner_ty>();
-                                #force_settings
-                                config.set_action(cote::Action::Set);
+                                <cote::Pos<#inner_ty> as cote::Alter>::alter(cote::Hint::Opt, #has_force, &mut config);
                                 config
                             }
                         },
                         TypeHint::Vec(inner_ty) => {
-                            let force_settings = if has_force { quote!{} } else { quote!{ config.set_force(true); } };
                             quote! {
                                 // using information of Pos<T>
                                 <cote::Pos<#inner_ty> as cote::Infer>::infer_fill_info(&mut config, true);
                                 config.set_type::<#inner_ty>();
-                                #force_settings
-                                config.set_action(cote::Action::App);
+                                <cote::Pos<#inner_ty> as cote::Alter>::alter(cote::Hint::Vec, #has_force, &mut config);
                                 config
                             }
                         },
                         TypeHint::OptVec(inner_ty) => {
-                            let force_settings = if has_force { quote!{} } else { quote!{ config.set_force(false); } };
                             quote! {
                                 // using information of Pos<T>
                                 <cote::Pos<#inner_ty> as cote::Infer>::infer_fill_info(&mut config, true);
                                 config.set_type::<#inner_ty>();
-                                #force_settings
-                                config.set_action(cote::Action::App);
+                                <cote::Pos<#inner_ty> as cote::Alter>::alter(cote::Hint::OptVec, #has_force, &mut config);
                                 config
                             }
                         },
                         TypeHint::Null(inner_ty) => {
-                            let force_settings = if has_force { quote!{} } else { quote!{ config.set_force(true); } };
                             quote! {
                                 // using information of Pos<T>
                                 <cote::Pos<#inner_ty> as cote::Infer>::infer_fill_info(&mut config, true);
                                 config.set_type::<#inner_ty>();
-                                #force_settings
-                                config.set_action(cote::Action::Set);
+                                <cote::Pos<#inner_ty> as cote::Alter>::alter(cote::Hint::Null, #has_force, &mut config);
                                 config
                             }
                         },
@@ -471,38 +463,30 @@ impl<'a> ArgGenerator<'a> {
                 _ => {
                     codes.push(match type_hint {
                         TypeHint::Opt(inner_ty) => {
-                            let force_settings = if has_force { quote!{} } else { quote!{ config.set_force(false); } };
                             quote! {
                                 <#inner_ty as cote::Infer>::infer_fill_info(&mut config, true);
-                                #force_settings
-                                config.set_action(cote::Action::Set);
+                                <#inner_ty as cote::Alter>::alter(cote::Hint::Opt, #has_force, &mut config);
                                 config
                             }
                         }
                         TypeHint::Vec(inner_ty) => {
-                            let force_settings = if has_force { quote!{} } else { quote!{ config.set_force(true); } };
                             quote! {
                                 <#inner_ty as cote::Infer>::infer_fill_info(&mut config, true);
-                                #force_settings
-                                config.set_action(cote::Action::App);
+                                <#inner_ty as cote::Alter>::alter(cote::Hint::Vec, #has_force, &mut config);
                                 config
                             }
                         }
                         TypeHint::OptVec(inner_ty) => {
-                            let force_settings = if has_force { quote!{} } else { quote!{ config.set_force(false); } };
                             quote! {
                                 <#inner_ty as cote::Infer>::infer_fill_info(&mut config, true);
-                                #force_settings
-                                config.set_action(cote::Action::App);
+                                <#inner_ty as cote::Alter>::alter(cote::Hint::OptVec, #has_force, &mut config);
                                 config
                             }
                         }
                         TypeHint::Null(inner_ty) => {
-                            let force_settings = if has_force { quote!{} } else { quote!{ config.set_force(true); } };
                             quote! {
                                 <#inner_ty as cote::Infer>::infer_fill_info(&mut config, true);
-                                #force_settings
-                                config.set_action(cote::Action::Set);
+                                <#inner_ty as cote::Alter>::alter(cote::Hint::Null, #has_force, &mut config);
                                 config
                             }
                         }

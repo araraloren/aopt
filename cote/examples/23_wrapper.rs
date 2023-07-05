@@ -14,7 +14,7 @@ impl Infer for Speed {
     type Val = i32;
 }
 
-impl<'a> InferValueMut<'a> for Speed {
+impl<'a> ValueFetch<'a> for Speed {
     fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
     where
         Self: Sized,
@@ -22,6 +22,8 @@ impl<'a> InferValueMut<'a> for Speed {
         Ok(Speed(set.take_val(name)?))
     }
 }
+
+impl_alter!(Speed);
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
