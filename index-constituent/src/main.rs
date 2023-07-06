@@ -67,8 +67,8 @@ impl Infer for SearchType {
     }
 }
 
-impl<'a> ValueFetch<'a> for SearchType {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
+impl<'a> Fetch<'a> for SearchType {
+    fn fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
     where
         Self: ErasedTy + Sized,
     {

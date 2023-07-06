@@ -137,25 +137,25 @@ impl<'a> ArgGenerator<'a> {
             TypeHint::Opt(_) => Ok((
                 false,
                 quote! {
-                    #ident: cote::value::ValueFetch::infer_fetch(#name, set).ok(),
+                    #ident: cote::value::Fetch::fetch(#name, set).ok(),
                 },
             )),
             TypeHint::Vec(_) => Ok((
                 false,
                 quote! {
-                    #ident: cote::value::ValueFetch::infer_fetch_vec(#name, set)?,
+                    #ident: cote::value::Fetch::fetch_vec(#name, set)?,
                 },
             )),
             TypeHint::OptVec(_) => Ok((
                 false,
                 quote! {
-                    #ident: cote::value::ValueFetch::infer_fetch_vec(#name, set).ok(),
+                    #ident: cote::value::Fetch::fetch_vec(#name, set).ok(),
                 },
             )),
             TypeHint::Null(_) => Ok((
                 false,
                 quote! {
-                    #ident: cote::value::ValueFetch::infer_fetch(#name, set)?,
+                    #ident: cote::value::Fetch::fetch(#name, set)?,
                 },
             )),
         }

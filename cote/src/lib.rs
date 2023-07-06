@@ -78,6 +78,8 @@ pub use aopt::RawVal;
 pub use aopt::Uid;
 pub use cote_derive::Cote;
 
+pub use alter::Alter;
+pub use alter::Hint;
 pub use help::display_set_help;
 pub use help::HelpDisplayCtx;
 pub use meta::IntoConfig;
@@ -85,9 +87,7 @@ pub use meta::OptionMeta;
 pub use parser::Parser;
 pub use rctx::FailedInfo;
 pub use rctx::RunningCtx;
-pub use value::ValueFetch;
-pub use alter::Alter;
-pub use alter::Hint;
+pub use value::Fetch;
 
 pub trait IntoParserDerive<'inv, Set, Ser>
 where

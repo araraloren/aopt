@@ -14,8 +14,8 @@ impl Infer for Speed {
     type Val = i32;
 }
 
-impl<'a> ValueFetch<'a> for Speed {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
+impl<'a> Fetch<'a> for Speed {
+    fn fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
     where
         Self: Sized,
     {

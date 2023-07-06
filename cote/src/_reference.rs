@@ -565,9 +565,9 @@
 //! `Cote` using [`infer_fill_info`](aopt::prelude::Infer::infer_fill_info) inference the default settings of
 //! given type.
 //!
-//! - [`ValueFetch`](crate::ValueFetch)
+//! - [`Fetch`](crate::Fetch)
 //!
-//! `Cote` using [`infer_fetch`](crate::ValueFetch::infer_fetch) fetch the value from [`Set`](aopt::set::Set).
+//! `Cote` using [`fetch`](crate::Fetch::fetch) fetch the value from [`Set`](aopt::set::Set).
 //!
 //! - [`RawValParser`](aopt::prelude::RawValParser)
 //!

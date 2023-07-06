@@ -20,8 +20,8 @@ impl Infer for Speed {
     type Val = i32;
 }
 
-impl<'a> ValueFetch<'a> for Speed {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
+impl<'a> Fetch<'a> for Speed {
+    fn fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
     where
         Self: Sized,
     {
@@ -43,8 +43,8 @@ impl Infer for Direction {
     type Val = Direction;
 }
 
-impl<'a> ValueFetch<'a> for Direction {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
+impl<'a> Fetch<'a> for Direction {
+    fn fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
     where
         Self: Sized,
     {
@@ -82,7 +82,7 @@ impl Infer for Way {
     type Val = Way;
 }
 
-cote::impl_value_fetch!(Way);
+cote::impl_fetch!(Way);
 
 impl RawValParser for Way {
     type Error = aopt::Error;
