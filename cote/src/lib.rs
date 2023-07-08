@@ -1,12 +1,13 @@
 #![doc = include_str!("../README.md")]
 pub mod _reference;
-pub mod alter;
-pub mod help;
-pub mod meta;
-pub mod parser;
-pub mod rctx;
+pub(crate) mod alter;
+pub(crate) mod help;
+pub(crate) mod meta;
+pub(crate) mod parser;
+pub(crate) mod rctx;
+pub(crate) mod value;
+
 pub mod valid;
-pub mod value;
 
 use std::marker::PhantomData;
 
@@ -23,6 +24,7 @@ pub use aopt::opt::Pos;
 pub use aopt::opt::RefOpt;
 pub use aopt::parser::UserStyle;
 pub use aopt::prelude::ctor_default_name;
+pub use aopt::prelude::AOpt;
 pub use aopt::prelude::APolicyExt;
 pub use aopt::prelude::ARef;
 pub use aopt::prelude::ASer;
@@ -54,6 +56,7 @@ pub use aopt::prelude::OptValueExt;
 pub use aopt::prelude::Policy;
 pub use aopt::prelude::PolicyParser;
 pub use aopt::prelude::PolicySettings;
+pub use aopt::prelude::PrefixOptValidator;
 pub use aopt::prelude::Process;
 pub use aopt::prelude::RawValParser;
 pub use aopt::prelude::ReturnVal;
@@ -71,6 +74,7 @@ pub use aopt::prelude::ValValidator;
 pub use aopt::prelude::VecStore;
 pub use aopt::raise_error;
 pub use aopt::raise_failure;
+pub use aopt::value::raw2str;
 pub use aopt::value::Placeholder;
 pub use aopt::Error as CoteError;
 pub use aopt::GetoptRes;

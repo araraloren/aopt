@@ -19,6 +19,10 @@ pub enum Hint {
     Null,
 }
 
+/// Using for generate code for procedural macro.
+///
+/// Cote using [`Alter`] modify some configure value when using field
+/// with `Option`, `Vec`.
 pub trait Alter {
     fn alter(hint: Hint, has_force: bool, cfg: &mut impl ConfigValue) {
         match hint {
@@ -82,13 +86,10 @@ impl Alter for bool {
 #[macro_export]
 macro_rules! impl_alter {
     ($what:path) => {
-        impl_alter!($what, $what);
+        impl Alter for $what { }
     };
-    ($what:path, $type:path) => {
-        impl Alter for $type { }
-    };
-    (@ $wrapper:ident) => {
-        impl<T> Alter for $wrapper<T> { }
+    ($what:ident, $inner:ident) => {
+        impl<$inner> Alter for $what<$inner> { }
     };
     (&$a:lifetime $what:path) => {
         impl<$a> Alter for &$a $what { }
@@ -133,13 +134,13 @@ impl_alter!(std::ffi::OsString);
 
 impl_alter!(std::io::Stdin);
 
-impl_alter!(@ Pos);
+impl_alter!(Pos, T);
 
-impl_alter!(@ Main);
+impl_alter!(Main, T);
 
-impl_alter!(@ Any);
+impl_alter!(Any, T);
 
-impl_alter!(@ MutOpt);
+impl_alter!(MutOpt, T);
 
 impl_alter!(&'a f64);
 impl_alter!(&'a f32);

@@ -222,7 +222,7 @@ macro_rules! display_help {
             a.into()
         }
 
-        $crate::help::display_set_help(
+        $crate::display_set_help(
             __check_set($set),
             __check_name($name),
             $head,

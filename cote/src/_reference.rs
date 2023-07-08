@@ -28,6 +28,8 @@
 //!     3. [Configurating help message](#configurating-help-message)
 //!     4. [Optional Sub commands](#optional-sub-commands)
 //! 6. [How it works](#how-it-works)
+//!     1. [Traits](#traits)
+//!     2. [Configurations list](#configurations-list)
 //!
 //! ## Quick Start
 //!
@@ -125,10 +127,10 @@
 //!
 //! ### Configurating Policy
 //!
-//! Cote has three policy types built-in: [`fwd`](aopt::prelude::AFwdPolicy)、[`pre`](aopt::prelude::APrePolicy)
-//! and [`delay`](aopt::prelude::ADelayPolicy).
-//! If no `policy` configuration specific, [`fwd`](aopt::prelude::AFwdPolicy) will be using if no sub command.
-//! Otherwise [`pre`](aopt::prelude::APrePolicy) will be used.
+//! Cote has three policy types built-in: [`fwd`](crate::FwdPolicy)、[`pre`](crate::PrePolicy)
+//! and [`delay`](crate::DelayPolicy).
+//! If no `policy` configuration specific, [`fwd`](crate::FwdPolicy) will be using if no sub command.
+//! Otherwise [`pre`](crate::PrePolicy) will be used.
 //!
 //! ```rust
 #![doc = include_str!("../examples/02_config_policy.rs")]
@@ -262,7 +264,7 @@
 //! The default name of options consists of prefixs and identifiers of the field.
 //! The default prefix is `--` if count of characters bigger than 1, otherwise `-` is using.
 //! You can use `name` or `alias` configure the name and alias of the option.
-//! For prefix information reference [`PrefixOptValidator`](aopt::prelude::PrefixOptValidator).
+//! For prefix information reference [`PrefixOptValidator`](crate::PrefixOptValidator).
 //!
 //! ```rust
 #![doc = include_str!("../examples/10_arg_name_alias.rs")]
@@ -307,7 +309,7 @@
 //!
 //! Index is only support positions and command flags.
 //! For command flags, the index is fixed position `@1` by default.
-//! For more informations about index, reference [`Index`](aopt::prelude::Index).
+//! For more informations about index, reference [`Index`](crate::Index).
 //!
 //! #### Example1
 //!
@@ -336,9 +338,9 @@
 //!
 //! ### Configurating action
 //!
-//! The type that implements [`Infer`](aopt::prelude::Infer) has different [`Action`](aopt::prelude::Action).
-//! The [`Action`](aopt::prelude::Action) defines the behavior when saving the value.
-//! For more information, see [`Action::process`](aopt::prelude::Action#method.process) and [`AOpt`](aopt::prelude::AOpt).
+//! The type that implements [`Infer`](crate::Infer) has different [`Action`](crate::Action).
+//! The [`Action`](crate::Action) defines the behavior when saving the value.
+//! For more information, see [`Action::process`](crate::Action#method.process) and [`AOpt`](crate::AOpt).
 //!
 //! ```rust
 #![doc = include_str!("../examples/15_arg_action.rs")]
@@ -430,9 +432,9 @@
 //!
 //! ### Add "no delay" option
 //!
-//! When using [`DelayPolicy`](aopt::prelude::DelayPolicy), the option process(invoke handler)
+//! When using [`DelayPolicy`](crate::DelayPolicy), the option process(invoke handler)
 //! after `Cmd` and `Pos` style.
-//! Sometimes we need the option process like [`FwdPolicy`](aopt::prelude::FwdPolicy) does,
+//! Sometimes we need the option process like [`FwdPolicy`](crate::FwdPolicy) does,
 //! that is process before `Cmd` and `Pos`.
 //!
 //!```rust
@@ -449,8 +451,8 @@
 //!
 //! ### Configurating Policy
 //!
-//! The default [`Policy`](aopt::prelude::Policy) of sub command is [`FwdPolicy`](aopt::prelude::FwdPolicy).
-//! For the sub commands to have sub commands, you should use [`PrePolicy`](aopt::prelude::PrePolicy) instead.
+//! The default [`Policy`](crate::Policy) of sub command is [`FwdPolicy`](crate::FwdPolicy).
+//! For the sub commands to have sub commands, you should use [`PrePolicy`](crate::PrePolicy) instead.
 //! For example, `sport` sub command does have two sub commands, it is configured with `#[sub(policy = pre)]`.
 //! Without `policy = pre`, you will got output when running `cli -g=42 sport walk -d 4`:
 //!
@@ -555,44 +557,68 @@
 //! ```
 //!
 //! ## How it works
+//! 
+//! ### Traits
 //!
 //! Implement follow traits, you can using the type in the struct filed.
 //!
-//! dsadasdadasdad
+//! - [`Infer`](crate::Infer)
 //!
-//! - [`Infer`](aopt::prelude::Infer)
-//!
-//! `Cote` using [`infer_fill_info`](aopt::prelude::Infer::infer_fill_info) inference the default settings of
+//! `Cote` using [`infer_fill_info`](crate::Infer::infer_fill_info) inference the default settings of
 //! given type.
 //!
 //! - [`Fetch`](crate::Fetch)
 //!
 //! `Cote` using [`fetch`](crate::Fetch::fetch) fetch the value from [`Set`](aopt::set::Set).
 //!
-//! - [`RawValParser`](aopt::prelude::RawValParser)
+//! - [`RawValParser`](crate::RawValParser)
 //!
-//! `Cote` using [`parse`](aopt::prelude::RawValParser::parse) parsing the value from command line arguments.
+//! `Cote` using [`parse`](crate::RawValParser::parse) parsing the value from command line arguments.
 //!
-//! - Modify action or optional using Option or Vec
+//! - [`Alter`](crate::Alter)
 //!
-//!| type | action | optional |
+//! `Cote` using the trait modify action or optional when using struct field with Option or Vec
+//!
+//!| type | action | force required |
 //!|------|--------|----------|
-//!| `T` | [`Action::Set`](aopt::prelude::Action::Set) | [`Default force of T`](aopt::prelude::Infer#method.infer_force) |
-//!| `Option<T>` | [`Action::Set`](aopt::prelude::Action::Set) | `false` |
-//!| `Vec<T>` | [`Action::App`](aopt::prelude::Action::App) | [`Default force of T`](aopt::prelude::Infer#method.infer_force) |
-//!| `Option<Vec<T>>` | [`Action::App`](aopt::prelude::Action::App) | `false` |
-//!| `Pos<T>` | [`Action::Set`](aopt::prelude::Action::Set) | [`Default force of Pos<T>`](aopt::prelude::Pos#method.infer_force) |
+//!| `T` | [`Action::Set`](crate::Action::Set) | `true` |
+//!| `Option<T>` | [`Action::Set`](crate::Action::Set) | `false` |
+//!| `Vec<T>` | [`Action::App`](crate::Action::App) | `true` |
+//!| `Option<Vec<T>>` | [`Action::App`](crate::Action::App) | `false` |
+//!| [`Pos<T>`](crate::Pos) | [`Action::Set`](crate::Action::Set) | `true` |
+//!| `bool` | [`Action::Set`](crate::Action::Set) | `false` |
+//!| [`Cmd`](crate::Cmd) | [`Action::Set`](crate::Action::Set) | `true` |
 //!
 //! ### Example
 //!
-//! The type `Speed` base on the type `i32` which already implemented [`RawValParser`](aopt::prelude::RawValParser).
+//! The type `Speed` base on the type `i32` which already implemented [`RawValParser`](crate::RawValParser).
 //!
 //! ```rust
 #![doc = include_str!("../examples/23_wrapper.rs")]
 //! ```
 //!
-//! ### Example
+//! ### Example - Derive default behavior from `Cote` macro
 //!
 //! ```rust
 #![doc = include_str!("../examples/24_rawvalparser.rs")]
 //! ```
+//! 
+//! ### Configurations list
+//! 
+//! #### `cote`
+//! 
+//! #### `arg`
+//! 
+//! #### `pos`
+//! 
+//! #### `cmd`
+//! 
+//! #### `sub`
+//! 
+//! #### `infer`
+//! 
+//! #### `alter`
+//! 
+//! #### `fetch`
+//! 
+//! #### `rawvalparser`

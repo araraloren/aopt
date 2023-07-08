@@ -1,11 +1,11 @@
-use aopt::opt::Any;
-use aopt::prelude::ErasedTy;
-use aopt::prelude::Main;
-use aopt::prelude::MutOpt;
-use aopt::prelude::RefOpt;
-use aopt::prelude::SetValueFindExt;
-use aopt::prelude::{Cmd, Pos};
-use aopt::value::Placeholder;
+use crate::Any;
+use crate::ErasedTy;
+use crate::Main;
+use crate::MutOpt;
+use crate::Placeholder;
+use crate::RefOpt;
+use crate::SetValueFindExt;
+use crate::{Cmd, Pos};
 
 /// Using for generate code for procedural macro.
 pub trait Fetch<'a> {
@@ -27,29 +27,29 @@ pub trait Fetch<'a> {
 #[macro_export]
 macro_rules! impl_fetch {
     ($name:path) => {
-        impl<'a> $crate::value::Fetch<'a> for $name {}
+        impl<'a> $crate::Fetch<'a> for $name {}
     };
     ($name:path, $map:expr) => {
-        impl<'a, T> $crate::value::Fetch<'a> for $name
+        impl<'a, T> $crate::Fetch<'a> for $name
         where
-            T: aopt::prelude::ErasedTy,
+            T: $crate::ErasedTy,
         {
-            fn fetch<S: aopt::prelude::SetValueFindExt>(
+            fn fetch<S: $crate::SetValueFindExt>(
                 name: &str,
                 set: &'a mut S,
             ) -> Result<Self, aopt::Error>
             where
-                Self: ErasedTy + Sized,
+                Self: $crate::ErasedTy + Sized,
             {
                 set.take_val::<T>(name).map(|v| $map(v))
             }
 
-            fn fetch_vec<S: aopt::prelude::SetValueFindExt>(
+            fn fetch_vec<S: $crate::SetValueFindExt>(
                 name: &str,
                 set: &'a mut S,
             ) -> Result<Vec<Self>, aopt::Error>
             where
-                Self: aopt::prelude::ErasedTy + Sized,
+                Self: $crate::ErasedTy + Sized,
             {
                 set.take_vals::<T>(name)
                     .map(|v| v.into_iter().map(|v| $map(v)).collect())
@@ -57,23 +57,23 @@ macro_rules! impl_fetch {
         }
     };
     ($name:path, $inner_type:path, $map:expr) => {
-        impl<'a> $crate::value::Fetch<'a> for $name {
-            fn fetch<S: aopt::prelude::SetValueFindExt>(
+        impl<'a> $crate::Fetch<'a> for $name {
+            fn fetch<S: $crate::SetValueFindExt>(
                 name: &str,
                 set: &'a mut S,
             ) -> Result<Self, aopt::Error>
             where
-                Self: aopt::prelude::ErasedTy + Sized,
+                Self: $crate::ErasedTy + Sized,
             {
                 set.take_val::<$inner_type>(name).map(|v| $map(v))
             }
 
-            fn fetch_vec<S: aopt::prelude::SetValueFindExt>(
+            fn fetch_vec<S: $crate::SetValueFindExt>(
                 name: &str,
                 set: &'a mut S,
             ) -> Result<Vec<Self>, aopt::Error>
             where
-                Self: aopt::prelude::ErasedTy + Sized,
+                Self: $crate::ErasedTy + Sized,
             {
                 set.take_vals::<$inner_type>(name)
                     .map(|v| v.into_iter().map(|v| $map(v)).collect())
@@ -81,27 +81,27 @@ macro_rules! impl_fetch {
         }
     };
     (&$a:lifetime $name:path) => {
-        impl<$a> $crate::value::Fetch<$a> for &$a $name {
-            fn fetch<S: aopt::prelude::SetValueFindExt>(name: &str, set: &$a mut S) -> Result<Self, aopt::Error>
+        impl<$a> $crate::Fetch<$a> for &$a $name {
+            fn fetch<S: $crate::SetValueFindExt>(name: &str, set: &$a mut S) -> Result<Self, aopt::Error>
             where Self: ErasedTy + Sized {
                 set.find_val::<$name>(name)
             }
 
-            fn fetch_vec<S: aopt::prelude::SetValueFindExt>(name: &str, set: &$a mut S) -> Result<Vec<Self>, aopt::Error>
-            where Self: aopt::prelude::ErasedTy + Sized {
+            fn fetch_vec<S: $crate::SetValueFindExt>(name: &str, set: &$a mut S) -> Result<Vec<Self>, aopt::Error>
+            where Self: $crate::ErasedTy + Sized {
                 Ok(set.find_vals::<$name>(name)?.iter().collect())
             }
         }
     };
     (&$a:lifetime $name:path, $inner:path, $map:expr) => {
-        impl<$a> $crate::value::Fetch<$a> for &$a $name {
-            fn fetch<S: aopt::prelude::SetValueFindExt>(name: &str, set: &$a mut S) -> Result<Self, aopt::Error>
-            where Self: aopt::prelude::ErasedTy + Sized {
+        impl<$a> $crate::Fetch<$a> for &$a $name {
+            fn fetch<S: $crate::SetValueFindExt>(name: &str, set: &$a mut S) -> Result<Self, aopt::Error>
+            where Self: $crate::ErasedTy + Sized {
                 set.find_val::<$inner>(name).map(|v|$map(v))
             }
 
-            fn fetch_vec<S: aopt::prelude::SetValueFindExt>(name: &str, set: &$a mut S) -> Result<Vec<Self>, aopt::Error>
-            where Self: aopt::prelude::ErasedTy + Sized {
+            fn fetch_vec<S: $crate::SetValueFindExt>(name: &str, set: &$a mut S) -> Result<Vec<Self>, aopt::Error>
+            where Self: $crate::ErasedTy + Sized {
                 Ok(set.find_vals::<$inner>(name)?.iter().map(|v|$map(v)).collect())
             }
         }
@@ -110,52 +110,52 @@ macro_rules! impl_fetch {
 
 macro_rules! value_fetch_forward {
     ($name:path, $map:expr) => {
-        impl<'a, T> $crate::value::Fetch<'a> for $name
+        impl<'a, T> $crate::Fetch<'a> for $name
         where
-            T: aopt::prelude::ErasedTy + $crate::value::Fetch<'a>,
+            T: $crate::ErasedTy + $crate::Fetch<'a>,
         {
-            fn fetch<S: aopt::prelude::SetValueFindExt>(
+            fn fetch<S: $crate::SetValueFindExt>(
                 name: &str,
                 set: &'a mut S,
             ) -> Result<Self, aopt::Error>
             where
-                Self: aopt::prelude::ErasedTy + Sized,
+                Self: $crate::ErasedTy + Sized,
             {
-                <T as $crate::value::Fetch>::fetch(name, set).map(|v| $map(v))
+                <T as $crate::Fetch>::fetch(name, set).map(|v| $map(v))
             }
 
-            fn fetch_vec<S: aopt::prelude::SetValueFindExt>(
+            fn fetch_vec<S: $crate::SetValueFindExt>(
                 name: &str,
                 set: &'a mut S,
             ) -> Result<Vec<Self>, aopt::Error>
             where
-                Self: aopt::prelude::ErasedTy + Sized,
+                Self: $crate::ErasedTy + Sized,
             {
-                <T as $crate::value::Fetch>::fetch_vec(name, set)
+                <T as $crate::Fetch>::fetch_vec(name, set)
                     .map(|v| v.into_iter().map(|v| $map(v)).collect())
             }
         }
     };
     ($name:path, $inner_type:path, $map:expr) => {
-        impl<'a> $crate::value::Fetch<'a> for $name {
-            fn fetch<S: aopt::prelude::SetValueFindExt>(
+        impl<'a> $crate::Fetch<'a> for $name {
+            fn fetch<S: $crate::SetValueFindExt>(
                 name: &str,
                 set: &'a mut S,
             ) -> Result<Self, aopt::Error>
             where
-                Self: aopt::prelude::ErasedTy + Sized,
+                Self: $crate::ErasedTy + Sized,
             {
-                <$inner_type as $crate::value::Fetch>::fetch(name, set).map(|v| $map(v))
+                <$inner_type as $crate::Fetch>::fetch(name, set).map(|v| $map(v))
             }
 
-            fn fetch_vec<S: aopt::prelude::SetValueFindExt>(
+            fn fetch_vec<S: $crate::SetValueFindExt>(
                 name: &str,
                 set: &'a mut S,
             ) -> Result<Vec<Self>, aopt::Error>
             where
-                Self: aopt::prelude::ErasedTy + Sized,
+                Self: $crate::ErasedTy + Sized,
             {
-                <$inner_type as $crate::value::Fetch>::fetch_vec(name, set)
+                <$inner_type as $crate::Fetch>::fetch_vec(name, set)
                     .map(|v| v.into_iter().map(|v| $map(v)).collect())
             }
         }

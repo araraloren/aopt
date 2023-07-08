@@ -8,7 +8,10 @@ use quote::quote;
 use syn::parse_macro_input;
 use syn::DeriveInput;
 
-#[proc_macro_derive(Cote, attributes(cote, arg, pos, cmd, sub))]
+#[proc_macro_derive(
+    Cote,
+    attributes(cote, arg, pos, cmd, sub, infer, alter, fetch, rawvalparser)
+)]
 #[proc_macro_error::proc_macro_error]
 pub fn parser(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input: DeriveInput = parse_macro_input!(input);
@@ -19,7 +22,7 @@ pub fn parser(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
             e
         }
     });
-    let impl_for_struct = analyzer.gen_all().unwrap_or_else(|e| {
+    let impl_code = analyzer.gen_all().unwrap_or_else(|e| {
         abort! {
             input,
             "Failed to generate code for struct: {:?}",
@@ -28,7 +31,7 @@ pub fn parser(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     });
 
     quote! {
-        #impl_for_struct
+        #impl_code
     }
     .into()
 }

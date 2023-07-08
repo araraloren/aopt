@@ -85,7 +85,7 @@ impl<'a> CoteGenerator<'a> {
         })
     }
 
-    pub fn split_for_impl(
+    pub fn get_generics_params(
         &self,
     ) -> (
         &Punctuated<GenericParam, Token![,]>,

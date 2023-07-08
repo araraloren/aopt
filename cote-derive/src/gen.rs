@@ -1,6 +1,10 @@
+mod alter;
 mod arg;
 mod cote;
+mod fetch;
+mod infer;
 mod sub;
+mod value;
 
 use proc_macro2::Ident;
 use proc_macro2::Span;
@@ -9,7 +13,9 @@ use proc_macro_error::abort;
 use quote::quote;
 use syn::punctuated::Punctuated;
 use syn::Attribute;
+use syn::DataEnum;
 use syn::DataStruct;
+use syn::DataUnion;
 use syn::DeriveInput;
 use syn::Field;
 use syn::Fields;
@@ -33,9 +39,13 @@ const CONFIG_POS: &str = "pos";
 const CONFIG_CMD: &str = "cmd";
 const APP_POSTFIX: &str = "InternalApp";
 
+pub use self::alter::AlterGenerator;
 pub use self::arg::ArgGenerator;
 pub use self::cote::CoteGenerator;
+pub use self::fetch::FetchGenerator;
+pub use self::infer::InferGenerator;
 pub use self::sub::SubGenerator;
+pub use self::value::ValueGenerator;
 
 pub type OptUpdate = (
     Option<TokenStream>,
@@ -54,11 +64,19 @@ pub struct Update {
 
 #[derive(Debug)]
 pub struct Analyzer<'a> {
-    cote_generator: CoteGenerator<'a>,
+    cote_generator: Option<CoteGenerator<'a>>,
 
     arg_generator: Vec<ArgGenerator<'a>>,
 
     sub_generator: Vec<SubGenerator<'a>>,
+
+    infer_generator: Option<InferGenerator<'a>>,
+
+    alter_generator: Option<AlterGenerator<'a>>,
+
+    fetch_generator: Option<FetchGenerator<'a>>,
+
+    value_generator: Option<ValueGenerator<'a>>,
 }
 
 impl<'a> Analyzer<'a> {
@@ -68,48 +86,188 @@ impl<'a> Analyzer<'a> {
                 fields: Fields::Named(ref fields),
                 ..
             }) => {
-                let mut cote_generator = CoteGenerator::new(input)?;
+                // check the attributes
+                let kinds = collect_attribute_on_struct(input);
+
+                if kinds.contains(&AttrKind::Cote) && kinds.iter().any(|v| v != &AttrKind::Cote) {
+                    let kind = kinds.iter().find(|&v| v != &AttrKind::Cote).unwrap();
+                    abort! {
+                        input,
+                        "Can not using attribute `cote` and `{:?}` on same struct", kind
+                    }
+                }
+
+                let mut infer_generator = None;
+                let mut alter_generator = None;
+                let mut fetch_generator = None;
+                let mut cote_generator = None;
                 let mut arg_generator = vec![];
                 let mut sub_generator = vec![];
                 let mut sub_app_idx = 0;
                 let mut pos_arg_idx = 1;
 
-                for field in fields.named.iter() {
-                    if check_if_has_sub_cfg(field)? {
-                        sub_generator.push(SubGenerator::new(field, sub_app_idx)?);
-                        cote_generator.set_has_sub_command(true);
-                        sub_app_idx += 1;
-                    } else {
-                        let arg = ArgGenerator::new(field, pos_arg_idx)?;
+                if kinds.is_empty() || kinds.contains(&AttrKind::Cote) {
+                    let mut generator = CoteGenerator::new(input)?;
 
-                        if arg.has_pos_id() {
-                            pos_arg_idx += 1;
+                    for field in fields.named.iter() {
+                        if check_if_has_sub_cfg(field)? {
+                            sub_generator.push(SubGenerator::new(field, sub_app_idx)?);
+                            generator.set_has_sub_command(true);
+                            sub_app_idx += 1;
+                        } else {
+                            let arg = ArgGenerator::new(field, pos_arg_idx)?;
+
+                            if arg.has_pos_id() {
+                                pos_arg_idx += 1;
+                            }
+                            arg_generator.push(arg);
                         }
-                        arg_generator.push(arg);
+                    }
+                    cote_generator = Some(generator);
+                } else {
+                    for kind in kinds {
+                        match kind {
+                            AttrKind::Infer => {
+                                infer_generator = Some(InferGenerator::new(input)?);
+                            }
+                            AttrKind::Fetch => {
+                                fetch_generator = Some(FetchGenerator::new(input)?);
+                            }
+                            AttrKind::Alter => {
+                                alter_generator = Some(AlterGenerator::new(input)?);
+                            }
+                            AttrKind::Value => {
+                                abort! {
+                                    input,
+                                    "Can not using attribute `rawvalparser` on struct"
+                                }
+                            }
+                            _ => {}
+                        }
                     }
                 }
+
                 Ok(Self {
                     arg_generator,
                     cote_generator,
                     sub_generator,
+                    infer_generator,
+                    alter_generator,
+                    fetch_generator,
+                    value_generator: None,
                 })
             }
-            _ => {
-                abort! {
-                    input,
-                        "cote only support struct format"
-                }
+            syn::Data::Enum(DataEnum { ref variants, .. }) => {
+                let value_generator = ValueGenerator::new(input, &variants)?;
+                let fetch_generator = FetchGenerator::new(input)?;
+                let infer_generator = InferGenerator::new(input)?;
+                let alter_generator = AlterGenerator::new(input)?;
+
+                Ok(Self {
+                    arg_generator: vec![],
+                    cote_generator: None,
+                    sub_generator: vec![],
+                    infer_generator: Some(infer_generator),
+                    alter_generator: Some(alter_generator),
+                    fetch_generator: Some(fetch_generator),
+                    value_generator: Some(value_generator),
+                })
+            }
+            syn::Data::Union(DataUnion { .. }) | syn::Data::Struct(DataStruct { .. }) => {
+                let fetch_generator = FetchGenerator::new(input)?;
+                let infer_generator = InferGenerator::new(input)?;
+                let alter_generator = AlterGenerator::new(input)?;
+
+                Ok(Self {
+                    arg_generator: vec![],
+                    cote_generator: None,
+                    sub_generator: vec![],
+                    infer_generator: Some(infer_generator),
+                    alter_generator: Some(alter_generator),
+                    fetch_generator: Some(fetch_generator),
+                    value_generator: None,
+                })
             }
         }
     }
 
+    pub fn cote(&self) -> &CoteGenerator {
+        debug_assert!(self.cote_generator.is_some(), "cote error detected");
+        self.cote_generator.as_ref().unwrap()
+    }
+
+    pub fn infer(&self) -> &InferGenerator {
+        debug_assert!(self.infer_generator.is_some(), "infer error detected");
+        self.infer_generator.as_ref().unwrap()
+    }
+
+    pub fn alter(&self) -> &AlterGenerator {
+        debug_assert!(self.alter_generator.is_some(), "alter error detected");
+        self.alter_generator.as_ref().unwrap()
+    }
+
+    pub fn fetch(&self) -> &FetchGenerator {
+        debug_assert!(self.fetch_generator.is_some(), "fetch error detected");
+        self.fetch_generator.as_ref().unwrap()
+    }
+
+    pub fn value(&self) -> &ValueGenerator {
+        debug_assert!(self.value_generator.is_some(), "value error detected");
+        self.value_generator.as_ref().unwrap()
+    }
+
+    pub fn args(&self) -> &[ArgGenerator] {
+        &self.arg_generator
+    }
+
+    pub fn subs(&self) -> &[SubGenerator] {
+        &self.sub_generator
+    }
+
     pub fn gen_all(&self) -> syn::Result<TokenStream> {
-        let ident = self.cote_generator.get_ident();
-        let (params, where_predicate) = self.cote_generator.split_for_impl();
+        let mut ret = quote! {};
+
+        if self.cote_generator.is_some() {
+            ret.extend(self.gen_impl_for_cote()?);
+        }
+        if self.infer_generator.is_some() {
+            ret.extend(self.gen_impl_for_infer()?);
+        }
+        if self.fetch_generator.is_some() {
+            ret.extend(self.gen_impl_for_fetch()?);
+        }
+        if self.alter_generator.is_some() {
+            ret.extend(self.gen_impl_for_alter()?);
+        }
+        if self.value_generator.is_some() {
+            ret.extend(self.gen_impl_for_value()?);
+        }
+        Ok(ret)
+    }
+
+    pub fn gen_impl_for_value(&self) -> syn::Result<TokenStream> {
+        self.value().gen_impl_for_enum()
+    }
+
+    pub fn gen_impl_for_infer(&self) -> syn::Result<TokenStream> {
+        self.infer().gen_impl_for_struct()
+    }
+
+    pub fn gen_impl_for_fetch(&self) -> syn::Result<TokenStream> {
+        self.fetch().gen_impl_for_struct()
+    }
+
+    pub fn gen_impl_for_alter(&self) -> syn::Result<TokenStream> {
+        self.alter().gen_impl_for_struct()
+    }
+
+    pub fn gen_impl_for_cote(&self) -> syn::Result<TokenStream> {
+        let ident = self.cote().get_ident();
+        let (params, where_predicate) = self.cote().get_generics_params();
         let (impl_parser, type_parser, where_parser) =
-            self.gen_impl_for_parser(params, where_predicate);
-        let (impl_ip, type_ip, where_ip) = self.gen_impl_for_ip(params, where_predicate);
-        let (impl_sd, type_sd, where_sd) = self.gen_impl_for_sd(params, where_predicate);
+            self.split_impl_for_parser(params, where_predicate);
+        let (impl_ip, type_ip, where_ip) = self.split_impl_for_ip(params, where_predicate);
+        let (impl_sd, type_sd, where_sd) = self.split_impl_for_sd(params, where_predicate);
         let parser_update = self.gen_parser_update()?;
         let try_extract = self.gen_try_extract()?;
         let parser_interface = self.gen_parser_interface()?;
@@ -139,7 +297,7 @@ impl<'a> Analyzer<'a> {
         })
     }
 
-    pub fn gen_impl_for_sd(
+    pub fn split_impl_for_sd(
         &self,
         params: &Punctuated<GenericParam, Token![,]>,
         where_predicate: Option<&Punctuated<WherePredicate, Token![,]>>,
@@ -165,7 +323,7 @@ impl<'a> Analyzer<'a> {
         )
     }
 
-    pub fn gen_impl_for_ip(
+    pub fn split_impl_for_ip(
         &self,
         params: &Punctuated<GenericParam, Token![,]>,
         where_predicate: Option<&Punctuated<WherePredicate, Token![,]>>,
@@ -191,7 +349,7 @@ impl<'a> Analyzer<'a> {
         )
     }
 
-    pub fn gen_impl_for_parser(
+    pub fn split_impl_for_parser(
         &self,
         params: &Punctuated<GenericParam, Token![,]>,
         where_predicate: Option<&Punctuated<WherePredicate, Token![,]>>,
@@ -260,7 +418,7 @@ impl<'a> Analyzer<'a> {
         let mut mut_field = vec![];
         let mut ref_field = vec![];
 
-        for field in self.arg_generator.iter() {
+        for field in self.args().iter() {
             let (is_refopt, ts) = field.gen_value_extract()?;
 
             if is_refopt {
@@ -269,7 +427,7 @@ impl<'a> Analyzer<'a> {
                 mut_field.push(ts);
             }
         }
-        for field in self.sub_generator.iter() {
+        for field in self.subs().iter() {
             let (is_refopt, ts) = field.gen_field_extract()?;
 
             if is_refopt {
@@ -299,7 +457,7 @@ impl<'a> Analyzer<'a> {
         let mut insert = vec![];
         let mut handler = vec![];
         let mut option_id = 0;
-        let is_process_help = self.cote_generator.is_process_help();
+        let is_process_help = self.cote().is_process_help();
         let mut help_uid = None;
 
         let mut append = |(c, i, h): OptUpdate| {
@@ -308,20 +466,20 @@ impl<'a> Analyzer<'a> {
             h.into_iter().for_each(|v| handler.push(v));
         };
 
-        if let Some(update) = self.cote_generator.gen_main_option_update(option_id) {
+        if let Some(update) = self.cote().gen_main_option_update(option_id) {
             append(update);
             option_id += 1;
         }
-        if let Some((uid, update)) = self.cote_generator.gen_help_option_update(option_id) {
+        if let Some((uid, update)) = self.cote().gen_help_option_update(option_id) {
             help_uid = Some(uid);
             append(update);
             option_id += 1;
         }
-        for field in self.arg_generator.iter() {
+        for field in self.args().iter() {
             append(field.gen_option_update(option_id)?);
             option_id += 1;
         }
-        for field in self.sub_generator.iter() {
+        for field in self.subs().iter() {
             append(field.gen_option_update(option_id, is_process_help, help_uid.as_ref())?);
             option_id += 1;
         }
@@ -336,7 +494,7 @@ impl<'a> Analyzer<'a> {
         let mut display_sub = quote! {};
         let mut display_call = quote! {};
 
-        for sub_generator in self.sub_generator.iter() {
+        for sub_generator in self.subs().iter() {
             let help_context_gen = sub_generator.gen_update_help_context()?;
             let internal_ty = sub_generator.gen_internal_ty()?;
             let idx = sub_generator.get_sub_index();
@@ -368,7 +526,7 @@ impl<'a> Analyzer<'a> {
             });
         }
 
-        if self.sub_generator.is_empty() {
+        if self.subs().is_empty() {
             Ok(quote! {})
         } else {
             Ok(quote! {
@@ -390,7 +548,7 @@ impl<'a> Analyzer<'a> {
     pub fn insert_sub_parsers(&self) -> syn::Result<TokenStream> {
         let mut insert_sub_parsers = quote! {};
 
-        for sub_generator in self.sub_generator.iter() {
+        for sub_generator in self.subs().iter() {
             let without_option_ty = sub_generator.get_without_option_type();
             let parser_name = sub_generator.name();
 
@@ -399,7 +557,7 @@ impl<'a> Analyzer<'a> {
             });
         }
 
-        if self.sub_generator.is_empty() {
+        if self.subs().is_empty() {
             Ok(quote! {})
         } else {
             Ok(quote! {
@@ -411,10 +569,10 @@ impl<'a> Analyzer<'a> {
     pub fn gen_policy_setting_modifier(&self) -> TokenStream {
         let mut ret = quote! {};
 
-        if let Some(policy_settings) = self.cote_generator.policy_settings_modifier() {
+        if let Some(policy_settings) = self.cote().policy_settings_modifier() {
             ret.extend(policy_settings);
         }
-        for arg in self.arg_generator.iter() {
+        for arg in self.args().iter() {
             ret.extend(arg.gen_nodelay_for_delay_parser().into_iter());
         }
         ret
@@ -436,13 +594,13 @@ impl<'a> Analyzer<'a> {
     }
 
     pub fn gen_parser_interface(&self) -> syn::Result<TokenStream> {
-        let major_internal_ty = self.cote_generator.gen_internal_ty();
-        let major_default_ty = self.cote_generator.gen_ret_default_policy_ty()?;
-        let major_policy_ty = self.cote_generator.gen_ret_policy_ty_generics()?;
+        let major_internal_ty = self.cote().gen_internal_ty();
+        let major_default_ty = self.cote().gen_ret_default_policy_ty()?;
+        let major_policy_ty = self.cote().gen_ret_policy_ty_generics()?;
         let insert_sub_parsers = self.insert_sub_parsers()?;
         let policy_settings = self.gen_policy_setting_modifier();
-        let method_call = self.cote_generator.gen_method_call()?;
-        let major_parser_name = self.cote_generator.get_name();
+        let method_call = self.cote().gen_method_call()?;
+        let major_parser_name = self.cote().get_name();
         let where_clause = Self::parser_where_clause();
 
         Ok(quote! {
@@ -582,11 +740,11 @@ impl<'a> Analyzer<'a> {
     }
 
     pub fn gen_internal_helper_struct(&self) -> syn::Result<TokenStream> {
-        let major_helper_ty = self.cote_generator.gen_internal_ty();
-        let major_helper_define = self.cote_generator.define_helper_ty(&major_helper_ty);
-        let help_display_ctx = self.cote_generator.gen_help_display_ctx();
+        let major_helper_ty = self.cote().gen_internal_ty();
+        let major_helper_define = self.cote().define_helper_ty(&major_helper_ty);
+        let help_display_ctx = self.cote().gen_help_display_ctx();
         let call_for_sub_help = self.gen_display_call_for_sub_help()?;
-        let sync_running_ctx = self.cote_generator.gen_sync_ret_value();
+        let sync_running_ctx = self.cote().gen_sync_ret_value();
 
         Ok(quote! {
             #major_helper_define
@@ -832,21 +990,6 @@ pub fn gen_ty_without_option(ty: &Type) -> syn::Result<Type> {
     }
 }
 
-// pub fn is_option_ty(ty: &Type) -> bool {
-//     if let Type::Path(path) = ty {
-//         if let Some(segment) = path.path.segments.last() {
-//             let ident_str = segment.ident.to_string();
-
-//             if ident_str == "Option" {
-//                 if let PathArguments::AngleBracketed(_) = &segment.arguments {
-//                     return true;
-//                 }
-//             }
-//         }
-//     }
-//     false
-// }
-
 pub fn gen_subapp_without_option(ty: &Type) -> syn::Result<&Ident> {
     if let Type::Path(path) = ty {
         if let Some(segment) = path.path.segments.last() {
@@ -857,4 +1000,48 @@ pub fn gen_subapp_without_option(ty: &Type) -> syn::Result<&Ident> {
         ty,
         "can not generate sub app type"
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+enum AttrKind {
+    Cote,
+
+    Infer,
+
+    Fetch,
+
+    Alter,
+
+    #[allow(unused)]
+    Value,
+}
+
+impl AttrKind {
+    pub fn name(&self) -> &str {
+        match self {
+            AttrKind::Cote => "cote",
+            AttrKind::Infer => "infer",
+            AttrKind::Fetch => "fetch",
+            AttrKind::Alter => "alter",
+            AttrKind::Value => "rawvalparser",
+        }
+    }
+}
+
+fn collect_attribute_on_struct(input: &DeriveInput) -> Vec<AttrKind> {
+    let attr_map = [
+        AttrKind::Cote,
+        AttrKind::Infer,
+        AttrKind::Fetch,
+        AttrKind::Alter,
+    ];
+    let attrs = &input.attrs;
+    let mut kinds = vec![];
+
+    for attr in attr_map {
+        if attrs.iter().any(|v| v.path.is_ident(attr.name())) {
+            kinds.push(attr);
+        }
+    }
+    kinds
 }
