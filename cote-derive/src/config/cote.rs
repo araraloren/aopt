@@ -9,8 +9,6 @@ pub enum CoteKind {
 
     Name,
 
-    Hint,
-
     Help,
 
     Head,
@@ -22,10 +20,6 @@ pub enum CoteKind {
     UsageWidth,
 
     AbortHelp,
-
-    Ref,
-
-    Mut,
 
     On,
 
@@ -54,15 +48,12 @@ impl Kind for CoteKind {
             Ok(match kind_str.as_str() {
                 "policy" => (Self::Policy, true),
                 "name" => (Self::Name, true),
-                "hint" => (Self::Hint, true),
                 "help" => (Self::Help, false),
                 "head" => (Self::Head, true),
                 "foot" => (Self::Foot, true),
                 "width" => (Self::HelpWidth, true),
                 "usagew" => (Self::UsageWidth, true),
                 "aborthelp" => (Self::AbortHelp, false),
-                "refopt" => (Self::Ref, false),
-                "mutopt" => (Self::Mut, false),
                 "on" => (Self::On, true),
                 "fallback" => (Self::Fallback, true),
                 "then" => (Self::Then, true),

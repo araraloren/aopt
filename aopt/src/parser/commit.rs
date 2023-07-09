@@ -6,6 +6,7 @@ use crate::ctx::Extract;
 use crate::ctx::Handler;
 use crate::ctx::HandlerCollection;
 use crate::ctx::HandlerEntry;
+use crate::ctx::HandlerEntryThen;
 use crate::map::ErasedTy;
 use crate::opt::Any;
 use crate::opt::Cmd;
@@ -167,7 +168,7 @@ where
     pub fn on<H, O, A>(
         mut self,
         handler: H,
-    ) -> Result<HandlerEntry<'a, 'b, I, S, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, A, O>, Error>
     where
         O: ErasedTy,
         H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + 'a,
@@ -209,7 +210,7 @@ where
     pub fn fallback<H, O, A>(
         mut self,
         handler: H,
-    ) -> Result<HandlerEntry<'a, 'b, I, S, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, A, O>, Error>
     where
         O: ErasedTy,
         H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + 'a,
@@ -455,7 +456,7 @@ where
     pub fn on<H, O, A>(
         mut self,
         handler: H,
-    ) -> Result<HandlerEntry<'a, 'b, I, S, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, A, O>, Error>
     where
         O: ErasedTy,
         H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + 'a,
@@ -497,7 +498,7 @@ where
     pub fn fallback<H, O, A>(
         mut self,
         handler: H,
-    ) -> Result<HandlerEntry<'a, 'b, I, S, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, A, O>, Error>
     where
         O: ErasedTy,
         H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + 'a,

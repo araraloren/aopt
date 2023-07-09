@@ -711,8 +711,8 @@ impl<'a, Set, Ser> Parser<'a, Set, Ser>
 where
     Set: aopt::set::Set,
 {
-    const DEFAULT_OPTION_WIDTH: usize = 40;
-    const DEFAULT_USAGE_WIDTH: usize = 10;
+    pub const DEFAULT_OPTION_WIDTH: usize = 40;
+    pub const DEFAULT_USAGE_WIDTH: usize = 10;
 
     pub fn display_help(
         &self,

@@ -12,6 +12,7 @@ pub mod valid;
 use std::marker::PhantomData;
 
 pub use aopt;
+use aopt::prelude::OptStyleManager;
 pub use aopt_help;
 pub use cote_derive;
 
@@ -68,6 +69,7 @@ pub use aopt::prelude::SetChecker;
 pub use aopt::prelude::SetExt;
 pub use aopt::prelude::SetValueFindExt;
 pub use aopt::prelude::Store;
+pub use aopt::prelude::Style;
 pub use aopt::prelude::ValInitializer;
 pub use aopt::prelude::ValStorer;
 pub use aopt::prelude::ValValidator;
@@ -125,11 +127,11 @@ where
     pub parser: Policy::Set,
 }
 
-pub trait ReturnValStatus {
+pub trait Status {
     fn status(&self) -> bool;
 }
 
-impl ReturnValStatus for ReturnVal {
+impl Status for ReturnVal {
     fn status(&self) -> bool {
         ReturnVal::status(self)
     }
@@ -153,21 +155,28 @@ pub type DelayPolicy<'inv, Set, Ser> = aopt::prelude::DelayPolicy<
     DefaultSetChecker<Parser<'inv, Set, Ser>>,
 >;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct NullPolicy<Set, Ser>(PhantomData<(Set, Ser)>);
+#[derive(Debug, Clone)]
+pub struct NullPolicy<'inv, Set, Ser> {
+    style_manager: OptStyleManager,
 
-impl<Set, Ser> Default for NullPolicy<Set, Ser> {
+    marker: PhantomData<(Set, Ser, &'inv ())>,
+}
+
+impl<'inv, Set, Ser> Default for NullPolicy<'inv, Set, Ser> {
     fn default() -> Self {
-        Self(Default::default())
+        Self {
+            style_manager: OptStyleManager::default(),
+            marker: Default::default(),
+        }
     }
 }
 
-impl<Set, Ser> Policy for NullPolicy<Set, Ser> {
-    type Ret = aopt::parser::ReturnVal;
+impl<'inv, Set, Ser> Policy for NullPolicy<'inv, Set, Ser> {
+    type Ret = ReturnVal;
 
-    type Set = Set;
+    type Set = Parser<'inv, Set, Ser>;
 
-    type Inv<'a> = aopt::prelude::Invoker<'a, Set, Ser>;
+    type Inv<'a> = Invoker<'a, Parser<'inv, Set, Ser>, Ser>;
 
     type Ser = Ser;
 
@@ -181,6 +190,58 @@ impl<Set, Ser> Policy for NullPolicy<Set, Ser> {
         _: ARef<Args>,
     ) -> Result<Self::Ret, Self::Error> {
         Ok(ReturnVal::default())
+    }
+}
+
+impl<'inv, Set, Ser> PolicySettings for NullPolicy<'inv, Set, Ser> {
+    fn style_manager(&self) -> &OptStyleManager {
+        &self.style_manager
+    }
+
+    fn style_manager_mut(&mut self) -> &mut OptStyleManager {
+        &mut self.style_manager
+    }
+
+    fn strict(&self) -> bool {
+        false
+    }
+
+    fn styles(&self) -> &[UserStyle] {
+        &self.style_manager
+    }
+
+    fn no_delay(&self) -> Option<&[aopt::Str]> {
+        None
+    }
+
+    fn set_strict(&mut self, _: bool) -> &mut Self {
+        self
+    }
+
+    fn set_styles(&mut self, _: Vec<UserStyle>) -> &mut Self {
+        self
+    }
+
+    fn set_no_delay(&mut self, _: impl Into<aopt::Str>) -> &mut Self {
+        self
+    }
+}
+
+impl<'inv, Set, Ser> APolicyExt<NullPolicy<'inv, Set, Ser>> for NullPolicy<'inv, Set, Ser>
+where
+    Set: Default,
+    Ser: Default,
+{
+    fn default_ser(&self) -> <NullPolicy<'inv, Set, Ser> as Policy>::Ser {
+        Ser::default()
+    }
+
+    fn default_set(&self) -> <NullPolicy<'inv, Set, Ser> as Policy>::Set {
+        Parser::default()
+    }
+
+    fn default_inv<'a>(&self) -> <NullPolicy<'inv, Set, Ser> as Policy>::Inv<'a> {
+        Invoker::default()
     }
 }
 

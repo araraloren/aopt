@@ -254,15 +254,9 @@ where
 {
     ser: &'b mut I,
 
-    handler: Option<H>,
-
-    register: bool,
-
     uid: Uid,
 
-    fallback: bool,
-
-    marker: PhantomData<(&'a (), A, O, Set, Ser)>,
+    marker: PhantomData<(&'a (), A, O, Set, Ser, H)>,
 }
 
 impl<'a, 'b, I, Set, Ser, H, A, O> HandlerEntry<'a, 'b, I, Set, Ser, H, A, O>
@@ -277,27 +271,64 @@ where
     pub fn new(inv_ser: &'b mut I, uid: Uid) -> Self {
         Self {
             ser: inv_ser,
-            handler: None,
-            register: false,
             uid,
-            fallback: false,
             marker: PhantomData::default(),
         }
     }
 
     /// Register the handler which will be called when option is set.
-    pub fn on(mut self, handler: H) -> Self {
-        self.handler = Some(handler);
-        self
+    pub fn on(self, handler: H) -> HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O> {
+        HandlerEntryThen::new(self.ser, self.uid, handler, false)
     }
 
     /// Register the handler which will be called when option is set.
     /// And the [`fallback`](crate::ctx::Invoker::fallback) will be called if
     /// the handler return None.
-    pub fn fallback(mut self, handler: H) -> Self {
-        self.handler = Some(handler);
-        self.fallback = true;
-        self
+    pub fn fallback(self, handler: H) -> HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O> {
+        HandlerEntryThen::new(self.ser, self.uid, handler, true)
+    }
+}
+
+pub struct HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O>
+where
+    O: ErasedTy,
+    Set: crate::set::Set,
+    SetOpt<Set>: Opt,
+    I: HandlerCollection<'a, Set, Ser>,
+    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
+    A: Extract<Set, Ser, Error = Error> + 'a,
+{
+    ser: &'b mut I,
+
+    handler: Option<H>,
+
+    register: bool,
+
+    uid: Uid,
+
+    fallback: bool,
+
+    marker: PhantomData<(&'a (), A, O, Set, Ser)>,
+}
+
+impl<'a, 'b, I, Set, Ser, H, A, O> HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O>
+where
+    O: ErasedTy,
+    Set: crate::set::Set,
+    SetOpt<Set>: Opt,
+    I: HandlerCollection<'a, Set, Ser>,
+    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
+    A: Extract<Set, Ser, Error = Error> + 'a,
+{
+    pub fn new(ser: &'b mut I, uid: Uid, handler: H, fallback: bool) -> Self {
+        Self {
+            ser,
+            handler: Some(handler),
+            register: false,
+            uid,
+            fallback,
+            marker: PhantomData::default(),
+        }
     }
 
     /// Register the handler with given `store`.
@@ -335,7 +366,7 @@ where
     }
 }
 
-impl<'a, 'b, I, Set, Ser, H, A, O> Drop for HandlerEntry<'a, 'b, I, Set, Ser, H, A, O>
+impl<'a, 'b, I, Set, Ser, H, A, O> Drop for HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O>
 where
     O: ErasedTy,
     Set: crate::set::Set,

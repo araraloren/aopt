@@ -93,7 +93,7 @@ impl<'a> SubGenerator<'a> {
 
         Ok(if let Some(policy_ty) = policy_ty {
             let policy_name = policy_ty.value().to_token_stream().to_string();
-            let policy = gen_policy_ty_generics(&policy_name);
+            let policy = gen_policy_ty_generics(&policy_name, Some(&policy_ty.value()));
 
             if let Some(policy) = policy {
                 policy
@@ -101,7 +101,7 @@ impl<'a> SubGenerator<'a> {
                 policy_ty.value().to_token_stream()
             }
         } else {
-            gen_policy_ty_generics(POLICY_FWD).unwrap()
+            gen_policy_ty_generics(POLICY_FWD, None).unwrap()
         })
     }
 

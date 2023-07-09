@@ -216,7 +216,7 @@ impl<'a> CoteGenerator<'a> {
         let for_strict = self.configs.find_cfg(CoteKind::Strict).map(|v| {
             let value = v.value();
             quote! {
-                style_manager.set_strict(#value);
+                cote::PolicySettings::set_strict(&mut policy, #value);
             }
         });
 
@@ -272,7 +272,7 @@ impl<'a> CoteGenerator<'a> {
         if self.configs.has_cfg(CoteKind::AbortHelp) {
             ret.extend(quote! {
                 if ret.is_err() ||
-                    !ret.as_ref().map(|v|cote::ReturnValStatus::status(v)).unwrap_or(true) {
+                    !ret.as_ref().map(|v|cote::Status::status(v)).unwrap_or(true) {
                     let running_ctx = self.rctx_mut()?;
                     if sub_parser {
                         running_ctx.set_display_sub_help(true);
@@ -361,7 +361,7 @@ impl<'a> CoteGenerator<'a> {
 
         Ok(if let Some(policy_ty) = policy_ty {
             let policy_name = policy_ty.value().to_token_stream().to_string();
-            let policy = gen_ret_default_policy_ty(&policy_name);
+            let policy = gen_ret_default_policy_ty(&policy_name, Some(&policy_ty.value()));
 
             if let Some(policy) = policy {
                 policy
@@ -369,9 +369,9 @@ impl<'a> CoteGenerator<'a> {
                 policy_ty.value().to_token_stream()
             }
         } else if self.has_sub_command() {
-            gen_ret_default_policy_ty(POLICY_PRE).unwrap()
+            gen_ret_default_policy_ty(POLICY_PRE, None).unwrap()
         } else {
-            gen_ret_default_policy_ty(POLICY_FWD).unwrap()
+            gen_ret_default_policy_ty(POLICY_FWD, None).unwrap()
         })
     }
 
@@ -380,7 +380,7 @@ impl<'a> CoteGenerator<'a> {
 
         Ok(if let Some(policy_ty) = policy_ty {
             let policy_name = policy_ty.value().to_token_stream().to_string();
-            let policy = gen_ret_policy_ty_generics(&policy_name);
+            let policy = gen_ret_policy_ty_generics(&policy_name, Some(&policy_ty.value()));
 
             if let Some(policy) = policy {
                 policy
@@ -388,9 +388,9 @@ impl<'a> CoteGenerator<'a> {
                 policy_ty.value().to_token_stream()
             }
         } else if self.has_sub_command() {
-            gen_ret_policy_ty_generics(POLICY_PRE).unwrap()
+            gen_ret_policy_ty_generics(POLICY_PRE, None).unwrap()
         } else {
-            gen_ret_policy_ty_generics(POLICY_FWD).unwrap()
+            gen_ret_policy_ty_generics(POLICY_FWD, None).unwrap()
         })
     }
 
@@ -452,6 +452,11 @@ impl<'a> CoteGenerator<'a> {
                     }
                 }),
             ))
+        } else if then.is_some() {
+            abort! {
+                ident,
+                "`then` must use with `on` or `fallback` together"
+            }
         } else {
             None
         }

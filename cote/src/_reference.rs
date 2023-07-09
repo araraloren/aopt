@@ -187,24 +187,24 @@
 //!
 //! The option styles support by default are:
 //!
-//! - [`EqualWithValue`](aopt::parser::UserStyle::EqualWithValue)
+//! - [`EqualWithValue`](crate::UserStyle::EqualWithValue)
 //!
 //! Options such as `--opt=value`, the value of option is set after `=`.
 //!
-//! - [`Argument`](aopt::parser::UserStyle::Argument)
+//! - [`Argument`](crate::UserStyle::Argument)
 //!
 //! Options such as `--opt value`, the value of option is next argument.
 //!
-//! - [`EmbeddedValue`](aopt::parser::UserStyle::EmbeddedValue)
+//! - [`EmbeddedValue`](crate::UserStyle::EmbeddedValue)
 //!
 //! Options such as `-o42`, the value `42` of option is embedded in string.
 //! The style only support one letter option.
 //!
-//! - [`Boolean`](aopt::parser::UserStyle::Boolean)
+//! - [`Boolean`](crate::UserStyle::Boolean)
 //!
 //! Options such as `--opt`, in general, it is named flag, the value type of option is always `bool`.
 //!
-//! - Add support for [`CombinedOption`](aopt::parser::UserStyle::CombinedOption).
+//! - `combine` - Add support for [`CombinedOption`](crate::UserStyle::CombinedOption).
 //!
 //! Options such as `-abcd`, thus set both boolean options `-a`, `-b`, `-c` and `-d`.
 //!
@@ -212,13 +212,23 @@
 #![doc = include_str!("../examples/04_config_style.rs")]
 //! ```
 //!
-//! - Add support for [`EmbeddedValuePlus`](aopt::parser::UserStyle::EmbeddedValuePlus).
+//! - `embedded` - Add support for [`EmbeddedValuePlus`](crate::UserStyle::EmbeddedValuePlus).
 //!
 //! Options such as `--opt42`, the value `42` of option is embedded in string.
 //! The style only supports options which name lengths bigger than 2.
 //!
 //! ```rust
 #![doc = include_str!("../examples/05_embedded_value_plus.rs")]
+//! ```
+//!
+//! - `flag` - Add support for [`Flag`](crate::UserStyle::Flag).
+//!
+//! Options such as `--opt`, in general, it is named flag, the value type of option is always `bool`.
+//! Unlike [`Boolean`](crate::UserStyle::Boolean) pass [`TRUE`](crate::aopt::opt::BOOL_TRUE) to [`parse`](crate::RawValParser::parse),
+//! [`Flag`](crate::UserStyle::Flag) pass [`None`] to [`parse`](crate::RawValParser::parse).
+//! 
+//! ```rust
+#![doc = include_str!("../examples/25_flag.rs")]
 //! ```
 //!
 //! ## Configurating Field
@@ -557,7 +567,7 @@
 //! ```
 //!
 //! ## How it works
-//! 
+//!
 //! ### Traits
 //!
 //! Implement follow traits, you can using the type in the struct filed.
@@ -602,23 +612,73 @@
 //! ```rust
 #![doc = include_str!("../examples/24_rawvalparser.rs")]
 //! ```
-//! 
+//!
 //! ### Configurations list
-//! 
+//!
 //! #### `cote`
-//! 
+//!
+//! * `policy`
+//!
+//! Configure the policy of current struct, its value should be `fwd`, `pre` or `delay.
+//! The default value is `fwd` if no sub command in the struct, otherwise it will be `pre`.
+//! ```rust
+#![doc = include_str!("../test/01_policy.rs")]
+//! ```
+//!
+//! * `name`
+//!
+//! The name is display in usage information.
+//!
+//! * `help`
+//!
+//! Add default help option `-h`|`--help`, generate help message when option set.
+//!
+//! * `aborthelp`
+//!
+//! Display help message if any error raised or command line parsing failed.
+//!
+//! * `head`, `foot`
+//!
+//! Custom the help message display.
+//!
+//! ```rust
+#![doc = include_str!("../test/02_head_foot.rs")]
+//!```
+//!
+//! * `width`, `usagew`
+//!
+//! `width` set the maximum length of option help message. `usagew` set the maximum count of options in usage.
+//! See [`Configurating Help`](#configurating-help).
+//!
+//! * `on`, `fallback`, `then`
+//!
+//! Configure the handler which invoked by the parser. See [`Configurating handler`](#configurating-handler).
+//!
+//! * `strict`
+//!
+//! Enable the strict mode of parser by calling the [`set_strict`](crate::PolicySettings::set_strict).
+//! If the option
+//!
+//! ```rust
+#![doc = include_str!("../test/03_strict.rs")]
+//!```
+//!
+//! * `combine`, `embedded`, `flag`
+//!
+//! Enable some extra [`user style`](crate::UserStyle) of policy. See [`Configurating User Style`](#configurating-user-style).
+//!
 //! #### `arg`
-//! 
+//!
 //! #### `pos`
-//! 
+//!
 //! #### `cmd`
-//! 
+//!
 //! #### `sub`
-//! 
+//!
 //! #### `infer`
-//! 
+//!
 //! #### `alter`
-//! 
+//!
 //! #### `fetch`
-//! 
+//!
 //! #### `rawvalparser`

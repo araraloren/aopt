@@ -39,6 +39,8 @@ const CONFIG_POS: &str = "pos";
 const CONFIG_CMD: &str = "cmd";
 const APP_POSTFIX: &str = "InternalApp";
 
+use crate::value::Value;
+
 pub use self::alter::AlterGenerator;
 pub use self::arg::ArgGenerator;
 pub use self::cote::CoteGenerator;
@@ -81,6 +83,14 @@ pub struct Analyzer<'a> {
 
 impl<'a> Analyzer<'a> {
     pub fn new(input: &'a DeriveInput) -> syn::Result<Self> {
+        let mut infer_generator = None;
+        let mut alter_generator = None;
+        let mut fetch_generator = None;
+        let mut value_generator = None;
+        let mut cote_generator = None;
+        let mut arg_generator = vec![];
+        let mut sub_generator = vec![];
+
         match input.data {
             syn::Data::Struct(DataStruct {
                 fields: Fields::Named(ref fields),
@@ -97,12 +107,6 @@ impl<'a> Analyzer<'a> {
                     }
                 }
 
-                let mut infer_generator = None;
-                let mut alter_generator = None;
-                let mut fetch_generator = None;
-                let mut cote_generator = None;
-                let mut arg_generator = vec![];
-                let mut sub_generator = vec![];
                 let mut sub_app_idx = 0;
                 let mut pos_arg_idx = 1;
 
@@ -146,49 +150,42 @@ impl<'a> Analyzer<'a> {
                         }
                     }
                 }
-
-                Ok(Self {
-                    arg_generator,
-                    cote_generator,
-                    sub_generator,
-                    infer_generator,
-                    alter_generator,
-                    fetch_generator,
-                    value_generator: None,
-                })
+            }
+            syn::Data::Struct(DataStruct {
+                fields: Fields::Unit,
+                ..
+            }) => {
+                cote_generator = Some(CoteGenerator::new(input)?);
+                fetch_generator = Some(FetchGenerator::new(input)?);
+                infer_generator = Some(InferGenerator::new(input)?);
+                alter_generator = Some(AlterGenerator::new(input)?);
             }
             syn::Data::Enum(DataEnum { ref variants, .. }) => {
-                let value_generator = ValueGenerator::new(input, &variants)?;
-                let fetch_generator = FetchGenerator::new(input)?;
-                let infer_generator = InferGenerator::new(input)?;
-                let alter_generator = AlterGenerator::new(input)?;
-
-                Ok(Self {
-                    arg_generator: vec![],
-                    cote_generator: None,
-                    sub_generator: vec![],
-                    infer_generator: Some(infer_generator),
-                    alter_generator: Some(alter_generator),
-                    fetch_generator: Some(fetch_generator),
-                    value_generator: Some(value_generator),
-                })
+                value_generator = Some(ValueGenerator::new(input, &variants)?);
+                fetch_generator = Some(FetchGenerator::new(input)?);
+                infer_generator = Some(InferGenerator::new(input)?);
+                alter_generator = Some(AlterGenerator::new(input)?);
             }
-            syn::Data::Union(DataUnion { .. }) | syn::Data::Struct(DataStruct { .. }) => {
-                let fetch_generator = FetchGenerator::new(input)?;
-                let infer_generator = InferGenerator::new(input)?;
-                let alter_generator = AlterGenerator::new(input)?;
-
-                Ok(Self {
-                    arg_generator: vec![],
-                    cote_generator: None,
-                    sub_generator: vec![],
-                    infer_generator: Some(infer_generator),
-                    alter_generator: Some(alter_generator),
-                    fetch_generator: Some(fetch_generator),
-                    value_generator: None,
-                })
+            syn::Data::Union(DataUnion { .. })
+            | syn::Data::Struct(DataStruct {
+                fields: Fields::Unnamed(_),
+                ..
+            }) => {
+                fetch_generator = Some(FetchGenerator::new(input)?);
+                infer_generator = Some(InferGenerator::new(input)?);
+                alter_generator = Some(AlterGenerator::new(input)?);
             }
         }
+
+        Ok(Self {
+            arg_generator,
+            cote_generator,
+            sub_generator,
+            infer_generator,
+            alter_generator,
+            fetch_generator,
+            value_generator,
+        })
     }
 
     pub fn cote(&self) -> &CoteGenerator {
@@ -581,7 +578,7 @@ impl<'a> Analyzer<'a> {
     pub fn parser_where_clause() -> TokenStream {
         quote! {
             P::Error: Into<cote::CoteError>,
-            P::Ret: cote::ReturnValStatus,
+            P::Ret: cote::Status,
             Ser: cote::ServicesValExt + Default + 'inv,
             cote::SetCfg<Set>: cote::Config + cote::ConfigValue + Default,
             Set: cote::Set + cote::OptParser + cote::OptValidator + cote::SetValueFindExt + Default + 'inv,
@@ -756,7 +753,7 @@ impl<'a> Analyzer<'a> {
             }
 
             impl<'a, 'inv, Set, Ser, Policy> #major_helper_ty<'a, cote::Parser<'inv, Set, Ser>, Policy>
-            where Ser: cote::ServicesValExt, Set: cote::SetValueFindExt, Policy: cote::Policy, Policy::Ret: cote::ReturnValStatus {
+            where Ser: cote::ServicesValExt, Set: cote::SetValueFindExt, Policy: cote::Policy, Policy::Ret: cote::Status {
                 pub fn sync_rctx(&mut self, ret: &Result<Policy::Ret, cote::CoteError>, sub_parser: bool)
                     -> Result<&mut Self, cote::CoteError> {
                     #sync_running_ctx
@@ -767,7 +764,7 @@ impl<'a> Analyzer<'a> {
             impl<'a, 'inv, Set, Ser, Policy> #major_helper_ty<'a, cote::Parser<'inv, Set, Ser>, Policy>
             where
                 Policy::Error: Into<cote::CoteError>,
-                Policy::Ret: cote::ReturnValStatus,
+                Policy::Ret: cote::Status,
                 Ser: cote::ServicesValExt,
                 Set: cote::Set + cote::OptParser + cote::OptValidator + cote::SetValueFindExt,
                 Policy: cote::Policy<
@@ -888,7 +885,7 @@ pub fn check_if_has_sub_cfg(field: &Field) -> syn::Result<bool> {
     }
 }
 
-pub fn gen_ret_default_policy_ty(policy_name: &str) -> Option<TokenStream> {
+pub fn gen_ret_default_policy_ty(policy_name: &str, policy: Option<&Value>) -> Option<TokenStream> {
     match policy_name {
         POLICY_PRE => Some(quote! {
             cote::PrePolicy<'inv, cote::ASet, cote::ASer>
@@ -899,11 +896,17 @@ pub fn gen_ret_default_policy_ty(policy_name: &str) -> Option<TokenStream> {
         POLICY_DELAY => Some(quote! {
             cote::DelayPolicy<'inv, cote::ASet, cote::ASer>
         }),
-        _ => None,
+        _ => {
+            let value = policy.unwrap();
+
+            Some(quote! {
+                #value<'inv, cote::ASet, cote::ASer>
+            })
+        }
     }
 }
 
-pub fn gen_policy_ty_generics(policy_name: &str) -> Option<TokenStream> {
+pub fn gen_policy_ty_generics(policy_name: &str, policy: Option<&Value>) -> Option<TokenStream> {
     match policy_name {
         POLICY_PRE => Some(quote! {
             cote::PrePolicy::<'inv, Set, Ser>
@@ -914,11 +917,20 @@ pub fn gen_policy_ty_generics(policy_name: &str) -> Option<TokenStream> {
         POLICY_DELAY => Some(quote! {
             cote::DelayPolicy::<'inv, Set, Ser>
         }),
-        _ => None,
+        _ => {
+            let value = policy.unwrap();
+
+            Some(quote! {
+                #value::<'inv, Set, Ser>
+            })
+        }
     }
 }
 
-pub fn gen_ret_policy_ty_generics(policy_name: &str) -> Option<TokenStream> {
+pub fn gen_ret_policy_ty_generics(
+    policy_name: &str,
+    policy: Option<&Value>,
+) -> Option<TokenStream> {
     match policy_name {
         POLICY_PRE => Some(quote! {
             cote::PrePolicy<'inv, Set, Ser>
@@ -929,7 +941,13 @@ pub fn gen_ret_policy_ty_generics(policy_name: &str) -> Option<TokenStream> {
         POLICY_DELAY => Some(quote! {
             cote::DelayPolicy<'inv, Set, Ser>
         }),
-        _ => None,
+        _ => {
+            let value = policy.unwrap();
+
+            Some(quote! {
+                #value<'inv, Set, Ser>
+            })
+        }
     }
 }
 
