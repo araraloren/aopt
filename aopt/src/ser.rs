@@ -30,7 +30,7 @@ pub trait ServicesValExt {
     fn sve_take_val<T: ErasedTy>(&mut self) -> Result<T, Error>;
 }
 
-/// A service can keep any type data, user can get the data inside [`hanlder`](crate::ctx::Invoker) of option.
+/// A service can keep any type data, user can get the data inside [`hanlder`](crate::ctx::InvokeHandler) of option.
 ///
 /// # Examples
 /// ```rust

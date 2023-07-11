@@ -6,16 +6,11 @@ pub struct Cli;
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
-    Cli::parse(Args::from(["app", "--opt-a"].into_iter()))?;
-    // Output:
-    // 
-    // Error:
-    //    0: Parsing arguments `"--opt-a"` failed: None
-    //    1: Can not find option `--opt-a`
-    //
-    // Location:
-    //    src/main.rs:9
-    //
-    // Backtrace omitted.
+    let ret = Cli::parse(Args::from(["app", "--opt-a"].into_iter()));
+    
+    assert!(ret.is_err());
+    if let Some(err) = ret.err() {
+        assert_eq!(err.to_string(), "Parsing arguments `\"--opt-a\"` failed: None");
+    }
     Ok(())
 }

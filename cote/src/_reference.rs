@@ -226,7 +226,7 @@
 //! Options such as `--opt`, in general, it is named flag, the value type of option is always `bool`.
 //! Unlike [`Boolean`](crate::UserStyle::Boolean) pass [`TRUE`](crate::aopt::opt::BOOL_TRUE) to [`parse`](crate::RawValParser::parse),
 //! [`Flag`](crate::UserStyle::Flag) pass [`None`] to [`parse`](crate::RawValParser::parse).
-//! 
+//!
 //! ```rust
 #![doc = include_str!("../examples/25_flag.rs")]
 //! ```

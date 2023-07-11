@@ -1,7 +1,6 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-use super::invoke_callback_opt;
 use super::process_callback_ret;
 use super::process_non_opt;
 use super::process_opt;
@@ -25,6 +24,7 @@ use crate::ctx::Invoker;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::parser::FailManager;
+use crate::prelude::HandlerCollection;
 use crate::prelude::SetExt;
 use crate::proc::Process;
 use crate::set::OptValidator;
@@ -258,15 +258,18 @@ where
     Set: crate::set::Set + OptParser,
 {
     // ignore failure
-    pub fn invoke_opt_callback(
+    pub fn invoke_opt_callback<'a, Inv>(
         &mut self,
         ctx: &mut Ctx,
         set: &mut Set,
-        inv: &mut Invoker<Set, Ser>,
+        inv: &mut Inv,
         ser: &mut Ser,
         manager: &mut FailManager,
         saver: CtxSaver,
-    ) -> Result<(), Error> {
+    ) -> Result<(), Error>
+    where
+        Inv: HandlerCollection<'a, Set, Ser>,
+    {
         let uid = saver.uid;
         let fail = |e: &Error| {
             manager.push(e.clone());
@@ -274,25 +277,24 @@ where
         };
 
         ctx.set_inner_ctx(Some(saver.ctx));
-        if !process_callback_ret(
-            invoke_callback_opt(uid, ctx, set, inv, ser),
-            |_| Ok(()),
-            fail,
-        )? {
+        if !process_callback_ret(inv.invoke_fb(&uid, set, ser, ctx), |_| Ok(()), fail)? {
             set.opt_mut(uid)?.set_matched(false);
         }
         Ok(())
     }
 
-    pub fn save_or_call(
+    pub fn save_or_call<'a, Inv>(
         &mut self,
         ctx: &mut Ctx,
         set: &mut Set,
-        inv: &mut Invoker<Set, Ser>,
+        inv: &mut Inv,
         ser: &mut Ser,
         manager: &mut FailManager,
         saver: CtxSaver,
-    ) -> Result<(), Error> {
+    ) -> Result<(), Error>
+    where
+        Inv: HandlerCollection<'a, Set, Ser>,
+    {
         let name = set.opt(saver.uid)?.name();
 
         if self.no_delay_opt.contains(name) {

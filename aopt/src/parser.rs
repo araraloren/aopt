@@ -26,7 +26,6 @@ pub use self::style::OptGuess;
 pub use self::style::OptStyleManager;
 pub use self::style::UserStyle;
 
-pub(crate) use self::process::invoke_callback_opt;
 pub(crate) use self::process::process_callback_ret;
 pub(crate) use self::process::process_non_opt;
 pub(crate) use self::process::process_opt;
