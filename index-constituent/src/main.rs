@@ -268,11 +268,11 @@ async fn run_command<'a, 'b>(ctx: &SearchCtx<'a, 'b>) -> Result<SpyderIndexData,
 async fn search_keyword<'a, 'b>(ctx: &SearchCtx<'a, 'b>) -> Result<SpyderIndexData, Error> {
     match ctx.get_type_() {
         SearchType::CS => {
-            let csspyder = CSIndex::new(ctx.get_debug(), ctx.get_page_size() as usize)
+            let csspyder = CSIndex::new(ctx.get_debug(), ctx.get_page_size())
                 .map_err(|e| Error::raise_error(format!("Can not init CSIndexSpyder: {:?}", e)))?;
 
             let ret = csspyder
-                .search(ctx.get_arg(), ctx.get_page_number() as usize)
+                .search(ctx.get_arg(), ctx.get_page_number())
                 .await
                 .map_err(|e| {
                     Error::raise_error(format!("Can not search {}: {:?}", ctx.get_arg(), e))
@@ -281,11 +281,11 @@ async fn search_keyword<'a, 'b>(ctx: &SearchCtx<'a, 'b>) -> Result<SpyderIndexDa
             Ok(ret)
         }
         SearchType::CN => {
-            let cnspyder = CNIndex::new(ctx.get_debug(), ctx.get_page_size() as usize)
+            let cnspyder = CNIndex::new(ctx.get_debug(), ctx.get_page_size())
                 .map_err(|e| Error::raise_error(format!("Can not init CSIndexSpyder: {:?}", e)))?;
 
             let ret = cnspyder
-                .search(ctx.get_arg(), ctx.get_page_number() as usize)
+                .search(ctx.get_arg(), ctx.get_page_number())
                 .await
                 .map_err(|e| {
                     Error::raise_error(format!("Can not search {}: {:?}", ctx.get_arg(), e))
@@ -299,11 +299,11 @@ async fn search_keyword<'a, 'b>(ctx: &SearchCtx<'a, 'b>) -> Result<SpyderIndexDa
 async fn display_cons_of<'a, 'b>(ctx: &SearchCtx<'a, 'b>) -> Result<SpyderIndexData, Error> {
     match ctx.get_type_() {
         SearchType::CS => {
-            let csspyder = CSIndex::new(ctx.get_debug(), ctx.get_page_size() as usize)
+            let csspyder = CSIndex::new(ctx.get_debug(), ctx.get_page_size())
                 .map_err(|e| Error::raise_error(format!("Can not init CSIndexSpyder: {:?}", e)))?;
 
             let ret = csspyder
-                .fetch_cons(ctx.get_arg(), ctx.get_page_number() as usize)
+                .fetch_cons(ctx.get_arg(), ctx.get_page_number())
                 .await
                 .map_err(|e| {
                     Error::raise_error(format!("Can not fetch cons {}: {:?}", ctx.get_arg(), e))
@@ -312,11 +312,11 @@ async fn display_cons_of<'a, 'b>(ctx: &SearchCtx<'a, 'b>) -> Result<SpyderIndexD
             Ok(ret)
         }
         SearchType::CN => {
-            let cnspyder = CNIndex::new(ctx.get_debug(), ctx.get_page_size() as usize)
+            let cnspyder = CNIndex::new(ctx.get_debug(), ctx.get_page_size())
                 .map_err(|e| Error::raise_error(format!("Can not init CSIndexSpyder: {:?}", e)))?;
 
             let ret = cnspyder
-                .fetch_cons(ctx.get_arg(), ctx.get_page_number() as usize)
+                .fetch_cons(ctx.get_arg(), ctx.get_page_number())
                 .await
                 .map_err(|e| {
                     Error::raise_error(format!("Can not fetch cons {}: {:?}", ctx.get_arg(), e))

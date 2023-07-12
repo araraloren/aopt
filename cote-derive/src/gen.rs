@@ -161,7 +161,7 @@ impl<'a> Analyzer<'a> {
                 alter_generator = Some(AlterGenerator::new(input)?);
             }
             syn::Data::Enum(DataEnum { ref variants, .. }) => {
-                value_generator = Some(ValueGenerator::new(input, &variants)?);
+                value_generator = Some(ValueGenerator::new(input, variants)?);
                 fetch_generator = Some(FetchGenerator::new(input)?);
                 infer_generator = Some(InferGenerator::new(input)?);
                 alter_generator = Some(AlterGenerator::new(input)?);

@@ -11,13 +11,9 @@ impl Kind for AlterKind {
         let ident: Ident = input.parse()?;
         let option = ident.to_string();
 
-        match option.as_str() {
-            _ => {
-                abort! {
-                    input.span(),
-                    "alter not support any configuration currently"
-                }
-            }
+        abort! {
+            input.span(),
+            "alter not support any configuration currently: {}", option.as_str()
         }
     }
 }

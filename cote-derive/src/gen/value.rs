@@ -21,7 +21,7 @@ impl<'a> ValueGenerator<'a> {
     ) -> syn::Result<Self> {
         let ident = &input.ident;
         let configs = Configs::<ValueKind>::parse_attrs("rawvalparser", &input.attrs);
-        let variants = variants.iter().map(|v| v).collect();
+        let variants = variants.iter().collect();
 
         Ok(Self {
             ident,

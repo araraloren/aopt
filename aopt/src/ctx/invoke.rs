@@ -221,7 +221,7 @@ where
         ctx: &mut Ctx,
     ) -> Result<bool, Error> {
         trace_log!("Invoking callback of {} {:?}", uid, ctx);
-        if let Some(callback) = self.get_handler(&uid) {
+        if let Some(callback) = self.get_handler(uid) {
             return (callback)(set, ser, ctx);
         }
         unreachable!(
@@ -238,9 +238,9 @@ where
         ser: &mut Ser,
         ctx: &mut Ctx,
     ) -> Result<bool, Error> {
-        if let Some(callback) = self.get_handler(&uid) {
+        if let Some(callback) = self.get_handler(uid) {
             trace_log!("Invoking(fb) callback of {} {:?}", uid, ctx);
-            return (callback)(set, ser, ctx);
+            (callback)(set, ser, ctx)
         } else {
             trace_log!("Invoking(fb) handler_fallback of {} {:?}", uid, ctx);
             Invoker::fallback(set, ser, ctx)
