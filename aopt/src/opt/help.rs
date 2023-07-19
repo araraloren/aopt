@@ -16,12 +16,12 @@ impl Help {
         Self { hint, help }
     }
 
-    pub fn with_hint<T: Into<Str>>(mut self, hint: T) -> Self {
+    pub fn with_hint(mut self, hint: impl Into<Str>) -> Self {
         self.hint = hint.into();
         self
     }
 
-    pub fn with_help<T: Into<Str>>(mut self, help: T) -> Self {
+    pub fn with_help(mut self, help: impl Into<Str>) -> Self {
         self.help = help.into();
         self
     }
@@ -34,12 +34,12 @@ impl Help {
         &self.help
     }
 
-    pub fn set_hint<T: Into<Str>>(&mut self, hint: T) -> &mut Self {
+    pub fn set_hint(&mut self, hint: impl Into<Str>) -> &mut Self {
         self.hint = hint.into();
         self
     }
 
-    pub fn set_help<T: Into<Str>>(&mut self, help: T) -> &mut Self {
+    pub fn set_help(&mut self, help: impl Into<Str>) -> &mut Self {
         self.help = help.into();
         self
     }

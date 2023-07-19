@@ -1,7 +1,6 @@
 use std::any::TypeId;
 
 use crate::err::Error;
-use crate::map::ErasedTy;
 use crate::opt::Action;
 use crate::opt::Help;
 use crate::opt::Index;
@@ -103,21 +102,21 @@ pub trait ConfigValue {
 
     fn set_force(&mut self, force: bool) -> &mut Self;
 
-    fn set_ctor<S: Into<Str>>(&mut self, ctor: S) -> &mut Self;
+    fn set_ctor(&mut self, ctor: impl Into<Str>) -> &mut Self;
 
-    fn set_name<S: Into<Str>>(&mut self, name: S) -> &mut Self;
+    fn set_name(&mut self, name: impl Into<Str>) -> &mut Self;
 
-    fn set_hint<S: Into<Str>>(&mut self, hint: S) -> &mut Self;
+    fn set_hint(&mut self, hint: impl Into<Str>) -> &mut Self;
 
-    fn set_help<S: Into<Str>>(&mut self, help: S) -> &mut Self;
+    fn set_help(&mut self, help: impl Into<Str>) -> &mut Self;
 
     fn set_style(&mut self, styles: Vec<Style>) -> &mut Self;
 
     fn clr_alias(&mut self) -> &mut Self;
 
-    fn add_alias<S: Into<Str>>(&mut self, alias: S) -> &mut Self;
+    fn add_alias(&mut self, alias: impl Into<Str>) -> &mut Self;
 
-    fn rem_alias<S: Into<Str>>(&mut self, alias: S) -> &mut Self;
+    fn rem_alias(&mut self, alias: impl Into<Str>) -> &mut Self;
 
     fn set_type<T: 'static>(&mut self) -> &mut Self;
 
@@ -175,32 +174,32 @@ impl OptConfig {
         self
     }
 
-    pub fn with_ctor<S: Into<Str>>(mut self, ctor: S) -> Self {
+    pub fn with_ctor(mut self, ctor: impl Into<Str>) -> Self {
         self.ctor = Some(ctor.into());
         self
     }
 
-    pub fn with_name<S: Into<Str>>(mut self, name: S) -> Self {
+    pub fn with_name(mut self, name: impl Into<Str>) -> Self {
         self.name = Some(name.into());
         self
     }
 
-    pub fn with_type<T: ErasedTy>(mut self) -> Self {
+    pub fn with_type<T: 'static>(mut self) -> Self {
         self.r#type = Some(typeid::<T>());
         self
     }
 
-    pub fn with_hint<S: Into<Str>>(mut self, hint: S) -> Self {
+    pub fn with_hint(mut self, hint: impl Into<Str>) -> Self {
         self.help.set_hint(hint.into());
         self
     }
 
-    pub fn with_help<S: Into<Str>>(mut self, help: S) -> Self {
+    pub fn with_help(mut self, help: impl Into<Str>) -> Self {
         self.help.set_help(help.into());
         self
     }
 
-    pub fn with_alias<S: Into<Str>>(mut self, alias: Vec<S>) -> Self {
+    pub fn with_alias(mut self, alias: Vec<impl Into<Str>>) -> Self {
         self.alias = alias.into_iter().map(|v| v.into()).collect();
         self
     }
@@ -498,22 +497,22 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn set_ctor<S: Into<Str>>(&mut self, ctor: S) -> &mut Self {
+    fn set_ctor(&mut self, ctor: impl Into<Str>) -> &mut Self {
         self.ctor = Some(ctor.into());
         self
     }
 
-    fn set_name<S: Into<Str>>(&mut self, name: S) -> &mut Self {
+    fn set_name(&mut self, name: impl Into<Str>) -> &mut Self {
         self.name = Some(name.into());
         self
     }
 
-    fn set_hint<S: Into<Str>>(&mut self, hint: S) -> &mut Self {
+    fn set_hint(&mut self, hint: impl Into<Str>) -> &mut Self {
         self.help.set_hint(hint);
         self
     }
 
-    fn set_help<S: Into<Str>>(&mut self, help: S) -> &mut Self {
+    fn set_help(&mut self, help: impl Into<Str>) -> &mut Self {
         self.help.set_help(help);
         self
     }
@@ -528,12 +527,12 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn add_alias<S: Into<Str>>(&mut self, alias: S) -> &mut Self {
+    fn add_alias(&mut self, alias: impl Into<Str>) -> &mut Self {
         self.alias.push(alias.into());
         self
     }
 
-    fn rem_alias<S: Into<Str>>(&mut self, alias: S) -> &mut Self {
+    fn rem_alias(&mut self, alias: impl Into<Str>) -> &mut Self {
         let alias = alias.into();
 
         for (index, value) in self.alias.iter().enumerate() {

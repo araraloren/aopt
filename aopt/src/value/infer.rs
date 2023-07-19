@@ -30,7 +30,7 @@ use super::ValStorer;
 
 /// Implement this if you want the type can used for create option.
 pub trait Infer {
-    type Val: ErasedTy + 'static;
+    type Val: ErasedTy;
 
     fn infer_act() -> Action {
         Action::App

@@ -14,16 +14,22 @@ use super::Opt;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub enum Action {
+    /// Set and replace current value of [`AnyValue`]
     Set,
 
+    /// Append value into [`AnyValue`]
     App,
 
+    /// Pop value from [`AnyValue`]
     Pop,
 
+    /// Saving the count of arguments into [`AnyValue`]
     Cnt,
 
+    /// Clear the value of [`AnyValue`]
     Clr,
 
+    /// Do nothing
     #[default]
     Null,
 }

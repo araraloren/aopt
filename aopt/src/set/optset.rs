@@ -1,3 +1,4 @@
+use std::any::type_name;
 use std::ffi::OsString;
 use std::fmt::Debug;
 
@@ -172,6 +173,40 @@ where
     }
 }
 
+macro_rules! add_interface {
+    ($name:ident, $forward_to:ident, $ret:ty) => {
+        pub fn $name(&self, opt: impl Into<Str>) -> Result<$ret, Error> {
+            self.$forward_to(opt, |f| {
+                Self::fill_type(f);
+            })
+        }
+    };
+    (mut $name:ident, $forward_to:ident, $ret:ty) => {
+        pub fn $name(&mut self, opt: impl Into<Str>) -> Result<$ret, Error> {
+            self.$forward_to(opt, |f| {
+                Self::fill_type(f);
+            })
+        }
+    };
+}
+
+macro_rules! add_interface_i {
+    ($name:ident, $forward_to:ident, $ret:ty) => {
+        pub fn $name<U: 'static>(&self, opt: impl Into<Str>) -> Result<$ret, Error> {
+            self.$forward_to(opt, |f| {
+                f.set_type::<U>();
+            })
+        }
+    };
+    (mut $name:ident, $forward_to:ident, $ret:ty) => {
+        pub fn $name<U: 'static>(&mut self, opt: impl Into<Str>) -> Result<$ret, Error> {
+            self.$forward_to(opt, |f| {
+                f.set_type::<U>();
+            })
+        }
+    };
+}
+
 impl<P, C, V> OptSet<P, C, V>
 where
     C::Opt: Opt,
@@ -218,7 +253,22 @@ where
         ))
     }
 
-    fn infer_fill_type<Cfg>(cfg: &mut Cfg) -> &mut Cfg
+    /// Add an option into current [`OptSet`].
+    ///
+    /// It parsing the given option string `S` using inner [`OptParser`], return an [`SetCommit`].
+    /// For option string, reference [`StrParser`](crate::opt::StrParser).
+    pub fn add_opt_i<U>(&mut self, opt_str: impl Into<Str>) -> Result<SetCommit<'_, Self, U>, Error>
+    where
+        U: Infer + 'static,
+        U::Val: RawValParser,
+    {
+        let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
+
+        U::infer_fill_info(&mut info, true);
+        Ok(SetCommit::new(self, info))
+    }
+
+    fn fill_type<Cfg>(cfg: &mut Cfg) -> &mut Cfg
     where
         Cfg: ConfigValue,
     {
@@ -245,78 +295,113 @@ where
         }
     }
 
-    /// Add an option into current [`OptSet`].
-    ///
-    /// It parsing the given option string `S` using inner [`OptParser`], return an [`SetCommit`].
-    /// For option string, reference [`StrParser`](crate::opt::StrParser).
-    pub fn add_opt_i<U>(&mut self, opt_str: impl Into<Str>) -> Result<SetCommit<'_, Self, U>, Error>
-    where
-        U: Infer + 'static,
-        U::Val: RawValParser,
-    {
-        let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
+    add_interface!(filter, filter_raw, Filter<'_, Self>);
 
-        U::infer_fill_info(&mut info, true);
-        Ok(SetCommit::new(self, info))
-    }
+    add_interface_i!(filter_i, filter_raw, Filter<'_, Self>);
 
     /// Filter the option by configuration.
     ///
     /// It parsing the given option string `S` using inner [`OptParser`], return an [`Filter`].
     /// For option string, reference [`StrParser`](crate::opt::StrParser).
-    pub fn filter<S: Into<Str>>(&self, opt_str: S) -> Result<Filter<'_, Self>, Error> {
-        let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
+    pub fn filter_raw(
+        &self,
+        opt: impl Into<Str>,
+        mut func: impl FnMut(&mut C::Config),
+    ) -> Result<Filter<'_, Self>, Error> {
+        let mut info = <C::Config as Config>::new(self.parser(), opt.into())?;
 
-        Self::infer_fill_type(&mut info);
+        func(&mut info);
         Ok(Filter::new(self, info))
     }
 
-    /// Filter the option, return the reference of first matched [`Opt`].
-    pub fn find<S: Into<Str>>(&self, opt_str: S) -> Result<Option<&C::Opt>, Error> {
-        let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
+    add_interface!(find, find_raw, Option<&C::Opt>);
 
-        Self::infer_fill_type(&mut info);
+    add_interface_i!(find_i, find_raw, Option<&C::Opt>);
+
+    /// Filter the option, return the reference of first matched [`Opt`].
+    pub fn find_raw(
+        &self,
+        opt: impl Into<Str>,
+        mut func: impl FnMut(&mut C::Config),
+    ) -> Result<Option<&C::Opt>, Error> {
+        let mut info = <C::Config as Config>::new(self.parser(), opt.into())?;
+
+        func(&mut info);
         Ok(self.iter().find(|opt| info.mat_opt(*opt)))
     }
 
-    /// Filter the option, return an iterator of reference of [`Opt`]s.
-    pub fn find_all<S: Into<Str>>(
-        &self,
-        opt_str: S,
-    ) -> Result<impl Iterator<Item = &C::Opt>, Error> {
-        let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
+    add_interface!(find_all, find_all_raw, impl Iterator<Item = &C::Opt>);
 
-        Self::infer_fill_type(&mut info);
+    add_interface_i!(find_all_i, find_all_raw, impl Iterator<Item = &C::Opt>);
+
+    /// Filter the option, return an iterator of reference of [`Opt`]s.
+    pub fn find_all_raw(
+        &self,
+        opt: impl Into<Str>,
+        mut func: impl FnMut(&mut C::Config),
+    ) -> Result<impl Iterator<Item = &C::Opt>, Error> {
+        let mut info = <C::Config as Config>::new(self.parser(), opt.into())?;
+
+        func(&mut info);
         Ok(self.iter().filter(move |opt| info.mat_opt(*opt)))
     }
+
+    add_interface!(mut filter_mut, filter_mut_raw, FilterMut<'_, Self>);
+
+    add_interface_i!(mut filter_mut_i, filter_mut_raw, FilterMut<'_, Self>);
 
     /// Filter the option by configuration.
     ///
     /// It parsing the given option string `S` using inner [`OptParser`], return an [`FilterMut`].
     /// For option string, reference [`StrParser`](crate::opt::StrParser).
-    pub fn filter_mut<S: Into<Str>>(&mut self, opt_str: S) -> Result<FilterMut<'_, Self>, Error> {
-        let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
+    pub fn filter_mut_raw(
+        &mut self,
+        opt: impl Into<Str>,
+        mut func: impl FnMut(&mut C::Config),
+    ) -> Result<FilterMut<'_, Self>, Error> {
+        let mut info = <C::Config as Config>::new(self.parser(), opt.into())?;
 
-        Self::infer_fill_type(&mut info);
+        func(&mut info);
         Ok(FilterMut::new(self, info))
     }
 
-    /// Filter the option, return the mutable reference of first matched [`Opt`].
-    pub fn find_mut<S: Into<Str>>(&mut self, opt_str: S) -> Result<Option<&mut C::Opt>, Error> {
-        let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
+    add_interface!(mut find_mut, find_mut_raw, Option<&mut C::Opt>);
 
-        Self::infer_fill_type(&mut info);
+    add_interface_i!(mut find_mut_i, find_mut_raw, Option<&mut C::Opt>);
+
+    /// Filter the option, return the mutable reference of first matched [`Opt`].
+    pub fn find_mut_raw(
+        &mut self,
+        opt: impl Into<Str>,
+        mut func: impl FnMut(&mut C::Config),
+    ) -> Result<Option<&mut C::Opt>, Error> {
+        let mut info = <C::Config as Config>::new(self.parser(), opt.into())?;
+
+        func(&mut info);
         Ok(self.iter_mut().find(|opt| info.mat_opt(*opt)))
     }
 
-    /// Filter the option, return an iterator of mutable reference of [`Opt`]s.
-    pub fn find_all_mut<S: Into<Str>>(
-        &mut self,
-        opt_str: S,
-    ) -> Result<impl Iterator<Item = &mut C::Opt>, Error> {
-        let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
+    add_interface!(
+        mut find_all_mut,
+        find_all_mut_raw,
+        impl Iterator<Item = &mut C::Opt>
+    );
 
-        Self::infer_fill_type(&mut info);
+    add_interface_i!(
+        mut find_all_mut_i,
+        find_all_mut_raw,
+        impl Iterator<Item = &mut C::Opt>
+    );
+
+    /// Filter the option, return an iterator of mutable reference of [`Opt`]s.
+    pub fn find_all_mut_raw(
+        &mut self,
+        opt: impl Into<Str>,
+        mut func: impl FnMut(&mut C::Config),
+    ) -> Result<impl Iterator<Item = &mut C::Opt>, Error> {
+        let mut info = <C::Config as Config>::new(self.parser(), opt.into())?;
+
+        func(&mut info);
         Ok(self.iter_mut().filter(move |opt| info.mat_opt(*opt)))
     }
 }
@@ -330,7 +415,7 @@ where
     P::Output: Information,
     C::Config: Config + ConfigValue + Default,
 {
-    fn find_uid<S: Into<Str>>(&self, opt: S) -> Result<Uid, Error> {
+    fn find_uid(&self, opt: impl Into<Str>) -> Result<Uid, Error> {
         let opt: Str = opt.into();
 
         self.find(opt.clone())?
@@ -338,18 +423,59 @@ where
             .ok_or_else(|| raise_error!("Can not find option `{}` in option set", opt))
     }
 
-    fn find_opt<S: Into<Str>>(&self, opt: S) -> Result<&SetOpt<Self>, Error> {
+    fn find_uid_i<U: 'static>(&self, opt: impl Into<Str>) -> Result<Uid, Error> {
+        let opt: Str = opt.into();
+
+        self.find_i::<U>(opt.clone())?
+            .map(|v| v.uid())
+            .ok_or_else(|| {
+                raise_error!(
+                    "Can not find option(with type {:?}) `{}` in option set",
+                    type_name::<U>(),
+                    opt
+                )
+            })
+    }
+
+    fn find_opt(&self, opt: impl Into<Str>) -> Result<&SetOpt<Self>, Error> {
         let opt: Str = opt.into();
 
         self.find(opt.clone())?
             .ok_or_else(|| raise_error!("Can not find option(ref) `{}` in option set", opt))
     }
 
-    fn find_opt_mut<S: Into<Str>>(&mut self, opt: S) -> Result<&mut SetOpt<Self>, Error> {
+    fn find_opt_i<U: 'static>(&self, opt: impl Into<Str>) -> Result<&SetOpt<Self>, Error> {
+        let opt: Str = opt.into();
+
+        self.find_i::<U>(opt.clone())?.ok_or_else(|| {
+            raise_error!(
+                "Can not find option(ref & with type {:?}) `{}` in option set",
+                type_name::<U>(),
+                opt
+            )
+        })
+    }
+
+    fn find_opt_mut(&mut self, opt: impl Into<Str>) -> Result<&mut SetOpt<Self>, Error> {
         let opt: Str = opt.into();
 
         self.find_mut(opt.clone())?
             .ok_or_else(|| raise_error!("Can not find option(mut) `{}` in option set", opt))
+    }
+
+    fn find_opt_mut_i<U: 'static>(
+        &mut self,
+        opt: impl Into<Str>,
+    ) -> Result<&mut SetOpt<Self>, Error> {
+        let opt: Str = opt.into();
+
+        self.find_mut_i::<U>(opt.clone())?.ok_or_else(|| {
+            raise_error!(
+                "Can not find option(mut & with type {:?}) `{}` in option set",
+                type_name::<U>(),
+                opt
+            )
+        })
     }
 }
 
