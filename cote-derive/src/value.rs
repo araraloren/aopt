@@ -10,6 +10,7 @@ use syn::punctuated::Punctuated;
 use syn::token::Paren;
 use syn::Expr;
 use syn::Lit;
+use syn::LitInt;
 use syn::Token;
 
 #[derive(Debug, Clone)]
@@ -62,7 +63,10 @@ impl Parse for Value {
         if input.peek(Token![=]) {
             let assign_token = input.parse::<Token![=]>()?;
 
-            if input.peek(Lit) {
+            // not seems like a range
+            if input.peek(Lit)
+                && !(input.peek(LitInt) && input.peek2(Token![.]) && input.peek3(Token![.]))
+            {
                 Ok(Self::Literal(input.parse()?))
             } else {
                 match input.parse::<Expr>() {

@@ -216,7 +216,7 @@ impl<'a> CoteGenerator<'a> {
         let for_strict = self.configs.find_cfg(CoteKind::Strict).map(|v| {
             let value = v.value();
             quote! {
-                cote::PolicySettings::set_strict(&mut policy, #value);
+                cote::PolicySettings::set_strict(policy, #value);
             }
         });
 

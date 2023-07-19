@@ -301,6 +301,8 @@ impl<'a> SubGenerator<'a> {
                     let mut policy = #policy_ty::default();
                     let mut helper = <#without_option_ty>::into_internal::<'_, 'inv, Set, Ser, #policy_ty>();
 
+                    // apply policy setting here, policy is create from default
+                    <#without_option_ty>::apply_policy_settings(&mut policy);
                     helper.set_inner_parser(sub_parser);
                     helper.set_inner_policy(&mut policy);
                     helper.set_rctx(next_ctx)?;

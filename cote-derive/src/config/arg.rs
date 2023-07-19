@@ -35,6 +35,12 @@ pub enum ArgKind {
 
     NoDelay,
 
+    Fetch,
+
+    Append,
+
+    Count,
+
     MethodCall(String),
 }
 
@@ -61,6 +67,9 @@ impl Kind for ArgKind {
                 "fallback" => (Self::Fallback, true),
                 "then" => (Self::Then, true),
                 "nodelay" => (Self::NoDelay, false),
+                "fetch" => (Self::Fetch, true),
+                "append" => (Self::Append, false),
+                "count" => (Self::Count, false),
                 method => (Self::MethodCall(method.to_owned()), true),
             })
         } else {

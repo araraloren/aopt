@@ -30,36 +30,7 @@ impl<'a> AlterGenerator<'a> {
         let (impl_, type_, where_) = self.generics.split_for_impl();
 
         Ok(quote! {
-            impl #impl_ cote::Alter for #ident #type_ #where_ {
-                fn alter(hint: Hint, has_force: bool, cfg: &mut impl cote::ConfigValue) {
-                    match hint {
-                        cote::Hint::Opt => {
-                            cfg.set_action(cote::Action::Set);
-                            if !has_force {
-                                cfg.set_force(false);
-                            }
-                        }
-                        cote::Hint::Vec => {
-                            cfg.set_action(cote::Action::App);
-                            if !has_force {
-                                cfg.set_force(true);
-                            }
-                        }
-                        cote::Hint::OptVec => {
-                            cfg.set_action(cote::Action::App);
-                            if !has_force {
-                                cfg.set_force(false);
-                            }
-                        }
-                        cote::Hint::Null => {
-                            cfg.set_action(cote::Action::Set);
-                            if !has_force {
-                                cfg.set_force(true);
-                            }
-                        }
-                    }
-                }
-            }
+            impl #impl_ cote::Alter for #ident #type_ #where_ { }
         })
     }
 }

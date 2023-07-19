@@ -623,11 +623,13 @@ impl<'a> Analyzer<'a> {
 
             pub fn into_policy_with<'inv, Set, Ser>() -> #major_policy_ty {
                 let mut policy: #major_policy_ty = Default::default();
-                let style_manager = policy.style_manager_mut();
-
-                #policy_settings
-
+                Self::apply_policy_settings(&mut policy);
                 policy
+            }
+
+            pub fn apply_policy_settings(policy: &mut impl cote::PolicySettings) {
+                let style_manager = policy.style_manager_mut();
+                #policy_settings
             }
 
             pub fn into_internal<'a, 'inv, Set, Ser, P>() -> #major_internal_ty<'a, cote::Parser<'inv, Set, Ser>, P>

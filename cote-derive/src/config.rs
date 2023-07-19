@@ -89,7 +89,7 @@ impl<T: Kind> Configs<T> {
                 .unwrap_or_else(|e| {
                     abort! {
                         attr,
-                        "can not parsing `{}` attributes: {:?}", e, name,
+                        "can not parsing `{}` attributes: {:?}", name, e
                     }
                 })
         });
