@@ -1,5 +1,6 @@
 use std::iter::FromIterator;
 
+use proc_macro2::Span;
 use proc_macro_error::abort;
 use quote::quote;
 use quote::ToTokens;
@@ -9,6 +10,7 @@ use syn::punctuated::Punctuated;
 use syn::token::Paren;
 use syn::Expr;
 use syn::Lit;
+use syn::LitInt;
 use syn::Token;
 
 #[derive(Debug, Clone)]
@@ -20,6 +22,20 @@ pub enum Value {
     Call(Vec<Expr>),
 
     Null,
+}
+
+impl Value {
+    pub fn split_call_args(self, span: Span) -> syn::Result<(Expr, Self)> {
+        if let Value::Call(mut args) = self {
+            if let Some(variable) = args.pop() {
+                return Ok((variable, Self::Call(args)));
+            }
+        }
+        abort! {
+            span,
+            "You must specify the context variable name for raw method call"
+        }
+    }
 }
 
 impl ToTokens for Value {
@@ -47,7 +63,10 @@ impl Parse for Value {
         if input.peek(Token![=]) {
             let assign_token = input.parse::<Token![=]>()?;
 
-            if input.peek(Lit) {
+            // not seems like a range
+            if input.peek(Lit)
+                && !(input.peek(LitInt) && input.peek2(Token![.]) && input.peek3(Token![.]))
+            {
                 Ok(Self::Literal(input.parse()?))
             } else {
                 match input.parse::<Expr>() {

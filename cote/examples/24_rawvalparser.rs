@@ -1,4 +1,5 @@
-use cote::{aopt::value::raw2str, prelude::*};
+use cote::*;
+
 #[derive(Debug, Cote, PartialEq, Eq)]
 #[cote(help, aborthelp)]
 pub struct Cli {
@@ -12,21 +13,10 @@ pub struct Cli {
     way: Way,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, CoteOpt)]
+#[fetch(inner = i32, map = Speed)]
+#[infer(val = i32)]
 pub struct Speed(i32);
-
-impl Infer for Speed {
-    type Val = i32;
-}
-
-impl<'a> InferValueMut<'a> for Speed {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
-    where
-        Self: Sized,
-    {
-        Ok(Speed(set.take_val(name)?))
-    }
-}
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Direction {
@@ -40,20 +30,15 @@ impl Infer for Direction {
     type Val = Direction;
 }
 
-impl<'a> InferValueMut<'a> for Direction {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
-    where
-        Self: Sized,
-    {
-        Ok(set.take_val(name)?)
-    }
-}
+impl Fetch<'_> for Direction {}
 
-impl RawValParser for Direction {
-    type Error = aopt::Error;
+impl Alter for Direction {}
 
-    fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error> {
-        let name = raw2str(raw)?.to_lowercase();
+impl cote::RawValParser for Direction {
+    type Error = cote::aopt::Error;
+
+    fn parse(raw: Option<&cote::RawVal>, ctx: &cote::Ctx) -> Result<Self, Self::Error> {
+        let name = cote::raw2str(raw)?.to_lowercase();
         let uid = ctx.uid()?;
 
         match name.as_str() {
@@ -61,38 +46,20 @@ impl RawValParser for Direction {
             "down" => Ok(Direction::Down),
             "left" => Ok(Direction::Left),
             "right" => Ok(Direction::Right),
-            _ => Err(aopt::raise_failure!("Unknow value for Direction: {}", name).with_uid(uid)),
+            _ => Err(
+                raise_failure!("Unknow value for enum type `{0}`: {1}", "Direction", name)
+                    .with_uid(uid),
+            ),
         }
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, CoteVal, CoteOpt)]
+#[coteval(igcase)]
 pub enum Way {
     Walk,
     Bike,
     Roll,
-}
-
-impl Infer for Way {
-    type Val = Way;
-}
-
-cote::cote_value_mut_impl!(Way);
-
-impl RawValParser for Way {
-    type Error = aopt::Error;
-
-    fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error> {
-        let name = raw2str(raw)?.to_lowercase();
-        let uid = ctx.uid()?;
-
-        match name.as_str() {
-            "walk" => Ok(Way::Walk),
-            "bike" => Ok(Way::Bike),
-            "roll" => Ok(Way::Roll),
-            _ => Err(aopt::raise_failure!("Unknow value for Way: {}", name).with_uid(uid)),
-        }
-    }
 }
 
 fn main() -> color_eyre::Result<()> {

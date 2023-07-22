@@ -1,70 +1,45 @@
 use crate::ctx::Ctx;
 use crate::ctx::InnerCtx;
-use crate::ctx::Invoker;
 use crate::opt::Opt;
 use crate::parser::CtxSaver;
+use crate::prelude::HandlerCollection;
 use crate::proc::Match;
 use crate::proc::NOAProcess;
 use crate::proc::OptProcess;
 use crate::proc::Process;
 use crate::set::SetOpt;
-use crate::trace_log;
 use crate::Error;
 use crate::Uid;
 
 use super::FailManager;
 
-pub struct ProcessCtx<'a, 'b, Set, Ser> {
+pub struct ProcessCtx<'a, Set, Ser, Inv> {
     pub idx: usize,
 
     pub tot: usize,
 
-    pub ctx: &'b mut Ctx,
+    pub ctx: &'a mut Ctx,
 
-    pub set: &'b mut Set,
+    pub set: &'a mut Set,
 
-    pub inv: &'b mut Invoker<'a, Set, Ser>,
+    pub inv: &'a mut Inv,
 
-    pub ser: &'b mut Ser,
-}
-
-/// Invoke the callback of option, map failure to false
-pub fn invoke_callback_opt<Set, Ser>(
-    uid: Uid,
-    ctx: &mut Ctx,
-    set: &mut Set,
-    inv: &mut Invoker<Set, Ser>,
-    ser: &mut Ser,
-) -> Result<bool, Error>
-where
-    SetOpt<Set>: Opt,
-    Set: crate::set::Set,
-{
-    match inv.has(uid) {
-        true => {
-            trace_log!("Invoke callback of {}", uid);
-            inv.invoke(set, ser, ctx)
-        }
-        false => {
-            trace_log!("Invoke default callback of {}", uid);
-            inv.invoke_default(set, ser, ctx)
-        }
-    }
+    pub ser: &'a mut Ser,
 }
 
 pub fn process_callback_ret(
     ret: Result<bool, Error>,
-    mut func_ret: impl FnMut(bool) -> Result<(), Error>,
-    mut func_fail: impl FnMut(&Error) -> Result<(), Error>,
+    mut when_ret: impl FnMut(bool) -> Result<(), Error>,
+    mut when_fail: impl FnMut(&Error) -> Result<(), Error>,
 ) -> Result<bool, Error> {
     match ret {
         Ok(ret) => {
-            (func_ret)(ret)?;
+            (when_ret)(ret)?;
             Ok(ret)
         }
         Err(e) => {
             if e.is_failure() {
-                (func_fail)(&e)?;
+                (when_fail)(&e)?;
                 Ok(false)
             } else {
                 Err(e)
@@ -73,7 +48,7 @@ pub fn process_callback_ret(
     }
 }
 
-pub fn process_opt<Set, Ser>(
+pub fn process_opt<'a, Set, Ser, Inv>(
     ProcessCtx {
         idx,
         tot,
@@ -81,7 +56,7 @@ pub fn process_opt<Set, Ser>(
         set,
         inv,
         ser,
-    }: ProcessCtx<Set, Ser>,
+    }: ProcessCtx<Set, Ser, Inv>,
     proc: &mut OptProcess<Set>,
     manager: &mut FailManager,
     invoke: bool,
@@ -89,6 +64,7 @@ pub fn process_opt<Set, Ser>(
 where
     SetOpt<Set>: Opt,
     Set: crate::set::Set,
+    Inv: HandlerCollection<'a, Set, Ser>,
 {
     // copy the uid of option, avoid borrow the set
     let keys: Vec<Uid> = set.keys();
@@ -134,11 +110,7 @@ where
 
             ctx.set_inner_ctx(Some(saver.ctx));
             // undo the process if option callback return None
-            if !process_callback_ret(
-                invoke_callback_opt(uid, ctx, set, inv, ser),
-                |_| Ok(()),
-                fail,
-            )? {
+            if !process_callback_ret(inv.invoke_fb(&uid, set, ser, ctx), |_| Ok(()), fail)? {
                 proc.undo(set)?;
                 break;
             }
@@ -151,7 +123,7 @@ where
     }
 }
 
-pub fn process_non_opt<Set, Ser>(
+pub fn process_non_opt<'a, Set, Ser, Inv>(
     ProcessCtx {
         idx,
         tot,
@@ -159,13 +131,14 @@ pub fn process_non_opt<Set, Ser>(
         set,
         inv,
         ser,
-    }: ProcessCtx<Set, Ser>,
+    }: ProcessCtx<Set, Ser, Inv>,
     proc: &mut NOAProcess<Set>,
     manager: &mut FailManager,
 ) -> Result<Vec<CtxSaver>, Error>
 where
     SetOpt<Set>: Opt,
     Set: crate::set::Set,
+    Inv: HandlerCollection<'a, Set, Ser>,
 {
     // copy the uid of option, avoid borrow the set
     let keys: Vec<Uid> = set.keys().to_vec();
@@ -191,11 +164,8 @@ where
                             .with_uid(uid), // current uid == uid in matcher
                     ));
 
-                    if !process_callback_ret(
-                        invoke_callback_opt(uid, ctx, set, inv, ser),
-                        |_| Ok(()),
-                        fail,
-                    )? {
+                    if !process_callback_ret(inv.invoke_fb(&uid, set, ser, ctx), |_| Ok(()), fail)?
+                    {
                         proc.undo(set)?;
                     }
                     proc.reset();

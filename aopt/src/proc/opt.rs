@@ -302,7 +302,8 @@ where
         if let Some(opt) = set.get_mut(uid) {
             let style_check = opt.mat_style(Style::Argument)
                 || opt.mat_style(Style::Boolean)
-                || opt.mat_style(Style::Combined);
+                || opt.mat_style(Style::Combined)
+                || opt.mat_style(Style::Flag);
 
             if style_check {
                 crate::trace_log!(

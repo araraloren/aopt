@@ -1,4 +1,4 @@
-use cote::prelude::*;
+use cote::*;
 
 #[derive(Debug, Cote, PartialEq, Eq)]
 pub struct Cli {
@@ -17,7 +17,7 @@ pub struct Cli {
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
-    let app = Cli::into_app()?;
+    let app = Cli::into_parser()?;
 
     assert_eq!(app["foo"].name(), "foo");
     assert_eq!(app["bar"].name(), "bar");

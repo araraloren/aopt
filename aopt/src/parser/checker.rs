@@ -79,13 +79,15 @@ where
 
     /// Call the [`valid`](crate::opt::Opt::valid) check the
     /// options([`Argument`](crate::opt::Style::Argument),
-    /// [`Boolean`](crate::opt::Style::Boolean), [`Combined`](crate::opt::Style::Combined))
+    /// [`Boolean`](crate::opt::Style::Boolean), [`Combined`](crate::opt::Style::Combined)),
+    /// [`Flag`](crate::opt::Style::Flag)
     fn opt_check(&self, set: &mut S) -> Result<bool, Error> {
         trace_log!("Opt Check, call valid on all Opt ...");
         for opt in set.iter().filter(|opt| {
             opt.mat_style(Style::Argument)
                 || opt.mat_style(Style::Boolean)
                 || opt.mat_style(Style::Combined)
+                || opt.mat_style(Style::Flag)
         }) {
             if !opt.valid() {
                 return Err(Error::sp_opt_force_require(opt.hint()).with_uid(opt.uid()));

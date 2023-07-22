@@ -2,7 +2,7 @@ mod spyder;
 
 use aopt::Error;
 use cote::aopt::raise_failure;
-use cote::prelude::*;
+use cote::*;
 use spyder::cnindex::CNIndex;
 use spyder::csindex::CSIndex;
 use spyder::Spyder;
@@ -28,7 +28,7 @@ pub struct Stock {
     id_only: bool,
 
     /// Reverse the order of results
-    #[arg(name = "--/reverse", alias = "-/r", value = true)]
+    #[arg(name = "--/reverse", alias = "-/r")]
     reverse: bool,
 
     /// Set the search type
@@ -67,8 +67,8 @@ impl Infer for SearchType {
     }
 }
 
-impl<'a> InferValueMut<'a> for SearchType {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
+impl<'a> Fetch<'a> for SearchType {
+    fn fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
     where
         Self: ErasedTy + Sized,
     {
@@ -80,6 +80,8 @@ impl<'a> InferValueMut<'a> for SearchType {
         }
     }
 }
+
+impl_alter!(SearchType);
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
@@ -266,11 +268,11 @@ async fn run_command<'a, 'b>(ctx: &SearchCtx<'a, 'b>) -> Result<SpyderIndexData,
 async fn search_keyword<'a, 'b>(ctx: &SearchCtx<'a, 'b>) -> Result<SpyderIndexData, Error> {
     match ctx.get_type_() {
         SearchType::CS => {
-            let csspyder = CSIndex::new(ctx.get_debug(), ctx.get_page_size() as usize)
+            let csspyder = CSIndex::new(ctx.get_debug(), ctx.get_page_size())
                 .map_err(|e| Error::raise_error(format!("Can not init CSIndexSpyder: {:?}", e)))?;
 
             let ret = csspyder
-                .search(ctx.get_arg(), ctx.get_page_number() as usize)
+                .search(ctx.get_arg(), ctx.get_page_number())
                 .await
                 .map_err(|e| {
                     Error::raise_error(format!("Can not search {}: {:?}", ctx.get_arg(), e))
@@ -279,11 +281,11 @@ async fn search_keyword<'a, 'b>(ctx: &SearchCtx<'a, 'b>) -> Result<SpyderIndexDa
             Ok(ret)
         }
         SearchType::CN => {
-            let cnspyder = CNIndex::new(ctx.get_debug(), ctx.get_page_size() as usize)
+            let cnspyder = CNIndex::new(ctx.get_debug(), ctx.get_page_size())
                 .map_err(|e| Error::raise_error(format!("Can not init CSIndexSpyder: {:?}", e)))?;
 
             let ret = cnspyder
-                .search(ctx.get_arg(), ctx.get_page_number() as usize)
+                .search(ctx.get_arg(), ctx.get_page_number())
                 .await
                 .map_err(|e| {
                     Error::raise_error(format!("Can not search {}: {:?}", ctx.get_arg(), e))
@@ -297,11 +299,11 @@ async fn search_keyword<'a, 'b>(ctx: &SearchCtx<'a, 'b>) -> Result<SpyderIndexDa
 async fn display_cons_of<'a, 'b>(ctx: &SearchCtx<'a, 'b>) -> Result<SpyderIndexData, Error> {
     match ctx.get_type_() {
         SearchType::CS => {
-            let csspyder = CSIndex::new(ctx.get_debug(), ctx.get_page_size() as usize)
+            let csspyder = CSIndex::new(ctx.get_debug(), ctx.get_page_size())
                 .map_err(|e| Error::raise_error(format!("Can not init CSIndexSpyder: {:?}", e)))?;
 
             let ret = csspyder
-                .fetch_cons(ctx.get_arg(), ctx.get_page_number() as usize)
+                .fetch_cons(ctx.get_arg(), ctx.get_page_number())
                 .await
                 .map_err(|e| {
                     Error::raise_error(format!("Can not fetch cons {}: {:?}", ctx.get_arg(), e))
@@ -310,11 +312,11 @@ async fn display_cons_of<'a, 'b>(ctx: &SearchCtx<'a, 'b>) -> Result<SpyderIndexD
             Ok(ret)
         }
         SearchType::CN => {
-            let cnspyder = CNIndex::new(ctx.get_debug(), ctx.get_page_size() as usize)
+            let cnspyder = CNIndex::new(ctx.get_debug(), ctx.get_page_size())
                 .map_err(|e| Error::raise_error(format!("Can not init CSIndexSpyder: {:?}", e)))?;
 
             let ret = cnspyder
-                .fetch_cons(ctx.get_arg(), ctx.get_page_number() as usize)
+                .fetch_cons(ctx.get_arg(), ctx.get_page_number())
                 .await
                 .map_err(|e| {
                     Error::raise_error(format!("Can not fetch cons {}: {:?}", ctx.get_arg(), e))

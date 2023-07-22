@@ -30,7 +30,7 @@ use super::ValStorer;
 
 /// Implement this if you want the type can used for create option.
 pub trait Infer {
-    type Val: ErasedTy + 'static;
+    type Val: ErasedTy;
 
     fn infer_act() -> Action {
         Action::App
@@ -129,39 +129,21 @@ pub trait Infer {
     }
 }
 
-macro_rules! impl_for_bool {
-    () => {
-        fn infer_act() -> Action {
-            Action::Set
-        }
-
-        fn infer_style() -> Vec<Style> {
-            vec![Style::Combined, Style::Boolean]
-        }
-    };
-}
-
 impl Infer for bool {
     type Val = bool;
 
-    impl_for_bool!();
+    fn infer_act() -> Action {
+        Action::Set
+    }
+
+    fn infer_style() -> Vec<Style> {
+        vec![Style::Combined, Style::Boolean]
+    }
 
     /// bool has a default value [`false`]
     fn infer_initializer() -> Option<ValInitializer> {
         Some(ValInitializer::new_value(false))
     }
-}
-
-impl Infer for Option<bool> {
-    type Val = bool;
-
-    impl_for_bool!();
-}
-
-impl Infer for Vec<bool> {
-    type Val = bool;
-
-    impl_for_bool!();
 }
 
 impl Infer for Cmd {
@@ -196,94 +178,71 @@ impl Infer for Cmd {
     }
 }
 
-macro_rules! impl_pos_type {
-    () => {
-        fn infer_style() -> Vec<Style> {
-            vec![Style::Pos]
-        }
-
-        fn infer_ignore_name() -> bool {
-            true
-        }
-
-        fn infer_ignore_alias() -> bool {
-            true
-        }
-
-        fn infer_ignore_index() -> bool {
-            false
-        }
-
-        /// Will add default type storer when value type is bool.
-        ///
-        /// # Storer
-        /// ```!
-        /// Box::new(
-        ///     |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
-        ///         let val = raw.is_some();
-        ///
-        ///         trace_log!("Pos value storer, parsing {:?} -> {:?}", raw, val);
-        ///         act.store1(Some(val), handler);
-        ///         Ok(())
-        ///     },
-        /// );
-        /// ```
-        fn infer_tweak_info<C>(cfg: &mut C)
-        where
-            Self: Sized + 'static,
-            Self::Val: RawValParser,
-            C: ConfigValue + Default,
-        {
-            if !cfg.has_storer() {
-                let type_id = cfg.r#type();
-                let ctor = cfg.ctor().map(|v| BuiltInCtor::from_name(v));
-                let bool_type = std::any::TypeId::of::<bool>();
-
-                // add default storer when value type is bool.
-                if type_id == Some(&bool_type) || ctor == Some(BuiltInCtor::Bool) {
-                    cfg.set_storer(ValStorer::new(Box::new(
-                        |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
-                            let val = raw.is_some();
-
-                            trace_log!("Pos value storer, parsing {:?} -> {:?}", raw, val);
-                            act.store1(Some(val), handler);
-                            Ok(())
-                        },
-                    )));
-                }
-            }
-        }
-    };
-}
-
 impl<T> Infer for Pos<T>
 where
     T: Infer + ErasedTy,
 {
     type Val = T::Val;
 
-    fn infer_force() -> bool {
-        true
-    }
-
     fn infer_type_id() -> TypeId {
         typeid::<Self>()
     }
 
-    impl_pos_type!();
-}
-
-impl<T> Infer for Option<Pos<T>>
-where
-    T: Infer + ErasedTy,
-{
-    type Val = T::Val;
-
-    fn infer_type_id() -> TypeId {
-        typeid::<Pos<T>>()
+    fn infer_style() -> Vec<Style> {
+        vec![Style::Pos]
     }
 
-    impl_pos_type!();
+    fn infer_ignore_name() -> bool {
+        true
+    }
+
+    fn infer_ignore_alias() -> bool {
+        true
+    }
+
+    fn infer_ignore_index() -> bool {
+        false
+    }
+
+    /// Will add default type storer when value type is bool.
+    ///
+    /// # Storer
+    /// ```!
+    /// Box::new(
+    ///     |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
+    ///         let val = raw.is_some();
+    ///
+    ///         trace_log!("Pos value storer, parsing {:?} -> {:?}", raw, val);
+    ///         act.store1(Some(val), handler);
+    ///         Ok(())
+    ///     },
+    /// );
+    /// ```
+    fn infer_tweak_info<C>(cfg: &mut C)
+    where
+        Self: Sized + 'static,
+        Self::Val: RawValParser,
+        C: ConfigValue + Default,
+    {
+        if !cfg.has_storer() {
+            let type_id = cfg.r#type();
+            let ctor = cfg.ctor().map(BuiltInCtor::from_name);
+            let bool_type = std::any::TypeId::of::<bool>();
+
+            // add default storer when value type is bool.
+            if type_id == Some(&bool_type) || ctor == Some(BuiltInCtor::Bool) {
+                cfg.set_storer(ValStorer::new(Box::new(
+                    |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
+                        let val = raw.is_some();
+
+                        trace_log!("Pos value storer, parsing {:?} -> {:?}", raw, val);
+                        act.store1(Some(val), handler);
+                        Ok(())
+                    },
+                )));
+            }
+        }
+    }
 }
 
 impl<T> Infer for Main<T>
@@ -359,152 +318,48 @@ where
     }
 }
 
-macro_rules! impl_for_stdin {
-    () => {
-        fn infer_act() -> Action {
-            Action::Set
-        }
-
-        fn infer_index() -> Option<Index> {
-            Some(Index::anywhere())
-        }
-
-        fn infer_style() -> Vec<Style> {
-            vec![Style::Pos]
-        }
-
-        fn infer_ignore_name() -> bool {
-            true
-        }
-
-        fn infer_ignore_index() -> bool {
-            false
-        }
-    };
-}
-
 impl Infer for Stdin {
     type Val = Stdin;
 
-    impl_for_stdin!();
-}
+    fn infer_act() -> Action {
+        Action::Set
+    }
 
-impl Infer for Option<Stdin> {
-    type Val = Stdin;
+    fn infer_index() -> Option<Index> {
+        Some(Index::anywhere())
+    }
 
-    impl_for_stdin!();
+    fn infer_style() -> Vec<Style> {
+        vec![Style::Pos]
+    }
+
+    fn infer_ignore_name() -> bool {
+        true
+    }
+
+    fn infer_ignore_index() -> bool {
+        false
+    }
 }
 
 macro_rules! impl_infer_for {
     ($name:path) => {
         impl Infer for $name {
             type Val = $name;
-
-            fn infer_force() -> bool {
-                true
-            }
-        }
-
-        impl Infer for std::option::Option<$name> {
-            type Val = $name;
-        }
-
-        impl Infer for std::vec::Vec<$name> {
-            type Val = $name;
-
-            fn infer_force() -> bool {
-                true
-            }
-        }
-
-        impl Infer for std::option::Option<std::vec::Vec<$name>> {
-            type Val = $name;
         }
     };
     (&$a:lifetime $name:path) => {
         impl<$a> Infer for &$a $name {
-            type Val = $name;
-
-            fn infer_force() -> bool {
-                true
-            }
-        }
-
-        impl<$a> Infer for std::option::Option<&$a $name> {
-            type Val = $name;
-        }
-
-        impl<$a> Infer for &$a std::vec::Vec<$name> {
-            type Val = $name;
-
-            fn infer_force() -> bool {
-                true
-            }
-        }
-
-        impl<$a> Infer for Option<&$a std::vec::Vec<$name>> {
             type Val = $name;
         }
     };
     (&$a:lifetime $name:path, $inner_type:path) => {
         impl<$a> Infer for &$a $name {
             type Val = $inner_type;
-
-            fn infer_force() -> bool {
-                true
-            }
-        }
-
-        impl<$a> Infer for std::option::Option<&$a $name> {
-            type Val = $inner_type;
-        }
-
-        impl<$a> Infer for std::vec::Vec<&$a $name> {
-            type Val = $inner_type;
-
-            fn infer_force() -> bool {
-                true
-            }
-        }
-
-        impl<$a> Infer for Option<std::vec::Vec<&$a $name>> {
-            type Val = $inner_type;
         }
     };
     ($name:path, $force:literal { type Val = $val_type:ty; $( fn $fn_name:ident() -> $ret_type:ty $fn_block:block )+ }) => {
         impl Infer for $name {
-            type Val = $val_type;
-
-            $(
-                fn $fn_name() -> $ret_type $fn_block
-            )+
-
-            fn infer_force() -> bool {
-                $force
-            }
-        }
-
-        impl Infer for std::option::Option<$name> {
-            type Val = $val_type;
-
-            $(
-                fn $fn_name() -> $ret_type $fn_block
-            )+
-        }
-
-        impl Infer for std::vec::Vec<$name> {
-            type Val = $val_type;
-
-            $(
-                fn $fn_name() -> $ret_type $fn_block
-            )+
-
-            fn infer_force() -> bool {
-                $force
-            }
-        }
-
-        impl Infer for std::option::Option<std::vec::Vec<$name>> {
             type Val = $val_type;
 
             $(

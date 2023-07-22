@@ -81,7 +81,7 @@ impl<'a> ArgGenerator<'a> {
                 let name = if is_position {
                     ident
                 } else if ident.chars().count() >= 2 {
-                    format!("--{}", ident.replace("_", "-"))
+                    format!("--{}", ident.replace('_', "-"))
                 } else {
                     format!("-{}", ident)
                 };
@@ -96,13 +96,21 @@ impl<'a> ArgGenerator<'a> {
                 "`cmd` has default position, please remove the `index` attribute"
             }
         }
+        if configs.has_cfg(ArgKind::Action)
+            && (configs.has_cfg(ArgKind::Append) || configs.has_cfg(ArgKind::Count))
+        {
+            abort! {
+                field_ty,
+                "`app` and `cnt` are alias of `action`, try to remove one from the configures"
+            }
+        }
         Ok(Self {
-            field_ty,
             name,
             ident,
-            configs,
             docs,
+            configs,
             pos_id,
+            field_ty,
             cfg_name,
             type_hint,
         })
@@ -123,7 +131,7 @@ impl<'a> ArgGenerator<'a> {
             let name = &self.name;
 
             quote! {
-                parser.policy_mut().set_no_delay(#name);
+                cote::PolicySettings::set_no_delay(policy, #name);
             }
         })
     }
@@ -132,32 +140,57 @@ impl<'a> ArgGenerator<'a> {
         let ident = self.ident;
         let name = &self.name;
         let hint = self.type_hint;
+        let fetch = self.configs.find_cfg(ArgKind::Fetch);
+        let inner_ty = self.type_hint.inner_type();
+        let spec_ty = self.configs.find_cfg(ArgKind::Type);
 
-        match hint {
-            TypeHint::Opt(_) => Ok((
-                false,
-                quote! {
-                    #ident: cote::value::InferValueMut::infer_fetch(#name, set).ok(),
-                },
-            )),
-            TypeHint::Vec(_) => Ok((
-                false,
-                quote! {
-                    #ident: cote::value::InferValueMut::infer_fetch_vec(#name, set)?,
-                },
-            )),
-            TypeHint::OptVec(_) => Ok((
-                false,
-                quote! {
-                    #ident: cote::value::InferValueMut::infer_fetch_vec(#name, set).ok(),
-                },
-            )),
-            TypeHint::Null => Ok((
-                false,
-                quote! {
-                    #ident: cote::value::InferValueMut::infer_fetch(#name, set)?,
-                },
-            )),
+        if let Some(fetch) = fetch {
+            let func = fetch.value();
+
+            if let Some(spec_ty) = spec_ty {
+                let inner_ty = spec_ty.value();
+
+                Ok((
+                    false,
+                    quote! {
+                        #ident: #func::<#inner_ty>(#name, set)?,
+                    },
+                ))
+            } else {
+                Ok((
+                    false,
+                    quote! {
+                        #ident: #func::<#inner_ty>(#name, set)?,
+                    },
+                ))
+            }
+        } else {
+            match hint {
+                TypeHint::Opt(_) => Ok((
+                    false,
+                    quote! {
+                        #ident: cote::Fetch::fetch(#name, set).ok(),
+                    },
+                )),
+                TypeHint::Vec(_) => Ok((
+                    false,
+                    quote! {
+                        #ident: cote::Fetch::fetch_vec(#name, set)?,
+                    },
+                )),
+                TypeHint::OptVec(_) => Ok((
+                    false,
+                    quote! {
+                        #ident: cote::Fetch::fetch_vec(#name, set).ok(),
+                    },
+                )),
+                TypeHint::Null(_) => Ok((
+                    false,
+                    quote! {
+                        #ident: cote::Fetch::fetch(#name, set)?,
+                    },
+                )),
+            }
         }
     }
 
@@ -228,13 +261,13 @@ impl<'a> ArgGenerator<'a> {
     }
 
     pub fn gen_option_config_new(&self, ident: &Ident) -> syn::Result<TokenStream> {
-        let ty = &self.field_ty;
         let type_hint = self.type_hint;
+        let inner_ty = type_hint.inner_type();
         let name = &self.name;
         let mut codes = vec![];
         let mut value = None;
         let mut config = quote! {
-            let mut config = aopt::prelude::SetCfg::<P::Set>::default();
+            let mut config = cote::SetCfg::<Set>::default();
             config.set_name(#name);
         };
 
@@ -255,8 +288,8 @@ impl<'a> ArgGenerator<'a> {
                             value = Some(token.clone());
                             quote! {
                                 config.set_initializer(
-                                    aopt::prelude::ValInitializer::new_value(
-                                        <<#ty as aopt::prelude::Infer>::Val>::from(#token)
+                                    cote::ValInitializer::new_value(
+                                        <<#inner_ty as cote::Infer>::Val>::from(#token)
                                     )
                                 );
                             }
@@ -267,9 +300,9 @@ impl<'a> ArgGenerator<'a> {
                             value = Some(token.clone());
                             quote! {
                                 let values = #token.into_iter().map(
-                                    |v|<<#ty as aopt::prelude::Infer>::Val>::from(v)
-                                ).collect::<Vec<<#ty as aopt::prelude::Infer>::Val>>();
-                                config.set_initializer(aopt::prelude::ValInitializer::new_values(values));
+                                    |v|<<#inner_ty as cote::Infer>::Val>::from(v)
+                                ).collect::<Vec<<#inner_ty as cote::Infer>::Val>>();
+                                config.set_initializer(cote::ValInitializer::new_values(values));
                             }
                         }
                         ArgKind::Alias => {
@@ -283,7 +316,7 @@ impl<'a> ArgGenerator<'a> {
                             let token = cfg.value();
 
                             quote! {
-                                config.set_index(aopt::prelude::Index::try_from(#token)?);
+                                config.set_index(cote::Index::try_from(#token)?);
                             }
                         }
                         ArgKind::Force => {
@@ -302,22 +335,46 @@ impl<'a> ArgGenerator<'a> {
                         }
                         ArgKind::Validator => {
                             let token = cfg.value();
+
                             quote! {
-                                let validator = aopt::prelude::ValValidator::from_fn(|value| {
+                                let validator = cote::ValValidator::from_fn(|value| {
                                     use cote::valid::Validate;
                                     #token.check(value)
                                 });
                                 config.set_storer(
-                                    aopt::prelude::ValStorer::new_validator::<<#ty as aopt::prelude::Infer>::Val>(validator)
+                                    cote::ValStorer::new_validator::<<#inner_ty as cote::Infer>::Val>(validator)
                                 );
                             }
                         }
-                        ArgKind::RawCall(method) => {
-                            let method = Ident::new(&method, ty.span());
-                            let args = cfg.value();
+                        ArgKind::MethodCall(method) => {
+                            let method = Ident::new(method, inner_ty.span());
+                            let value = cfg.value().clone();
+                            let (var, args) = value.split_call_args(inner_ty.span())?;
+                            let var_name = var.to_token_stream().to_string();
 
-                            quote!{
-                                config.#method(#args);
+                            match var_name.as_str() {
+                                "config" => {
+                                    quote!{
+                                        #var.#method(#args);
+                                    }
+                                }
+                                _ => {
+                                    let args = cfg.value();
+
+                                    quote!{
+                                        #method(#args);
+                                    }
+                                }
+                            }
+                        }
+                        ArgKind::Count => {
+                            quote! {
+                                config.set_action(cote::Action::Cnt);
+                            }
+                        }
+                        ArgKind::Append => {
+                            quote! {
+                                config.set_action(cote::Action::App);
                             }
                         }
                         _ => {
@@ -325,6 +382,11 @@ impl<'a> ArgGenerator<'a> {
                         }
                     }
                )
+        }
+        if self.configs.has_cfg(ArgKind::Value) || self.configs.has_cfg(ArgKind::Values) {
+            codes.push(quote! {
+                config.set_force(false);
+            })
         }
         let help = if let Some(cfg) = self.configs.find_cfg(ArgKind::Help) {
             let value = cfg.value();
@@ -352,6 +414,7 @@ impl<'a> ArgGenerator<'a> {
         } else {
             None
         };
+
         if let Some(mut help) = help {
             if let Some(value) = &value {
                 let value_string = value.to_token_stream().to_string();
@@ -370,45 +433,36 @@ impl<'a> ArgGenerator<'a> {
         if let Some(pos_id) = self.pos_id {
             if !self.configs.has_cfg(ArgKind::Index) {
                 codes.push(quote! {
-                    config.set_index(aopt::prelude::Index::forward(#pos_id));
+                    config.set_index(cote::Index::forward(#pos_id));
                 })
             } else {
                 abort! {
-                    ty,
+                    inner_ty,
                     "Can not have both auto increment Pos id and index configuration `{:?}`",
                     self.configs.find_cfg(ArgKind::Index)
                 }
             }
         }
-        let force_setting = if self.configs.has_cfg(ArgKind::Force) {
-            quote! {}
-        } else {
-            quote! {
-                config.set_force(false);
-            }
-        };
-
         if let Some(cfg) = self.configs.find_cfg(ArgKind::Type) {
             let spec_ty = cfg.value();
 
             codes.push(quote! {
-                <#spec_ty as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
-                config
+                <#spec_ty as cote::Alter>::alter(cote::Hint::Null, &mut config);
+                <#spec_ty as cote::Infer>::infer_fill_info(&mut config, true);
             });
         } else {
             match self.cfg_name {
                 CONFIG_CMD => {
                     codes.push(if !type_hint.is_null() {
                         abort! {
-                            ty,
+                            self.field_ty,
                             "Cmd always force required, please remove Option or Vec from type"
                         }
                     } else {
                         quote! {
-                            <aopt::opt::Cmd as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
-                            config.set_type::<#ty>();
-                            config.set_action(aopt::prelude::Action::Set);
-                            config
+                            config.set_type::<#inner_ty>();
+                            <cote::Cmd as cote::Alter>::alter(cote::Hint::Null, &mut config);
+                            <cote::Cmd as cote::Infer>::infer_fill_info(&mut config, true);
                         }
                     });
                 }
@@ -417,82 +471,70 @@ impl<'a> ArgGenerator<'a> {
                         TypeHint::Opt(inner_ty) => {
                             quote! {
                                 // using information of Pos<T>
-                                <aopt::opt::Pos<#inner_ty> as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
                                 config.set_type::<#inner_ty>();
-                                #force_setting
-                                config.set_action(aopt::prelude::Action::Set);
-                                config
+                                <cote::Pos<#inner_ty> as cote::Alter>::alter(cote::Hint::Opt, &mut config);
+                                <cote::Pos<#inner_ty> as cote::Infer>::infer_fill_info(&mut config, true);
                             }
                         },
                         TypeHint::Vec(inner_ty) => {
                             quote! {
                                 // using information of Pos<T>
-                                <aopt::opt::Pos<#inner_ty> as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
                                 config.set_type::<#inner_ty>();
-                                config.set_action(aopt::prelude::Action::App);
-                                config
+                                <cote::Pos<#inner_ty> as cote::Alter>::alter(cote::Hint::Vec, &mut config);
+                                <cote::Pos<#inner_ty> as cote::Infer>::infer_fill_info(&mut config, true);
                             }
                         },
                         TypeHint::OptVec(inner_ty) => {
                             quote! {
                                 // using information of Pos<T>
-                                <aopt::opt::Pos<#inner_ty> as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
                                 config.set_type::<#inner_ty>();
-                                #force_setting
-                                config.set_action(aopt::prelude::Action::App);
-                                config
+                                <cote::Pos<#inner_ty> as cote::Alter>::alter(cote::Hint::OptVec, &mut config);
+                                <cote::Pos<#inner_ty> as cote::Infer>::infer_fill_info(&mut config, true);
                             }
                         },
-                        TypeHint::Null => {
+                        TypeHint::Null(inner_ty) => {
                             quote! {
                                 // using information of Pos<T>
-                                <aopt::opt::Pos<#ty> as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
-                                config.set_type::<#ty>();
-                                config.set_action(aopt::prelude::Action::Set);
-                                config
+                                config.set_type::<#inner_ty>();
+                                <cote::Pos<#inner_ty> as cote::Alter>::alter(cote::Hint::Null, &mut config);
+                                <cote::Pos<#inner_ty> as cote::Infer>::infer_fill_info(&mut config, true);
                             }
                         },
                     });
                 }
                 _ => {
-                    codes.push(
-                        match type_hint {
-                            TypeHint::Opt(inner_ty) => {
-                                quote! {
-                                    <#inner_ty as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
-                                    #force_setting
-                                    config.set_action(aopt::prelude::Action::Set);
-                                    config
-                                }
-                            },
-                            TypeHint::Vec(inner_ty) => {
-                                quote! {
-                                    <#inner_ty as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
-                                    config.set_action(aopt::prelude::Action::App);
-                                    config
-                                }
-                            },
-                            TypeHint::OptVec(inner_ty) => {
-                                quote! {
-                                    <#inner_ty as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
-                                    #force_setting
-                                    config.set_action(aopt::prelude::Action::App);
-                                    config
-                                }
-                            },
-                            TypeHint::Null => {
-                                quote! {
-                                    <#ty as aopt::prelude::Infer>::infer_fill_info(&mut config, true);
-                                    config.set_action(aopt::prelude::Action::Set);
-                                    config
-                                }
-                            },
+                    codes.push(match type_hint {
+                        TypeHint::Opt(inner_ty) => {
+                            quote! {
+                                <#inner_ty as cote::Alter>::alter(cote::Hint::Opt, &mut config);
+                                <#inner_ty as cote::Infer>::infer_fill_info(&mut config, true);
+                            }
                         }
-                        );
+                        TypeHint::Vec(inner_ty) => {
+                            quote! {
+                                <#inner_ty as cote::Alter>::alter(cote::Hint::Vec, &mut config);
+                                <#inner_ty as cote::Infer>::infer_fill_info(&mut config, true);
+                            }
+                        }
+                        TypeHint::OptVec(inner_ty) => {
+                            quote! {
+                                <#inner_ty as cote::Alter>::alter(cote::Hint::OptVec, &mut config);
+                                <#inner_ty as cote::Infer>::infer_fill_info(&mut config, true);
+                            }
+                        }
+                        TypeHint::Null(inner_ty) => {
+                            quote! {
+                                <#inner_ty as cote::Alter>::alter(cote::Hint::Null, &mut config);
+                                <#inner_ty as cote::Infer>::infer_fill_info(&mut config, true);
+                            }
+                        }
+                    });
                 }
             }
         }
+
         config.extend(codes.into_iter());
+        config.extend(quote! { config });
 
         Ok(quote! {
             let #ident = {
@@ -510,7 +552,7 @@ pub enum TypeHint<'a> {
 
     OptVec(&'a Type),
 
-    Null,
+    Null(&'a Type),
 }
 
 impl<'a> TypeHint<'a> {
@@ -522,13 +564,22 @@ impl<'a> TypeHint<'a> {
             },
             (false, inner_ty) => match check_segment_ty(inner_ty, "Vec") {
                 (true, inner_ty) => Self::Vec(inner_ty),
-                (false, _) => Self::Null,
+                (false, _) => Self::Null(ty),
             },
         }
     }
 
     pub fn is_null(&self) -> bool {
-        matches!(self, Self::Null)
+        matches!(self, Self::Null(_))
+    }
+
+    pub fn inner_type(&self) -> &Type {
+        match self {
+            TypeHint::Opt(ty) => ty,
+            TypeHint::Vec(ty) => ty,
+            TypeHint::OptVec(ty) => ty,
+            TypeHint::Null(ty) => ty,
+        }
     }
 }
 

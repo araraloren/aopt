@@ -12,6 +12,7 @@ pub use self::extract::Extract;
 pub use self::handler::Handler;
 pub use self::invoke::HandlerCollection;
 pub use self::invoke::HandlerEntry;
+pub use self::invoke::HandlerEntryThen;
 pub use self::invoke::InvokeHandler;
 pub use self::invoke::Invoker;
 pub use self::store::NullStore;

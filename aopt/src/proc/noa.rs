@@ -314,7 +314,7 @@ where
 
             if style_check {
                 crate::trace_log!(
-                    "Start process NOA{{{}}} eg. {}@{:?}",
+                    "Start process NOA{{{}}} eg. {} -{:?}-",
                     opt.uid(),
                     opt.hint(),
                     opt.index()

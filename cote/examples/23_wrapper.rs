@@ -1,4 +1,4 @@
-use cote::prelude::*;
+use cote::*;
 
 #[derive(Debug, Cote, PartialEq, Eq)]
 #[cote(help, aborthelp)]
@@ -14,13 +14,17 @@ impl Infer for Speed {
     type Val = i32;
 }
 
-impl<'a> InferValueMut<'a> for Speed {
-    fn infer_fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
+impl<'a> Fetch<'a> for Speed {
+    fn fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
     where
         Self: Sized,
     {
         Ok(Speed(set.take_val(name)?))
     }
+}
+
+impl Alter for Speed {
+    // using default behavior
 }
 
 fn main() -> color_eyre::Result<()> {

@@ -1,6 +1,6 @@
+use std::any::TypeId;
 use std::fmt::Debug;
 
-use crate::map::ErasedTy;
 use crate::opt::Config;
 use crate::opt::ConfigValue;
 use crate::opt::Index;
@@ -99,14 +99,20 @@ where
     }
 
     /// Set the option name of filter configuration.
-    pub fn set_name<T: Into<Str>>(&mut self, name: T) -> &mut Self {
+    pub fn set_name(&mut self, name: impl Into<Str>) -> &mut Self {
         self.info.set_name(name);
         self
     }
 
     /// Set the option type name of filter configuration.
-    pub fn set_type<U: ErasedTy>(&mut self) -> &mut Self {
+    pub fn set_type<U: 'static>(&mut self) -> &mut Self {
         self.info.set_type::<U>();
+        self
+    }
+
+    /// Set the option type name of filter configuration.
+    pub fn set_type_id(&mut self, type_id: TypeId) -> &mut Self {
+        self.info.set_type_id(type_id);
         self
     }
 
@@ -170,14 +176,20 @@ where
     }
 
     /// Set the option name of filter configuration.
-    pub fn set_name<T: Into<Str>>(&mut self, name: T) -> &mut Self {
+    pub fn set_name(&mut self, name: impl Into<Str>) -> &mut Self {
         self.info.set_name(name);
         self
     }
 
     /// Set the option type name of filter configuration.
-    pub fn set_type<U: ErasedTy>(&mut self) -> &mut Self {
+    pub fn set_type<U: 'static>(&mut self) -> &mut Self {
         self.info.set_type::<U>();
+        self
+    }
+
+    /// Set the option type name of filter configuration.
+    pub fn set_type_id(&mut self, type_id: TypeId) -> &mut Self {
+        self.info.set_type_id(type_id);
         self
     }
 

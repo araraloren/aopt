@@ -205,14 +205,27 @@ pub trait SetValueFindExt
 where
     Self: Set + Sized,
 {
-    fn find_uid<S: Into<Str>>(&self, opt: S) -> Result<Uid, Error>;
+    fn find_uid(&self, opt: impl Into<Str>) -> Result<Uid, Error>;
 
-    fn find_opt<S: Into<Str>>(&self, opt: S) -> Result<&SetOpt<Self>, Error> {
+    fn find_uid_i<U: 'static>(&self, opt: impl Into<Str>) -> Result<Uid, Error>;
+
+    fn find_opt(&self, opt: impl Into<Str>) -> Result<&SetOpt<Self>, Error> {
         self.opt(self.find_uid(opt)?)
     }
 
-    fn find_opt_mut<S: Into<Str>>(&mut self, opt: S) -> Result<&mut SetOpt<Self>, Error> {
+    fn find_opt_i<U: 'static>(&self, opt: impl Into<Str>) -> Result<&SetOpt<Self>, Error> {
+        self.opt(self.find_uid_i::<U>(opt)?)
+    }
+
+    fn find_opt_mut(&mut self, opt: impl Into<Str>) -> Result<&mut SetOpt<Self>, Error> {
         self.opt_mut(self.find_uid(opt)?)
+    }
+
+    fn find_opt_mut_i<U: 'static>(
+        &mut self,
+        opt: impl Into<Str>,
+    ) -> Result<&mut SetOpt<Self>, Error> {
+        self.opt_mut(self.find_uid_i::<U>(opt)?)
     }
 
     fn find_val<U: ErasedTy>(&self, opt: impl Into<Str>) -> Result<&U, Error> {
@@ -282,12 +295,12 @@ where
         self
     }
 
-    fn set_name<T: Into<Str>>(mut self, name: T) -> Self {
+    fn set_name(mut self, name: impl Into<Str>) -> Self {
         self.cfg_mut().set_name(name);
         self
     }
 
-    fn set_ctor<T: Into<Str>>(mut self, ctor: T) -> Self {
+    fn set_ctor(mut self, ctor: impl Into<Str>) -> Self {
         self.cfg_mut().set_ctor(ctor);
         self
     }
@@ -297,12 +310,12 @@ where
         self
     }
 
-    fn rem_alias<T: Into<Str>>(mut self, alias: T) -> Self {
+    fn rem_alias(mut self, alias: impl Into<Str>) -> Self {
         self.cfg_mut().rem_alias(alias);
         self
     }
 
-    fn add_alias<T: Into<Str>>(mut self, alias: T) -> Self {
+    fn add_alias(mut self, alias: impl Into<Str>) -> Self {
         self.cfg_mut().add_alias(alias);
         self
     }
@@ -312,12 +325,12 @@ where
         self
     }
 
-    fn set_hint<T: Into<Str>>(mut self, hint: T) -> Self {
+    fn set_hint(mut self, hint: impl Into<Str>) -> Self {
         self.cfg_mut().set_hint(hint);
         self
     }
 
-    fn set_help<T: Into<Str>>(mut self, help: T) -> Self {
+    fn set_help(mut self, help: impl Into<Str>) -> Self {
         self.cfg_mut().set_help(help);
         self
     }

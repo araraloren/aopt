@@ -1,7 +1,9 @@
-use std::{marker::PhantomData, ops::RangeBounds};
+use std::marker::PhantomData;
+use std::ops::RangeBounds;
 
-pub use aopt::prelude::ErasedTy;
-use aopt::value::{ValValidator, ValidatorHandler};
+use aopt::prelude::ErasedTy;
+use aopt::value::ValValidator;
+use aopt::value::ValidatorHandler;
 
 pub trait Validate<T>
 where
@@ -161,7 +163,7 @@ where
 ///
 /// # Example
 /// ```rust
-/// # use cote::prelude::*;
+/// # use cote::*;
 /// # use cote::valid;
 /// #
 /// #[derive(Debug, Cote, PartialEq, Eq)]

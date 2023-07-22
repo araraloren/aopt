@@ -1,4 +1,4 @@
-use cote::prelude::*;
+use cote::*;
 
 #[derive(Debug, Cote, PartialEq, Eq)]
 #[cote(help)]
@@ -12,17 +12,20 @@ pub struct Cli {
     baz: String,
 
     // `quux` can accept position arguments at range 3 or 4
-    #[pos(index = "3..5")]
+    #[pos(index = 3..5)]
     quux: Vec<String>,
 }
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
-    let app = Cli::into_app()?;
+    let parser = Cli::into_parser()?;
 
-    assert_eq!(app["bar"].index(), Some(&Index::forward(1)));
-    assert_eq!(app["--baz"].index(), None);
-    assert_eq!(app["quux"].index(), Some(&Index::range(Some(3), Some(5))));
+    assert_eq!(parser["bar"].index(), Some(&Index::forward(1)));
+    assert_eq!(parser["--baz"].index(), None);
+    assert_eq!(
+        parser["quux"].index(),
+        Some(&Index::range(Some(3), Some(5)))
+    );
 
     let app = Cli::parse(Args::from_array([
         "app",    // index 0

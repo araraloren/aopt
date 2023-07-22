@@ -1,4 +1,5 @@
-use proc_macro2::Ident;
+use quote::ToTokens;
+use syn::Path;
 
 use super::Kind;
 
@@ -34,31 +35,48 @@ pub enum ArgKind {
 
     NoDelay,
 
-    RawCall(String),
+    Fetch,
+
+    Append,
+
+    Count,
+
+    MethodCall(String),
 }
 
 impl Kind for ArgKind {
     fn parse(input: &mut syn::parse::ParseStream) -> syn::Result<(Self, bool)> {
-        let ident: Ident = input.parse()?;
-        let kind_str = ident.to_string();
+        let path: Path = input.parse()?;
 
-        Ok(match kind_str.as_str() {
-            "name" => (Self::Name, true),
-            "ty" => (Self::Type, true),
-            "hint" => (Self::Hint, true),
-            "help" => (Self::Help, true),
-            "value" => (Self::Value, true),
-            "values" => (Self::Values, true),
-            "alias" => (Self::Alias, true),
-            "index" => (Self::Index, true),
-            "force" => (Self::Force, true),
-            "action" => (Self::Action, true),
-            "valid" => (Self::Validator, true),
-            "on" => (Self::On, true),
-            "fallback" => (Self::Fallback, true),
-            "then" => (Self::Then, true),
-            "nodelay" => (Self::NoDelay, false),
-            call => (Self::RawCall(call.to_owned()), true),
-        })
+        if let Some(ident) = path.get_ident() {
+            let kind_str = ident.to_string();
+
+            Ok(match kind_str.as_str() {
+                "name" => (Self::Name, true),
+                "ty" => (Self::Type, true),
+                "hint" => (Self::Hint, true),
+                "help" => (Self::Help, true),
+                "value" => (Self::Value, true),
+                "values" => (Self::Values, true),
+                "alias" => (Self::Alias, true),
+                "index" => (Self::Index, true),
+                "force" => (Self::Force, true),
+                "action" => (Self::Action, true),
+                "valid" => (Self::Validator, true),
+                "on" => (Self::On, true),
+                "fallback" => (Self::Fallback, true),
+                "then" => (Self::Then, true),
+                "nodelay" => (Self::NoDelay, false),
+                "fetch" => (Self::Fetch, true),
+                "append" => (Self::Append, false),
+                "count" => (Self::Count, false),
+                method => (Self::MethodCall(method.to_owned()), true),
+            })
+        } else {
+            let method = path.to_token_stream().to_string();
+            let method = method.replace(char::is_whitespace, "");
+
+            Ok((Self::MethodCall(method), true))
+        }
     }
 }

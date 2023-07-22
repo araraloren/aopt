@@ -6,6 +6,7 @@ use crate::ctx::Extract;
 use crate::ctx::Handler;
 use crate::ctx::HandlerCollection;
 use crate::ctx::HandlerEntry;
+use crate::ctx::HandlerEntryThen;
 use crate::map::ErasedTy;
 use crate::opt::Any;
 use crate::opt::Cmd;
@@ -99,9 +100,9 @@ macro_rules! add_interface {
             mut self,
         ) -> ParserCommit<'a, 'b, I, S, Ser, $ty> where T::Val: RawValParser + Clone, T: ErasedTy + Infer {
             let inner = self.inner.take().unwrap();
-        let inv_ser = self.inv_ser.take().unwrap();
+            let inv_ser = self.inv_ser.take().unwrap();
 
-        ParserCommit::new(inner.$name2::<T>(), inv_ser)
+            ParserCommit::new(inner.$name2::<T>(), inv_ser)
         }
     }
 }
@@ -113,7 +114,7 @@ where
     SetCfg<S>: ConfigValue + Default,
     I: HandlerCollection<'a, S, Ser>,
 {
-    add_interface!(Option<Pos<T>>, set_pos_type_only, set_pos_type);
+    add_interface!(Pos<T>, set_pos_type_only, set_pos_type);
 
     add_interface!(Main<T>, set_main_type_only, set_main_type);
 
@@ -167,7 +168,7 @@ where
     pub fn on<H, O, A>(
         mut self,
         handler: H,
-    ) -> Result<HandlerEntry<'a, 'b, I, S, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, A, O>, Error>
     where
         O: ErasedTy,
         H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + 'a,
@@ -187,7 +188,7 @@ where
     pub fn on<H, O, A>(
         mut self,
         handler: H,
-    ) -> Result<HandlerEntry<'a, 'b, I, S, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, A, O>, Error>
     where
         O: ErasedTy,
         H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
@@ -209,7 +210,7 @@ where
     pub fn fallback<H, O, A>(
         mut self,
         handler: H,
-    ) -> Result<HandlerEntry<'a, 'b, I, S, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, A, O>, Error>
     where
         O: ErasedTy,
         H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + 'a,
@@ -231,7 +232,7 @@ where
     pub fn fallback<H, O, A>(
         mut self,
         handler: H,
-    ) -> Result<HandlerEntry<'a, 'b, I, S, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, A, O>, Error>
     where
         O: ErasedTy,
         H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
@@ -455,7 +456,7 @@ where
     pub fn on<H, O, A>(
         mut self,
         handler: H,
-    ) -> Result<HandlerEntry<'a, 'b, I, S, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, A, O>, Error>
     where
         O: ErasedTy,
         H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + 'a,
@@ -475,7 +476,7 @@ where
     pub fn on<H, O, A>(
         mut self,
         handler: H,
-    ) -> Result<HandlerEntry<'a, 'b, I, S, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, A, O>, Error>
     where
         O: ErasedTy,
         H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
@@ -497,7 +498,7 @@ where
     pub fn fallback<H, O, A>(
         mut self,
         handler: H,
-    ) -> Result<HandlerEntry<'a, 'b, I, S, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, A, O>, Error>
     where
         O: ErasedTy,
         H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + 'a,
@@ -519,7 +520,7 @@ where
     pub fn fallback<H, O, A>(
         mut self,
         handler: H,
-    ) -> Result<HandlerEntry<'a, 'b, I, S, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, A, O>, Error>
     where
         O: ErasedTy,
         H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,

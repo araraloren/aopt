@@ -1,4 +1,4 @@
-use cote::prelude::*;
+use cote::*;
 
 #[derive(Debug, Cote, PartialEq, Eq)]
 #[cote(help, // Generate help for current struct
@@ -27,7 +27,7 @@ pub struct Cli {
     arg: String,
 
     /// Collection of arguments start from position 3.
-    #[pos(index = "3..")]
+    #[pos(index = 3..)]
     args: Vec<String>,
 }
 

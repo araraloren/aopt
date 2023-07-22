@@ -105,7 +105,7 @@ where
         }
     }
 
-    add_interface!(Option<Pos<T>>, set_pos_type_only, set_pos_type);
+    add_interface!(Pos<T>, set_pos_type_only, set_pos_type);
 
     add_interface!(Main<T>, set_main_type_only, set_main_type);
 

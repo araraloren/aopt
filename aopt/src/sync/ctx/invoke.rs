@@ -73,13 +73,13 @@ use crate::Uid;
 ///      .then(NullStore);
 ///
 ///  ctx.set_inner_ctx(Some(InnerCtx::default().with_uid(0)));
-///  is.invoke(&mut set, &mut ser, &mut ctx)?;
+///  is.invoke(&0, &mut set, &mut ser, &mut ctx)?;
 ///
 ///  ctx.set_inner_ctx(Some(InnerCtx::default().with_uid(1)));
-///  is.invoke(&mut set, &mut ser, &mut ctx)?;
+///  is.invoke(&1, &mut set, &mut ser, &mut ctx)?;
 ///
 ///  ctx.set_inner_ctx(Some(InnerCtx::default().with_uid(2)));
-///  is.invoke(&mut set, &mut ser, &mut ctx)?;
+///  is.invoke(&2, &mut set, &mut ser, &mut ctx)?;
 /// #
 /// #    Ok(())
 /// # }
@@ -87,9 +87,6 @@ use crate::Uid;
 pub struct Invoker<'a, Set, Ser> {
     callbacks: HashMap<Uid, InvokeHandler<'a, Set, Ser, Error>>,
 }
-
-pub type InvokeHandler<'a, Set, Ser, Error> =
-    Box<dyn FnMut(&mut Set, &mut Ser, &mut Ctx) -> Result<bool, Error> + Send + Sync + 'a>;
 
 impl<'a, Set, Ser> Debug for Invoker<'a, Set, Ser> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -168,20 +165,6 @@ where
     pub fn has(&self, uid: Uid) -> bool {
         self.callbacks.contains_key(&uid)
     }
-
-    /// Invoke the handler saved in [`Invoker`], it will panic if the handler not exist.
-    pub fn invoke(&mut self, set: &mut Set, ser: &mut Ser, ctx: &mut Ctx) -> Result<bool, Error> {
-        let uid = ctx.uid()?;
-
-        crate::trace_log!("Invoking callback of {}({:?})", uid, ctx);
-        if let Some(callback) = self.callbacks.get_mut(&uid) {
-            return (callback)(set, ser, ctx);
-        }
-        unreachable!(
-            "There is no callback of {}, call `invoke_default` instead",
-            set.opt(uid)?.name()
-        )
-    }
 }
 
 impl<'a, Set, Ser> Invoker<'a, Set, Ser>
@@ -214,18 +197,16 @@ where
         trace_log!("Invoke fallback for {}({act}) {{{ctx:?}}}", opt.name());
         opt.accessor_mut().store_all(raw, ctx, &act)
     }
-
-    pub fn invoke_default(
-        &mut self,
-        set: &mut Set,
-        ser: &mut Ser,
-        ctx: &mut Ctx,
-    ) -> Result<bool, Error> {
-        Self::fallback(set, ser, ctx)
-    }
 }
 
-pub trait HandlerCollection<'a, Set, Ser> {
+/// Handler type using for callback.
+pub type InvokeHandler<'a, Set, Ser, Error> =
+    Box<dyn FnMut(&mut Set, &mut Ser, &mut Ctx) -> Result<bool, Error> + Send + Sync + 'a>;
+
+pub trait HandlerCollection<'a, Set, Ser>
+where
+    Set: crate::set::Set,
+{
     fn register_handler<
         H: FnMut(&mut Set, &mut Ser, &mut Ctx) -> Result<bool, Error> + Send + Sync + 'a,
     >(
@@ -233,6 +214,43 @@ pub trait HandlerCollection<'a, Set, Ser> {
         uid: Uid,
         handler: H,
     );
+
+    fn get_handler(&mut self, uid: &Uid) -> Option<&mut InvokeHandler<'a, Set, Ser, Error>>;
+
+    /// Invoke the handler saved in [`Invoker`], it will panic if the handler not exist.
+    fn invoke(
+        &mut self,
+        uid: &Uid,
+        set: &mut Set,
+        ser: &mut Ser,
+        ctx: &mut Ctx,
+    ) -> Result<bool, Error> {
+        trace_log!("Invoking callback of {} {:?}", uid, ctx);
+        if let Some(callback) = self.get_handler(&uid) {
+            return (callback)(set, ser, ctx);
+        }
+        unreachable!(
+            "There is no callback of {}, call `invoke_fb` or `fallback` instead",
+            set.opt(*uid)?.name()
+        )
+    }
+
+    /// Invoke the handler of given `uid` if it exist, otherwise call the [`fallback`](Invoker::fallback).
+    fn invoke_fb(
+        &mut self,
+        uid: &Uid,
+        set: &mut Set,
+        ser: &mut Ser,
+        ctx: &mut Ctx,
+    ) -> Result<bool, Error> {
+        if let Some(callback) = self.get_handler(&uid) {
+            trace_log!("Invoking(fb) callback of {} {:?}", uid, ctx);
+            return (callback)(set, ser, ctx);
+        } else {
+            trace_log!("Invoking(fb) handler_fallback of {} {:?}", uid, ctx);
+            Invoker::fallback(set, ser, ctx)
+        }
+    }
 }
 
 impl<'a, Set, Ser> HandlerCollection<'a, Set, Ser> for Invoker<'a, Set, Ser>
@@ -248,9 +266,59 @@ where
     ) {
         self.set_raw(uid, handler);
     }
+
+    fn get_handler(&mut self, uid: &Uid) -> Option<&mut InvokeHandler<'a, Set, Ser, Error>> {
+        self.callbacks.get_mut(uid)
+    }
 }
 
 pub struct HandlerEntry<'a, 'b, I, Set, Ser, H, A, O>
+where
+    O: ErasedTy,
+    Set: crate::set::Set,
+    SetOpt<Set>: Opt,
+    I: HandlerCollection<'a, Set, Ser>,
+    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
+    A: Extract<Set, Ser, Error = Error> + Send + Sync + 'a,
+{
+    ser: &'b mut I,
+
+    uid: Uid,
+
+    marker: PhantomData<(&'a (), A, O, Set, Ser, H)>,
+}
+
+impl<'a, 'b, I, Set, Ser, H, A, O> HandlerEntry<'a, 'b, I, Set, Ser, H, A, O>
+where
+    O: ErasedTy,
+    Set: crate::set::Set,
+    SetOpt<Set>: Opt,
+    I: HandlerCollection<'a, Set, Ser>,
+    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
+    A: Extract<Set, Ser, Error = Error> + Send + Sync + 'a,
+{
+    pub fn new(inv_ser: &'b mut I, uid: Uid) -> Self {
+        Self {
+            ser: inv_ser,
+            uid,
+            marker: PhantomData::default(),
+        }
+    }
+
+    /// Register the handler which will be called when option is set.
+    pub fn on(self, handler: H) -> HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O> {
+        HandlerEntryThen::new(self.ser, self.uid, handler, false)
+    }
+
+    /// Register the handler which will be called when option is set.
+    /// And the [`fallback`](crate::ctx::Invoker::fallback) will be called if
+    /// the handler return None.
+    pub fn fallback(self, handler: H) -> HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O> {
+        HandlerEntryThen::new(self.ser, self.uid, handler, true)
+    }
+}
+
+pub struct HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O>
 where
     O: ErasedTy,
     Set: crate::set::Set,
@@ -269,10 +337,10 @@ where
 
     fallback: bool,
 
-    marker: PhantomData<(A, O, Set, &'a Ser)>,
+    marker: PhantomData<(&'a (), A, O, Set, Ser)>,
 }
 
-impl<'a, 'b, I, Set, Ser, H, A, O> HandlerEntry<'a, 'b, I, Set, Ser, H, A, O>
+impl<'a, 'b, I, Set, Ser, H, A, O> HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O>
 where
     O: ErasedTy,
     Set: crate::set::Set,
@@ -281,30 +349,15 @@ where
     H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
     A: Extract<Set, Ser, Error = Error> + Send + Sync + 'a,
 {
-    pub fn new(inv_ser: &'b mut I, uid: Uid) -> Self {
+    pub fn new(ser: &'b mut I, uid: Uid, handler: H, fallback: bool) -> Self {
         Self {
-            ser: inv_ser,
-            handler: None,
+            ser,
+            handler: Some(handler),
             register: false,
             uid,
-            fallback: false,
+            fallback,
             marker: PhantomData::default(),
         }
-    }
-
-    /// Register the handler which will be called when option is set.
-    pub fn on(mut self, handler: H) -> Self {
-        self.handler = Some(handler);
-        self
-    }
-
-    /// Register the handler which will be called when option is set.
-    /// And the [`fallback`](crate::ctx::Invoker::fallback) will be called if
-    /// the handler return None.
-    pub fn fallback(mut self, handler: H) -> Self {
-        self.handler = Some(handler);
-        self.fallback = true;
-        self
     }
 
     /// Register the handler with given `store`.
@@ -345,7 +398,7 @@ where
     }
 }
 
-impl<'a, 'b, I, Set, Ser, H, A, O> Drop for HandlerEntry<'a, 'b, I, Set, Ser, H, A, O>
+impl<'a, 'b, I, Set, Ser, H, A, O> Drop for HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O>
 where
     O: ErasedTy,
     Set: crate::set::Set,

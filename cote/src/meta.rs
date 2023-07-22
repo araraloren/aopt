@@ -11,7 +11,8 @@ pub trait IntoConfig {
 }
 
 /// Hold the option information from configuration files.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone)]
 pub struct OptionMeta<T>
 where
     T: Clone,
@@ -35,7 +36,7 @@ impl<T> OptionMeta<T>
 where
     T: Clone,
 {
-    pub fn new<S: Into<String>>(id: S, option: S) -> Self {
+    pub fn new(id: impl Into<String>, option: impl Into<String>) -> Self {
         Self {
             id: id.into(),
             option: option.into(),
@@ -99,22 +100,22 @@ where
         self.value.take()
     }
 
-    pub fn with_id<S: Into<String>>(mut self, id: S) -> Self {
+    pub fn with_id(mut self, id: impl Into<String>) -> Self {
         self.id = id.into();
         self
     }
 
-    pub fn with_option<S: Into<String>>(mut self, option: S) -> Self {
+    pub fn with_option(mut self, option: impl Into<String>) -> Self {
         self.option = option.into();
         self
     }
 
-    pub fn with_hint<S: Into<String>>(mut self, hint: Option<S>) -> Self {
+    pub fn with_hint(mut self, hint: Option<impl Into<String>>) -> Self {
         self.hint = hint.map(|v| v.into());
         self
     }
 
-    pub fn with_help<S: Into<String>>(mut self, help: Option<S>) -> Self {
+    pub fn with_help(mut self, help: Option<impl Into<String>>) -> Self {
         self.help = help.map(|v| v.into());
         self
     }
@@ -124,7 +125,7 @@ where
         self
     }
 
-    pub fn with_alias<S: Into<String>>(mut self, alias: Option<Vec<S>>) -> Self {
+    pub fn with_alias(mut self, alias: Option<Vec<impl Into<String>>>) -> Self {
         self.alias = alias.map(|alias| alias.into_iter().map(|v| v.into()).collect());
         self
     }
@@ -134,22 +135,22 @@ where
         self
     }
 
-    pub fn set_id<S: Into<String>>(&mut self, id: S) -> &mut Self {
+    pub fn set_id(&mut self, id: impl Into<String>) -> &mut Self {
         self.id = id.into();
         self
     }
 
-    pub fn set_option<S: Into<String>>(&mut self, option: S) -> &mut Self {
+    pub fn set_option(&mut self, option: impl Into<String>) -> &mut Self {
         self.option = option.into();
         self
     }
 
-    pub fn set_hint<S: Into<String>>(&mut self, hint: Option<S>) -> &mut Self {
+    pub fn set_hint(&mut self, hint: Option<impl Into<String>>) -> &mut Self {
         self.hint = hint.map(|v| v.into());
         self
     }
 
-    pub fn set_help<S: Into<String>>(&mut self, help: Option<S>) -> &mut Self {
+    pub fn set_help(&mut self, help: Option<impl Into<String>>) -> &mut Self {
         self.help = help.map(|v| v.into());
         self
     }
@@ -159,7 +160,7 @@ where
         self
     }
 
-    pub fn set_alias<S: Into<String>>(&mut self, alias: Option<Vec<S>>) -> &mut Self {
+    pub fn set_alias(&mut self, alias: Option<Vec<impl Into<String>>>) -> &mut Self {
         self.alias = alias.map(|alias| alias.into_iter().map(|v| v.into()).collect());
         self
     }

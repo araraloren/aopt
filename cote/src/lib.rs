@@ -1,1021 +1,259 @@
 #![doc = include_str!("../README.md")]
 pub mod _reference;
-pub mod meta;
+pub(crate) mod alter;
+pub(crate) mod help;
+pub(crate) mod meta;
+pub(crate) mod parser;
+pub(crate) mod rctx;
+pub(crate) mod value;
+
 pub mod valid;
-pub mod value;
 
-use std::borrow::Cow;
-use std::fmt::Debug;
-use std::future::Future;
-use std::ops::Deref;
-use std::ops::DerefMut;
-
-use aopt::prelude::*;
-use aopt::value::Placeholder;
-use aopt::Error;
-use aopt::RawVal;
-use aopt_help::prelude::Block;
-use aopt_help::prelude::Store;
-
-use meta::IntoConfig;
+use std::marker::PhantomData;
 
 pub use aopt;
+use aopt::prelude::OptStyleManager;
 pub use aopt_help;
 pub use cote_derive;
 
-pub mod prelude {
-    pub use crate::aopt;
-    pub use crate::aopt::prelude::*;
-    pub use crate::cote_derive::Cote;
-    pub use crate::display_help;
-    pub use crate::display_set_help;
-    pub use crate::meta::IntoConfig;
-    pub use crate::meta::OptionMeta;
-    pub use crate::simple_display_set_help;
-    pub use crate::valid;
-    pub use crate::value;
-    pub use crate::value::InferValueMut;
-    pub use crate::CoteApp;
-    pub use crate::ExtractFromSetDerive;
-    pub use crate::HelpDisplayCtx;
-    pub use crate::IntoParserDerive;
-}
+pub use aopt::ext::ctx;
+pub use aopt::opt::Any;
+pub use aopt::opt::Cmd;
+pub use aopt::opt::Main;
+pub use aopt::opt::MutOpt;
+pub use aopt::opt::Pos;
+pub use aopt::opt::RefOpt;
+pub use aopt::parser::UserStyle;
+pub use aopt::prelude::ctor_default_name;
+pub use aopt::prelude::AOpt;
+pub use aopt::prelude::APolicyExt;
+pub use aopt::prelude::ARef;
+pub use aopt::prelude::ASer;
+pub use aopt::prelude::ASet;
+pub use aopt::prelude::Action;
+pub use aopt::prelude::Args;
+pub use aopt::prelude::Commit;
+pub use aopt::prelude::Config;
+pub use aopt::prelude::ConfigValue;
+pub use aopt::prelude::Ctor;
+pub use aopt::prelude::Ctx;
+pub use aopt::prelude::DefaultSetChecker;
+pub use aopt::prelude::ErasedTy;
+pub use aopt::prelude::ErasedValue;
+pub use aopt::prelude::Extract;
+pub use aopt::prelude::FilterMatcher;
+pub use aopt::prelude::Handler;
+pub use aopt::prelude::HandlerCollection;
+pub use aopt::prelude::Index;
+pub use aopt::prelude::Infer;
+pub use aopt::prelude::Information;
+pub use aopt::prelude::InitializeValue;
+pub use aopt::prelude::Invoker;
+pub use aopt::prelude::Match;
+pub use aopt::prelude::Opt;
+pub use aopt::prelude::OptParser;
+pub use aopt::prelude::OptValidator;
+pub use aopt::prelude::OptValueExt;
+pub use aopt::prelude::Policy;
+pub use aopt::prelude::PolicyParser;
+pub use aopt::prelude::PolicySettings;
+pub use aopt::prelude::PrefixOptValidator;
+pub use aopt::prelude::Process;
+pub use aopt::prelude::RawValParser;
+pub use aopt::prelude::ReturnVal;
+pub use aopt::prelude::ServicesExt;
+pub use aopt::prelude::ServicesValExt;
+pub use aopt::prelude::Set;
+pub use aopt::prelude::SetCfg;
+pub use aopt::prelude::SetChecker;
+pub use aopt::prelude::SetExt;
+pub use aopt::prelude::SetValueFindExt;
+pub use aopt::prelude::Store;
+pub use aopt::prelude::Style;
+pub use aopt::prelude::ValInitializer;
+pub use aopt::prelude::ValStorer;
+pub use aopt::prelude::ValValidator;
+pub use aopt::prelude::VecStore;
+pub use aopt::raise_error;
+pub use aopt::raise_failure;
+pub use aopt::value::raw2str;
+pub use aopt::value::Placeholder;
+pub use aopt::Error as CoteError;
+pub use aopt::GetoptRes;
+pub use aopt::RawVal;
+pub use aopt::Uid;
+pub use cote_derive::Cote;
+pub use cote_derive::CoteOpt;
+pub use cote_derive::CoteVal;
 
-pub trait IntoParserDerive<'zlifetime, P>
+pub use alter::Alter;
+pub use alter::Hint;
+pub use help::display_set_help;
+pub use help::HelpDisplayCtx;
+pub use meta::IntoConfig;
+pub use meta::OptionMeta;
+pub use parser::Parser;
+pub use rctx::FailedInfo;
+pub use rctx::RunningCtx;
+pub use value::Fetch;
+
+pub trait IntoParserDerive<'inv, Set, Ser>
 where
-    P::Set: Set,
-    P::Error: Into<aopt::Error>,
-    P: Policy + APolicyExt<P> + Default,
-    SetCfg<P::Set>: Config + ConfigValue + Default,
+    Ser: ServicesValExt + Default,
+    SetCfg<Set>: Config + ConfigValue + Default,
+    Set: crate::Set + OptParser + OptValidator + Default,
 {
-    fn into_parser() -> Result<Parser<'zlifetime, P>, Error> {
-        let mut parser = Parser::<'zlifetime, P>::new(P::default());
+    fn into_parser() -> Result<Parser<'inv, Set, Ser>, aopt::Error> {
+        let mut parser = Parser::default();
         Self::update(&mut parser)?;
         Ok(parser)
     }
-    fn update(parser: &mut Parser<'zlifetime, P>) -> Result<(), Error>;
+    fn update(parser: &mut Parser<'inv, Set, Ser>) -> Result<(), aopt::Error>;
 }
 
-pub trait ExtractFromSetDerive<'zlifetime, S>
-where
-    S: SetValueFindExt,
-{
-    fn try_extract(set: &'zlifetime mut S) -> Result<Self, aopt::Error>
+pub trait ExtractFromSetDerive<'set, Set: SetValueFindExt> {
+    fn try_extract(set: &'set mut Set) -> Result<Self, aopt::Error>
     where
         Self: Sized;
 }
 
-pub struct CoteApp<'a, P>
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct CoteRes<P, Policy>
 where
-    P: Policy,
+    Policy: crate::Policy,
 {
-    name: String,
+    pub policy: P,
 
-    parser: Parser<'a, P>,
+    pub ret: Policy::Ret,
+
+    pub parser: Policy::Set,
 }
 
-impl<'a, P> Debug for CoteApp<'a, P>
-where
-    P::Ret: Debug,
-    P::Set: Debug,
-    P::Ser: Debug,
-    P: Policy + Debug,
-    P::Inv<'a>: Debug,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CoteApp")
-            .field("name", &self.name)
-            .field("parser", &self.parser)
-            .finish()
+pub trait Status {
+    fn status(&self) -> bool;
+}
+
+impl Status for ReturnVal {
+    fn status(&self) -> bool {
+        ReturnVal::status(self)
     }
 }
 
-impl<'a, P> Default for CoteApp<'a, P>
-where
-    P::Set: Default,
-    P::Ser: Default,
-    P::Inv<'a>: Default,
-    P: Policy + APolicyExt<P> + Default,
-{
+pub type PrePolicy<'inv, Set, Ser> = aopt::prelude::PrePolicy<
+    Parser<'inv, Set, Ser>,
+    Ser,
+    DefaultSetChecker<Parser<'inv, Set, Ser>>,
+>;
+
+pub type FwdPolicy<'inv, Set, Ser> = aopt::prelude::FwdPolicy<
+    Parser<'inv, Set, Ser>,
+    Ser,
+    DefaultSetChecker<Parser<'inv, Set, Ser>>,
+>;
+
+pub type DelayPolicy<'inv, Set, Ser> = aopt::prelude::DelayPolicy<
+    Parser<'inv, Set, Ser>,
+    Ser,
+    DefaultSetChecker<Parser<'inv, Set, Ser>>,
+>;
+
+#[derive(Debug, Clone)]
+pub struct NullPolicy<'inv, Set, Ser> {
+    style_manager: OptStyleManager,
+
+    marker: PhantomData<(Set, Ser, &'inv ())>,
+}
+
+impl<'inv, Set, Ser> Default for NullPolicy<'inv, Set, Ser> {
     fn default() -> Self {
         Self {
-            name: "CoteApp".to_owned(),
-            parser: Parser::default(),
+            style_manager: OptStyleManager::default(),
+            marker: Default::default(),
         }
     }
 }
 
-impl<'a, P: Policy> Deref for CoteApp<'a, P> {
-    type Target = Parser<'a, P>;
+impl<'inv, Set, Ser> Policy for NullPolicy<'inv, Set, Ser> {
+    type Ret = ReturnVal;
 
-    fn deref(&self) -> &Self::Target {
-        &self.parser
-    }
-}
+    type Set = Parser<'inv, Set, Ser>;
 
-impl<'a, P: Policy> DerefMut for CoteApp<'a, P> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.parser
-    }
-}
+    type Inv<'a> = Invoker<'a, Parser<'inv, Set, Ser>, Ser>;
 
-impl<'a, P> CoteApp<'a, P>
-where
-    P: Policy + APolicyExt<P>,
-{
-    pub fn new<S: Into<String>>(name: S, policy: P) -> Self {
-        Self {
-            name: name.into(),
+    type Ser = Ser;
 
-            parser: Parser::new(policy),
-        }
-    }
+    type Error = aopt::Error;
 
-    pub fn new_with_parser<S: Into<String>>(name: S, parser: Parser<'a, P>) -> Self {
-        Self {
-            name: name.into(),
-
-            parser,
-        }
-    }
-}
-
-impl<'a, P> CoteApp<'a, P>
-where
-    P: Policy,
-{
-    pub fn inner_parser(&self) -> &Parser<'a, P> {
-        &self.parser
-    }
-
-    pub fn inner_parser_mut(&mut self) -> &mut Parser<'a, P> {
-        &mut self.parser
-    }
-
-    pub fn set_parser(&mut self, parser: Parser<'a, P>) -> &mut Self {
-        self.parser = parser;
-        self
-    }
-}
-
-impl<'a, 'b, P> CoteApp<'a, P>
-where
-    'a: 'b,
-    P: Policy,
-    P::Set: SetValueFindExt,
-{
-    pub fn extract_type<T>(&'b mut self) -> Result<T, Error>
-    where
-        T: ExtractFromSetDerive<'b, P::Set>,
-    {
-        let set = self.parser.optset_mut();
-
-        T::try_extract(set)
-    }
-}
-
-impl<'a, P> CoteApp<'a, P>
-where
-    P: Policy,
-    SetOpt<P::Set>: Opt,
-    P::Set: Set + OptValidator + OptParser,
-    <P::Set as OptParser>::Output: Information,
-    SetCfg<P::Set>: Config + ConfigValue + Default,
-    P::Inv<'a>: HandlerCollection<'a, P::Set, P::Ser>,
-{
-    /// Add option by option configuration generated from [`OptionMeta`](crate::meta::OptionMeta).
-    ///
-    /// # Example load option from json configuration.
-    /// ```rust
-    /// # use cote::prelude::*;
-    /// # use aopt::prelude::*;
-    /// # use aopt::Error;
-    /// #
-    /// # fn main() -> Result<(), Error> {
-    ///     let mut cote = CoteApp::<AFwdPolicy>::default();
-    ///
-    ///     let config: OptionMeta<String> = serde_json::from_str(
-    ///         r#"
-    ///                      {
-    ///                          "id": "-c",
-    ///                          "option": "-c=s",
-    ///                          "hint": "-c <str>",
-    ///                          "help": "This is a help for option c",
-    ///                          "action": "App",
-    ///                          "alias": null,
-    ///                          "value": [
-    ///                          "we",
-    ///                          "it"
-    ///                          ]
-    ///                      }
-    ///                  "#,
-    ///     )
-    ///     .unwrap();
-    ///
-    ///     cote.add_opt_meta(config)?;
-    ///
-    ///     let config: OptionMeta<i64> = serde_json::from_str(
-    ///         r#"
-    ///                          {
-    ///                              "id": "-p",
-    ///                              "option": "--point=i",
-    ///                              "hint": "--point <int>",
-    ///                              "help": "This is a help for option",
-    ///                              "action": "App",
-    ///                              "alias": [
-    ///                                  "-p"
-    ///                              ]
-    ///                          }
-    ///                      "#,
-    ///     )
-    ///     .unwrap();
-    ///
-    ///     cote.add_opt_meta(config)?;
-    ///
-    ///     cote.run_with(
-    ///         ["-p", "256"].into_iter(),
-    ///         |ret, cote: &CoteApp<AFwdPolicy>| {
-    ///             if ret.status() {
-    ///                 assert_eq!(
-    ///                     &vec!["we".to_owned(), "it".to_owned()],
-    ///                     cote.find_vals::<String>("-c")?
-    ///                 );
-    ///                 assert_eq!(&256, cote.find_val::<i64>("--point")?);
-    ///                 println!("cote running okay!!!");
-    ///             }
-    ///             Ok(())
-    ///         },
-    ///     )?;
-    ///
-    /// #    Ok(())
-    /// # }
-    ///```
-    ///
-    pub fn add_opt_meta(
+    fn parse(
         &mut self,
-        meta: impl IntoConfig<Ret = SetCfg<P::Set>>,
-    ) -> Result<ParserCommit<'a, '_, P::Inv<'a>, P::Set, P::Ser, Placeholder>, Error> {
-        let set = self.parser.optset();
-        let config = meta.into_config(set)?;
-
-        self.parser.add_opt_cfg(config)
-    }
-
-    /// This function will insert help option `--help;-h;-?: Display help message`.
-    pub fn add_help_option(&mut self) -> Result<&mut Self, Error> {
-        self.add_opt_i::<bool>("--help;-h;-?: Display help message")?;
-        Ok(self)
-    }
-
-    /// Running function after parsing.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use cote::CoteApp;
-    /// use aopt::Error;
-    /// use aopt::prelude::*;
-    ///
-    /// fn main() -> Result<(), Error> {
-    ///     let mut cote = CoteApp::<AFwdPolicy>::default();
-    ///
-    ///     cote.add_opt("-a=b!")?;
-    ///     cote.add_opt("-b=i")?;
-    ///
-    ///     cote.run_mut_with(["-a", "-b", "42"].into_iter(), move |ret, cote| {
-    ///         if ret.status() {
-    ///             assert_eq!(cote.find_val::<bool>("-a")?, &true);
-    ///             assert_eq!(cote.find_val::<i64>("-b")?, &42);
-    ///             println!("{} running over!", cote.name());
-    ///         }
-    ///         Ok(())
-    ///     })?;
-    ///
-    ///     // cote still avilable here, CoteApp::run_mut_with pass mutable reference to closure.
-    ///
-    ///     Ok(())
-    /// }
-    ///```
-    pub fn run_mut_with<'c, 'b, I, R, F>(
-        &'c mut self,
-        iter: impl Iterator<Item = I>,
-        mut r: F,
-    ) -> Result<R, Error>
-    where
-        'c: 'b,
-        I: Into<RawVal>,
-        F: FnMut(P::Ret, &'b mut CoteApp<'a, P>) -> Result<R, Error>,
-    {
-        let args = iter.map(|v| v.into());
-        let parser = &mut self.parser;
-
-        // initialize the option value
-        parser.init()?;
-
-        let ret = parser
-            .parse(aopt::ARef::new(Args::from(args)))
-            .map_err(Into::into)?;
-
-        r(ret, self)
-    }
-
-    /// Running with default arguments [`args()`](std::env::args).
-    pub fn run_mut<'c, 'b, R, F>(&'c mut self, r: F) -> Result<R, Error>
-    where
-        'c: 'b,
-        F: FnMut(P::Ret, &'b mut CoteApp<'a, P>) -> Result<R, Error>,
-    {
-        let args = Args::from_env().into_inner();
-        self.run_mut_with(args.into_iter(), r)
-    }
-
-    /// Running async function after parsing.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use cote::CoteApp;
-    /// use aopt::Error;
-    /// use aopt::prelude::*;
-    ///
-    /// #[tokio::main]
-    /// async fn main() -> Result<(), Error> {
-    ///     let mut cote = CoteApp::<AFwdPolicy>::default();
-    ///
-    ///     cote.add_opt("-a=b!")?;
-    ///     cote.add_opt("-b=i")?;
-    ///
-    ///     cote.run_async_mut_with(["-a", "-b", "42"].into_iter(), |ret, cote| async move {
-    ///         if ret.status() {
-    ///             assert_eq!(cote.find_val::<bool>("-a")?, &true);
-    ///             assert_eq!(cote.find_val::<i64>("-b")?, &42);
-    ///             println!("{} running over!", cote.name());
-    ///         }
-    ///         Ok(())
-    ///     })
-    ///     .await?;
-    ///
-    ///     // cote still avilable here, CoteApp::run_async_mut_with pass mutable reference to closure.
-    ///
-    ///     Ok(())
-    /// }
-    ///```
-    pub async fn run_async_mut_with<'c, 'b, I, R, FUT, F>(
-        &'c mut self,
-        iter: impl Iterator<Item = I>,
-        mut r: F,
-    ) -> Result<R, Error>
-    where
-        'c: 'b,
-        I: Into<RawVal>,
-        FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b mut CoteApp<'a, P>) -> FUT,
-    {
-        let args = iter.map(|v| v.into());
-        let parser = &mut self.parser;
-        let async_ret;
-
-        // initialize the option value
-        parser.init()?;
-        match parser.parse(aopt::ARef::new(Args::from(args))) {
-            Ok(ret) => {
-                let ret = r(ret, self).await;
-
-                async_ret = ret;
-            }
-            Err(e) => {
-                async_ret = Err(e.into());
-            }
-        }
-        async_ret
-    }
-
-    /// Running with default arguments [`args()`](std::env::args).
-    pub async fn run_async_mut<'c, 'b, R, FUT, F>(&'c mut self, r: F) -> Result<R, Error>
-    where
-        'c: 'b,
-        FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b mut CoteApp<'a, P>) -> FUT,
-    {
-        let args = Args::from_env().into_inner();
-        self.run_async_mut_with(args.into_iter(), r).await
-    }
-
-    /// Running function after parsing.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use cote::CoteApp;
-    /// use aopt::Error;
-    /// use aopt::prelude::*;
-    ///
-    /// fn main() -> Result<(), Error> {
-    ///     let mut cote = CoteApp::<AFwdPolicy>::default();
-    ///
-    ///     cote.add_opt("-a=b!")?;
-    ///     cote.add_opt("-b=i")?;
-    ///
-    ///     cote.run_with(["-a", "-b", "42"].into_iter(), move |ret, cote| {
-    ///         if ret.status() {
-    ///             assert_eq!(cote.find_val::<bool>("-a")?, &true);
-    ///             assert_eq!(cote.find_val::<i64>("-b")?, &42);
-    ///             println!("{} running over!", cote.name());
-    ///         }
-    ///         Ok(())
-    ///     })?;
-    ///
-    ///     // cote still avilable here, CoteApp::run_with pass reference to closure.
-    ///
-    ///     Ok(())
-    /// }
-    ///```
-    pub fn run_with<'c, 'b, I, R, F>(
-        &'c mut self,
-        iter: impl Iterator<Item = I>,
-        mut r: F,
-    ) -> Result<R, Error>
-    where
-        'c: 'b,
-        I: Into<RawVal>,
-        F: FnMut(P::Ret, &'b CoteApp<'a, P>) -> Result<R, Error>,
-    {
-        let args = iter.map(|v| v.into());
-        let parser = &mut self.parser;
-
-        // initialize the option value
-        parser.init()?;
-
-        let ret = parser
-            .parse(aopt::ARef::new(Args::from(args)))
-            .map_err(Into::into)?;
-
-        r(ret, self)
-    }
-
-    /// Running with default arguments [`args()`](std::env::args).
-    pub fn run<'c, 'b, R, F>(&'c mut self, r: F) -> Result<R, Error>
-    where
-        'c: 'b,
-        F: FnMut(P::Ret, &'b CoteApp<'a, P>) -> Result<R, Error>,
-    {
-        let args = Args::from_env().into_inner();
-        self.run_with(args.into_iter(), r)
-    }
-
-    /// Running async function after parsing.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use cote::CoteApp;
-    /// use aopt::Error;
-    /// use aopt::prelude::*;
-    ///
-    /// #[tokio::main]
-    /// async fn main() -> Result<(), Error> {
-    ///     let mut cote = CoteApp::<AFwdPolicy>::default();
-    ///
-    ///     cote.add_opt("-a=b!")?;
-    ///     cote.add_opt("-b=i")?;
-    ///
-    ///     cote.run_async_with(["-a", "-b", "42"].into_iter(), |ret, cote| async move {
-    ///         if ret.status() {
-    ///             assert_eq!(cote.find_val::<bool>("-a")?, &true);
-    ///             assert_eq!(cote.find_val::<i64>("-b")?, &42);
-    ///             println!("{} running over!", cote.name());
-    ///         }
-    ///         Ok(())
-    ///     })
-    ///     .await?;
-    ///
-    ///     // cote still avilable here, CoteApp::run_async_with pass reference to closure.
-    ///
-    ///     Ok(())
-    /// }
-    ///```
-    pub async fn run_async_with<'c, 'b, I, R, FUT, F>(
-        &'c mut self,
-        iter: impl Iterator<Item = I>,
-        mut r: F,
-    ) -> Result<R, Error>
-    where
-        'c: 'b,
-        I: Into<RawVal>,
-        FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b CoteApp<'a, P>) -> FUT,
-    {
-        let args = iter.map(|v| v.into());
-        let parser = &mut self.parser;
-        let async_ret;
-
-        // initialize the option value
-        parser.init()?;
-        match parser.parse(aopt::ARef::new(Args::from(args))) {
-            Ok(ret) => {
-                let ret = r(ret, self).await;
-
-                async_ret = ret;
-            }
-            Err(e) => {
-                async_ret = Err(e.into());
-            }
-        }
-        async_ret
-    }
-
-    /// Running with default arguments [`args()`](std::env::args).
-    pub async fn run_async<'c, 'b, R, FUT, F>(&'c mut self, r: F) -> Result<R, Error>
-    where
-        'c: 'b,
-        FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b CoteApp<'a, P>) -> FUT,
-    {
-        let args = Args::from_env().into_inner();
-        self.run_async_with(args.into_iter(), r).await
+        _: &mut Self::Set,
+        _: &mut Self::Inv<'_>,
+        _: &mut Self::Ser,
+        _: ARef<Args>,
+    ) -> Result<Self::Ret, Self::Error> {
+        Ok(ReturnVal::default())
     }
 }
 
-impl<'a, P> CoteApp<'a, P>
+impl<'inv, Set, Ser> PolicySettings for NullPolicy<'inv, Set, Ser> {
+    fn style_manager(&self) -> &OptStyleManager {
+        &self.style_manager
+    }
+
+    fn style_manager_mut(&mut self) -> &mut OptStyleManager {
+        &mut self.style_manager
+    }
+
+    fn strict(&self) -> bool {
+        false
+    }
+
+    fn styles(&self) -> &[UserStyle] {
+        &self.style_manager
+    }
+
+    fn no_delay(&self) -> Option<&[aopt::Str]> {
+        None
+    }
+
+    fn set_strict(&mut self, _: bool) -> &mut Self {
+        self
+    }
+
+    fn set_styles(&mut self, _: Vec<UserStyle>) -> &mut Self {
+        self
+    }
+
+    fn set_no_delay(&mut self, _: impl Into<aopt::Str>) -> &mut Self {
+        self
+    }
+}
+
+impl<'inv, Set, Ser> APolicyExt<NullPolicy<'inv, Set, Ser>> for NullPolicy<'inv, Set, Ser>
 where
-    P: Policy,
-    P::Set: SetValueFindExt,
+    Set: Default,
+    Ser: Default,
 {
-    pub fn new_with<S: Into<String>>(
-        name: S,
-        policy: P,
-        optset: P::Set,
-        invoker: P::Inv<'a>,
-        appser: P::Ser,
-    ) -> Self {
-        Self {
-            name: name.into(),
-
-            parser: Parser::new_with(policy, optset, invoker, appser),
-        }
+    fn default_ser(&self) -> <NullPolicy<'inv, Set, Ser> as Policy>::Ser {
+        Ser::default()
     }
 
-    pub fn name(&self) -> &String {
-        &self.name
+    fn default_set(&self) -> <NullPolicy<'inv, Set, Ser> as Policy>::Set {
+        Parser::default()
     }
 
-    pub fn with_name<S: Into<String>>(mut self, name: S) -> Self {
-        self.name = name.into();
-        self
+    fn default_inv<'a>(&self) -> <NullPolicy<'inv, Set, Ser> as Policy>::Inv<'a> {
+        Invoker::default()
     }
-
-    pub fn set_name<S: Into<String>>(&mut self, name: S) -> &mut Self {
-        self.name = name.into();
-        self
-    }
-
-    pub fn display_help(
-        &self,
-        author: impl Into<String>,
-        version: impl Into<String>,
-        description: impl Into<String>,
-    ) -> Result<bool, Error> {
-        self.display_help_if("--help", author, version, description)
-    }
-
-    pub fn display_help_if(
-        &self,
-        option: &str,
-        author: impl Into<String>,
-        version: impl Into<String>,
-        description: impl Into<String>,
-    ) -> Result<bool, Error> {
-        self.display_help_if_width(option, author, version, description, 40, 10)
-    }
-
-    pub fn display_help_if_width(
-        &self,
-        option: &str,
-        author: impl Into<String>,
-        version: impl Into<String>,
-        description: impl Into<String>,
-        option_width: usize,
-        usage_width: usize,
-    ) -> Result<bool, Error> {
-        let set = self.parser.optset();
-
-        if let Ok(help_option) = set.find_val::<bool>(option) {
-            if *help_option {
-                let (author, version, description) =
-                    (author.into(), version.into(), description.into());
-                let name = self.name.to_string();
-
-                crate::display_set_help!(
-                    &name,
-                    set,
-                    author,
-                    version,
-                    description,
-                    option_width,
-                    usage_width
-                )?;
-                return Ok(true);
-            }
-        }
-        Ok(false)
-    }
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct HelpDisplayCtx {
-    name: String,
-
-    head: String,
-
-    foot: String,
-
-    width: usize,
-
-    usagew: usize,
-
-    subnames: Vec<String>,
-
-    submode: bool,
-}
-
-impl HelpDisplayCtx {
-    pub fn with_name(mut self, name: impl Into<String>) -> Self {
-        self.name = name.into();
-        self
-    }
-
-    pub fn with_head(mut self, head: impl Into<String>) -> Self {
-        self.head = head.into();
-        self
-    }
-
-    pub fn with_foot(mut self, foot: impl Into<String>) -> Self {
-        self.foot = foot.into();
-        self
-    }
-
-    pub fn with_width(mut self, width: usize) -> Self {
-        self.width = width;
-        self
-    }
-
-    pub fn with_usagew(mut self, usagew: usize) -> Self {
-        self.usagew = usagew;
-        self
-    }
-
-    pub fn with_subnames(mut self, subnames: Vec<String>) -> Self {
-        self.subnames = subnames;
-        self
-    }
-
-    pub fn with_submode(mut self, submode: bool) -> Self {
-        self.submode = submode;
-        self
-    }
-
-    pub fn set_name(&mut self, name: impl Into<String>) -> &mut Self {
-        self.name = name.into();
-        self
-    }
-
-    pub fn set_head(&mut self, head: impl Into<String>) -> &mut Self {
-        self.head = head.into();
-        self
-    }
-
-    pub fn set_foot(&mut self, foot: impl Into<String>) -> &mut Self {
-        self.foot = foot.into();
-        self
-    }
-
-    pub fn set_width(&mut self, width: usize) -> &mut Self {
-        self.width = width;
-        self
-    }
-
-    pub fn set_usagew(&mut self, usagew: usize) -> &mut Self {
-        self.usagew = usagew;
-        self
-    }
-
-    pub fn set_subnames(&mut self, subnames: Vec<String>) -> &mut Self {
-        self.subnames = subnames;
-        self
-    }
-
-    pub fn set_submode(&mut self, submode: bool) -> &mut Self {
-        self.submode = submode;
-        self
-    }
-
-    pub fn name(&self) -> &String {
-        &self.name
-    }
-
-    pub fn head(&self) -> &String {
-        &self.head
-    }
-
-    pub fn foot(&self) -> &String {
-        &self.foot
-    }
-
-    pub fn width(&self) -> usize {
-        self.width
-    }
-
-    pub fn usagew(&self) -> usize {
-        self.usagew
-    }
-
-    pub fn subnames(&self) -> &[String] {
-        &self.subnames
-    }
-
-    pub fn submode(&self) -> bool {
-        self.submode
-    }
-
-    pub fn generate_name(&self) -> String {
-        if self.submode {
-            std::iter::once(self.name())
-                .chain(self.subnames().iter())
-                .map(|v| v.as_str())
-                .collect::<Vec<&str>>()
-                .join(" ")
-        } else {
-            self.subnames()
-                .iter()
-                .chain(std::iter::once(self.name()))
-                .map(|v| v.as_str())
-                .collect::<Vec<&str>>()
-                .join(" ")
-        }
-    }
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct AppRunningCtx<T = (String, aopt::prelude::ReturnVal)> {
-    names: Vec<String>,
-
-    display_help: bool,
-
-    display_sub_help: bool,
-
-    exit: bool,
-
-    exit_sub: bool,
-
-    failed_info: Vec<T>,
-}
-
-impl<T> AppRunningCtx<T> {
-    pub fn with_names(mut self, names: Vec<String>) -> Self {
-        self.names = names;
-        self
-    }
-
-    pub fn with_display_help(mut self, display_help: bool) -> Self {
-        self.display_help = display_help;
-        self
-    }
-
-    pub fn with_display_sub_help(mut self, display_sub_help: bool) -> Self {
-        self.display_sub_help = display_sub_help;
-        self
-    }
-
-    pub fn with_exit(mut self, exit: bool) -> Self {
-        self.exit = exit;
-        self
-    }
-
-    pub fn with_exit_sub(mut self, exit_sub: bool) -> Self {
-        self.exit_sub = exit_sub;
-        self
-    }
-
-    pub fn set_names(&mut self, names: Vec<String>) -> &mut Self {
-        self.names = names;
-        self
-    }
-
-    pub fn set_display_help(&mut self, display_help: bool) -> &mut Self {
-        self.display_help = display_help;
-        self
-    }
-
-    pub fn set_display_sub_help(&mut self, display_sub_help: bool) -> &mut Self {
-        self.display_sub_help = display_sub_help;
-        self
-    }
-
-    pub fn set_exit(&mut self, exit: bool) -> &mut Self {
-        self.exit = exit;
-        self
-    }
-
-    pub fn set_exit_sub(&mut self, exit_sub: bool) -> &mut Self {
-        self.exit_sub = exit_sub;
-        self
-    }
-
-    pub fn add_failed_info(&mut self, failed_info: T) -> &mut Self {
-        self.failed_info.push(failed_info);
-        self
-    }
-
-    pub fn names(&self) -> &[String] {
-        &self.names
-    }
-
-    pub fn display_help(&self) -> bool {
-        self.display_help
-    }
-
-    pub fn display_sub_help(&self) -> bool {
-        self.display_sub_help
-    }
-
-    pub fn exit(&self) -> bool {
-        self.exit
-    }
-
-    pub fn exit_sub(&self) -> bool {
-        self.exit_sub
-    }
-
-    pub fn failed_info(&self) -> &[T] {
-        &self.failed_info
-    }
-
-    pub fn take_failed_info(&mut self) -> Vec<T> {
-        std::mem::take(&mut self.failed_info)
-    }
-
-    pub fn clear_failed_info(&mut self) {
-        self.failed_info.clear();
-    }
-
-    pub fn add_name(&mut self, name: String) -> &mut Self {
-        self.names.push(name);
-        self
-    }
-
-    pub fn sync_ctx(&mut self, ctx: &mut Self) -> &mut Self {
-        self.names.append(&mut ctx.names);
-        self.display_help = self.display_help() || ctx.display_help();
-        self.display_sub_help = self.display_sub_help() || ctx.display_sub_help();
-        self.exit = self.exit() || ctx.exit();
-        self.exit_sub = self.exit_sub() || ctx.exit_sub();
-        self
-    }
-
-    pub fn sync_failed_info(&mut self, ctx: &mut Self) -> &mut Self {
-        self.failed_info.extend(ctx.take_failed_info());
-        self
-    }
-}
-
-impl AppRunningCtx<(String, aopt::prelude::ReturnVal)> {
-    pub fn chain_error(&mut self) -> Option<aopt::Error> {
-        let mut iter = self.failed_info.iter_mut();
-
-        if let Some(failed_info) = iter.next() {
-            let mut error = failed_info.1.take_failure();
-
-            for failed_info in iter {
-                error = error.cause(failed_info.1.take_failure());
-            }
-            Some(error)
-        } else {
-            None
-        }
-    }
-}
-
-pub fn simple_display_set_help<'a, T: Set, S: Into<Cow<'a, str>>>(
-    set: &T,
-    name: S,
-    head: S,
-    foot: S,
-    max_width: usize,
-    usage_width: usize,
-) -> Result<(), aopt_help::Error> {
-    let mut app_help = aopt_help::AppHelp::new(
-        name,
-        head,
-        foot,
-        aopt_help::prelude::Style::default(),
-        std::io::stdout(),
-        max_width,
-        usage_width,
-    );
-    let global = app_help.global_mut();
-
-    global.add_block(Block::new("command", "<COMMAND>", "", "Commands:", ""))?;
-    global.add_block(Block::new("option", "", "", "Options:", ""))?;
-    global.add_block(Block::new("args", "[ARGS]", "", "Args:", ""))?;
-    for opt in set.iter() {
-        if opt.mat_style(Style::Pos) {
-            global.add_store(
-                "args",
-                Store::new(
-                    Cow::from(opt.name().as_str()),
-                    Cow::from(opt.hint().as_str()),
-                    Cow::from(opt.help().as_str()),
-                    Cow::default(),
-                    !opt.force(),
-                    true,
-                ),
-            )?;
-        } else if opt.mat_style(Style::Cmd) {
-            global.add_store(
-                "command",
-                Store::new(
-                    Cow::from(opt.name().as_str()),
-                    Cow::from(opt.hint().as_str()),
-                    Cow::from(opt.help().as_str()),
-                    Cow::default(),
-                    !opt.force(),
-                    true,
-                ),
-            )?;
-        } else if opt.mat_style(Style::Argument)
-            || opt.mat_style(Style::Boolean)
-            || opt.mat_style(Style::Combined)
-        {
-            global.add_store(
-                "option",
-                Store::new(
-                    Cow::from(opt.name().as_str()),
-                    Cow::from(opt.hint().as_str()),
-                    Cow::from(opt.help().as_str()),
-                    Cow::default(),
-                    !opt.force(),
-                    false,
-                ),
-            )?;
-        }
-    }
-
-    app_help.display(true)?;
-
-    Ok(())
-}
-
-/// Display help message of [`CoteApp`] generate from `Cargo.toml`.
-/// The `head` will be generate from package's description.
-/// The `foot` will be generate from package's authors and version.
-/// Default option text width is 20, and default usage width is 10.
-#[macro_export]
-macro_rules! display_help {
-    ($cote:ident) => {{
-        $cote.display_help(
-            env!("CARGO_PKG_AUTHORS"),
-            env!("CARGO_PKG_VERSION"),
-            env!("CARGO_PKG_DESCRIPTION"),
-        )
-    }};
-}
-
-/// Display help message of [`CoteApp`] generate from `Cargo.toml`.
-/// The `head` will be generate from package's description.
-/// The `foot` will be generate from package's authors and version.
-#[macro_export]
-macro_rules! display_set_help {
-    ($name:expr, $set:ident, $author:expr, $version:expr, $description:expr, $width:expr, $usage_width:expr) => {{
-        let foot = format!("Create by {} v{}", $author, $version,);
-        let head = format!("{}", $description);
-
-        fn __check_set<S: aopt::prelude::Set>(a: &S) -> &S {
-            a
-        }
-
-        fn __check_name<T: Into<String>>(a: T) -> String {
-            a.into()
-        }
-
-        $crate::simple_display_set_help(
-            __check_set($set),
-            __check_name($name),
-            head,
-            foot,
-            $width,
-            $usage_width,
-        )
-        .map_err(|e| aopt::Error::raise_error(format!("Can not show help message: {:?}", e)))
-    }};
 }
 
 #[cfg(test)]
 mod test {
     #[test]
     fn test_example_simple() {
-        use crate::prelude::*;
-        // macro generate the code depend on crate name
         use crate as cote;
+        use crate::*;
+        // macro generate the code depend on crate name
         use aopt::opt::Pos;
 
         #[derive(Debug, Cote)]
@@ -1037,7 +275,7 @@ mod test {
         assert_eq!(example.foo, true);
         assert_eq!(example.bar.0, 42);
 
-        let parser = Example::into_app().unwrap();
+        let parser = Example::into_parser().unwrap();
 
         assert_eq!(parser["--foo"].help(), &aopt::astr("a flag argument"));
         assert_eq!(parser["bar"].help(), &aopt::astr("a position argument"));
@@ -1045,7 +283,7 @@ mod test {
 
     #[test]
     fn test_multiple_pos_arguments() {
-        use crate::prelude::*;
+        use crate::*;
         // macro generate the code depend on crate name
         use crate as cote;
         use aopt::opt::Pos;
@@ -1065,7 +303,7 @@ mod test {
             destination: Pos<String>,
 
             /// Specify path to copy
-            #[arg(index = "2..")]
+            #[arg(index = 2..)]
             sources: Vec<Pos<PathBuf>>,
         }
 
@@ -1092,14 +330,13 @@ mod test {
 
     #[test]
     fn test_fallback() {
-        use crate::prelude::*;
+        use crate::*;
         // macro generate the code depend on crate name
         use crate as cote;
         use aopt::opt::Pos;
-        use aopt::GetoptRes;
 
         #[derive(Debug, Cote)]
-        #[cote(policy = delay, help, on = find_main::<P>, name = "find")]
+        #[cote(policy = delay, help, on = find_main, name = "find")]
         pub struct Find {
             /// Do not follow symbolic link
             #[arg(name = "-H", nodelay)]
@@ -1119,14 +356,11 @@ mod test {
             #[arg(name = "-size")]
             size: Option<usize>,
 
-            #[arg(index = "1", help = "Search starting point", fallback = search::<P>, then = VecStore)]
+            #[arg(index = "1", help = "Search starting point", fallback = search, then = VecStore)]
             destination: Vec<Pos<String>>,
         }
 
-        fn search<P: Policy>(
-            _: &mut P::Set,
-            _: &mut P::Ser,
-        ) -> Result<Option<Vec<String>>, aopt::Error> {
+        fn search<Set, Ser>(_: &mut Set, _: &mut Ser) -> Result<Option<Vec<String>>, aopt::Error> {
             Ok(Some(
                 ["file1", "file2", "dir1", "dir2"]
                     .into_iter()
@@ -1135,10 +369,9 @@ mod test {
             ))
         }
 
-        fn find_main<P>(set: &mut P::Set, _: &mut P::Ser) -> Result<Option<()>, aopt::Error>
+        fn find_main<Set, Ser>(set: &mut Set, _: &mut Ser) -> Result<Option<()>, aopt::Error>
         where
-            P: Policy,
-            P::Set: SetValueFindExt,
+            Set: SetValueFindExt,
         {
             let tool = Find::try_extract(set)?;
 
@@ -1160,7 +393,7 @@ mod test {
 
         let args = Args::from_array(["app", ".", "-H", "-name=foo", "-size", "42"]);
 
-        let GetoptRes { ret, parser: _ } = Find::parse_args(args).unwrap();
+        let CoteRes { ret, .. } = Find::parse_args(args).unwrap();
 
         ret.ok().unwrap();
     }
@@ -1171,12 +404,9 @@ mod test {
     }
 
     fn sub_test_impl() -> Result<(), aopt::Error> {
-        use crate::prelude::*;
+        use crate::*;
         // macro generate the code depend on crate name
         use crate as cote;
-        use aopt::opt::Pos;
-        use aopt::GetoptRes;
-        use cote::valid;
         use std::path::PathBuf;
 
         #[derive(Debug, Cote, PartialEq, Default)]
@@ -1262,9 +492,10 @@ mod test {
 
         let args = Args::from_array(["app", "--count=42", "list"]);
 
-        let GetoptRes {
+        let CoteRes {
             ret,
             parser: mut app,
+            ..
         } = App::parse_args(args)?;
 
         assert_eq!(ret.status(), false);

@@ -10,7 +10,7 @@ use crate::Str;
 /// The struct of the option string are:
 ///
 /// ```!
-/// [--option][=][type][!][@index]
+/// [--option][=][type][!*][@index]
 ///      |     |    |   |   |
 ///      |     |    |   |   |
 ///      |     |    |   |   |
@@ -23,7 +23,7 @@ use crate::Str;
 ///      |     |    |   |   @<3 means position less than 3
 ///      |     |    |   |   @* means all the position
 ///      |     |    |   |
-///      |     |    |   Indicate the option is force required.
+///      |     |    |   Indicate the option wether is force required(!) or not(*).
 ///      |     |    |
 ///      |     |    |
 ///      |     |    |
@@ -43,14 +43,14 @@ use crate::Str;
 /// #
 /// # fn main() -> Result<(), Error> {
 ///     let parser = StrParser::default();
-///     let ret = parser.parse("--aopt=t!".into())?;
+///     let ret = parser.parse_opt("--aopt=t!".into())?;
 ///
 ///     assert_eq!(ret.name() , Some(&astr("--aopt")));
 ///     assert_eq!(ret.ctor(), Some(&astr("t")));
 ///     assert_eq!(ret.force(), Some(true));
 ///     assert_eq!(ret.index(), None);
 ///
-///     let ret = parser.parse("bopt=t@[1,2,3]".into())?;
+///     let ret = parser.parse_opt("bopt=t@[1,2,3]".into())?;
 ///
 ///     assert_eq!(ret.name(), Some(&astr("bopt")));
 ///     assert_eq!(ret.ctor(), Some(&astr("t")));
@@ -67,7 +67,7 @@ use crate::Str;
 pub struct StrParser;
 
 thread_local! {
-    static STR_PARSER: Regex = Regex::new(r"^([^=!@;:]+)?((?:;[^=!@;:]+)+)?(?:=([a-zA-Z])+)?(!)?(@([^@:]+))?(?::(.+))?$").unwrap();
+    static STR_PARSER: Regex = Regex::new(r"^([^=!*@;:]+)?((?:;[^=!*@;:]+)+)?(?:=([a-zA-Z])+)?([!*])?(@([^@:]+))?(?::(.+))?$").unwrap();
 }
 
 impl StrParser {
@@ -86,10 +86,13 @@ impl StrParser {
                     let mut idx = None;
                     let mut alias = None;
 
-                    if let Some(mat) = cap.get(IDX_FORCE) {
+                    if let Some(mat) = cap.get(IDX_OPTIONAL) {
                         match mat.as_str() {
                             "!" => {
                                 force = Some(true);
+                            }
+                            "*" => {
+                                force = Some(false);
                             }
                             _ => {
                                 unreachable!(
@@ -136,7 +139,7 @@ impl StrParser {
 const IDX_NAME: usize = 1;
 const IDX_ALIAS: usize = 2;
 const IDX_CTOR: usize = 3;
-const IDX_FORCE: usize = 4;
+const IDX_OPTIONAL: usize = 4;
 const IDX_INDEX: usize = 6;
 const IDX_HELP: usize = 7;
 
@@ -145,7 +148,7 @@ impl OptParser for StrParser {
 
     type Error = Error;
 
-    fn parse(&self, pattern: Str) -> Result<Self::Output, Self::Error> {
+    fn parse_opt(&self, pattern: Str) -> Result<Self::Output, Self::Error> {
         if pattern.trim().is_empty() {
             Ok(Self::Output::default())
         } else {
@@ -230,8 +233,8 @@ mod test {
         ];
         let helps = [": This is an option help message", ""];
         let helps_test = [Some(astr("This is an option help message")), None];
-        let forces = ["!", ""];
-        let forces_test = [Some(true), None];
+        let forces = ["!", "*", ""];
+        let forces_test = [Some(true), Some(false), None];
         let positions = [
             "@1",
             "@68",
@@ -268,7 +271,7 @@ mod test {
                     for (position, position_test) in positions.iter().zip(positions_test.iter()) {
                         let creator = astr(format!("{}{}{}{}", option, force, position, help));
 
-                        if let Ok(cap) = parser.parse(creator) {
+                        if let Ok(cap) = parser.parse_opt(creator) {
                             assert_eq!(option_test.0.as_ref(), cap.name());
                             assert_eq!(option_test.1.as_ref(), cap.alias());
                             assert_eq!(help_test.as_ref(), cap.help());
@@ -276,7 +279,14 @@ mod test {
                             assert_eq!(position_test.as_ref(), cap.index());
                             assert_eq!(option_test.2.as_ref(), cap.ctor());
                         } else {
-                            assert!(option_test.0.is_none());
+                            assert!(
+                                option_test.0.is_none(),
+                                "{}{}{}{}",
+                                option,
+                                force,
+                                position,
+                                help
+                            );
                             assert!(option_test.1.is_none());
                         }
                     }
