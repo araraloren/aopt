@@ -55,7 +55,7 @@ where
 }
 
 impl<'a, Set, Ser> Parser<'a, Set, Ser> {
-    pub fn new<S: Into<String>>(name: S, set: Set) -> Self {
+    pub fn new(name: impl Into<String>, set: Set) -> Self {
         Self {
             name: name.into(),
             set,
@@ -69,12 +69,12 @@ impl<'a, Set, Ser> Parser<'a, Set, Ser> {
         &self.name
     }
 
-    pub fn with_name<S: Into<String>>(mut self, name: S) -> Self {
+    pub fn with_name(mut self, name: impl Into<String>) -> Self {
         self.name = name.into();
         self
     }
 
-    pub fn set_name<S: Into<String>>(&mut self, name: S) -> &mut Self {
+    pub fn set_name(&mut self, name: impl Into<String>) -> &mut Self {
         self.name = name.into();
         self
     }
@@ -367,16 +367,31 @@ impl<'a, Set, Ser> SetValueFindExt for Parser<'a, Set, Ser>
 where
     Set: SetValueFindExt,
 {
-    fn find_uid<S: Into<aopt::Str>>(&self, opt: S) -> Result<Uid, Error> {
+    fn find_uid(&self, opt: impl Into<aopt::Str>) -> Result<Uid, Error> {
         SetValueFindExt::find_uid(&self.set, opt)
     }
 
-    fn find_opt<S: Into<aopt::Str>>(&self, opt: S) -> Result<&SetOpt<Self>, Error> {
+    fn find_opt(&self, opt: impl Into<aopt::Str>) -> Result<&SetOpt<Self>, Error> {
         SetValueFindExt::find_opt(&self.set, opt)
     }
 
-    fn find_opt_mut<S: Into<aopt::Str>>(&mut self, opt: S) -> Result<&mut SetOpt<Self>, Error> {
+    fn find_opt_mut(&mut self, opt: impl Into<aopt::Str>) -> Result<&mut SetOpt<Self>, Error> {
         SetValueFindExt::find_opt_mut(&mut self.set, opt)
+    }
+
+    fn find_uid_i<U: 'static>(&self, opt: impl Into<aopt::Str>) -> Result<Uid, Error> {
+        SetValueFindExt::find_uid_i::<U>(&self.set, opt)
+    }
+
+    fn find_opt_i<U: 'static>(&self, opt: impl Into<aopt::Str>) -> Result<&SetOpt<Self>, Error> {
+        SetValueFindExt::find_opt_i::<U>(&self.set, opt)
+    }
+
+    fn find_opt_mut_i<U: 'static>(
+        &mut self,
+        opt: impl Into<aopt::Str>,
+    ) -> Result<&mut SetOpt<Self>, Error> {
+        SetValueFindExt::find_opt_mut_i::<U>(&mut self.set, opt)
     }
 }
 

@@ -27,7 +27,7 @@ pub struct Cli {
     arg: String,
 
     /// Collection of arguments start from position 3.
-    #[pos(index = "3..")]
+    #[pos(index = 3..)]
     args: Vec<String>,
 }
 

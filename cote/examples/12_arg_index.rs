@@ -17,7 +17,7 @@ pub struct Cli {
     baz: String,
 
     // `quux` can accept position arguments at range from 3 to infinite
-    #[pos(index = "3..", values = ["corge", "grault"])]
+    #[pos(index = 3.., values = ["corge", "grault"])]
     quux: Vec<String>,
 }
 fn main() -> color_eyre::Result<()> {

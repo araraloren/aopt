@@ -19,10 +19,8 @@ pub struct Cli {
     #[arg(force = true)]
     qux: Option<i64>,
 
-    // Using `force` you can force set `--quux` to optional in `arg`.
-    // But the parse will raise error when extract `Cli` from `CoteApp`
-    // if the option has no default value
-    #[arg(force = false, values = ["need"])]
+    // If the option has default value, then it is optional
+    #[arg(values = ["need"])]
     quux: Vec<String>,
 }
 fn main() -> color_eyre::Result<()> {

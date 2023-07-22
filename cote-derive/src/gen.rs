@@ -13,9 +13,7 @@ use proc_macro_error::abort;
 use quote::quote;
 use syn::punctuated::Punctuated;
 use syn::Attribute;
-use syn::DataEnum;
 use syn::DataStruct;
-use syn::DataUnion;
 use syn::DeriveInput;
 use syn::Field;
 use syn::Fields;
@@ -71,23 +69,11 @@ pub struct Analyzer<'a> {
     arg_generator: Vec<ArgGenerator<'a>>,
 
     sub_generator: Vec<SubGenerator<'a>>,
-
-    infer_generator: Option<InferGenerator<'a>>,
-
-    alter_generator: Option<AlterGenerator<'a>>,
-
-    fetch_generator: Option<FetchGenerator<'a>>,
-
-    value_generator: Option<ValueGenerator<'a>>,
 }
 
 impl<'a> Analyzer<'a> {
     pub fn new(input: &'a DeriveInput) -> syn::Result<Self> {
-        let mut infer_generator = None;
-        let mut alter_generator = None;
-        let mut fetch_generator = None;
-        let mut value_generator = None;
-        let mut cote_generator = None;
+        let cote_generator;
         let mut arg_generator = vec![];
         let mut sub_generator = vec![];
 
@@ -96,84 +82,38 @@ impl<'a> Analyzer<'a> {
                 fields: Fields::Named(ref fields),
                 ..
             }) => {
-                // check the attributes
-                let kinds = collect_attribute_on_struct(input);
-
-                if kinds.contains(&AttrKind::Cote) && kinds.iter().any(|v| v != &AttrKind::Cote) {
-                    let kind = kinds.iter().find(|&v| v != &AttrKind::Cote).unwrap();
-                    abort! {
-                        input,
-                        "Can not using attribute `cote` and `{:?}` on same struct", kind
-                    }
-                }
-
                 let mut sub_app_idx = 0;
                 let mut pos_arg_idx = 1;
 
-                if kinds.is_empty() || kinds.contains(&AttrKind::Cote) {
-                    let mut generator = CoteGenerator::new(input)?;
+                let mut generator = CoteGenerator::new(input)?;
 
-                    for field in fields.named.iter() {
-                        if check_if_has_sub_cfg(field)? {
-                            sub_generator.push(SubGenerator::new(field, sub_app_idx)?);
-                            generator.set_has_sub_command(true);
-                            sub_app_idx += 1;
-                        } else {
-                            let arg = ArgGenerator::new(field, pos_arg_idx)?;
+                for field in fields.named.iter() {
+                    if check_if_has_sub_cfg(field)? {
+                        sub_generator.push(SubGenerator::new(field, sub_app_idx)?);
+                        generator.set_has_sub_command(true);
+                        sub_app_idx += 1;
+                    } else {
+                        let arg = ArgGenerator::new(field, pos_arg_idx)?;
 
-                            if arg.has_pos_id() {
-                                pos_arg_idx += 1;
-                            }
-                            arg_generator.push(arg);
+                        if arg.has_pos_id() {
+                            pos_arg_idx += 1;
                         }
-                    }
-                    cote_generator = Some(generator);
-                } else {
-                    for kind in kinds {
-                        match kind {
-                            AttrKind::Infer => {
-                                infer_generator = Some(InferGenerator::new(input)?);
-                            }
-                            AttrKind::Fetch => {
-                                fetch_generator = Some(FetchGenerator::new(input)?);
-                            }
-                            AttrKind::Alter => {
-                                alter_generator = Some(AlterGenerator::new(input)?);
-                            }
-                            AttrKind::Value => {
-                                abort! {
-                                    input,
-                                    "Can not using attribute `rawvalparser` on struct"
-                                }
-                            }
-                            _ => {}
-                        }
+                        arg_generator.push(arg);
                     }
                 }
+                cote_generator = Some(generator);
             }
             syn::Data::Struct(DataStruct {
                 fields: Fields::Unit,
                 ..
             }) => {
                 cote_generator = Some(CoteGenerator::new(input)?);
-                fetch_generator = Some(FetchGenerator::new(input)?);
-                infer_generator = Some(InferGenerator::new(input)?);
-                alter_generator = Some(AlterGenerator::new(input)?);
             }
-            syn::Data::Enum(DataEnum { ref variants, .. }) => {
-                value_generator = Some(ValueGenerator::new(input, variants)?);
-                fetch_generator = Some(FetchGenerator::new(input)?);
-                infer_generator = Some(InferGenerator::new(input)?);
-                alter_generator = Some(AlterGenerator::new(input)?);
-            }
-            syn::Data::Union(DataUnion { .. })
-            | syn::Data::Struct(DataStruct {
-                fields: Fields::Unnamed(_),
-                ..
-            }) => {
-                fetch_generator = Some(FetchGenerator::new(input)?);
-                infer_generator = Some(InferGenerator::new(input)?);
-                alter_generator = Some(AlterGenerator::new(input)?);
+            _ => {
+                abort! {
+                    input,
+                    "Cote macro not support the type currently"
+                }
             }
         }
 
@@ -181,36 +121,12 @@ impl<'a> Analyzer<'a> {
             arg_generator,
             cote_generator,
             sub_generator,
-            infer_generator,
-            alter_generator,
-            fetch_generator,
-            value_generator,
         })
     }
 
     pub fn cote(&self) -> &CoteGenerator {
         debug_assert!(self.cote_generator.is_some(), "cote error detected");
         self.cote_generator.as_ref().unwrap()
-    }
-
-    pub fn infer(&self) -> &InferGenerator {
-        debug_assert!(self.infer_generator.is_some(), "infer error detected");
-        self.infer_generator.as_ref().unwrap()
-    }
-
-    pub fn alter(&self) -> &AlterGenerator {
-        debug_assert!(self.alter_generator.is_some(), "alter error detected");
-        self.alter_generator.as_ref().unwrap()
-    }
-
-    pub fn fetch(&self) -> &FetchGenerator {
-        debug_assert!(self.fetch_generator.is_some(), "fetch error detected");
-        self.fetch_generator.as_ref().unwrap()
-    }
-
-    pub fn value(&self) -> &ValueGenerator {
-        debug_assert!(self.value_generator.is_some(), "value error detected");
-        self.value_generator.as_ref().unwrap()
     }
 
     pub fn args(&self) -> &[ArgGenerator] {
@@ -227,35 +143,7 @@ impl<'a> Analyzer<'a> {
         if self.cote_generator.is_some() {
             ret.extend(self.gen_impl_for_cote()?);
         }
-        if self.infer_generator.is_some() {
-            ret.extend(self.gen_impl_for_infer()?);
-        }
-        if self.fetch_generator.is_some() {
-            ret.extend(self.gen_impl_for_fetch()?);
-        }
-        if self.alter_generator.is_some() {
-            ret.extend(self.gen_impl_for_alter()?);
-        }
-        if self.value_generator.is_some() {
-            ret.extend(self.gen_impl_for_value()?);
-        }
         Ok(ret)
-    }
-
-    pub fn gen_impl_for_value(&self) -> syn::Result<TokenStream> {
-        self.value().gen_impl_for_enum()
-    }
-
-    pub fn gen_impl_for_infer(&self) -> syn::Result<TokenStream> {
-        self.infer().gen_impl_for_struct()
-    }
-
-    pub fn gen_impl_for_fetch(&self) -> syn::Result<TokenStream> {
-        self.fetch().gen_impl_for_struct()
-    }
-
-    pub fn gen_impl_for_alter(&self) -> syn::Result<TokenStream> {
-        self.alter().gen_impl_for_struct()
     }
 
     pub fn gen_impl_for_cote(&self) -> syn::Result<TokenStream> {
@@ -1020,48 +908,4 @@ pub fn gen_subapp_without_option(ty: &Type) -> syn::Result<&Ident> {
         ty,
         "can not generate sub app type"
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-enum AttrKind {
-    Cote,
-
-    Infer,
-
-    Fetch,
-
-    Alter,
-
-    #[allow(unused)]
-    Value,
-}
-
-impl AttrKind {
-    pub fn name(&self) -> &str {
-        match self {
-            AttrKind::Cote => "cote",
-            AttrKind::Infer => "infer",
-            AttrKind::Fetch => "fetch",
-            AttrKind::Alter => "alter",
-            AttrKind::Value => "rawvalparser",
-        }
-    }
-}
-
-fn collect_attribute_on_struct(input: &DeriveInput) -> Vec<AttrKind> {
-    let attr_map = [
-        AttrKind::Cote,
-        AttrKind::Infer,
-        AttrKind::Fetch,
-        AttrKind::Alter,
-    ];
-    let attrs = &input.attrs;
-    let mut kinds = vec![];
-
-    for attr in attr_map {
-        if attrs.iter().any(|v| v.path.is_ident(attr.name())) {
-            kinds.push(attr);
-        }
-    }
-    kinds
 }

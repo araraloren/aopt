@@ -5,11 +5,19 @@ use super::Kind;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ValueKind {
+    Forward,
+
     Map,
+
+    MapRaw,
 
     IgCase,
 
     MapStr,
+
+    Name,
+
+    Alias,
 }
 
 impl Kind for ValueKind {
@@ -18,9 +26,13 @@ impl Kind for ValueKind {
         let option = ident.to_string();
 
         match option.as_str() {
-            "mapstr" => Ok((Self::MapStr, true)),
+            "forward" => Ok((Self::Forward, true)),
             "map" => Ok((Self::Map, true)),
+            "mapraw" => Ok((Self::MapRaw, true)),
+            "mapstr" => Ok((Self::MapStr, true)),
             "igcase" => Ok((Self::IgCase, false)),
+            "name" => Ok((Self::Name, true)),
+            "alias" => Ok((Self::Alias, true)),
             _ => {
                 abort! {
                     input.span(),

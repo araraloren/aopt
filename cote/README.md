@@ -32,16 +32,19 @@ By default, the command line parsing support `OsString`, enable `utf8` using `St
 cote = { version = "*", features = [ "utf8" ] }
 ```
 
-## Example
+## Documents 
 
-### Using [`Cote`](crate::cote_derive::Cote) generate struct from command line options.
+See [`reference`](crate::_reference) for more information.
+
+### Example
+
+#### Using [`Cote`](crate::cote_derive::Cote) generate struct from command line options.
 
 ```rust
 use aopt::opt::Pos;
-use aopt::Error;
 use cote::*;
 
-fn main() -> Result<(), Error> {
+fn main() -> Result<(), CoteError> {
     #[derive(Debug, Cote)]
     pub struct Cli {
         /// A flag option named `--flag`
@@ -59,7 +62,7 @@ fn main() -> Result<(), Error> {
         from: Pos<String>,
 
         /// A positon option collect argument start from 2
-        #[pos(index = "2..")]
+        #[pos(index = 2..)]
         to: Vec<String>,
     }
     let cli = Cli::parse(Args::from_array(["app", "-nLily", "src", "foo", "bar"]))?;
@@ -83,8 +86,6 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 ```
-
-See [`reference`](crate::_reference) for more information.
 
 ## LICENSE
 

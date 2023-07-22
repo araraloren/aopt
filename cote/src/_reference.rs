@@ -29,7 +29,9 @@
 //!     4. [Optional Sub commands](#optional-sub-commands)
 //! 6. [How it works](#how-it-works)
 //!     1. [Traits](#traits)
-//!     2. [Configurations list](#configurations-list)
+//!     2. [`Cote` Configurations list](#cote-configurations-list)
+//!     2. [`CoteOpt` Configurations list](#copt-configurations-list)
+//!     2. [`CoteVal` Configurations list](#coteval-configurations-list)
 //!
 //! ## Quick Start
 //!
@@ -443,9 +445,9 @@
 //! ### Add "no delay" option
 //!
 //! When using [`DelayPolicy`](crate::DelayPolicy), the option process(invoke handler)
-//! after `Cmd` and `Pos` style.
+//! after [`Cmd`](crate::UserStyle::Cmd) and [`Pos`](crate::UserStyle::Pos) style.
 //! Sometimes we need the option process like [`FwdPolicy`](crate::FwdPolicy) does,
-//! that is process before `Cmd` and `Pos`.
+//! that is process before [`Cmd`](crate::UserStyle::Cmd) and [`Pos`](crate::UserStyle::Pos).
 //!
 //!```rust
 #![doc = include_str!("../examples/18_arg_no_delay.rs")]
@@ -587,17 +589,17 @@
 //!
 //! - [`Alter`](crate::Alter)
 //!
-//! `Cote` using the trait modify action or optional when using struct field with Option or Vec
+//! `Cote` using the trait override the action or optional behavior of [`Infer`](crate::Infer).
 //!
-//!| type | action | force required |
-//!|------|--------|----------|
-//!| `T` | [`Action::Set`](crate::Action::Set) | `true` |
-//!| `Option<T>` | [`Action::Set`](crate::Action::Set) | `false` |
-//!| `Vec<T>` | [`Action::App`](crate::Action::App) | `true` |
-//!| `Option<Vec<T>>` | [`Action::App`](crate::Action::App) | `false` |
-//!| [`Pos<T>`](crate::Pos) | [`Action::Set`](crate::Action::Set) | `true` |
-//!| `bool` | [`Action::Set`](crate::Action::Set) | `false` |
-//!| [`Cmd`](crate::Cmd) | [`Action::Set`](crate::Action::Set) | `true` |
+//!| type | action | force required | force required if has default value |
+//!|------|--------|----------|----------|
+//!| `T` | [`Action::Set`](crate::Action::Set) | `true` | `false` |
+//!| `Option<T>` | [`Action::Set`](crate::Action::Set) | `false` | `false` |
+//!| `Vec<T>` | [`Action::App`](crate::Action::App) | `true` | `false` |
+//!| `Option<Vec<T>>` | [`Action::App`](crate::Action::App) | `false` | `false` |
+//!| [`Pos<T>`](crate::Pos) | [`Action::Set`](crate::Action::Set) | `true` | `false` |
+//!| `bool` | [`Action::Set`](crate::Action::Set) | `false` | `false` |
+//!| [`Cmd`](crate::Cmd) | [`Action::Set`](crate::Action::Set) | `true` | `true` |
 //!
 //! ### Example
 //!
@@ -607,16 +609,33 @@
 #![doc = include_str!("../examples/23_wrapper.rs")]
 //! ```
 //!
-//! ### Example - Derive default behavior from `Cote` macro
+//! ### Example - Derive default behavior from `CoteOpt` or `CoteVal` macro
 //!
 //! ```rust
 #![doc = include_str!("../examples/24_rawvalparser.rs")]
 //! ```
 //!
-//! ### Configurations list
+//! ### `Cote` Configurations list
 //!
 //! #### `cote`
 //!
+//!| name      | need value | available value |
+//!|-----------|------------|-----------|
+//!| `policy`  |  true      | `"pre"`, `"fwd"`, `"delay"`, or type |
+//!| `name`    |  true      | string literal |
+//!| `help`    |  false     | |
+//!| `head`    |  true      | string literal |
+//!| `foot`    |  true      | string literal |
+//!| `width`   |  true      | integer |
+//!| `usagew`  |  true      | integer |
+//!|`aborthelp`|  false     | |
+//!| `on`      |  true      | function or closure |
+//!| `fallback`|  true      | function or closure |
+//!| `then`    |  true      | function or closure |
+//!| `strict`  |  true      | boolean |
+//!| `combine` |  false     | |
+//!| `embedded`|  false     | |
+//!| `flag`    |  false     | |
 //! * `policy`
 //!
 //! Configure the policy of current struct, its value should be `fwd`, `pre` or `delay.
@@ -643,7 +662,7 @@
 //!
 //! ```rust
 #![doc = include_str!("../test/02_head_foot.rs")]
-//!```
+//! ```
 //!
 //! * `width`, `usagew`
 //!
@@ -652,7 +671,24 @@
 //!
 //! * `on`, `fallback`, `then`
 //!
-//! Configure the handler which invoked by the parser. See [`Configurating handler`](#configurating-handler).
+//! Using `then` you can configure a handler which is responsible for storing the option value
+//! (which is generated from the struct and inserted by cote-derive).
+//! In default the handler is [`process`](crate::Action#method.process),
+//! and the action is [`App`](crate::Action::App) or [`Set`](crate::Action::Set).
+//!
+//! And with `on`, you can set a handler will be invoked by [`policy`](crate::Policy),
+//! the return value of handler will store as the value of option.
+//!
+//! ```rust
+#![doc = include_str!("../test/04_on.rs")]
+//! ```
+//!
+//! The `fallback` do same things as `on` except the [`fallback`](crate::Invoker::fallback) will be called
+//! if the handler returns [`None`].
+//!
+//! ```rust
+#![doc = include_str!("../test/05_fallback.rs")]
+//! ```
 //!
 //! * `strict`
 //!
@@ -661,24 +697,250 @@
 //!
 //! ```rust
 #![doc = include_str!("../test/03_strict.rs")]
-//!```
+//! ```
 //!
 //! * `combine`, `embedded`, `flag`
 //!
-//! Enable some extra [`user style`](crate::UserStyle) of policy. See [`Configurating User Style`](#configurating-user-style).
+//! Enable some extra [`user style`](crate::UserStyle) of policy. See also [`Configurating User Style`](#configurating-user-style).
 //!
-//! #### `arg`
+//! #### `arg`, `pos`, `cmd`
 //!
-//! #### `pos`
+//!| name      | need value | available value |
+//!|-----------|------------|-----------|
+//!| `name`    |  true      | string literal |
+//!| `ty`      |  true      | type |
+//!| `hint`    |  true      | string literal |
+//!| `help`    |  true      | string literal |
+//!| `value`   |  true      | value expression |
+//!| `values`  |  true      | values expression |
+//!| `alias`   |  true      | string literal |
+//!| `index`   |  true      | range or integer |
+//!| `force`   |  true      | boolean |
+//!| `action`  |  true      | [`Action`](crate::Action) |
+//!| `valid`   |  true      | [`valid!`](crate::valid!) |
+//!| `on`      |  true      | function or closure |
+//!| `fallback`|  true      | function or closure |
+//!| `then`    |  true      | function or closure |
+//!| `nodelay` |  false     | |
+//!| `fetch`   |  true      | function |
+//!| `append`  |  false     | |
+//!| `count`   |  false     | |
 //!
-//! #### `cmd`
+//! * `name`, `alias`
+//!
+//! Configure the name and alias of current option. See also [`Configurating the name and alias`](#configurating-the-name-and-alias).
+//!
+//! * `hint`, `help`
+//!
+//! Configure the name and help message of option.
+//! See also [`Configurating the hint, help and default value`](#configurating-the-hint-help-and-default-value).
+//!
+//! * `value`, `values`
+//!
+//! Configure the default value of option, `cote-derive` using [`From`] convert given value to option value.
+//!
+//! ```rust
+#![doc = include_str!("../test/06_value.rs")]
+//! ```
+//!
+//! * `index`
+//!
+//! Configure the index of option, it is using for `pos`([`Pos`](crate::Pos)) attribute generally.
+//!
+//! ```rust
+#![doc = include_str!("../test/07_index.rs")]
+//! ```
+//!
+//! * `force`
+//!
+//! Make the option force required.
+//!
+//! ```rust
+#![doc = include_str!("../test/08_force.rs")]
+//! ```
+//!
+//! * `action`, `ty`, `append`, `count`
+//!
+//! `action` can configure the [`Action`](crate::Action) which responsible for saving value of option.
+//! Using `ty` specify the option type when using [`Action::Cnt`](crate::Action::Cnt).
+//!  
+//! ```rust
+#![doc = include_str!("../test/09_action.rs")]
+//! ```
+//!
+//! `append` is an alias of "action = [`Action::App`](crate::Action::App)",
+//! `count` is an alias of "action = [`Action::Cnt`](crate::Action::Cnt)"
+//!
+//! * `fetch`
+//!
+//! Configure the handler which is used to extract value from [`set`](crate::Set).
+//!
+//! ```rust
+#![doc = include_str!("../test/10_fetch.rs")]
+//! ```
+//!
+//! * `valid`
+//!
+//! Using [`valid!`](crate::valid!) validate the value set by user. See also [`Validate values`](#validate-values).
+//!
+//! ```rust
+#![doc = include_str!("../test/11_valid.rs")]
+//! ```
+//!
+//! * `on`, `fallback`, `then`
+//!
+//! Using `then` you can configure a handler which is responsible for storing the option value.
+//! In default the handler is [`process`](crate::Action#method.process), and the action is [`Null`](crate::Action::Null).
+//!
+//! And with `on`, you can set a handler will be invoked by [`policy`](crate::Policy),
+//! the return value of handler will store as the value of option.
+//!
+//! ```rust
+#![doc = include_str!("../test/12_on.rs")]
+//! ```
+//!
+//! The `fallback` do same things as `on` except the [`fallback`](crate::Invoker::fallback) will be called
+//! if the handler returns [`None`].
+//!
+//! * `nodelay`
+//!
+//! Invoke the option's handler before any [`Cmd`](crate::UserStyle::Cmd) or [`Pos`](crate::UserStyle::Pos).
+//! Only work for [`DelayPolicy`](crate::DelayPolicy) currently.
+//! See also [`Add "no delay" option`](#add-no-delay-option).
 //!
 //! #### `sub`
 //!
+//!| name      | need value | available value |
+//!|-----------|------------|-----------|
+//!| `policy`  |  true      | `"pre"`, `"fwd"`, `"delay"`, or type |
+//!| `name`    |  true      | string literal |
+//!| `hint`    |  true      | string literal |
+//!| `help`    |  true      | string literal |
+//!| `head`    |  true      | string literal |
+//!| `foot`    |  true      | string literal |
+//!| `alias`   |  true      | string literal |
+//!| `force`   |  true      | boolean |
+//!
+//! * `policy`
+//!
+//! Override the `policy` of sub command.
+//!
+//! ```rust
+#![doc = include_str!("../test/13_policy.rs")]
+//! ```
+//!
+//! * `name`, `alias`
+//!
+//! Configure the name and alias of sub command.
+//!
+//! * `hint`, `help`
+//!
+//! Configure the hint and help of help message.
+//!
+//! * `head`, `foot`
+//!
+//! Configure the head and foot of help message of sub command.
+//!
+//! ```rust
+#![doc = include_str!("../test/14_help.rs")]
+//! ```
+//!
+//! * `force`
+//!
+//! Configure the sub command optional, in default one of sub commands must be set.
+//!
+//! ```rust
+#![doc = include_str!("../test/15_force.rs")]
+//! ```
+//!
+//! ### `CoteOpt` Configurations list
+//!
+//! `CoteOpt` derive the default behavior of [`Infer`](crate::Infer), [`Fetch`](crate::Fetch`) and [`Alter`](crate::Alter).
+//!
 //! #### `infer`
+//!
+//!| name      | need value | available value |
+//!|-----------|------------|-----------|
+//!| `val`     |  true      | value type |
+//!| `action`  |  true      | [`Action`](crate::Action) |
+//!| `force`   |  true      | boolean |
+//!| `ctor`    |  true      | [`Str`](crate::aopt::Str) |
+//!| `index`   |  true      | Option<[`Index`](crate::Index)> |
+//!| `style`   |  true      | Vec<[`Style`](crate::Style)> |
+//!| `igname`  |  true      | boolean |
+//!| `igalias` |  true      | boolean |
+//!| `igindex` |  true      | boolean |
+//!| `valid`   |  true      | Option<[`ValValidator`](crate::ValValidator)\<[`Val`](crate::Infer::Val)\>> |
+//!| `init`    |  true      | Option<[`ValInitializer`](crate::ValInitializer)> |
+//!| `ty`      |  true      | [`TypeId`](std::any::TypeId) |
+//!| `tweak`   |  true      | function |
+//!| `fill`    |  true      | function |
+//!
+//! `infer` can configure the behavior of [`Infer`](crate::Infer), the configures are mostly using to providing default value.
+//!
+//! ##### Example
+//!
+//! ```rust
+#![doc = include_str!("../test/16_infer.rs")]
+//! ```
 //!
 //! #### `alter`
 //!
+//! `alter` is reserve for future using.
+//!
 //! #### `fetch`
 //!
-//! #### `rawvalparser`
+//!| name      | need value | available value |
+//!|-----------|------------|-----------|
+//!| `inner`   |  true      |  type     |
+//!| `map`     |  true      |  function |
+//!| `scalar`  |  true      |  function |
+//!| `vector`  |  true      |  function |
+//!
+//! `fetch` can configure the behavior of [`Fetch`](crate::Fetch).
+//!
+//! You can use `inner` and `map` configure the type and map function.
+//! Or use `scalar` or `vector` configure the [`fetch`](crate::Fetch#method.fetch) and [`fetch_vec`](crate::Fetch#method.fetch_vec) separately.
+//!
+//! ##### Example
+//!
+//! ```rust
+#![doc = include_str!("../test/17_fetch.rs")]
+//! ```
+//!
+//! ### `CoteVal` Configurations list
+//!
+//! `CoteVal` derive the default behavior of [`RawValParser`](crate::RawValParser).
+//!
+//! #### `coteval`
+//!
+//!| name      | need value | available value |
+//!|-----------|------------|-----------|
+//!| `forward` |  true      |  type     |
+//!| `map`     |  true      |  function |
+//!| `mapraw`  |  true      |  function |
+//!| `mapstr`  |  true      |  function |
+//!| `igcase`  |  false     | |
+//!| `name`    |  true      | string literal |
+//!| `alias`   |  true      | string literal |
+//!
+//! `coteval` can configure the behavior of [`RawValParser`](crate::RawValParser).
+//!
+//! Using `forward` and `map` you can forward the call to another type, and then map the value to current type.
+//! Or you can use `mapraw`, `mapstr` pass a parser called by [`parse`](crate::RawValParser#method.parse).
+//!
+//! `CoteVal` also support generate default parsing code for simple enum type.
+//! For enum type, you can use `igcase` ignore case when matching, `name` configure the name of matching
+//! or use `alias` add other names of matching.
+//!
+//! ##### Example 1
+//!
+//! ```rust
+#![doc = include_str!("../test/18_value.rs")]
+//! ```
+//!
+//! ##### Example of `mapraw` and `mapstr`
+//!
+//! ```rust
+#![doc = include_str!("../test/19_map.rs")]
+//! ```

@@ -15,7 +15,7 @@ pub struct Cli {
     #[arg(alias = "-b", help = "Set the string value of baz")]
     baz: String,
 
-    #[pos(index = "3..", values = ["corge", "grault"])]
+    #[pos(index = 3.., values = ["corge", "grault"])]
     quux: Vec<String>,
 }
 

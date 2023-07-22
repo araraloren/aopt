@@ -13,7 +13,7 @@ pub struct Cli {
     way: Way,
 }
 
-#[derive(Debug, PartialEq, Eq, Cote)]
+#[derive(Debug, PartialEq, Eq, CoteOpt)]
 #[fetch(inner = i32, map = Speed)]
 #[infer(val = i32)]
 pub struct Speed(i32);
@@ -54,8 +54,8 @@ impl cote::RawValParser for Direction {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Cote)]
-#[rawvalparser(igcase)]
+#[derive(Debug, PartialEq, Eq, CoteVal, CoteOpt)]
+#[coteval(igcase)]
 pub enum Way {
     Walk,
     Bike,

@@ -24,62 +24,34 @@ pub enum Hint {
 /// Cote using [`Alter`] modify some configure value when using field
 /// with `Option`, `Vec`.
 pub trait Alter {
-    fn alter(hint: Hint, has_force: bool, cfg: &mut impl ConfigValue) {
-        match hint {
-            Hint::Opt => {
-                cfg.set_action(crate::Action::Set);
-                if !has_force {
-                    cfg.set_force(false);
-                }
-            }
-            Hint::Vec => {
-                cfg.set_action(crate::Action::App);
-                if !has_force {
-                    cfg.set_force(true);
-                }
-            }
-            Hint::OptVec => {
-                cfg.set_action(crate::Action::App);
-                if !has_force {
-                    cfg.set_force(false);
-                }
-            }
-            Hint::Null => {
-                cfg.set_action(crate::Action::Set);
-                if !has_force {
-                    cfg.set_force(true);
-                }
-            }
-        }
+    fn alter(hint: Hint, cfg: &mut impl ConfigValue) {
+        let (action, force) = match hint {
+            Hint::Opt => (crate::Action::Set, false),
+            Hint::Vec => (crate::Action::App, true),
+            Hint::OptVec => (crate::Action::App, false),
+            Hint::Null => (crate::Action::Set, true),
+        };
+
+        (!cfg.has_force()).then(|| cfg.set_force(force));
+        (!cfg.has_action()).then(|| cfg.set_action(action));
     }
 }
 
 impl Alter for Cmd {
-    fn alter(_: Hint, _: bool, cfg: &mut impl ConfigValue) {
-        cfg.set_force(true);
-        cfg.set_action(crate::Action::Set);
+    fn alter(_: Hint, cfg: &mut impl ConfigValue) {
+        (!cfg.has_force()).then(|| cfg.set_force(true));
+        (!cfg.has_action()).then(|| cfg.set_action(crate::Action::Set));
     }
 }
 
 impl Alter for bool {
-    fn alter(hint: Hint, has_force: bool, cfg: &mut impl ConfigValue) {
-        if !has_force {
-            cfg.set_force(false);
-        }
-        match hint {
-            Hint::Opt => {
-                cfg.set_action(crate::Action::Set);
-            }
-            Hint::Vec => {
-                cfg.set_action(crate::Action::App);
-            }
-            Hint::OptVec => {
-                cfg.set_action(crate::Action::App);
-            }
-            Hint::Null => {
-                cfg.set_action(crate::Action::Set);
-            }
-        }
+    fn alter(hint: Hint, cfg: &mut impl ConfigValue) {
+        let action = match hint {
+            Hint::Opt | Hint::Null => crate::Action::Set,
+            Hint::Vec | Hint::OptVec => crate::Action::App,
+        };
+        (!cfg.has_force()).then(|| cfg.set_force(false));
+        (!cfg.has_action()).then(|| cfg.set_action(action));
     }
 }
 
@@ -168,32 +140,15 @@ impl_alter!(&'a str);
 impl_alter!(&'a std::ffi::OsStr);
 
 impl<'a, T> Alter for RefOpt<'a, T> {
-    fn alter(hint: Hint, has_force: bool, cfg: &mut impl ConfigValue) {
-        match hint {
-            Hint::Opt => {
-                cfg.set_action(crate::Action::Set);
-                if has_force {
-                    cfg.set_force(false);
-                }
-            }
-            Hint::Vec => {
-                cfg.set_action(crate::Action::App);
-                if has_force {
-                    cfg.set_force(true);
-                }
-            }
-            Hint::OptVec => {
-                cfg.set_action(crate::Action::App);
-                if has_force {
-                    cfg.set_force(false);
-                }
-            }
-            Hint::Null => {
-                cfg.set_action(crate::Action::Set);
-                if has_force {
-                    cfg.set_force(true);
-                }
-            }
-        }
+    fn alter(hint: Hint, cfg: &mut impl ConfigValue) {
+        let (action, force) = match hint {
+            Hint::Opt => (crate::Action::Set, false),
+            Hint::Vec => (crate::Action::App, true),
+            Hint::OptVec => (crate::Action::App, false),
+            Hint::Null => (crate::Action::Set, true),
+        };
+
+        (!cfg.has_force()).then(|| cfg.set_force(force));
+        (!cfg.has_action()).then(|| cfg.set_action(action));
     }
 }

@@ -83,6 +83,8 @@ pub use aopt::GetoptRes;
 pub use aopt::RawVal;
 pub use aopt::Uid;
 pub use cote_derive::Cote;
+pub use cote_derive::CoteOpt;
+pub use cote_derive::CoteVal;
 
 pub use alter::Alter;
 pub use alter::Hint;
@@ -301,7 +303,7 @@ mod test {
             destination: Pos<String>,
 
             /// Specify path to copy
-            #[arg(index = "2..")]
+            #[arg(index = 2..)]
             sources: Vec<Pos<PathBuf>>,
         }
 

@@ -54,10 +54,10 @@ impl<'a> FetchGenerator<'a> {
                 let inner = self.find_cfg(FetchKind::Inner);
                 let map = self.find_cfg(FetchKind::Map);
 
-                if inner.is_none() || inner.is_none() {
+                if inner.is_none() || map.is_none() {
                     abort! {
                         ident,
-                        "`fetch` attribute: configuration `infer` can only using pair with `map`"
+                        "`fetch` attribute: configuration `inner` can only using pair with `map`"
                     }
                 }
                 let inner = inner.unwrap();
@@ -77,7 +77,7 @@ impl<'a> FetchGenerator<'a> {
             } else {
                 abort! {
                     ident,
-                    "Configuration `infer` can only using pair with `map`"
+                    "Configuration `inner` can only using pair with `map`"
                 }
             }
             if let Some(cfg) = self.find_cfg(FetchKind::Scalar) {

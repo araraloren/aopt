@@ -14,11 +14,12 @@ use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::parser::ParserCommit;
 use crate::parser::Policy;
-use crate::prelude::SetCommit;
 use crate::ser::ServicesValExt;
 use crate::set::OptValidator;
 use crate::set::SetCfg;
+use crate::set::SetCommit;
 use crate::set::SetOpt;
+use crate::set::SetValueFindExt;
 use crate::value::Infer;
 use crate::value::Placeholder;
 use crate::value::RawValParser;
@@ -531,6 +532,38 @@ where
 
     fn parse_opt(&self, pattern: Str) -> Result<Self::Output, Self::Error> {
         OptParser::parse_opt(&self.set, pattern)
+    }
+}
+
+impl<Set, Inv, Ser> SetValueFindExt for HCOptSet<Set, Inv, Ser>
+where
+    Set: SetValueFindExt,
+{
+    fn find_uid(&self, opt: impl Into<Str>) -> Result<Uid, Error> {
+        SetValueFindExt::find_uid(&self.set, opt)
+    }
+
+    fn find_uid_i<U: 'static>(&self, opt: impl Into<Str>) -> Result<Uid, Error> {
+        SetValueFindExt::find_uid_i::<U>(&self.set, opt)
+    }
+
+    fn find_opt(&self, opt: impl Into<Str>) -> Result<&SetOpt<Self>, Error> {
+        SetValueFindExt::find_opt(&self.set, opt)
+    }
+
+    fn find_opt_i<U: 'static>(&self, opt: impl Into<Str>) -> Result<&SetOpt<Self>, Error> {
+        SetValueFindExt::find_opt_i::<U>(&self.set, opt)
+    }
+
+    fn find_opt_mut(&mut self, opt: impl Into<Str>) -> Result<&mut SetOpt<Self>, Error> {
+        SetValueFindExt::find_opt_mut(&mut self.set, opt)
+    }
+
+    fn find_opt_mut_i<U: 'static>(
+        &mut self,
+        opt: impl Into<Str>,
+    ) -> Result<&mut SetOpt<Self>, Error> {
+        SetValueFindExt::find_opt_mut_i::<U>(&mut self.set, opt)
     }
 }
 

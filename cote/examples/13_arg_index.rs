@@ -12,7 +12,7 @@ pub struct Cli {
     baz: String,
 
     // `quux` can accept position arguments at range 3 or 4
-    #[pos(index = "3..5")]
+    #[pos(index = 3..5)]
     quux: Vec<String>,
 }
 fn main() -> color_eyre::Result<()> {
