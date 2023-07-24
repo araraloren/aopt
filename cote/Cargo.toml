@@ -16,8 +16,6 @@ categories = ["command-line-interface"]
 aopt = { version = "^0.10.0" }
 cote-derive = "^0.2"
 aopt-help = "0.3"
-serde = { version = "1.0", features = [ "derive" ] }
-tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }
 
 [dev-dependencies]
 serde_json = "1.0"
