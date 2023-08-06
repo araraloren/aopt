@@ -1,3 +1,5 @@
+use std::cell::Ref;
+use std::cell::RefCell;
 use std::ops::Range;
 use std::ops::RangeBounds;
 use std::ops::RangeFrom;
@@ -6,7 +8,10 @@ use std::ops::RangeInclusive;
 use std::ops::RangeTo;
 use std::ops::RangeToInclusive;
 
-use regex::Regex;
+use neure::neure;
+use neure::regex;
+use neure::CharsCtx;
+use neure::Context;
 
 use crate::raise_error;
 use crate::Error;
@@ -33,7 +38,7 @@ use crate::Error;
 ///
 /// For option check, see [`SetChecker`](crate::set::SetChecker) for more information.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default, PartialOrd, Ord)]
 pub enum Index {
     /// The forward index of NOA, fixed position.
     ///
@@ -122,17 +127,17 @@ pub enum Index {
 }
 
 thread_local! {
-    static IDX_PARSER: Regex = Regex::new(r"^(?:([+-])?(\d+)|(\d+)?(..)(\d+)?|([+-])?(\[(?:\s*\d+,?\s*)+\])|(\*))$").unwrap();
+    static IDX_PARSER: RefCell<CharsCtx> = RefCell::new(CharsCtx::new("", KEY_TOTAL));
 }
 
-const IDX_INDEX: usize = 2;
-const IDX_INDEX_SIGN: usize = 1;
-const IDX_RANGE: usize = 4;
-const IDX_RANGE_BEG: usize = 3;
-const IDX_RANGE_END: usize = 5;
-const IDX_SEQUENCE: usize = 7;
-const IDX_SEQUENCE_SIGN: usize = 6;
-const IDX_ANYWHERE: usize = 8;
+const KEY_ANYWHERE: usize = 0;
+const KEY_PLUS: usize = 1;
+const KEY_MINUS: usize = 2;
+const KEY_SEQ: usize = 3;
+const KEY_START: usize = 4;
+const KEY_END: usize = 5;
+const KEY_RANGE: usize = 6;
+const KEY_TOTAL: usize = 7;
 
 impl Index {
     // the index number is small in generally
@@ -142,68 +147,92 @@ impl Index {
         })
     }
 
-    pub(crate) fn parse_as_usize_sequence(pattern: &str, data: &str) -> Result<Vec<usize>, Error> {
-        let mut ret = vec![];
-        let mut last = 0usize;
+    #[inline(always)]
+    pub fn parse_ctx(ctx: &mut CharsCtx) -> Result<(), neure::err::Error> {
+        let start = neure::start();
+        let end = neure::end();
+        let anywhere = neure!('*');
+        let plus = neure!('+');
+        let minus = neure!('-');
+        let left = neure!('[');
+        let right = neure!(']');
+        let digit = neure!(['0' - '9']+);
+        let comma = neure!(',');
+        let range_op = neure!('.'{2});
+        let space = neure!(*);
+        let whole_parser = move |ctx: &mut CharsCtx| -> Result<(), neure::err::Error> {
+            ctx.try_mat(&start)?;
+            if !ctx.cap(KEY_ANYWHERE, &anywhere) {
+                let _ = ctx.cap(KEY_PLUS, &plus) || ctx.cap(KEY_MINUS, &minus);
 
-        for (index, ch) in data.chars().enumerate() {
-            // skip '+'
-            if ch == '+' || ch == '[' {
-                last += 1;
-                continue;
-            }
-            if ch.is_ascii_whitespace() {
-                continue;
-            }
-            if ch == ',' || ch == ']' {
-                if last == index {
-                    return Err(Error::invalid_opt_index(
-                        pattern,
-                        format!("{} not a valid usize number", data),
-                    ));
+                if ctx.mat(&left) {
+                    let ret = ctx.try_cap(KEY_SEQ, &digit)? > 0 && ctx.mat(&comma);
+
+                    ctx.mat(&space);
+                    if ret {
+                        while ctx.cap(KEY_SEQ, &digit) && ctx.mat(&comma) {}
+                    }
+                    ctx.try_mat(&right)?;
+                } else {
+                    ctx.cap(KEY_START, &digit); // start may not exist
+                    ctx.mat(&space);
+                    if ctx.cap(KEY_RANGE, &range_op) {
+                        ctx.mat(&space);
+                        if ctx.contain(KEY_START) {
+                            ctx.cap(KEY_END, &digit);
+                        } else {
+                            ctx.try_cap(KEY_END, &digit)?;
+                        }
+                    }
                 }
-                ret.push(Self::parse_as_usize(pattern, &data[last..index])?);
-                last = index + 1;
             }
-        }
-        Ok(ret)
+            ctx.try_mat(&end)?;
+            Ok(())
+        };
+
+        whole_parser(ctx)
+    }
+
+    pub fn substr_of_ctx<'a>(
+        ctx: &'a Ref<'a, CharsCtx>,
+        span_id: usize,
+        index: usize,
+    ) -> Result<&'a str, Error> {
+        let spans = ctx.spans(span_id).ok_or_else(|| {
+            raise_error!("Can not get span data for `{}` from `{:?}`", span_id, ctx)
+        })?;
+        let span = spans
+            .get(index)
+            .ok_or_else(|| raise_error!("Invalid span data from `{:?}`", ctx))?;
+        ctx.substr(span)
+            .map_err(|e| raise_error!("Can not get substr from `{:?}`: {:?}", ctx, e))
     }
 
     pub fn parse(pat: &str) -> Result<Self, Error> {
         IDX_PARSER
-            .try_with(|regex| {
-                if let Some(cap) = regex.captures(pat) {
-                    if let Some(value) = cap.get(IDX_INDEX) {
-                        let index = Self::parse_as_usize(pat, value.as_str())?;
-                        let sign = cap
-                            .get(IDX_INDEX_SIGN)
-                            .map(|sign| sign.as_str() == "-")
-                            .unwrap_or(false);
+            .try_with(|ctx| {
+                if Self::parse_ctx(ctx.borrow_mut().reset_with(pat)).is_ok() {
+                    let ctx = ctx.borrow();
 
-                        if sign {
-                            Ok(Self::backward(index))
-                        } else {
-                            Ok(Self::forward(index))
-                        }
-                    } else if cap.get(IDX_RANGE).is_some() {
-                        let range_beg = cap.get(IDX_RANGE_BEG);
-                        let range_end = cap.get(IDX_RANGE_END);
+                    if ctx.contain(KEY_ANYWHERE) {
+                        Ok(Self::anywhere())
+                    } else if ctx.contain(KEY_RANGE) {
+                        let range_beg = Self::substr_of_ctx(&ctx, KEY_START, 0).ok();
+                        let range_end = Self::substr_of_ctx(&ctx, KEY_END, 0).ok();
 
                         match (range_beg, range_end) {
                             (None, None) => {
                                 return Err(Error::invalid_opt_index(pat, "index can not be empty"))
                             }
-                            (None, Some(end)) => Ok(Self::range(
-                                None,
-                                Some(Self::parse_as_usize(pat, end.as_str())?),
-                            )),
-                            (Some(beg), None) => Ok(Self::range(
-                                Some(Self::parse_as_usize(pat, beg.as_str())?),
-                                None,
-                            )),
+                            (None, Some(end)) => {
+                                Ok(Self::range(None, Some(Self::parse_as_usize(pat, end)?)))
+                            }
+                            (Some(beg), None) => {
+                                Ok(Self::range(Some(Self::parse_as_usize(pat, beg)?), None))
+                            }
                             (Some(beg), Some(end)) => {
-                                let beg = Self::parse_as_usize(pat, beg.as_str())?;
-                                let end = Self::parse_as_usize(pat, end.as_str())?;
+                                let beg = Self::parse_as_usize(pat, beg)?;
+                                let end = Self::parse_as_usize(pat, end)?;
 
                                 if beg <= end {
                                     Ok(Self::range(Some(beg), Some(end)))
@@ -215,22 +244,33 @@ impl Index {
                                 }
                             }
                         }
-                    } else if let Some(value) = cap.get(IDX_SEQUENCE) {
-                        let list = Self::parse_as_usize_sequence(pat, value.as_str())?;
-                        let sign = cap
-                            .get(IDX_SEQUENCE_SIGN)
-                            .map(|sign| sign.as_str() == "-")
-                            .unwrap_or(false);
+                    } else if let Some(value) = ctx.spans(KEY_SEQ) {
+                        let mut list = vec![];
 
-                        if sign {
+                        for span in value {
+                            list.push(Self::parse_as_usize(
+                                pat,
+                                ctx.substr(span).map_err(|e| {
+                                    raise_error!("Can not get substr from `{:?}`: {:?}", ctx, e)
+                                })?,
+                            )?);
+                        }
+                        if ctx.contain(KEY_MINUS) {
                             Ok(Self::except(list))
                         } else {
                             Ok(Self::list(list))
                         }
-                    } else if cap.get(IDX_ANYWHERE).is_some() {
-                        Ok(Self::anywhere())
+                    } else if ctx.contain(KEY_START) {
+                        let index =
+                            Self::parse_as_usize(pat, Self::substr_of_ctx(&ctx, KEY_START, 0)?)?;
+
+                        if ctx.contain(KEY_MINUS) {
+                            Ok(Self::backward(index))
+                        } else {
+                            Ok(Self::forward(index))
+                        }
                     } else {
-                        Err(Error::invalid_opt_index(pat, "invalid index create string"))
+                        Err(Error::invalid_opt_index(pat, "unknown index create string"))
                     }
                 } else {
                     Err(Error::invalid_opt_index(

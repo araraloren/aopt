@@ -1,7 +1,14 @@
-use regex::Regex;
+use std::cell::Ref;
+use std::cell::RefCell;
+
+use neure::neure;
+use neure::regex;
+use neure::CharsCtx;
+use neure::Context;
 
 use super::{ConstrctInfo, OptParser};
 use crate::opt::Index;
+use crate::raise_error;
 use crate::Error;
 use crate::Str;
 
@@ -67,7 +74,7 @@ use crate::Str;
 pub struct StrParser;
 
 thread_local! {
-    static STR_PARSER: Regex = Regex::new(r"^([^=!*@;:]+)?((?:;[^=!*@;:]+)+)?(?:=([a-zA-Z])+)?([!*])?(@([^@:]+))?(?::(.+))?$").unwrap();
+    static STR_PARSER: RefCell<CharsCtx> = RefCell::new(CharsCtx::new("", KEY_TOTAL));
 }
 
 impl StrParser {
@@ -75,19 +82,79 @@ impl StrParser {
         Self {}
     }
 
+    pub fn parse_ctx(ctx: &mut CharsCtx) -> Result<(), neure::err::Error> {
+        let start = neure::start();
+        let end = neure::end();
+        let name = neure!([^'=' '!' '*' '@' ';' ':']+);
+        let semi = neure!(';');
+        let equal = neure!('=');
+        let ty = neure!([a-z A-Z]+);
+        let optional = neure!(['!' '*']);
+        let at = neure!('@');
+        let index = neure!([^ '@' ':']+);
+        let colon = neure!(':');
+        let usage = neure!(.+);
+        let space = neure!(*);
+        let parser = |ctx: &mut CharsCtx| -> Result<(), neure::err::Error> {
+            ctx.try_mat(&start)?;
+            if ctx.cap(KEY_NAME, &name) {
+                // name
+                while ctx.mat(&semi) {
+                    ctx.cap(KEY_ALIAS, &name);
+                }
+            }
+            if ctx.mat(&equal) {
+                // = type
+                ctx.try_cap(KEY_CTOR, &ty)?;
+            }
+            ctx.cap(KEY_OPTIONAL, &optional); // ! or *
+            if ctx.mat(&at) {
+                // @index
+                ctx.try_cap(KEY_INDEX, &index)?;
+            }
+            if ctx.mat(&colon) {
+                ctx.mat(&space);
+                ctx.try_cap(KEY_HELP, &usage)?;
+            }
+            ctx.try_mat(&end)?;
+            Ok(())
+        };
+
+        parser(ctx)
+    }
+
+    pub fn substr_of_ctx<'a>(
+        ctx: &'a Ref<'a, CharsCtx>,
+        span_id: usize,
+        index: usize,
+    ) -> Result<&'a str, Error> {
+        let spans = ctx.spans(span_id).ok_or_else(|| {
+            raise_error!("Can not get span data for `{}` from `{:?}`", span_id, ctx)
+        })?;
+        let span = spans
+            .get(index)
+            .ok_or_else(|| raise_error!("Invalid span data from `{:?}`", ctx))?;
+        ctx.substr(span)
+            .map_err(|e| raise_error!("Can not get substr from `{:?}`: {:?}", ctx, e))
+    }
+
     pub fn parse_creator_string(&self, pattern: Str) -> Result<ConstrctInfo, Error> {
         let pattern_clone = pattern.clone();
         let pattern = pattern.as_str();
 
         STR_PARSER
-            .try_with(|regex| {
-                if let Some(cap) = regex.captures(pattern) {
+            .try_with(|ctx| {
+                if Self::parse_ctx(ctx.borrow_mut().reset_with(pattern)).is_ok() {
                     let mut force = None;
                     let mut idx = None;
                     let mut alias = None;
+                    let ctx = ctx.borrow();
+                    let name = Self::substr_of_ctx(&ctx, KEY_NAME, 0).ok();
+                    let help = Self::substr_of_ctx(&ctx, KEY_HELP, 0).ok();
+                    let ctor = Self::substr_of_ctx(&ctx, KEY_CTOR, 0).ok();
 
-                    if let Some(mat) = cap.get(IDX_OPTIONAL) {
-                        match mat.as_str() {
+                    if let Ok(opt) = Self::substr_of_ctx(&ctx, KEY_OPTIONAL, 0) {
+                        match opt {
                             "!" => {
                                 force = Some(true);
                             }
@@ -102,26 +169,36 @@ impl StrParser {
                             }
                         }
                     }
-                    if let Some(mat) = cap.get(IDX_ALIAS) {
-                        let splited = mat.as_str().split(';');
+                    if let Some(spans) = ctx.spans(KEY_ALIAS) {
+                        let mut strs = vec![];
+
+                        for span in spans {
+                            strs.push(ctx.substr(span).map_err(|e| {
+                                raise_error!(
+                                    "Can not get substr of KEY_ALIAS from `{:?}`: `{:?}`",
+                                    ctx,
+                                    e
+                                )
+                            })?)
+                        }
 
                         alias = Some(
-                            splited
+                            strs.into_iter()
                                 .filter(|v| !v.trim().is_empty())
                                 .map(|v| Str::from(v.trim()))
                                 .collect(),
                         );
                     }
-                    if let Some(mat) = cap.get(IDX_INDEX) {
-                        idx = Some(Index::parse(mat.as_str())?);
+                    if let Ok(index) = Self::substr_of_ctx(&ctx, KEY_INDEX, 0) {
+                        idx = Some(Index::parse(index)?);
                     }
                     Ok(ConstrctInfo::default()
                         .with_force(force)
                         .with_index(idx)
                         .with_pat(pattern_clone)
-                        .with_name(cap.get(IDX_NAME).map(|v| Str::from(v.as_str().trim())))
-                        .with_help(cap.get(IDX_HELP).map(|v| Str::from(v.as_str().trim())))
-                        .with_ctor(cap.get(IDX_CTOR).map(|v| Str::from(v.as_str().trim())))
+                        .with_name(name.map(|v| Str::from(v.trim())))
+                        .with_help(help.map(|v| Str::from(v.trim())))
+                        .with_ctor(ctor.map(|v| Str::from(v.trim())))
                         .with_alias(alias))
                 } else {
                     Err(Error::invalid_create_str(
@@ -136,12 +213,13 @@ impl StrParser {
     }
 }
 
-const IDX_NAME: usize = 1;
-const IDX_ALIAS: usize = 2;
-const IDX_CTOR: usize = 3;
-const IDX_OPTIONAL: usize = 4;
-const IDX_INDEX: usize = 6;
-const IDX_HELP: usize = 7;
+const KEY_NAME: usize = 0;
+const KEY_ALIAS: usize = 1;
+const KEY_CTOR: usize = 2;
+const KEY_OPTIONAL: usize = 3;
+const KEY_INDEX: usize = 4;
+const KEY_HELP: usize = 5;
+const KEY_TOTAL: usize = KEY_HELP + 1;
 
 impl OptParser for StrParser {
     type Output = ConstrctInfo;
@@ -271,6 +349,7 @@ mod test {
                     for (position, position_test) in positions.iter().zip(positions_test.iter()) {
                         let creator = astr(format!("{}{}{}{}", option, force, position, help));
 
+                        println!("\"{}\",", creator);
                         if let Ok(cap) = parser.parse_opt(creator) {
                             assert_eq!(option_test.0.as_ref(), cap.name());
                             assert_eq!(option_test.1.as_ref(), cap.alias());

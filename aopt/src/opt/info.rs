@@ -40,7 +40,7 @@ pub trait Information {
 }
 
 /// Parsing result of option constructor string.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ConstrctInfo {
     pub(crate) pattern: Str,
 

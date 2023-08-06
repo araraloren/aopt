@@ -1,6 +1,10 @@
 
 # Relase note
 
+## 0.10.1
+
+- Replace regex with neure, reduce compile time of crate
+
 ## 0.9.23
 
 - Fix the consume issue in policy
