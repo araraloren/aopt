@@ -1,4 +1,3 @@
-use std::cell::Ref;
 use std::cell::RefCell;
 use std::ops::Range;
 use std::ops::RangeBounds;
@@ -11,7 +10,9 @@ use std::ops::RangeToInclusive;
 use neure::neure;
 use neure::regex;
 use neure::CharsCtx;
-use neure::Context;
+use neure::MatchPolicy;
+use neure::SpanStore;
+use neure::SpanStorer;
 
 use crate::raise_error;
 use crate::Error;
@@ -127,7 +128,7 @@ pub enum Index {
 }
 
 thread_local! {
-    static IDX_PARSER: RefCell<CharsCtx> = RefCell::new(CharsCtx::new("", KEY_TOTAL));
+    static IDX_PARSER: RefCell<SpanStorer> = RefCell::new(SpanStorer::new(KEY_TOTAL));
 }
 
 const KEY_ANYWHERE: usize = 0;
@@ -148,7 +149,7 @@ impl Index {
     }
 
     #[inline(always)]
-    pub fn parse_ctx(ctx: &mut CharsCtx) -> Result<(), neure::err::Error> {
+    pub fn parse_ctx(storer: &mut SpanStorer, str: &str) -> Result<(), neure::err::Error> {
         let start = neure::start();
         let end = neure::end();
         let anywhere = neure!('*');
@@ -160,28 +161,30 @@ impl Index {
         let comma = neure!(',');
         let range_op = neure!('.'{2});
         let space = neure!(*);
-        let whole_parser = move |ctx: &mut CharsCtx| -> Result<(), neure::err::Error> {
+        let whole_parser = move |storer: &mut SpanStorer, str| -> Result<(), neure::err::Error> {
+            let mut ctx = CharsCtx::new(str);
+
             ctx.try_mat(&start)?;
-            if !ctx.cap(KEY_ANYWHERE, &anywhere) {
-                let _ = ctx.cap(KEY_PLUS, &plus) || ctx.cap(KEY_MINUS, &minus);
+            if !ctx.cap(KEY_ANYWHERE, storer, &anywhere) {
+                let _ = ctx.cap(KEY_PLUS, storer, &plus) || ctx.cap(KEY_MINUS, storer, &minus);
 
                 if ctx.mat(&left) {
-                    let ret = ctx.try_cap(KEY_SEQ, &digit)? > 0 && ctx.mat(&comma);
+                    let ret = !ctx.try_cap(KEY_SEQ, storer, &digit)?.is_zero() && ctx.mat(&comma);
 
                     ctx.mat(&space);
                     if ret {
-                        while ctx.cap(KEY_SEQ, &digit) && ctx.mat(&comma) {}
+                        while ctx.cap(KEY_SEQ, storer, &digit) && ctx.mat(&comma) {}
                     }
                     ctx.try_mat(&right)?;
                 } else {
-                    ctx.cap(KEY_START, &digit); // start may not exist
+                    ctx.cap(KEY_START, storer, &digit); // start may not exist
                     ctx.mat(&space);
-                    if ctx.cap(KEY_RANGE, &range_op) {
+                    if ctx.cap(KEY_RANGE, storer, &range_op) {
                         ctx.mat(&space);
-                        if ctx.contain(KEY_START) {
-                            ctx.cap(KEY_END, &digit);
+                        if storer.contain(KEY_START) {
+                            ctx.cap(KEY_END, storer, &digit);
                         } else {
-                            ctx.try_cap(KEY_END, &digit)?;
+                            ctx.try_cap(KEY_END, storer, &digit)?;
                         }
                     }
                 }
@@ -190,35 +193,20 @@ impl Index {
             Ok(())
         };
 
-        whole_parser(ctx)
-    }
-
-    pub fn substr_of_ctx<'a>(
-        ctx: &'a Ref<'a, CharsCtx>,
-        span_id: usize,
-        index: usize,
-    ) -> Result<&'a str, Error> {
-        let spans = ctx.spans(span_id).ok_or_else(|| {
-            raise_error!("Can not get span data for `{}` from `{:?}`", span_id, ctx)
-        })?;
-        let span = spans
-            .get(index)
-            .ok_or_else(|| raise_error!("Invalid span data from `{:?}`", ctx))?;
-        ctx.substr(span)
-            .map_err(|e| raise_error!("Can not get substr from `{:?}`: {:?}", ctx, e))
+        whole_parser(storer, str)
     }
 
     pub fn parse(pat: &str) -> Result<Self, Error> {
         IDX_PARSER
-            .try_with(|ctx| {
-                if Self::parse_ctx(ctx.borrow_mut().reset_with(pat)).is_ok() {
-                    let ctx = ctx.borrow();
+            .try_with(|storer| {
+                if Self::parse_ctx(storer.borrow_mut().reset(), pat).is_ok() {
+                    let storer = storer.borrow();
 
-                    if ctx.contain(KEY_ANYWHERE) {
+                    if storer.contain(KEY_ANYWHERE) {
                         Ok(Self::anywhere())
-                    } else if ctx.contain(KEY_RANGE) {
-                        let range_beg = Self::substr_of_ctx(&ctx, KEY_START, 0).ok();
-                        let range_end = Self::substr_of_ctx(&ctx, KEY_END, 0).ok();
+                    } else if storer.contain(KEY_RANGE) {
+                        let range_beg = storer.substr(pat, KEY_START, 0).ok();
+                        let range_end = storer.substr(pat, KEY_END, 0).ok();
 
                         match (range_beg, range_end) {
                             (None, None) => {
@@ -244,27 +232,26 @@ impl Index {
                                 }
                             }
                         }
-                    } else if let Some(value) = ctx.spans(KEY_SEQ) {
+                    } else if let Ok(iter) = storer.substrs(pat, KEY_SEQ) {
                         let mut list = vec![];
 
-                        for span in value {
-                            list.push(Self::parse_as_usize(
-                                pat,
-                                ctx.substr(span).map_err(|e| {
-                                    raise_error!("Can not get substr from `{:?}`: {:?}", ctx, e)
-                                })?,
-                            )?);
+                        for value in iter {
+                            list.push(Self::parse_as_usize(pat, value)?);
                         }
-                        if ctx.contain(KEY_MINUS) {
+                        if storer.contain(KEY_MINUS) {
                             Ok(Self::except(list))
                         } else {
                             Ok(Self::list(list))
                         }
-                    } else if ctx.contain(KEY_START) {
-                        let index =
-                            Self::parse_as_usize(pat, Self::substr_of_ctx(&ctx, KEY_START, 0)?)?;
+                    } else if storer.contain(KEY_START) {
+                        let index = Self::parse_as_usize(
+                            pat,
+                            storer.substr(pat, KEY_START, 0).map_err(|e| {
+                                raise_error!("Can not get substr from `{:?}`: {:?}", storer, e)
+                            })?,
+                        )?;
 
-                        if ctx.contain(KEY_MINUS) {
+                        if storer.contain(KEY_MINUS) {
                             Ok(Self::backward(index))
                         } else {
                             Ok(Self::forward(index))
