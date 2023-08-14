@@ -31,6 +31,10 @@ mod __raw_utf8 {
         pub fn get_str(&self) -> Option<&str> {
             Some(self.0.as_str())
         }
+
+        pub fn into_os_string(self) -> OsString {
+            self.0.into_os_string()
+        }
     }
 
     impl TryFrom<OsString> for RawVal {
@@ -119,6 +123,10 @@ mod __raw_utf8 {
     impl RawVal {
         pub fn get_str(&self) -> Option<&str> {
             self.0.to_str()
+        }
+
+        pub fn into_os_string(self) -> OsString {
+            self.0
         }
     }
 

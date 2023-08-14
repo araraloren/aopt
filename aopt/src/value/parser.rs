@@ -135,7 +135,11 @@ impl RawValParser for PathBuf {
     type Error = Error;
 
     fn parse(raw: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(PathBuf::from(raw2str(raw)?))
+        Ok(PathBuf::from(
+            raw.ok_or_else(|| raise_failure!("Can not construct PathBuf from None"))?
+                .clone()
+                .into_os_string(),
+        ))
     }
 }
 
