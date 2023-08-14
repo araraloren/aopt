@@ -62,7 +62,7 @@ impl<'a, I> DefaultPolicy<'a, I> {
             max_width,
             hiding_pos,
             usage_new_line,
-            marker: PhantomData::default(),
+            marker: PhantomData,
         }
     }
 }
@@ -305,7 +305,7 @@ impl<'a, I> DefaultAppPolicy<'a, I> {
             show_global,
             hiding_pos: true,
             usage_new_line,
-            marker: PhantomData::default(),
+            marker: PhantomData,
         }
     }
 }
