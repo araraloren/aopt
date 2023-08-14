@@ -109,7 +109,7 @@ where
     R: RangeBounds<K> + ErasedTy,
 {
     pub fn new(value: R) -> Self {
-        Self(value, PhantomData::default())
+        Self(value, PhantomData)
     }
 }
 
