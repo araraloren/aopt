@@ -25,7 +25,7 @@ impl<S> Debug for DefaultSetChecker<S> {
 
 impl<S> Default for DefaultSetChecker<S> {
     fn default() -> Self {
-        Self(PhantomData::default())
+        Self(PhantomData)
     }
 }
 
@@ -35,7 +35,7 @@ where
     SetOpt<S>: Opt,
 {
     pub fn new() -> Self {
-        Self(PhantomData::default())
+        Self(PhantomData)
     }
 
     pub fn clear(&mut self) {}

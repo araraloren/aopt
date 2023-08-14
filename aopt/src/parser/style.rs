@@ -186,7 +186,7 @@ impl<'a, S, T> Default for OptGuess<'a, S, T> {
 
 impl<'a, S, T> OptGuess<'a, S, T> {
     pub fn new() -> Self {
-        Self(PhantomData::default())
+        Self(PhantomData)
     }
 
     fn bool2str(value: bool) -> ARef<RawVal> {
@@ -388,7 +388,7 @@ impl<'a, S> Default for NOAGuess<'a, S> {
 
 impl<'a, S> NOAGuess<'a, S> {
     pub fn new() -> Self {
-        Self(PhantomData::default())
+        Self(PhantomData)
     }
 }
 

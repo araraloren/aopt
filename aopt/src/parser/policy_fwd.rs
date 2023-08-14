@@ -133,7 +133,7 @@ where
             strict: true,
             style_manager: OptStyleManager::default(),
             checker: Chk::default(),
-            marker_s: PhantomData::default(),
+            marker_s: PhantomData,
         }
     }
 }

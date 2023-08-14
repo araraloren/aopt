@@ -61,7 +61,7 @@ impl<S> Default for NOAMatch<S> {
             noa_total: 0,
             matched_uid: None,
             matched_index: None,
-            marker: Default::default(),
+            marker: PhantomData,
         }
         .reset_arg()
     }

@@ -101,7 +101,7 @@ where
             info: Some(info),
             uid: None,
             drop: true,
-            marker: PhantomData::default(),
+            marker: PhantomData,
         }
     }
 
@@ -125,7 +125,7 @@ where
             info: Some(info),
             uid: None,
             drop: true,
-            marker: PhantomData::default(),
+            marker: PhantomData,
         }
     }
 
@@ -342,7 +342,7 @@ where
     pub fn new(inner: SetCommit<'a, S, U>) -> Self {
         Self {
             inner: Some(inner),
-            marker: PhantomData::default(),
+            marker: PhantomData,
         }
     }
 

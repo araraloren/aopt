@@ -148,7 +148,7 @@ where
             checker: Chk::default(),
             style_manager: OptStyleManager::default(),
             no_delay_opt: vec![],
-            marker_s: PhantomData::default(),
+            marker_s: PhantomData,
         }
     }
 }

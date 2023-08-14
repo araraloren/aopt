@@ -294,7 +294,7 @@ where
         Self {
             ser: inv_ser,
             uid,
-            marker: PhantomData::default(),
+            marker: PhantomData,
         }
     }
 
@@ -349,7 +349,7 @@ where
             register: false,
             uid,
             fallback,
-            marker: PhantomData::default(),
+            marker: PhantomData,
         }
     }
 

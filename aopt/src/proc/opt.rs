@@ -54,7 +54,7 @@ impl<S> Default for OptMatch<S> {
             consume_arg: false,
             index: 0,
             total: 0,
-            marker: PhantomData::default(),
+            marker: PhantomData,
         }
     }
 }

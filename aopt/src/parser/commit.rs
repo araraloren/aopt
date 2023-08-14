@@ -134,7 +134,7 @@ where
         Self {
             inner: Some(inner),
             inv_ser: Some(inv_ser),
-            marker: PhantomData::default(),
+            marker: PhantomData,
         }
     }
 
@@ -422,7 +422,7 @@ where
         Self {
             inner: Some(inner),
             inv_ser: Some(inv_ser),
-            marker: PhantomData::default(),
+            marker: PhantomData,
         }
     }
 

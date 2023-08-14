@@ -158,7 +158,7 @@ where
     pub fn new(entry: MapEntry<'a, TypeId, BoxedAny>) -> Self {
         Self {
             inner: entry,
-            marker: PhantomData::default(),
+            marker: PhantomData,
         }
     }
 

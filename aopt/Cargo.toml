@@ -1,6 +1,6 @@
 [package]
 name = "aopt"
-version = "0.10.2"
+version = "0.10.3"
 authors = ["araraloren <blackcatoverwall@gmail.com>"]
 edition = "2021"
 license = "MPL-2.0"
@@ -13,13 +13,13 @@ readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ahash = "0.8.3"
-neure = "0.2.0"
+ahash = "0.8"
+neure = "0.2"
 serde = { version = "1.0", features = [ "derive" ], optional = true }
 tracing = { version = "0.1", optional = true }
 
 [dev-dependencies]
-cote = "0.2.0"
+cote = "0.2"
 
 [features]
 sync = []
