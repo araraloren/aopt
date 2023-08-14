@@ -1,12 +1,13 @@
 use std::ops::Deref;
 
-use proc_macro_error::abort;
 use syn::parse::Parse;
 use syn::parse::ParseStream;
 use syn::punctuated::Punctuated;
+use syn::spanned::Spanned;
 use syn::Attribute;
 use syn::Token;
 
+use crate::error;
 use crate::value::Value;
 
 pub mod alter;
@@ -87,10 +88,11 @@ impl<T: Kind> Configs<T> {
             attr.parse_args_with(Punctuated::<Config<T>, Token![,]>::parse_terminated)
                 .map(|res| res.into_iter())
                 .unwrap_or_else(|e| {
-                    abort! {
-                        attr,
-                        "can not parsing `{}` attributes: {:?}", name, e
-                    }
+                    error(
+                        attr.span(),
+                        format!("can not parsing `{}` attributes: {:?}", name, e),
+                    )
+                    .unwrap()
                 })
         });
 

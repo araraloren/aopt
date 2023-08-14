@@ -1,7 +1,7 @@
-use proc_macro_error::abort;
-use syn::Ident;
-
 use super::Kind;
+use crate::error;
+
+use syn::Ident;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum FetchKind {
@@ -24,12 +24,13 @@ impl Kind for FetchKind {
             "map" => Ok((Self::Map, true)),
             "scalar" => Ok((Self::Scalar, true)),
             "vector" => Ok((Self::Vector, true)),
-            _ => {
-                abort! {
-                    input.span(),
-                    "Unknow configuration name {} in attribute fetch", option
-                }
-            }
+            _ => error(
+                input.span(),
+                format!(
+                    "unknown configuration name `{}` in attribute fetch",
+                    option.as_str()
+                ),
+            ),
         }
     }
 }

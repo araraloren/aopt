@@ -1,7 +1,7 @@
-use proc_macro_error::abort;
 use syn::Ident;
 
 use super::Kind;
+use crate::error;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum InferKind {
@@ -54,12 +54,13 @@ impl Kind for InferKind {
             "ty" => Ok((Self::Type, true)),
             "tweak" => Ok((Self::Tweak, true)),
             "fill" => Ok((Self::Fill, true)),
-            _ => {
-                abort! {
-                    input.span(),
-                    "Unknow configuration name {} in attribute infer", option
-                }
-            }
+            _ => error(
+                input.span(),
+                format!(
+                    "unknown configuration name `{}` in attribute infer",
+                    option.as_str()
+                ),
+            ),
         }
     }
 }

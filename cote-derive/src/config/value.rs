@@ -1,7 +1,7 @@
-use proc_macro_error::abort;
 use syn::Ident;
 
 use super::Kind;
+use crate::error;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ValueKind {
@@ -33,12 +33,13 @@ impl Kind for ValueKind {
             "igcase" => Ok((Self::IgCase, false)),
             "name" => Ok((Self::Name, true)),
             "alias" => Ok((Self::Alias, true)),
-            _ => {
-                abort! {
-                    input.span(),
-                    "Unknow configuration name {} in attribute rawvalparser", option
-                }
-            }
+            _ => error(
+                input.span(),
+                format!(
+                    "unknown configuration name `{}` in attribute rawvalparser",
+                    option.as_str()
+                ),
+            ),
         }
     }
 }

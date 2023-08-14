@@ -1,7 +1,6 @@
 use std::iter::FromIterator;
 
 use proc_macro2::Span;
-use proc_macro_error::abort;
 use quote::quote;
 use quote::ToTokens;
 use syn::parenthesized;
@@ -12,6 +11,8 @@ use syn::Expr;
 use syn::Lit;
 use syn::LitInt;
 use syn::Token;
+
+use crate::error;
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -31,10 +32,10 @@ impl Value {
                 return Ok((variable, Self::Call(args)));
             }
         }
-        abort! {
+        error(
             span,
-            "You must specify the context variable name for raw method call"
-        }
+            "You must specify the context variable name for raw method call".to_owned(),
+        )
     }
 }
 
@@ -71,10 +72,13 @@ impl Parse for Value {
             } else {
                 match input.parse::<Expr>() {
                     Ok(expr) => Ok(Value::Expr(expr)),
-                    Err(e) => abort! {
+                    Err(e) => error(
                         assign_token,
-                        "excepted `string literal` or `expression` after `=`: {:?}", e
-                    },
+                        format!(
+                            "excepted `string literal` or `expression` after `=`: {:?}",
+                            e
+                        ),
+                    ),
                 }
             }
         } else if input.peek(Paren) {
@@ -87,7 +91,7 @@ impl Parse for Value {
 
             Ok(Self::Call(Vec::from_iter(method_args)))
         } else {
-            abort!(input.span(), "invalid configuration value")
+            error(input.span(), "invalid configuration value".to_owned())
         }
     }
 }

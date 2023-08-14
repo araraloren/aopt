@@ -1,6 +1,5 @@
 use proc_macro2::Ident;
 use proc_macro2::TokenStream;
-use proc_macro_error::abort;
 use quote::quote;
 use quote::ToTokens;
 use syn::spanned::Spanned;
@@ -13,6 +12,7 @@ use syn::Type;
 use crate::config;
 use crate::config::ArgKind;
 use crate::config::Configs;
+use crate::error;
 
 use super::check_in_path;
 use super::filter_comment_doc;
@@ -71,12 +71,13 @@ impl<'a> ArgGenerator<'a> {
             if let Some(cfg) = configs.find_cfg(ArgKind::Name) {
                 cfg.value().to_token_stream()
             } else {
-                let ident = ident.unwrap_or_else(|| {
-                    abort! {
-                        ident,
-                        "`arg`, `pos` or `cmd` not support empty field name"
-                    }
-                });
+                if ident.is_none() {
+                    return error(
+                        field.span(),
+                        "`arg`, `pos` or `cmd` not support empty field name".to_owned(),
+                    );
+                }
+                let ident = ident.unwrap();
                 let ident = ident.to_string();
                 let name = if is_position {
                     ident
@@ -91,18 +92,19 @@ impl<'a> ArgGenerator<'a> {
         };
 
         if (cfg_name == CONFIG_CMD || is_cmd_ty || is_main_ty) && has_index {
-            abort! {
-                field_ty,
-                "`cmd` has default position, please remove the `index` attribute"
-            }
+            return error(
+                field_ty.span(),
+                "`cmd` has default position, please remove the `index` attribute".to_owned(),
+            );
         }
         if configs.has_cfg(ArgKind::Action)
             && (configs.has_cfg(ArgKind::Append) || configs.has_cfg(ArgKind::Count))
         {
-            abort! {
-                field_ty,
+            return error(
+                field_ty.span(),
                 "`app` and `cnt` are alias of `action`, try to remove one from the configures"
-            }
+                    .to_owned(),
+            );
         }
         Ok(Self {
             name,
@@ -239,10 +241,10 @@ impl<'a> ArgGenerator<'a> {
                 },
             ))
         } else if self.configs.has_cfg(ArgKind::Then) {
-            abort! {
-                self.field_ty,
-                "`then` must use with `on` or `fallback` together"
-            }
+            return error(
+                self.field_ty.span(),
+                "`then` must use with `on` or `fallback` together".to_owned(),
+            );
         } else {
             Ok(None)
         }
@@ -436,11 +438,13 @@ impl<'a> ArgGenerator<'a> {
                     config.set_index(cote::Index::forward(#pos_id));
                 })
             } else {
-                abort! {
-                    inner_ty,
-                    "Can not have both auto increment Pos id and index configuration `{:?}`",
-                    self.configs.find_cfg(ArgKind::Index)
-                }
+                return error(
+                    inner_ty.span(),
+                    format!(
+                        "Can not have both auto increment Pos id and index configuration `{:?}`",
+                        self.configs.find_cfg(ArgKind::Index)
+                    ),
+                );
             }
         }
         if let Some(cfg) = self.configs.find_cfg(ArgKind::Type) {
@@ -454,10 +458,11 @@ impl<'a> ArgGenerator<'a> {
             match self.cfg_name {
                 CONFIG_CMD => {
                     codes.push(if !type_hint.is_null() {
-                        abort! {
-                            self.field_ty,
+                        return error(
+                            self.field_ty.span(),
                             "Cmd always force required, please remove Option or Vec from type"
-                        }
+                                .to_owned(),
+                        );
                     } else {
                         quote! {
                             config.set_type::<#inner_ty>();

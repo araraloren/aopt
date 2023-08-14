@@ -9,7 +9,6 @@ mod value;
 use proc_macro2::Ident;
 use proc_macro2::Span;
 use proc_macro2::TokenStream;
-use proc_macro_error::abort;
 use quote::quote;
 use syn::punctuated::Punctuated;
 use syn::Attribute;
@@ -37,6 +36,7 @@ const CONFIG_POS: &str = "pos";
 const CONFIG_CMD: &str = "cmd";
 const APP_POSTFIX: &str = "InternalApp";
 
+use crate::error;
 use crate::value::Value;
 
 pub use self::alter::AlterGenerator;
@@ -110,10 +110,10 @@ impl<'a> Analyzer<'a> {
                 cote_generator = Some(CoteGenerator::new(input)?);
             }
             _ => {
-                abort! {
+                return error(
                     input,
-                    "Cote macro not support the type currently"
-                }
+                    "Cote macro not support the type currently".to_owned(),
+                )
             }
         }
 
@@ -351,7 +351,7 @@ impl<'a> Analyzer<'a> {
             h.into_iter().for_each(|v| handler.push(v));
         };
 
-        if let Some(update) = self.cote().gen_main_option_update(option_id) {
+        if let Some(update) = self.cote().gen_main_option_update(option_id)? {
             append(update);
             option_id += 1;
         }
@@ -766,10 +766,10 @@ pub fn check_if_has_sub_cfg(field: &Field) -> syn::Result<bool> {
     let has_pos_cfg = attrs.iter().any(|v| v.path.is_ident(CONFIG_POS));
 
     if (has_arg_cfg || has_cmd_cfg || has_pos_cfg) && has_sub_cfg {
-        abort! {
+        error(
             field,
-            "can not have both `sub` and `arg` configuration on same field"
-        }
+            "can not have both `sub` and `arg` configuration on same field".to_owned(),
+        )
     } else {
         Ok(has_sub_cfg)
     }
@@ -872,9 +872,7 @@ pub fn check_in_path(ty: &Type, name: &str) -> syn::Result<bool> {
         }
         Ok(false)
     } else {
-        abort! {
-            ty, "Cote not support reference type"
-        }
+        error(ty, "Cote not support reference type".to_owned())
     }
 }
 
@@ -892,10 +890,10 @@ pub fn gen_ty_without_option(ty: &Type) -> syn::Result<Type> {
             }
         }
     }
-    abort! {
+    error(
         ty,
-        "`sub` configuration only support `Option<T>`"
-    }
+        "`sub` configuration only support `Option<T>`".to_owned(),
+    )
 }
 
 pub fn gen_subapp_without_option(ty: &Type) -> syn::Result<&Ident> {
@@ -904,8 +902,5 @@ pub fn gen_subapp_without_option(ty: &Type) -> syn::Result<&Ident> {
             return Ok(&segment.ident);
         }
     }
-    abort! {
-        ty,
-        "can not generate sub app type"
-    }
+    error(ty, "can not generate sub app type".to_owned())
 }

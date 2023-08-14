@@ -1,9 +1,9 @@
 use proc_macro2::Ident;
 use proc_macro2::TokenStream;
-use proc_macro_error::abort;
 use quote::quote;
 use quote::ToTokens;
 use syn::punctuated::Punctuated;
+use syn::spanned::Spanned;
 use syn::DeriveInput;
 use syn::GenericParam;
 use syn::Generics;
@@ -12,6 +12,7 @@ use syn::WherePredicate;
 
 use crate::config::Configs;
 use crate::config::CoteKind;
+use crate::error;
 
 use super::gen_option_ident;
 use super::gen_option_uid_ident;
@@ -60,18 +61,22 @@ impl<'a> CoteGenerator<'a> {
             match param {
                 GenericParam::Type(_) => {}
                 GenericParam::Lifetime(lifetime) => {
-                    abort! {
-                        input,
-                        "Cote not support struct with lifetime `{}`",
-                        lifetime.to_token_stream().to_string()
-                    }
+                    return error(
+                        input.span(),
+                        format!(
+                            "Cote not support struct with lifetime `{}`",
+                            lifetime.to_token_stream()
+                        ),
+                    )
                 }
                 GenericParam::Const(const_param) => {
-                    abort! {
-                        input,
-                        "Parsing struct failed: Cote not support const parameter `{:?}`",
-                        const_param,
-                    }
+                    return error(
+                        input.span(),
+                        format!(
+                            "Parsing struct failed: Cote not support const parameter `{:?}`",
+                            const_param
+                        ),
+                    )
                 }
             }
         }
@@ -394,7 +399,7 @@ impl<'a> CoteGenerator<'a> {
         })
     }
 
-    pub fn gen_main_option_update(&self, idx: usize) -> Option<OptUpdate> {
+    pub fn gen_main_option_update(&self, idx: usize) -> syn::Result<Option<OptUpdate>> {
         let ident = self.ident;
         let then = self.configs.find_cfg(CoteKind::Then);
         let on = self.configs.find_cfg(CoteKind::On);
@@ -404,7 +409,7 @@ impl<'a> CoteGenerator<'a> {
             let ident = gen_option_ident(idx, ident.span());
             let uid = gen_option_uid_ident(idx, ident.span());
 
-            Some((
+            Ok(Some((
                 Some(quote! {
                     let #ident = {
                         ctor.new_with({
@@ -451,14 +456,14 @@ impl<'a> CoteGenerator<'a> {
                         panic!("can not go here")
                     }
                 }),
-            ))
+            )))
         } else if then.is_some() {
-            abort! {
-                ident,
-                "`then` must use with `on` or `fallback` together"
-            }
+            error(
+                ident.span(),
+                "`then` must use with `on` or `fallback` together".to_owned(),
+            )
         } else {
-            None
+            Ok(None)
         }
     }
 

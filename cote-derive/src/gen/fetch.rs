@@ -1,6 +1,5 @@
 use proc_macro2::Ident;
 use proc_macro2::TokenStream;
-use proc_macro_error::abort;
 use quote::quote;
 use syn::punctuated::Punctuated;
 use syn::DeriveInput;
@@ -12,6 +11,7 @@ use syn::WherePredicate;
 use crate::config::Config;
 use crate::config::Configs;
 use crate::config::FetchKind;
+use crate::error;
 
 #[derive(Debug)]
 pub struct FetchGenerator<'a> {
@@ -55,10 +55,11 @@ impl<'a> FetchGenerator<'a> {
                 let map = self.find_cfg(FetchKind::Map);
 
                 if inner.is_none() || map.is_none() {
-                    abort! {
-                        ident,
+                    return error(
+                        ident.span(),
                         "`fetch` attribute: configuration `inner` can only using pair with `map`"
-                    }
+                            .to_owned(),
+                    );
                 }
                 let inner = inner.unwrap();
                 let map = map.unwrap();
@@ -75,10 +76,10 @@ impl<'a> FetchGenerator<'a> {
                         )
                 };
             } else {
-                abort! {
-                    ident,
-                    "Configuration `inner` can only using pair with `map`"
-                }
+                return error(
+                    ident.span(),
+                    "Configuration `inner` can only using pair with `map`".to_owned(),
+                );
             }
             if let Some(cfg) = self.find_cfg(FetchKind::Scalar) {
                 let scalar_cfg = cfg.value();

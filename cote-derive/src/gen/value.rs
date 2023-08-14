@@ -1,9 +1,9 @@
 use proc_macro2::{Ident, TokenStream};
-use proc_macro_error::abort;
 use quote::quote;
 use syn::{punctuated::Punctuated, token::Comma, DeriveInput, Variant};
 
 use crate::config::{Configs, ValueKind};
+use crate::error;
 
 #[derive(Debug)]
 pub struct ValueGenerator<'a> {
@@ -52,10 +52,10 @@ impl<'a> ValueGenerator<'a> {
         let ignore_case = self.configs.has_cfg(ValueKind::IgCase);
         let impl_code = if let (Some(forward_cfg), Some(map_cfg)) = (forward_cfg, map_cfg) {
             if map_raw_cfg.is_some() || map_str_cfg.is_some() || ignore_case {
-                abort! {
-                    ident,
-                    "`CoteVal` error: `forward` can only using pair with `map`"
-                }
+                return error(
+                    ident.span(),
+                    "`CoteVal` error: `forward` can only using pair with `map`".to_owned(),
+                );
             }
             let forward = forward_cfg.value();
             let map = map_cfg.value();
@@ -65,20 +65,20 @@ impl<'a> ValueGenerator<'a> {
             }
         } else {
             if map_raw_cfg.is_some() && map_str_cfg.is_some() {
-                abort! {
-                    ident,
-                    "`CoteVal` error: `mapraw` or `mapstr` can not using on same type"
-                }
+                return error(
+                    ident.span(),
+                    "`CoteVal` error: `mapraw` or `mapstr` can not using on same type".to_owned(),
+                );
             } else if map_cfg.is_some() {
-                abort! {
-                    ident,
-                    "`CoteVal` error: `mapraw` or `mapstr` can not using with `map`"
-                }
+                return error(
+                    ident.span(),
+                    "`CoteVal` error: `mapraw` or `mapstr` can not using with `map`".to_owned(),
+                );
             } else if map_raw_cfg.is_some() && ignore_case {
-                abort! {
-                    ident,
-                    "`CoteVal` error: `mapraw` can not using with `igcase`"
-                }
+                return error(
+                    ident.span(),
+                    "`CoteVal` error: `mapraw` can not using with `igcase`".to_owned(),
+                );
             }
 
             let str_convert = if ignore_case {
@@ -106,10 +106,10 @@ impl<'a> ValueGenerator<'a> {
                 }
             } else {
                 if self.variants.is_empty() {
-                    abort! {
-                        ident,
-                        "`CoteVal` error: only can generate parsing code for enum type currently, conside using `forward` and `map` on struct"
-                    }
+                    return  error(
+                        ident.span(),
+                        "`CoteVal` error: only can generate parsing code for enum type currently, conside using `forward` and `map` on struct".to_owned()
+                    );
                 }
                 let mut mat_branchs = vec![];
                 let enum_type = ident.to_string();

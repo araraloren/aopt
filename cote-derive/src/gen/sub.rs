@@ -1,6 +1,5 @@
 use proc_macro2::Ident;
 use proc_macro2::TokenStream;
-use proc_macro_error::abort;
 use quote::quote;
 use quote::ToTokens;
 use syn::spanned::Spanned;
@@ -11,6 +10,7 @@ use syn::Type;
 
 use crate::config::Configs;
 use crate::config::SubKind;
+use crate::error;
 
 use super::filter_comment_doc;
 use super::gen_option_ident;
@@ -53,15 +53,14 @@ impl<'a> SubGenerator<'a> {
             if let Some(cfg) = configs.find_cfg(SubKind::Name) {
                 cfg.value().to_token_stream()
             } else {
-                ident
-                    .unwrap_or_else(|| {
-                        abort! {
-                            ident,
-                            "`arg` or `sub` not support empty field name"
-                        }
-                    })
-                    .to_string()
-                    .to_token_stream()
+                if ident.is_none() {
+                    return error(
+                        field.span(),
+                        "`arg` or `sub` not support empty field name".to_owned(),
+                    );
+                }
+                let ident = ident.unwrap();
+                ident.to_string().to_token_stream()
             }
         };
 
@@ -112,10 +111,10 @@ impl<'a> SubGenerator<'a> {
         let name = &self.name;
 
         if is_refopt && is_mutopt {
-            abort! {
-                ident,
-                "can not set both mut and ref on arg"
-            }
+            error(
+                ident.span(),
+                "can not set both mut and ref on arg".to_owned(),
+            )
         } else if is_refopt {
             Ok((
                 true,
@@ -264,12 +263,13 @@ impl<'a> SubGenerator<'a> {
         let sub_id = self.get_sub_index();
         let sub_id = Index::from(sub_id);
         let pass_help_to_next = if is_process_help {
-            let help_uid = help_uid.unwrap_or_else(|| {
-                abort! {
-                    uid,
-                    "Failed generate help handler, found None of help uid"
-                }
-            });
+            if help_uid.is_none() {
+                return error(
+                    uid.span(),
+                    "Failed generate help handler, found None of help uid".to_owned(),
+                );
+            }
+            let help_uid = help_uid.unwrap();
             quote! {
                 if let Ok(value) = set.opt(#help_uid)?.val::<bool>() {
                     if *value {
