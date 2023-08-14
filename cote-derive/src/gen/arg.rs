@@ -318,7 +318,7 @@ impl<'a> ArgGenerator<'a> {
                             let token = cfg.value();
 
                             quote! {
-                                config.set_index(cote::Index::try_from(#token)?);
+                                config.set_index(<cote::Index as std::convert::TryFrom::<_>>::try_from(#token)?);
                             }
                         }
                         ArgKind::Force => {
