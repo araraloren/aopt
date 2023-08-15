@@ -33,7 +33,7 @@ mod __raw_utf8 {
         }
 
         pub fn into_os_string(self) -> OsString {
-            self.0.into_os_string()
+            OsString::from(self.0)
         }
     }
 

@@ -85,6 +85,7 @@ impl std::error::Error for Internal {}
 pub struct Error {
     inner: Internal,
 
+    // TODO! Remove Vec
     uids: Vec<Uid>,
 
     cause: Option<Box<Error>>,

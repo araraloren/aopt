@@ -141,7 +141,7 @@ where
     Inv: HandlerCollection<'a, Set, Ser>,
 {
     // copy the uid of option, avoid borrow the set
-    let keys: Vec<Uid> = set.keys().to_vec();
+    let keys: Vec<Uid> = set.keys();
 
     crate::trace_log!("NOA process {:?}", proc);
     for uid in keys {
