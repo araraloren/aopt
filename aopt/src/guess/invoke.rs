@@ -29,7 +29,7 @@ pub struct InvokeGuess<'a, Set, Inv, Ser> {
 
     pub arg: Option<ARef<RawVal>>,
 
-    pub name: Str,
+    pub name: Option<Str>,
 
     pub next: Option<ARef<RawVal>>,
 
@@ -73,10 +73,6 @@ where
     type Error = Error;
 
     fn guess(&mut self, style: &Self::Sty) -> Result<Self::Ret, Self::Error> {
-        println!(
-            "GUESS: {style:?} idx = {}, tot = {}, name = {}, arg = {:?}, next = {:?}",
-            self.idx, self.tot, self.name, self.arg, self.next
-        );
         match style {
             UserStyle::Main => self.guess_wrapper::<MainStyle>(),
             UserStyle::Pos => self.guess_wrapper::<PosStyle>(),
@@ -104,7 +100,6 @@ where
     fn process(&mut self, policy: &mut SingleOpt<Set>) -> Result<bool, Self::Error> {
         let uids = self.set.keys();
 
-        println!("macthing policy: {:?}", policy);
         for uid in uids {
             if !policy.filter(uid, self.set) {
                 if let Err(e) = policy.r#match(uid, self.set) {
@@ -116,7 +111,6 @@ where
                 }
             }
         }
-        println!(" >>>>>>>> found matched: {:?}", policy.uids());
         Ok(policy.matched())
     }
 
@@ -134,7 +128,6 @@ where
 
             let invoke_ret = self.inv.invoke_fb(uid, self.set, self.ser, self.ctx);
 
-            println!("invoke ret = {:?}", invoke_ret);
             if process_handler_ret(
                 invoke_ret,
                 |_| Ok(()),
@@ -146,7 +139,6 @@ where
                 return Ok(Some(idx));
             }
         }
-        println!(" ---> after invoke {:?}", policy);
         Ok(None)
     }
 }
@@ -164,7 +156,6 @@ where
         let uids = self.set.keys();
         let any_match = multi_policy.any_match();
 
-        println!("macthing policy: {:?}", multi_policy);
         for policy in multi_policy.sub_policys_mut() {
             for uid in uids.iter() {
                 if !policy.filter(*uid, self.set) {
@@ -181,8 +172,6 @@ where
                 break;
             }
         }
-
-        println!(" >>>>>>>> found matched: {:?}", multi_policy);
         Ok(multi_policy.matched())
     }
 
@@ -223,7 +212,6 @@ where
     fn process(&mut self, policy: &mut SingleNonOpt<Set>) -> Result<bool, Self::Error> {
         let uids = self.set.keys();
 
-        println!("macthing policy: {:?}", policy);
         for uid in uids {
             if !policy.filter(uid, self.set) {
                 if let Err(e) = policy.r#match(uid, self.set) {
@@ -235,7 +223,6 @@ where
                 }
             }
         }
-        println!(" >>>>>>>> found matched: {:?}", policy.uids());
         Ok(policy.matched())
     }
 
@@ -254,7 +241,6 @@ where
             ));
             let invoke_ret = self.inv.invoke_fb(uid, self.set, self.ser, self.ctx);
 
-            println!("invoke ret = {:?}", invoke_ret);
             if process_handler_ret(
                 invoke_ret,
                 |_| Ok(()),
@@ -266,7 +252,6 @@ where
                 ret.push(idx);
             }
         }
-        println!(" ---> after invoke {:?}", policy);
         Ok(ret)
     }
 }
@@ -284,7 +269,6 @@ where
 
     fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
         let args = self.ctx.args();
-        let name = args.get(self.idx).and_then(|v| v.get_str()).map(Str::from);
 
         Ok(Some(
             SingleNonOpt::default()
@@ -292,7 +276,7 @@ where
                 .with_total(self.tot)
                 .with_args(args.clone())
                 .with_style(Style::Main)
-                .with_name(name)
+                .with_name(self.name.clone())
                 .reset_arg(),
         ))
     }
@@ -323,7 +307,6 @@ where
 
     fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
         let args = self.ctx.args();
-        let name = args.get(self.idx).and_then(|v| v.get_str()).map(Str::from);
 
         Ok(Some(
             SingleNonOpt::default()
@@ -331,7 +314,7 @@ where
                 .with_total(self.tot)
                 .with_args(args.clone())
                 .with_style(Style::Pos)
-                .with_name(name)
+                .with_name(self.name.clone())
                 .reset_arg(),
         ))
     }
@@ -354,7 +337,6 @@ where
 
     fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
         let args = self.ctx.args();
-        let name = args.get(self.idx).and_then(|v| v.get_str()).map(Str::from);
 
         Ok(Some(
             SingleNonOpt::default()
@@ -362,7 +344,7 @@ where
                 .with_total(self.tot)
                 .with_args(args.clone())
                 .with_style(Style::Cmd)
-                .with_name(name)
+                .with_name(self.name.clone())
                 .with_arg(Some(RawVal::from(BOOL_TRUE).into())),
         ))
     }
@@ -384,11 +366,12 @@ where
     type Error = Error;
 
     fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
+        debug_assert!(self.name.is_some());
         Ok(self.arg.as_ref().map(|_| {
             SingleOpt::default()
                 .with_idx(self.idx)
                 .with_total(self.tot)
-                .with_name(self.name.clone())
+                .with_name(self.name.as_ref().unwrap().clone())
                 .with_arg(self.arg.clone())
                 .with_consume(false)
                 .with_style(Style::Argument)
@@ -420,15 +403,20 @@ where
     type Error = Error;
 
     fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
-        Ok(self.arg.as_ref().map(|_| {
-            SingleOpt::default()
-                .with_idx(self.idx)
-                .with_total(self.tot)
-                .with_name(self.name.clone())
-                .with_arg(self.next.clone())
-                .with_consume(true)
-                .with_style(Style::Argument)
-        }))
+        debug_assert!(self.name.is_some());
+        Ok(if self.arg.is_none() && self.next.is_some() {
+            Some(
+                SingleOpt::default()
+                    .with_idx(self.idx)
+                    .with_total(self.tot)
+                    .with_name(self.name.as_ref().unwrap().clone())
+                    .with_arg(self.next.clone())
+                    .with_consume(true)
+                    .with_style(Style::Argument),
+            )
+        } else {
+            None
+        })
     }
 
     fn guess_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
@@ -448,9 +436,10 @@ where
     type Error = Error;
 
     fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
+        debug_assert!(self.name.is_some());
         if self.arg.is_none() {
             // strip the prefix before generate
-            let name = self.name.as_str();
+            let name = self.name.as_ref().unwrap().as_str();
             let opt_validator = &self.set;
             let splited = opt_validator.split(name).map_err(Into::into)?;
             let prefix_len = splited.0.len();
@@ -492,9 +481,10 @@ where
     type Error = Error;
 
     fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
+        debug_assert!(self.name.is_some());
         if self.arg.is_none() {
             // strip the prefix before generate
-            let name = self.name.as_str();
+            let name = self.name.as_ref().unwrap().as_str();
             let opt_validator = &self.set;
             let splited = opt_validator.split(name).map_err(Into::into)?;
             let prefix_len = splited.0.len();
@@ -558,9 +548,10 @@ where
     type Error = Error;
 
     fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
+        debug_assert!(self.name.is_some());
         if self.arg.is_none() {
             // strip the prefix before generate
-            let name = self.name.as_str();
+            let name = self.name.as_ref().unwrap().as_str();
             let opt_validator = &self.set;
             let splited = opt_validator.split(name).map_err(Into::into)?;
 
@@ -601,12 +592,13 @@ where
     type Policy = Option<SingleOpt<Set>>;
 
     fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
+        debug_assert!(self.name.is_some());
         if self.arg.is_none() {
             Ok(Some(
                 SingleOpt::default()
                     .with_idx(self.idx)
                     .with_total(self.tot)
-                    .with_name(self.name.clone())
+                    .with_name(self.name.as_ref().unwrap().clone())
                     .with_arg(Some(ARef::new(RawVal::from(BOOL_TRUE))))
                     .with_consume(false)
                     .with_style(Style::Boolean),
@@ -633,15 +625,20 @@ where
     type Policy = Option<SingleOpt<Set>>;
 
     fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
-        Ok(self.arg.as_ref().map(|_| {
-            SingleOpt::default()
-                .with_idx(self.idx)
-                .with_total(self.tot)
-                .with_name(self.name.clone())
-                .with_arg(None)
-                .with_consume(false)
-                .with_style(Style::Flag)
-        }))
+        debug_assert!(self.name.is_some());
+        Ok(if self.arg.is_none() {
+            Some(
+                SingleOpt::default()
+                    .with_idx(self.idx)
+                    .with_total(self.tot)
+                    .with_name(self.name.as_ref().unwrap().clone())
+                    .with_arg(None)
+                    .with_consume(false)
+                    .with_style(Style::Flag),
+            )
+        } else {
+            None
+        })
     }
 
     fn guess_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {

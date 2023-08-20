@@ -1,28 +1,20 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-use super::process_non_opt;
-use super::process_opt;
 use super::FailManager;
-use super::Guess;
-use super::GuessNOACfg;
-use super::GuessOptCfg;
-use super::NOAGuess;
-use super::OptGuess;
 use super::OptStyleManager;
 use super::Policy;
 use super::PolicySettings;
-use super::ProcessCtx;
 use super::ReturnVal;
 use super::UserStyle;
 use crate::args::ArgParser;
 use crate::args::Args;
-use crate::astr;
 use crate::ctx::Ctx;
 use crate::ctx::Invoker;
+use crate::guess::Guess;
+use crate::guess::InvokeGuess;
 use crate::opt::Opt;
 use crate::opt::OptParser;
-use crate::proc::Process;
 use crate::set::OptValidator;
 use crate::set::SetChecker;
 use crate::set::SetOpt;
@@ -248,61 +240,46 @@ where
 
         let opt_styles = &self.style_manager;
         let args = ctx.orig_args().clone();
-        let args_len = args.len();
+        let tot = args.len();
         let mut noa_args = Args::default();
         let mut iter = args.guess_iter().enumerate();
         let mut opt_fail = FailManager::default();
 
         ctx.set_args(args.clone());
-        while let Some((idx, (opt, arg))) = iter.next() {
+        while let Some((idx, (opt, next))) = iter.next() {
             let mut matched = false;
             let mut consume = false;
-            let arg = arg.map(|v| ARef::new(v.clone()));
+            let next = next.map(|v| ARef::new(v.clone()));
 
             if let Ok(clopt) = opt.parse_arg() {
                 if let Some(name) = clopt.name() {
                     if set.check(name.as_str()).map_err(Into::into)? {
+                        let arg = clopt.value().cloned();
+                        let mut guess = InvokeGuess {
+                            idx,
+                            arg,
+                            set,
+                            inv,
+                            ser,
+                            tot,
+                            ctx,
+                            next: next.clone(),
+                            fail: &mut opt_fail,
+                            name: Some(name.clone()),
+                        };
+
                         for style in opt_styles.iter() {
-                            if let Some(mut proc) = OptGuess::new().guess(
-                                style,
-                                GuessOptCfg::new(idx, args_len, arg.clone(), &clopt, set),
-                            )? {
-                                process_opt(
-                                    ProcessCtx {
-                                        idx,
-                                        ctx,
-                                        set,
-                                        inv,
-                                        ser,
-                                        tot: args_len,
-                                    },
-                                    &mut proc,
-                                    &mut opt_fail,
-                                    true,
-                                )?;
-                                if proc.status() {
-                                    matched = true;
-                                }
-                                if matched {
-                                    if proc.is_consume() {
-                                        consume = true;
-                                    }
-                                    break;
-                                }
+                            (matched, consume) = guess.guess(style)?;
+                            if matched {
+                                break;
                             }
                         }
                         if !matched && self.strict() {
-                            let default_str = astr("");
-
-                            return Err(opt_fail.cause(Error::sp_option_not_found(format!(
-                                "{}",
-                                clopt.name().unwrap_or(&default_str)
-                            ))));
+                            return Err(opt_fail.cause(Error::sp_option_not_found(name)));
                         }
                     }
                 }
             }
-
             // if consume the argument, skip it
             if matched && consume {
                 iter.next();
@@ -315,49 +292,53 @@ where
         opt_fail.process(self.checker().opt_check(set))?;
 
         let noa_args = ARef::new(noa_args);
-        let noa_len = noa_args.len();
+        let tot = noa_args.len();
         let mut pos_fail = FailManager::default();
         let mut cmd_fail = FailManager::default();
 
         ctx.set_args(noa_args.clone());
         // when style is pos, noa index is [1..=len]
-        if noa_len > 0 {
-            if let Some(mut proc) = NOAGuess::new().guess(
-                &UserStyle::Cmd,
-                GuessNOACfg::new(noa_args.clone(), Self::noa_cmd(), noa_len),
-            )? {
-                process_non_opt(
-                    ProcessCtx {
-                        ctx,
-                        set,
-                        inv,
-                        ser,
-                        tot: noa_len,
-                        idx: Self::noa_cmd(),
-                    },
-                    &mut proc,
-                    &mut cmd_fail,
-                )?;
-            }
+        if tot > 0 {
+            let name = noa_args
+                .get(Self::noa_cmd())
+                .and_then(|v| v.get_str())
+                .map(Str::from);
+            let mut guess = InvokeGuess {
+                set,
+                inv,
+                ser,
+                tot,
+                name,
+                ctx,
+                arg: None,
+                next: None,
+                fail: &mut cmd_fail,
+                idx: Self::noa_cmd(),
+            };
+
+            guess.guess(&UserStyle::Cmd)?;
             cmd_fail.process(self.checker().cmd_check(set))?;
-            for idx in 1..noa_len {
-                if let Some(mut proc) = NOAGuess::new().guess(
-                    &UserStyle::Pos,
-                    GuessNOACfg::new(noa_args.clone(), Self::noa_pos(idx), noa_len),
-                )? {
-                    process_non_opt(
-                        ProcessCtx {
-                            ctx,
-                            set,
-                            inv,
-                            ser,
-                            tot: noa_len,
-                            idx: Self::noa_pos(idx),
-                        },
-                        &mut proc,
-                        &mut pos_fail,
-                    )?;
-                }
+
+            let mut guess = InvokeGuess {
+                set,
+                inv,
+                ser,
+                tot,
+                ctx,
+                name: None,
+                arg: None,
+                next: None,
+                fail: &mut pos_fail,
+                idx: Self::noa_cmd(),
+            };
+
+            for idx in 1..tot {
+                guess.idx = Self::noa_pos(idx);
+                guess.name = noa_args
+                    .get(Self::noa_pos(idx))
+                    .and_then(|v| v.get_str())
+                    .map(Str::from);
+                guess.guess(&UserStyle::Pos)?;
             }
         } else {
             cmd_fail.process(self.checker().cmd_check(set))?;
@@ -366,27 +347,28 @@ where
         pos_fail.process(self.checker().pos_check(set))?;
 
         let main_args = noa_args;
-        let main_len = main_args.len();
+        let tot = main_args.len();
         let mut main_fail = FailManager::default();
 
         ctx.set_args(main_args.clone());
-        if let Some(mut proc) = NOAGuess::new().guess(
-            &UserStyle::Main,
-            GuessNOACfg::new(main_args, Self::noa_main(), noa_len),
-        )? {
-            process_non_opt(
-                ProcessCtx {
-                    ctx,
-                    set,
-                    inv,
-                    ser,
-                    tot: main_len,
-                    idx: Self::noa_main(),
-                },
-                &mut proc,
-                &mut main_fail,
-            )?;
-        }
+        let name = main_args
+            .get(Self::noa_main())
+            .and_then(|v| v.get_str())
+            .map(Str::from);
+        let mut guess = InvokeGuess {
+            set,
+            inv,
+            ser,
+            tot,
+            name,
+            ctx,
+            arg: None,
+            next: None,
+            fail: &mut main_fail,
+            idx: Self::noa_main(),
+        };
+
+        guess.guess(&UserStyle::Main)?;
         main_fail.process(self.checker().post_check(set))?;
         Ok(())
     }
