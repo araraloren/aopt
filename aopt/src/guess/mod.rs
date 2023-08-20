@@ -1,4 +1,5 @@
 mod delay;
+mod first;
 mod invoke;
 mod multi;
 mod noa;
@@ -8,6 +9,9 @@ mod style;
 use crate::Error;
 use crate::Uid;
 
+pub use self::delay::DelayGuess;
+pub use self::delay::InnerCtxSaver;
+pub use self::first::FirstOpt;
 pub use self::invoke::InvokeGuess;
 pub use self::multi::MultiOpt;
 pub use self::noa::SingleNonOpt;
@@ -35,7 +39,7 @@ pub trait Process<Policy> {
     type Ret;
     type Error: Into<Error>;
 
-    fn process(&mut self, policy: &mut Policy) -> Result<bool, Self::Error>;
+    fn match_all(&mut self, policy: &mut Policy) -> Result<bool, Self::Error>;
 
     fn invoke_handler(&mut self, policy: &mut Policy) -> Result<Self::Ret, Self::Error>;
 }

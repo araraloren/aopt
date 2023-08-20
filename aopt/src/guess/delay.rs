@@ -118,8 +118,8 @@ where
 
     type Error = Error;
 
-    fn process(&mut self, policy: &mut SingleOpt<Set>) -> Result<bool, Self::Error> {
-        Process::<SingleOpt<Set>>::process(&mut self.0, policy)
+    fn match_all(&mut self, policy: &mut SingleOpt<Set>) -> Result<bool, Self::Error> {
+        Process::<SingleOpt<Set>>::match_all(&mut self.0, policy)
     }
 
     fn invoke_handler(&mut self, policy: &mut SingleOpt<Set>) -> Result<Self::Ret, Self::Error> {
@@ -148,8 +148,8 @@ where
 
     type Error = Error;
 
-    fn process(&mut self, multi_policy: &mut MultiOpt<Set>) -> Result<bool, Self::Error> {
-        Process::<MultiOpt<Set>>::process(&mut self.0, multi_policy)
+    fn match_all(&mut self, multi_policy: &mut MultiOpt<Set>) -> Result<bool, Self::Error> {
+        Process::<MultiOpt<Set>>::match_all(&mut self.0, multi_policy)
     }
 
     fn invoke_handler(
@@ -183,8 +183,8 @@ where
 
     type Error = Error;
 
-    fn process(&mut self, policy: &mut SingleNonOpt<Set>) -> Result<bool, Self::Error> {
-        Process::<SingleNonOpt<Set>>::process(&mut self.0, policy)
+    fn match_all(&mut self, policy: &mut SingleNonOpt<Set>) -> Result<bool, Self::Error> {
+        Process::<SingleNonOpt<Set>>::match_all(&mut self.0, policy)
     }
 
     fn invoke_handler(&mut self, policy: &mut SingleNonOpt<Set>) -> Result<Self::Ret, Self::Error> {
@@ -221,7 +221,7 @@ where
 
     fn guess_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
         if let Some(policy) = policy {
-            if self.process(policy)? {
+            if self.match_all(policy)? {
                 return self.invoke_handler(policy);
             }
         }
@@ -286,7 +286,7 @@ where
 
     fn guess_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
         if let Some(policy) = policy {
-            if self.process(policy)? {
+            if self.match_all(policy)? {
                 return self.invoke_handler(policy);
             }
         }
@@ -352,7 +352,7 @@ where
     fn guess_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
         if let Some(policy) = policy {
             if !policy.is_empty() {
-                if self.process(policy)? {
+                if self.match_all(policy)? {
                     return self.invoke_handler(policy);
                 }
             }

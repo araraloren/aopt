@@ -27,3 +27,24 @@ pub struct BooleanStyle;
 
 #[derive(Debug, Default)]
 pub struct FlagStyle;
+
+#[derive(Debug, Default)]
+pub struct FirstEqualWithValuStyle;
+
+#[derive(Debug, Default)]
+pub struct FirstArgumentStyle;
+
+#[derive(Debug, Default)]
+pub struct FirstEmbeddedValueStyle;
+
+#[derive(Debug, Default)]
+pub struct FirstEmbeddedValuePlusStyle;
+
+#[derive(Debug, Default)]
+pub struct FirstCombinedOptionStyle;
+
+#[derive(Debug, Default)]
+pub struct FirstBooleanStyle;
+
+#[derive(Debug, Default)]
+pub struct FirstFlagStyle;
