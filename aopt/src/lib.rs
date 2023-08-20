@@ -3,6 +3,7 @@ pub mod args;
 pub mod ctx;
 pub mod err;
 pub mod ext;
+pub mod guess;
 pub mod map;
 pub mod opt;
 pub mod parser;
