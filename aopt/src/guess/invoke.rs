@@ -60,6 +60,31 @@ impl<'a, Set, Inv, Ser> InvokeGuess<'a, Set, Inv, Ser> {
             fail,
         }
     }
+
+    pub fn with_idx(mut self, idx: usize) -> Self {
+        self.idx = idx;
+        self
+    }
+    
+    pub fn with_tot(mut self, tot: usize) -> Self {
+        self.tot = tot;
+        self
+    }
+    
+    pub fn with_arg(mut self, arg: Option<ARef<RawVal>>) -> Self {
+        self.arg = arg;
+        self
+    }
+    
+    pub fn with_name(mut self, name: Option<Str>) -> Self {
+        self.name = name;
+        self
+    }
+    
+    pub fn with_next(mut self, next: Option<ARef<RawVal>>) -> Self {
+        self.next = next;
+        self
+    }
 }
 
 impl<'a, 'b, Set, Inv, Ser> InvokeGuess<'a, Set, Inv, Ser>
