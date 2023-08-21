@@ -14,11 +14,11 @@ use crate::Str;
 use super::process_handler_ret;
 use super::style::*;
 use super::FirstOpt;
-use super::Guess;
 use super::GuessOpt;
 use super::MatchPolicy;
 use super::MultiOpt;
 use super::Process;
+use super::SimpleMatRes;
 use super::SingleNonOpt;
 use super::SingleOpt;
 
@@ -46,7 +46,13 @@ pub struct InvokeGuess<'a, Set, Inv, Ser> {
 }
 
 impl<'a, Set, Inv, Ser> InvokeGuess<'a, Set, Inv, Ser> {
-    pub fn new(ctx: &'a mut Ctx, set: &'a mut Set, inv: &'a mut Inv, ser: &'a mut Ser, fail: &'a mut FailManager) -> Self {
+    pub fn new(
+        ctx: &'a mut Ctx,
+        set: &'a mut Set,
+        inv: &'a mut Inv,
+        ser: &'a mut Ser,
+        fail: &'a mut FailManager,
+    ) -> Self {
         Self {
             idx: 0,
             tot: 0,
@@ -61,26 +67,101 @@ impl<'a, Set, Inv, Ser> InvokeGuess<'a, Set, Inv, Ser> {
         }
     }
 
+    pub fn set_ctx(&mut self, ctx: &'a mut Ctx) -> &mut Self {
+        self.ctx = ctx;
+        self
+    }
+
+    pub fn set_optset(&mut self, set: &'a mut Set) -> &mut Self {
+        self.set = set;
+        self
+    }
+
+    pub fn set_inv(&mut self, inv: &'a mut Inv) -> &mut Self {
+        self.inv = inv;
+        self
+    }
+
+    pub fn set_ser(&mut self, ser: &'a mut Ser) -> &mut Self {
+        self.ser = ser;
+        self
+    }
+
+    pub fn set_fail(&mut self, fail: &'a mut FailManager) -> &mut Self {
+        self.fail = fail;
+        self
+    }
+
+    pub fn set_idx(&mut self, idx: usize) -> &mut Self {
+        self.idx = idx;
+        self
+    }
+
+    pub fn set_tot(&mut self, tot: usize) -> &mut Self {
+        self.tot = tot;
+        self
+    }
+
+    pub fn set_arg(&mut self, arg: Option<ARef<RawVal>>) -> &mut Self {
+        self.arg = arg;
+        self
+    }
+
+    pub fn set_name(&mut self, name: Option<Str>) -> &mut Self {
+        self.name = name;
+        self
+    }
+
+    pub fn set_next(&mut self, next: Option<ARef<RawVal>>) -> &mut Self {
+        self.next = next;
+        self
+    }
+
+    pub fn with_ctx(mut self, ctx: &'a mut Ctx) -> Self {
+        self.ctx = ctx;
+        self
+    }
+
+    pub fn with_set(mut self, set: &'a mut Set) -> Self {
+        self.set = set;
+        self
+    }
+
+    pub fn with_inv(mut self, inv: &'a mut Inv) -> Self {
+        self.inv = inv;
+        self
+    }
+
+    pub fn with_ser(mut self, ser: &'a mut Ser) -> Self {
+        self.ser = ser;
+        self
+    }
+
+    pub fn with_fail(mut self, fail: &'a mut FailManager) -> Self {
+        self.fail = fail;
+        self
+    }
+
     pub fn with_idx(mut self, idx: usize) -> Self {
         self.idx = idx;
         self
     }
-    
+
     pub fn with_tot(mut self, tot: usize) -> Self {
         self.tot = tot;
         self
     }
-    
+
     pub fn with_arg(mut self, arg: Option<ARef<RawVal>>) -> Self {
         self.arg = arg;
         self
     }
-    
+
     pub fn with_name(mut self, name: Option<Str>) -> Self {
         self.name = name;
         self
     }
-    
+
     pub fn with_next(mut self, next: Option<ARef<RawVal>>) -> Self {
         self.next = next;
         self
@@ -104,18 +185,12 @@ where
     }
 }
 
-impl<'a, 'b, Set, Inv, Ser> Guess for InvokeGuess<'a, Set, Inv, Ser>
+impl<'a, 'b, Set, Inv, Ser> InvokeGuess<'a, Set, Inv, Ser>
 where
     Set: crate::set::Set + OptValidator,
     Inv: HandlerCollection<'b, Set, Ser>,
 {
-    type Sty = UserStyle;
-
-    type Ret = (bool, bool);
-
-    type Error = Error;
-
-    fn guess(&mut self, style: &Self::Sty) -> Result<Self::Ret, Self::Error> {
+    pub fn guess(&mut self, style: &UserStyle) -> Result<(bool, bool), Error> {
         match style {
             UserStyle::Main => self.guess_wrapper::<MainStyle>(),
             UserStyle::Pos => self.guess_wrapper::<PosStyle>(),
@@ -136,6 +211,7 @@ where
     Set: crate::set::Set,
     Inv: HandlerCollection<'b, Set, Ser>,
 {
+    // index of matched uid
     type Ret = Option<usize>;
 
     type Error = Error;
@@ -144,6 +220,7 @@ where
         let uids = self.set.keys();
 
         for uid in uids {
+            // select all the option may match the `policy`
             if !policy.filter(uid, self.set) {
                 if let Err(e) = policy.r#match(uid, self.set) {
                     if e.is_failure() {
@@ -169,8 +246,10 @@ where
             self.ctx
                 .set_inner_ctx(Some(inner_ctx.clone().with_uid(*uid)));
 
+            // invoke the handler of `uid`
             let invoke_ret = self.inv.invoke_fb(uid, self.set, self.ser, self.ctx);
 
+            // return first index if handler success
             if process_handler_ret(
                 invoke_ret,
                 |_| Ok(()),
@@ -186,23 +265,29 @@ where
     }
 }
 
-impl<'a, 'b, Set, Inv, Ser> Process<MultiOpt<Set>> for InvokeGuess<'a, Set, Inv, Ser>
+impl<'a, 'b, Set, Inv, Ser> Process<MultiOpt<SingleOpt<Set>, Set>>
+    for InvokeGuess<'a, Set, Inv, Ser>
 where
     Set: crate::set::Set,
     Inv: HandlerCollection<'b, Set, Ser>,
 {
+    // (index of matched policy, index of matched uid)
     type Ret = Vec<(usize, usize)>;
 
     type Error = Error;
 
-    fn match_all(&mut self, multi_policy: &mut MultiOpt<Set>) -> Result<bool, Self::Error> {
+    fn match_all(
+        &mut self,
+        policy: &mut MultiOpt<SingleOpt<Set>, Set>,
+    ) -> Result<bool, Self::Error> {
         let uids = self.set.keys();
-        let any_match = multi_policy.any_match();
+        let any_match = policy.any_match();
 
-        for policy in multi_policy.sub_policys_mut() {
+        for sub_policy in policy.sub_policys_mut() {
+            // process all uids with each policy first
             for uid in uids.iter() {
-                if !policy.filter(*uid, self.set) {
-                    if let Err(e) = policy.r#match(*uid, self.set) {
+                if !sub_policy.filter(*uid, self.set) {
+                    if let Err(e) = sub_policy.r#match(*uid, self.set) {
                         if e.is_failure() {
                             self.fail.push(e);
                         } else {
@@ -211,22 +296,22 @@ where
                     }
                 }
             }
-            if any_match && policy.matched() {
+            if any_match && sub_policy.matched() {
                 break;
             }
         }
-        Ok(multi_policy.matched())
+        Ok(policy.matched())
     }
 
     fn invoke_handler(
         &mut self,
-        multi_policy: &mut MultiOpt<Set>,
+        policy: &mut MultiOpt<SingleOpt<Set>, Set>,
     ) -> Result<Self::Ret, Self::Error> {
         let mut ret = vec![];
-        let any_match = multi_policy.any_match();
+        let any_match = policy.any_match();
 
-        for (policy_idx, policy) in multi_policy.sub_policys_mut().iter_mut().enumerate() {
-            let single = self.invoke_handler(policy)?;
+        for (policy_idx, sub_policy) in policy.sub_policys_mut().iter_mut().enumerate() {
+            let single = self.invoke_handler(sub_policy)?;
 
             if let Some(idx) = single {
                 if any_match {
@@ -248,6 +333,7 @@ where
     Set: crate::set::Set,
     Inv: HandlerCollection<'b, Set, Ser>,
 {
+    // all the index of matched uids
     type Ret = Vec<usize>;
 
     type Error = Error;
@@ -255,6 +341,7 @@ where
     fn match_all(&mut self, policy: &mut SingleNonOpt<Set>) -> Result<bool, Self::Error> {
         let uids = self.set.keys();
 
+        // process all the uid
         for uid in uids {
             if !policy.filter(uid, self.set) {
                 if let Err(e) = policy.r#match(uid, self.set) {
@@ -278,12 +365,14 @@ where
             .with_arg(policy.clone_arg())
             .with_style(policy.style());
 
-        for (idx, uid) in policy.uids().iter().enumerate() {
+        for (index, uid) in policy.uids().iter().enumerate() {
             self.ctx
                 .set_inner_ctx(Some(inner_ctx.clone().with_uid(*uid)));
 
+            // invoke the handler of `uid`
             let invoke_ret = self.inv.invoke_fb(uid, self.set, self.ser, self.ctx);
 
+            // add the index to return value
             if process_handler_ret(
                 invoke_ret,
                 |_| Ok(()),
@@ -292,7 +381,7 @@ where
                     Ok(())
                 },
             )? {
-                ret.push(idx);
+                ret.push(index);
             }
         }
         Ok(ret)
@@ -304,6 +393,7 @@ where
     Set: crate::set::Set,
     Inv: HandlerCollection<'b, Set, Ser>,
 {
+    // always 0 if exists
     type Ret = Option<usize>;
 
     type Error = Error;
@@ -312,6 +402,7 @@ where
         let uids = self.set.keys();
 
         for uid in uids {
+            // if any opt matched, skip
             if !policy.matched() && !policy.filter(uid, self.set) {
                 if let Err(e) = policy.r#match(uid, self.set) {
                     if e.is_failure() {
@@ -337,8 +428,10 @@ where
             self.ctx
                 .set_inner_ctx(Some(inner_ctx.clone().with_uid(*uid)));
 
+            // invoke the handler of first matched opt
             let invoke_ret = self.inv.invoke_fb(uid, self.set, self.ser, self.ctx);
 
+            // return 0 if success
             if process_handler_ret(
                 invoke_ret,
                 |_| Ok(()),
@@ -354,41 +447,111 @@ where
     }
 }
 
+impl<'a, 'b, Set, Inv, Ser> Process<MultiOpt<FirstOpt<Set>, Set>> for InvokeGuess<'a, Set, Inv, Ser>
+where
+    Set: crate::set::Set,
+    Inv: HandlerCollection<'b, Set, Ser>,
+{
+    // index of matched policy
+    // index of matched uid == 0
+    type Ret = Vec<usize>;
+
+    type Error = Error;
+
+    fn match_all(
+        &mut self,
+        policy: &mut MultiOpt<FirstOpt<Set>, Set>,
+    ) -> Result<bool, Self::Error> {
+        let uids = self.set.keys();
+        let any_match = policy.any_match();
+
+        for sub_policy in policy.sub_policys_mut() {
+            // process all uids with each policy first
+            for uid in uids.iter() {
+                if !sub_policy.matched() && !sub_policy.filter(*uid, self.set) {
+                    if let Err(e) = sub_policy.r#match(*uid, self.set) {
+                        if e.is_failure() {
+                            self.fail.push(e);
+                        } else {
+                            return Err(e);
+                        }
+                    }
+                }
+            }
+            if any_match && sub_policy.matched() {
+                break;
+            }
+        }
+        Ok(policy.matched())
+    }
+
+    fn invoke_handler(
+        &mut self,
+        policy: &mut MultiOpt<FirstOpt<Set>, Set>,
+    ) -> Result<Self::Ret, Self::Error> {
+        let mut ret = vec![];
+        let any_match = policy.any_match();
+
+        for (policy_idx, sub_policy) in policy.sub_policys_mut().iter_mut().enumerate() {
+            let single = self.invoke_handler(sub_policy)?;
+
+            // index is 0
+            if let Some(_) = single {
+                if any_match {
+                    // any match, return current
+                    return Ok(vec![policy_idx]);
+                } else {
+                    ret.push(policy_idx);
+                }
+            } else if !any_match {
+                return Ok(vec![]);
+            }
+        }
+        Ok(ret)
+    }
+}
+
 impl<'a, 'b, Set, Inv, Ser> GuessOpt<MainStyle> for InvokeGuess<'a, Set, Inv, Ser>
 where
     Set: crate::set::Set,
     Inv: HandlerCollection<'b, Set, Ser>,
 {
-    type Ret = (bool, bool);
+    type Ret = SimpleMatRes;
 
     type Policy = Option<SingleNonOpt<Set>>;
 
     type Error = Error;
 
     fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
-        let args = self.ctx.args();
+        let idx = self.idx;
+        let tot = self.tot;
+        let style = Style::Main;
+        let name = self.name.clone();
+        let args = self.ctx.args().clone();
 
         Ok(Some(
             SingleNonOpt::default()
-                .with_idx(self.idx)
-                .with_total(self.tot)
-                .with_args(args.clone())
-                .with_style(Style::Main)
-                .with_name(self.name.clone())
+                .with_idx(idx)
+                .with_args(args)
+                .with_name(name)
+                .with_total(tot)
+                .with_style(style)
                 .reset_arg(),
         ))
     }
 
     fn guess_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
+        let mut res = SimpleMatRes::default();
+
         if let Some(policy) = policy {
             if self.match_all(policy)? {
                 for idx in self.invoke_handler(policy)? {
                     policy.apply(policy.uids()[idx], self.set)?;
                 }
-                return Ok((true, false));
+                res.matched = true;
             }
         }
-        Ok((false, false))
+        Ok(res)
     }
 }
 
@@ -397,22 +560,26 @@ where
     Set: crate::set::Set,
     Inv: HandlerCollection<'b, Set, Ser>,
 {
-    type Ret = (bool, bool);
+    type Ret = SimpleMatRes;
 
     type Policy = Option<SingleNonOpt<Set>>;
 
     type Error = Error;
 
     fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
-        let args = self.ctx.args();
+        let idx = self.idx;
+        let tot = self.tot;
+        let style = Style::Pos;
+        let name = self.name.clone();
+        let args = self.ctx.args().clone();
 
         Ok(Some(
             SingleNonOpt::default()
-                .with_idx(self.idx)
-                .with_total(self.tot)
-                .with_args(args.clone())
-                .with_style(Style::Pos)
-                .with_name(self.name.clone())
+                .with_idx(idx)
+                .with_args(args)
+                .with_name(name)
+                .with_total(tot)
+                .with_style(style)
                 .reset_arg(),
         ))
     }
@@ -427,22 +594,26 @@ where
     Set: crate::set::Set,
     Inv: HandlerCollection<'b, Set, Ser>,
 {
-    type Ret = (bool, bool);
+    type Ret = SimpleMatRes;
 
     type Policy = Option<SingleNonOpt<Set>>;
 
     type Error = Error;
 
     fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
-        let args = self.ctx.args();
+        let idx = self.idx;
+        let tot = self.tot;
+        let style = Style::Cmd;
+        let name = self.name.clone();
+        let args = self.ctx.args().clone();
 
         Ok(Some(
             SingleNonOpt::default()
-                .with_idx(self.idx)
-                .with_total(self.tot)
-                .with_args(args.clone())
-                .with_style(Style::Cmd)
-                .with_name(self.name.clone())
+                .with_idx(idx)
+                .with_args(args)
+                .with_name(name)
+                .with_total(tot)
+                .with_style(style)
                 .with_arg(Some(RawVal::from(BOOL_TRUE).into())),
         ))
     }
@@ -457,7 +628,7 @@ where
     Set: crate::set::Set,
     Inv: HandlerCollection<'b, Set, Ser>,
 {
-    type Ret = (bool, bool);
+    type Ret = SimpleMatRes;
 
     type Policy = Option<SingleOpt<Set>>;
 
@@ -465,30 +636,40 @@ where
 
     fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
         debug_assert!(self.name.is_some());
+
+        let idx = self.idx;
+        let tot = self.tot;
+        let arg = self.arg.clone();
+        let style = Style::Argument;
+        let name = self.name.as_ref().unwrap().clone();
+
         Ok(self.arg.as_ref().map(|_| {
             SingleOpt::default()
-                .with_idx(self.idx)
-                .with_total(self.tot)
-                .with_name(self.name.as_ref().unwrap().clone())
-                .with_arg(self.arg.clone())
-                .with_consume(false)
-                .with_style(Style::Argument)
+                .with_idx(idx)
+                .with_total(tot)
+                .with_name(name)
+                .with_arg(arg)
+                .with_style(style)
         }))
     }
 
     fn guess_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
+        let mut ret = SimpleMatRes::default();
+
         if let Some(policy) = policy {
             if self.match_all(policy)? {
                 if let Some(idx) = self.invoke_handler(policy)? {
                     policy.apply(policy.uids()[idx], self.set)?;
-                    return Ok((true, policy.is_consume()));
+                    ret.matched = true;
+                    ret.consume = policy.is_consume();
                 }
             }
         }
-        Ok((false, false))
+        Ok(ret)
     }
 }
 
+// todo!
 impl<'a, 'b, Set, Inv, Ser> GuessOpt<ArgumentStyle> for InvokeGuess<'a, Set, Inv, Ser>
 where
     Set: crate::set::Set,
@@ -574,7 +755,7 @@ where
 {
     type Ret = (bool, bool);
 
-    type Policy = Option<MultiOpt<Set>>;
+    type Policy = Option<MultiOpt<SingleOpt<Set>, Set>>;
 
     type Error = Error;
 
@@ -641,7 +822,7 @@ where
 {
     type Ret = (bool, bool);
 
-    type Policy = Option<MultiOpt<Set>>;
+    type Policy = Option<MultiOpt<SingleOpt<Set>, Set>>;
 
     type Error = Error;
 

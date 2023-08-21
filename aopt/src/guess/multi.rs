@@ -1,6 +1,7 @@
 use std::fmt::Debug;
+use std::marker::PhantomData;
 
-use super::{MatchPolicy, SingleOpt};
+use super::MatchPolicy;
 
 use crate::opt::Opt;
 use crate::opt::Style;
@@ -9,47 +10,60 @@ use crate::set::SetOpt;
 use crate::Error;
 use crate::Uid;
 
-pub struct MultiOpt<S> {
+pub struct MultiOpt<T, S> {
     any_match: bool,
 
-    single_opt: Vec<SingleOpt<S>>,
+    sub_policys: Vec<T>,
+
+    marker: PhantomData<S>,
 }
 
-impl<S> Debug for MultiOpt<S> {
+impl<T, S> Debug for MultiOpt<T, S>
+where
+    T: Debug,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MultiOpt")
             .field("any_match", &self.any_match)
-            .field("single_opt", &self.single_opt)
+            .field("sub_policys", &self.sub_policys)
             .finish()
     }
 }
 
-impl<S> Clone for MultiOpt<S> {
+impl<T, S> Clone for MultiOpt<T, S>
+where
+    T: Clone,
+{
     fn clone(&self) -> Self {
         Self {
             any_match: self.any_match.clone(),
-            single_opt: self.single_opt.clone(),
+            sub_policys: self.sub_policys.clone(),
+            marker: self.marker.clone(),
         }
     }
 }
 
-impl<S> Default for MultiOpt<S> {
+impl<T, S> Default for MultiOpt<T, S>
+where
+    T: Default,
+{
     fn default() -> Self {
         Self {
             any_match: Default::default(),
-            single_opt: Default::default(),
+            sub_policys: Default::default(),
+            marker: PhantomData,
         }
     }
 }
 
-impl<S> MultiOpt<S> {
+impl<T, S> MultiOpt<T, S> {
     pub fn with_any_match(mut self, any_match: bool) -> Self {
         self.any_match = any_match;
         self
     }
 
-    pub fn with_sub_policy(mut self, single_opt: Vec<SingleOpt<S>>) -> Self {
-        self.single_opt = single_opt;
+    pub fn with_sub_policy(mut self, single_opt: Vec<T>) -> Self {
+        self.sub_policys = single_opt;
         self
     }
 
@@ -57,32 +71,41 @@ impl<S> MultiOpt<S> {
         self.any_match
     }
 
-    pub fn add_sub_policy(&mut self, policy: SingleOpt<S>) -> &mut Self {
-        self.single_opt.push(policy);
+    pub fn add_sub_policy(&mut self, policy: T) -> &mut Self {
+        self.sub_policys.push(policy);
         self
     }
 
-    pub fn sub_policys(&self) -> &[SingleOpt<S>] {
-        &self.single_opt
+    pub fn sub_policy(&self, idx: usize) -> Option<&T> {
+        self.sub_policys.get(idx)
     }
 
-    pub fn sub_policys_mut(&mut self) -> &mut [SingleOpt<S>] {
-        &mut self.single_opt
+    pub fn sub_policy_mut(&mut self, idx: usize) -> Option<&mut T> {
+        self.sub_policys.get_mut(idx)
+    }
+
+    pub fn sub_policys(&self) -> &[T] {
+        &self.sub_policys
+    }
+
+    pub fn sub_policys_mut(&mut self) -> &mut [T] {
+        &mut self.sub_policys
     }
 
     pub fn len(&self) -> usize {
-        self.single_opt.len()
+        self.sub_policys.len()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.single_opt.is_empty()
+        self.sub_policys.is_empty()
     }
 }
 
-impl<S> MatchPolicy for MultiOpt<S>
+impl<T, S> MatchPolicy for MultiOpt<T, S>
 where
     S: Set,
     SetOpt<S>: Opt,
+    T: MatchPolicy<Set = S, Ret = bool, Error = Error>,
 {
     type Set = S;
 
@@ -91,7 +114,7 @@ where
     type Error = Error;
 
     fn reset(&mut self) -> &mut Self {
-        self.single_opt.iter_mut().for_each(|v| {
+        self.sub_policys.iter_mut().for_each(|v| {
             v.reset();
         });
         self
@@ -99,9 +122,9 @@ where
 
     fn matched(&self) -> bool {
         if self.any_match {
-            self.single_opt.iter().any(SingleOpt::matched)
+            self.sub_policys.iter().any(MatchPolicy::matched)
         } else {
-            self.single_opt.iter().all(SingleOpt::matched)
+            self.sub_policys.iter().all(MatchPolicy::matched)
         }
     }
 
@@ -131,8 +154,8 @@ where
     }
 
     fn r#match(&mut self, uid: Uid, set: &mut Self::Set) -> Result<Self::Ret, Self::Error> {
-        for (index, single_opt) in self.single_opt.iter_mut().enumerate() {
-            if single_opt.r#match(uid, set)? {
+        for (index, sub_policy) in self.sub_policys.iter_mut().enumerate() {
+            if sub_policy.r#match(uid, set)? {
                 return Ok(Some(index));
             }
         }

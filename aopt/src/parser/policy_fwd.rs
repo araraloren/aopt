@@ -11,7 +11,6 @@ use crate::args::ArgParser;
 use crate::args::Args;
 use crate::ctx::Ctx;
 use crate::ctx::Invoker;
-use crate::guess::Guess;
 use crate::guess::InvokeGuess;
 use crate::opt::Opt;
 use crate::opt::OptParser;

@@ -9,20 +9,25 @@ mod style;
 use crate::Error;
 use crate::Uid;
 
-pub use self::delay::DelayGuess;
-pub use self::delay::InnerCtxSaver;
+// pub use self::delay::DelayGuess;
+// pub use self::delay::InnerCtxSaver;
 pub use self::first::FirstOpt;
 pub use self::invoke::InvokeGuess;
 pub use self::multi::MultiOpt;
 pub use self::noa::SingleNonOpt;
 pub use self::single::SingleOpt;
 
-pub trait Guess {
-    type Sty;
-    type Ret;
-    type Error: Into<Error>;
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SimpleMatRes {
+    pub matched: bool,
 
-    fn guess(&mut self, style: &Self::Sty) -> Result<Self::Ret, Self::Error>;
+    pub consume: bool,
+}
+
+impl SimpleMatRes {
+    pub fn new(matched: bool, consume: bool) -> Self {
+        Self { matched, consume }
+    }
 }
 
 pub trait GuessOpt<T> {
