@@ -669,13 +669,12 @@ where
     }
 }
 
-// todo!
 impl<'a, 'b, Set, Inv, Ser> GuessOpt<ArgumentStyle> for InvokeGuess<'a, Set, Inv, Ser>
 where
     Set: crate::set::Set,
     Inv: HandlerCollection<'b, Set, Ser>,
 {
-    type Ret = (bool, bool);
+    type Ret = SimpleMatRes;
 
     type Policy = Option<SingleOpt<Set>>;
 
@@ -683,15 +682,22 @@ where
 
     fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
         debug_assert!(self.name.is_some());
+
+        let idx = self.idx;
+        let tot = self.tot;
+        let arg = self.next.clone();
+        let style = Style::Argument;
+        let name = self.name.as_ref().unwrap().clone();
+
         Ok(if self.arg.is_none() && self.next.is_some() {
             Some(
                 SingleOpt::default()
-                    .with_idx(self.idx)
-                    .with_total(self.tot)
-                    .with_name(self.name.as_ref().unwrap().clone())
-                    .with_arg(self.next.clone())
+                    .with_idx(idx)
+                    .with_total(tot)
+                    .with_name(name)
+                    .with_arg(arg)
                     .with_consume(true)
-                    .with_style(Style::Argument),
+                    .with_style(style),
             )
         } else {
             None
@@ -708,7 +714,7 @@ where
     Set: crate::set::Set + OptValidator,
     Inv: HandlerCollection<'b, Set, Ser>,
 {
-    type Ret = (bool, bool);
+    type Ret = SimpleMatRes;
 
     type Policy = Option<SingleOpt<Set>>;
 
@@ -716,27 +722,32 @@ where
 
     fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
         debug_assert!(self.name.is_some());
+
+        let idx = self.idx;
+        let tot = self.tot;
+        let style = Style::Argument;
+
         if self.arg.is_none() {
             // strip the prefix before generate
-            let name = self.name.as_ref().unwrap().as_str();
-            let opt_validator = &self.set;
-            let splited = opt_validator.split(name).map_err(Into::into)?;
-            let prefix_len = splited.0.len();
+            let option = self.name.as_ref().unwrap().as_str();
+            let validator = &self.set;
+            let splited = validator.split(option).map_err(Into::into)?;
 
             // make sure we using `chars.count`, not len()
             // make sure the name length >= 2
             // only check first letter `--v42` ==> `--v 42`
             if let Some((idx, _)) = splited.1.char_indices().nth(1) {
-                let name_value = name.split_at(prefix_len + idx);
+                let (name, arg) = splited.1.split_at(idx);
+                let arg = Some(RawVal::from(arg).into());
+                let name = name.into();
 
                 return Ok(Some(
                     SingleOpt::default()
-                        .with_idx(self.idx)
-                        .with_total(self.tot)
-                        .with_name(name_value.0.into())
-                        .with_arg(Some(RawVal::from(name_value.1).into()))
-                        .with_consume(false)
-                        .with_style(Style::Argument),
+                        .with_idx(idx)
+                        .with_total(tot)
+                        .with_name(name)
+                        .with_arg(arg)
+                        .with_style(style),
                 ));
             }
         }
@@ -753,7 +764,7 @@ where
     Set: crate::set::Set + OptValidator,
     Inv: HandlerCollection<'b, Set, Ser>,
 {
-    type Ret = (bool, bool);
+    type Ret = SimpleMatRes;
 
     type Policy = Option<MultiOpt<SingleOpt<Set>, Set>>;
 
@@ -761,29 +772,35 @@ where
 
     fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
         debug_assert!(self.name.is_some());
+
+        let idx = self.idx;
+        let tot = self.tot;
+        let style = Style::Argument;
+
         if self.arg.is_none() {
             // strip the prefix before generate
-            let name = self.name.as_ref().unwrap().as_str();
-            let opt_validator = &self.set;
-            let splited = opt_validator.split(name).map_err(Into::into)?;
-            let prefix_len = splited.0.len();
+            let option = self.name.as_ref().unwrap().as_str();
+            let validator = &self.set;
+            let splited = validator.split(option).map_err(Into::into)?;
             let char_indices = splited.1.char_indices().skip(2);
             let mut policy = MultiOpt::default().with_any_match(true);
 
             // make sure we using `chars.count`, not len()
             // check the name start 3th letter
             // for `--opt42` check the option like `--op t42`, `--opt 42`, `--opt4 2`
-            for (i, _) in char_indices {
-                let name_value = name.split_at(prefix_len + i);
+            for (idx, _) in char_indices {
+                let (name, arg) = splited.1.split_at(idx);
+                let arg = Some(RawVal::from(arg).into());
+                let name = name.into();
 
                 policy.add_sub_policy(
                     SingleOpt::default()
-                        .with_idx(self.idx)
-                        .with_total(self.tot)
-                        .with_name(name_value.0.into())
-                        .with_arg(Some(RawVal::from(name_value.1).into()))
+                        .with_idx(idx)
+                        .with_total(tot)
+                        .with_name(name)
+                        .with_arg(arg)
                         .with_consume(false)
-                        .with_style(Style::Argument),
+                        .with_style(style),
                 );
             }
             Ok(Some(policy))
@@ -793,19 +810,20 @@ where
     }
 
     fn guess_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
-        let mut ret = (false, false);
+        let mut ret = SimpleMatRes::default();
+
         if let Some(policy) = policy {
             if !policy.is_empty() {
                 if self.match_all(policy)? {
                     let invoke_rets = self.invoke_handler(policy)?;
 
                     if !invoke_rets.is_empty() {
-                        ret.0 = true;
-                        for (policy_idx, idx) in invoke_rets {
+                        ret.matched = true;
+                        for (policy_idx, uid_idx) in invoke_rets {
                             let sub_policy = &mut policy.sub_policys_mut()[policy_idx];
 
-                            sub_policy.apply(sub_policy.uids()[idx], self.set)?;
-                            ret.1 = ret.1 || sub_policy.is_consume();
+                            sub_policy.apply(sub_policy.uids()[uid_idx], self.set)?;
+                            ret.consume = ret.consume || sub_policy.is_consume();
                         }
                     }
                 }
@@ -820,7 +838,7 @@ where
     Set: crate::set::Set + OptValidator,
     Inv: HandlerCollection<'b, Set, Ser>,
 {
-    type Ret = (bool, bool);
+    type Ret = SimpleMatRes;
 
     type Policy = Option<MultiOpt<SingleOpt<Set>, Set>>;
 
@@ -828,11 +846,17 @@ where
 
     fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
         debug_assert!(self.name.is_some());
+
+        let idx = self.idx;
+        let tot = self.tot;
+        let style = Style::Boolean;
+        let arg = Some(ARef::new(RawVal::from(BOOL_TRUE)));
+
         if self.arg.is_none() {
             // strip the prefix before generate
-            let name = self.name.as_ref().unwrap().as_str();
-            let opt_validator = &self.set;
-            let splited = opt_validator.split(name).map_err(Into::into)?;
+            let option = self.name.as_ref().unwrap().as_str();
+            let validator = &self.set;
+            let splited = validator.split(option).map_err(Into::into)?;
 
             if splited.1.chars().count() > 1 {
                 let mut policy = MultiOpt::default().with_any_match(false);
@@ -840,12 +864,11 @@ where
                 for ch in splited.1.chars() {
                     policy.add_sub_policy(
                         SingleOpt::default()
-                            .with_idx(self.idx)
-                            .with_total(self.tot)
+                            .with_idx(idx)
+                            .with_total(tot)
                             .with_name(format!("{}{}", splited.0, ch).into())
-                            .with_arg(Some(ARef::new(RawVal::from(BOOL_TRUE))))
-                            .with_consume(false)
-                            .with_style(Style::Combined),
+                            .with_arg(arg)
+                            .with_style(style),
                     );
                 }
                 return Ok(Some(policy));
@@ -864,7 +887,7 @@ where
     Set: crate::set::Set,
     Inv: HandlerCollection<'b, Set, Ser>,
 {
-    type Ret = (bool, bool);
+    type Ret = SimpleMatRes;
 
     type Error = Error;
 
@@ -872,15 +895,21 @@ where
 
     fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
         debug_assert!(self.name.is_some());
+
+        let idx = self.idx;
+        let tot = self.tot;
+        let arg = Some(ARef::new(RawVal::from(BOOL_TRUE)));
+        let style = Style::Boolean;
+        let name = self.name.as_ref().unwrap().clone();
+
         if self.arg.is_none() {
             Ok(Some(
                 SingleOpt::default()
-                    .with_idx(self.idx)
-                    .with_total(self.tot)
-                    .with_name(self.name.as_ref().unwrap().clone())
-                    .with_arg(Some(ARef::new(RawVal::from(BOOL_TRUE))))
-                    .with_consume(false)
-                    .with_style(Style::Boolean),
+                    .with_idx(idx)
+                    .with_total(tot)
+                    .with_name(name)
+                    .with_arg(arg)
+                    .with_style(style),
             ))
         } else {
             Ok(None)
@@ -897,7 +926,7 @@ where
     Set: crate::set::Set,
     Inv: HandlerCollection<'b, Set, Ser>,
 {
-    type Ret = (bool, bool);
+    type Ret = SimpleMatRes;
 
     type Error = Error;
 
@@ -905,15 +934,21 @@ where
 
     fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
         debug_assert!(self.name.is_some());
+
+        let idx = self.idx;
+        let tot = self.tot;
+        let arg = None;
+        let style = Style::Flag;
+        let name = self.name.as_ref().unwrap().clone();
+
         Ok(if self.arg.is_none() {
             Some(
                 SingleOpt::default()
-                    .with_idx(self.idx)
-                    .with_total(self.tot)
-                    .with_name(self.name.as_ref().unwrap().clone())
+                    .with_idx(idx)
+                    .with_total(tot)
+                    .with_name(name)
                     .with_arg(None)
-                    .with_consume(false)
-                    .with_style(Style::Flag),
+                    .with_style(style),
             )
         } else {
             None
