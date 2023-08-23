@@ -6,6 +6,50 @@ mod noa;
 mod single;
 mod style;
 
+///
+/// argument boolean/flag embedded equalwithvalue - generate one guess
+///     - invoke
+///         - first
+///             - match first opt
+///             - invoke the handler of first opt
+///             - set first opt matched if handler return Ok(Some(_))
+///         - all
+///             - match all the opt
+///             - invoke the handler of all matched opt
+///             - set opt matched and return if any handler return Ok(Some(_))
+///    - delay
+///         - first 
+///             - match first opt
+///             - return the inner ctx
+///         - all
+///             - match all the opt
+///             - return the inner ctxs
+///     
+/// embeddedplus combined - generate multiple guess
+///     - invoke
+///         - first
+///             - match first opt
+///             - invoke the handler of first opt
+///             - set first opt matched if handler return Ok(Some(_))
+///         - all
+///             - match all the opt
+///             - invoke the handler of all matched opt
+///             - set opt matched and return if any handler return Ok(Some(_))
+///    - delay
+///         - first 
+///             - match first opt
+///             - return the inner ctx
+///         - all
+///             - match all the opt
+///             - return the inner ctxs
+/// main pos cmd - generate one guess
+///     - invoke
+///         - match all the opt
+///         - invoke the handler of all matched opt
+///         - set all the opt matched if handler return Ok(Some(_))
+///     - delay mode
+///         not support
+/// 
 use crate::Error;
 use crate::Uid;
 
