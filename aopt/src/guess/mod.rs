@@ -18,7 +18,7 @@ mod style;
 ///             - invoke the handler of all matched opt
 ///             - set opt matched and return if any handler return Ok(Some(_))
 ///    - delay
-///         - first 
+///         - first
 ///             - match first opt
 ///             - return the inner ctx
 ///         - all
@@ -36,7 +36,7 @@ mod style;
 ///             - invoke the handler of all matched opt
 ///             - set opt matched and return if any handler return Ok(Some(_))
 ///    - delay
-///         - first 
+///         - first
 ///             - match first opt
 ///             - return the inner ctx
 ///         - all
@@ -49,9 +49,17 @@ mod style;
 ///         - set all the opt matched if handler return Ok(Some(_))
 ///     - delay mode
 ///         not support
-/// 
+///
 use crate::Error;
 use crate::Uid;
+use crate::args::Args;
+use crate::opt::Opt;
+use crate::opt::Style;
+use crate::set::Set;
+use crate::set::SetOpt;
+use crate::ARef;
+use crate::RawVal;
+use crate::Str;
 
 // pub use self::delay::DelayGuess;
 // pub use self::delay::InnerCtxSaver;
@@ -72,6 +80,16 @@ impl SimpleMatRes {
     pub fn new(matched: bool, consume: bool) -> Self {
         Self { matched, consume }
     }
+}
+
+pub trait GuessPolicy<S> {
+    type All;
+    type First;
+    type Error: Into<Error>;
+
+    fn guess_all(&mut self) -> Result<Option<Self::All>, Self::Error>;
+
+    fn guess_first(&mut self) -> Result<Option<Self::First>, Self::Error>;
 }
 
 pub trait GuessOpt<T> {
@@ -109,6 +127,22 @@ pub trait MatchPolicy {
     fn filter(&mut self, uid: Uid, set: &mut Self::Set) -> bool;
 
     fn r#match(&mut self, uid: Uid, set: &mut Self::Set) -> Result<Self::Ret, Self::Error>;
+}
+
+pub trait PolicyBuild {
+    fn with_name(self, name: Str) -> Self;
+
+    fn with_style(self, style: Style) -> Self;
+
+    fn with_idx(self, index: usize) -> Self;
+
+    fn with_total(self, total: usize) -> Self;
+
+    fn with_consume(self, consume: bool) -> Self;
+
+    fn with_arg(self, argument: Option<ARef<RawVal>>) -> Self;
+
+    fn with_args(self, args: ARef<Args>) -> Self;
 }
 
 pub fn process_handler_ret(

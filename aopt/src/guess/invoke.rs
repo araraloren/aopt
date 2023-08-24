@@ -15,6 +15,7 @@ use super::process_handler_ret;
 use super::style::*;
 use super::FirstOpt;
 use super::GuessOpt;
+use super::GuessPolicy;
 use super::MatchPolicy;
 use super::MultiOpt;
 use super::Process;
@@ -191,18 +192,35 @@ where
     Inv: HandlerCollection<'b, Set, Ser>,
 {
     pub fn guess(&mut self, style: &UserStyle) -> Result<(bool, bool), Error> {
-        match style {
-            UserStyle::Main => self.guess_wrapper::<MainStyle>(),
-            UserStyle::Pos => self.guess_wrapper::<PosStyle>(),
-            UserStyle::Cmd => self.guess_wrapper::<CmdStyle>(),
-            UserStyle::EqualWithValue => self.guess_wrapper::<EqualWithValuStyle>(),
-            UserStyle::Argument => self.guess_wrapper::<ArgumentStyle>(),
-            UserStyle::EmbeddedValue => self.guess_wrapper::<EmbeddedValueStyle>(),
-            UserStyle::EmbeddedValuePlus => self.guess_wrapper::<EmbeddedValuePlusStyle>(),
-            UserStyle::CombinedOption => self.guess_wrapper::<CombinedOptionStyle>(),
-            UserStyle::Boolean => self.guess_wrapper::<BooleanStyle>(),
-            UserStyle::Flag => self.guess_wrapper::<FlagStyle>(),
-        }
+        // match style {
+        //     UserStyle::Main => self.guess_wrapper::<MainStyle>(),
+        //     UserStyle::Pos => self.guess_wrapper::<PosStyle>(),
+        //     UserStyle::Cmd => self.guess_wrapper::<CmdStyle>(),
+        //     UserStyle::EqualWithValue => self.guess_wrapper::<EqualWithValuStyle>(),
+        //     UserStyle::Argument => self.guess_wrapper::<ArgumentStyle>(),
+        //     UserStyle::EmbeddedValue => self.guess_wrapper::<EmbeddedValueStyle>(),
+        //     UserStyle::EmbeddedValuePlus => self.guess_wrapper::<EmbeddedValuePlusStyle>(),
+        //     UserStyle::CombinedOption => self.guess_wrapper::<CombinedOptionStyle>(),
+        //     UserStyle::Boolean => self.guess_wrapper::<BooleanStyle>(),
+        //     UserStyle::Flag => self.guess_wrapper::<FlagStyle>(),
+        // }
+        todo!()
+    }
+}
+
+impl<'a, Set, Inv, Ser> GuessPolicy<ArgumentStyle> for InvokeGuess<'a, Set, Inv, Ser> {
+    type All = SingleOpt<Set>;
+
+    type First = FirstOpt<Set>;
+
+    type Error = Error;
+
+    fn guess_all(&mut self) -> Result<Option<Self::All>, Self::Error> {
+        todo!()
+    }
+
+    fn guess_first(&mut self) -> Result<Option<Self::First>, Self::Error> {
+        todo!()
     }
 }
 
@@ -867,7 +885,7 @@ where
                             .with_idx(idx)
                             .with_total(tot)
                             .with_name(format!("{}{}", splited.0, ch).into())
-                            .with_arg(arg)
+                            .with_arg(arg.clone())
                             .with_style(style),
                     );
                 }
@@ -947,7 +965,7 @@ where
                     .with_idx(idx)
                     .with_total(tot)
                     .with_name(name)
-                    .with_arg(None)
+                    .with_arg(arg)
                     .with_style(style),
             )
         } else {
