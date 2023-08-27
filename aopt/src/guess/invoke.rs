@@ -6,6 +6,7 @@ use crate::opt::BOOL_TRUE;
 use crate::parser::FailManager;
 use crate::parser::UserStyle;
 use crate::set::OptValidator;
+use crate::trace_log;
 use crate::ARef;
 use crate::Error;
 use crate::RawVal;
@@ -13,13 +14,14 @@ use crate::Str;
 
 use super::process_handler_ret;
 use super::style::*;
-use super::FirstOpt;
-use super::GuessOpt;
 use super::GuessPolicy;
+use super::InnerCtxSaver;
 use super::MatchPolicy;
 use super::MultiOpt;
-use super::Process;
-use super::SimpleMatRes;
+use super::PolicyBuild;
+use super::PolicyConfig;
+use super::PolicyInnerCtx;
+use super::SimpleMatRet;
 use super::SingleNonOpt;
 use super::SingleOpt;
 
@@ -171,76 +173,569 @@ impl<'a, Set, Inv, Ser> InvokeGuess<'a, Set, Inv, Ser> {
 
 impl<'a, 'b, Set, Inv, Ser> InvokeGuess<'a, Set, Inv, Ser>
 where
-    Set: crate::set::Set,
+    Set: crate::set::Set + OptValidator,
     Inv: HandlerCollection<'b, Set, Ser>,
 {
-    fn guess_wrapper<T>(
+    pub fn guess_and_invoke(
         &mut self,
-    ) -> Result<<Self as GuessOpt<T>>::Ret, <Self as GuessOpt<T>>::Error>
-    where
-        Self: GuessOpt<T>,
-    {
-        let mut policy = GuessOpt::<T>::guess_policy(self)?;
+        style: &UserStyle,
+        fst: bool,
+    ) -> Result<Option<SimpleMatRet>, Error> {
+        let mut matched = false;
+        let mut consume = false;
 
-        GuessOpt::<T>::guess_opt(self, &mut policy)
+        match style {
+            UserStyle::Main => {
+                if let Some(mut policy) =
+                    GuessPolicy::<MainStyle, SingleNonOpt<Set>>::guess_policy(self)?
+                {
+                    if self.r#match(&mut policy, fst, consume)? {
+                        matched = self.invoke(&mut policy)?;
+                    }
+                }
+            }
+            UserStyle::Pos => {
+                if let Some(mut policy) =
+                    GuessPolicy::<PosStyle, SingleNonOpt<Set>>::guess_policy(self)?
+                {
+                    if self.r#match(&mut policy, fst, consume)? {
+                        matched = self.invoke(&mut policy)?;
+                    }
+                }
+            }
+            UserStyle::Cmd => {
+                if let Some(mut policy) =
+                    GuessPolicy::<CmdStyle, SingleNonOpt<Set>>::guess_policy(self)?
+                {
+                    if self.r#match(&mut policy, fst, consume)? {
+                        matched = self.invoke(&mut policy)?;
+                    }
+                }
+            }
+            UserStyle::EqualWithValue => {
+                if let Some(mut policy) =
+                    GuessPolicy::<EqualWithValuStyle, SingleOpt<Set>>::guess_policy(self)?
+                {
+                    if self.r#match(&mut policy, fst, consume)? {
+                        matched = self.invoke(&mut policy)?;
+                    }
+                }
+            }
+            UserStyle::Argument => {
+                if let Some(mut policy) =
+                    GuessPolicy::<ArgumentStyle, SingleOpt<Set>>::guess_policy(self)?
+                {
+                    consume = true;
+                    if self.r#match(&mut policy, fst, consume)? {
+                        matched = self.invoke(&mut policy)?;
+                    }
+                }
+            }
+            UserStyle::EmbeddedValue => {
+                if let Some(mut policy) =
+                    GuessPolicy::<EmbeddedValueStyle, SingleOpt<Set>>::guess_policy(self)?
+                {
+                    if self.r#match(&mut policy, fst, consume)? {
+                        matched = self.invoke(&mut policy)?;
+                    }
+                }
+            }
+            UserStyle::EmbeddedValuePlus => {
+                if let Some(mut policy) = GuessPolicy::<
+                    EmbeddedValuePlusStyle,
+                    MultiOpt<SingleOpt<Set>, Set>,
+                >::guess_policy(self)?
+                {
+                    if self.match_multi(&mut policy, fst, consume)? {
+                        matched = self.invoke_multi(&mut policy)?;
+                    }
+                }
+            }
+            UserStyle::CombinedOption => {
+                if let Some(mut policy) = GuessPolicy::<
+                    CombinedOptionStyle,
+                    MultiOpt<SingleOpt<Set>, Set>,
+                >::guess_policy(self)?
+                {
+                    if self.match_multi(&mut policy, fst, consume)? {
+                        matched = self.invoke_multi(&mut policy)?;
+                    }
+                }
+            }
+            UserStyle::Boolean => {
+                if let Some(mut policy) =
+                    GuessPolicy::<BooleanStyle, SingleOpt<Set>>::guess_policy(self)?
+                {
+                    if self.r#match(&mut policy, fst, consume)? {
+                        matched = self.invoke(&mut policy)?;
+                    }
+                }
+            }
+            UserStyle::Flag => {
+                if let Some(mut policy) =
+                    GuessPolicy::<FlagStyle, SingleOpt<Set>>::guess_policy(self)?
+                {
+                    if self.r#match(&mut policy, fst, consume)? {
+                        matched = self.invoke(&mut policy)?;
+                    }
+                }
+            }
+        }
+        trace_log!(
+            "Guess style = {:?}, fst = {} ---> matched = {}, consume = {}",
+            style,
+            fst,
+            matched,
+            consume
+        );
+        Ok(Some(SimpleMatRet::new(matched, consume)))
+    }
+
+    pub fn guess_and_collect(
+        &mut self,
+        style: &UserStyle,
+        fst: bool,
+    ) -> Result<Option<InnerCtxSaver>, Error> {
+        let mut ret = None;
+
+        match style {
+            UserStyle::Main => {
+                if let Some(mut policy) =
+                    GuessPolicy::<MainStyle, SingleNonOpt<Set>>::guess_policy(self)?
+                {
+                    if self.r#match(&mut policy, fst, false)? {
+                        ret = policy.collect_ctx().map(|inner_ctx| {
+                            InnerCtxSaver::default().with_policy_ctx(vec![inner_ctx])
+                        });
+                    }
+                }
+            }
+            UserStyle::Pos => {
+                if let Some(mut policy) =
+                    GuessPolicy::<PosStyle, SingleNonOpt<Set>>::guess_policy(self)?
+                {
+                    if self.r#match(&mut policy, fst, false)? {
+                        ret = policy.collect_ctx().map(|inner_ctx| {
+                            InnerCtxSaver::default().with_policy_ctx(vec![inner_ctx])
+                        });
+                    }
+                }
+            }
+            UserStyle::Cmd => {
+                if let Some(mut policy) =
+                    GuessPolicy::<CmdStyle, SingleNonOpt<Set>>::guess_policy(self)?
+                {
+                    if self.r#match(&mut policy, fst, false)? {
+                        ret = policy.collect_ctx().map(|inner_ctx| {
+                            InnerCtxSaver::default().with_policy_ctx(vec![inner_ctx])
+                        });
+                    }
+                }
+            }
+            UserStyle::EqualWithValue => {
+                if let Some(mut policy) =
+                    GuessPolicy::<EqualWithValuStyle, SingleOpt<Set>>::guess_policy(self)?
+                {
+                    if self.r#match(&mut policy, fst, false)? {
+                        ret = policy.collect_ctx().map(|inner_ctx| {
+                            InnerCtxSaver::default().with_policy_ctx(vec![inner_ctx])
+                        });
+                    }
+                }
+            }
+            UserStyle::Argument => {
+                if let Some(mut policy) =
+                    GuessPolicy::<ArgumentStyle, SingleOpt<Set>>::guess_policy(self)?
+                {
+                    if self.r#match(&mut policy, fst, true)? {
+                        ret = policy.collect_ctx().map(|inner_ctx| {
+                            InnerCtxSaver::default()
+                                .with_policy_ctx(vec![inner_ctx])
+                                .with_consume(true)
+                        });
+                    }
+                }
+            }
+            UserStyle::EmbeddedValue => {
+                if let Some(mut policy) =
+                    GuessPolicy::<EmbeddedValueStyle, SingleOpt<Set>>::guess_policy(self)?
+                {
+                    if self.r#match(&mut policy, fst, false)? {
+                        ret = policy.collect_ctx().map(|inner_ctx| {
+                            InnerCtxSaver::default().with_policy_ctx(vec![inner_ctx])
+                        });
+                    }
+                }
+            }
+            UserStyle::EmbeddedValuePlus => {
+                if let Some(mut policy) = GuessPolicy::<
+                    EmbeddedValuePlusStyle,
+                    MultiOpt<SingleOpt<Set>, Set>,
+                >::guess_policy(self)?
+                {
+                    if self.match_multi(&mut policy, fst, false)? {
+                        ret = Some(self.collect_ctxs(&mut policy, false)?);
+                    }
+                }
+            }
+            UserStyle::CombinedOption => {
+                if let Some(mut policy) = GuessPolicy::<
+                    CombinedOptionStyle,
+                    MultiOpt<SingleOpt<Set>, Set>,
+                >::guess_policy(self)?
+                {
+                    if self.match_multi(&mut policy, fst, false)? {
+                        ret = Some(self.collect_ctxs(&mut policy, false)?);
+                    }
+                }
+            }
+            UserStyle::Boolean => {
+                if let Some(mut policy) =
+                    GuessPolicy::<BooleanStyle, SingleOpt<Set>>::guess_policy(self)?
+                {
+                    if self.r#match(&mut policy, fst, false)? {
+                        ret = policy.collect_ctx().map(|inner_ctx| {
+                            InnerCtxSaver::default().with_policy_ctx(vec![inner_ctx])
+                        });
+                    }
+                }
+            }
+            UserStyle::Flag => {
+                if let Some(mut policy) =
+                    GuessPolicy::<FlagStyle, SingleOpt<Set>>::guess_policy(self)?
+                {
+                    if self.r#match(&mut policy, fst, false)? {
+                        ret = policy.collect_ctx().map(|inner_ctx| {
+                            InnerCtxSaver::default().with_policy_ctx(vec![inner_ctx])
+                        });
+                    }
+                }
+            }
+        }
+        if ret.is_some() {
+            trace_log!("Guess style = {:?}, fst = {}, ret == {:?}", style, fst, ret);
+        }
+        Ok(ret)
+    }
+}
+
+impl<'a, Set, Inv, Ser, T> GuessPolicy<EqualWithValuStyle, T> for InvokeGuess<'a, Set, Inv, Ser>
+where
+    T: Default + PolicyBuild,
+{
+    type Error = Error;
+
+    fn guess_policy(&mut self) -> Result<Option<T>, Self::Error> {
+        if self.arg.is_some() {
+            if let Some(name) = &self.name {
+                return Ok(Some(
+                    T::default()
+                        .with_idx(self.idx)
+                        .with_tot(self.tot)
+                        .with_name(Some(name.clone()))
+                        .with_arg(self.arg.clone())
+                        .with_style(Style::Argument),
+                ));
+            }
+        }
+        Ok(None)
+    }
+}
+
+impl<'a, Set, Inv, Ser, T> GuessPolicy<ArgumentStyle, T> for InvokeGuess<'a, Set, Inv, Ser>
+where
+    T: Default + PolicyBuild,
+{
+    type Error = Error;
+
+    fn guess_policy(&mut self) -> Result<Option<T>, Self::Error> {
+        if self.arg.is_none() && self.next.is_some() {
+            if let Some(name) = &self.name {
+                return Ok(Some(
+                    T::default()
+                        .with_idx(self.idx)
+                        .with_tot(self.tot)
+                        .with_name(Some(name.clone()))
+                        .with_arg(self.next.clone())
+                        .with_style(Style::Argument),
+                ));
+            }
+        }
+        Ok(None)
+    }
+}
+
+impl<'a, Set, Inv, Ser, T> GuessPolicy<EmbeddedValueStyle, T> for InvokeGuess<'a, Set, Inv, Ser>
+where
+    Set: OptValidator,
+    T: Default + PolicyBuild,
+{
+    type Error = Error;
+
+    fn guess_policy(&mut self) -> Result<Option<T>, Self::Error> {
+        let idx = self.idx;
+        let tot = self.tot;
+        let style = Style::Argument;
+
+        if self.arg.is_none() {
+            if let Some(name) = &self.name {
+                // strip the prefix before generate
+                let validator = &self.set;
+                let splited = validator.split(name.as_str()).map_err(Into::into)?;
+                let prefix_len = splited.0.len();
+
+                // make sure we using `chars.count`, not len()
+                // make sure the name length >= 2
+                // only check first letter `--v42` ==> `--v 42`
+                if let Some((char_idx, _)) = splited.1.char_indices().nth(1) {
+                    let (name, arg) = name.split_at(prefix_len + char_idx);
+                    let arg = Some(RawVal::from(arg).into());
+                    let name = Some(name.into());
+
+                    return Ok(Some(
+                        T::default()
+                            .with_idx(idx)
+                            .with_tot(tot)
+                            .with_name(name)
+                            .with_arg(arg)
+                            .with_style(style),
+                    ));
+                }
+            }
+        }
+        Ok(None)
+    }
+}
+
+impl<'a, Set, Inv, Ser, T> GuessPolicy<EmbeddedValuePlusStyle, MultiOpt<T, Set>>
+    for InvokeGuess<'a, Set, Inv, Ser>
+where
+    Set: OptValidator,
+    T: Default + PolicyBuild,
+{
+    type Error = Error;
+
+    fn guess_policy(&mut self) -> Result<Option<MultiOpt<T, Set>>, Self::Error> {
+        let idx = self.idx;
+        let tot = self.tot;
+        let style = Style::Argument;
+
+        if self.arg.is_none() {
+            if let Some(name) = &self.name {
+                // strip the prefix before generate
+                let validator = &self.set;
+                let splited = validator.split(name.as_str()).map_err(Into::into)?;
+                let char_indices = splited.1.char_indices().skip(2);
+                let prefix_len = splited.0.len();
+                let mut policy = MultiOpt::default().with_any_match(true);
+
+                // make sure we using `chars.count`, not len()
+                // check the name start 3th letter
+                // for `--opt42` check the option like `--op t42`, `--opt 42`, `--opt4 2`
+                for (char_idx, _) in char_indices {
+                    let (name, arg) = name.split_at(prefix_len + char_idx);
+                    let arg = Some(RawVal::from(arg).into());
+                    let name = Some(name.into());
+
+                    policy.add_sub_policy(
+                        T::default()
+                            .with_idx(idx)
+                            .with_tot(tot)
+                            .with_name(name)
+                            .with_arg(arg)
+                            .with_style(style),
+                    );
+                }
+                return Ok(Some(policy));
+            }
+        }
+        Ok(None)
+    }
+}
+
+impl<'a, Set, Inv, Ser, T> GuessPolicy<CombinedOptionStyle, MultiOpt<T, Set>>
+    for InvokeGuess<'a, Set, Inv, Ser>
+where
+    Set: OptValidator,
+    T: Default + PolicyBuild,
+{
+    type Error = Error;
+
+    fn guess_policy(&mut self) -> Result<Option<MultiOpt<T, Set>>, Self::Error> {
+        let idx = self.idx;
+        let tot = self.tot;
+        let style = Style::Boolean;
+        let arg = Some(ARef::new(RawVal::from(BOOL_TRUE)));
+
+        if self.arg.is_none() {
+            if let Some(name) = &self.name {
+                // strip the prefix before generate
+                let option = name.as_str();
+                let validator = &self.set;
+                let splited = validator.split(option).map_err(Into::into)?;
+
+                if splited.1.chars().count() > 1 {
+                    let mut policy = MultiOpt::default().with_any_match(false);
+
+                    for ch in splited.1.chars() {
+                        policy.add_sub_policy(
+                            T::default()
+                                .with_idx(idx)
+                                .with_tot(tot)
+                                .with_name(Some(format!("{}{}", splited.0, ch).into()))
+                                .with_arg(arg.clone())
+                                .with_style(style),
+                        );
+                    }
+                    return Ok(Some(policy));
+                }
+            }
+        }
+        Ok(None)
+    }
+}
+
+impl<'a, Set, Inv, Ser, T> GuessPolicy<BooleanStyle, T> for InvokeGuess<'a, Set, Inv, Ser>
+where
+    T: Default + PolicyBuild,
+{
+    type Error = Error;
+
+    fn guess_policy(&mut self) -> Result<Option<T>, Self::Error> {
+        if self.arg.is_none() {
+            if let Some(name) = &self.name {
+                return Ok(Some(
+                    T::default()
+                        .with_idx(self.idx)
+                        .with_tot(self.tot)
+                        .with_name(Some(name.clone()))
+                        .with_arg(Some(ARef::new(RawVal::from(BOOL_TRUE))))
+                        .with_style(Style::Boolean),
+                ));
+            }
+        }
+        Ok(None)
+    }
+}
+
+impl<'a, Set, Inv, Ser, T> GuessPolicy<FlagStyle, T> for InvokeGuess<'a, Set, Inv, Ser>
+where
+    T: Default + PolicyBuild,
+{
+    type Error = Error;
+
+    fn guess_policy(&mut self) -> Result<Option<T>, Self::Error> {
+        if self.arg.is_none() {
+            if let Some(name) = &self.name {
+                return Ok(Some(
+                    T::default()
+                        .with_idx(self.idx)
+                        .with_tot(self.tot)
+                        .with_name(Some(name.clone()))
+                        .with_arg(None)
+                        .with_style(Style::Flag),
+                ));
+            }
+        }
+        Ok(None)
+    }
+}
+
+impl<'a, Set, Inv, Ser, T> GuessPolicy<MainStyle, T> for InvokeGuess<'a, Set, Inv, Ser>
+where
+    T: Default + PolicyBuild,
+{
+    type Error = Error;
+
+    fn guess_policy(&mut self) -> Result<Option<T>, Self::Error> {
+        let idx = self.idx;
+        let tot = self.tot;
+        let style = Style::Main;
+        let name = self.name.clone();
+        let args = self.ctx.args().clone();
+        let arg = args.get(idx).map(|v| v.clone().into());
+
+        Ok(Some(
+            T::default()
+                .with_idx(idx)
+                .with_arg(arg)
+                .with_args(args)
+                .with_name(name)
+                .with_tot(tot)
+                .with_style(style),
+        ))
+    }
+}
+
+impl<'a, Set, Inv, Ser, T> GuessPolicy<PosStyle, T> for InvokeGuess<'a, Set, Inv, Ser>
+where
+    T: Default + PolicyBuild,
+{
+    type Error = Error;
+
+    fn guess_policy(&mut self) -> Result<Option<T>, Self::Error> {
+        let idx = self.idx;
+        let tot = self.tot;
+        let style = Style::Pos;
+        let name = self.name.clone();
+        let args = self.ctx.args().clone();
+        let arg = args.get(idx).map(|v| v.clone().into());
+
+        Ok(Some(
+            T::default()
+                .with_idx(idx)
+                .with_arg(arg)
+                .with_args(args)
+                .with_name(name)
+                .with_tot(tot)
+                .with_style(style),
+        ))
+    }
+}
+
+impl<'a, Set, Inv, Ser, T> GuessPolicy<CmdStyle, T> for InvokeGuess<'a, Set, Inv, Ser>
+where
+    T: Default + PolicyBuild,
+{
+    type Error = Error;
+
+    fn guess_policy(&mut self) -> Result<Option<T>, Self::Error> {
+        let idx = self.idx;
+        let tot = self.tot;
+        let style = Style::Cmd;
+        let name = self.name.clone();
+        let args = self.ctx.args().clone();
+        let arg = Some(RawVal::from(BOOL_TRUE).into());
+
+        Ok(Some(
+            T::default()
+                .with_idx(idx)
+                .with_arg(arg)
+                .with_args(args)
+                .with_name(name)
+                .with_tot(tot)
+                .with_style(style),
+        ))
     }
 }
 
 impl<'a, 'b, Set, Inv, Ser> InvokeGuess<'a, Set, Inv, Ser>
 where
-    Set: crate::set::Set + OptValidator,
-    Inv: HandlerCollection<'b, Set, Ser>,
-{
-    pub fn guess(&mut self, style: &UserStyle) -> Result<(bool, bool), Error> {
-        // match style {
-        //     UserStyle::Main => self.guess_wrapper::<MainStyle>(),
-        //     UserStyle::Pos => self.guess_wrapper::<PosStyle>(),
-        //     UserStyle::Cmd => self.guess_wrapper::<CmdStyle>(),
-        //     UserStyle::EqualWithValue => self.guess_wrapper::<EqualWithValuStyle>(),
-        //     UserStyle::Argument => self.guess_wrapper::<ArgumentStyle>(),
-        //     UserStyle::EmbeddedValue => self.guess_wrapper::<EmbeddedValueStyle>(),
-        //     UserStyle::EmbeddedValuePlus => self.guess_wrapper::<EmbeddedValuePlusStyle>(),
-        //     UserStyle::CombinedOption => self.guess_wrapper::<CombinedOptionStyle>(),
-        //     UserStyle::Boolean => self.guess_wrapper::<BooleanStyle>(),
-        //     UserStyle::Flag => self.guess_wrapper::<FlagStyle>(),
-        // }
-        todo!()
-    }
-}
-
-impl<'a, Set, Inv, Ser> GuessPolicy<ArgumentStyle> for InvokeGuess<'a, Set, Inv, Ser> {
-    type All = SingleOpt<Set>;
-
-    type First = FirstOpt<Set>;
-
-    type Error = Error;
-
-    fn guess_all(&mut self) -> Result<Option<Self::All>, Self::Error> {
-        todo!()
-    }
-
-    fn guess_first(&mut self) -> Result<Option<Self::First>, Self::Error> {
-        todo!()
-    }
-}
-
-impl<'a, 'b, Set, Inv, Ser> Process<SingleOpt<Set>> for InvokeGuess<'a, Set, Inv, Ser>
-where
     Set: crate::set::Set,
     Inv: HandlerCollection<'b, Set, Ser>,
 {
-    // index of matched uid
-    type Ret = Option<usize>;
-
-    type Error = Error;
-
-    fn match_all(&mut self, policy: &mut SingleOpt<Set>) -> Result<bool, Self::Error> {
+    pub fn r#match<T>(&mut self, policy: &mut T, fst: bool, consume: bool) -> Result<bool, Error>
+    where
+        T: PolicyConfig + MatchPolicy<Set = Set>,
+    {
         let uids = self.set.keys();
 
         for uid in uids {
-            // select all the option may match the `policy`
+            // if fst is false select all the option may match the `policy`
             if !policy.filter(uid, self.set) {
-                if let Err(e) = policy.r#match(uid, self.set) {
+                if let Err(e) = policy.r#match(uid, self.set, fst, consume) {
+                    let e = e.into();
+
                     if e.is_failure() {
                         self.fail.push(e);
                     } else {
@@ -249,23 +744,59 @@ where
                 }
             }
         }
+        trace_log!("Matching Policy [ idx: {}, tot: {}, name: {:?}, style: {:?}, arg: {:?}, comsume: {} ] ==> {:?}", 
+            policy.idx(), policy.tot(), policy.name(), policy.style(), policy.arg(), consume, policy.uids());
         Ok(policy.matched())
     }
 
-    fn invoke_handler(&mut self, policy: &mut SingleOpt<Set>) -> Result<Self::Ret, Self::Error> {
+    fn match_multi(
+        &mut self,
+        policy: &mut MultiOpt<SingleOpt<Set>, Set>,
+        fst: bool,
+        consume: bool,
+    ) -> Result<bool, Error> {
+        let uids = self.set.keys();
+        let any_match = policy.any_match();
+
+        trace_log!("Any match = {}", any_match);
+        for sub_policy in policy.sub_policys_mut() {
+            // process all uids with each policy first
+            for uid in uids.iter() {
+                if !sub_policy.filter(*uid, self.set) {
+                    if let Err(e) = self.r#match(sub_policy, fst, consume) {
+                        if e.is_failure() {
+                            self.fail.push(e);
+                        } else {
+                            return Err(e);
+                        }
+                    }
+                }
+            }
+            if any_match && sub_policy.matched() {
+                break;
+            }
+        }
+        Ok(policy.matched())
+    }
+
+    pub fn invoke<T>(&mut self, policy: &mut T) -> Result<bool, Error>
+    where
+        T: PolicyConfig + MatchPolicy<Set = Set>,
+    {
         let inner_ctx = InnerCtx::default()
             .with_idx(policy.idx())
-            .with_total(policy.total())
+            .with_total(policy.tot())
             .with_name(policy.name().cloned())
-            .with_arg(policy.clone_arg())
+            .with_arg(policy.arg().clone())
             .with_style(policy.style());
+        let uids = policy.uids().to_vec();
 
-        for (idx, uid) in policy.uids().iter().enumerate() {
+        for uid in uids {
             self.ctx
-                .set_inner_ctx(Some(inner_ctx.clone().with_uid(*uid)));
+                .set_inner_ctx(Some(inner_ctx.clone().with_uid(uid)));
 
             // invoke the handler of `uid`
-            let invoke_ret = self.inv.invoke_fb(uid, self.set, self.ser, self.ctx);
+            let invoke_ret = self.inv.invoke_fb(&uid, self.set, self.ser, self.ctx);
 
             // return first index if handler success
             if process_handler_ret(
@@ -276,704 +807,435 @@ where
                     Ok(())
                 },
             )? {
-                return Ok(Some(idx));
-            }
-        }
-        Ok(None)
-    }
-}
-
-impl<'a, 'b, Set, Inv, Ser> Process<MultiOpt<SingleOpt<Set>, Set>>
-    for InvokeGuess<'a, Set, Inv, Ser>
-where
-    Set: crate::set::Set,
-    Inv: HandlerCollection<'b, Set, Ser>,
-{
-    // (index of matched policy, index of matched uid)
-    type Ret = Vec<(usize, usize)>;
-
-    type Error = Error;
-
-    fn match_all(
-        &mut self,
-        policy: &mut MultiOpt<SingleOpt<Set>, Set>,
-    ) -> Result<bool, Self::Error> {
-        let uids = self.set.keys();
-        let any_match = policy.any_match();
-
-        for sub_policy in policy.sub_policys_mut() {
-            // process all uids with each policy first
-            for uid in uids.iter() {
-                if !sub_policy.filter(*uid, self.set) {
-                    if let Err(e) = sub_policy.r#match(*uid, self.set) {
-                        if e.is_failure() {
-                            self.fail.push(e);
-                        } else {
-                            return Err(e);
-                        }
-                    }
-                }
-            }
-            if any_match && sub_policy.matched() {
-                break;
+                policy.apply(uid, self.set).map_err(Into::into)?;
             }
         }
         Ok(policy.matched())
     }
 
-    fn invoke_handler(
+    pub fn collect_ctxs<T>(
         &mut self,
-        policy: &mut MultiOpt<SingleOpt<Set>, Set>,
-    ) -> Result<Self::Ret, Self::Error> {
-        let mut ret = vec![];
+        policy: &mut MultiOpt<T, Set>,
+        consume: bool,
+    ) -> Result<InnerCtxSaver, Error>
+    where
+        T: PolicyConfig + MatchPolicy<Set = Set>,
+    {
         let any_match = policy.any_match();
+        let mut inner_ctxs = Vec::with_capacity(policy.len());
 
-        for (policy_idx, sub_policy) in policy.sub_policys_mut().iter_mut().enumerate() {
-            let single = self.invoke_handler(sub_policy)?;
-
-            if let Some(idx) = single {
-                if any_match {
-                    // any match, return current
-                    return Ok(vec![(policy_idx, idx)]);
-                } else {
-                    ret.push((policy_idx, idx));
-                }
-            } else if !any_match {
-                return Ok(vec![]);
+        for sub_policy in policy.sub_policys().iter() {
+            if let Some(inner_ctx) = sub_policy.collect_ctx() {
+                inner_ctxs.push(inner_ctx);
             }
         }
-        Ok(ret)
-    }
-}
 
-impl<'a, 'b, Set, Inv, Ser> Process<SingleNonOpt<Set>> for InvokeGuess<'a, Set, Inv, Ser>
-where
-    Set: crate::set::Set,
-    Inv: HandlerCollection<'b, Set, Ser>,
-{
-    // all the index of matched uids
-    type Ret = Vec<usize>;
-
-    type Error = Error;
-
-    fn match_all(&mut self, policy: &mut SingleNonOpt<Set>) -> Result<bool, Self::Error> {
-        let uids = self.set.keys();
-
-        // process all the uid
-        for uid in uids {
-            if !policy.filter(uid, self.set) {
-                if let Err(e) = policy.r#match(uid, self.set) {
-                    if e.is_failure() {
-                        self.fail.push(e);
-                    } else {
-                        return Err(e);
-                    }
-                }
-            }
-        }
-        Ok(policy.matched())
-    }
-
-    fn invoke_handler(&mut self, policy: &mut SingleNonOpt<Set>) -> Result<Self::Ret, Self::Error> {
-        let mut ret = vec![];
-        let inner_ctx = InnerCtx::default()
-            .with_idx(policy.idx())
-            .with_total(policy.total())
-            .with_name(policy.name().cloned())
-            .with_arg(policy.clone_arg())
-            .with_style(policy.style());
-
-        for (index, uid) in policy.uids().iter().enumerate() {
-            self.ctx
-                .set_inner_ctx(Some(inner_ctx.clone().with_uid(*uid)));
-
-            // invoke the handler of `uid`
-            let invoke_ret = self.inv.invoke_fb(uid, self.set, self.ser, self.ctx);
-
-            // add the index to return value
-            if process_handler_ret(
-                invoke_ret,
-                |_| Ok(()),
-                |e| {
-                    self.fail.push(e);
-                    Ok(())
-                },
-            )? {
-                ret.push(index);
-            }
-        }
-        Ok(ret)
-    }
-}
-
-impl<'a, 'b, Set, Inv, Ser> Process<FirstOpt<Set>> for InvokeGuess<'a, Set, Inv, Ser>
-where
-    Set: crate::set::Set,
-    Inv: HandlerCollection<'b, Set, Ser>,
-{
-    // always 0 if exists
-    type Ret = Option<usize>;
-
-    type Error = Error;
-
-    fn match_all(&mut self, policy: &mut FirstOpt<Set>) -> Result<bool, Self::Error> {
-        let uids = self.set.keys();
-
-        for uid in uids {
-            // if any opt matched, skip
-            if !policy.matched() && !policy.filter(uid, self.set) {
-                if let Err(e) = policy.r#match(uid, self.set) {
-                    if e.is_failure() {
-                        self.fail.push(e);
-                    } else {
-                        return Err(e);
-                    }
-                }
-            }
-        }
-        Ok(policy.matched())
-    }
-
-    fn invoke_handler(&mut self, policy: &mut FirstOpt<Set>) -> Result<Self::Ret, Self::Error> {
-        let inner_ctx = InnerCtx::default()
-            .with_idx(policy.idx())
-            .with_total(policy.total())
-            .with_name(policy.name().cloned())
-            .with_arg(policy.clone_arg())
-            .with_style(policy.style());
-
-        if let Some(uid) = policy.uid() {
-            self.ctx
-                .set_inner_ctx(Some(inner_ctx.clone().with_uid(*uid)));
-
-            // invoke the handler of first matched opt
-            let invoke_ret = self.inv.invoke_fb(uid, self.set, self.ser, self.ctx);
-
-            // return 0 if success
-            if process_handler_ret(
-                invoke_ret,
-                |_| Ok(()),
-                |e| {
-                    self.fail.push(e);
-                    Ok(())
-                },
-            )? {
-                return Ok(Some(0));
-            }
-        }
-        Ok(None)
-    }
-}
-
-impl<'a, 'b, Set, Inv, Ser> Process<MultiOpt<FirstOpt<Set>, Set>> for InvokeGuess<'a, Set, Inv, Ser>
-where
-    Set: crate::set::Set,
-    Inv: HandlerCollection<'b, Set, Ser>,
-{
-    // index of matched policy
-    // index of matched uid == 0
-    type Ret = Vec<usize>;
-
-    type Error = Error;
-
-    fn match_all(
-        &mut self,
-        policy: &mut MultiOpt<FirstOpt<Set>, Set>,
-    ) -> Result<bool, Self::Error> {
-        let uids = self.set.keys();
-        let any_match = policy.any_match();
-
-        for sub_policy in policy.sub_policys_mut() {
-            // process all uids with each policy first
-            for uid in uids.iter() {
-                if !sub_policy.matched() && !sub_policy.filter(*uid, self.set) {
-                    if let Err(e) = sub_policy.r#match(*uid, self.set) {
-                        if e.is_failure() {
-                            self.fail.push(e);
-                        } else {
-                            return Err(e);
-                        }
-                    }
-                }
-            }
-            if any_match && sub_policy.matched() {
-                break;
-            }
-        }
-        Ok(policy.matched())
-    }
-
-    fn invoke_handler(
-        &mut self,
-        policy: &mut MultiOpt<FirstOpt<Set>, Set>,
-    ) -> Result<Self::Ret, Self::Error> {
-        let mut ret = vec![];
-        let any_match = policy.any_match();
-
-        for (policy_idx, sub_policy) in policy.sub_policys_mut().iter_mut().enumerate() {
-            let single = self.invoke_handler(sub_policy)?;
-
-            // index is 0
-            if let Some(_) = single {
-                if any_match {
-                    // any match, return current
-                    return Ok(vec![policy_idx]);
-                } else {
-                    ret.push(policy_idx);
-                }
-            } else if !any_match {
-                return Ok(vec![]);
-            }
-        }
-        Ok(ret)
-    }
-}
-
-impl<'a, 'b, Set, Inv, Ser> GuessOpt<MainStyle> for InvokeGuess<'a, Set, Inv, Ser>
-where
-    Set: crate::set::Set,
-    Inv: HandlerCollection<'b, Set, Ser>,
-{
-    type Ret = SimpleMatRes;
-
-    type Policy = Option<SingleNonOpt<Set>>;
-
-    type Error = Error;
-
-    fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
-        let idx = self.idx;
-        let tot = self.tot;
-        let style = Style::Main;
-        let name = self.name.clone();
-        let args = self.ctx.args().clone();
-
-        Ok(Some(
-            SingleNonOpt::default()
-                .with_idx(idx)
-                .with_args(args)
-                .with_name(name)
-                .with_total(tot)
-                .with_style(style)
-                .reset_arg(),
-        ))
-    }
-
-    fn guess_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
-        let mut res = SimpleMatRes::default();
-
-        if let Some(policy) = policy {
-            if self.match_all(policy)? {
-                for idx in self.invoke_handler(policy)? {
-                    policy.apply(policy.uids()[idx], self.set)?;
-                }
-                res.matched = true;
-            }
-        }
-        Ok(res)
-    }
-}
-
-impl<'a, 'b, Set, Inv, Ser> GuessOpt<PosStyle> for InvokeGuess<'a, Set, Inv, Ser>
-where
-    Set: crate::set::Set,
-    Inv: HandlerCollection<'b, Set, Ser>,
-{
-    type Ret = SimpleMatRes;
-
-    type Policy = Option<SingleNonOpt<Set>>;
-
-    type Error = Error;
-
-    fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
-        let idx = self.idx;
-        let tot = self.tot;
-        let style = Style::Pos;
-        let name = self.name.clone();
-        let args = self.ctx.args().clone();
-
-        Ok(Some(
-            SingleNonOpt::default()
-                .with_idx(idx)
-                .with_args(args)
-                .with_name(name)
-                .with_total(tot)
-                .with_style(style)
-                .reset_arg(),
-        ))
-    }
-
-    fn guess_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
-        GuessOpt::<MainStyle>::guess_opt(self, policy)
-    }
-}
-
-impl<'a, 'b, Set, Inv, Ser> GuessOpt<CmdStyle> for InvokeGuess<'a, Set, Inv, Ser>
-where
-    Set: crate::set::Set,
-    Inv: HandlerCollection<'b, Set, Ser>,
-{
-    type Ret = SimpleMatRes;
-
-    type Policy = Option<SingleNonOpt<Set>>;
-
-    type Error = Error;
-
-    fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
-        let idx = self.idx;
-        let tot = self.tot;
-        let style = Style::Cmd;
-        let name = self.name.clone();
-        let args = self.ctx.args().clone();
-
-        Ok(Some(
-            SingleNonOpt::default()
-                .with_idx(idx)
-                .with_args(args)
-                .with_name(name)
-                .with_total(tot)
-                .with_style(style)
-                .with_arg(Some(RawVal::from(BOOL_TRUE).into())),
-        ))
-    }
-
-    fn guess_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
-        GuessOpt::<MainStyle>::guess_opt(self, policy)
-    }
-}
-
-impl<'a, 'b, Set, Inv, Ser> GuessOpt<EqualWithValuStyle> for InvokeGuess<'a, Set, Inv, Ser>
-where
-    Set: crate::set::Set,
-    Inv: HandlerCollection<'b, Set, Ser>,
-{
-    type Ret = SimpleMatRes;
-
-    type Policy = Option<SingleOpt<Set>>;
-
-    type Error = Error;
-
-    fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
-        debug_assert!(self.name.is_some());
-
-        let idx = self.idx;
-        let tot = self.tot;
-        let arg = self.arg.clone();
-        let style = Style::Argument;
-        let name = self.name.as_ref().unwrap().clone();
-
-        Ok(self.arg.as_ref().map(|_| {
-            SingleOpt::default()
-                .with_idx(idx)
-                .with_total(tot)
-                .with_name(name)
-                .with_arg(arg)
-                .with_style(style)
-        }))
-    }
-
-    fn guess_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
-        let mut ret = SimpleMatRes::default();
-
-        if let Some(policy) = policy {
-            if self.match_all(policy)? {
-                if let Some(idx) = self.invoke_handler(policy)? {
-                    policy.apply(policy.uids()[idx], self.set)?;
-                    ret.matched = true;
-                    ret.consume = policy.is_consume();
-                }
-            }
-        }
-        Ok(ret)
-    }
-}
-
-impl<'a, 'b, Set, Inv, Ser> GuessOpt<ArgumentStyle> for InvokeGuess<'a, Set, Inv, Ser>
-where
-    Set: crate::set::Set,
-    Inv: HandlerCollection<'b, Set, Ser>,
-{
-    type Ret = SimpleMatRes;
-
-    type Policy = Option<SingleOpt<Set>>;
-
-    type Error = Error;
-
-    fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
-        debug_assert!(self.name.is_some());
-
-        let idx = self.idx;
-        let tot = self.tot;
-        let arg = self.next.clone();
-        let style = Style::Argument;
-        let name = self.name.as_ref().unwrap().clone();
-
-        Ok(if self.arg.is_none() && self.next.is_some() {
-            Some(
-                SingleOpt::default()
-                    .with_idx(idx)
-                    .with_total(tot)
-                    .with_name(name)
-                    .with_arg(arg)
-                    .with_consume(true)
-                    .with_style(style),
-            )
-        } else {
-            None
+        Ok(InnerCtxSaver {
+            any_match,
+            consume,
+            policy_ctx: inner_ctxs,
         })
     }
 
-    fn guess_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
-        GuessOpt::<EqualWithValuStyle>::guess_opt(self, policy)
-    }
-}
+    pub fn invoke_multi<T>(&mut self, policy: &mut MultiOpt<T, Set>) -> Result<bool, Error>
+    where
+        T: PolicyConfig + MatchPolicy<Set = Set>,
+    {
+        let mut matched = false;
+        let any_match = policy.any_match();
 
-impl<'a, 'b, Set, Inv, Ser> GuessOpt<EmbeddedValueStyle> for InvokeGuess<'a, Set, Inv, Ser>
-where
-    Set: crate::set::Set + OptValidator,
-    Inv: HandlerCollection<'b, Set, Ser>,
-{
-    type Ret = SimpleMatRes;
-
-    type Policy = Option<SingleOpt<Set>>;
-
-    type Error = Error;
-
-    fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
-        debug_assert!(self.name.is_some());
-
-        let idx = self.idx;
-        let tot = self.tot;
-        let style = Style::Argument;
-
-        if self.arg.is_none() {
-            // strip the prefix before generate
-            let option = self.name.as_ref().unwrap().as_str();
-            let validator = &self.set;
-            let splited = validator.split(option).map_err(Into::into)?;
-
-            // make sure we using `chars.count`, not len()
-            // make sure the name length >= 2
-            // only check first letter `--v42` ==> `--v 42`
-            if let Some((idx, _)) = splited.1.char_indices().nth(1) {
-                let (name, arg) = splited.1.split_at(idx);
-                let arg = Some(RawVal::from(arg).into());
-                let name = name.into();
-
-                return Ok(Some(
-                    SingleOpt::default()
-                        .with_idx(idx)
-                        .with_total(tot)
-                        .with_name(name)
-                        .with_arg(arg)
-                        .with_style(style),
-                ));
-            }
-        }
-        Ok(None)
-    }
-
-    fn guess_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
-        GuessOpt::<EqualWithValuStyle>::guess_opt(self, policy)
-    }
-}
-
-impl<'a, 'b, Set, Inv, Ser> GuessOpt<EmbeddedValuePlusStyle> for InvokeGuess<'a, Set, Inv, Ser>
-where
-    Set: crate::set::Set + OptValidator,
-    Inv: HandlerCollection<'b, Set, Ser>,
-{
-    type Ret = SimpleMatRes;
-
-    type Policy = Option<MultiOpt<SingleOpt<Set>, Set>>;
-
-    type Error = Error;
-
-    fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
-        debug_assert!(self.name.is_some());
-
-        let idx = self.idx;
-        let tot = self.tot;
-        let style = Style::Argument;
-
-        if self.arg.is_none() {
-            // strip the prefix before generate
-            let option = self.name.as_ref().unwrap().as_str();
-            let validator = &self.set;
-            let splited = validator.split(option).map_err(Into::into)?;
-            let char_indices = splited.1.char_indices().skip(2);
-            let mut policy = MultiOpt::default().with_any_match(true);
-
-            // make sure we using `chars.count`, not len()
-            // check the name start 3th letter
-            // for `--opt42` check the option like `--op t42`, `--opt 42`, `--opt4 2`
-            for (idx, _) in char_indices {
-                let (name, arg) = splited.1.split_at(idx);
-                let arg = Some(RawVal::from(arg).into());
-                let name = name.into();
-
-                policy.add_sub_policy(
-                    SingleOpt::default()
-                        .with_idx(idx)
-                        .with_total(tot)
-                        .with_name(name)
-                        .with_arg(arg)
-                        .with_consume(false)
-                        .with_style(style),
-                );
-            }
-            Ok(Some(policy))
-        } else {
-            Ok(None)
-        }
-    }
-
-    fn guess_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
-        let mut ret = SimpleMatRes::default();
-
-        if let Some(policy) = policy {
-            if !policy.is_empty() {
-                if self.match_all(policy)? {
-                    let invoke_rets = self.invoke_handler(policy)?;
-
-                    if !invoke_rets.is_empty() {
-                        ret.matched = true;
-                        for (policy_idx, uid_idx) in invoke_rets {
-                            let sub_policy = &mut policy.sub_policys_mut()[policy_idx];
-
-                            sub_policy.apply(sub_policy.uids()[uid_idx], self.set)?;
-                            ret.consume = ret.consume || sub_policy.is_consume();
-                        }
-                    }
+        for sub_policy in policy.sub_policys_mut().iter_mut() {
+            if self.invoke(sub_policy)? {
+                matched = true;
+                if any_match {
+                    // any match, return current
+                    break;
                 }
+            } else if !any_match {
+                matched = false;
+                break;
             }
         }
-        Ok(ret)
+        Ok(matched)
     }
 }
 
-impl<'a, 'b, Set, Inv, Ser> GuessOpt<CombinedOptionStyle> for InvokeGuess<'a, Set, Inv, Ser>
-where
-    Set: crate::set::Set + OptValidator,
-    Inv: HandlerCollection<'b, Set, Ser>,
-{
-    type Ret = SimpleMatRes;
+// impl<'a, 'b, Set, Inv, Ser> Match<SingleOpt<Set>> for InvokeGuess<'a, Set, Inv, Ser>
+// where
+//     Set: crate::set::Set,
+//     Inv: HandlerCollection<'b, Set, Ser>,
+// {
+//     // index of matched uid
+//     type Ret = Option<usize>;
 
-    type Policy = Option<MultiOpt<SingleOpt<Set>, Set>>;
+//     type Error = Error;
 
-    type Error = Error;
+//     fn r#match(&mut self, policy: &mut SingleOpt<Set>, fst: bool) -> Result<bool, Self::Error> {
+//         let uids = self.set.keys();
 
-    fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
-        debug_assert!(self.name.is_some());
+//         for uid in uids {
+//             // select all the option may match the `policy`
+//             if !policy.filter(uid, self.set) {
+//                 if let Err(e) = policy.r#match(uid, self.set, fst) {
+//                     if e.is_failure() {
+//                         self.fail.push(e);
+//                     } else {
+//                         return Err(e);
+//                     }
+//                 }
+//             }
+//         }
+//         Ok(policy.matched())
+//     }
 
-        let idx = self.idx;
-        let tot = self.tot;
-        let style = Style::Boolean;
-        let arg = Some(ARef::new(RawVal::from(BOOL_TRUE)));
+//     fn invoke_handler(&mut self, policy: &mut SingleOpt<Set>) -> Result<Self::Ret, Self::Error> {
+//         let inner_ctx = InnerCtx::default()
+//             .with_idx(policy.idx())
+//             .with_total(policy.total())
+//             .with_name(policy.name().cloned())
+//             .with_arg(policy.clone_arg())
+//             .with_style(policy.style());
 
-        if self.arg.is_none() {
-            // strip the prefix before generate
-            let option = self.name.as_ref().unwrap().as_str();
-            let validator = &self.set;
-            let splited = validator.split(option).map_err(Into::into)?;
+//         for (idx, uid) in policy.uids().iter().enumerate() {
+//             self.ctx
+//                 .set_inner_ctx(Some(inner_ctx.clone().with_uid(*uid)));
 
-            if splited.1.chars().count() > 1 {
-                let mut policy = MultiOpt::default().with_any_match(false);
+//             // invoke the handler of `uid`
+//             let invoke_ret = self.inv.invoke_fb(uid, self.set, self.ser, self.ctx);
 
-                for ch in splited.1.chars() {
-                    policy.add_sub_policy(
-                        SingleOpt::default()
-                            .with_idx(idx)
-                            .with_total(tot)
-                            .with_name(format!("{}{}", splited.0, ch).into())
-                            .with_arg(arg.clone())
-                            .with_style(style),
-                    );
-                }
-                return Ok(Some(policy));
-            }
-        }
-        Ok(None)
-    }
+//             // return first index if handler success
+//             if process_handler_ret(
+//                 invoke_ret,
+//                 |_| Ok(()),
+//                 |e| {
+//                     self.fail.push(e);
+//                     Ok(())
+//                 },
+//             )? {
+//                 return Ok(Some(idx));
+//             }
+//         }
+//         Ok(None)
+//     }
+// }
 
-    fn guess_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
-        GuessOpt::<EmbeddedValuePlusStyle>::guess_opt(self, policy)
-    }
-}
+// impl<'a, 'b, Set, Inv, Ser> Match<MultiOpt<SingleOpt<Set>, Set>> for InvokeGuess<'a, Set, Inv, Ser>
+// where
+//     Set: crate::set::Set,
+//     Inv: HandlerCollection<'b, Set, Ser>,
+// {
+//     // (index of matched policy, index of matched uid)
+//     type Ret = Vec<(usize, usize)>;
 
-impl<'a, 'b, Set, Inv, Ser> GuessOpt<BooleanStyle> for InvokeGuess<'a, Set, Inv, Ser>
-where
-    Set: crate::set::Set,
-    Inv: HandlerCollection<'b, Set, Ser>,
-{
-    type Ret = SimpleMatRes;
+//     type Error = Error;
 
-    type Error = Error;
+//     fn r#match(
+//         &mut self,
+//         policy: &mut MultiOpt<SingleOpt<Set>, Set>,
+//         fst: bool,
+//     ) -> Result<bool, Self::Error> {
+//         let uids = self.set.keys();
+//         let any_match = policy.any_match();
 
-    type Policy = Option<SingleOpt<Set>>;
+//         for sub_policy in policy.sub_policys_mut() {
+//             // process all uids with each policy first
+//             for uid in uids.iter() {
+//                 if !sub_policy.filter(*uid, self.set) {
+//                     if let Err(e) = sub_policy.r#match(*uid, self.set) {
+//                         if e.is_failure() {
+//                             self.fail.push(e);
+//                         } else {
+//                             return Err(e);
+//                         }
+//                     }
+//                 }
+//             }
+//             if any_match && sub_policy.matched() {
+//                 break;
+//             }
+//         }
+//         Ok(policy.matched())
+//     }
 
-    fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
-        debug_assert!(self.name.is_some());
+//     fn invoke_handler(
+//         &mut self,
+//         policy: &mut MultiOpt<SingleOpt<Set>, Set>,
+//     ) -> Result<Self::Ret, Self::Error> {
+//         let mut ret = vec![];
+//         let any_match = policy.any_match();
 
-        let idx = self.idx;
-        let tot = self.tot;
-        let arg = Some(ARef::new(RawVal::from(BOOL_TRUE)));
-        let style = Style::Boolean;
-        let name = self.name.as_ref().unwrap().clone();
+//         for (policy_idx, sub_policy) in policy.sub_policys_mut().iter_mut().enumerate() {
+//             let single = self.invoke_handler(sub_policy)?;
 
-        if self.arg.is_none() {
-            Ok(Some(
-                SingleOpt::default()
-                    .with_idx(idx)
-                    .with_total(tot)
-                    .with_name(name)
-                    .with_arg(arg)
-                    .with_style(style),
-            ))
-        } else {
-            Ok(None)
-        }
-    }
+//             if let Some(idx) = single {
+//                 if any_match {
+//                     // any match, return current
+//                     return Ok(vec![(policy_idx, idx)]);
+//                 } else {
+//                     ret.push((policy_idx, idx));
+//                 }
+//             } else if !any_match {
+//                 return Ok(vec![]);
+//             }
+//         }
+//         Ok(ret)
+//     }
+// }
 
-    fn guess_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
-        GuessOpt::<EqualWithValuStyle>::guess_opt(self, policy)
-    }
-}
+// impl<'a, 'b, Set, Inv, Ser> Match<SingleNonOpt<Set>> for InvokeGuess<'a, Set, Inv, Ser>
+// where
+//     Set: crate::set::Set,
+//     Inv: HandlerCollection<'b, Set, Ser>,
+// {
+//     // all the index of matched uids
+//     type Ret = Vec<usize>;
 
-impl<'a, 'b, Set, Inv, Ser> GuessOpt<FlagStyle> for InvokeGuess<'a, Set, Inv, Ser>
-where
-    Set: crate::set::Set,
-    Inv: HandlerCollection<'b, Set, Ser>,
-{
-    type Ret = SimpleMatRes;
+//     type Error = Error;
 
-    type Error = Error;
+//     fn r#match(&mut self, policy: &mut SingleNonOpt<Set>, fst: bool) -> Result<bool, Self::Error> {
+//         let uids = self.set.keys();
 
-    type Policy = Option<SingleOpt<Set>>;
+//         // process all the uid
+//         for uid in uids {
+//             if !policy.filter(uid, self.set) {
+//                 if let Err(e) = policy.r#match(uid, self.set) {
+//                     if e.is_failure() {
+//                         self.fail.push(e);
+//                     } else {
+//                         return Err(e);
+//                     }
+//                 }
+//             }
+//         }
+//         Ok(policy.matched())
+//     }
 
-    fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error> {
-        debug_assert!(self.name.is_some());
+//     fn invoke_handler(&mut self, policy: &mut SingleNonOpt<Set>) -> Result<Self::Ret, Self::Error> {
+//         let mut ret = vec![];
+//         let inner_ctx = InnerCtx::default()
+//             .with_idx(policy.idx())
+//             .with_total(policy.total())
+//             .with_name(policy.name().cloned())
+//             .with_arg(policy.clone_arg())
+//             .with_style(policy.style());
 
-        let idx = self.idx;
-        let tot = self.tot;
-        let arg = None;
-        let style = Style::Flag;
-        let name = self.name.as_ref().unwrap().clone();
+//         for (index, uid) in policy.uids().iter().enumerate() {
+//             self.ctx
+//                 .set_inner_ctx(Some(inner_ctx.clone().with_uid(*uid)));
 
-        Ok(if self.arg.is_none() {
-            Some(
-                SingleOpt::default()
-                    .with_idx(idx)
-                    .with_total(tot)
-                    .with_name(name)
-                    .with_arg(arg)
-                    .with_style(style),
-            )
-        } else {
-            None
-        })
-    }
+//             // invoke the handler of `uid`
+//             let invoke_ret = self.inv.invoke_fb(uid, self.set, self.ser, self.ctx);
 
-    fn guess_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
-        GuessOpt::<EqualWithValuStyle>::guess_opt(self, policy)
-    }
-}
+//             // add the index to return value
+//             if process_handler_ret(
+//                 invoke_ret,
+//                 |_| Ok(()),
+//                 |e| {
+//                     self.fail.push(e);
+//                     Ok(())
+//                 },
+//             )? {
+//                 ret.push(index);
+//             }
+//         }
+//         Ok(ret)
+//     }
+// }
+
+// impl<'a, 'b, Set, Inv, Ser, T> Process<MainStyle, T> for InvokeGuess<'a, Set, Inv, Ser>
+// where
+//     Set: crate::set::Set,
+//     Inv: HandlerCollection<'b, Set, Ser>,
+// {
+//     type Ret = SimpleMatRes;
+
+//     type Error = Error;
+
+//     fn process_opt(&mut self, policy: &mut T) -> Result<Self::Ret, Self::Error> {
+//         let mut res = SimpleMatRes::default();
+
+//         if let Some(policy) = policy {
+//             if self.match_all(policy)? {
+//                 for idx in self.invoke_handler(policy)? {
+//                     policy.apply(policy.uids()[idx], self.set)?;
+//                 }
+//                 res.matched = true;
+//             }
+//         }
+//         Ok(res)
+//     }
+// }
+
+// impl<'a, 'b, Set, Inv, Ser> Process<PosStyle> for InvokeGuess<'a, Set, Inv, Ser>
+// where
+//     Set: crate::set::Set,
+//     Inv: HandlerCollection<'b, Set, Ser>,
+// {
+//     type Ret = SimpleMatRes;
+
+//     type Policy = Option<SingleNonOpt<Set>>;
+
+//     type Error = Error;
+
+//     fn process_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
+//         Process::<MainStyle>::process_opt(self, policy)
+//     }
+// }
+
+// impl<'a, 'b, Set, Inv, Ser> Process<CmdStyle> for InvokeGuess<'a, Set, Inv, Ser>
+// where
+//     Set: crate::set::Set,
+//     Inv: HandlerCollection<'b, Set, Ser>,
+// {
+//     type Ret = SimpleMatRes;
+
+//     type Policy = Option<SingleNonOpt<Set>>;
+
+//     type Error = Error;
+
+//     fn process_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
+//         Process::<MainStyle>::process_opt(self, policy)
+//     }
+// }
+
+// impl<'a, 'b, Set, Inv, Ser> Process<EqualWithValuStyle> for InvokeGuess<'a, Set, Inv, Ser>
+// where
+//     Set: crate::set::Set,
+//     Inv: HandlerCollection<'b, Set, Ser>,
+// {
+//     type Ret = SimpleMatRes;
+
+//     type Policy = Option<SingleOpt<Set>>;
+
+//     type Error = Error;
+
+//     fn process_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
+//         let mut ret = SimpleMatRes::default();
+
+//         if let Some(policy) = policy {
+//             if self.match_all(policy)? {
+//                 if let Some(idx) = self.invoke_handler(policy)? {
+//                     policy.apply(policy.uids()[idx], self.set)?;
+//                     ret.matched = true;
+//                     ret.consume = policy.is_consume();
+//                 }
+//             }
+//         }
+//         Ok(ret)
+//     }
+// }
+
+// impl<'a, 'b, Set, Inv, Ser> Process<ArgumentStyle> for InvokeGuess<'a, Set, Inv, Ser>
+// where
+//     Set: crate::set::Set,
+//     Inv: HandlerCollection<'b, Set, Ser>,
+// {
+//     type Ret = SimpleMatRes;
+
+//     type Policy = Option<SingleOpt<Set>>;
+
+//     type Error = Error;
+
+//     fn process_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
+//         Process::<EqualWithValuStyle>::process_opt(self, policy)
+//     }
+// }
+
+// impl<'a, 'b, Set, Inv, Ser> Process<EmbeddedValueStyle> for InvokeGuess<'a, Set, Inv, Ser>
+// where
+//     Set: crate::set::Set,
+//     Inv: HandlerCollection<'b, Set, Ser>,
+// {
+//     type Ret = SimpleMatRes;
+
+//     type Policy = Option<SingleOpt<Set>>;
+
+//     type Error = Error;
+
+//     fn process_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
+//         Process::<EqualWithValuStyle>::process_opt(self, policy)
+//     }
+// }
+
+// impl<'a, 'b, Set, Inv, Ser> Process<EmbeddedValuePlusStyle> for InvokeGuess<'a, Set, Inv, Ser>
+// where
+//     Set: crate::set::Set,
+//     Inv: HandlerCollection<'b, Set, Ser>,
+// {
+//     type Ret = SimpleMatRes;
+
+//     type Policy = Option<MultiOpt<SingleOpt<Set>, Set>>;
+
+//     type Error = Error;
+
+//     fn process_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
+//         let mut ret = SimpleMatRes::default();
+
+//         if let Some(policy) = policy {
+//             if !policy.is_empty() {
+//                 if self.match_all(policy)? {
+//                     let invoke_rets = self.invoke_handler(policy)?;
+
+//                     if !invoke_rets.is_empty() {
+//                         ret.matched = true;
+//                         for (policy_idx, uid_idx) in invoke_rets {
+//                             let sub_policy = &mut policy.sub_policys_mut()[policy_idx];
+
+//                             sub_policy.apply(sub_policy.uids()[uid_idx], self.set)?;
+//                             ret.consume = ret.consume || sub_policy.is_consume();
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//         Ok(ret)
+//     }
+// }
+
+// impl<'a, 'b, Set, Inv, Ser> Process<CombinedOptionStyle> for InvokeGuess<'a, Set, Inv, Ser>
+// where
+//     Set: crate::set::Set,
+//     Inv: HandlerCollection<'b, Set, Ser>,
+// {
+//     type Ret = SimpleMatRes;
+
+//     type Policy = Option<MultiOpt<SingleOpt<Set>, Set>>;
+
+//     type Error = Error;
+
+//     fn process_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
+//         Process::<EmbeddedValuePlusStyle>::process_opt(self, policy)
+//     }
+// }
+
+// impl<'a, 'b, Set, Inv, Ser> Process<BooleanStyle> for InvokeGuess<'a, Set, Inv, Ser>
+// where
+//     Set: crate::set::Set,
+//     Inv: HandlerCollection<'b, Set, Ser>,
+// {
+//     type Ret = SimpleMatRes;
+
+//     type Error = Error;
+
+//     type Policy = Option<SingleOpt<Set>>;
+
+//     fn process_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
+//         Process::<EqualWithValuStyle>::process_opt(self, policy)
+//     }
+// }
+
+// impl<'a, 'b, Set, Inv, Ser> Process<FlagStyle> for InvokeGuess<'a, Set, Inv, Ser>
+// where
+//     Set: crate::set::Set,
+//     Inv: HandlerCollection<'b, Set, Ser>,
+// {
+//     type Ret = SimpleMatRes;
+
+//     type Error = Error;
+
+//     type Policy = Option<SingleOpt<Set>>;
+
+//     fn process_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error> {
+//         Process::<EqualWithValuStyle>::process_opt(self, policy)
+//     }
+// }

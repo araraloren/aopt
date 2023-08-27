@@ -153,9 +153,15 @@ where
         }
     }
 
-    fn r#match(&mut self, uid: Uid, set: &mut Self::Set) -> Result<Self::Ret, Self::Error> {
+    fn r#match(
+        &mut self,
+        uid: Uid,
+        set: &mut Self::Set,
+        fst: bool,
+        consume: bool,
+    ) -> Result<Self::Ret, Self::Error> {
         for (index, sub_policy) in self.sub_policys.iter_mut().enumerate() {
-            if sub_policy.r#match(uid, set)? {
+            if sub_policy.r#match(uid, set, fst, consume)? {
                 return Ok(Some(index));
             }
         }

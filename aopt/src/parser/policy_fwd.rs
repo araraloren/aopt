@@ -268,7 +268,9 @@ where
                         };
 
                         for style in opt_styles.iter() {
-                            (matched, consume) = guess.guess(style)?;
+                            if let Some(ret) = guess.guess_and_invoke(style, true)? {
+                                (matched, consume) = (ret.matched, ret.consume);
+                            }
                             if matched {
                                 break;
                             }
@@ -315,7 +317,7 @@ where
                 idx: Self::noa_cmd(),
             };
 
-            guess.guess(&UserStyle::Cmd)?;
+            guess.guess_and_invoke(&UserStyle::Cmd, true)?;
             cmd_fail.process(self.checker().cmd_check(set))?;
 
             let mut guess = InvokeGuess {
@@ -337,7 +339,7 @@ where
                     .get(Self::noa_pos(idx))
                     .and_then(|v| v.get_str())
                     .map(Str::from);
-                guess.guess(&UserStyle::Pos)?;
+                guess.guess_and_invoke(&UserStyle::Pos, true)?;
             }
         } else {
             cmd_fail.process(self.checker().cmd_check(set))?;
@@ -367,7 +369,7 @@ where
             idx: Self::noa_main(),
         };
 
-        guess.guess(&UserStyle::Main)?;
+        guess.guess_and_invoke(&UserStyle::Main, true)?;
         main_fail.process(self.checker().post_check(set))?;
         Ok(())
     }

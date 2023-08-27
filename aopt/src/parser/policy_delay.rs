@@ -21,10 +21,15 @@ use crate::args::Args;
 use crate::astr;
 use crate::ctx::Ctx;
 use crate::ctx::Invoker;
+use crate::guess::InnerCtxSaver;
+use crate::guess::InvokeGuess;
+use crate::guess::PolicyInnerCtx;
+use crate::guess::SimpleMatRet;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::parser::FailManager;
 use crate::prelude::HandlerCollection;
+use crate::prelude::InnerCtx;
 use crate::prelude::SetExt;
 use crate::proc::Process;
 use crate::set::OptValidator;
@@ -34,6 +39,25 @@ use crate::trace_log;
 use crate::ARef;
 use crate::Error;
 use crate::Str;
+use crate::Uid;
+
+#[derive(Debug, Clone, Default)]
+pub struct DelayCtx {
+    pub uids: Vec<Uid>,
+
+    pub matched: Vec<Option<bool>>,
+
+    pub inner_ctx: InnerCtx,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct DelayCtxSaver {
+    pub any_match: bool,
+
+    pub consume: bool,
+
+    pub delay_ctx: Vec<DelayCtx>,
+}
 
 /// [`DelayPolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
 /// The option would match failed if any special [`Error`] raised during option processing.
@@ -111,7 +135,7 @@ use crate::Str;
 pub struct DelayPolicy<Set, Ser, Chk> {
     strict: bool,
 
-    contexts: Vec<CtxSaver>,
+    contexts: Vec<DelayCtxSaver>,
 
     checker: Chk,
 
@@ -260,50 +284,144 @@ where
     // ignore failure
     pub fn invoke_opt_callback<'a, Inv>(
         &mut self,
+        uid: Uid,
         ctx: &mut Ctx,
         set: &mut Set,
         inv: &mut Inv,
         ser: &mut Ser,
-        manager: &mut FailManager,
-        saver: CtxSaver,
-    ) -> Result<(), Error>
+        fail: &mut FailManager,
+        inner_ctx: InnerCtx,
+    ) -> Result<bool, Error>
     where
         Inv: HandlerCollection<'a, Set, Ser>,
     {
-        let uid = saver.uid;
         let fail = |e: &Error| {
-            manager.push(e.clone());
+            fail.push(e.clone());
             Ok(())
         };
 
-        ctx.set_inner_ctx(Some(saver.ctx));
-        if !process_callback_ret(inv.invoke_fb(&uid, set, ser, ctx), |_| Ok(()), fail)? {
-            set.opt_mut(uid)?.set_matched(false);
-        }
-        Ok(())
+        ctx.set_inner_ctx(Some(inner_ctx.with_uid(uid)));
+        let ret = process_callback_ret(inv.invoke_fb(&uid, set, ser, ctx), |_| Ok(()), fail)?;
+
+        set.opt_mut(uid)?.set_matched(ret);
+        Ok(ret)
     }
 
-    pub fn save_or_call<'a, Inv>(
+    pub fn process_delay_ctx<'a, Inv>(
         &mut self,
         ctx: &mut Ctx,
         set: &mut Set,
         inv: &mut Inv,
         ser: &mut Ser,
-        manager: &mut FailManager,
-        saver: CtxSaver,
-    ) -> Result<(), Error>
+        fail: &mut FailManager,
+        saver: DelayCtxSaver,
+    ) -> Result<SimpleMatRet, Error>
     where
         Inv: HandlerCollection<'a, Set, Ser>,
     {
-        let name = set.opt(saver.uid)?.name();
+        let any_match = saver.any_match;
+        let consume = saver.consume;
 
-        if self.no_delay_opt.contains(name) {
-            return self.invoke_opt_callback(ctx, set, inv, ser, manager, saver);
-        } else {
-            self.contexts.push(saver);
+        for delay_ctx in saver.delay_ctx {
+            let inner_ctx = delay_ctx.inner_ctx;
+            let mut matched = false;
+
+            trace_log!("Invoke the handler: Inner = {:?}", &inner_ctx);
+            for (uid, cache_matched) in delay_ctx.uids.iter().zip(delay_ctx.matched.iter()) {
+                let ret = if let Some(cache_matched) = cache_matched {
+                    *cache_matched
+                } else {
+                    self.invoke_opt_callback(
+                        *uid,
+                        ctx,
+                        set,
+                        inv,
+                        ser,
+                        fail,
+                        inner_ctx.clone().with_uid(*uid),
+                    )?
+                };
+
+                // if it matched,
+                // so the policy_inner_ctx matched
+                // and inner_ctx_saver matched,
+                // should return immediately
+                if any_match && ret {
+                    return Ok(SimpleMatRet::new(true, consume));
+                }
+                matched = matched || ret;
+            }
+            if !any_match {
+                if !matched {
+                    return Ok(SimpleMatRet::new(false, false));
+                }
+            }
         }
+        Ok(SimpleMatRet::new(true, consume))
+    }
 
-        Ok(())
+    pub fn save_or_call<'a, 'b, Inv>(
+        &mut self,
+        guess: &mut InvokeGuess<'b, Set, Inv, Ser>,
+        saver: InnerCtxSaver,
+    ) -> Result<Option<SimpleMatRet>, Error>
+    where
+        Inv: HandlerCollection<'a, Set, Ser>,
+    {
+        let any_match = saver.any_match;
+        let consume = saver.consume;
+        let mut delay_ctx = vec![];
+
+        for policy in saver.policy_ctx {
+            let len = policy.uids.len();
+            let inner_ctx = policy.inner_ctx.clone();
+            let mut matched = Vec::with_capacity(len);
+
+            for uid in policy.uids.iter() {
+                let name = guess.set.opt(*uid)?.name();
+
+                if self.no_delay_opt.contains(name) {
+                    let ret = self.invoke_opt_callback(
+                        *uid,
+                        guess.ctx,
+                        guess.set,
+                        guess.inv,
+                        guess.ser,
+                        guess.fail,
+                        inner_ctx.clone().with_uid(*uid),
+                    )?;
+
+                    // if it matched,
+                    // so the policy_inner_ctx matched
+                    // and inner_ctx_saver matched,
+                    // should return immediately
+                    if any_match && ret {
+                        return Ok(Some(SimpleMatRet::new(true, consume)));
+                    } else {
+                        matched.push(Some(ret));
+                    }
+                } else {
+                    matched.push(None);
+                }
+            }
+            if !any_match && matched.iter().all(|v| v == &Some(false)) {
+                return Ok(Some(SimpleMatRet::new(false, false)));
+            } else {
+                delay_ctx.push(DelayCtx {
+                    uids: policy.uids,
+                    matched,
+                    inner_ctx: policy.inner_ctx,
+                });
+            }
+        }
+        if !delay_ctx.is_empty() {
+            self.contexts.push(DelayCtxSaver {
+                any_match,
+                consume,
+                delay_ctx,
+            })
+        }
+        Ok(None)
     }
 }
 
@@ -325,7 +443,7 @@ where
         // take the invoke service, avoid borrow the ser
         let opt_styles = self.style_manager.clone();
         let args = ctx.orig_args().clone();
-        let args_len = args.len();
+        let tot = args.len();
         let mut noa_args = Args::default();
         let mut iter = args.guess_iter().enumerate();
         let mut opt_fail = FailManager::default();
@@ -333,62 +451,46 @@ where
         trace_log!("Parsing {ctx:?} using delay policy");
         // set option args, and args length
         ctx.set_args(args.clone());
-        while let Some((idx, (opt, arg))) = iter.next() {
+        while let Some((idx, (opt, next))) = iter.next() {
             let mut matched = false;
             let mut consume = false;
-            let arg = arg.map(|v| ARef::new(v.clone()));
+            let next = next.map(|v| ARef::new(v.clone()));
 
             // parsing current argument
             if let Ok(clopt) = opt.parse_arg() {
                 if let Some(name) = clopt.name() {
                     if set.check(name.as_str()).map_err(Into::into)? {
-                        for style in opt_styles.iter() {
-                            if let Some(mut proc) = OptGuess::new().guess(
-                                style,
-                                GuessOptCfg::new(idx, args_len, arg.clone(), &clopt, set),
-                            )? {
-                                let ret = process_opt(
-                                    ProcessCtx {
-                                        idx,
-                                        ctx,
-                                        set,
-                                        inv,
-                                        ser,
-                                        tot: args_len,
-                                    },
-                                    &mut proc,
-                                    &mut opt_fail,
-                                    false,
-                                )?;
+                        let arg = clopt.value().cloned();
+                        let mut guess = InvokeGuess {
+                            idx,
+                            arg,
+                            set,
+                            inv,
+                            ser,
+                            tot,
+                            ctx,
+                            next: next.clone(),
+                            fail: &mut opt_fail,
+                            name: Some(name.clone()),
+                        };
 
-                                if proc.status() {
-                                    for saver in ret {
-                                        self.save_or_call(
-                                            ctx,
-                                            set,
-                                            inv,
-                                            ser,
-                                            &mut opt_fail,
-                                            saver,
-                                        )?;
-                                    }
-                                    matched = true;
+                        trace_log!("Guess command line clopt = {:?} & next = {:?}", clopt, next);
+                        for style in opt_styles.iter() {
+                            if let Some(ret) = guess.guess_and_collect(style, true)? {
+                                // pretend we are matched, cause it is delay
+                                matched = true;
+                                consume = ret.consume;
+                                if let Some(ret) = self.save_or_call(&mut guess, ret)? {
+                                    // if the call returned, set the real return value
+                                    (matched, consume) = (ret.matched, ret.consume);
                                 }
                                 if matched {
-                                    if proc.is_consume() {
-                                        consume = true;
-                                    }
                                     break;
                                 }
                             }
                         }
                         if !matched && self.strict() {
-                            let default_str = astr("");
-
-                            return Err(opt_fail.cause(Error::sp_option_not_found(format!(
-                                "{}",
-                                clopt.name().unwrap_or(&default_str)
-                            ))));
+                            return Err(opt_fail.cause(Error::sp_option_not_found(name)));
                         }
                     }
                 }
@@ -404,84 +506,98 @@ where
         }
 
         let noa_args = ARef::new(noa_args);
-        let noa_len = noa_args.len();
+        let tot = noa_args.len();
         let mut pos_fail = FailManager::default();
         let mut cmd_fail = FailManager::default();
 
         ctx.set_args(noa_args.clone());
         // when style is pos, noa index is [1..=len]
-        if noa_len > 0 {
-            if let Some(mut proc) = NOAGuess::new().guess(
-                &UserStyle::Cmd,
-                GuessNOACfg::new(noa_args.clone(), Self::noa_cmd(), noa_len),
-            )? {
-                process_non_opt(
-                    ProcessCtx {
-                        ctx,
-                        set,
-                        inv,
-                        ser,
-                        tot: noa_len,
-                        idx: Self::noa_cmd(),
-                    },
-                    &mut proc,
-                    &mut cmd_fail,
-                )?;
-            }
+        if tot > 0 {
+            let name = noa_args
+                .get(Self::noa_cmd())
+                .and_then(|v| v.get_str())
+                .map(Str::from);
+            let mut guess = InvokeGuess {
+                set,
+                inv,
+                ser,
+                tot,
+                name,
+                ctx,
+                arg: None,
+                next: None,
+                fail: &mut cmd_fail,
+                idx: Self::noa_cmd(),
+            };
+
+            trace_log!("Guess CMD = {:?}", guess.name);
+            guess.guess_and_invoke(&UserStyle::Cmd, true)?;
             cmd_fail.process(self.checker().cmd_check(set))?;
-            for idx in 1..noa_len {
-                if let Some(mut proc) = NOAGuess::new().guess(
-                    &UserStyle::Pos,
-                    GuessNOACfg::new(noa_args.clone(), Self::noa_pos(idx), noa_len),
-                )? {
-                    process_non_opt(
-                        ProcessCtx {
-                            ctx,
-                            set,
-                            inv,
-                            ser,
-                            tot: noa_len,
-                            idx: Self::noa_pos(idx),
-                        },
-                        &mut proc,
-                        &mut pos_fail,
-                    )?;
-                }
+
+            let mut guess = InvokeGuess {
+                set,
+                inv,
+                ser,
+                tot,
+                ctx,
+                name: None,
+                arg: None,
+                next: None,
+                fail: &mut pos_fail,
+                idx: Self::noa_cmd(),
+            };
+
+            for idx in 1..tot {
+                guess.idx = Self::noa_pos(idx);
+                guess.name = noa_args
+                    .get(Self::noa_pos(idx))
+                    .and_then(|v| v.get_str())
+                    .map(Str::from);
+                trace_log!("Guess POS argument = {:?} @ {}", guess.name, guess.idx);
+                guess.guess_and_invoke(&UserStyle::Pos, true)?;
             }
         } else {
             cmd_fail.process(self.checker().cmd_check(set))?;
         }
 
+        trace_log!("Invoke the handler of option");
         // after cmd and pos callback invoked, invoke the callback of option
         for saver in std::mem::take(&mut self.contexts) {
-            self.invoke_opt_callback(ctx, set, inv, ser, &mut opt_fail, saver)?;
+            let ret = self.process_delay_ctx(ctx, set, inv, ser, &mut opt_fail, saver)?;
+
+            if !ret.matched && self.strict() {
+                return Err(
+                    opt_fail.cause(crate::raise_error!("Option match failed, Ctx = {:?}", ctx))
+                );
+            }
         }
 
         opt_fail.process(self.checker().opt_check(set))?;
         pos_fail.process(self.checker().pos_check(set))?;
 
         let main_args = noa_args;
-        let main_len = main_args.len();
+        let tot = main_args.len();
         let mut main_fail = FailManager::default();
 
         ctx.set_args(main_args.clone());
-        if let Some(mut proc) = NOAGuess::new().guess(
-            &UserStyle::Main,
-            GuessNOACfg::new(main_args, Self::noa_main(), main_len),
-        )? {
-            process_non_opt(
-                ProcessCtx {
-                    ctx,
-                    set,
-                    inv,
-                    ser,
-                    tot: main_len,
-                    idx: Self::noa_main(),
-                },
-                &mut proc,
-                &mut main_fail,
-            )?;
-        }
+        let name = main_args
+            .get(Self::noa_main())
+            .and_then(|v| v.get_str())
+            .map(Str::from);
+        let mut guess = InvokeGuess {
+            set,
+            inv,
+            ser,
+            tot,
+            name,
+            ctx,
+            arg: None,
+            next: None,
+            fail: &mut main_fail,
+            idx: Self::noa_main(),
+        };
+
+        guess.guess_and_invoke(&UserStyle::Main, true)?;
         main_fail.process(self.checker().post_check(set))?;
         Ok(())
     }

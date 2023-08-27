@@ -1,8 +1,10 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
+use crate::args::Args;
 use crate::opt::Opt;
 use crate::opt::Style;
+use crate::prelude::InnerCtx;
 use crate::set::Set;
 use crate::set::SetOpt;
 use crate::ARef;
@@ -12,17 +14,20 @@ use crate::Str;
 use crate::Uid;
 
 use super::MatchPolicy;
+use super::PolicyBuild;
+use super::PolicyConfig;
+use super::PolicyInnerCtx;
 
 pub struct SingleOpt<S> {
-    name: Str,
+    name: Option<Str>,
 
     style: Style,
 
     arg: Option<ARef<RawVal>>,
 
-    uids: Vec<Uid>,
+    args: ARef<Args>,
 
-    consume: bool,
+    uids: Vec<Uid>,
 
     index: usize,
 
@@ -37,8 +42,8 @@ impl<S> Clone for SingleOpt<S> {
             name: self.name.clone(),
             style: self.style.clone(),
             arg: self.arg.clone(),
+            args: self.args.clone(),
             uids: self.uids.clone(),
-            consume: self.consume.clone(),
             index: self.index.clone(),
             total: self.total.clone(),
             marker: self.marker.clone(),
@@ -52,8 +57,8 @@ impl<S> Debug for SingleOpt<S> {
             .field("name", &self.name)
             .field("style", &self.style)
             .field("arg", &self.arg)
+            .field("args", &self.args)
             .field("uids", &self.uids)
-            .field("consume", &self.consume)
             .field("index", &self.index)
             .field("total", &self.total)
             .finish()
@@ -66,8 +71,8 @@ impl<S> Default for SingleOpt<S> {
             name: Default::default(),
             style: Default::default(),
             arg: Default::default(),
+            args: Default::default(),
             uids: Default::default(),
-            consume: Default::default(),
             index: Default::default(),
             total: Default::default(),
             marker: Default::default(),
@@ -75,71 +80,83 @@ impl<S> Default for SingleOpt<S> {
     }
 }
 
-impl<S> SingleOpt<S> {
-    pub fn with_name(mut self, name: Str) -> Self {
+impl<S> PolicyBuild for SingleOpt<S> {
+    fn with_name(mut self, name: Option<Str>) -> Self {
         self.name = name;
         self
     }
 
-    pub fn with_style(mut self, style: Style) -> Self {
+    fn with_style(mut self, style: Style) -> Self {
         self.style = style;
         self
     }
 
-    pub fn with_idx(mut self, index: usize) -> Self {
+    fn with_idx(mut self, index: usize) -> Self {
         self.index = index;
         self
     }
 
-    pub fn with_total(mut self, total: usize) -> Self {
+    fn with_tot(mut self, total: usize) -> Self {
         self.total = total;
         self
     }
 
-    pub fn with_consume(mut self, consume: bool) -> Self {
-        self.consume = consume;
+    fn with_arg(mut self, arg: Option<ARef<RawVal>>) -> Self {
+        self.arg = arg;
         self
     }
 
-    pub fn with_arg(mut self, argument: Option<ARef<RawVal>>) -> Self {
-        self.arg = argument;
+    fn with_args(mut self, args: ARef<Args>) -> Self {
+        self.args = args;
         self
     }
+}
 
-    pub fn name(&self) -> Option<&Str> {
-        Some(&self.name)
-    }
-
-    pub fn idx(&self) -> usize {
+impl<S> PolicyConfig for SingleOpt<S> {
+    fn idx(&self) -> usize {
         self.index
     }
 
-    pub fn total(&self) -> usize {
+    fn tot(&self) -> usize {
         self.total
     }
 
+    fn name(&self) -> Option<&Str> {
+        self.name.as_ref()
+    }
+
+    fn style(&self) -> Style {
+        self.style
+    }
+
+    fn arg(&self) -> Option<ARef<RawVal>> {
+        self.arg.clone()
+    }
+
+    fn uids(&self) -> &[Uid] {
+        &self.uids
+    }
+
+    fn collect_ctx(&self) -> Option<PolicyInnerCtx> {
+        (!self.uids.is_empty()).then(|| PolicyInnerCtx {
+            uids: self.uids().to_vec(),
+            inner_ctx: InnerCtx::default()
+                .with_idx(self.idx())
+                .with_total(self.tot())
+                .with_name(self.name().cloned())
+                .with_arg(self.arg())
+                .with_style(self.style()),
+        })
+    }
+}
+
+impl<S> SingleOpt<S> {
     pub fn clone_arg(&self) -> Option<ARef<RawVal>> {
         self.arg.clone()
     }
 
-    pub fn uids(&self) -> &[Uid] {
-        &self.uids
-    }
-
     pub fn set_uid(&mut self, uid: Uid) {
         self.uids.push(uid);
-    }
-
-    pub fn style(&self) -> Style {
-        self.style
-    }
-
-    pub fn arg(&self) -> Option<&RawVal> {
-        self.arg.as_ref().map(|v| v.as_ref())
-    }
-
-    pub fn is_consume(&self) -> bool {
-        self.consume
     }
 }
 
@@ -188,36 +205,43 @@ where
         }
     }
 
-    fn r#match(&mut self, uid: Uid, set: &mut Self::Set) -> Result<Self::Ret, Error> {
-        if let Some(opt) = set.get(uid) {
-            let mut matched = opt.mat_style(self.style);
+    fn r#match(
+        &mut self,
+        uid: Uid,
+        set: &mut Self::Set,
+        fst: bool,
+        consume: bool,
+    ) -> Result<Self::Ret, Error> {
+        if !(self.matched() && fst) {
+            if let Some(opt) = set.get(uid) {
+                let mut matched = opt.mat_style(self.style);
 
-            if matched {
-                if !opt.ignore_name() {
-                    matched = opt.mat_name(self.name());
+                if matched {
+                    if !opt.ignore_name() {
+                        matched = opt.mat_name(self.name());
+                    }
+                    if !opt.ignore_alias() && opt.alias().is_some() {
+                        matched = matched || opt.mat_alias(self.name.as_ref().unwrap())
+                    }
+                    if !opt.ignore_index() {
+                        matched = matched && {
+                            if opt.index().is_some() {
+                                opt.mat_index(Some((self.index, self.total)))
+                            } else {
+                                false
+                            }
+                        };
+                    }
                 }
-                if !opt.ignore_alias() && opt.alias().is_some() {
-                    matched = matched || opt.mat_alias(&self.name)
+                if matched {
+                    if consume && self.arg.is_none() {
+                        return Err(Error::sp_missing_opt_value(opt.hint()).with_uid(uid));
+                    }
+                    self.set_uid(uid);
                 }
-                if !opt.ignore_index() {
-                    matched = matched && {
-                        if opt.index().is_some() {
-                            opt.mat_index(Some((self.index, self.total)))
-                        } else {
-                            false
-                        }
-                    };
-                }
+                return Ok(matched);
             }
-            if matched {
-                if self.is_consume() && self.arg.is_none() {
-                    return Err(Error::sp_missing_opt_value(opt.hint()).with_uid(uid));
-                }
-                self.set_uid(uid);
-            }
-            Ok(matched)
-        } else {
-            Ok(false)
         }
+        Ok(false)
     }
 }

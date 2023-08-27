@@ -1,11 +1,16 @@
-mod delay;
-mod first;
 mod invoke;
 mod multi;
 mod noa;
 mod single;
 mod style;
 
+use crate::args::Args;
+use crate::opt::Opt;
+use crate::opt::Style;
+use crate::prelude::InnerCtx;
+use crate::set::Set;
+use crate::set::SetOpt;
+use crate::ARef;
 ///
 /// argument boolean/flag embedded equalwithvalue - generate one guess
 ///     - invoke
@@ -51,64 +56,67 @@ mod style;
 ///         not support
 ///
 use crate::Error;
-use crate::Uid;
-use crate::args::Args;
-use crate::opt::Opt;
-use crate::opt::Style;
-use crate::set::Set;
-use crate::set::SetOpt;
-use crate::ARef;
 use crate::RawVal;
 use crate::Str;
+use crate::Uid;
 
 // pub use self::delay::DelayGuess;
 // pub use self::delay::InnerCtxSaver;
-pub use self::first::FirstOpt;
 pub use self::invoke::InvokeGuess;
 pub use self::multi::MultiOpt;
 pub use self::noa::SingleNonOpt;
 pub use self::single::SingleOpt;
 
 #[derive(Debug, Clone, Copy, Default)]
-pub struct SimpleMatRes {
+pub struct SimpleMatRet {
     pub matched: bool,
 
     pub consume: bool,
 }
 
-impl SimpleMatRes {
+impl SimpleMatRet {
     pub fn new(matched: bool, consume: bool) -> Self {
         Self { matched, consume }
     }
 }
 
-pub trait GuessPolicy<S> {
-    type All;
-    type First;
+pub trait GuessPolicy<Sty, Policy> {
     type Error: Into<Error>;
 
-    fn guess_all(&mut self) -> Result<Option<Self::All>, Self::Error>;
-
-    fn guess_first(&mut self) -> Result<Option<Self::First>, Self::Error>;
+    fn guess_policy(&mut self) -> Result<Option<Policy>, Self::Error>;
 }
 
-pub trait GuessOpt<T> {
-    type Ret;
-    type Policy;
-    type Error: Into<Error>;
+#[derive(Debug, Clone, Default)]
+pub struct PolicyInnerCtx {
+    pub uids: Vec<Uid>,
 
-    fn guess_policy(&mut self) -> Result<Self::Policy, Self::Error>;
-
-    fn guess_opt(&mut self, policy: &mut Self::Policy) -> Result<Self::Ret, Self::Error>;
+    pub inner_ctx: InnerCtx,
 }
 
-pub trait Process<Policy> {
-    type Ret;
-    type Error: Into<Error>;
+#[derive(Debug, Clone, Default)]
+pub struct InnerCtxSaver {
+    pub any_match: bool,
 
-    fn match_all(&mut self, policy: &mut Policy) -> Result<bool, Self::Error>;
+    pub consume: bool,
 
-    fn invoke_handler(&mut self, policy: &mut Policy) -> Result<Self::Ret, Self::Error>;
+    pub policy_ctx: Vec<PolicyInnerCtx>,
+}
+
+impl InnerCtxSaver {
+    pub fn with_any_match(mut self, any_match: bool) -> Self {
+        self.any_match = any_match;
+        self
+    }
+
+    pub fn with_consume(mut self, consume: bool) -> Self {
+        self.consume = consume;
+        self
+    }
+
+    pub fn with_policy_ctx(mut self, policy_ctx: Vec<PolicyInnerCtx>) -> Self {
+        self.policy_ctx = policy_ctx;
+        self
+    }
 }
 
 pub trait MatchPolicy {
@@ -126,19 +134,39 @@ pub trait MatchPolicy {
 
     fn filter(&mut self, uid: Uid, set: &mut Self::Set) -> bool;
 
-    fn r#match(&mut self, uid: Uid, set: &mut Self::Set) -> Result<Self::Ret, Self::Error>;
+    fn r#match(
+        &mut self,
+        uid: Uid,
+        set: &mut Self::Set,
+        fst: bool,
+        consume: bool,
+    ) -> Result<Self::Ret, Self::Error>;
+}
+
+pub trait PolicyConfig {
+    fn idx(&self) -> usize;
+
+    fn tot(&self) -> usize;
+
+    fn name(&self) -> Option<&Str>;
+
+    fn style(&self) -> Style;
+
+    fn arg(&self) -> Option<ARef<RawVal>>;
+
+    fn uids(&self) -> &[Uid];
+
+    fn collect_ctx(&self) -> Option<PolicyInnerCtx>;
 }
 
 pub trait PolicyBuild {
-    fn with_name(self, name: Str) -> Self;
+    fn with_name(self, name: Option<Str>) -> Self;
 
     fn with_style(self, style: Style) -> Self;
 
     fn with_idx(self, index: usize) -> Self;
 
-    fn with_total(self, total: usize) -> Self;
-
-    fn with_consume(self, consume: bool) -> Self;
+    fn with_tot(self, total: usize) -> Self;
 
     fn with_arg(self, argument: Option<ARef<RawVal>>) -> Self;
 
