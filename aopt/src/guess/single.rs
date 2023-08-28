@@ -209,10 +209,10 @@ where
         &mut self,
         uid: Uid,
         set: &mut Self::Set,
-        fst: bool,
+        overload: bool,
         consume: bool,
     ) -> Result<Self::Ret, Error> {
-        if !(self.matched() && fst) {
+        if overload || !self.matched() {
             if let Some(opt) = set.get(uid) {
                 let mut matched = opt.mat_style(self.style);
 

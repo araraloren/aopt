@@ -104,11 +104,15 @@ pub trait PolicySettings {
 
     fn no_delay(&self) -> Option<&[Str]>;
 
+    fn overload(&self) -> bool;
+
     fn set_strict(&mut self, strict: bool) -> &mut Self;
 
     fn set_styles(&mut self, styles: Vec<UserStyle>) -> &mut Self;
 
     fn set_no_delay(&mut self, name: impl Into<Str>) -> &mut Self;
+
+    fn set_overload(&mut self, overload: bool) -> &mut Self;
 }
 
 pub trait PolicyParser<P>
@@ -321,11 +325,15 @@ where
     }
 
     fn styles(&self) -> &[UserStyle] {
-        self.policy.styles()
+        self.policy().styles()
     }
 
     fn no_delay(&self) -> Option<&[Str]> {
         self.policy().no_delay()
+    }
+
+    fn overload(&self) -> bool {
+        self.policy().overload()
     }
 
     fn set_strict(&mut self, strict: bool) -> &mut Self {
@@ -340,6 +348,11 @@ where
 
     fn set_no_delay(&mut self, name: impl Into<Str>) -> &mut Self {
         self.policy_mut().set_no_delay(name);
+        self
+    }
+
+    fn set_overload(&mut self, overload: bool) -> &mut Self {
+        self.policy_mut().set_overload(overload);
         self
     }
 }

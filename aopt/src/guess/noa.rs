@@ -211,7 +211,7 @@ where
         &mut self,
         uid: Uid,
         set: &mut Self::Set,
-        _fst: bool,
+        _overload: bool,
         _consume: bool,
     ) -> Result<Self::Ret, Error> {
         if let Some(opt) = set.get(uid) {

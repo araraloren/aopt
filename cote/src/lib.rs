@@ -215,6 +215,10 @@ impl<'inv, Set, Ser> PolicySettings for NullPolicy<'inv, Set, Ser> {
         None
     }
 
+    fn overload(&self) -> bool {
+        false
+    }
+
     fn set_strict(&mut self, _: bool) -> &mut Self {
         self
     }
@@ -224,6 +228,10 @@ impl<'inv, Set, Ser> PolicySettings for NullPolicy<'inv, Set, Ser> {
     }
 
     fn set_no_delay(&mut self, _: impl Into<aopt::Str>) -> &mut Self {
+        self
+    }
+
+    fn set_overload(&mut self, _: bool) -> &mut Self {
         self
     }
 }

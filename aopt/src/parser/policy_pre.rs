@@ -112,6 +112,8 @@ use crate::Str;
 pub struct PrePolicy<Set, Ser, Chk> {
     strict: bool,
 
+    overload: bool,
+
     style_manager: OptStyleManager,
 
     checker: Chk,
@@ -126,6 +128,7 @@ where
     fn clone(&self) -> Self {
         Self {
             strict: self.strict,
+            overload: self.overload,
             style_manager: self.style_manager.clone(),
             checker: self.checker.clone(),
             marker_s: self.marker_s,
@@ -140,6 +143,7 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PrePolicy")
             .field("strict", &self.strict)
+            .field("overload", &self.overload)
             .field("style_manager", &self.style_manager)
             .field("checker", &self.checker)
             .finish()
@@ -153,6 +157,7 @@ where
     fn default() -> Self {
         Self {
             strict: false,
+            overload: false,
             style_manager: OptStyleManager::default(),
             checker: Chk::default(),
             marker_s: PhantomData,
@@ -188,6 +193,11 @@ impl<Set, Ser, Chk> PrePolicy<Set, Ser, Chk> {
 
     pub fn with_checker(mut self, checker: Chk) -> Self {
         self.checker = checker;
+        self
+    }
+
+    pub fn with_overload(mut self, overload: bool) -> Self {
+        self.overload = overload;
         self
     }
 
@@ -252,6 +262,10 @@ impl<Set, Ser, Chk> PolicySettings for PrePolicy<Set, Ser, Chk> {
         None
     }
 
+    fn overload(&self) -> bool {
+        self.overload
+    }
+
     fn set_strict(&mut self, strict: bool) -> &mut Self {
         self.strict = strict;
         self
@@ -263,6 +277,11 @@ impl<Set, Ser, Chk> PolicySettings for PrePolicy<Set, Ser, Chk> {
     }
 
     fn set_no_delay(&mut self, _: impl Into<Str>) -> &mut Self {
+        self
+    }
+
+    fn set_overload(&mut self, overload: bool) -> &mut Self {
+        self.overload = overload;
         self
     }
 }
@@ -282,6 +301,7 @@ where
     ) -> Result<(), <Self as Policy>::Error> {
         self.checker().pre_check(set).map_err(|e| e.into())?;
 
+        let overload = self.overload();
         let opt_styles = &self.style_manager;
         let args = ctx.orig_args().clone();
         let tot = args.len();
@@ -319,7 +339,7 @@ where
 
                             for style in opt_styles.iter() {
                                 if let Some(Some(ret)) =
-                                    Self::ig_failure(guess.guess_and_invoke(style, true))?
+                                    Self::ig_failure(guess.guess_and_invoke(style, overload))?
                                 {
                                     (matched, consume) = (ret.matched, ret.consume);
                                 }
@@ -367,7 +387,7 @@ where
                 idx: Self::noa_cmd(),
             };
 
-            Self::ig_failure(guess.guess_and_invoke(&UserStyle::Cmd, true))?;
+            Self::ig_failure(guess.guess_and_invoke(&UserStyle::Cmd, overload))?;
             cmd_fail.process(self.checker().cmd_check(set))?;
 
             let mut guess = InvokeGuess {
@@ -389,7 +409,7 @@ where
                     .get(Self::noa_pos(idx))
                     .and_then(|v| v.get_str())
                     .map(Str::from);
-                Self::ig_failure(guess.guess_and_invoke(&UserStyle::Pos, true))?;
+                Self::ig_failure(guess.guess_and_invoke(&UserStyle::Pos, overload))?;
             }
         } else {
             cmd_fail.process(self.checker().cmd_check(set))?;
@@ -418,7 +438,7 @@ where
             idx: Self::noa_main(),
         };
 
-        Self::ig_failure(guess.guess_and_invoke(&UserStyle::Main, true))?;
+        Self::ig_failure(guess.guess_and_invoke(&UserStyle::Main, overload))?;
         main_fail.process(self.checker().post_check(set))?;
         Ok(())
     }

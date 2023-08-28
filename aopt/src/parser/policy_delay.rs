@@ -122,6 +122,8 @@ pub struct DelayCtxSaver {
 pub struct DelayPolicy<Set, Ser, Chk> {
     strict: bool,
 
+    overload: bool,
+
     contexts: Vec<DelayCtxSaver>,
 
     checker: Chk,
@@ -140,6 +142,7 @@ where
     fn clone(&self) -> Self {
         Self {
             strict: self.strict,
+            overload: self.overload,
             contexts: self.contexts.clone(),
             checker: self.checker.clone(),
             style_manager: self.style_manager.clone(),
@@ -156,6 +159,7 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DelayPolicy")
             .field("strict", &self.strict)
+            .field("overload", &self.overload)
             .field("contexts", &self.contexts)
             .field("checker", &self.checker)
             .field("style_manager", &self.style_manager)
@@ -171,6 +175,7 @@ where
     fn default() -> Self {
         Self {
             strict: true,
+            overload: false,
             contexts: vec![],
             checker: Chk::default(),
             style_manager: OptStyleManager::default(),
@@ -212,6 +217,11 @@ impl<Set, Ser, Chk> DelayPolicy<Set, Ser, Chk> {
 
     pub fn with_checker(mut self, checker: Chk) -> Self {
         self.checker = checker;
+        self
+    }
+
+    pub fn with_overload(mut self, overload: bool) -> Self {
+        self.overload = overload;
         self
     }
 
@@ -262,6 +272,10 @@ impl<Set, Ser, Chk> PolicySettings for DelayPolicy<Set, Ser, Chk> {
         Some(&self.no_delay_opt)
     }
 
+    fn overload(&self) -> bool {
+        self.overload
+    }
+
     fn set_strict(&mut self, strict: bool) -> &mut Self {
         self.strict = strict;
         self
@@ -274,6 +288,11 @@ impl<Set, Ser, Chk> PolicySettings for DelayPolicy<Set, Ser, Chk> {
 
     fn set_no_delay(&mut self, name: impl Into<Str>) -> &mut Self {
         self.no_delay_opt.push(name.into());
+        self
+    }
+
+    fn set_overload(&mut self, overload: bool) -> &mut Self {
+        self.overload = overload;
         self
     }
 }
@@ -443,7 +462,7 @@ where
     ) -> Result<(), <Self as Policy>::Error> {
         self.checker().pre_check(set).map_err(|e| e.into())?;
 
-        // take the invoke service, avoid borrow the ser
+        let overload = self.overload();
         let opt_styles = self.style_manager.clone();
         let args = ctx.orig_args().clone();
         let tot = args.len();
@@ -479,7 +498,7 @@ where
 
                         trace_log!("Guess command line clopt = {:?} & next = {:?}", clopt, next);
                         for style in opt_styles.iter() {
-                            if let Some(ret) = guess.guess_and_collect(style, true)? {
+                            if let Some(ret) = guess.guess_and_collect(style, overload)? {
                                 // pretend we are matched, cause it is delay
                                 matched = true;
                                 consume = ret.consume;
@@ -535,7 +554,7 @@ where
             };
 
             trace_log!("Guess CMD = {:?}", guess.name);
-            guess.guess_and_invoke(&UserStyle::Cmd, true)?;
+            guess.guess_and_invoke(&UserStyle::Cmd, overload)?;
             cmd_fail.process(self.checker().cmd_check(set))?;
 
             let mut guess = InvokeGuess {
@@ -558,7 +577,7 @@ where
                     .and_then(|v| v.get_str())
                     .map(Str::from);
                 trace_log!("Guess POS argument = {:?} @ {}", guess.name, guess.idx);
-                guess.guess_and_invoke(&UserStyle::Pos, true)?;
+                guess.guess_and_invoke(&UserStyle::Pos, overload)?;
             }
         } else {
             cmd_fail.process(self.checker().cmd_check(set))?;
@@ -602,7 +621,7 @@ where
             idx: Self::noa_main(),
         };
 
-        guess.guess_and_invoke(&UserStyle::Main, true)?;
+        guess.guess_and_invoke(&UserStyle::Main, overload)?;
         main_fail.process(self.checker().post_check(set))?;
         Ok(())
     }

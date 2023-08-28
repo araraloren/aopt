@@ -178,7 +178,7 @@ where
     pub fn guess_and_invoke(
         &mut self,
         style: &UserStyle,
-        fst: bool,
+        overload: bool,
     ) -> Result<Option<SimpleMatRet>, Error> {
         let mut matched = false;
         let mut consume = false;
@@ -188,7 +188,7 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<MainStyle, SingleNonOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, fst, consume)? {
+                    if self.r#match(&mut policy, overload, consume)? {
                         matched = self.invoke(&mut policy)?;
                     }
                 }
@@ -197,7 +197,7 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<PosStyle, SingleNonOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, fst, consume)? {
+                    if self.r#match(&mut policy, overload, consume)? {
                         matched = self.invoke(&mut policy)?;
                     }
                 }
@@ -206,7 +206,7 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<CmdStyle, SingleNonOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, fst, consume)? {
+                    if self.r#match(&mut policy, overload, consume)? {
                         matched = self.invoke(&mut policy)?;
                     }
                 }
@@ -215,7 +215,7 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<EqualWithValuStyle, SingleOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, fst, consume)? {
+                    if self.r#match(&mut policy, overload, consume)? {
                         matched = self.invoke(&mut policy)?;
                     }
                 }
@@ -225,7 +225,7 @@ where
                     GuessPolicy::<ArgumentStyle, SingleOpt<Set>>::guess_policy(self)?
                 {
                     consume = true;
-                    if self.r#match(&mut policy, fst, consume)? {
+                    if self.r#match(&mut policy, overload, consume)? {
                         matched = self.invoke(&mut policy)?;
                     }
                 }
@@ -234,7 +234,7 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<EmbeddedValueStyle, SingleOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, fst, consume)? {
+                    if self.r#match(&mut policy, overload, consume)? {
                         matched = self.invoke(&mut policy)?;
                     }
                 }
@@ -245,7 +245,7 @@ where
                     MultiOpt<SingleOpt<Set>, Set>,
                 >::guess_policy(self)?
                 {
-                    if self.match_multi(&mut policy, fst, consume)? {
+                    if self.match_multi(&mut policy, overload, consume)? {
                         matched = self.invoke_multi(&mut policy)?;
                     }
                 }
@@ -256,7 +256,7 @@ where
                     MultiOpt<SingleOpt<Set>, Set>,
                 >::guess_policy(self)?
                 {
-                    if self.match_multi(&mut policy, fst, consume)? {
+                    if self.match_multi(&mut policy, overload, consume)? {
                         matched = self.invoke_multi(&mut policy)?;
                     }
                 }
@@ -265,7 +265,7 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<BooleanStyle, SingleOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, fst, consume)? {
+                    if self.r#match(&mut policy, overload, consume)? {
                         matched = self.invoke(&mut policy)?;
                     }
                 }
@@ -274,16 +274,16 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<FlagStyle, SingleOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, fst, consume)? {
+                    if self.r#match(&mut policy, overload, consume)? {
                         matched = self.invoke(&mut policy)?;
                     }
                 }
             }
         }
         trace_log!(
-            "Guess style = {:?}, fst = {} ---> matched = {}, consume = {}",
+            "Guess style = {:?}, overload = {} ---> matched = {}, consume = {}",
             style,
-            fst,
+            overload,
             matched,
             consume
         );
@@ -293,7 +293,7 @@ where
     pub fn guess_and_collect(
         &mut self,
         style: &UserStyle,
-        fst: bool,
+        overload: bool,
     ) -> Result<Option<InnerCtxSaver>, Error> {
         let mut ret = None;
 
@@ -302,7 +302,7 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<MainStyle, SingleNonOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, fst, false)? {
+                    if self.r#match(&mut policy, overload, false)? {
                         ret = policy.collect_ctx().map(|inner_ctx| {
                             InnerCtxSaver::default().with_policy_ctx(vec![inner_ctx])
                         });
@@ -313,7 +313,7 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<PosStyle, SingleNonOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, fst, false)? {
+                    if self.r#match(&mut policy, overload, false)? {
                         ret = policy.collect_ctx().map(|inner_ctx| {
                             InnerCtxSaver::default().with_policy_ctx(vec![inner_ctx])
                         });
@@ -324,7 +324,7 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<CmdStyle, SingleNonOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, fst, false)? {
+                    if self.r#match(&mut policy, overload, false)? {
                         ret = policy.collect_ctx().map(|inner_ctx| {
                             InnerCtxSaver::default().with_policy_ctx(vec![inner_ctx])
                         });
@@ -335,7 +335,7 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<EqualWithValuStyle, SingleOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, fst, false)? {
+                    if self.r#match(&mut policy, overload, false)? {
                         ret = policy.collect_ctx().map(|inner_ctx| {
                             InnerCtxSaver::default().with_policy_ctx(vec![inner_ctx])
                         });
@@ -346,7 +346,7 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<ArgumentStyle, SingleOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, fst, true)? {
+                    if self.r#match(&mut policy, overload, true)? {
                         ret = policy.collect_ctx().map(|inner_ctx| {
                             InnerCtxSaver::default()
                                 .with_policy_ctx(vec![inner_ctx])
@@ -359,7 +359,7 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<EmbeddedValueStyle, SingleOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, fst, false)? {
+                    if self.r#match(&mut policy, overload, false)? {
                         ret = policy.collect_ctx().map(|inner_ctx| {
                             InnerCtxSaver::default().with_policy_ctx(vec![inner_ctx])
                         });
@@ -372,7 +372,7 @@ where
                     MultiOpt<SingleOpt<Set>, Set>,
                 >::guess_policy(self)?
                 {
-                    if self.match_multi(&mut policy, fst, false)? {
+                    if self.match_multi(&mut policy, overload, false)? {
                         ret = Some(self.collect_ctxs(&mut policy, false)?);
                     }
                 }
@@ -383,7 +383,7 @@ where
                     MultiOpt<SingleOpt<Set>, Set>,
                 >::guess_policy(self)?
                 {
-                    if self.match_multi(&mut policy, fst, false)? {
+                    if self.match_multi(&mut policy, overload, false)? {
                         ret = Some(self.collect_ctxs(&mut policy, false)?);
                     }
                 }
@@ -392,7 +392,7 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<BooleanStyle, SingleOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, fst, false)? {
+                    if self.r#match(&mut policy, overload, false)? {
                         ret = policy.collect_ctx().map(|inner_ctx| {
                             InnerCtxSaver::default().with_policy_ctx(vec![inner_ctx])
                         });
@@ -403,7 +403,7 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<FlagStyle, SingleOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, fst, false)? {
+                    if self.r#match(&mut policy, overload, false)? {
                         ret = policy.collect_ctx().map(|inner_ctx| {
                             InnerCtxSaver::default().with_policy_ctx(vec![inner_ctx])
                         });
@@ -412,7 +412,12 @@ where
             }
         }
         if ret.is_some() {
-            trace_log!("Guess style = {:?}, fst = {}, ret == {:?}", style, fst, ret);
+            trace_log!(
+                "Guess style = {:?}, overload = {}, ret == {:?}",
+                style,
+                overload,
+                ret
+            );
         }
         Ok(ret)
     }
@@ -723,16 +728,21 @@ where
     Set: crate::set::Set,
     Inv: HandlerCollection<'b, Set, Ser>,
 {
-    pub fn r#match<T>(&mut self, policy: &mut T, fst: bool, consume: bool) -> Result<bool, Error>
+    pub fn r#match<T>(
+        &mut self,
+        policy: &mut T,
+        overload: bool,
+        consume: bool,
+    ) -> Result<bool, Error>
     where
         T: PolicyConfig + MatchPolicy<Set = Set>,
     {
         let uids = self.set.keys();
 
         for uid in uids {
-            // if fst is false select all the option may match the `policy`
+            // if overload is true select all the option may match the `policy`
             if !policy.filter(uid, self.set) {
-                if let Err(e) = policy.r#match(uid, self.set, fst, consume) {
+                if let Err(e) = policy.r#match(uid, self.set, overload, consume) {
                     let e = e.into();
 
                     if e.is_failure() {
@@ -751,7 +761,7 @@ where
     fn match_multi(
         &mut self,
         policy: &mut MultiOpt<SingleOpt<Set>, Set>,
-        fst: bool,
+        overload: bool,
         consume: bool,
     ) -> Result<bool, Error> {
         let uids = self.set.keys();
@@ -762,7 +772,7 @@ where
             // process all uids with each policy first
             for uid in uids.iter() {
                 if !sub_policy.filter(*uid, self.set) {
-                    if let Err(e) = self.r#match(sub_policy, fst, consume) {
+                    if let Err(e) = self.r#match(sub_policy, overload, consume) {
                         if e.is_failure() {
                             self.fail.push(e);
                         } else {
