@@ -5,7 +5,6 @@ pub(crate) mod optset;
 pub(crate) mod policy_delay;
 pub(crate) mod policy_fwd;
 pub(crate) mod policy_pre;
-pub(crate) mod process;
 pub(crate) mod returnval;
 pub(crate) mod style;
 
@@ -18,18 +17,8 @@ pub use self::policy_delay::DelayPolicy;
 pub use self::policy_fwd::FwdPolicy;
 pub use self::policy_pre::PrePolicy;
 pub use self::returnval::ReturnVal;
-pub use self::style::Guess;
-pub use self::style::GuessNOACfg;
-pub use self::style::GuessOptCfg;
-pub use self::style::NOAGuess;
-pub use self::style::OptGuess;
 pub use self::style::OptStyleManager;
 pub use self::style::UserStyle;
-
-pub(crate) use self::process::process_callback_ret;
-pub(crate) use self::process::process_non_opt;
-pub(crate) use self::process::process_opt;
-pub(crate) use self::process::ProcessCtx;
 
 use std::fmt::Debug;
 use std::ops::Deref;

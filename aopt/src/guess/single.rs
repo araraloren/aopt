@@ -2,9 +2,9 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use crate::args::Args;
+use crate::ctx::InnerCtx;
 use crate::opt::Opt;
 use crate::opt::Style;
-use crate::prelude::InnerCtx;
 use crate::set::Set;
 use crate::set::SetOpt;
 use crate::ARef;
@@ -40,13 +40,13 @@ impl<S> Clone for SingleOpt<S> {
     fn clone(&self) -> Self {
         Self {
             name: self.name.clone(),
-            style: self.style.clone(),
+            style: self.style,
             arg: self.arg.clone(),
             args: self.args.clone(),
             uids: self.uids.clone(),
-            index: self.index.clone(),
-            total: self.total.clone(),
-            marker: self.marker.clone(),
+            index: self.index,
+            total: self.total,
+            marker: self.marker,
         }
     }
 }

@@ -12,9 +12,10 @@ pub mod valid;
 use std::marker::PhantomData;
 
 pub use aopt;
-use aopt::prelude::OptStyleManager;
 pub use aopt_help;
 pub use cote_derive;
+
+use aopt::prelude::OptStyleManager;
 
 pub use aopt::ext::ctx;
 pub use aopt::opt::Any;
@@ -49,7 +50,6 @@ pub use aopt::prelude::Infer;
 pub use aopt::prelude::Information;
 pub use aopt::prelude::InitializeValue;
 pub use aopt::prelude::Invoker;
-pub use aopt::prelude::Match;
 pub use aopt::prelude::Opt;
 pub use aopt::prelude::OptParser;
 pub use aopt::prelude::OptValidator;
@@ -58,7 +58,6 @@ pub use aopt::prelude::Policy;
 pub use aopt::prelude::PolicyParser;
 pub use aopt::prelude::PolicySettings;
 pub use aopt::prelude::PrefixOptValidator;
-pub use aopt::prelude::Process;
 pub use aopt::prelude::RawValParser;
 pub use aopt::prelude::ReturnVal;
 pub use aopt::prelude::ServicesExt;

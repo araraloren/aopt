@@ -2,15 +2,35 @@ mod invoke;
 mod multi;
 mod noa;
 mod single;
-mod style;
+pub mod style;
 
 use crate::args::Args;
-use crate::opt::Opt;
+use crate::ctx::InnerCtx;
 use crate::opt::Style;
-use crate::prelude::InnerCtx;
-use crate::set::Set;
-use crate::set::SetOpt;
 use crate::ARef;
+use crate::Error;
+use crate::RawVal;
+use crate::Str;
+use crate::Uid;
+
+pub use self::invoke::InvokeGuess;
+pub use self::multi::MultiOpt;
+pub use self::noa::SingleNonOpt;
+pub use self::single::SingleOpt;
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SimpleMatRet {
+    pub matched: bool,
+
+    pub consume: bool,
+}
+
+impl SimpleMatRet {
+    pub fn new(matched: bool, consume: bool) -> Self {
+        Self { matched, consume }
+    }
+}
+
 ///
 /// argument boolean/flag embedded equalwithvalue - generate one guess
 ///     - invoke
@@ -55,31 +75,6 @@ use crate::ARef;
 ///     - delay mode
 ///         not support
 ///
-use crate::Error;
-use crate::RawVal;
-use crate::Str;
-use crate::Uid;
-
-// pub use self::delay::DelayGuess;
-// pub use self::delay::InnerCtxSaver;
-pub use self::invoke::InvokeGuess;
-pub use self::multi::MultiOpt;
-pub use self::noa::SingleNonOpt;
-pub use self::single::SingleOpt;
-
-#[derive(Debug, Clone, Copy, Default)]
-pub struct SimpleMatRet {
-    pub matched: bool,
-
-    pub consume: bool,
-}
-
-impl SimpleMatRet {
-    pub fn new(matched: bool, consume: bool) -> Self {
-        Self { matched, consume }
-    }
-}
-
 pub trait GuessPolicy<Sty, Policy> {
     type Error: Into<Error>;
 
@@ -173,6 +168,10 @@ pub trait PolicyBuild {
     fn with_args(self, args: ARef<Args>) -> Self;
 }
 
+/// Process the return value of handler:
+/// call the callback `when_ret` and return the return value of handler if `Ok`;
+/// ignore failure and call the callback `when_fail` on the failure if `Err`
+/// or the return the `Err`.
 pub fn process_handler_ret(
     ret: Result<bool, Error>,
     mut when_ret: impl FnMut(bool) -> Result<(), Error>,

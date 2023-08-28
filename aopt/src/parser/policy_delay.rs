@@ -1,39 +1,27 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-use super::process_callback_ret;
-use super::process_non_opt;
-use super::process_opt;
-use super::CtxSaver;
-use super::Guess;
-use super::GuessNOACfg;
-use super::GuessOptCfg;
-use super::NOAGuess;
-use super::OptGuess;
 use super::OptStyleManager;
 use super::Policy;
 use super::PolicySettings;
-use super::ProcessCtx;
 use super::ReturnVal;
 use super::UserStyle;
 use crate::args::ArgParser;
 use crate::args::Args;
-use crate::astr;
 use crate::ctx::Ctx;
+use crate::ctx::HandlerCollection;
+use crate::ctx::InnerCtx;
 use crate::ctx::Invoker;
+use crate::guess::process_handler_ret;
 use crate::guess::InnerCtxSaver;
 use crate::guess::InvokeGuess;
-use crate::guess::PolicyInnerCtx;
 use crate::guess::SimpleMatRet;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::parser::FailManager;
-use crate::prelude::HandlerCollection;
-use crate::prelude::InnerCtx;
-use crate::prelude::SetExt;
-use crate::proc::Process;
 use crate::set::OptValidator;
 use crate::set::SetChecker;
+use crate::set::SetExt;
 use crate::set::SetOpt;
 use crate::trace_log;
 use crate::ARef;
@@ -282,6 +270,8 @@ where
     Set: crate::set::Set + OptParser,
 {
     // ignore failure
+    #[allow(clippy::too_many_arguments)]
+    #[inline(always)]
     pub fn invoke_opt_callback<'a, Inv>(
         &mut self,
         uid: Uid,
@@ -295,13 +285,13 @@ where
     where
         Inv: HandlerCollection<'a, Set, Ser>,
     {
-        let fail = |e: &Error| {
-            fail.push(e.clone());
+        let fail = |e: Error| {
+            fail.push(e);
             Ok(())
         };
 
         ctx.set_inner_ctx(Some(inner_ctx.with_uid(uid)));
-        let ret = process_callback_ret(inv.invoke_fb(&uid, set, ser, ctx), |_| Ok(()), fail)?;
+        let ret = process_handler_ret(inv.invoke_fb(&uid, set, ser, ctx), |_| Ok(()), fail)?;
 
         set.opt_mut(uid)?.set_matched(ret);
         Ok(ret)
@@ -351,10 +341,8 @@ where
                 }
                 matched = matched || ret;
             }
-            if !any_match {
-                if !matched {
-                    return Ok(SimpleMatRet::new(false, false));
-                }
+            if !any_match && !matched {
+                return Ok(SimpleMatRet::new(false, false));
             }
         }
         Ok(SimpleMatRet::new(true, consume))
@@ -509,6 +497,7 @@ where
         let tot = noa_args.len();
         let mut pos_fail = FailManager::default();
         let mut cmd_fail = FailManager::default();
+        let mut prev_ctx = ctx.clone();
 
         ctx.set_args(noa_args.clone());
         // when style is pos, noa index is [1..=len]
@@ -563,12 +552,13 @@ where
         trace_log!("Invoke the handler of option");
         // after cmd and pos callback invoked, invoke the callback of option
         for saver in std::mem::take(&mut self.contexts) {
-            let ret = self.process_delay_ctx(ctx, set, inv, ser, &mut opt_fail, saver)?;
+            let ret = self.process_delay_ctx(&mut prev_ctx, set, inv, ser, &mut opt_fail, saver)?;
 
             if !ret.matched && self.strict() {
-                return Err(
-                    opt_fail.cause(crate::raise_error!("Option match failed, Ctx = {:?}", ctx))
-                );
+                return Err(opt_fail.cause(crate::raise_error!(
+                    "Option match failed, Ctx = {:?}",
+                    prev_ctx
+                )));
             }
         }
 

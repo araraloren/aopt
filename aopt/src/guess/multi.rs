@@ -36,9 +36,9 @@ where
 {
     fn clone(&self) -> Self {
         Self {
-            any_match: self.any_match.clone(),
+            any_match: self.any_match,
             sub_policys: self.sub_policys.clone(),
-            marker: self.marker.clone(),
+            marker: self.marker,
         }
     }
 }
