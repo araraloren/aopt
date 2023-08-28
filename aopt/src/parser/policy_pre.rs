@@ -109,7 +109,6 @@ use crate::Str;
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Clone)]
 pub struct PrePolicy<Set, Ser, Chk> {
     strict: bool,
 
@@ -118,6 +117,20 @@ pub struct PrePolicy<Set, Ser, Chk> {
     checker: Chk,
 
     marker_s: PhantomData<(Set, Ser)>,
+}
+
+impl<Set, Ser, Chk> Clone for PrePolicy<Set, Ser, Chk>
+where
+    Chk: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            strict: self.strict,
+            style_manager: self.style_manager.clone(),
+            checker: self.checker.clone(),
+            marker_s: self.marker_s,
+        }
+    }
 }
 
 impl<Set, Ser, Chk> Debug for PrePolicy<Set, Ser, Chk>

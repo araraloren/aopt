@@ -119,7 +119,6 @@ pub struct DelayCtxSaver {
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Clone)]
 pub struct DelayPolicy<Set, Ser, Chk> {
     strict: bool,
 
@@ -132,6 +131,22 @@ pub struct DelayPolicy<Set, Ser, Chk> {
     no_delay_opt: Vec<Str>,
 
     marker_s: PhantomData<(Set, Ser)>,
+}
+
+impl<Set, Ser, Chk> Clone for DelayPolicy<Set, Ser, Chk>
+where
+    Chk: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            strict: self.strict,
+            contexts: self.contexts.clone(),
+            checker: self.checker.clone(),
+            style_manager: self.style_manager.clone(),
+            no_delay_opt: self.no_delay_opt.clone(),
+            marker_s: self.marker_s,
+        }
+    }
 }
 
 impl<Set, Ser, Chk> Debug for DelayPolicy<Set, Ser, Chk>

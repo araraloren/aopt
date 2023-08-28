@@ -91,7 +91,6 @@ use crate::Str;
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Clone)]
 pub struct FwdPolicy<Set, Ser, Chk> {
     strict: bool,
 
@@ -100,6 +99,20 @@ pub struct FwdPolicy<Set, Ser, Chk> {
     style_manager: OptStyleManager,
 
     marker_s: PhantomData<(Set, Ser)>,
+}
+
+impl<Set, Ser, Chk> Clone for FwdPolicy<Set, Ser, Chk>
+where
+    Chk: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            strict: self.strict,
+            checker: self.checker.clone(),
+            style_manager: self.style_manager.clone(),
+            marker_s: self.marker_s,
+        }
+    }
 }
 
 impl<Set, Ser, Chk> Debug for FwdPolicy<Set, Ser, Chk>
