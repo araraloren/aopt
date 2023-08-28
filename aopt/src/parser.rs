@@ -136,23 +136,6 @@ where
         self.parse_policy(args, &mut policy)
     }
 
-    fn parse_env_args(&mut self) -> Result<P::Ret, Self::Error>
-    where
-        P: Default,
-    {
-        let mut policy = P::default();
-        let args = ARef::new(Args::from_env());
-        self.parse_policy(args, &mut policy)
-    }
-
-    fn parse_args(&mut self, args: ARef<Args>) -> Result<P::Ret, Self::Error>
-    where
-        P: Default,
-    {
-        let mut policy = P::default();
-        self.parse_policy(args, &mut policy)
-    }
-
     fn parse_env_policy(&mut self, policy: &mut P) -> Result<P::Ret, Self::Error> {
         let args = ARef::new(Args::from_env());
         self.parse_policy(args, policy)
@@ -306,6 +289,10 @@ where
     pub fn init(&mut self) -> Result<(), Error> {
         self.optset.init()
     }
+
+    pub fn parse(&mut self, args: ARef<Args>) -> Result<<P as Policy>::Ret, Error> {
+        PolicyParser::<P>::parse_policy(&mut self.optset, args, &mut self.policy)
+    }
 }
 
 impl<'a, P> PolicySettings for Parser<'a, P>
@@ -392,6 +379,13 @@ where
     P::Set: crate::set::Set,
 {
     type Error = Error;
+
+    fn parse(&mut self, args: ARef<Args>) -> Result<<P as Policy>::Ret, Self::Error>
+    where
+        P: Default,
+    {
+        PolicyParser::<P>::parse_policy(&mut self.optset, args, &mut self.policy)
+    }
 
     fn parse_policy(
         &mut self,
