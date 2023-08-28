@@ -35,6 +35,8 @@ pub enum CoteKind {
 
     Flag,
 
+    Overload,
+
     MethodCall(String),
 }
 
@@ -61,6 +63,7 @@ impl Kind for CoteKind {
                 "combine" => (Self::Combine, false),
                 "embedded" => (Self::EmbeddedPlus, false),
                 "flag" => (Self::Flag, false),
+                "overload" => (Self::Overload, false),
                 method => (Self::MethodCall(method.to_owned()), true),
             })
         } else {
