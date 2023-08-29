@@ -189,7 +189,7 @@ where
                     GuessPolicy::<MainStyle, SingleNonOpt<Set>>::guess_policy(self)?
                 {
                     if self.r#match(&mut policy, overload, consume)? {
-                        matched = self.invoke(&mut policy)?;
+                        matched = self.invoke(&mut policy, true)?;
                     }
                 }
             }
@@ -198,7 +198,7 @@ where
                     GuessPolicy::<PosStyle, SingleNonOpt<Set>>::guess_policy(self)?
                 {
                     if self.r#match(&mut policy, overload, consume)? {
-                        matched = self.invoke(&mut policy)?;
+                        matched = self.invoke(&mut policy, true)?;
                     }
                 }
             }
@@ -207,7 +207,7 @@ where
                     GuessPolicy::<CmdStyle, SingleNonOpt<Set>>::guess_policy(self)?
                 {
                     if self.r#match(&mut policy, overload, consume)? {
-                        matched = self.invoke(&mut policy)?;
+                        matched = self.invoke(&mut policy, true)?;
                     }
                 }
             }
@@ -216,7 +216,7 @@ where
                     GuessPolicy::<EqualWithValuStyle, SingleOpt<Set>>::guess_policy(self)?
                 {
                     if self.r#match(&mut policy, overload, consume)? {
-                        matched = self.invoke(&mut policy)?;
+                        matched = self.invoke(&mut policy, false)?;
                     }
                 }
             }
@@ -226,7 +226,7 @@ where
                 {
                     consume = true;
                     if self.r#match(&mut policy, overload, consume)? {
-                        matched = self.invoke(&mut policy)?;
+                        matched = self.invoke(&mut policy, false)?;
                     }
                 }
             }
@@ -235,7 +235,7 @@ where
                     GuessPolicy::<EmbeddedValueStyle, SingleOpt<Set>>::guess_policy(self)?
                 {
                     if self.r#match(&mut policy, overload, consume)? {
-                        matched = self.invoke(&mut policy)?;
+                        matched = self.invoke(&mut policy, false)?;
                     }
                 }
             }
@@ -246,7 +246,7 @@ where
                 >::guess_policy(self)?
                 {
                     if self.match_multi(&mut policy, overload, consume)? {
-                        matched = self.invoke_multi(&mut policy)?;
+                        matched = self.invoke_multi(&mut policy, false)?;
                     }
                 }
             }
@@ -257,7 +257,7 @@ where
                 >::guess_policy(self)?
                 {
                     if self.match_multi(&mut policy, overload, consume)? {
-                        matched = self.invoke_multi(&mut policy)?;
+                        matched = self.invoke_multi(&mut policy, false)?;
                     }
                 }
             }
@@ -266,7 +266,7 @@ where
                     GuessPolicy::<BooleanStyle, SingleOpt<Set>>::guess_policy(self)?
                 {
                     if self.r#match(&mut policy, overload, consume)? {
-                        matched = self.invoke(&mut policy)?;
+                        matched = self.invoke(&mut policy, false)?;
                     }
                 }
             }
@@ -275,7 +275,7 @@ where
                     GuessPolicy::<FlagStyle, SingleOpt<Set>>::guess_policy(self)?
                 {
                     if self.r#match(&mut policy, overload, consume)? {
-                        matched = self.invoke(&mut policy)?;
+                        matched = self.invoke(&mut policy, false)?;
                     }
                 }
             }
@@ -788,7 +788,7 @@ where
         Ok(policy.matched())
     }
 
-    pub fn invoke<T>(&mut self, policy: &mut T) -> Result<bool, Error>
+    pub fn invoke<T>(&mut self, policy: &mut T, all: bool) -> Result<bool, Error>
     where
         T: PolicyConfig + MatchPolicy<Set = Set>,
     {
@@ -814,6 +814,11 @@ where
             // return first index if handler success
             if process_handler_ret(invoke_ret, |_| Ok(()), when_fail)? {
                 policy.apply(uid, self.set).map_err(Into::into)?;
+                if !all {
+                    // may return if first matched, for option
+                    // otherwise invoke all the handler, for noa
+                    break;
+                }
             }
         }
         Ok(policy.matched())
@@ -843,7 +848,7 @@ where
         })
     }
 
-    pub fn invoke_multi<T>(&mut self, policy: &mut MultiOpt<T, Set>) -> Result<bool, Error>
+    pub fn invoke_multi<T>(&mut self, policy: &mut MultiOpt<T, Set>, all: bool) -> Result<bool, Error>
     where
         T: PolicyConfig + MatchPolicy<Set = Set>,
     {
@@ -851,7 +856,7 @@ where
         let any_match = policy.any_match();
 
         for sub_policy in policy.sub_policys_mut().iter_mut() {
-            if self.invoke(sub_policy)? {
+            if self.invoke(sub_policy, all)? {
                 matched = true;
                 if any_match {
                     // any match, return current
