@@ -148,7 +148,7 @@ impl<'a> ValueGenerator<'a> {
                 });
                 let mut match_code = quote! {};
 
-                match_code.extend(mat_branchs.into_iter());
+                match_code.extend(mat_branchs);
                 quote! {
                     let name = #str_convert;
                     let name = name.as_ref();

@@ -538,7 +538,7 @@ impl<'a> ArgGenerator<'a> {
             }
         }
 
-        config.extend(codes.into_iter());
+        config.extend(codes);
         config.extend(quote! { config });
 
         Ok(quote! {

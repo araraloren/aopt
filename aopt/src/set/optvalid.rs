@@ -10,7 +10,7 @@ pub trait OptValidator {
     fn split<'a>(&self, name: &'a str) -> Result<(&'a str, &'a str), Self::Error>;
 }
 
-/// A prefixed validator used in [`Policy`](crate::parser::Policy) and [`OptGuess`](crate::parser::OptGuess).
+/// A prefixed validator used in [`Policy`](crate::parser::Policy) and [`InvokeGuess`](crate::guess::InvokeGuess).
 ///
 /// The default prefixes are `--/`, `--`, `-/`, `-` and `/`(only for windows).
 #[derive(Debug, Clone)]

@@ -323,8 +323,8 @@ impl<'a> Analyzer<'a> {
         }
         let mut ret = quote! {};
 
-        ret.extend(mut_field.into_iter());
-        ret.extend(ref_field.into_iter());
+        ret.extend(mut_field);
+        ret.extend(ref_field);
         Ok(quote! {
             Ok(Self {
                 #ret
@@ -368,9 +368,9 @@ impl<'a> Analyzer<'a> {
             append(field.gen_option_update(option_id, is_process_help, help_uid.as_ref())?);
             option_id += 1;
         }
-        ret.extend(create.into_iter());
-        ret.extend(insert.into_iter());
-        ret.extend(handler.into_iter());
+        ret.extend(create);
+        ret.extend(insert);
+        ret.extend(handler);
         ret.extend(quote! { Ok(()) });
         Ok(ret)
     }

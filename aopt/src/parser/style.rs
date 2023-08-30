@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-/// User set option style used for generate [`Process`](crate::proc::Process).
+/// User set option style used for generate [`InvokeGuess`](crate::guess::InvokeGuess).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum UserStyle {

@@ -238,11 +238,11 @@ impl<'a> CoteGenerator<'a> {
         } else {
             let mut ret = quote! {};
 
-            ret.extend(for_combine.into_iter());
-            ret.extend(for_embedded_plus.into_iter());
-            ret.extend(for_flag.into_iter());
-            ret.extend(for_strict.into_iter());
-            ret.extend(for_overload.into_iter());
+            ret.extend(for_combine);
+            ret.extend(for_embedded_plus);
+            ret.extend(for_flag);
+            ret.extend(for_strict);
+            ret.extend(for_overload);
             Some(ret)
         }
     }

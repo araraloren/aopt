@@ -9,6 +9,7 @@ members = [
     "simple-find-file",
     "snowball-follow",
 ]
+resolver = "2"
 
 [patch.crates-io]
 cote = {path = "cote"}

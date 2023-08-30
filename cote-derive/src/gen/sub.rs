@@ -243,7 +243,7 @@ impl<'a> SubGenerator<'a> {
             cote::Cmd::infer_fill_info(&mut config, true);
             config
         });
-        config.extend(codes.into_iter());
+        config.extend(codes);
 
         Ok(quote! {
             let #ident = {

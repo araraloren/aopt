@@ -133,7 +133,7 @@ impl<'a> InferGenerator<'a> {
         }
         let mut code = quote! {};
 
-        code.extend(codes.into_iter());
+        code.extend(codes);
         Ok(quote! {
             impl #impl_ cote::Infer for #ident #type_ #where_ {
                 #code

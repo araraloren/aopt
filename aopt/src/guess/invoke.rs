@@ -848,7 +848,11 @@ where
         })
     }
 
-    pub fn invoke_multi<T>(&mut self, policy: &mut MultiOpt<T, Set>, all: bool) -> Result<bool, Error>
+    pub fn invoke_multi<T>(
+        &mut self,
+        policy: &mut MultiOpt<T, Set>,
+        all: bool,
+    ) -> Result<bool, Error>
     where
         T: PolicyConfig + MatchPolicy<Set = Set>,
     {

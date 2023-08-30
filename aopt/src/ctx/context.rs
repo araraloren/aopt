@@ -72,7 +72,7 @@ impl InnerCtx {
 
     /// The name of matched option.
     /// For option it is the option name, for NOA it is the argument,
-    /// which set in [`guess`](crate::parser::Guess::guess).
+    /// which set in [`invoke`](crate::guess::InvokeGuess#method.invoke).
     pub fn name(&self) -> Option<&Str> {
         self.name.as_ref()
     }
@@ -82,7 +82,7 @@ impl InnerCtx {
         self.style
     }
 
-    /// The argument which set in [`guess`](crate::parser::Guess::guess).
+    /// The argument which set in [`invoke`](crate::guess::InvokeGuess#method.invoke).
     pub fn arg(&self) -> Option<ARef<RawVal>> {
         self.arg.clone()
     }
@@ -181,7 +181,7 @@ impl Ctx {
 
     /// The name of matched option.
     /// For option it is the option name, for NOA it is the argument,
-    /// which set in [`guess`](crate::parser::Guess::guess).
+    /// which set in [`invoke`](crate::guess::InvokeGuess#method.invoke).
     pub fn name(&self) -> Result<Option<&Str>, Error> {
         Ok(self.inner_ctx()?.name())
     }
@@ -197,7 +197,7 @@ impl Ctx {
         &self.args
     }
 
-    /// The argument which set in [`guess`](crate::parser::Guess::guess).
+    /// The argument which set in [`invoke`](crate::guess::InvokeGuess#method.invoke).
     pub fn arg(&self) -> Result<Option<ARef<RawVal>>, Error> {
         Ok(self.inner_ctx()?.arg())
     }
