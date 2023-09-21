@@ -85,8 +85,7 @@ impl std::error::Error for Internal {}
 pub struct Error {
     inner: Internal,
 
-    // TODO! Remove Vec
-    uids: Vec<Uid>,
+    uid: Option<Uid>,
 
     cause: Option<Box<Error>>,
 }
@@ -101,7 +100,12 @@ impl std::error::Error for Error {
 
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.display())
+        if let Some(uid) = self.uid {
+            write!(f, "{} (uid = {})", self.display(), uid)
+        }
+        else {
+            write!(f, "{}", self.display())
+        }
     }
 }
 
@@ -109,7 +113,7 @@ impl Error {
     pub fn new(error: Internal) -> Self {
         Self {
             inner: error,
-            uids: vec![],
+            uid: None,
             cause: None,
         }
     }
@@ -153,28 +157,12 @@ impl Error {
     }
 
     pub fn with_uid(mut self, uid: Uid) -> Self {
-        self.uids = vec![uid];
+        self.uid = Some(uid);
         self
     }
 
-    pub fn with_uids(mut self, uids: Vec<Uid>) -> Self {
-        self.uids = uids;
-        self
-    }
-
-    pub fn uids(&self) -> &[Uid] {
-        &self.uids
-    }
-
-    pub fn intersection(&self, other: &Self) -> bool {
-        for uid in self.uids.iter() {
-            for other_uid in other.uids.iter() {
-                if uid == other_uid {
-                    return true;
-                }
-            }
-        }
-        false
+    pub fn uid(&self) -> Option<Uid> {
+        self.uid
     }
 
     pub fn from<E: std::error::Error + Display>(error: E) -> Self {

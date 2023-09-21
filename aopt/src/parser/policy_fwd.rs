@@ -323,7 +323,7 @@ where
             }
         }
 
-        opt_fail.process(self.checker().opt_check(set))?;
+        opt_fail.process_check(self.checker().opt_check(set))?;
 
         let noa_args = ARef::new(noa_args);
         let tot = noa_args.len();
@@ -351,7 +351,7 @@ where
             };
 
             guess.guess_and_invoke(&UserStyle::Cmd, overload)?;
-            cmd_fail.process(self.checker().cmd_check(set))?;
+            cmd_fail.process_check(self.checker().cmd_check(set))?;
 
             let mut guess = InvokeGuess {
                 set,
@@ -375,10 +375,10 @@ where
                 guess.guess_and_invoke(&UserStyle::Pos, overload)?;
             }
         } else {
-            cmd_fail.process(self.checker().cmd_check(set))?;
+            cmd_fail.process_check(self.checker().cmd_check(set))?;
         }
 
-        pos_fail.process(self.checker().pos_check(set))?;
+        pos_fail.process_check(self.checker().pos_check(set))?;
 
         let main_args = noa_args;
         let tot = main_args.len();
@@ -403,7 +403,7 @@ where
         };
 
         guess.guess_and_invoke(&UserStyle::Main, overload)?;
-        main_fail.process(self.checker().post_check(set))?;
+        main_fail.process_check(self.checker().post_check(set))?;
         Ok(())
     }
 }

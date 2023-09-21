@@ -31,7 +31,7 @@ impl FailManager {
         if self.is_empty() {
             new_err
         } else {
-            let mut fails = self.fails.into_iter().filter(|v| new_err.intersection(v));
+            let mut fails = self.fails.into_iter().filter(|v| new_err.uid() == v.uid() || v.uid().is_none());
 
             if let Some(fail) = fails.next() {
                 let mut err = fail;
@@ -46,7 +46,7 @@ impl FailManager {
         }
     }
 
-    pub fn process<T, E>(self, ret: Result<T, E>) -> Result<T, Error>
+    pub fn process_check<T, E>(self, ret: Result<T, E>) -> Result<T, Error>
     where
         E: Into<Error>,
     {

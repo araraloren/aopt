@@ -14,8 +14,13 @@ use crate::Uid;
 
 /// Check the option base on [`Style`].
 /// The checker will used for option check of [`Policy`](crate::parser::Policy).
-#[derive(Clone)]
 pub struct DefaultSetChecker<S>(PhantomData<S>);
+
+impl<S> Clone for DefaultSetChecker<S> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
 
 impl<S> Debug for DefaultSetChecker<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -96,16 +101,9 @@ where
         Ok(true)
     }
 
-    /// Check if the [`Pos`](crate::opt::Style::Pos) is valid.
-    ///
-    /// For which [`Pos`](crate::opt::Style::Pos) is have fixed position,
-    /// [`Pos`](crate::opt::Style::Pos) has same position are replaceble even it is force reuqired.
-    ///
-    /// For which [`Pos`](crate::opt::Style::Pos) is have floating position, it must be set if it is force reuqired.
+    /// Check if the [`Pos`](crate::opt::Style::Pos) is valid, it must be set if it is force reuqired.
     fn pos_check(&self, set: &mut S) -> Result<bool, Error> {
-        // for POS has certainty position, POS has same position are replaceble even it is force reuqired.
         let mut index_map = HashMap::<usize, Vec<Uid>>::default();
-        // for POS has uncertainty position, it must be set if it is force reuqired
         let mut float_vec: Vec<Uid> = vec![];
 
         const MAX_INDEX: usize = usize::MAX;
@@ -160,7 +158,7 @@ where
                 }
             }
             if !pos_valid {
-                return Err(Error::sp_pos_force_require(names.join(" | ")).with_uids(uids));
+                return Err(Error::sp_pos_force_require(names.join(" | ")).with_uid(uids[0]));
             }
             names.clear();
         }
@@ -172,7 +170,7 @@ where
                     names.push(Self::opt(set, uid).hint().clone());
                 });
             if !names.is_empty() {
-                return Err(Error::sp_pos_force_require(names.join(" | ")).with_uids(float_vec));
+                return Err(Error::sp_pos_force_require(names.join(" | ")).with_uid(float_vec[0]));
             }
         }
         Ok(true)
@@ -198,7 +196,7 @@ where
         }
         trace_log!("Cmd Check, any one of the cmd matched: {}", valid);
         if !valid && !names.is_empty() {
-            return Err(Error::sp_cmd_force_require(names.join(" | ")).with_uids(uids));
+            return Err(Error::sp_cmd_force_require(names.join(" | ")).with_uid(uids[0]));
         }
         Ok(true)
     }
