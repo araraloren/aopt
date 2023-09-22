@@ -102,8 +102,7 @@ impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(uid) = self.uid {
             write!(f, "{} (uid = {})", self.display(), uid)
-        }
-        else {
+        } else {
             write!(f, "{}", self.display())
         }
     }

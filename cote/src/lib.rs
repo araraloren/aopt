@@ -60,7 +60,6 @@ pub use aopt::prelude::PolicySettings;
 pub use aopt::prelude::PrefixOptValidator;
 pub use aopt::prelude::RawValParser;
 pub use aopt::prelude::ReturnVal;
-pub use aopt::prelude::ServicesExt;
 pub use aopt::prelude::ServicesValExt;
 pub use aopt::prelude::Set;
 pub use aopt::prelude::SetCfg;

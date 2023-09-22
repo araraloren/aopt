@@ -9,13 +9,6 @@ use crate::map::ErasedTy;
 use crate::raise_error;
 use crate::Error;
 
-/// Some convenient function access the [`AppServices`](crate::ser::AppServices).
-pub trait ServicesExt {
-    fn ser_app(&self) -> &AppServices;
-
-    fn ser_app_mut(&mut self) -> &mut AppServices;
-}
-
 pub trait ServicesValExt {
     /// Get the user value reference of option `uid` from [`AppServices`].
     fn sve_insert<T: ErasedTy>(&mut self, val: T) -> Option<T>;
@@ -65,16 +58,6 @@ impl AppServices {
         Self {
             ..Default::default()
         }
-    }
-}
-
-impl ServicesExt for AppServices {
-    fn ser_app(&self) -> &AppServices {
-        self
-    }
-
-    fn ser_app_mut(&mut self) -> &mut AppServices {
-        self
     }
 }
 

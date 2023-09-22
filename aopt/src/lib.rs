@@ -284,7 +284,6 @@ pub mod prelude {
     pub use crate::parser::ReturnVal;
     pub use crate::parser::UserStyle;
     pub use crate::ser::AppServices;
-    pub use crate::ser::ServicesExt;
     pub use crate::ser::ServicesValExt;
     pub use crate::ser::UsrValService;
     pub use crate::set::ctor_default_name;

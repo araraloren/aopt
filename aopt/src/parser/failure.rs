@@ -31,7 +31,10 @@ impl FailManager {
         if self.is_empty() {
             new_err
         } else {
-            let mut fails = self.fails.into_iter().filter(|v| new_err.uid() == v.uid() || v.uid().is_none());
+            let mut fails = self
+                .fails
+                .into_iter()
+                .filter(|v| new_err.uid() == v.uid() || v.uid().is_none());
 
             if let Some(fail) = fails.next() {
                 let mut err = fail;
