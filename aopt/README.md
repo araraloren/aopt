@@ -43,14 +43,9 @@ A flexible and typed getopt like command line framwork for rust.
 
     - Checkout [`cote`](https://docs.rs/cote/latest/cote/index.html) crate for derive support and help message generate.
 
-## Setup
+## Setup 
 
-Add following to your `Cargo.toml` file:
-
-```toml
-[dependencies]
-aopt = "0.9"
-```
+`cargo add aopt`
 
 ### `sync` feature
 
