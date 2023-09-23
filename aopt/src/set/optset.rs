@@ -233,9 +233,8 @@ where
         U: Infer + 'static,
         U::Val: RawValParser,
     {
-        let mut info = config.into();
+        let info = config.into();
 
-        U::infer_fill_info(&mut info, true);
         Ok(SetCommit::new(self, info))
     }
 
@@ -262,9 +261,8 @@ where
         U: Infer + 'static,
         U::Val: RawValParser,
     {
-        let mut info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
+        let info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
 
-        U::infer_fill_info(&mut info, true);
         Ok(SetCommit::new(self, info))
     }
 

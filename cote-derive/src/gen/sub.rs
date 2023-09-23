@@ -240,7 +240,7 @@ impl<'a> SubGenerator<'a> {
             })
         }
         codes.push(quote! {
-            cote::Cmd::infer_fill_info(&mut config, true);
+            cote::Cmd::infer_fill_info(&mut config)?;
             config
         });
         config.extend(codes);

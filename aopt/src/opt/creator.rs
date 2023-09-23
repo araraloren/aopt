@@ -1,18 +1,12 @@
-use std::ffi::OsString;
 use std::fmt::Debug;
 
 use crate::opt::AOpt;
 use crate::opt::Action;
-use crate::opt::Any;
-use crate::opt::Cmd;
 use crate::opt::ConfigValue;
-use crate::opt::Main;
 use crate::opt::Opt;
 use crate::opt::OptConfig;
-use crate::opt::Pos;
 use crate::set::Ctor;
 use crate::trace_log;
-use crate::value::Infer;
 use crate::value::ValAccessor;
 use crate::Error;
 use crate::Str;
@@ -265,29 +259,6 @@ impl Creator<AOpt, OptConfig, Error> {
         )
     }
 
-    pub(crate) fn guess_default_infer(ctor: BuiltInCtor, info: &mut OptConfig) {
-        trace_log!(
-            "In default, guess infer {:?} fill config `{:?}`",
-            ctor,
-            info
-        );
-        match ctor {
-            BuiltInCtor::Int => <i64>::infer_fill_info(info, false),
-            BuiltInCtor::Str => <String>::infer_fill_info(info, false),
-            BuiltInCtor::Flt => <f64>::infer_fill_info(info, false),
-            BuiltInCtor::Uint => <u64>::infer_fill_info(info, false),
-            BuiltInCtor::Bool => bool::infer_fill_info(info, false),
-            BuiltInCtor::Cmd => Cmd::infer_fill_info(info, false),
-            BuiltInCtor::Pos => <Pos<bool>>::infer_fill_info(info, false),
-            BuiltInCtor::Main => Main::<()>::infer_fill_info(info, false),
-            BuiltInCtor::Any => Any::<()>::infer_fill_info(info, false),
-            BuiltInCtor::Raw => <OsString>::infer_fill_info(info, false),
-            BuiltInCtor::Fallback => {
-                unreachable!("Fallback creator can't infer any type")
-            }
-        }
-    }
-
     pub fn new_type_ctor(ctor: BuiltInCtor) -> Self {
         if ctor == BuiltInCtor::Fallback {
             return Self::fallback();
@@ -295,10 +266,6 @@ impl Creator<AOpt, OptConfig, Error> {
         let name = Str::from(ctor.name());
 
         Self::new(name, move |mut config: OptConfig| {
-            trace_log!("Fill infer data for config {:?}", &config);
-
-            Self::guess_default_infer(ctor, &mut config);
-
             trace_log!("Construct option with config {:?}", &config);
 
             let force = config.force().unwrap_or(false);

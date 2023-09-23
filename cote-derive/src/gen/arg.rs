@@ -452,7 +452,7 @@ impl<'a> ArgGenerator<'a> {
 
             codes.push(quote! {
                 <#spec_ty as cote::Alter>::alter(cote::Hint::Null, &mut config);
-                <#spec_ty as cote::Infer>::infer_fill_info(&mut config, true);
+                <#spec_ty as cote::Infer>::infer_fill_info(&mut config)?;
             });
         } else {
             match self.cfg_name {
@@ -467,7 +467,7 @@ impl<'a> ArgGenerator<'a> {
                         quote! {
                             config.set_type::<#inner_ty>();
                             <cote::Cmd as cote::Alter>::alter(cote::Hint::Null, &mut config);
-                            <cote::Cmd as cote::Infer>::infer_fill_info(&mut config, true);
+                            <cote::Cmd as cote::Infer>::infer_fill_info(&mut config)?;
                         }
                     });
                 }
@@ -478,7 +478,7 @@ impl<'a> ArgGenerator<'a> {
                                 // using information of Pos<T>
                                 config.set_type::<#inner_ty>();
                                 <cote::Pos<#inner_ty> as cote::Alter>::alter(cote::Hint::Opt, &mut config);
-                                <cote::Pos<#inner_ty> as cote::Infer>::infer_fill_info(&mut config, true);
+                                <cote::Pos<#inner_ty> as cote::Infer>::infer_fill_info(&mut config)?;
                             }
                         },
                         TypeHint::Vec(inner_ty) => {
@@ -486,7 +486,7 @@ impl<'a> ArgGenerator<'a> {
                                 // using information of Pos<T>
                                 config.set_type::<#inner_ty>();
                                 <cote::Pos<#inner_ty> as cote::Alter>::alter(cote::Hint::Vec, &mut config);
-                                <cote::Pos<#inner_ty> as cote::Infer>::infer_fill_info(&mut config, true);
+                                <cote::Pos<#inner_ty> as cote::Infer>::infer_fill_info(&mut config)?;
                             }
                         },
                         TypeHint::OptVec(inner_ty) => {
@@ -494,7 +494,7 @@ impl<'a> ArgGenerator<'a> {
                                 // using information of Pos<T>
                                 config.set_type::<#inner_ty>();
                                 <cote::Pos<#inner_ty> as cote::Alter>::alter(cote::Hint::OptVec, &mut config);
-                                <cote::Pos<#inner_ty> as cote::Infer>::infer_fill_info(&mut config, true);
+                                <cote::Pos<#inner_ty> as cote::Infer>::infer_fill_info(&mut config)?;
                             }
                         },
                         TypeHint::Null(inner_ty) => {
@@ -502,7 +502,7 @@ impl<'a> ArgGenerator<'a> {
                                 // using information of Pos<T>
                                 config.set_type::<#inner_ty>();
                                 <cote::Pos<#inner_ty> as cote::Alter>::alter(cote::Hint::Null, &mut config);
-                                <cote::Pos<#inner_ty> as cote::Infer>::infer_fill_info(&mut config, true);
+                                <cote::Pos<#inner_ty> as cote::Infer>::infer_fill_info(&mut config)?;
                             }
                         },
                     });
@@ -512,25 +512,25 @@ impl<'a> ArgGenerator<'a> {
                         TypeHint::Opt(inner_ty) => {
                             quote! {
                                 <#inner_ty as cote::Alter>::alter(cote::Hint::Opt, &mut config);
-                                <#inner_ty as cote::Infer>::infer_fill_info(&mut config, true);
+                                <#inner_ty as cote::Infer>::infer_fill_info(&mut config)?;
                             }
                         }
                         TypeHint::Vec(inner_ty) => {
                             quote! {
                                 <#inner_ty as cote::Alter>::alter(cote::Hint::Vec, &mut config);
-                                <#inner_ty as cote::Infer>::infer_fill_info(&mut config, true);
+                                <#inner_ty as cote::Infer>::infer_fill_info(&mut config)?;
                             }
                         }
                         TypeHint::OptVec(inner_ty) => {
                             quote! {
                                 <#inner_ty as cote::Alter>::alter(cote::Hint::OptVec, &mut config);
-                                <#inner_ty as cote::Infer>::infer_fill_info(&mut config, true);
+                                <#inner_ty as cote::Infer>::infer_fill_info(&mut config)?;
                             }
                         }
                         TypeHint::Null(inner_ty) => {
                             quote! {
                                 <#inner_ty as cote::Alter>::alter(cote::Hint::Null, &mut config);
-                                <#inner_ty as cote::Infer>::infer_fill_info(&mut config, true);
+                                <#inner_ty as cote::Infer>::infer_fill_info(&mut config)?;
                             }
                         }
                     });

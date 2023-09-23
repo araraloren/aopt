@@ -21,6 +21,7 @@ use crate::trace_log;
 use crate::typeid;
 use crate::value::ValInitializer;
 use crate::value::ValValidator;
+use crate::Error;
 use crate::RawVal;
 use crate::Str;
 
@@ -76,15 +77,16 @@ pub trait Infer {
         typeid::<Self::Val>()
     }
 
-    fn infer_tweak_info<C>(_cfg: &mut C)
+    fn infer_tweak_info<C>(_cfg: &mut C) -> Result<(), Error>
     where
         Self: Sized + 'static,
         Self::Val: RawValParser,
         C: ConfigValue + Default,
     {
+        Ok(())
     }
 
-    fn infer_fill_info<C>(cfg: &mut C, ignore_infer: bool)
+    fn infer_fill_info<C>(cfg: &mut C) -> Result<(), Error>
     where
         Self: Sized + 'static,
         Self::Val: RawValParser,
@@ -106,7 +108,7 @@ pub trait Infer {
             Some(ValStorer::fallback::<Self::Val>())
         };
 
-        Self::infer_tweak_info(cfg);
+        Self::infer_tweak_info(cfg)?;
         (!cfg.has_ctor()).then(|| cfg.set_ctor(ctor));
         (!cfg.has_index()).then(|| index.map(|idx| cfg.set_index(idx)));
         (!cfg.has_type()).then(|| cfg.set_type_id(type_id));
@@ -114,18 +116,16 @@ pub trait Infer {
         (!cfg.has_style()).then(|| cfg.set_style(style));
         (!cfg.has_force()).then(|| cfg.set_force(force));
         (!cfg.has_action()).then(|| cfg.set_action(act));
-        if ignore_infer || !cfg.has_infer() {
-            cfg.set_infer(true);
-            if let Some(storer) = storer {
-                (!cfg.has_storer()).then(|| cfg.set_storer(storer));
-            }
-            if let Some(initializer) = initializer {
-                (!cfg.has_initializer()).then(|| cfg.set_initializer(initializer));
-            }
+        if let Some(storer) = storer {
+            (!cfg.has_storer()).then(|| cfg.set_storer(storer));
+        }
+        if let Some(initializer) = initializer {
+            (!cfg.has_initializer()).then(|| cfg.set_initializer(initializer));
         }
         cfg.set_ignore_name(ignore_name);
         cfg.set_ignore_alias(ignore_alias);
         cfg.set_ignore_index(ignore_index);
+        Ok(())
     }
 }
 
@@ -218,20 +218,23 @@ where
     ///     },
     /// );
     /// ```
-    fn infer_tweak_info<C>(cfg: &mut C)
+    fn infer_tweak_info<C>(cfg: &mut C) -> Result<(), Error>
     where
         Self: Sized + 'static,
         Self::Val: RawValParser,
         C: ConfigValue + Default,
     {
         if !cfg.has_storer() {
-            let type_id = cfg.r#type();
-            let ctor = cfg.ctor().map(BuiltInCtor::from_name);
+            let type_id = std::any::TypeId::of::<T>();
             let bool_type = std::any::TypeId::of::<bool>();
 
+            trace_log!(
+                "Tweak the storer for Pos<bool> for {:?}?: type = {:?}",
+                cfg.name(),
+                std::any::type_name::<T>()
+            );
             // add default storer when value type is bool.
-            if type_id == Some(&bool_type) || ctor == Some(BuiltInCtor::Pos) && type_id.is_none() {
-                trace_log!("Tweak the storer for Pos<bool>: {:?}", cfg.name());
+            if type_id == bool_type {
                 cfg.set_storer(ValStorer::new(Box::new(
                     |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
                         let val = raw.is_some();
@@ -243,6 +246,7 @@ where
                 )));
             }
         }
+        Ok(())
     }
 }
 
@@ -425,6 +429,34 @@ impl Infer for Placeholder {
 
     fn infer_type_id() -> TypeId {
         typeid::<Self>()
+    }
+
+    fn infer_fill_info<C>(cfg: &mut C) -> Result<(), Error>
+    where
+        Self: Sized + 'static,
+        Self::Val: RawValParser,
+        C: ConfigValue + Default,
+    {
+        // it must have ctor here
+        let ctor = cfg
+            .ctor()
+            .ok_or_else(|| crate::raise_error!("Incomplete configuration, `ctor` must be set"))?;
+        let ctor = BuiltInCtor::from_name(ctor);
+
+        trace_log!("In default, fill info in Placeholder");
+        match ctor {
+            BuiltInCtor::Int => <i64>::infer_fill_info(cfg),
+            BuiltInCtor::Str => <String>::infer_fill_info(cfg),
+            BuiltInCtor::Flt => <f64>::infer_fill_info(cfg),
+            BuiltInCtor::Uint => <u64>::infer_fill_info(cfg),
+            BuiltInCtor::Bool => bool::infer_fill_info(cfg),
+            BuiltInCtor::Cmd => Cmd::infer_fill_info(cfg),
+            BuiltInCtor::Pos => <Pos<bool>>::infer_fill_info(cfg),
+            BuiltInCtor::Main => Main::<()>::infer_fill_info(cfg),
+            BuiltInCtor::Any => Any::<()>::infer_fill_info(cfg),
+            BuiltInCtor::Raw => <OsString>::infer_fill_info(cfg),
+            BuiltInCtor::Fallback => Ok(()),
+        }
     }
 }
 

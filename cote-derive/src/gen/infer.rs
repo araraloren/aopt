@@ -105,23 +105,25 @@ impl<'a> InferGenerator<'a> {
                     }
                 },
                 InferKind::Tweak => quote! {
-                    fn infer_tweak_info<C>(cfg: &mut C)
+                    fn infer_tweak_info<C>(cfg: &mut C) -> Result<(), cote::CoteError>
                     where
                         Self: Sized + 'static,
                         Self::Val: cote::RawValParser,
                         C: cote::ConfigValue + Default,
                     {
-                        #value(cfg)
+                        #value(cfg);
+                        Ok(())
                     }
                 },
                 InferKind::Fill => quote! {
-                    fn infer_fill_info<C>(cfg: &mut C, ignore_infer: bool)
+                    fn infer_fill_info<C>(cfg: &mut C) -> Result<(), cote::CoteError>
                     where
                         Self: Sized + 'static,
                         Self::Val: cote::RawValParser,
                         C: cote::ConfigValue + Default,
                     {
-                        #value(cfg, ignore_infer)
+                        #value(cfg, ignore_infer);
+                        Ok(())
                     }
                 },
             });

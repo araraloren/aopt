@@ -95,7 +95,7 @@ impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Debug
     }
 }
 
-pub const CTOR_DEFAULT: &str = "default_ctor";
+pub const CTOR_DEFAULT: &str = "fallback";
 
 /// Get default creator name.
 pub fn ctor_default_name() -> Str {

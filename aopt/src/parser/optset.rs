@@ -324,9 +324,8 @@ where
         U: Infer + 'static,
         U::Val: RawValParser,
     {
-        let mut info = <SetCfg<Set>>::new(&self.set, opt.into())?;
+        let info = <SetCfg<Set>>::new(&self.set, opt.into())?;
 
-        U::infer_fill_info(&mut info, true);
         Ok(ParserCommit::new(
             SetCommit::new(&mut self.set, info),
             &mut self.inv,
@@ -403,11 +402,8 @@ where
         U: Infer + 'static,
         U::Val: RawValParser,
     {
-        let mut info = config.into();
-
-        U::infer_fill_info(&mut info, true);
         Ok(ParserCommit::new(
-            SetCommit::new(&mut self.set, info),
+            SetCommit::new(&mut self.set, config.into()),
             &mut self.inv,
         ))
     }

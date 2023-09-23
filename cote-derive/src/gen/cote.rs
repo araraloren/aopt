@@ -420,7 +420,7 @@ impl<'a> CoteGenerator<'a> {
                         ctor.new_with({
                             let mut config = cote::SetCfg::<Set>::default();
                             config.set_name(format!("main_option_{}", #idx));
-                            <cote::Main>::infer_fill_info(&mut config, true);
+                            <cote::Main>::infer_fill_info(&mut config)?;
                             config
                         }).map_err(Into::into)?
                     };
@@ -488,7 +488,7 @@ impl<'a> CoteGenerator<'a> {
                                 config.set_name(#HELP_OPTION_NAME);
                                 config.add_alias(#HELP_OPTION_SHORT);
                                 config.set_help(#HELP_OPTION_HELP);
-                                <bool>::infer_fill_info(&mut config, true);
+                                <bool>::infer_fill_info(&mut config)?;
                                 config
                             }).map_err(Into::into)?
                         };

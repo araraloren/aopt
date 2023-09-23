@@ -12,6 +12,7 @@ use crate::set::Ctor;
 use crate::set::Set;
 use crate::set::SetCfg;
 use crate::set::SetExt;
+use crate::trace_log;
 use crate::value::Infer;
 use crate::value::Placeholder;
 use crate::value::RawValParser;
@@ -139,9 +140,8 @@ where
 
         let set = self.set.take();
         let info = self.info.take();
-        let mut info = info.unwrap();
+        let info = info.unwrap();
 
-        O::infer_fill_info(&mut info, true);
         SetCommit::new(set.unwrap(), info)
     }
 
@@ -152,19 +152,22 @@ where
             self.drop = false;
 
             let info = std::mem::take(&mut self.info);
-            let info = info.unwrap();
+            let mut info = info.unwrap();
+
+            <U as Infer>::infer_fill_info(&mut info)?;
+
             let set = self.set.as_mut().unwrap();
             let ctor = info
                 .ctor()
                 .ok_or_else(|| crate::raise_error!("Invalid configuration: missing creator name!"))?
                 .clone();
 
-            crate::trace_log!("Register a opt {:?} with creator({})", info.name(), ctor);
+            trace_log!("Register a opt {:?} with creator({})", info.name(), ctor);
 
             let opt = set.ctor_mut(&ctor)?.new_with(info).map_err(|e| e.into())?;
             let uid = set.insert(opt);
 
-            crate::trace_log!("--> register okay: {uid}");
+            trace_log!("--> register okay: {uid}");
             self.uid = Some(uid);
             Ok(uid)
         }
