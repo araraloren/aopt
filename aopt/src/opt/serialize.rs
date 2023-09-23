@@ -113,7 +113,7 @@ where
 {
     type Error = Error;
 
-    fn parse(val: Option<&crate::RawVal>, _: &Ctx) -> Result<Self, Self::Error> {
+    fn parse(val: Option<&crate::AString>, _: &Ctx) -> Result<Self, Self::Error> {
         let string = raw2str(val)?;
 
         Ok(Serde(T::deserialize_from(string).map_err(|e| e.into())?))

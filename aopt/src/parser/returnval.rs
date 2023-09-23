@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use crate::Error;
-use crate::{ctx::Ctx, RawVal};
+use crate::{ctx::Ctx, AString};
 
 /// Return value for [`Policy`](crate::parser::Policy).
 #[derive(Debug, Clone, Default)]
@@ -37,7 +37,7 @@ impl ReturnVal {
         &self.ctx
     }
 
-    pub fn args(&self) -> &[RawVal] {
+    pub fn args(&self) -> &[AString] {
         self.ctx.args().as_slice()
     }
 
@@ -72,7 +72,7 @@ impl ReturnVal {
         std::mem::take(&mut self.failure)
     }
 
-    pub fn clone_args(&self) -> Vec<RawVal> {
+    pub fn clone_args(&self) -> Vec<AString> {
         let args = self.ctx.args().as_ref();
 
         args.clone().into_inner()

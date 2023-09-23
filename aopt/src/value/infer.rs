@@ -21,8 +21,8 @@ use crate::trace_log;
 use crate::typeid;
 use crate::value::ValInitializer;
 use crate::value::ValValidator;
+use crate::AString;
 use crate::Error;
-use crate::RawVal;
 use crate::Str;
 
 use super::AnyValue;
@@ -209,7 +209,7 @@ where
     /// # Storer
     /// ```!
     /// Box::new(
-    ///     |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
+    ///     |raw: Option<&AString>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
     ///         let val = raw.is_some();
     ///
     ///         trace_log!("Pos value storer, parsing {:?} -> {:?}", raw, val);
@@ -236,7 +236,7 @@ where
             // add default storer when value type is bool.
             if type_id == bool_type {
                 cfg.set_storer(ValStorer::new(Box::new(
-                    |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
+                    |raw: Option<&AString>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
                         let val = raw.is_some();
 
                         trace_log!("Pos value storer, parsing {:?} -> {:?}", raw, val);

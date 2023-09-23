@@ -532,8 +532,8 @@ mod test {
     use crate::opt::Pos;
     use crate::prelude::*;
     use crate::ARef;
+    use crate::AString;
     use crate::Error;
-    use crate::RawVal;
 
     #[test]
     fn testing_1() {
@@ -705,7 +705,7 @@ mod test {
                 |uid: Uid,
                  set: &mut ASet,
                  _: &mut ASer,
-                 raw: Option<&RawVal>,
+                 raw: Option<&AString>,
                  val: Option<String>| {
                     if let Some(val) = val {
                         // let's put the value to `popt`

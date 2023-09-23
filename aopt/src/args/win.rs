@@ -5,8 +5,8 @@ use std::os::windows::ffi::{OsStrExt, OsStringExt};
 use crate::args::ArgParser;
 use crate::astr;
 use crate::ARef;
+use crate::AString;
 use crate::Error;
-use crate::RawVal;
 use crate::Str;
 
 /// Return an [`OsString`] with the prefix removed if the prefix exists.
@@ -89,27 +89,27 @@ impl AOsStrExt for OsStr {
 /// # use aopt::Error;
 /// # use aopt::astr;
 /// # use aopt::ARef;
-/// # use aopt::RawVal;
+/// # use aopt::AString;
 /// # use aopt::args::ArgParser;
 /// #
 /// # fn main() -> Result<(), Error> {
 ///     {// parse option with value
-///         let output = RawVal::from("--foo=32").parse_arg()?;
+///         let output = AString::from("--foo=32").parse_arg()?;
 ///
 ///         assert_eq!(output.name, Some(astr("--foo")));
-///         assert_eq!(output.value, Some(ARef::new(RawVal::from("32"))));
+///         assert_eq!(output.value, Some(ARef::new(AString::from("32"))));
 ///     }
 ///     {// parse boolean option
-///         let output = RawVal::from("--/bar").parse_arg()?;
+///         let output = AString::from("--/bar").parse_arg()?;
 ///
 ///         assert_eq!(output.name, Some(astr("--/bar")));
 ///         assert_eq!(output.value, None);
 ///     }
 ///     {// parse other string
-///         let output = RawVal::from("-=bar").parse_arg()?;
+///         let output = AString::from("-=bar").parse_arg()?;
 ///
 ///         assert_eq!(output.name, Some(astr("-")));
-///         assert_eq!(output.value, Some(ARef::new(RawVal::from("bar"))));
+///         assert_eq!(output.value, Some(ARef::new(AString::from("bar"))));
 ///     }
 /// # Ok(())
 /// # }
@@ -118,7 +118,7 @@ impl AOsStrExt for OsStr {
 pub struct CLOpt {
     pub name: Option<Str>,
 
-    pub value: Option<ARef<RawVal>>,
+    pub value: Option<ARef<AString>>,
 }
 
 impl CLOpt {
@@ -126,7 +126,7 @@ impl CLOpt {
         self.name.as_ref()
     }
 
-    pub fn value(&self) -> Option<&ARef<RawVal>> {
+    pub fn value(&self) -> Option<&ARef<AString>> {
         self.value.as_ref()
     }
 }
@@ -134,7 +134,7 @@ impl CLOpt {
 const EQUAL: char = '=';
 
 #[cfg(not(feature = "utf8"))]
-impl ArgParser for RawVal {
+impl ArgParser for AString {
     type Output = CLOpt;
 
     type Error = Error;
@@ -179,7 +179,7 @@ impl ArgParser for RawVal {
 }
 
 #[cfg(feature = "utf8")]
-impl ArgParser for RawVal {
+impl ArgParser for AString {
     type Output = CLOpt;
 
     type Error = Error;

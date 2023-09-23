@@ -237,7 +237,7 @@ where
     /// # use aopt::prelude::*;
     /// # use aopt::ARef;
     /// # use aopt::Error;
-    /// # use aopt::RawVal;
+    /// # use aopt::AString;
     /// # use std::ops::Deref;
     /// #
     /// # fn main() -> Result<(), Error> {
@@ -264,7 +264,7 @@ where
     ///     uid: Uid,
     ///     set: &mut ASet,
     ///     _: &mut ASer,
-    ///     _: Option<&RawVal>,
+    ///     _: Option<&AString>,
     ///     val: Option<bool>,
     /// ) -> Result<bool, Error> {
     ///     let values = set[uid].entry::<u64>().or_insert(vec![0]);

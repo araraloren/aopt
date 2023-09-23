@@ -15,7 +15,8 @@ pub mod value;
 
 pub type Uid = u64;
 pub type HashMap<K, V> = ahash::HashMap<K, V>;
-pub type RawVal = raw::RawVal;
+pub type AString = raw::AString;
+pub type AStr = raw::AStr;
 
 #[cfg(feature = "sync")]
 pub type ARef<T> = std::sync::Arc<T>;
@@ -76,7 +77,7 @@ pub struct GetoptRes<R, T> {
 ///
 /// ```rust
 /// # use aopt::err::Result;
-/// # use aopt::{prelude::*, RawVal};
+/// # use aopt::{prelude::*, AString};
 /// #
 /// # fn main() -> Result<()> {
 /// let mut parser = AFwdParser::default();
@@ -87,7 +88,7 @@ pub struct GetoptRes<R, T> {
 ///     parser.add_opt("--bopt=i")?;
 ///     parser.add_opt("c=p@-0")?.on(
 ///         |_: &mut ASet, _: &mut ASer, args: ctx::Args, mut val: ctx::Value<String>| {
-///             assert_eq!(args[0], RawVal::from("foo"));
+///             assert_eq!(args[0], AString::from("foo"));
 ///             Ok(Some(val.take()))
 ///         },
 ///     )?;
@@ -112,7 +113,7 @@ pub struct GetoptRes<R, T> {
 ///         &vec!["bar".to_owned(), "foo".to_owned()],
 ///     );
 ///     assert_eq!(parser.find_val::<String>("--eopt")?, &String::from("pre"));
-///     assert_eq!(args, vec![RawVal::from("foo")] );
+///     assert_eq!(args, vec![AString::from("foo")] );
 /// }
 ///
 /// parser.reset()?;
@@ -143,7 +144,7 @@ pub struct GetoptRes<R, T> {
 ///         &vec!["bar".to_owned(), "foo".to_owned()],
 ///     );
 ///     assert_eq!(pre_parser.find_val::<String>("--eopt")?, &String::from("pre"));
-///     assert_eq!(args, vec![RawVal::from("foo")]);
+///     assert_eq!(args, vec![AString::from("foo")]);
 /// }
 /// # Ok(())
 /// # }
@@ -313,7 +314,7 @@ pub mod prelude {
     pub use crate::value::ValStorer;
     pub use crate::value::ValValidator;
     pub use crate::ARef;
+    pub use crate::AString;
     pub use crate::GetoptRes;
-    pub use crate::RawVal;
     pub use crate::Uid;
 }

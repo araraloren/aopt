@@ -3,8 +3,8 @@ use crate::map::ErasedTy;
 use crate::set::SetExt;
 use crate::set::SetOpt;
 use crate::value::AnyValue;
+use crate::AString;
 use crate::Error;
-use crate::RawVal;
 use crate::Uid;
 
 use super::Opt;
@@ -99,9 +99,9 @@ impl Action {
     /// Save the value in [`handler`](AnyValue) and raw value in `raw_handler`.
     pub fn store2<U: ErasedTy>(
         &self,
-        raw: Option<&RawVal>,
+        raw: Option<&AString>,
         val: Option<U>,
-        raw_handler: &mut Vec<RawVal>,
+        raw_handler: &mut Vec<AString>,
         handler: &mut AnyValue,
     ) -> bool {
         let ret = self.store1(val, handler);
@@ -116,7 +116,7 @@ impl Action {
 }
 
 /// Default store using for store value to [`ValStorer`](crate::value::ValStorer).
-/// It will store `RawVal` and `Val` if `val` is `Some(Val)`, otherwise do nothing.
+/// It will store `AString` and `Val` if `val` is `Some(Val)`, otherwise do nothing.
 ///
 /// Note: The [`ValStorer`](crate::value::ValStorer) internal using an [`vec`] saving the option value.
 ///
@@ -146,7 +146,7 @@ where
         uid: Uid,
         set: &mut Set,
         _: &mut Ser,
-        raw: Option<&RawVal>,
+        raw: Option<&AString>,
         val: Option<Val>,
     ) -> Result<Self::Ret, Self::Error> {
         let opt = set.opt_mut(uid)?;

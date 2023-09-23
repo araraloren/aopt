@@ -1,8 +1,8 @@
 use crate::map::ErasedTy;
 use crate::opt::Opt;
 use crate::set::SetOpt;
+use crate::AString;
 use crate::Error;
-use crate::RawVal;
 use crate::Uid;
 
 /// The [`Store`] saving the value of given option.
@@ -15,7 +15,7 @@ pub trait Store<Set, Ser, Value> {
         uid: Uid,
         set: &mut Set,
         ser: &mut Ser,
-        raw: Option<&RawVal>,
+        raw: Option<&AString>,
         val: Option<Value>,
     ) -> Result<Self::Ret, Self::Error>;
 }
@@ -24,7 +24,7 @@ pub trait Store<Set, Ser, Value> {
 impl<Func, Set, Ser, Value, Ret, Err> Store<Set, Ser, Value> for Func
 where
     Err: Into<Error>,
-    Func: FnMut(Uid, &mut Set, &mut Ser, Option<&RawVal>, Option<Value>) -> Result<Ret, Err>,
+    Func: FnMut(Uid, &mut Set, &mut Ser, Option<&AString>, Option<Value>) -> Result<Ret, Err>,
 {
     type Ret = Ret;
     type Error = Err;
@@ -34,7 +34,7 @@ where
         uid: Uid,
         set: &mut Set,
         ser: &mut Ser,
-        raw: Option<&RawVal>,
+        raw: Option<&AString>,
         val: Option<Value>,
     ) -> Result<Self::Ret, Self::Error> {
         (self)(uid, set, ser, raw, val)
@@ -44,7 +44,7 @@ where
 impl<Func, Set, Ser, Value, Ret, Err> Store<Set, Ser, Value> for Func
 where
     Err: Into<Error>,
-    Func: FnMut(Uid, &mut Set, &mut Ser, Option<&RawVal>, Option<Value>) -> Result<Ret, Err>
+    Func: FnMut(Uid, &mut Set, &mut Ser, Option<&AString>, Option<Value>) -> Result<Ret, Err>
         + Send
         + Sync,
 {
@@ -56,7 +56,7 @@ where
         uid: Uid,
         set: &mut Set,
         ser: &mut Ser,
-        raw: Option<&RawVal>,
+        raw: Option<&AString>,
         val: Option<Value>,
     ) -> Result<Self::Ret, Self::Error> {
         (self)(uid, set, ser, raw, val)
@@ -76,7 +76,7 @@ impl<Set, Ser, Value> Store<Set, Ser, Value> for NullStore {
         _: Uid,
         _: &mut Set,
         _: &mut Ser,
-        _: Option<&RawVal>,
+        _: Option<&AString>,
         _: Option<Value>,
     ) -> Result<Self::Ret, Self::Error> {
         Ok(true)
@@ -102,7 +102,7 @@ where
         uid: Uid,
         set: &mut Set,
         _: &mut Ser,
-        raw: Option<&RawVal>,
+        raw: Option<&AString>,
         val: Option<Vec<Value>>,
     ) -> Result<Self::Ret, Self::Error> {
         let has_value = val.is_some();

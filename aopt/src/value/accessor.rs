@@ -11,22 +11,22 @@ use crate::ctx::Ctx;
 use crate::map::ErasedTy;
 use crate::opt::Action;
 use crate::raise_error;
+use crate::AString;
 use crate::Error;
-use crate::RawVal;
 
 /// [`ValAccessor`] manage the option value and raw value.
 ///
 /// # Example
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::RawVal;
+/// # use aopt::AString;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<(), Error> {
 /// let ctx = Ctx::default().with_inner_ctx(InnerCtx::default());
 /// {
 ///     let mut value = ValAccessor::fallback::<i32>();
-///     let raw_value = RawVal::from("123");
+///     let raw_value = AString::from("123");
 ///
 ///     value.initialize()?;
 ///     value.set(vec![1, 4]);
@@ -37,7 +37,7 @@ use crate::RawVal;
 /// {
 ///     let mut value =
 ///         ValAccessor::new(ValStorer::fallback::<i32>(), ValInitializer::new_values(vec![7]));
-///     let raw_value = RawVal::from("42");
+///     let raw_value = AString::from("42");
 ///
 ///     value.initialize()?;
 ///     value.store_all(Some(&raw_value), &ctx, &Action::Set)?;
@@ -47,7 +47,7 @@ use crate::RawVal;
 /// {
 ///     let validator = ValValidator::range_from(-32i32);
 ///     let mut value = ValAccessor::new_validator(validator, ValInitializer::fallback());
-///     let raw_value1 = RawVal::from("8");
+///     let raw_value1 = AString::from("8");
 ///
 ///     value.initialize()?;
 ///     value.set(vec![1, 4]);
@@ -58,7 +58,7 @@ use crate::RawVal;
 ///     assert_eq!(value.pop::<i32>(), Some(8));
 ///     assert_eq!(value.rawval()?, &raw_value1);
 ///
-///     let raw_value2 = RawVal::from("-66");
+///     let raw_value2 = AString::from("-66");
 ///
 ///     assert!(value.store_all(Some(&raw_value2), &ctx, &Action::App).is_err());
 ///     assert_eq!(value.pop::<i32>(), Some(4));
@@ -68,7 +68,7 @@ use crate::RawVal;
 ///     let validator = ValValidator::range_to(-42);
 ///     let mut value =
 ///         ValAccessor::new_validator(validator, ValInitializer::new_values(vec![-88, 1]));
-///     let raw_value1 = RawVal::from("-68");
+///     let raw_value1 = AString::from("-68");
 ///
 ///     value.initialize()?;
 ///     assert_eq!(
@@ -78,7 +78,7 @@ use crate::RawVal;
 ///     assert_eq!(value.pop::<i32>(), Some(-68));
 ///     assert_eq!(value.rawval()?, &raw_value1);
 ///
-///     let raw_value2 = RawVal::from("-20");
+///     let raw_value2 = AString::from("-20");
 ///
 ///     assert!(value.store_all(Some(&raw_value2), &ctx, &Action::App).is_err());
 ///     assert_eq!(value.pop::<i32>(), None);
@@ -91,7 +91,7 @@ use crate::RawVal;
 pub struct ValAccessor {
     any_value: AnyValue,
 
-    rawval: Vec<RawVal>,
+    rawval: Vec<AString>,
 
     storer: ValStorer,
 
@@ -171,7 +171,7 @@ impl ValAccessor {
         &mut self.initializer
     }
 
-    pub fn handlers(&mut self) -> (&mut Vec<RawVal>, &mut AnyValue) {
+    pub fn handlers(&mut self) -> (&mut Vec<AString>, &mut AnyValue) {
         (&mut self.rawval, &mut self.any_value)
     }
 
@@ -179,7 +179,7 @@ impl ValAccessor {
     /// The function will map the failure error to `Ok(false)`.
     pub fn store_all(
         &mut self,
-        raw: Option<&RawVal>,
+        raw: Option<&AString>,
         ctx: &Ctx,
         act: &Action,
     ) -> Result<bool, Error> {
@@ -202,7 +202,7 @@ impl ErasedValue for ValAccessor {
         self.initializer.invoke(handler)
     }
 
-    fn store(&mut self, raw: Option<&RawVal>, ctx: &Ctx, act: &Action) -> Result<(), Error> {
+    fn store(&mut self, raw: Option<&AString>, ctx: &Ctx, act: &Action) -> Result<(), Error> {
         let handler = &mut self.any_value;
 
         self.storer.invoke(raw, ctx, act, handler)
@@ -251,23 +251,23 @@ impl ErasedValue for ValAccessor {
         self.any_value.vals_mut()
     }
 
-    fn rawval(&self) -> Result<&RawVal, Error> {
+    fn rawval(&self) -> Result<&AString, Error> {
         self.rawval
             .last()
             .ok_or_else(|| raise_error!("No more raw value in current accessor"))
     }
 
-    fn rawval_mut(&mut self) -> Result<&mut RawVal, Error> {
+    fn rawval_mut(&mut self) -> Result<&mut AString, Error> {
         self.rawval
             .last_mut()
             .ok_or_else(|| raise_error!("No more raw value in current accessor"))
     }
 
-    fn rawvals(&self) -> Result<&Vec<RawVal>, Error> {
+    fn rawvals(&self) -> Result<&Vec<AString>, Error> {
         Ok(&self.rawval)
     }
 
-    fn rawvals_mut(&mut self) -> Result<&mut Vec<RawVal>, Error> {
+    fn rawvals_mut(&mut self) -> Result<&mut Vec<AString>, Error> {
         Ok(&mut self.rawval)
     }
 }

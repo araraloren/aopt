@@ -1,30 +1,32 @@
+use std::borrow::Cow;
 use std::fmt::Display;
 
 use crate::args::Args;
 use crate::opt::Style;
 use crate::parser::ReturnVal;
+use crate::raw::just;
 use crate::ARef;
+use crate::AStr;
+use crate::AString;
 use crate::Error;
-use crate::RawVal;
-use crate::Str;
 use crate::Uid;
 
 #[derive(Debug, Clone, Default)]
-pub struct InnerCtx {
+pub struct InnerCtx<'a> {
     uid: Uid,
 
-    name: Option<Str>,
+    name: Option<Cow<'a, str>>,
 
     style: Style,
 
-    arg: Option<ARef<RawVal>>,
+    arg: Option<Cow<'a, AStr>>,
 
     index: usize,
 
     total: usize,
 }
 
-impl InnerCtx {
+impl<'a> InnerCtx<'a> {
     pub fn with_uid(mut self, uid: Uid) -> Self {
         self.uid = uid;
         self
@@ -40,7 +42,7 @@ impl InnerCtx {
         self
     }
 
-    pub fn with_name(mut self, name: Option<Str>) -> Self {
+    pub fn with_name(mut self, name: Option<Cow<'a, str>>) -> Self {
         self.name = name;
         self
     }
@@ -50,7 +52,7 @@ impl InnerCtx {
         self
     }
 
-    pub fn with_arg(mut self, argument: Option<ARef<RawVal>>) -> Self {
+    pub fn with_arg(mut self, argument: Option<Cow<'a, AStr>>) -> Self {
         self.arg = argument;
         self
     }
@@ -73,7 +75,7 @@ impl InnerCtx {
     /// The name of matched option.
     /// For option it is the option name, for NOA it is the argument,
     /// which set in [`invoke`](crate::guess::InvokeGuess#method.invoke).
-    pub fn name(&self) -> Option<&Str> {
+    pub fn name(&self) -> Option<&Cow<'a, str>> {
         self.name.as_ref()
     }
 
@@ -83,8 +85,8 @@ impl InnerCtx {
     }
 
     /// The argument which set in [`invoke`](crate::guess::InvokeGuess#method.invoke).
-    pub fn arg(&self) -> Option<ARef<RawVal>> {
-        self.arg.clone()
+    pub fn arg(&self) -> Option<&Cow<'a, AStr>> {
+        self.arg.as_ref()
     }
 
     pub fn set_uid(&mut self, uid: Uid) -> &mut Self {
@@ -104,7 +106,7 @@ impl InnerCtx {
         self
     }
 
-    pub fn set_name(&mut self, name: Option<Str>) -> &mut Self {
+    pub fn set_name(&mut self, name: Option<Cow<'a, str>>) -> &mut Self {
         self.name = name;
         self
     }
@@ -114,21 +116,21 @@ impl InnerCtx {
         self
     }
 
-    pub fn set_arg(&mut self, argument: Option<ARef<RawVal>>) -> &mut Self {
+    pub fn set_arg(&mut self, argument: Option<Cow<'a, AStr>>) -> &mut Self {
         self.arg = argument;
         self
     }
 }
 
-impl Display for InnerCtx {
+impl<'a> Display for InnerCtx<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "InnerCtx {{ uid: {}, name: {}, style: {}, arg: {}, index: {}, total: {} }}",
             self.uid,
-            crate::display_option(&self.name),
+            just(&self.name),
             self.style,
-            crate::display_option(&self.arg),
+            just(&self.arg),
             self.index,
             self.total,
         )
@@ -198,7 +200,7 @@ impl Ctx {
     }
 
     /// The argument which set in [`invoke`](crate::guess::InvokeGuess#method.invoke).
-    pub fn arg(&self) -> Result<Option<ARef<RawVal>>, Error> {
+    pub fn arg(&self) -> Result<Option<ARef<AString>>, Error> {
         Ok(self.inner_ctx()?.arg())
     }
 
@@ -220,7 +222,7 @@ impl Ctx {
     }
 
     /// The current argument indexed by `self.idx()`.
-    pub fn curr_arg(&self) -> Result<Option<&RawVal>, Error> {
+    pub fn curr_arg(&self) -> Result<Option<&AString>, Error> {
         let idx = self.idx()?;
         Ok((idx > 0).then(|| self.orig_args().get(idx)).flatten())
     }
@@ -267,7 +269,7 @@ impl Ctx {
         Ok(self)
     }
 
-    pub fn set_arg(&mut self, argument: Option<ARef<RawVal>>) -> Result<&mut Self, Error> {
+    pub fn set_arg(&mut self, argument: Option<ARef<AString>>) -> Result<&mut Self, Error> {
         self.inner_ctx_mut()?.set_arg(argument);
         Ok(self)
     }

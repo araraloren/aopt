@@ -27,8 +27,8 @@ use crate::map::Entry;
 use crate::map::ErasedTy;
 use crate::opt::Action;
 use crate::raise_error;
+use crate::AString;
 use crate::Error;
-use crate::RawVal;
 
 /// A special option value, can stop the policy, using for implement `--`.
 ///
@@ -83,7 +83,7 @@ pub struct Stop;
 pub trait ErasedValue {
     fn initialize(&mut self) -> Result<(), Error>;
 
-    fn store(&mut self, raw: Option<&RawVal>, ctx: &Ctx, act: &Action) -> Result<(), Error>;
+    fn store(&mut self, raw: Option<&AString>, ctx: &Ctx, act: &Action) -> Result<(), Error>;
 
     fn store_act<U: ErasedTy>(&mut self, val: U, ctx: &Ctx, act: &Action) -> Result<(), Error>;
 
@@ -95,13 +95,13 @@ pub trait ErasedValue {
 
     fn vals_mut<U: ErasedTy>(&mut self) -> Result<&mut Vec<U>, Error>;
 
-    fn rawval(&self) -> Result<&RawVal, Error>;
+    fn rawval(&self) -> Result<&AString, Error>;
 
-    fn rawval_mut(&mut self) -> Result<&mut RawVal, Error>;
+    fn rawval_mut(&mut self) -> Result<&mut AString, Error>;
 
-    fn rawvals(&self) -> Result<&Vec<RawVal>, Error>;
+    fn rawvals(&self) -> Result<&Vec<AString>, Error>;
 
-    fn rawvals_mut(&mut self) -> Result<&mut Vec<RawVal>, Error>;
+    fn rawvals_mut(&mut self) -> Result<&mut Vec<AString>, Error>;
 }
 
 /// [`AnyValue`] can save values of any type. In internal it save the value into a vector of type T.

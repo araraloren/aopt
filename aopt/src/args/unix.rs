@@ -1,12 +1,12 @@
+use std::borrow::Cow;
 use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt;
 
 use crate::args::ArgParser;
-use crate::astr;
-use crate::ARef;
+use crate::raw::just;
+use crate::AStr;
+use crate::AString;
 use crate::Error;
-use crate::RawVal;
-use crate::Str;
 
 fn strip_prefix<'a>(str: &'a OsStr, prefix: &str) -> Option<&'a OsStr> {
     let enc = str.as_bytes();
@@ -69,44 +69,44 @@ impl AOsStrExt for OsStr {
 /// # use aopt::Error;
 /// # use aopt::astr;
 /// # use aopt::ARef;
-/// # use aopt::RawVal;
+/// # use aopt::AString;
 /// # use aopt::args::ArgParser;
 /// #
 /// # fn main() -> Result<(), Error> {
 ///     {// parse option with value
-///         let output = RawVal::from("--foo=32").parse_arg()?;
+///         let output = AString::from("--foo=32").parse_arg()?;
 ///
 ///         assert_eq!(output.name, Some(astr("--foo")));
-///         assert_eq!(output.value, Some(ARef::new(RawVal::from("32"))));
+///         assert_eq!(output.value, Some(ARef::new(AString::from("32"))));
 ///     }
 ///     {// parse boolean option
-///         let output = RawVal::from("--/bar").parse_arg()?;
+///         let output = AString::from("--/bar").parse_arg()?;
 ///
 ///         assert_eq!(output.name, Some(astr("--/bar")));
 ///         assert_eq!(output.value, None);
 ///     }
 ///     {// parse other string
-///         let output = RawVal::from("-=bar").parse_arg()?;
+///         let output = AString::from("-=bar").parse_arg()?;
 ///
 ///         assert_eq!(output.name, Some(astr("-")));
-///         assert_eq!(output.value, Some(ARef::new(RawVal::from("bar"))));
+///         assert_eq!(output.value, Some(ARef::new(AString::from("bar"))));
 ///     }
 /// # Ok(())
 /// # }
 /// ```
 #[derive(Debug, Clone, Default)]
-pub struct CLOpt {
-    pub name: Option<Str>,
+pub struct CLOpt<'a> {
+    pub name: Option<Cow<'a, str>>,
 
-    pub value: Option<ARef<RawVal>>,
+    pub value: Option<Cow<'a, AStr>>,
 }
 
-impl CLOpt {
-    pub fn name(&self) -> Option<&Str> {
+impl<'a> CLOpt<'a> {
+    pub fn name(&self) -> Option<&Cow<'a, str>> {
         self.name.as_ref()
     }
 
-    pub fn value(&self) -> Option<&ARef<RawVal>> {
+    pub fn value(&self) -> Option<&Cow<'a, AStr>> {
         self.value.as_ref()
     }
 }
@@ -114,19 +114,19 @@ impl CLOpt {
 const EQUAL: char = '=';
 
 #[cfg(not(feature = "utf8"))]
-impl ArgParser for RawVal {
-    type Output = CLOpt;
+impl ArgParser for AString {
+    type Output<'a> = CLOpt<'a> where Self: 'a;
 
     type Error = Error;
 
-    fn parse_arg(&self) -> Result<Self::Output, Self::Error> {
+    fn parse_arg(&self) -> Result<Self::Output<'_>, Self::Error> {
         if let Some((name, value)) = self.split_once(EQUAL) {
             let name = name
                 .to_str()
                 .ok_or_else(|| {
                     Error::invalid_arg_name(format!(
                         "failed convert argument name `{}` to str",
-                        self
+                        just(self)
                     ))
                 })?
                 .trim();
@@ -135,8 +135,8 @@ impl ArgParser for RawVal {
             }
 
             Ok(Self::Output {
-                name: Some(astr(name)),
-                value: Some(ARef::new(value.to_os_string().into())),
+                name: Some(Cow::from(name)),
+                value: Some(Cow::from(value)),
             })
         } else {
             let name = self
@@ -144,13 +144,13 @@ impl ArgParser for RawVal {
                 .ok_or_else(|| {
                     Error::invalid_arg_name(format!(
                         "failed convert argument name `{}` to str",
-                        self
+                        just(self)
                     ))
                 })?
                 .trim();
 
             Ok(Self::Output {
-                name: Some(astr(name)),
+                name: Some(Cow::from(name)),
                 value: None,
             })
         }
@@ -158,7 +158,7 @@ impl ArgParser for RawVal {
 }
 
 #[cfg(feature = "utf8")]
-impl ArgParser for RawVal {
+impl ArgParser for AString {
     type Output = CLOpt;
 
     type Error = Error;

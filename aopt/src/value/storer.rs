@@ -4,8 +4,8 @@ use crate::ctx::Ctx;
 use crate::map::ErasedTy;
 use crate::opt::Action;
 use crate::trace_log;
+use crate::AString;
 use crate::Error;
-use crate::RawVal;
 
 use super::AnyValue;
 use super::RawValParser;
@@ -13,11 +13,11 @@ use super::ValValidator;
 
 #[cfg(feature = "sync")]
 pub type StoreHandler<T> =
-    Box<dyn FnMut(Option<&RawVal>, &Ctx, &Action, &mut T) -> Result<(), Error> + Send + Sync>;
+    Box<dyn FnMut(Option<&AString>, &Ctx, &Action, &mut T) -> Result<(), Error> + Send + Sync>;
 
 #[cfg(not(feature = "sync"))]
 pub type StoreHandler<T> =
-    Box<dyn FnMut(Option<&RawVal>, &Ctx, &Action, &mut T) -> Result<(), Error>>;
+    Box<dyn FnMut(Option<&AString>, &Ctx, &Action, &mut T) -> Result<(), Error>>;
 
 /// [`ValStorer`] perform the value storing action.
 pub struct ValStorer(StoreHandler<AnyValue>);
@@ -47,7 +47,7 @@ impl ValStorer {
     /// Invoke the inner value store handler on [`AnyValue`].
     pub fn invoke(
         &mut self,
-        raw: Option<&RawVal>,
+        raw: Option<&AString>,
         ctx: &Ctx,
         act: &Action,
         arg: &mut AnyValue,
@@ -60,7 +60,7 @@ impl ValStorer {
         validator: ValValidator<U>,
     ) -> StoreHandler<AnyValue> {
         Box::new(
-            move |raw: Option<&RawVal>, ctx: &Ctx, act: &Action, handler: &mut AnyValue| {
+            move |raw: Option<&AString>, ctx: &Ctx, act: &Action, handler: &mut AnyValue| {
                 let val = U::parse(raw, ctx).map_err(Into::into)?;
 
                 if !validator.invoke(&val) {
@@ -91,7 +91,7 @@ impl ValStorer {
 
     pub fn fallback_handler<U: ErasedTy + RawValParser>() -> StoreHandler<AnyValue> {
         Box::new(
-            |raw: Option<&RawVal>, ctx: &Ctx, act: &Action, handler: &mut AnyValue| {
+            |raw: Option<&AString>, ctx: &Ctx, act: &Action, handler: &mut AnyValue| {
                 let val = U::parse(raw, ctx).map_err(Into::into);
 
                 trace_log!("Fallback value storer, parsing {:?} -> {:?}", raw, val);

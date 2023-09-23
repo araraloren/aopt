@@ -8,8 +8,8 @@ use crate::opt::Style;
 use crate::set::Set;
 use crate::set::SetOpt;
 use crate::ARef;
+use crate::AString;
 use crate::Error;
-use crate::RawVal;
 use crate::Str;
 use crate::Uid;
 
@@ -23,7 +23,7 @@ pub struct SingleNonOpt<S> {
 
     style: Style,
 
-    arg: Option<ARef<RawVal>>,
+    arg: Option<ARef<AString>>,
 
     args: ARef<Args>,
 
@@ -101,7 +101,7 @@ impl<S> PolicyBuild for SingleNonOpt<S> {
         self
     }
 
-    fn with_arg(mut self, arg: Option<ARef<RawVal>>) -> Self {
+    fn with_arg(mut self, arg: Option<ARef<AString>>) -> Self {
         self.arg = arg;
         self
     }
@@ -129,7 +129,7 @@ impl<S> PolicyConfig for SingleNonOpt<S> {
         self.style
     }
 
-    fn arg(&self) -> Option<ARef<RawVal>> {
+    fn arg(&self) -> Option<ARef<AString>> {
         self.arg.clone()
     }
 
@@ -151,7 +151,7 @@ impl<S> PolicyConfig for SingleNonOpt<S> {
 }
 
 impl<S> SingleNonOpt<S> {
-    pub fn clone_arg(&self) -> Option<ARef<RawVal>> {
+    pub fn clone_arg(&self) -> Option<ARef<AString>> {
         self.arg.clone()
     }
 

@@ -5,7 +5,7 @@
 //! ```rust
 //! # use aopt::prelude::*;
 //! # use aopt::ARef;
-//! # use aopt::RawVal;
+//! # use aopt::AString;
 //! # use std::ops::Deref;
 //! #
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -46,7 +46,7 @@
 //!         Ok(Some(*val.deref()))
 //!     });
 //! inv.entry(3).on(
-//!     |_: &mut ASet, _: &mut ASer, index: ctx::Index, raw_val: ctx::RawVal| {
+//!     |_: &mut ASet, _: &mut ASer, index: ctx::Index, raw_val: ctx::AString| {
 //!         Ok(Some((*index.deref(), raw_val.deref().clone())))
 //!     },
 //! );
@@ -61,9 +61,9 @@
 //! assert_eq!(set.find_val::<bool>("set")?, &true);
 //! assert_eq!(set.find_val::<i64>("pos_2")?, &42);
 //!
-//! let test = vec![(3, RawVal::from("foo")), (4, RawVal::from("bar"))];
+//! let test = vec![(3, AString::from("foo")), (4, AString::from("bar"))];
 //!
-//! for (idx, val) in set[3].vals::<(usize, RawVal)>()?.iter().enumerate() {
+//! for (idx, val) in set[3].vals::<(usize, AString)>()?.iter().enumerate() {
 //!     assert_eq!(val.0, test[idx].0);
 //!     assert_eq!(val.1, test[idx].1);
 //! }
@@ -635,7 +635,7 @@ impl<Set, Ser> Extract<Set, Ser> for Style {
 /// # use aopt::prelude::*;
 /// # use aopt::ARef;
 /// # use aopt::Error;
-/// # use aopt::RawVal;
+/// # use aopt::AString;
 /// # use std::ops::Deref;
 /// #
 /// # fn main() -> Result<(), Error> {
@@ -648,31 +648,31 @@ impl<Set, Ser> Extract<Set, Ser> for Style {
 /// set.add_opt("set=c")?.run()?;
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// inv.entry(0)
-///     .on(|_: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal| {
+///     .on(|_: &mut ASet, _: &mut ASer, raw_val: ctx::AString| {
 ///         assert_eq!(
-///             &RawVal::from("true"),
+///             &AString::from("true"),
 ///             raw_val.deref(),
-///             "RawVal is the raw value copied from Ctx set in Policy"
+///             "AString is the raw value copied from Ctx set in Policy"
 ///         );
 ///         Ok(Some(false))
 ///     });
 ///
 /// inv.entry(1)
-///     .on(|_: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal| {
+///     .on(|_: &mut ASet, _: &mut ASer, raw_val: ctx::AString| {
 ///         assert_eq!(
-///             &RawVal::from("true"),
+///             &AString::from("true"),
 ///             raw_val.deref(),
-///             "RawVal is the raw value copied from Ctx set in Policy"
+///             "AString is the raw value copied from Ctx set in Policy"
 ///         );
 ///         Ok(Some(true))
 ///     });
 ///
 /// inv.entry(2)
-///     .on(|_: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal| {
+///     .on(|_: &mut ASet, _: &mut ASer, raw_val: ctx::AString| {
 ///         assert_eq!(
-///             &RawVal::from("value"),
+///             &AString::from("value"),
 ///             raw_val.deref(),
-///             "RawVal is the raw value copied from Ctx set in Policy"
+///             "AString is the raw value copied from Ctx set in Policy"
 ///         );
 ///         Ok(Some(2i64))
 ///     });
@@ -689,31 +689,31 @@ impl<Set, Ser> Extract<Set, Ser> for Style {
 /// # }
 /// ```
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct RawVal(ARef<crate::RawVal>);
+pub struct AString(ARef<crate::AString>);
 
-impl RawVal {
+impl AString {
     pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
         Ok(Self(ctx.arg()?.ok_or_else(|| {
             Error::sp_raise_extract_error(
-                "consider using Option<RawVal> instead, RawVal maybe not exist",
+                "consider using Option<AString> instead, AString maybe not exist",
             )
         })?))
     }
 
-    pub fn clone_rawval(&self) -> crate::RawVal {
+    pub fn clone_rawval(&self) -> crate::AString {
         self.0.as_ref().clone()
     }
 }
 
-impl Deref for RawVal {
-    type Target = crate::RawVal;
+impl Deref for AString {
+    type Target = crate::AString;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl<Set, Ser> Extract<Set, Ser> for RawVal {
+impl<Set, Ser> Extract<Set, Ser> for AString {
     type Error = Error;
 
     fn extract(_set: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {

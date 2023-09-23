@@ -167,8 +167,8 @@ impl<T> DerefMut for Pos<T> {
 /// parser.add_opt_i::<Main>("main_function: Call the main function")?
 ///       // Main do nothing in default, you must change the `Action` if you want save value
 ///       .set_action(Action::Set)
-///       .on(|_: &mut ASet, _: &mut ASer, val: ctx::RawVal|{
-///             assert_eq!(val.deref(), &RawVal::from("app"));
+///       .on(|_: &mut ASet, _: &mut ASer, val: ctx::AString|{
+///             assert_eq!(val.deref(), &AString::from("app"));
 ///             Ok(Some(String::from("main_function called")))
 ///       })?;
 ///
@@ -222,7 +222,7 @@ impl<T> DerefMut for Main<T> {
 /// impl RawValParser for Name {
 ///     type Error = Error;
 ///
-///     fn parse(arg: Option<&RawVal>, _: &Ctx) -> Result<Self, Self::Error> {
+///     fn parse(arg: Option<&AString>, _: &Ctx) -> Result<Self, Self::Error> {
 ///         Ok(Name(raw2str(arg)?.to_owned()))
 ///     }
 /// }
@@ -283,7 +283,7 @@ impl<T> DerefMut for MutOpt<T> {
 /// impl RawValParser for Name {
 ///     type Error = Error;
 ///
-///     fn parse(arg: Option<&RawVal>, _: &Ctx) -> Result<Self, Self::Error> {
+///     fn parse(arg: Option<&AString>, _: &Ctx) -> Result<Self, Self::Error> {
 ///         Ok(Name(raw2str(arg)?.to_owned()))
 ///     }
 /// }

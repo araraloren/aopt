@@ -1,174 +1,84 @@
-pub use __raw_utf8::RawVal;
+pub use __raw_utf8::AStr;
+pub use __raw_utf8::AString;
 
-#[cfg(feature = "utf8")]
-mod __raw_utf8 {
-    use crate::Str;
-    use std::ffi::OsStr;
-    use std::ffi::OsString;
-    use std::ops::{Deref, DerefMut};
+use std::borrow::Cow;
+use std::ffi::OsStr;
+use std::ffi::OsString;
 
-    /// Raw value used when parsing command line argument,
-    /// it is wrapper of [`String`] if feature `utf8` enabled.
-    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-    #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    pub struct RawVal(String);
+#[derive(Debug, Clone, Copy)]
+pub struct Just<'a, T: ?Sized>(&'a T);
 
-    impl Deref for RawVal {
-        type Target = String;
+pub fn just<T>(val: &T) -> Just<T> {
+    Just(val)
+}
 
-        fn deref(&self) -> &Self::Target {
-            &self.0
-        }
+impl<'a> std::fmt::Display for Just<'a, OsString> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.0)
     }
+}
 
-    impl DerefMut for RawVal {
-        fn deref_mut(&mut self) -> &mut Self::Target {
-            &mut self.0
-        }
+impl<'a> std::fmt::Display for Just<'a, OsStr> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.0)
     }
+}
 
-    impl RawVal {
-        pub fn get_str(&self) -> Option<&str> {
-            Some(self.0.as_str())
-        }
-
-        pub fn into_os_string(self) -> OsString {
-            OsString::from(self.0)
-        }
+impl<'a> std::fmt::Display for Just<'a, Cow<'_, OsStr>> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.0)
     }
+}
 
-    impl TryFrom<OsString> for RawVal {
-        type Error = crate::Error;
-
-        fn try_from(value: OsString) -> Result<Self, Self::Error> {
-            Ok(Self(
-                value
-                    .to_str()
-                    .ok_or_else(|| crate::raise_error!("failed convert `{:?}` to str", &value))?
-                    .to_owned(),
-            ))
-        }
-    }
-
-    impl From<String> for RawVal {
-        fn from(v: String) -> Self {
-            Self(v)
-        }
-    }
-
-    impl<'a> From<&'a String> for RawVal {
-        fn from(v: &'a String) -> Self {
-            Self(v.clone())
-        }
-    }
-
-    impl<'a> From<&'a str> for RawVal {
-        fn from(v: &'a str) -> Self {
-            Self(v.to_owned())
-        }
-    }
-
-    impl From<Str> for RawVal {
-        fn from(v: Str) -> Self {
-            Self(String::from(v.as_str()))
-        }
-    }
-
-    impl std::fmt::Display for RawVal {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "{:?}", self.0)
-        }
-    }
-
-    impl AsRef<str> for RawVal {
-        fn as_ref(&self) -> &str {
-            self.0.as_str()
-        }
-    }
-
-    impl AsRef<OsStr> for RawVal {
-        fn as_ref(&self) -> &OsStr {
-            self.0.as_ref()
+impl<'a> std::fmt::Display for Just<'a, Option<Cow<'_, OsStr>>> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.0.as_ref() {
+            Some(val) => write!(f, "Some({:?})", val),
+            None => write!(f, "None"),
         }
     }
 }
 
+impl<'a> std::fmt::Display for Just<'a, String> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl<'a> std::fmt::Display for Just<'a, str> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl<'a> std::fmt::Display for Just<'a, Cow<'a, str>> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl<'a> std::fmt::Display for Just<'a, Option<Cow<'a, str>>> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.0.as_ref() {
+            Some(val) => write!(f, "Some({})", val),
+            None => write!(f, "None"),
+        }
+    }
+}
+
+#[cfg(feature = "utf8")]
+mod __raw_utf8 {
+    pub type AString = String;
+
+    pub type AStr = str;
+}
+
 #[cfg(not(feature = "utf8"))]
 mod __raw_utf8 {
-    use crate::Str;
     use std::ffi::OsStr;
     use std::ffi::OsString;
-    use std::ops::{Deref, DerefMut};
 
-    /// Raw value used when parsing command line argument,
-    /// it is wrapper of [`OsString`] in default.
-    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-    #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    pub struct RawVal(OsString);
+    pub type AString = OsString;
 
-    impl Deref for RawVal {
-        type Target = OsString;
-
-        fn deref(&self) -> &Self::Target {
-            &self.0
-        }
-    }
-
-    impl DerefMut for RawVal {
-        fn deref_mut(&mut self) -> &mut Self::Target {
-            &mut self.0
-        }
-    }
-
-    impl RawVal {
-        pub fn get_str(&self) -> Option<&str> {
-            self.0.to_str()
-        }
-
-        pub fn into_os_string(self) -> OsString {
-            self.0
-        }
-    }
-
-    impl From<OsString> for RawVal {
-        fn from(v: OsString) -> Self {
-            Self(v)
-        }
-    }
-
-    impl From<String> for RawVal {
-        fn from(v: String) -> Self {
-            Self(OsString::from(v))
-        }
-    }
-
-    impl<'a> From<&'a String> for RawVal {
-        fn from(v: &'a String) -> Self {
-            Self(OsString::from(v))
-        }
-    }
-
-    impl<'a> From<&'a str> for RawVal {
-        fn from(v: &'a str) -> Self {
-            Self(OsString::from(v))
-        }
-    }
-
-    impl From<Str> for RawVal {
-        fn from(v: Str) -> Self {
-            Self(OsString::from(v.as_str()))
-        }
-    }
-
-    impl std::fmt::Display for RawVal {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "{:?}", self.0)
-        }
-    }
-
-    impl AsRef<OsStr> for RawVal {
-        fn as_ref(&self) -> &OsStr {
-            self.as_os_str()
-        }
-    }
+    pub type AStr = OsStr;
 }

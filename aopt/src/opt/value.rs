@@ -2,8 +2,8 @@ use crate::map::Entry;
 use crate::map::ErasedTy;
 use crate::raise_error;
 use crate::value::ErasedValue;
+use crate::AString;
 use crate::Error;
-use crate::RawVal;
 
 use super::Opt;
 
@@ -18,13 +18,13 @@ pub trait OptValueExt {
 
     fn entry<T: ErasedTy>(&mut self) -> Entry<'_, Vec<T>>;
 
-    fn rawval(&self) -> Result<&RawVal, Error>;
+    fn rawval(&self) -> Result<&AString, Error>;
 
-    fn rawval_mut(&mut self) -> Result<&mut RawVal, Error>;
+    fn rawval_mut(&mut self) -> Result<&mut AString, Error>;
 
-    fn rawvals(&self) -> Result<&Vec<RawVal>, Error>;
+    fn rawvals(&self) -> Result<&Vec<AString>, Error>;
 
-    fn rawvals_mut(&mut self) -> Result<&mut Vec<RawVal>, Error>;
+    fn rawvals_mut(&mut self) -> Result<&mut Vec<AString>, Error>;
 
     fn filter<T: ErasedTy>(&mut self, f: impl FnMut(&T) -> bool) -> Result<Vec<T>, Error>;
 }
@@ -90,7 +90,7 @@ impl<O: Opt> OptValueExt for O {
         self.accessor_mut().entry::<T>()
     }
 
-    fn rawval(&self) -> Result<&RawVal, Error> {
+    fn rawval(&self) -> Result<&AString, Error> {
         let uid = self.uid();
 
         self.accessor().rawval().map_err(|e| {
@@ -102,7 +102,7 @@ impl<O: Opt> OptValueExt for O {
         })
     }
 
-    fn rawval_mut(&mut self) -> Result<&mut RawVal, Error> {
+    fn rawval_mut(&mut self) -> Result<&mut AString, Error> {
         let hint = self.hint().clone();
         let uid = self.uid();
 
@@ -112,7 +112,7 @@ impl<O: Opt> OptValueExt for O {
         })
     }
 
-    fn rawvals(&self) -> Result<&Vec<RawVal>, Error> {
+    fn rawvals(&self) -> Result<&Vec<AString>, Error> {
         self.accessor().rawvals().map_err(|e| {
             e.cause(raise_error!(
                 "Can not find raw values(ref) of `{}`",
@@ -121,7 +121,7 @@ impl<O: Opt> OptValueExt for O {
         })
     }
 
-    fn rawvals_mut(&mut self) -> Result<&mut Vec<RawVal>, Error> {
+    fn rawvals_mut(&mut self) -> Result<&mut Vec<AString>, Error> {
         let hint = self.hint().clone();
         let uid = self.uid();
 

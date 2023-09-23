@@ -7,26 +7,28 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 
 use crate::parser::ReturnVal;
+use crate::AString;
 use crate::Error;
-use crate::RawVal;
 
 pub use self::osstr_ext::AOsStrExt;
 pub use self::osstr_ext::CLOpt;
 
 pub trait ArgParser {
-    type Output;
+    type Output<'a>
+    where
+        Self: 'a;
     type Error: Into<Error>;
 
-    fn parse_arg(&self) -> Result<Self::Output, Self::Error>;
+    fn parse_arg(&self) -> Result<Self::Output<'_>, Self::Error>;
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct Args {
-    inner: Vec<RawVal>,
+    inner: Vec<AString>,
 }
 
 impl Args {
-    pub fn new<S: Into<RawVal>>(inner: impl Iterator<Item = S>) -> Self {
+    pub fn new<S: Into<AString>>(inner: impl Iterator<Item = S>) -> Self {
         Self {
             inner: inner.map(|v| v.into()).collect(),
         }
@@ -44,15 +46,15 @@ impl Args {
         Self::new(std::env::args())
     }
 
-    pub fn from_vec(raw: Vec<RawVal>) -> Self {
+    pub fn from_vec(raw: Vec<AString>) -> Self {
         Self::new(raw.into_iter())
     }
 
-    pub fn clone_from_slice(raw: &[RawVal]) -> Self {
+    pub fn clone_from_slice(raw: &[AString]) -> Self {
         Self::new(raw.iter().cloned())
     }
 
-    pub fn from_array<const N: usize, T: Into<RawVal>>(raw: [T; N]) -> Self {
+    pub fn from_array<const N: usize, T: Into<AString>>(raw: [T; N]) -> Self {
         Self::new(raw.into_iter().map(|v| v.into()))
     }
 
@@ -60,12 +62,12 @@ impl Args {
         Iter::new(&self.inner)
     }
 
-    pub fn into_inner(self) -> Vec<RawVal> {
+    pub fn into_inner(self) -> Vec<AString> {
         self.inner
     }
 }
 
-impl<S: Into<RawVal>, I: Iterator<Item = S>> From<I> for Args {
+impl<S: Into<AString>, I: Iterator<Item = S>> From<I> for Args {
     fn from(iter: I) -> Self {
         Self::new(iter)
     }
@@ -90,7 +92,7 @@ impl<'a> From<&'a mut ReturnVal> for Args {
 }
 
 impl Deref for Args {
-    type Target = Vec<RawVal>;
+    type Target = Vec<AString>;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
@@ -119,12 +121,12 @@ impl Display for Args {
 
 #[derive(Debug, Clone)]
 pub struct Iter<'a> {
-    inner: &'a [RawVal],
+    inner: &'a [AString],
     index: usize,
 }
 
 impl<'a> Iter<'a> {
-    pub fn new(iter: &'a [RawVal]) -> Self {
+    pub fn new(iter: &'a [AString]) -> Self {
         Self {
             inner: iter,
             index: 0,
@@ -141,7 +143,7 @@ impl<'a> Iter<'a> {
 }
 
 impl<'a> Iterator for Iter<'a> {
-    type Item = (&'a RawVal, Option<&'a RawVal>);
+    type Item = (&'a AString, Option<&'a AString>);
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.len() {
@@ -165,7 +167,7 @@ impl<'a> ExactSizeIterator for Iter<'a> {
 mod test {
 
     use super::Args;
-    use crate::RawVal;
+    use crate::AString;
 
     #[test]
     fn test_args() {
@@ -174,25 +176,25 @@ mod test {
 
         if let Some((idx, (opt, arg))) = iter.next() {
             assert_eq!(idx, 0);
-            assert_eq!(opt, &RawVal::from("--opt"));
-            assert_eq!(arg, Some(&RawVal::from("value")));
+            assert_eq!(opt, &AString::from("--opt"));
+            assert_eq!(arg, Some(&AString::from("value")));
         }
 
         if let Some((idx, (opt, arg))) = iter.next() {
             assert_eq!(idx, 1);
-            assert_eq!(opt, &RawVal::from("value"));
-            assert_eq!(arg, Some(&RawVal::from("--bool")));
+            assert_eq!(opt, &AString::from("value"));
+            assert_eq!(arg, Some(&AString::from("--bool")));
         }
 
         if let Some((idx, (opt, arg))) = iter.next() {
             assert_eq!(idx, 2);
-            assert_eq!(opt, &RawVal::from("--bool"));
-            assert_eq!(arg, Some(&RawVal::from("pos")));
+            assert_eq!(opt, &AString::from("--bool"));
+            assert_eq!(arg, Some(&AString::from("pos")));
         }
 
         if let Some((idx, (opt, arg))) = iter.next() {
             assert_eq!(idx, 3);
-            assert_eq!(opt, &RawVal::from("pos"));
+            assert_eq!(opt, &AString::from("pos"));
             assert_eq!(arg, None);
         }
 

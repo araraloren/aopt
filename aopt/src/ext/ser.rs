@@ -27,20 +27,20 @@ pub struct Value<T: ?Sized>(ARef<T>);
 /// # use aopt::prelude::*;
 /// # use aopt::ARef;
 /// # use aopt::Error;
-/// # use aopt::RawVal;
+/// # use aopt::AString;
 /// # use std::cell::RefCell;
 /// # use std::ops::Deref;
 /// # fn main() -> Result<(), Error> {
 /// #
 /// #[derive(Debug, Clone)]
-/// pub struct PosList(RefCell<Vec<RawVal>>);
+/// pub struct PosList(RefCell<Vec<AString>>);
 ///
 /// impl PosList {
-///     pub fn add_pos(&self, val: RawVal) {
+///     pub fn add_pos(&self, val: AString) {
 ///         self.0.borrow_mut().push(val);
 ///     }
 ///
-///     pub fn test_pos(&self, test: Vec<RawVal>) {
+///     pub fn test_pos(&self, test: Vec<AString>) {
 ///         assert_eq!(self.0.borrow().len(), test.len());
 ///         for (vall, valr) in self.0.borrow().iter().zip(test.iter()) {
 ///             assert_eq!(vall, valr);
@@ -65,7 +65,7 @@ pub struct Value<T: ?Sized>(ARef<T>);
 ///
 /// inv.entry(1)
 ///     .on(
-///         |_: &mut ASet, _: &mut ASer, raw_val: ctx::RawVal, data: ser::Value<PosList>| {
+///         |_: &mut ASet, _: &mut ASer, raw_val: ctx::AString, data: ser::Value<PosList>| {
 ///             data.add_pos(raw_val.clone_rawval());
 ///             Ok(Some(true))
 ///         },
@@ -79,7 +79,7 @@ pub struct Value<T: ?Sized>(ARef<T>);
 /// ser.sve_val::<ser::Value::<PosList>>()?.test_pos(
 ///     ["set", "42", "foo", "bar"]
 ///         .into_iter()
-///         .map(RawVal::from)
+///         .map(AString::from)
 ///         .collect(),
 /// );
 /// # Ok(())

@@ -8,8 +8,8 @@ use crate::args::Args;
 use crate::ctx::InnerCtx;
 use crate::opt::Style;
 use crate::ARef;
+use crate::AString;
 use crate::Error;
-use crate::RawVal;
 use crate::Str;
 use crate::Uid;
 
@@ -147,7 +147,7 @@ pub trait PolicyConfig {
 
     fn style(&self) -> Style;
 
-    fn arg(&self) -> Option<ARef<RawVal>>;
+    fn arg(&self) -> Option<ARef<AString>>;
 
     fn uids(&self) -> &[Uid];
 
@@ -163,7 +163,7 @@ pub trait PolicyBuild {
 
     fn with_tot(self, total: usize) -> Self;
 
-    fn with_arg(self, argument: Option<ARef<RawVal>>) -> Self;
+    fn with_arg(self, argument: Option<ARef<AString>>) -> Self;
 
     fn with_args(self, args: ARef<Args>) -> Self;
 }

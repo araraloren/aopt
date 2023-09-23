@@ -132,7 +132,7 @@ where
     /// # Note
     /// ```txt
     /// |   handler: |&mut Set, &mut Ser, { Other Args }| -> Result<Option<Value>, Error>
-    /// |   storer: |&mut Set, &mut Ser, Option<&RawVal>, Option<Value>| -> Result<bool, Error>
+    /// |   storer: |&mut Set, &mut Ser, Option<&AString>, Option<Value>| -> Result<bool, Error>
     ///         |
     ///      wrapped
     ///         |
@@ -146,7 +146,7 @@ where
     /// |       call Handler::invoke(&mut self, &mut Set, &mut Ser, Args)
     /// |           call Args::extract(&Set, &Ser, &Ctx) -> Args
     /// |           -> Result<Option<Value>, Error>
-    /// |       -> call Store::process(&Set, Option<&RawVal>, Option<Value>)
+    /// |       -> call Store::process(&Set, Option<&AString>, Option<Value>)
     /// |           -> Result<bool, Error>
     /// ```
     pub fn set_handler<A, O, H, T>(&mut self, uid: Uid, handler: H, store: T) -> &mut Self
@@ -182,7 +182,7 @@ where
     /// The default handler for all option.
     ///
     /// If there no handler for a option, then default handler will be called.
-    /// It will parsing [`RawVal`](crate::RawVal)(using [`RawValParser`](crate::value::RawValParser)) into associated type,
+    /// It will parsing [`AString`](crate::AString)(using [`RawValParser`](crate::value::RawValParser)) into associated type,
     /// then save the value to [`ValStorer`](crate::value::ValStorer).
     pub fn fallback(set: &mut Set, _: &mut Ser, ctx: &mut Ctx) -> Result<bool, Error> {
         let uid = ctx.uid()?;

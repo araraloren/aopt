@@ -8,8 +8,8 @@ use crate::parser::UserStyle;
 use crate::set::OptValidator;
 use crate::trace_log;
 use crate::ARef;
+use crate::AString;
 use crate::Error;
-use crate::RawVal;
 use crate::Str;
 
 use super::process_handler_ret;
@@ -30,11 +30,11 @@ pub struct InvokeGuess<'a, Set, Inv, Ser> {
 
     pub tot: usize,
 
-    pub arg: Option<ARef<RawVal>>,
+    pub arg: Option<ARef<AString>>,
 
     pub name: Option<Str>,
 
-    pub next: Option<ARef<RawVal>>,
+    pub next: Option<ARef<AString>>,
 
     pub ctx: &'a mut Ctx,
 
@@ -104,7 +104,7 @@ impl<'a, Set, Inv, Ser> InvokeGuess<'a, Set, Inv, Ser> {
         self
     }
 
-    pub fn set_arg(&mut self, arg: Option<ARef<RawVal>>) -> &mut Self {
+    pub fn set_arg(&mut self, arg: Option<ARef<AString>>) -> &mut Self {
         self.arg = arg;
         self
     }
@@ -114,7 +114,7 @@ impl<'a, Set, Inv, Ser> InvokeGuess<'a, Set, Inv, Ser> {
         self
     }
 
-    pub fn set_next(&mut self, next: Option<ARef<RawVal>>) -> &mut Self {
+    pub fn set_next(&mut self, next: Option<ARef<AString>>) -> &mut Self {
         self.next = next;
         self
     }
@@ -154,7 +154,7 @@ impl<'a, Set, Inv, Ser> InvokeGuess<'a, Set, Inv, Ser> {
         self
     }
 
-    pub fn with_arg(mut self, arg: Option<ARef<RawVal>>) -> Self {
+    pub fn with_arg(mut self, arg: Option<ARef<AString>>) -> Self {
         self.arg = arg;
         self
     }
@@ -164,7 +164,7 @@ impl<'a, Set, Inv, Ser> InvokeGuess<'a, Set, Inv, Ser> {
         self
     }
 
-    pub fn with_next(mut self, next: Option<ARef<RawVal>>) -> Self {
+    pub fn with_next(mut self, next: Option<ARef<AString>>) -> Self {
         self.next = next;
         self
     }
@@ -493,7 +493,7 @@ where
                 // only check first letter `--v42` ==> `--v 42`
                 if let Some((char_idx, _)) = splited.1.char_indices().nth(1) {
                     let (name, arg) = name.split_at(prefix_len + char_idx);
-                    let arg = Some(RawVal::from(arg).into());
+                    let arg = Some(AString::from(arg).into());
                     let name = Some(name.into());
 
                     return Ok(Some(
@@ -538,7 +538,7 @@ where
                 // for `--opt42` check the option like `--op t42`, `--opt 42`, `--opt4 2`
                 for (char_idx, _) in char_indices {
                     let (name, arg) = name.split_at(prefix_len + char_idx);
-                    let arg = Some(RawVal::from(arg).into());
+                    let arg = Some(AString::from(arg).into());
                     let name = Some(name.into());
 
                     policy.add_sub_policy(
@@ -569,7 +569,7 @@ where
         let idx = self.idx;
         let tot = self.tot;
         let style = Style::Boolean;
-        let arg = Some(ARef::new(RawVal::from(BOOL_TRUE)));
+        let arg = Some(ARef::new(AString::from(BOOL_TRUE)));
 
         if self.arg.is_none() {
             if let Some(name) = &self.name {
@@ -613,7 +613,7 @@ where
                         .with_idx(self.idx)
                         .with_tot(self.tot)
                         .with_name(Some(name.clone()))
-                        .with_arg(Some(ARef::new(RawVal::from(BOOL_TRUE))))
+                        .with_arg(Some(ARef::new(AString::from(BOOL_TRUE))))
                         .with_style(Style::Boolean),
                 ));
             }
@@ -709,7 +709,7 @@ where
         let style = Style::Cmd;
         let name = self.name.clone();
         let args = self.ctx.args().clone();
-        let arg = Some(RawVal::from(BOOL_TRUE).into());
+        let arg = Some(AString::from(BOOL_TRUE).into());
 
         Ok(Some(
             T::default()
