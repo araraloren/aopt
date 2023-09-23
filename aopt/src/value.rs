@@ -30,6 +30,56 @@ use crate::raise_error;
 use crate::Error;
 use crate::RawVal;
 
+/// A special option value, can stop the policy, using for implement `--`.
+///
+/// # Example
+/// ```
+/// use aopt::prelude::*;
+///
+/// fn main() -> Result<(), Box<dyn std::error::Error>> {
+///
+///     let mut parser = AFwdParser::default();
+///
+///     parser.set_strict(true);
+///     parser
+///         .add_opt("--=b")?
+///         .set_value_type::<aopt::value::Stop>();
+///
+///     // -w will processed, it is set before `--`
+///     parser.add_opt("-w=i")?;
+///
+///     // -o will not processed, it is set after `--`
+///     parser.add_opt("-o=s")?;
+///
+///     // fo will processed, it is not an option
+///     parser.add_opt("foo=p@1")?;
+///
+///     parser.init()?;
+///     parser.parse(ARef::new(Args::from(
+///         ["app", "-w=42", "--", "-o", "val", "foo"].into_iter(),
+///     )))?;
+///
+///     assert_eq!(parser.find_val::<i64>("-w")?, &42);
+///     assert!(parser.find_val::<String>("-o").is_err());
+///     assert_eq!(parser.find_val::<bool>("foo")?, &true);
+///     Ok(())
+/// }
+/// ```
+///
+/// ```!
+/// POSIX.1-2017
+///
+/// 12.2 Utility Syntax Guidelines
+///
+/// Guideline 10:
+///
+/// The first -- argument that is not an option-argument should be accepted as a delimiter indicating the end of options.
+/// Any following arguments should be treated as operands, even if they begin with the '-' character.
+/// ```
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Stop;
+
 pub trait ErasedValue {
     fn initialize(&mut self) -> Result<(), Error>;
 

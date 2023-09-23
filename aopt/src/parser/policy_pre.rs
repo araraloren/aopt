@@ -11,12 +11,14 @@ use crate::args::ArgParser;
 use crate::args::Args;
 use crate::ctx::Ctx;
 use crate::ctx::Invoker;
+use crate::err::ErrorCmd;
 use crate::guess::InvokeGuess;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::set::OptValidator;
 use crate::set::SetChecker;
 use crate::set::SetOpt;
+use crate::trace_log;
 use crate::ARef;
 use crate::Error;
 use crate::Str;
@@ -309,10 +311,12 @@ where
         let mut iter = args.guess_iter().enumerate();
         let mut opt_fail = FailManager::default();
 
+        trace_log!("Parsing {ctx:?} using pre policy");
         ctx.set_args(args.clone());
         while let Some((idx, (opt, next))) = iter.next() {
             let mut matched = false;
             let mut consume = false;
+            let mut stopped = false;
             let mut like_opt = false;
             let next = next.map(|v| ARef::new(v.clone()));
 
@@ -337,11 +341,25 @@ where
                                 name: Some(name.clone()),
                             };
 
+                            trace_log!(
+                                "Guess command line clopt = {:?} & next = {:?}",
+                                clopt,
+                                next
+                            );
                             for style in opt_styles.iter() {
                                 if let Some(Some(ret)) =
                                     Self::ig_failure(guess.guess_and_invoke(style, overload))?
                                 {
                                     (matched, consume) = (ret.matched, ret.consume);
+                                }
+                                if let Some(error_cmd) = guess.fail.find_err_command() {
+                                    match error_cmd {
+                                        ErrorCmd::StopPolicy => {
+                                            stopped = true;
+                                            break;
+                                        }
+                                        ErrorCmd::QuitPolicy => return Ok(()),
+                                    }
                                 }
                                 if matched {
                                     break;
@@ -351,7 +369,11 @@ where
                     }
                 }
             }
-
+            if stopped {
+                // skip current, put left argument to noa args
+                noa_args.extend_from_slice(&args[(idx + 1)..]);
+                break;
+            }
             // if consume the argument, skip it
             if matched && consume {
                 iter.next();
@@ -387,7 +409,16 @@ where
                 idx: Self::noa_cmd(),
             };
 
+            trace_log!("Guess CMD = {:?}", guess.name);
             Self::ig_failure(guess.guess_and_invoke(&UserStyle::Cmd, overload))?;
+            if let Some(error_cmd) = cmd_fail.find_err_command() {
+                match error_cmd {
+                    ErrorCmd::StopPolicy => {
+                        // do nothing for cmd
+                    }
+                    ErrorCmd::QuitPolicy => return Ok(()),
+                }
+            }
             cmd_fail.process_check(self.checker().cmd_check(set))?;
 
             let mut guess = InvokeGuess {
@@ -409,7 +440,16 @@ where
                     .get(Self::noa_pos(idx))
                     .and_then(|v| v.get_str())
                     .map(Str::from);
+                trace_log!("Guess POS argument = {:?} @ {}", guess.name, guess.idx);
                 Self::ig_failure(guess.guess_and_invoke(&UserStyle::Pos, overload))?;
+                if let Some(error_cmd) = guess.fail.find_err_command() {
+                    match error_cmd {
+                        ErrorCmd::StopPolicy => {
+                            break;
+                        }
+                        ErrorCmd::QuitPolicy => return Ok(()),
+                    }
+                }
             }
         } else {
             cmd_fail.process_check(self.checker().cmd_check(set))?;

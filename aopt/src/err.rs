@@ -8,9 +8,16 @@ use crate::Uid;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+#[derive(Debug, Clone, Copy)]
+pub enum ErrorCmd {
+    StopPolicy,
+    QuitPolicy,
+}
+
 #[derive(Debug, Clone)]
 pub enum Internal {
     Null,
+    Command(ErrorCmd),
     OtherError(String),
     Error(String, bool),
     InvalidArgName(String),
@@ -36,6 +43,9 @@ impl Internal {
     pub fn display(&self) -> String {
         match self {
             Internal::Null => "Null".to_owned(),
+            Internal::Command(command) => {
+                format!("Command using for policy: {:?}", command)
+            }
             Internal::OtherError(error) => error.clone(),
             Internal::Error(msg, _) => msg.clone(),
             Internal::InvalidArgName(msg) => {
@@ -129,10 +139,20 @@ impl Error {
         matches!(self.inner, Internal::Null)
     }
 
+    pub fn command(&self) -> Option<ErrorCmd> {
+        if let Internal::Command(cmd) = self.inner {
+            Some(cmd)
+        } else {
+            None
+        }
+    }
+
     /// The error can be moitted if [`is_failure`](Error::is_failure) return true.
     pub fn is_failure(&self) -> bool {
         if let Internal::Error(_, fail) = &self.inner {
             *fail
+        } else if matches!(self.inner, Internal::Command(_)) {
+            true
         } else {
             matches!(
                 self.inner,
@@ -197,6 +217,10 @@ impl Error {
         Self::new(Internal::Error(msg.into(), true))
     }
 
+    pub fn raise_command(cmd: ErrorCmd) -> Self {
+        Self::new(Internal::Command(cmd))
+    }
+
     pub fn sp_missing_opt_value(names: impl Into<String>) -> Self {
         Self::new(Internal::MissingOptValue(names.into()))
     }
@@ -251,5 +275,12 @@ macro_rules! raise_error {
 macro_rules! raise_failure {
     ($($arg:tt)*) => {
         $crate::Error::raise_failure(format!($($arg)*))
+    };
+}
+
+#[macro_export]
+macro_rules! raise_command {
+    ($cmd:expr) => {
+        $crate::Error::raise_command($cmd)
     };
 }

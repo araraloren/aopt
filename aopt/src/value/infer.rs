@@ -230,7 +230,8 @@ where
             let bool_type = std::any::TypeId::of::<bool>();
 
             // add default storer when value type is bool.
-            if type_id == Some(&bool_type) || ctor == Some(BuiltInCtor::Bool) {
+            if type_id == Some(&bool_type) || ctor == Some(BuiltInCtor::Pos) && type_id.is_none() {
+                trace_log!("Tweak the storer for Pos<bool>: {:?}", cfg.name());
                 cfg.set_storer(ValStorer::new(Box::new(
                     |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
                         let val = raw.is_some();

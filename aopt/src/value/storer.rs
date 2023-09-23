@@ -92,10 +92,10 @@ impl ValStorer {
     pub fn fallback_handler<U: ErasedTy + RawValParser>() -> StoreHandler<AnyValue> {
         Box::new(
             |raw: Option<&RawVal>, ctx: &Ctx, act: &Action, handler: &mut AnyValue| {
-                let val = U::parse(raw, ctx).map_err(Into::into)?;
+                let val = U::parse(raw, ctx).map_err(Into::into);
 
                 trace_log!("Fallback value storer, parsing {:?} -> {:?}", raw, val);
-                act.store1(Some(val), handler);
+                act.store1(Some(val?), handler);
                 Ok(())
             },
         )

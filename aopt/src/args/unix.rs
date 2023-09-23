@@ -12,8 +12,7 @@ fn strip_prefix<'a>(str: &'a OsStr, prefix: &str) -> Option<&'a OsStr> {
     let enc = str.as_bytes();
     let pre = prefix.as_bytes();
 
-    enc.strip_prefix(pre)
-        .and_then(|v| Some(OsStr::from_bytes(v)))
+    enc.strip_prefix(pre).map(OsStr::from_bytes)
 }
 
 fn split_once(str: &OsStr, ch: char) -> Option<(&OsStr, &OsStr)> {
@@ -24,11 +23,11 @@ fn split_once(str: &OsStr, ch: char) -> Option<(&OsStr, &OsStr)> {
     enc.iter()
         .enumerate()
         .find(|(_, ch)| ch == &&sep[0])
-        .and_then(|(idx, _)| {
-            Some((
+        .map(|(idx, _)| {
+            (
                 OsStr::from_bytes(&enc[0..idx]),
                 OsStr::from_bytes(&enc[idx + 1..]),
-            ))
+            )
         })
 }
 

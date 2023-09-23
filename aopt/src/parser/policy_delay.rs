@@ -12,6 +12,7 @@ use crate::ctx::Ctx;
 use crate::ctx::HandlerCollection;
 use crate::ctx::InnerCtx;
 use crate::ctx::Invoker;
+use crate::err::ErrorCmd;
 use crate::guess::process_handler_ret;
 use crate::guess::InnerCtxSaver;
 use crate::guess::InvokeGuess;
@@ -476,6 +477,7 @@ where
         while let Some((idx, (opt, next))) = iter.next() {
             let mut matched = false;
             let mut consume = false;
+            let mut stopped = false;
             let next = next.map(|v| ARef::new(v.clone()));
 
             // parsing current argument
@@ -510,14 +512,27 @@ where
                                     break;
                                 }
                             }
+                            if let Some(error_cmd) = guess.fail.find_err_command() {
+                                match error_cmd {
+                                    ErrorCmd::StopPolicy => {
+                                        stopped = true;
+                                        break;
+                                    }
+                                    ErrorCmd::QuitPolicy => return Ok(()),
+                                }
+                            }
                         }
-                        if !matched && self.strict() {
+                        if !stopped && !matched && self.strict() {
                             return Err(opt_fail.cause(Error::sp_option_not_found(name)));
                         }
                     }
                 }
             }
-
+            if stopped {
+                // skip current, put left argument to noa args
+                noa_args.extend_from_slice(&args[(idx + 1)..]);
+                break;
+            }
             // if consume the argument, skip it
             if matched && consume {
                 iter.next();
@@ -555,6 +570,12 @@ where
 
             trace_log!("Guess CMD = {:?}", guess.name);
             guess.guess_and_invoke(&UserStyle::Cmd, overload)?;
+            if let Some(error_cmd) = guess.fail.find_err_command() {
+                match error_cmd {
+                    ErrorCmd::StopPolicy => {}
+                    ErrorCmd::QuitPolicy => return Ok(()),
+                }
+            }
             cmd_fail.process_check(self.checker().cmd_check(set))?;
 
             let mut guess = InvokeGuess {
@@ -578,6 +599,14 @@ where
                     .map(Str::from);
                 trace_log!("Guess POS argument = {:?} @ {}", guess.name, guess.idx);
                 guess.guess_and_invoke(&UserStyle::Pos, overload)?;
+                if let Some(error_cmd) = guess.fail.find_err_command() {
+                    match error_cmd {
+                        ErrorCmd::StopPolicy => {
+                            break;
+                        }
+                        ErrorCmd::QuitPolicy => return Ok(()),
+                    }
+                }
             }
         } else {
             cmd_fail.process_check(self.checker().cmd_check(set))?;
@@ -588,6 +617,14 @@ where
         for saver in std::mem::take(&mut self.contexts) {
             let ret = self.process_delay_ctx(&mut prev_ctx, set, inv, ser, &mut opt_fail, saver)?;
 
+            if let Some(error_cmd) = opt_fail.find_err_command() {
+                match error_cmd {
+                    ErrorCmd::StopPolicy => {
+                        break;
+                    }
+                    ErrorCmd::QuitPolicy => return Ok(()),
+                }
+            }
             if !ret.matched && self.strict() {
                 return Err(opt_fail.cause(crate::raise_error!(
                     "Option match failed, Ctx = {:?}",

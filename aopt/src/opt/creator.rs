@@ -266,6 +266,11 @@ impl Creator<AOpt, OptConfig, Error> {
     }
 
     pub(crate) fn guess_default_infer(ctor: BuiltInCtor, info: &mut OptConfig) {
+        trace_log!(
+            "In default, guess infer {:?} fill config `{:?}`",
+            ctor,
+            info
+        );
         match ctor {
             BuiltInCtor::Int => <i64>::infer_fill_info(info, false),
             BuiltInCtor::Str => <String>::infer_fill_info(info, false),

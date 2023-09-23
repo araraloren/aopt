@@ -3,7 +3,9 @@ use std::io::Stdin;
 use std::path::PathBuf;
 
 use crate::ctx::Ctx;
+use crate::raise_command;
 use crate::raise_failure;
+use crate::value::Stop;
 use crate::Error;
 use crate::RawVal;
 
@@ -155,5 +157,41 @@ impl RawValParser for Stdin {
             }
         }
         Err(raise_failure!("Stdin value only support value `-`: {:?}", raw).with_uid(ctx.uid()?))
+    }
+}
+
+impl RawValParser for Stop {
+    type Error = Error;
+
+    fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error> {
+        const STOP: &str = "--";
+
+        let inner_ctx = ctx.inner_ctx()?;
+
+        match inner_ctx.style() {
+            crate::prelude::Style::Null => {
+                unreachable!("Unexcepted null style in ctx({:?})", ctx)
+            }
+            crate::prelude::Style::Pos
+            | crate::prelude::Style::Cmd
+            | crate::prelude::Style::Main => {
+                // check value for noa
+                if let Some(raw) = raw {
+                    if raw.get_str() == Some(STOP) {
+                        return Err(raise_command!(crate::err::ErrorCmd::StopPolicy));
+                    }
+                }
+            }
+            crate::prelude::Style::Boolean
+            | crate::prelude::Style::Argument
+            | crate::prelude::Style::Combined
+            | crate::prelude::Style::Flag => {
+                // check name for option
+                if inner_ctx.name().map(|v| v.as_str()) == Some(STOP) {
+                    return Err(raise_command!(crate::err::ErrorCmd::StopPolicy));
+                }
+            }
+        }
+        Err(raise_failure!("Stop value only support value `--`: {:?}", raw).with_uid(ctx.uid()?))
     }
 }

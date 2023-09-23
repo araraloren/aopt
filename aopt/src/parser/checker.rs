@@ -18,7 +18,7 @@ pub struct DefaultSetChecker<S>(PhantomData<S>);
 
 impl<S> Clone for DefaultSetChecker<S> {
     fn clone(&self) -> Self {
-        Self(self.0.clone())
+        Self(self.0)
     }
 }
 

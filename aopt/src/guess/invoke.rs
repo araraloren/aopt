@@ -799,6 +799,7 @@ where
             .with_arg(policy.arg().clone())
             .with_style(policy.style());
         let uids = policy.uids().to_vec();
+        let mut result = false;
 
         for uid in uids {
             self.ctx
@@ -813,6 +814,7 @@ where
 
             // return first index if handler success
             if process_handler_ret(invoke_ret, |_| Ok(()), when_fail)? {
+                result = true;
                 policy.apply(uid, self.set).map_err(Into::into)?;
                 if !all {
                     // may return if first matched, for option
@@ -821,7 +823,7 @@ where
                 }
             }
         }
-        Ok(policy.matched())
+        Ok(result)
     }
 
     pub fn collect_ctxs<T>(
