@@ -1,6 +1,6 @@
 [package]
 name = "aopt"
-version = "0.11.0"
+version = "0.11.1"
 authors = ["araraloren <blackcatoverwall@gmail.com>"]
 edition = "2021"
 license = "MPL-2.0"
@@ -23,3 +23,6 @@ sync = []
 utf8 = []
 log = ["tracing"]
 serde = ["serde/derive"]
+
+[package.metadata.docs.rs]
+cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]

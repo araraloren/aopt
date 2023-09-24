@@ -237,11 +237,17 @@ impl Creator<AOpt, OptConfig, Error> {
                     if let Some(index) = &index {
                         debug_assert!(
                             !index.is_null(),
-                            "Option {} not support position parameters: {:?}",
+                            "Please remove the index, option `{}` not support positional parameters: {:?}",
                             name,
                             index
                         );
                     }
+                } else {
+                    debug_assert!(
+                        index.is_some(),
+                        "Please provide an index, indicate the position you want to capture for option `{}`.",
+                        name
+                    );
                 }
                 Ok(
                     AOpt::new(name, r#type, ValAccessor::new(storer, initializer))
@@ -297,11 +303,17 @@ impl Creator<AOpt, OptConfig, Error> {
                 if let Some(index) = &index {
                     debug_assert!(
                         !index.is_null(),
-                        "Option {} not support position parameters: {:?}",
+                        "Please remove the index, option `{}` not support positional parameters: {:?}",
                         name,
                         index
                     );
                 }
+            } else {
+                debug_assert!(
+                    index.is_some(),
+                    "Please provide an index, indicate the position you want to capture for option `{}`.",
+                    name
+                );
             }
             Ok(
                 AOpt::new(name, r#type, ValAccessor::new(storer, initializer))

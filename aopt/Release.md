@@ -1,6 +1,18 @@
 
 # Relase note
 
+## 0.11
+
+- Refactor guess code support option value overload
+
+- Improve the performance of Error
+
+- Add error command support interrupt the `Policy`, add support of `--`
+
+- Fix the issue of `Pos<bool>`
+
+- Fix the issue of `Infer::infer_fill_info`
+
 ## 0.10.1
 
 - Replace regex with neure, reduce compile time of crate

@@ -365,9 +365,7 @@ where
     }
 
     /// Enable [`Flag`](UserStyle::Flag) option set style.
-    /// This can support option style like `--opt42` which set `--opt` value to 42.
-    /// In default the [`Flag`](UserStyle::Flag) style only support
-    /// one letter option such as `-i`.
+    /// It will support set style like `--flag`, but the value will be set to None.
     pub fn enable_flag(&mut self) -> &mut Self {
         self.style_manager_mut().push(UserStyle::Flag);
         self
