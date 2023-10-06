@@ -375,7 +375,6 @@ where
     ///     parser.add_opt_cfg(Bool)?.set_name("--round");
     ///     parser.add_opt_cfg(Int64)?.set_name("--poll");
     ///
-    ///     parser.init()?;
     ///     parser.parse(aopt::ARef::new(Args::from(["--poll", "42"].into_iter())))?;
     ///
     ///     assert_eq!(parser.find_val::<bool>("--round")?, &false);
@@ -585,7 +584,6 @@ mod test {
             });
         set.add_opt_i::<Cmd>("ls")?;
 
-        set.init()?;
         PolicyParser::<AFwdPolicy>::parse(
             &mut set,
             ARef::new(Args::from_array(["app", "ls", "--aopt", "--bopt=42"])),

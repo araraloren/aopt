@@ -14,7 +14,6 @@ pub fn main() -> Result<(), aopt::Error> {
         .set_value(true)
         .on(|_: &mut ASet, _: &mut ASer, val: ctx::Value<bool>| Ok(Some(!*val)))?;
 
-    parser.init()?;
     parser
         .parse(ARef::new(Args::from(
             ["app", "-flag=foo", "--/flag"].into_iter(),

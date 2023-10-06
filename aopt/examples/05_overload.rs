@@ -8,7 +8,7 @@ pub fn main() -> Result<(), aopt::Error> {
     parser.add_opt_i::<bool>("-flag")?;
 
     // enable combination style
-    parser.set_overload(true).init()?;
+    parser.set_overload(true);
     parser
         .parse(ARef::new(Args::from(
             ["app", "-flag=foo", "-flag=42", "-flag"].into_iter(),

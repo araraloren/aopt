@@ -13,7 +13,7 @@ pub fn main() -> Result<(), aopt::Error> {
     parser.add_opt_i::<Pos<String>>("second@2")?;
 
     // enable combination style
-    parser.enable_combined().init()?;
+    parser.enable_combined();
     parser
         .parse(ARef::new(Args::from(
             ["app", "list", "--foo", "value", "bar"].into_iter(),

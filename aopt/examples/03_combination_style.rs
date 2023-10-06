@@ -12,7 +12,7 @@ pub fn main() -> Result<(), aopt::Error> {
     parser.add_opt_i::<bool>("f")?;
 
     // enable combination style
-    parser.enable_combined().init()?;
+    parser.enable_combined();
     parser
         .parse(ARef::new(Args::from(["app", "-abc", "def"].into_iter())))?
         .ok()?;
@@ -28,7 +28,6 @@ pub fn main() -> Result<(), aopt::Error> {
     // and disable the strict flag of policy
     parser.validator_mut().add_prefix("");
     parser.set_strict(false);
-    parser.init()?;
     parser
         .parse(ARef::new(Args::from(["app", "-abc", "def"].into_iter())))?
         .ok()?;

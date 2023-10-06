@@ -54,7 +54,6 @@ use crate::RawVal;
 ///     // fo will processed, it is not an option
 ///     parser.add_opt("foo=p@1")?;
 ///
-///     parser.init()?;
 ///     parser.parse(ARef::new(Args::from(
 ///         ["app", "-w=42", "--", "-o", "val", "foo"].into_iter(),
 ///     )))?;

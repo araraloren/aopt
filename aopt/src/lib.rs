@@ -10,6 +10,7 @@ pub mod parser;
 pub mod raw;
 pub mod ser;
 pub mod set;
+pub mod shell;
 pub mod str;
 pub mod value;
 
@@ -167,7 +168,6 @@ macro_rules! getopt {
                 $(
                     let parser = __check_p(&mut $parser_left);
 
-                    parser.init()?;
                     match $crate::parser::Parser::parse(parser, args.clone()) {
                         Ok(mut parser_ret) => {
                             if parser_ret.status() {
@@ -206,7 +206,6 @@ macro_rules! getopt {
                 $(
                     let parser = __check_p(&mut $parser_left);
 
-                    parser.init()?;
                     match $crate::parser::Parser::parse(parser, args.clone()) {
                         Ok(mut parser_ret) => {
                             if parser_ret.status() {

@@ -63,8 +63,6 @@ pub const BOOL_FALSE: &str = "false";
 ///
 /// // `Cmd` has a default position `@1`.
 /// parser.add_opt_i::<Cmd>("list: Set the list sub command")?;
-///
-/// parser.init()?;
 /// parser.parse(ARef::new(Args::from_array(["app", "list"])))?;
 ///
 /// // Get the value by `Infer::Val` type of `bool`.
@@ -115,7 +113,6 @@ impl DerefMut for Cmd {
 /// // Name is not important.
 /// parser.add_opt_i::<Pos<String>>("pos_accept_string@1: Set the string value")?;
 ///
-/// parser.init()?;
 /// parser.parse(ARef::new(Args::from_array(["app", "value"])))?;
 ///
 /// // Get the value by `Infer::Val` type of `String`.
@@ -172,7 +169,6 @@ impl<T> DerefMut for Pos<T> {
 ///             Ok(Some(String::from("main_function called")))
 ///       })?;
 ///
-/// parser.init()?;
 /// parser.parse(ARef::new(Args::from_array(["app", "list"])))?;
 ///
 /// // Get the value of main function returned.
@@ -233,7 +229,6 @@ impl<T> DerefMut for Main<T> {
 /// // add the option wrap with `MutOpt`
 /// parser.add_opt_i::<MutOpt<Name>>("-e: Set the name")?;
 ///
-/// parser.init()?;
 /// parser.parse(ARef::new(Args::from_array(["app", "-e=foo"])))?;
 ///
 /// // Get the value through value type `Name`
@@ -294,7 +289,6 @@ impl<T> DerefMut for MutOpt<T> {
 /// // add the option wrap with `RefOpt`
 /// parser.add_opt_i::<RefOpt<'_, Name>>("-e: Set the name")?;
 ///
-/// parser.init()?;
 /// parser.parse(ARef::new(Args::from_array(["app", "-e=foo"])))?;
 ///
 /// // Get the value through value type `Name`

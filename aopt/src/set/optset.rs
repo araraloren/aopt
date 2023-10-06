@@ -171,6 +171,16 @@ where
     pub fn validator_mut(&mut self) -> &mut V {
         &mut self.validator
     }
+
+    /// Take all the options
+    pub fn take_options(&mut self) -> Option<Vec<C::Opt>> {
+        let mut ret = None;
+
+        if !self.opts.is_empty() {
+            ret = Some(std::mem::replace(&mut self.opts, vec![]));
+        }
+        ret
+    }
 }
 
 macro_rules! add_interface {

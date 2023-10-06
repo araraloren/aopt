@@ -232,7 +232,6 @@ fn parser_command_line<'a>() -> Result<AFwdParser<'a>, Error> {
         })?
         .then(VecStore);
 
-    parser.init()?;
     parser.parse_env()?.ok()?;
 
     Ok(parser)

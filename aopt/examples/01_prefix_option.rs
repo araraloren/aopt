@@ -7,7 +7,6 @@ pub fn main() -> Result<(), aopt::Error> {
     parser.add_opt("-f=b")?;
     parser.add_opt_i::<bool>("--flag")?;
 
-    parser.init()?;
     parser
         .parse(ARef::new(Args::from(["app", "-f"].into_iter())))?
         .ok()?;
@@ -19,7 +18,6 @@ pub fn main() -> Result<(), aopt::Error> {
     parser.add_opt("-flag=b!")?;
     parser.add_opt("--/flag=b")?;
 
-    parser.init()?;
     parser
         .parse(ARef::new(Args::from(
             ["app", "-flag", "--/flag"].into_iter(),

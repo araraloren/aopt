@@ -477,10 +477,6 @@ where
         F: FnMut(P::Ret, &'b mut Self) -> Result<R, Error>,
     {
         let args = iter.map(|v| v.into());
-
-        // initialize the option value
-        self.init()?;
-
         let ret = self.parse_policy(aopt::ARef::new(Args::from(args)), policy)?;
 
         r(ret, self)
@@ -546,8 +542,6 @@ where
         let args = iter.map(|v| v.into());
         let async_ret;
 
-        // initialize the option value
-        self.init()?;
         match self.parse_policy(aopt::ARef::new(Args::from(args)), policy) {
             Ok(ret) => {
                 let ret = r(ret, self).await;
@@ -621,10 +615,6 @@ where
         F: FnMut(P::Ret, &'b Self) -> Result<R, Error>,
     {
         let args = iter.map(|v| v.into());
-
-        // initialize the option value
-        self.init()?;
-
         let ret = self.parse_policy(aopt::ARef::new(Args::from(args)), policy)?;
 
         r(ret, self)
@@ -690,8 +680,6 @@ where
         let args = iter.map(|v| v.into());
         let async_ret;
 
-        // initialize the option value
-        self.init()?;
         match self.parse_policy(aopt::ARef::new(Args::from(args)), policy) {
             Ok(ret) => {
                 let ret = r(ret, self).await;

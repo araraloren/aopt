@@ -8,7 +8,6 @@ pub fn main() -> Result<(), aopt::Error> {
     parser.add_opt("--flag=s")?;
     parser.add_opt_i::<f32>("-flag")?;
 
-    parser.init()?;
     parser
         .parse(ARef::new(Args::from(
             ["app", "-f42", "--flag", "foo", "-flag=2.1"].into_iter(),

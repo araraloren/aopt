@@ -129,7 +129,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok(Some(val.take()))
         },
     )?;
-    parser.init()?;
     parser.parse_env()?.unwrap();
 
     Ok(())

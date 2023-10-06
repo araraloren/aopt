@@ -1,31 +1,36 @@
 use crate::ctx::Ctx;
 use crate::ctx::HandlerCollection;
-use crate::ctx::InnerCtx;
 use crate::opt::Style;
 use crate::opt::BOOL_TRUE;
-use crate::parser::FailManager;
 use crate::parser::UserStyle;
 use crate::set::OptValidator;
-use crate::trace_log;
 use crate::ARef;
 use crate::Error;
 use crate::RawVal;
 use crate::Str;
+use crate::Uid;
 
-use super::process_handler_ret;
-use super::style::*;
-use super::GuessPolicy;
-use super::InnerCtxSaver;
-use super::MatchPolicy;
-use super::MultiOpt;
-use super::PolicyBuild;
-use super::PolicyConfig;
-use super::SimpleMatRet;
-use super::SingleNonOpt;
-use super::SingleOpt;
+use crate::guess::style::*;
+use crate::guess::GuessPolicy;
+use crate::guess::MatchPolicy;
+use crate::guess::MultiOpt;
+use crate::guess::PolicyBuild;
+use crate::guess::PolicyConfig;
+use crate::guess::SimpleMatRet;
+use crate::guess::SingleNonOpt;
+use crate::guess::SingleOpt;
+
+#[derive(Debug, Clone, Copy)]
+pub struct CompleteRet {
+    pub matched: bool,
+
+    pub consume: bool,
+
+    pub need_val_opt: Option<Uid>,
+}
 
 #[derive(Debug)]
-pub struct InvokeGuess<'a, Set, Inv, Ser> {
+pub struct CompleteGuess<'a, Set, Inv, Ser> {
     pub idx: usize,
 
     pub tot: usize,
@@ -43,18 +48,10 @@ pub struct InvokeGuess<'a, Set, Inv, Ser> {
     pub inv: &'a mut Inv,
 
     pub ser: &'a mut Ser,
-
-    pub fail: &'a mut FailManager,
 }
 
-impl<'a, Set, Inv, Ser> InvokeGuess<'a, Set, Inv, Ser> {
-    pub fn new(
-        ctx: &'a mut Ctx,
-        set: &'a mut Set,
-        inv: &'a mut Inv,
-        ser: &'a mut Ser,
-        fail: &'a mut FailManager,
-    ) -> Self {
+impl<'a, Set, Inv, Ser> CompleteGuess<'a, Set, Inv, Ser> {
+    pub fn new(ctx: &'a mut Ctx, set: &'a mut Set, inv: &'a mut Inv, ser: &'a mut Ser) -> Self {
         Self {
             idx: 0,
             tot: 0,
@@ -65,7 +62,6 @@ impl<'a, Set, Inv, Ser> InvokeGuess<'a, Set, Inv, Ser> {
             set,
             inv,
             ser,
-            fail,
         }
     }
 
@@ -86,11 +82,6 @@ impl<'a, Set, Inv, Ser> InvokeGuess<'a, Set, Inv, Ser> {
 
     pub fn set_ser(&mut self, ser: &'a mut Ser) -> &mut Self {
         self.ser = ser;
-        self
-    }
-
-    pub fn set_fail(&mut self, fail: &'a mut FailManager) -> &mut Self {
-        self.fail = fail;
         self
     }
 
@@ -139,11 +130,6 @@ impl<'a, Set, Inv, Ser> InvokeGuess<'a, Set, Inv, Ser> {
         self
     }
 
-    pub fn with_fail(mut self, fail: &'a mut FailManager) -> Self {
-        self.fail = fail;
-        self
-    }
-
     pub fn with_idx(mut self, idx: usize) -> Self {
         self.idx = idx;
         self
@@ -170,16 +156,12 @@ impl<'a, Set, Inv, Ser> InvokeGuess<'a, Set, Inv, Ser> {
     }
 }
 
-impl<'a, 'b, Set, Inv, Ser> InvokeGuess<'a, Set, Inv, Ser>
+impl<'a, 'b, Set, Inv, Ser> CompleteGuess<'a, Set, Inv, Ser>
 where
     Set: crate::set::Set + OptValidator,
     Inv: HandlerCollection<'b, Set, Ser>,
 {
-    pub fn guess_and_invoke(
-        &mut self,
-        style: &UserStyle,
-        overload: bool,
-    ) -> Result<Option<SimpleMatRet>, Error> {
+    pub fn guess_complete(&mut self, style: &UserStyle) -> Result<Option<SimpleMatRet>, Error> {
         let mut matched = false;
         let mut consume = false;
 
@@ -188,8 +170,8 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<MainStyle, SingleNonOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, overload, consume)? {
-                        matched = self.invoke(&mut policy, true)?;
+                    if self.r#match(&mut policy, consume)? {
+                        matched = self.apply(&mut policy, true)?;
                     }
                 }
             }
@@ -197,8 +179,8 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<PosStyle, SingleNonOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, overload, consume)? {
-                        matched = self.invoke(&mut policy, true)?;
+                    if self.r#match(&mut policy, consume)? {
+                        matched = self.apply(&mut policy, true)?;
                     }
                 }
             }
@@ -206,8 +188,8 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<CmdStyle, SingleNonOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, overload, consume)? {
-                        matched = self.invoke(&mut policy, true)?;
+                    if self.r#match(&mut policy, consume)? {
+                        matched = self.apply(&mut policy, true)?;
                     }
                 }
             }
@@ -215,8 +197,8 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<EqualWithValuStyle, SingleOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, overload, consume)? {
-                        matched = self.invoke(&mut policy, false)?;
+                    if self.r#match(&mut policy, consume)? {
+                        matched = self.apply(&mut policy, false)?;
                     }
                 }
             }
@@ -225,8 +207,8 @@ where
                     GuessPolicy::<ArgumentStyle, SingleOpt<Set>>::guess_policy(self)?
                 {
                     consume = true;
-                    if self.r#match(&mut policy, overload, consume)? {
-                        matched = self.invoke(&mut policy, false)?;
+                    if self.r#match(&mut policy, consume)? {
+                        matched = self.apply(&mut policy, false)?;
                     }
                 }
             }
@@ -234,8 +216,8 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<EmbeddedValueStyle, SingleOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, overload, consume)? {
-                        matched = self.invoke(&mut policy, false)?;
+                    if self.r#match(&mut policy, consume)? {
+                        matched = self.apply(&mut policy, false)?;
                     }
                 }
             }
@@ -245,8 +227,8 @@ where
                     MultiOpt<SingleOpt<Set>, Set>,
                 >::guess_policy(self)?
                 {
-                    if self.match_multi(&mut policy, overload, consume)? {
-                        matched = self.invoke_multi(&mut policy, false)?;
+                    if self.match_multi(&mut policy, consume)? {
+                        matched = self.apply_multi(&mut policy, false)?;
                     }
                 }
             }
@@ -256,8 +238,8 @@ where
                     MultiOpt<SingleOpt<Set>, Set>,
                 >::guess_policy(self)?
                 {
-                    if self.match_multi(&mut policy, overload, consume)? {
-                        matched = self.invoke_multi(&mut policy, false)?;
+                    if self.match_multi(&mut policy, consume)? {
+                        matched = self.apply_multi(&mut policy, false)?;
                     }
                 }
             }
@@ -265,8 +247,8 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<BooleanStyle, SingleOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, overload, consume)? {
-                        matched = self.invoke(&mut policy, false)?;
+                    if self.r#match(&mut policy, consume)? {
+                        matched = self.apply(&mut policy, false)?;
                     }
                 }
             }
@@ -274,156 +256,17 @@ where
                 if let Some(mut policy) =
                     GuessPolicy::<FlagStyle, SingleOpt<Set>>::guess_policy(self)?
                 {
-                    if self.r#match(&mut policy, overload, consume)? {
-                        matched = self.invoke(&mut policy, false)?;
+                    if self.r#match(&mut policy, consume)? {
+                        matched = self.apply(&mut policy, false)?;
                     }
                 }
             }
         }
-        trace_log!(
-            "Guess style = {:?}, overload = {} ---> matched = {}, consume = {}",
-            style,
-            overload,
-            matched,
-            consume
-        );
         Ok(Some(SimpleMatRet::new(matched, consume)))
-    }
-
-    pub fn guess_and_collect(
-        &mut self,
-        style: &UserStyle,
-        overload: bool,
-    ) -> Result<Option<InnerCtxSaver>, Error> {
-        let mut ret = None;
-
-        match style {
-            UserStyle::Main => {
-                if let Some(mut policy) =
-                    GuessPolicy::<MainStyle, SingleNonOpt<Set>>::guess_policy(self)?
-                {
-                    if self.r#match(&mut policy, overload, false)? {
-                        ret = policy.collect_ctx().map(|inner_ctx| {
-                            InnerCtxSaver::default().with_policy_ctx(vec![inner_ctx])
-                        });
-                    }
-                }
-            }
-            UserStyle::Pos => {
-                if let Some(mut policy) =
-                    GuessPolicy::<PosStyle, SingleNonOpt<Set>>::guess_policy(self)?
-                {
-                    if self.r#match(&mut policy, overload, false)? {
-                        ret = policy.collect_ctx().map(|inner_ctx| {
-                            InnerCtxSaver::default().with_policy_ctx(vec![inner_ctx])
-                        });
-                    }
-                }
-            }
-            UserStyle::Cmd => {
-                if let Some(mut policy) =
-                    GuessPolicy::<CmdStyle, SingleNonOpt<Set>>::guess_policy(self)?
-                {
-                    if self.r#match(&mut policy, overload, false)? {
-                        ret = policy.collect_ctx().map(|inner_ctx| {
-                            InnerCtxSaver::default().with_policy_ctx(vec![inner_ctx])
-                        });
-                    }
-                }
-            }
-            UserStyle::EqualWithValue => {
-                if let Some(mut policy) =
-                    GuessPolicy::<EqualWithValuStyle, SingleOpt<Set>>::guess_policy(self)?
-                {
-                    if self.r#match(&mut policy, overload, false)? {
-                        ret = policy.collect_ctx().map(|inner_ctx| {
-                            InnerCtxSaver::default().with_policy_ctx(vec![inner_ctx])
-                        });
-                    }
-                }
-            }
-            UserStyle::Argument => {
-                if let Some(mut policy) =
-                    GuessPolicy::<ArgumentStyle, SingleOpt<Set>>::guess_policy(self)?
-                {
-                    if self.r#match(&mut policy, overload, true)? {
-                        ret = policy.collect_ctx().map(|inner_ctx| {
-                            InnerCtxSaver::default()
-                                .with_policy_ctx(vec![inner_ctx])
-                                .with_consume(true)
-                        });
-                    }
-                }
-            }
-            UserStyle::EmbeddedValue => {
-                if let Some(mut policy) =
-                    GuessPolicy::<EmbeddedValueStyle, SingleOpt<Set>>::guess_policy(self)?
-                {
-                    if self.r#match(&mut policy, overload, false)? {
-                        ret = policy.collect_ctx().map(|inner_ctx| {
-                            InnerCtxSaver::default().with_policy_ctx(vec![inner_ctx])
-                        });
-                    }
-                }
-            }
-            UserStyle::EmbeddedValuePlus => {
-                if let Some(mut policy) = GuessPolicy::<
-                    EmbeddedValuePlusStyle,
-                    MultiOpt<SingleOpt<Set>, Set>,
-                >::guess_policy(self)?
-                {
-                    if self.match_multi(&mut policy, overload, false)? {
-                        ret = Some(self.collect_ctxs(&mut policy, false)?);
-                    }
-                }
-            }
-            UserStyle::CombinedOption => {
-                if let Some(mut policy) = GuessPolicy::<
-                    CombinedOptionStyle,
-                    MultiOpt<SingleOpt<Set>, Set>,
-                >::guess_policy(self)?
-                {
-                    if self.match_multi(&mut policy, overload, false)? {
-                        ret = Some(self.collect_ctxs(&mut policy, false)?);
-                    }
-                }
-            }
-            UserStyle::Boolean => {
-                if let Some(mut policy) =
-                    GuessPolicy::<BooleanStyle, SingleOpt<Set>>::guess_policy(self)?
-                {
-                    if self.r#match(&mut policy, overload, false)? {
-                        ret = policy.collect_ctx().map(|inner_ctx| {
-                            InnerCtxSaver::default().with_policy_ctx(vec![inner_ctx])
-                        });
-                    }
-                }
-            }
-            UserStyle::Flag => {
-                if let Some(mut policy) =
-                    GuessPolicy::<FlagStyle, SingleOpt<Set>>::guess_policy(self)?
-                {
-                    if self.r#match(&mut policy, overload, false)? {
-                        ret = policy.collect_ctx().map(|inner_ctx| {
-                            InnerCtxSaver::default().with_policy_ctx(vec![inner_ctx])
-                        });
-                    }
-                }
-            }
-        }
-        if ret.is_some() {
-            trace_log!(
-                "Guess style = {:?}, overload = {}, ret == {:?}",
-                style,
-                overload,
-                ret
-            );
-        }
-        Ok(ret)
     }
 }
 
-impl<'a, Set, Inv, Ser, T> GuessPolicy<EqualWithValuStyle, T> for InvokeGuess<'a, Set, Inv, Ser>
+impl<'a, Set, Inv, Ser, T> GuessPolicy<EqualWithValuStyle, T> for CompleteGuess<'a, Set, Inv, Ser>
 where
     T: Default + PolicyBuild,
 {
@@ -446,7 +289,7 @@ where
     }
 }
 
-impl<'a, Set, Inv, Ser, T> GuessPolicy<ArgumentStyle, T> for InvokeGuess<'a, Set, Inv, Ser>
+impl<'a, Set, Inv, Ser, T> GuessPolicy<ArgumentStyle, T> for CompleteGuess<'a, Set, Inv, Ser>
 where
     T: Default + PolicyBuild,
 {
@@ -469,7 +312,7 @@ where
     }
 }
 
-impl<'a, Set, Inv, Ser, T> GuessPolicy<EmbeddedValueStyle, T> for InvokeGuess<'a, Set, Inv, Ser>
+impl<'a, Set, Inv, Ser, T> GuessPolicy<EmbeddedValueStyle, T> for CompleteGuess<'a, Set, Inv, Ser>
 where
     Set: OptValidator,
     T: Default + PolicyBuild,
@@ -512,7 +355,7 @@ where
 }
 
 impl<'a, Set, Inv, Ser, T> GuessPolicy<EmbeddedValuePlusStyle, MultiOpt<T, Set>>
-    for InvokeGuess<'a, Set, Inv, Ser>
+    for CompleteGuess<'a, Set, Inv, Ser>
 where
     Set: OptValidator,
     T: Default + PolicyBuild,
@@ -558,7 +401,7 @@ where
 }
 
 impl<'a, Set, Inv, Ser, T> GuessPolicy<CombinedOptionStyle, MultiOpt<T, Set>>
-    for InvokeGuess<'a, Set, Inv, Ser>
+    for CompleteGuess<'a, Set, Inv, Ser>
 where
     Set: OptValidator,
     T: Default + PolicyBuild,
@@ -599,7 +442,7 @@ where
     }
 }
 
-impl<'a, Set, Inv, Ser, T> GuessPolicy<BooleanStyle, T> for InvokeGuess<'a, Set, Inv, Ser>
+impl<'a, Set, Inv, Ser, T> GuessPolicy<BooleanStyle, T> for CompleteGuess<'a, Set, Inv, Ser>
 where
     T: Default + PolicyBuild,
 {
@@ -622,7 +465,7 @@ where
     }
 }
 
-impl<'a, Set, Inv, Ser, T> GuessPolicy<FlagStyle, T> for InvokeGuess<'a, Set, Inv, Ser>
+impl<'a, Set, Inv, Ser, T> GuessPolicy<FlagStyle, T> for CompleteGuess<'a, Set, Inv, Ser>
 where
     T: Default + PolicyBuild,
 {
@@ -645,7 +488,7 @@ where
     }
 }
 
-impl<'a, Set, Inv, Ser, T> GuessPolicy<MainStyle, T> for InvokeGuess<'a, Set, Inv, Ser>
+impl<'a, Set, Inv, Ser, T> GuessPolicy<MainStyle, T> for CompleteGuess<'a, Set, Inv, Ser>
 where
     T: Default + PolicyBuild,
 {
@@ -671,7 +514,7 @@ where
     }
 }
 
-impl<'a, Set, Inv, Ser, T> GuessPolicy<PosStyle, T> for InvokeGuess<'a, Set, Inv, Ser>
+impl<'a, Set, Inv, Ser, T> GuessPolicy<PosStyle, T> for CompleteGuess<'a, Set, Inv, Ser>
 where
     T: Default + PolicyBuild,
 {
@@ -697,7 +540,7 @@ where
     }
 }
 
-impl<'a, Set, Inv, Ser, T> GuessPolicy<CmdStyle, T> for InvokeGuess<'a, Set, Inv, Ser>
+impl<'a, Set, Inv, Ser, T> GuessPolicy<CmdStyle, T> for CompleteGuess<'a, Set, Inv, Ser>
 where
     T: Default + PolicyBuild,
 {
@@ -723,17 +566,12 @@ where
     }
 }
 
-impl<'a, 'b, Set, Inv, Ser> InvokeGuess<'a, Set, Inv, Ser>
+impl<'a, 'b, Set, Inv, Ser> CompleteGuess<'a, Set, Inv, Ser>
 where
     Set: crate::set::Set,
     Inv: HandlerCollection<'b, Set, Ser>,
 {
-    pub fn r#match<T>(
-        &mut self,
-        policy: &mut T,
-        overload: bool,
-        consume: bool,
-    ) -> Result<bool, Error>
+    pub fn r#match<T>(&mut self, policy: &mut T, consume: bool) -> Result<bool, Error>
     where
         T: PolicyConfig + MatchPolicy<Set = Set>,
     {
@@ -742,40 +580,32 @@ where
         for uid in uids {
             // if overload is true select all the option may match the `policy`
             if !policy.filter(uid, self.set) {
-                if let Err(e) = policy.r#match(uid, self.set, overload, consume) {
+                if let Err(e) = policy.r#match(uid, self.set, false, consume) {
                     let e = e.into();
 
-                    if e.is_failure() {
-                        self.fail.push(e);
-                    } else {
+                    if !e.is_failure() {
                         return Err(e);
                     }
                 }
             }
         }
-        trace_log!("Matching Policy [ idx: {}, tot: {}, name: {:?}, style: {:?}, arg: {:?}, comsume: {} ] ==> {:?}", 
-            policy.idx(), policy.tot(), policy.name(), policy.style(), policy.arg(), consume, policy.uids());
         Ok(policy.matched())
     }
 
     fn match_multi(
         &mut self,
         policy: &mut MultiOpt<SingleOpt<Set>, Set>,
-        overload: bool,
         consume: bool,
     ) -> Result<bool, Error> {
         let uids = self.set.keys();
         let any_match = policy.any_match();
 
-        trace_log!("Any match = {}", any_match);
         for sub_policy in policy.sub_policys_mut() {
             // process all uids with each policy first
             for uid in uids.iter() {
                 if !sub_policy.filter(*uid, self.set) {
-                    if let Err(e) = sub_policy.r#match(*uid, self.set, overload, consume) {
-                        if e.is_failure() {
-                            self.fail.push(e);
-                        } else {
+                    if let Err(e) = sub_policy.r#match(*uid, self.set, false, consume) {
+                        if !e.is_failure() {
                             return Err(e);
                         }
                     }
@@ -788,69 +618,33 @@ where
         Ok(policy.matched())
     }
 
-    pub fn invoke<T>(&mut self, policy: &mut T, all: bool) -> Result<bool, Error>
+    pub fn apply<T>(&mut self, policy: &mut T, all: bool) -> Result<bool, Error>
     where
         T: PolicyConfig + MatchPolicy<Set = Set>,
     {
-        let inner_ctx = InnerCtx::default()
-            .with_idx(policy.idx())
-            .with_total(policy.tot())
-            .with_name(policy.name().cloned())
-            .with_arg(policy.arg().clone())
-            .with_style(policy.style());
-        let uids = policy.uids().to_vec();
         let mut result = false;
 
-        for uid in uids {
-            self.ctx
-                .set_inner_ctx(Some(inner_ctx.clone().with_uid(uid)));
+        if !all {
+            // apply first
+            if let Some(uid) = policy.uids().first() {
+                let uid = *uid;
 
-            // invoke the handler of `uid`
-            let invoke_ret = self.inv.invoke_fb(&uid, self.set, self.ser, self.ctx);
-            let when_fail = |e| {
-                self.fail.push(e);
-                Ok(())
-            };
-
-            // return first index if handler success
-            if process_handler_ret(invoke_ret, |_| Ok(()), when_fail)? {
                 result = true;
                 policy.apply(uid, self.set).map_err(Into::into)?;
-                if !all {
-                    // may return if first matched, for option
-                    // otherwise invoke all the handler, for noa
-                    break;
-                }
+            }
+        } else if !policy.uids().is_empty() {
+            let uids = policy.uids().to_vec();
+
+            result = true;
+            for uid in uids {
+                policy.apply(uid, self.set).map_err(Into::into)?;
             }
         }
+
         Ok(result)
     }
 
-    pub fn collect_ctxs<T>(
-        &mut self,
-        policy: &mut MultiOpt<T, Set>,
-        consume: bool,
-    ) -> Result<InnerCtxSaver, Error>
-    where
-        T: PolicyConfig + MatchPolicy<Set = Set>,
-    {
-        let any_match = policy.any_match();
-        let mut inner_ctxs = Vec::with_capacity(policy.len());
-
-        for sub_policy in policy.sub_policys().iter() {
-            if let Some(inner_ctx) = sub_policy.collect_ctx() {
-                inner_ctxs.push(inner_ctx);
-            }
-        }
-
-        Ok(InnerCtxSaver {
-            any_match,
-            consume,
-            policy_ctx: inner_ctxs,
-        })
-    }
-
-    pub fn invoke_multi<T>(
+    pub fn apply_multi<T>(
         &mut self,
         policy: &mut MultiOpt<T, Set>,
         all: bool,
@@ -862,7 +656,7 @@ where
         let any_match = policy.any_match();
 
         for sub_policy in policy.sub_policys_mut().iter_mut() {
-            if self.invoke(sub_policy, all)? {
+            if self.apply(sub_policy, all)? {
                 matched = true;
                 if any_match {
                     // any match, return current
