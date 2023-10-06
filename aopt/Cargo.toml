@@ -1,6 +1,6 @@
 [package]
 name = "aopt"
-version = "0.11.2"
+version = "0.11.3"
 authors = ["araraloren <blackcatoverwall@gmail.com>"]
 edition = "2021"
 license = "MPL-2.0"
@@ -21,6 +21,7 @@ tracing = { version = "0.1", optional = true }
 [features]
 sync = []
 utf8 = []
+shell = []
 log = ["tracing"]
 serde = ["serde/derive"]
 

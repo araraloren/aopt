@@ -10,6 +10,7 @@ pub mod parser;
 pub mod raw;
 pub mod ser;
 pub mod set;
+#[cfg(feature = "shell")]
 pub mod shell;
 pub mod str;
 pub mod value;
