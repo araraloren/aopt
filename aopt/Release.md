@@ -1,6 +1,12 @@
 
 # Relase note
 
+## 0.11.2
+
+- Remove some unless init call
+
+- Add simple shell completion support for bash/fish/zsh
+
 ## 0.11
 
 - Refactor guess code support option value overload
