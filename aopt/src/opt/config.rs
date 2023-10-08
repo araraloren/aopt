@@ -1,4 +1,6 @@
 use std::any::TypeId;
+use std::fmt::Debug;
+use std::marker::PhantomData;
 
 use crate::err::Error;
 use crate::opt::Action;
@@ -7,16 +9,22 @@ use crate::opt::Index;
 use crate::opt::Information;
 use crate::opt::OptParser;
 use crate::typeid;
+use crate::value::Placeholder;
 use crate::value::ValInitializer;
 use crate::value::ValStorer;
 use crate::Str;
 
 use super::Style;
 
-pub trait Config {
-    fn new<Parser>(parser: &Parser, pattern: Str) -> Result<Self, Error>
+pub trait ConfigBuild {
+    type Infer;
+
+    type Config;
+
+    fn describe(&self) -> &str;
+
+    fn build<Parser>(self, parser: &Parser) -> Result<Self::Config, Error>
     where
-        Self: Sized,
         Parser: OptParser,
         Parser::Output: Information;
 }
@@ -320,40 +328,6 @@ impl OptConfig {
     }
 }
 
-impl Config for OptConfig {
-    fn new<Parser>(parser: &Parser, pattern: Str) -> Result<Self, Error>
-    where
-        Self: Sized,
-        Parser: OptParser,
-        Parser::Output: Information,
-    {
-        let mut output = parser.parse_opt(pattern).map_err(|e| e.into())?;
-        let mut ret = Self::default();
-
-        if let Some(v) = output.take_name() {
-            ret.set_name(v);
-        }
-        if let Some(v) = output.take_index() {
-            ret.set_index(v);
-        }
-        if let Some(v) = output.take_force() {
-            ret.set_force(v);
-        }
-        if let Some(v) = output.take_help() {
-            ret.set_help(v);
-        }
-        if let Some(v) = output.take_ctor() {
-            ret.set_ctor(v);
-        }
-        if let Some(v) = output.take_alias() {
-            for item in v {
-                ret.add_alias(item);
-            }
-        }
-        Ok(ret)
-    }
-}
-
 impl ConfigValue for OptConfig {
     fn hint(&self) -> &Str {
         self.help.hint()
@@ -567,5 +541,345 @@ impl ConfigValue for OptConfig {
     fn set_initializer(&mut self, initializer: ValInitializer) -> &mut Self {
         self.initializer = Some(initializer);
         self
+    }
+}
+
+/// Contain the information used for create option instance.
+pub struct ConfigBuilder<I> {
+    creator: Option<Str>,
+
+    ctor: Option<Str>,
+
+    r#type: Option<TypeId>,
+
+    name: Option<Str>,
+
+    force: Option<bool>,
+
+    index: Option<Index>,
+
+    alias: Option<Vec<Str>>,
+
+    help: Option<Help>,
+
+    action: Option<Action>,
+
+    storer: Option<ValStorer>,
+
+    initializer: Option<ValInitializer>,
+
+    ignore_name: Option<bool>,
+
+    ignore_alias: Option<bool>,
+
+    ignore_index: Option<bool>,
+
+    styles: Option<Vec<Style>>,
+
+    marker: PhantomData<I>,
+}
+
+impl<I> Default for ConfigBuilder<I> {
+    fn default() -> Self {
+        Self {
+            creator: Default::default(),
+            ctor: Default::default(),
+            r#type: Default::default(),
+            name: Default::default(),
+            force: Default::default(),
+            index: Default::default(),
+            alias: Default::default(),
+            help: Default::default(),
+            action: Default::default(),
+            storer: Default::default(),
+            initializer: Default::default(),
+            ignore_name: Default::default(),
+            ignore_alias: Default::default(),
+            ignore_index: Default::default(),
+            styles: Default::default(),
+            marker: Default::default(),
+        }
+    }
+}
+
+impl<I> Debug for ConfigBuilder<I> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ConfigBuilder")
+            .field("creator", &self.creator)
+            .field("ctor", &self.ctor)
+            .field("r#type", &self.r#type)
+            .field("name", &self.name)
+            .field("force", &self.force)
+            .field("index", &self.index)
+            .field("alias", &self.alias)
+            .field("help", &self.help)
+            .field("action", &self.action)
+            .field("storer", &self.storer)
+            .field("initializer", &self.initializer)
+            .field("ignore_name", &self.ignore_name)
+            .field("ignore_alias", &self.ignore_alias)
+            .field("ignore_index", &self.ignore_index)
+            .field("styles", &self.styles)
+            .field("marker", &self.marker)
+            .finish()
+    }
+}
+
+impl<I> ConfigBuilder<I> {
+    pub fn new(creator: Option<Str>) -> Self {
+        Self {
+            creator,
+            ..Default::default()
+        }
+    }
+
+    pub fn with_index(mut self, index: Index) -> Self {
+        self.index = Some(index);
+        self
+    }
+
+    pub fn with_force(mut self, force: bool) -> Self {
+        self.force = Some(force);
+        self
+    }
+
+    pub fn with_ctor(mut self, ctor: impl Into<Str>) -> Self {
+        self.ctor = Some(ctor.into());
+        self
+    }
+
+    pub fn with_name(mut self, name: impl Into<Str>) -> Self {
+        self.name = Some(name.into());
+        self
+    }
+
+    pub fn with_type<T: 'static>(mut self) -> Self {
+        self.r#type = Some(typeid::<T>());
+        self
+    }
+
+    pub fn with_hint(mut self, hint: impl Into<Str>) -> Self {
+        self.help
+            .get_or_insert(Help::default())
+            .set_hint(hint.into());
+        self
+    }
+
+    pub fn with_help(mut self, help: impl Into<Str>) -> Self {
+        self.help
+            .get_or_insert(Help::default())
+            .set_help(help.into());
+        self
+    }
+
+    pub fn with_alias(mut self, alias: Vec<impl Into<Str>>) -> Self {
+        self.alias = Some(alias.into_iter().map(|v| v.into()).collect());
+        self
+    }
+
+    pub fn with_styles(mut self, styles: Vec<Style>) -> Self {
+        self.styles = Some(styles);
+        self
+    }
+
+    pub fn with_action(mut self, action: Action) -> Self {
+        self.action = Some(action);
+        self
+    }
+
+    pub fn with_storer(mut self, storer: ValStorer) -> Self {
+        self.storer = Some(storer);
+        self
+    }
+
+    pub fn with_ignore_alias(mut self, ignore_alias: bool) -> Self {
+        self.ignore_alias = Some(ignore_alias);
+        self
+    }
+
+    pub fn with_ignore_index(mut self, ignore_index: bool) -> Self {
+        self.ignore_index = Some(ignore_index);
+        self
+    }
+
+    pub fn with_ignore_name(mut self, ignore_name: bool) -> Self {
+        self.ignore_name = Some(ignore_name);
+        self
+    }
+
+    pub fn with_initializer(mut self, initializer: ValInitializer) -> Self {
+        self.initializer = Some(initializer);
+        self
+    }
+}
+
+impl<I> From<Str> for ConfigBuilder<I> {
+    fn from(value: Str) -> Self {
+        Self::new(Some(value))
+    }
+}
+
+impl ConfigBuild for Str {
+    type Infer = Placeholder;
+
+    type Config = OptConfig;
+
+    fn describe(&self) -> &str {
+        self.as_str()
+    }
+
+    fn build<Parser>(self, parser: &Parser) -> Result<Self::Config, Error>
+    where
+        Self: Sized,
+        Parser: OptParser,
+        Parser::Output: Information,
+    {
+        let mut output = parser.parse_opt(self).map_err(|e| e.into())?;
+        let mut ret = Self::Config::default();
+
+        if let Some(v) = output.take_name() {
+            ret.set_name(v);
+        }
+        if let Some(v) = output.take_index() {
+            ret.set_index(v);
+        }
+        if let Some(v) = output.take_force() {
+            ret.set_force(v);
+        }
+        if let Some(v) = output.take_help() {
+            ret.set_help(v);
+        }
+        if let Some(v) = output.take_ctor() {
+            ret.set_ctor(v);
+        }
+        if let Some(v) = output.take_alias() {
+            for item in v {
+                ret.add_alias(item);
+            }
+        }
+        Ok(ret)
+    }
+}
+
+impl ConfigBuild for &'_ str {
+    type Infer = Placeholder;
+
+    type Config = OptConfig;
+
+    fn describe(&self) -> &str {
+        self
+    }
+
+    fn build<Parser>(self, parser: &Parser) -> Result<Self::Config, Error>
+    where
+        Self: Sized,
+        Parser: OptParser,
+        Parser::Output: Information,
+    {
+        ConfigBuild::build(Str::from(self), parser)
+    }
+}
+
+impl ConfigBuild for String {
+    type Infer = Placeholder;
+
+    type Config = OptConfig;
+
+    fn describe(&self) -> &str {
+        self.as_str()
+    }
+
+    fn build<Parser>(self, parser: &Parser) -> Result<Self::Config, Error>
+    where
+        Self: Sized,
+        Parser: OptParser,
+        Parser::Output: Information,
+    {
+        ConfigBuild::build(Str::from(self), parser)
+    }
+}
+
+impl<I> ConfigBuild for ConfigBuilder<I> {
+    type Infer = I;
+
+    type Config = OptConfig;
+
+    fn describe(&self) -> &str {
+        self.name.as_ref().map(|v|v.as_str()).unwrap_or("Empty name")
+    }
+
+    fn build<Parser>(self, parser: &Parser) -> Result<Self::Config, Error>
+    where
+        Self: Sized,
+        Parser: OptParser,
+        Parser::Output: Information,
+    {
+        let mut ret = if let Some(creator) = self.creator {
+            creator.build(parser)?
+        } else {
+            Self::Config::default()
+        };
+
+        if let Some(ctor) = self.ctor {
+            ret.with_ctor(ctor);
+        }
+        if let Some(r#type) = self.r#type {
+            ret.set_type_id(r#type);
+        }
+        if let Some(name) = self.name {
+            ret.with_name(name);
+        }
+        if let Some(force) = self.force {
+            ret.with_force(force);
+        }
+        if let Some(index) = self.index {
+            ret.with_index(index);
+        }
+        if let Some(alias) = self.alias {
+            ret.with_alias(alias);
+        }
+        if let Some(help) = self.help {
+            ret.with_help(help.help());
+            ret.with_hint(help.hint());
+        }
+        if let Some(action) = self.action {
+            ret.with_action(action);
+        }
+        if let Some(storer) = self.storer {
+            ret.with_storer(storer);
+        }
+        if let Some(initializer) = self.initializer {
+            ret.with_initializer(initializer);
+        }
+        if let Some(ignore_name) = self.ignore_name {
+            ret.with_ignore_name(ignore_name);
+        }
+        if let Some(ignore_alias) = self.ignore_alias {
+            ret.with_ignore_alias(ignore_alias);
+        }
+        if let Some(ignore_index) = self.ignore_index {
+            ret.with_ignore_index(ignore_index);
+        }
+        if let Some(styles) = self.styles {
+            ret.with_styles(styles);
+        }
+        Ok(ret)
+    }
+}
+
+impl ConfigBuild for OptConfig {
+    type Infer = Placeholder;
+
+    type Config = OptConfig;
+
+    fn describe(&self) -> &str {
+        self.name.as_ref().map(|v|v.as_str()).unwrap_or("Empty name")
+    }
+
+    fn build<Parser>(self, parser: &Parser) -> Result<Self::Config, Error>
+    where
+        Parser: OptParser,
+        Parser::Output: Information {
+        Ok(self)
     }
 }

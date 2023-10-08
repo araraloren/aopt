@@ -25,6 +25,7 @@ use crate::opt::ConfigValue;
 use crate::opt::Index;
 use crate::opt::Opt;
 use crate::opt::OptValueExt;
+use crate::prelude::ConfigBuild;
 use crate::raise_error;
 use crate::value::ValInitializer;
 use crate::value::ValStorer;
@@ -205,49 +206,58 @@ pub trait SetValueFindExt
 where
     Self: Set + Sized,
 {
-    fn find_uid(&self, opt: impl Into<Str>) -> Result<Uid, Error>;
+    fn find_uid(&self, builder: impl ConfigBuild<Config = SetCfg<Self>>) -> Result<Uid, Error>;
 
-    fn find_uid_i<U: 'static>(&self, opt: impl Into<Str>) -> Result<Uid, Error>;
-
-    fn find_opt(&self, opt: impl Into<Str>) -> Result<&SetOpt<Self>, Error> {
-        self.opt(self.find_uid(opt)?)
+    fn find_opt(
+        &self,
+        builder: impl ConfigBuild<Config = SetCfg<Self>>,
+    ) -> Result<&SetOpt<Self>, Error> {
+        self.opt(self.find_uid(builder)?)
     }
 
-    fn find_opt_i<U: 'static>(&self, opt: impl Into<Str>) -> Result<&SetOpt<Self>, Error> {
-        self.opt(self.find_uid_i::<U>(opt)?)
-    }
-
-    fn find_opt_mut(&mut self, opt: impl Into<Str>) -> Result<&mut SetOpt<Self>, Error> {
-        self.opt_mut(self.find_uid(opt)?)
-    }
-
-    fn find_opt_mut_i<U: 'static>(
+    fn find_opt_mut(
         &mut self,
-        opt: impl Into<Str>,
+        builder: impl ConfigBuild<Config = SetCfg<Self>>,
     ) -> Result<&mut SetOpt<Self>, Error> {
-        self.opt_mut(self.find_uid_i::<U>(opt)?)
+        self.opt_mut(self.find_uid(builder)?)
     }
 
-    fn find_val<U: ErasedTy>(&self, opt: impl Into<Str>) -> Result<&U, Error> {
-        self.opt(self.find_uid(opt)?)?.val::<U>()
+    fn find_val<U: ErasedTy>(
+        &self,
+        builder: impl ConfigBuild<Config = SetCfg<Self>>,
+    ) -> Result<&U, Error> {
+        self.opt(self.find_uid(builder)?)?.val::<U>()
     }
 
-    fn find_val_mut<U: ErasedTy>(&mut self, opt: impl Into<Str>) -> Result<&mut U, Error> {
-        self.opt_mut(self.find_uid(opt)?)?.val_mut()
+    fn find_val_mut<U: ErasedTy>(
+        &mut self,
+        builder: impl ConfigBuild<Config = SetCfg<Self>>,
+    ) -> Result<&mut U, Error> {
+        self.opt_mut(self.find_uid(builder)?)?.val_mut()
     }
 
-    fn find_vals<U: ErasedTy>(&self, opt: impl Into<Str>) -> Result<&Vec<U>, Error> {
-        self.opt(self.find_uid(opt)?)?.vals()
+    fn find_vals<U: ErasedTy>(
+        &self,
+        builder: impl ConfigBuild<Config = SetCfg<Self>>,
+    ) -> Result<&Vec<U>, Error> {
+        self.opt(self.find_uid(builder)?)?.vals()
     }
 
-    fn find_vals_mut<U: ErasedTy>(&mut self, opt: impl Into<Str>) -> Result<&mut Vec<U>, Error> {
-        self.opt_mut(self.find_uid(opt)?)?.vals_mut()
+    fn find_vals_mut<U: ErasedTy>(
+        &mut self,
+        builder: impl ConfigBuild<Config = SetCfg<Self>>,
+    ) -> Result<&mut Vec<U>, Error> {
+        self.opt_mut(self.find_uid(builder)?)?.vals_mut()
     }
 
-    fn take_val<U: ErasedTy>(&mut self, opt: impl Into<Str>) -> Result<U, Error> {
-        let name: Str = opt.into();
-        let opt = self.find_uid(name.clone())?;
-        let vals = self.opt_mut(opt)?.vals_mut::<U>()?;
+    fn take_val<U: ErasedTy>(
+        &mut self,
+        builder: impl ConfigBuild<Config = SetCfg<Self>>,
+    ) -> Result<U, Error> {
+        let uid = self.find_uid(builder)?;
+        let opt = self.opt_mut(uid)?;
+        let name = opt.name().clone();
+        let vals = opt.vals_mut::<U>()?;
 
         vals.pop().ok_or_else(|| {
             raise_error!(
@@ -255,14 +265,18 @@ where
                 type_name::<U>(),
                 name
             )
-            .with_uid(opt)
+            .with_uid(uid)
         })
     }
 
-    fn take_vals<U: ErasedTy>(&mut self, opt: impl Into<Str>) -> Result<Vec<U>, Error> {
-        let name: Str = opt.into();
-        let uid = self.find_uid(name.clone())?;
-        let vals = self.find_vals_mut::<U>(name.clone());
+    fn take_vals<U: ErasedTy>(
+        &mut self,
+        builder: impl ConfigBuild<Config = SetCfg<Self>>,
+    ) -> Result<Vec<U>, Error> {
+        let uid = self.find_uid(builder)?;
+        let opt = self.opt_mut(uid)?;
+        let name = opt.name().clone();
+        let vals = opt.vals_mut();
 
         Ok(std::mem::take(vals.map_err(|e| {
             raise_error!(
