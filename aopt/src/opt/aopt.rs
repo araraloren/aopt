@@ -16,7 +16,6 @@ use crate::opt::Style;
 use crate::value::ErasedValue;
 use crate::value::ValAccessor;
 use crate::Error;
-use crate::Str;
 use crate::Uid;
 
 /// A multiple features option type.
@@ -51,7 +50,7 @@ use crate::Uid;
 pub struct AOpt {
     uid: Uid,
 
-    name: Str,
+    name: String,
 
     r#type: TypeId,
 
@@ -63,7 +62,7 @@ pub struct AOpt {
 
     accessor: ValAccessor,
 
-    alias: Option<Vec<Str>>,
+    alias: Option<Vec<String>>,
 
     action: Action,
 
@@ -79,10 +78,10 @@ pub struct AOpt {
 }
 
 impl AOpt {
-    pub fn new(name: Str, type_id: TypeId, accessor: ValAccessor) -> Self {
+    pub fn new(name: impl Into<String>, type_id: TypeId, accessor: ValAccessor) -> Self {
         Self {
             uid: 0,
-            name,
+            name: name.into(),
             r#type: type_id,
             help: Default::default(),
             matched: false,
@@ -105,7 +104,7 @@ impl AOpt {
     }
 
     /// Set the name of option.
-    pub fn with_name(mut self, name: Str) -> Self {
+    pub fn with_name(mut self, name: String) -> Self {
         self.name = name;
         self
     }
@@ -135,14 +134,14 @@ impl AOpt {
     }
 
     /// Set the hint of option, such as `--option`.
-    pub fn with_hint(mut self, hint: Str) -> Self {
-        self.help.set_hint(hint);
+    pub fn with_hint(mut self, hint: impl Into<String>) -> Self {
+        self.help.set_hint(hint.into());
         self
     }
 
     /// Set the help message of option.
-    pub fn with_help(mut self, help: Str) -> Self {
-        self.help.set_help(help);
+    pub fn with_help(mut self, help: impl Into<String>) -> Self {
+        self.help.set_help(help.into());
         self
     }
 
@@ -177,7 +176,7 @@ impl AOpt {
     }
 
     /// Set the alias of option.
-    pub fn with_alias(mut self, alias: Option<Vec<Str>>) -> Self {
+    pub fn with_alias(mut self, alias: Option<Vec<String>>) -> Self {
         self.alias = alias;
         self
     }
@@ -190,8 +189,8 @@ impl AOpt {
 }
 
 impl AOpt {
-    pub fn set_name(&mut self, name: Str) -> &mut Self {
-        self.name = name;
+    pub fn set_name(&mut self, name: impl Into<String>) -> &mut Self {
+        self.name = name.into();
         self
     }
 
@@ -205,13 +204,13 @@ impl AOpt {
         self
     }
 
-    pub fn set_hint(&mut self, hint: Str) -> &mut Self {
-        self.help.set_hint(hint);
+    pub fn set_hint(&mut self, hint: impl Into<String>) -> &mut Self {
+        self.help.set_hint(hint.into());
         self
     }
 
-    pub fn set_help(&mut self, help: Str) -> &mut Self {
-        self.help.set_help(help);
+    pub fn set_help(&mut self, help: impl Into<String>) -> &mut Self {
+        self.help.set_help(help.into());
         self
     }
 
@@ -235,14 +234,14 @@ impl AOpt {
         self
     }
 
-    pub fn add_alias(&mut self, name: Str) -> &mut Self {
+    pub fn add_alias(&mut self, name: impl Into<String>) -> &mut Self {
         if let Some(alias) = &mut self.alias {
-            alias.push(name);
+            alias.push(name.into());
         }
         self
     }
 
-    pub fn rem_alias(&mut self, name: &Str) -> &mut Self {
+    pub fn rem_alias(&mut self, name: &str) -> &mut Self {
         if let Some(alias) = &mut self.alias {
             if let Some((i, _)) = alias.iter().enumerate().find(|(_, v)| v == &name) {
                 alias.remove(i);
@@ -261,7 +260,7 @@ impl Opt for AOpt {
         self.uid
     }
 
-    fn name(&self) -> &Str {
+    fn name(&self) -> &str {
         &self.name
     }
 
@@ -269,11 +268,11 @@ impl Opt for AOpt {
         &self.r#type
     }
 
-    fn hint(&self) -> &Str {
+    fn hint(&self) -> &str {
         self.help.hint()
     }
 
-    fn help(&self) -> &Str {
+    fn help(&self) -> &str {
         self.help.help()
     }
 
@@ -297,7 +296,7 @@ impl Opt for AOpt {
         self.index.as_ref()
     }
 
-    fn alias(&self) -> Option<&Vec<Str>> {
+    fn alias(&self) -> Option<&Vec<String>> {
         self.alias.as_ref()
     }
 
@@ -337,11 +336,11 @@ impl Opt for AOpt {
         self.force() == force
     }
 
-    fn mat_name(&self, name: Option<&Str>) -> bool {
+    fn mat_name(&self, name: Option<&str>) -> bool {
         name.iter().all(|&v| v == self.name())
     }
 
-    fn mat_alias(&self, name: &Str) -> bool {
+    fn mat_alias(&self, name: &str) -> bool {
         if let Some(alias) = &self.alias {
             alias.iter().any(|v| v == name)
         } else {

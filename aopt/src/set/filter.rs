@@ -1,7 +1,7 @@
 use std::any::TypeId;
 use std::fmt::Debug;
 
-use crate::opt::Config;
+use crate::opt::ConfigBuild;
 use crate::opt::ConfigValue;
 use crate::opt::Index;
 use crate::opt::Opt;
@@ -22,7 +22,7 @@ where
 impl<C, T> FilterMatcher<T> for C
 where
     T: Opt,
-    C: Config + ConfigValue,
+    C: ConfigBuild + ConfigValue,
 {
     /// Check if option matched current option.
     fn mat_opt(&self, opt: &T) -> bool {
@@ -67,7 +67,7 @@ pub struct Filter<'a, S>
 where
     S: Set,
     S::Ctor: Ctor,
-    SetCfg<S>: Config + ConfigValue,
+    SetCfg<S>: ConfigBuild + ConfigValue,
 {
     set: &'a S,
     info: SetCfg<S>,
@@ -77,7 +77,7 @@ impl<'a, S> Debug for Filter<'a, S>
 where
     S: Set + Debug,
     S::Ctor: Ctor,
-    SetCfg<S>: Config + ConfigValue + Debug,
+    SetCfg<S>: ConfigBuild + ConfigValue + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Filter")
@@ -92,7 +92,7 @@ where
     S: Set,
     S::Ctor: Ctor,
     SetOpt<S>: Opt,
-    SetCfg<S>: Config + ConfigValue,
+    SetCfg<S>: ConfigBuild + ConfigValue,
 {
     pub fn new(set: &'a S, info: SetCfg<S>) -> Self {
         Self { set, info }
@@ -144,7 +144,7 @@ pub struct FilterMut<'a, S>
 where
     S: Set,
     S::Ctor: Ctor,
-    SetCfg<S>: Config + ConfigValue,
+    SetCfg<S>: ConfigBuild + ConfigValue,
 {
     set: &'a mut S,
     info: SetCfg<S>,
@@ -154,7 +154,7 @@ impl<'a, S> Debug for FilterMut<'a, S>
 where
     S: Set + Debug,
     S::Ctor: Ctor,
-    SetCfg<S>: Config + ConfigValue + Debug,
+    SetCfg<S>: ConfigBuild + ConfigValue + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("FilterMut")
@@ -169,7 +169,7 @@ where
     S: Set,
     S::Ctor: Ctor,
     SetOpt<S>: Opt,
-    SetCfg<S>: Config + ConfigValue,
+    SetCfg<S>: ConfigBuild + ConfigValue,
 {
     pub fn new(set: &'a mut S, info: SetCfg<S>) -> Self {
         Self { set, info }

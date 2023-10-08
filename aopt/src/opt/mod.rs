@@ -13,7 +13,7 @@ pub(crate) mod value;
 
 pub use self::action::Action;
 pub use self::aopt::AOpt;
-pub use self::config::Config;
+pub use self::config::ConfigBuild;
 pub use self::config::ConfigValue;
 pub use self::config::OptConfig;
 pub use self::creator::BuiltInCtor;
@@ -352,16 +352,16 @@ pub trait Opt: Debug {
     fn uid(&self) -> Uid;
 
     /// The name of option.
-    fn name(&self) -> &Str;
+    fn name(&self) -> &str;
 
     /// The type of option.
     fn r#type(&self) -> &TypeId;
 
     /// The help hint of option such as `--flag`.
-    fn hint(&self) -> &Str;
+    fn hint(&self) -> &str;
 
     /// The help message of option.
-    fn help(&self) -> &Str;
+    fn help(&self) -> &str;
 
     fn valid(&self) -> bool;
 
@@ -378,7 +378,7 @@ pub trait Opt: Debug {
     fn index(&self) -> Option<&Index>;
 
     /// The alias the option.
-    fn alias(&self) -> Option<&Vec<Str>>;
+    fn alias(&self) -> Option<&Vec<String>>;
 
     fn accessor(&self) -> &ValAccessor;
 
@@ -398,9 +398,9 @@ pub trait Opt: Debug {
 
     fn mat_force(&self, force: bool) -> bool;
 
-    fn mat_name(&self, name: Option<&Str>) -> bool;
+    fn mat_name(&self, name: Option<&str>) -> bool;
 
-    fn mat_alias(&self, name: &Str) -> bool;
+    fn mat_alias(&self, name: &str) -> bool;
 
     fn mat_index(&self, index: Option<(usize, usize)>) -> bool;
 

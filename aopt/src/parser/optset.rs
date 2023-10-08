@@ -7,7 +7,7 @@ use crate::ctx::Handler;
 use crate::ctx::HandlerCollection;
 use crate::ctx::HandlerEntry;
 use crate::map::ErasedTy;
-use crate::opt::Config;
+use crate::opt::ConfigBuild;
 use crate::opt::ConfigValue;
 use crate::opt::Information;
 use crate::opt::Opt;
@@ -220,7 +220,7 @@ where
 impl<'a, Set, Inv, Ser> HCOptSet<Set, Inv, Ser>
 where
     SetOpt<Set>: Opt,
-    SetCfg<Set>: Config + ConfigValue + Default,
+    SetCfg<Set>: ConfigBuild + ConfigValue + Default,
     <Set as OptParser>::Output: Information,
     Inv: HandlerCollection<'a, Set, Ser>,
     Set: crate::set::Set + OptParser + OptValidator,
@@ -308,7 +308,7 @@ where
         &mut self,
         opt: impl Into<Str>,
     ) -> Result<ParserCommit<'a, '_, Inv, Set, Ser, Placeholder>, Error> {
-        let info = <SetCfg<Set>>::new(&self.set, opt.into())?;
+        let info = <SetCfg<Set>>::build(&self.set, opt.into())?;
 
         Ok(ParserCommit::new(
             SetCommit::new_placeholder(&mut self.set, info),
@@ -324,7 +324,7 @@ where
         U: Infer + 'static,
         U::Val: RawValParser,
     {
-        let info = <SetCfg<Set>>::new(&self.set, opt.into())?;
+        let info = <SetCfg<Set>>::build(&self.set, opt.into())?;
 
         Ok(ParserCommit::new(
             SetCommit::new(&mut self.set, info),

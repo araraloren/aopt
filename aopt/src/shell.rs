@@ -148,7 +148,8 @@ where
         use crate::set::SetExt;
 
         if matches!(shell, Shell::Zsh) {
-            writeln!(writer, "local -a subcmds\nsubcmds=(\n").map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
+            writeln!(writer, "local -a subcmds\nsubcmds=(\n")
+                .map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
         }
         if self.display_cmd {
             for uid in self.avail_cmd.iter() {
@@ -197,7 +198,8 @@ where
             }
         }
         if matches!(shell, Shell::Zsh) {
-            writeln!(writer, ")\n_describe 'available values' subcmds\n").map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
+            writeln!(writer, ")\n_describe 'available values' subcmds\n")
+                .map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
         }
         Ok(())
     }

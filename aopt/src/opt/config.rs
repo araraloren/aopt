@@ -13,29 +13,31 @@ use crate::Str;
 
 use super::Style;
 
-pub trait Config {
-    fn new<Parser>(parser: &Parser, pattern: Str) -> Result<Self, Error>
+pub trait ConfigBuild {
+    type Infer;
+
+    type Config;
+
+    fn describe(&self) -> &str;
+
+    fn build<Parser>(parser: &Parser, pattern: &str) -> Result<Self::Config, Error>
     where
-        Self: Sized,
         Parser: OptParser,
         Parser::Output: Information;
 }
 
 pub trait ConfigValue {
     /// The hint message used in usage of option.
-    fn hint(&self) -> &Str;
-
-    /// The help message of option.
-    fn help(&self) -> &Str;
+    fn hint(&self) -> Option<&Help>;
 
     /// The style support by current option.
     fn style(&self) -> Option<&Vec<Style>>;
 
     /// The creator name of option.
-    fn ctor(&self) -> Option<&Str>;
+    fn ctor(&self) -> Option<&str>;
 
     /// The name of option.
-    fn name(&self) -> Option<&Str>;
+    fn name(&self) -> Option<&str>;
 
     /// The type name of option.
     fn r#type(&self) -> Option<&TypeId>;
@@ -44,7 +46,7 @@ pub trait ConfigValue {
     fn index(&self) -> Option<&Index>;
 
     /// The alias name and prefix of option.
-    fn alias(&self) -> Option<&Vec<Str>>;
+    fn alias(&self) -> Option<&Vec<String>>;
 
     /// If the option is force required.
     fn force(&self) -> Option<bool>;
@@ -64,8 +66,6 @@ pub trait ConfigValue {
 
     fn ignore_index(&self) -> bool;
 
-    fn has_infer(&self) -> bool;
-
     fn has_index(&self) -> bool;
 
     fn has_ctor(&self) -> bool;
@@ -73,8 +73,6 @@ pub trait ConfigValue {
     fn has_name(&self) -> bool;
 
     fn has_type(&self) -> bool;
-
-    fn has_hint(&self) -> bool;
 
     fn has_help(&self) -> bool;
 
@@ -96,27 +94,23 @@ pub trait ConfigValue {
 
     fn set_ignore_index(&mut self, ignore_index: bool) -> &mut Self;
 
-    fn set_infer(&mut self, infered: bool) -> &mut Self;
-
     fn set_index(&mut self, index: Index) -> &mut Self;
 
     fn set_force(&mut self, force: bool) -> &mut Self;
 
-    fn set_ctor(&mut self, ctor: impl Into<Str>) -> &mut Self;
+    fn set_ctor(&mut self, ctor: impl Into<String>) -> &mut Self;
 
-    fn set_name(&mut self, name: impl Into<Str>) -> &mut Self;
+    fn set_name(&mut self, name: impl Into<String>) -> &mut Self;
 
-    fn set_hint(&mut self, hint: impl Into<Str>) -> &mut Self;
-
-    fn set_help(&mut self, help: impl Into<Str>) -> &mut Self;
+    fn set_help(&mut self, help: impl Into<Help>) -> &mut Self;
 
     fn set_style(&mut self, styles: Vec<Style>) -> &mut Self;
 
     fn clr_alias(&mut self) -> &mut Self;
 
-    fn add_alias(&mut self, alias: impl Into<Str>) -> &mut Self;
+    fn add_alias(&mut self, alias: impl Into<String>) -> &mut Self;
 
-    fn rem_alias(&mut self, alias: impl Into<Str>) -> &mut Self;
+    fn rem_alias(&mut self, alias: impl Into<String>) -> &mut Self;
 
     fn set_type<T: 'static>(&mut self) -> &mut Self;
 
@@ -127,24 +121,46 @@ pub trait ConfigValue {
     fn set_storer(&mut self, storer: ValStorer) -> &mut Self;
 
     fn set_initializer(&mut self, initializer: ValInitializer) -> &mut Self;
+
+    fn take_index(&mut self) -> Option<Index>;
+
+    fn take_ctor(&mut self) -> Option<String>;
+
+    fn take_name(&mut self) -> Option<String>;
+
+    fn take_type(&mut self) -> Option<TypeId>;
+
+    fn take_help(&mut self) -> Option<Help>;
+
+    fn take_alias(&mut self) -> Option<Vec<String>>;
+
+    fn take_styles(&mut self) -> Option<Vec<Style>>;
+
+    fn take_action(&mut self) -> Option<Action>;
+
+    fn take_storer(&mut self) -> Option<ValStorer>;
+
+    fn take_initializer(&mut self) -> Option<ValInitializer>;
+
+    
 }
 
 /// Contain the information used for create option instance.
 #[derive(Debug, Default)]
 pub struct OptConfig {
-    ctor: Option<Str>,
+    ctor: Option<String>,
 
     r#type: Option<TypeId>,
 
-    name: Option<Str>,
+    name: Option<String>,
 
     force: Option<bool>,
 
     index: Option<Index>,
 
-    alias: Vec<Str>,
+    alias: Option<Vec<String>>,
 
-    help: Help,
+    help: Option<Help>,
 
     action: Option<Action>,
 
@@ -157,8 +173,6 @@ pub struct OptConfig {
     ignore_alias: bool,
 
     ignore_index: bool,
-
-    infered: bool,
 
     styles: Option<Vec<Style>>,
 }
@@ -174,12 +188,12 @@ impl OptConfig {
         self
     }
 
-    pub fn with_ctor(mut self, ctor: impl Into<Str>) -> Self {
+    pub fn with_ctor(mut self, ctor: impl Into<String>) -> Self {
         self.ctor = Some(ctor.into());
         self
     }
 
-    pub fn with_name(mut self, name: impl Into<Str>) -> Self {
+    pub fn with_name(mut self, name: impl Into<String>) -> Self {
         self.name = Some(name.into());
         self
     }
@@ -189,18 +203,18 @@ impl OptConfig {
         self
     }
 
-    pub fn with_hint(mut self, hint: impl Into<Str>) -> Self {
-        self.help.set_hint(hint.into());
+    pub fn with_type_id(mut self, type_id: TypeId) -> Self {
+        self.r#type = Some(type_id);
         self
     }
 
-    pub fn with_help(mut self, help: impl Into<Str>) -> Self {
-        self.help.set_help(help.into());
+    pub fn with_help(mut self, help: impl Into<Help>) -> Self {
+        self.help = Some(help.into());
         self
     }
 
-    pub fn with_alias(mut self, alias: Vec<impl Into<Str>>) -> Self {
-        self.alias = alias.into_iter().map(|v| v.into()).collect();
+    pub fn with_alias(mut self, alias: Vec<impl Into<String>>) -> Self {
+        self.alias = Some(alias.into_iter().map(Into::into).collect());
         self
     }
 
@@ -238,90 +252,10 @@ impl OptConfig {
         self.initializer = Some(initializer);
         self
     }
-
-    pub fn take_alias(&mut self) -> Vec<Str> {
-        std::mem::take(&mut self.alias)
-    }
-
-    pub fn take_storer(&mut self) -> Option<ValStorer> {
-        self.storer.take()
-    }
-
-    pub fn take_initializer(&mut self) -> Option<ValInitializer> {
-        self.initializer.take()
-    }
-
-    pub fn gen_name(&self) -> Result<Str, Error> {
-        Ok(self
-            .name
-            .as_ref()
-            .ok_or_else(|| {
-                crate::raise_error!("Incomplete option configuration: missing option name")
-            })?
-            .clone())
-    }
-
-    pub fn gen_type(&mut self) -> Result<TypeId, Error> {
-        self.r#type.take().ok_or_else(|| {
-            crate::raise_error!("Incomplete option configuration: missing option value type")
-        })
-    }
-
-    pub fn gen_storer(&mut self) -> Result<ValStorer, Error> {
-        self.storer.take().ok_or_else(|| {
-            crate::raise_error!("Incomplete option configuration: missing ValStorer")
-        })
-    }
-
-    pub fn gen_initializer(&mut self) -> Result<ValInitializer, Error> {
-        self.initializer.take().ok_or_else(|| {
-            crate::raise_error!("Incomplete option configuration: missing ValInitializer")
-        })
-    }
-
-    pub fn gen_styles(&mut self) -> Result<Vec<Style>, Error> {
-        self.styles
-            .take()
-            .ok_or_else(|| crate::raise_error!("Incomplete option configuration: missing Style"))
-    }
-
-    pub fn gen_opt_help(&self) -> Result<Help, Error> {
-        let mut ret = self.help.clone();
-
-        if ret.hint().is_empty() {
-            let mut names = vec![String::default()];
-
-            // add name
-            names[0] += self.gen_name()?.as_ref();
-
-            // add alias
-            if let Some(alias_vec) = self.alias() {
-                for alias in alias_vec {
-                    names.push(format!("{}", alias));
-                }
-            }
-            // sort name by len
-            names.sort_by_key(|v| v.len());
-
-            if let Some(index) = &self.index {
-                let index_string = index.to_help();
-
-                // add index string
-                if index_string.is_empty() {
-                    ret.set_hint(names.join(","));
-                } else {
-                    ret.set_hint(format!("{}@{}", names.join(","), index_string));
-                }
-            } else {
-                ret.set_hint(names.join(","));
-            }
-        }
-        Ok(ret)
-    }
 }
 
-impl Config for OptConfig {
-    fn new<Parser>(parser: &Parser, pattern: Str) -> Result<Self, Error>
+impl ConfigBuild for OptConfig {
+    fn build<Parser>(parser: &Parser, pattern: Str) -> Result<Self, Error>
     where
         Self: Sized,
         Parser: OptParser,
@@ -567,5 +501,45 @@ impl ConfigValue for OptConfig {
     fn set_initializer(&mut self, initializer: ValInitializer) -> &mut Self {
         self.initializer = Some(initializer);
         self
+    }
+
+    fn take_index(&mut self) -> Option<Index> {
+        self.index.take()
+    }
+
+    fn take_ctor(&mut self) -> Option<String> {
+        self.ctor.take()
+    }
+
+    fn take_name(&mut self) -> Option<String> {
+        self.name.take()
+    }
+
+    fn take_type(&mut self) -> Option<TypeId> {
+        self.r#type.take()
+    }
+
+    fn take_help(&mut self) -> Option<Help> {
+        self.help.take()
+    }
+
+    fn take_alias(&mut self) -> Option<Vec<String>> {
+        self.alias.take()
+    }
+
+    fn take_styles(&mut self) -> Option<Vec<Style>> {
+        self.styles.take()
+    }
+
+    fn take_action(&mut self) -> Option<Action> {
+        self.action.take()
+    }
+
+    fn take_storer(&mut self) -> Option<ValStorer> {
+        self.storer.take()
+    }
+
+    fn take_initializer(&mut self) -> Option<ValInitializer> {
+        self.initializer.take()
     }
 }

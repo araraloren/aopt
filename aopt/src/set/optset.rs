@@ -5,7 +5,7 @@ use std::fmt::Debug;
 use crate::opt::Any;
 use crate::opt::BuiltInCtor;
 use crate::opt::Cmd;
-use crate::opt::Config;
+use crate::opt::ConfigBuild;
 use crate::opt::ConfigValue;
 use crate::opt::Information;
 use crate::opt::Main;
@@ -123,7 +123,7 @@ where
     C::Opt: Opt,
     C: Ctor,
     P: OptParser,
-    C::Config: Config,
+    C::Config: ConfigBuild,
     V: OptValidator,
 {
     pub fn with_creator(mut self, creator: C) -> Self {
@@ -136,7 +136,7 @@ impl<P, C, V> OptSet<P, C, V>
 where
     C: Ctor,
     P: OptParser,
-    C::Config: Config,
+    C::Config: ConfigBuild,
     V: OptValidator,
 {
     pub fn parser(&self) -> &P {
@@ -224,7 +224,7 @@ where
     P: OptParser,
     V: OptValidator,
     P::Output: Information,
-    C::Config: Config + ConfigValue + Default,
+    C::Config: ConfigBuild + ConfigValue + Default,
 {
     /// Add an option by configuration into current [`OptSet`].
     pub fn add_opt_cfg(
@@ -258,7 +258,7 @@ where
     ) -> Result<SetCommit<'_, Self, Placeholder>, Error> {
         Ok(SetCommit::new_placeholder(
             self,
-            <C::Config as Config>::new(self.parser(), opt_str.into())?,
+            <C::Config as ConfigBuild>::build(self.parser(), opt_str.into())?,
         ))
     }
 
@@ -271,7 +271,7 @@ where
         U: Infer + 'static,
         U::Val: RawValParser,
     {
-        let info = <C::Config as Config>::new(self.parser(), opt_str.into())?;
+        let info = <C::Config as ConfigBuild>::build(self.parser(), opt_str.into())?;
 
         Ok(SetCommit::new(self, info))
     }
@@ -316,7 +316,7 @@ where
         opt: impl Into<Str>,
         mut func: impl FnMut(&mut C::Config),
     ) -> Result<Filter<'_, Self>, Error> {
-        let mut info = <C::Config as Config>::new(self.parser(), opt.into())?;
+        let mut info = <C::Config as ConfigBuild>::build(self.parser(), opt.into())?;
 
         func(&mut info);
         Ok(Filter::new(self, info))
@@ -332,7 +332,7 @@ where
         opt: impl Into<Str>,
         mut func: impl FnMut(&mut C::Config),
     ) -> Result<Option<&C::Opt>, Error> {
-        let mut info = <C::Config as Config>::new(self.parser(), opt.into())?;
+        let mut info = <C::Config as ConfigBuild>::build(self.parser(), opt.into())?;
 
         func(&mut info);
         Ok(self.iter().find(|opt| info.mat_opt(*opt)))
@@ -348,7 +348,7 @@ where
         opt: impl Into<Str>,
         mut func: impl FnMut(&mut C::Config),
     ) -> Result<impl Iterator<Item = &C::Opt>, Error> {
-        let mut info = <C::Config as Config>::new(self.parser(), opt.into())?;
+        let mut info = <C::Config as ConfigBuild>::build(self.parser(), opt.into())?;
 
         func(&mut info);
         Ok(self.iter().filter(move |opt| info.mat_opt(*opt)))
@@ -367,7 +367,7 @@ where
         opt: impl Into<Str>,
         mut func: impl FnMut(&mut C::Config),
     ) -> Result<FilterMut<'_, Self>, Error> {
-        let mut info = <C::Config as Config>::new(self.parser(), opt.into())?;
+        let mut info = <C::Config as ConfigBuild>::build(self.parser(), opt.into())?;
 
         func(&mut info);
         Ok(FilterMut::new(self, info))
@@ -383,7 +383,7 @@ where
         opt: impl Into<Str>,
         mut func: impl FnMut(&mut C::Config),
     ) -> Result<Option<&mut C::Opt>, Error> {
-        let mut info = <C::Config as Config>::new(self.parser(), opt.into())?;
+        let mut info = <C::Config as ConfigBuild>::build(self.parser(), opt.into())?;
 
         func(&mut info);
         Ok(self.iter_mut().find(|opt| info.mat_opt(*opt)))
@@ -407,7 +407,7 @@ where
         opt: impl Into<Str>,
         mut func: impl FnMut(&mut C::Config),
     ) -> Result<impl Iterator<Item = &mut C::Opt>, Error> {
-        let mut info = <C::Config as Config>::new(self.parser(), opt.into())?;
+        let mut info = <C::Config as ConfigBuild>::build(self.parser(), opt.into())?;
 
         func(&mut info);
         Ok(self.iter_mut().filter(move |opt| info.mat_opt(*opt)))
@@ -421,7 +421,7 @@ where
     P: OptParser,
     V: OptValidator,
     P::Output: Information,
-    C::Config: Config + ConfigValue + Default,
+    C::Config: ConfigBuild + ConfigValue + Default,
 {
     fn find_uid(&self, opt: impl Into<Str>) -> Result<Uid, Error> {
         let opt: Str = opt.into();
@@ -494,7 +494,7 @@ where
     P: OptParser,
     V: OptValidator,
     P::Output: Information,
-    C::Config: Config + ConfigValue + Default,
+    C::Config: ConfigBuild + ConfigValue + Default,
 {
     type Output = C::Opt;
 
@@ -510,7 +510,7 @@ where
     P: OptParser,
     V: OptValidator,
     P::Output: Information,
-    C::Config: Config + ConfigValue + Default,
+    C::Config: ConfigBuild + ConfigValue + Default,
 {
     fn index_mut(&mut self, index: I) -> &mut Self::Output {
         index.mut_from(self).unwrap()
@@ -524,7 +524,7 @@ where
     P: OptParser,
     V: OptValidator,
     P::Output: Information,
-    C::Config: Config + ConfigValue + Default,
+    C::Config: ConfigBuild + ConfigValue + Default,
 {
     fn ref_from<'a>(&self, set: &'a OptSet<P, C, V>) -> Result<&'a C::Opt, Error> {
         set.find(*self)?
@@ -605,7 +605,7 @@ where
     P: OptParser,
     V: OptValidator,
     P::Output: Information,
-    C::Config: Config + ConfigValue + Default,
+    C::Config: ConfigBuild + ConfigValue + Default,
 {
     type Output = P::Output;
 
