@@ -2,7 +2,7 @@ use aopt::prelude::*;
 use aopt::Error;
 
 pub trait IntoConfig {
-    type Ret: Config + ConfigValue;
+    type Ret: ConfigBuild + ConfigValue;
 
     fn into_config<Parser>(self, parser: &Parser) -> Result<Self::Ret, Error>
     where
@@ -193,7 +193,7 @@ impl<T: ErasedTy + Clone> IntoConfig for OptionMeta<T> {
         Parser: OptParser,
         Parser::Output: Information,
     {
-        let mut cfg = Self::Ret::new(parser, self.take_option().into())?;
+        let mut cfg = Self::Ret::build(parser, self.take_option().into())?;
 
         if let Some(hint) = self.take_hint() {
             cfg.set_hint(hint);

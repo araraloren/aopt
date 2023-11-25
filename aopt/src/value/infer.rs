@@ -113,7 +113,7 @@ pub trait Infer {
         (!cfg.has_index()).then(|| index.map(|idx| cfg.set_index(idx)));
         (!cfg.has_type()).then(|| cfg.set_type_id(type_id));
         (!cfg.has_action()).then(|| cfg.set_action(act));
-        (!cfg.has_style()).then(|| cfg.set_style(style));
+        (!cfg.has_style()).then(|| cfg.set_styles(style));
         (!cfg.has_force()).then(|| cfg.set_force(force));
         (!cfg.has_action()).then(|| cfg.set_action(act));
         if let Some(storer) = storer {

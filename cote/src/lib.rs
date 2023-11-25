@@ -34,7 +34,7 @@ pub use aopt::prelude::ASet;
 pub use aopt::prelude::Action;
 pub use aopt::prelude::Args;
 pub use aopt::prelude::Commit;
-pub use aopt::prelude::Config;
+pub use aopt::prelude::ConfigBuild;
 pub use aopt::prelude::ConfigValue;
 pub use aopt::prelude::Ctor;
 pub use aopt::prelude::Ctx;
@@ -98,7 +98,7 @@ pub use value::Fetch;
 pub trait IntoParserDerive<'inv, Set, Ser>
 where
     Ser: ServicesValExt + Default,
-    SetCfg<Set>: Config + ConfigValue + Default,
+    SetCfg<Set>: ConfigBuild + ConfigValue + Default,
     Set: crate::Set + OptParser + OptValidator + Default,
 {
     fn into_parser() -> Result<Parser<'inv, Set, Ser>, aopt::Error> {

@@ -4,7 +4,7 @@ use std::ops::DerefMut;
 
 use aopt::ctx::HandlerEntry;
 use aopt::prelude::Args;
-use aopt::prelude::Config;
+use aopt::prelude::ConfigBuild;
 use aopt::prelude::ConfigValue;
 use aopt::prelude::ErasedTy;
 use aopt::prelude::Extract;
@@ -431,7 +431,7 @@ where
     SetOpt<Set>: Opt,
     Set: aopt::set::Set + OptValidator + OptParser,
     <Set as OptParser>::Output: Information,
-    SetCfg<Set>: Config + ConfigValue + Default,
+    SetCfg<Set>: ConfigBuild + ConfigValue + Default,
 {
     /// Running function after parsing.
     ///

@@ -39,7 +39,6 @@ use std::ops::DerefMut;
 
 use crate::value::ValAccessor;
 use crate::Error;
-use crate::Str;
 use crate::Uid;
 
 pub const BOOL_TRUE: &str = "true";
@@ -343,7 +342,7 @@ pub trait OptParser {
     type Output;
     type Error: Into<Error>;
 
-    fn parse_opt(&self, pattern: Str) -> Result<Self::Output, Self::Error>;
+    fn parse_opt(&self, pattern: &str) -> Result<Self::Output, Self::Error>;
 }
 
 pub trait Opt: Debug {
