@@ -27,6 +27,7 @@ use crate::value::raw2str;
 use crate::value::RawValParser;
 use crate::ARef;
 use crate::Error;
+use crate::RawVal;
 use crate::Uid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -234,6 +235,61 @@ where
         }
         Ok(())
     }
+
+    #[cfg(not(feature = "utf8"))]
+    fn process_last_arg(
+        &mut self,
+        set: &mut <Self as Policy>::Set,
+        last: &RawVal,
+    ) -> Result<(), Error> {
+        use crate::args::AOsStrExt;
+
+        #[allow(unused)]
+        let mut win_os_string = None;
+        let mut arg = last.as_os_str();
+
+        #[allow(clippy::needless_option_as_deref)]
+        if let Some((opt, _)) = arg.split_once('=') {
+            win_os_string = Some(opt);
+            arg = win_os_string.as_deref().unwrap();
+        }
+
+        self.set_incomplete_opt(
+            set,
+            arg.to_str()
+                .ok_or_else(|| crate::raise_failure!("Can't convert value `{:?}` to str", arg))?,
+        )
+    }
+
+    #[cfg(feature = "utf8")]
+    fn process_last_arg(
+        &mut self,
+        set: &mut <Self as Policy>::Set,
+        last: &RawVal,
+    ) -> Result<(), Error> {
+        let mut arg = last.as_str();
+
+        if let Some((opt, _)) = arg.split_once('=') {
+            arg = opt;
+        }
+        self.set_incomplete_opt(set, arg)
+    }
+
+    fn set_incomplete_opt(
+        &mut self,
+        set: &mut <Self as Policy>::Set,
+        arg: &str,
+    ) -> Result<(), Error> {
+        if set.split(arg).is_ok() {
+            for opt in set.iter() {
+                if opt.mat_style(Style::Argument) && opt.name() == arg {
+                    self.incomplete_opt = Some(opt.uid());
+                    break;
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 impl<Set, Ser> Policy for CompleteService<Set, Ser>
@@ -309,36 +365,7 @@ where
             }
         }
         if let Some(last) = last {
-            use crate::args::AOsStrExt;
-
-            #[cfg(target_os = "windows")]
-            #[allow(unused)]
-            let mut win_os_string = None;
-            let mut arg = last.as_os_str();
-
-            if let Some((opt, _)) = arg.split_once('=') {
-                #[cfg(target_os = "windows")]
-                {
-                    win_os_string = Some(opt);
-                    arg = win_os_string.as_deref().unwrap();
-                }
-                #[cfg(target_os = "unix")]
-                {
-                    arg = opt;
-                }
-            }
-            let arg = arg
-                .to_str()
-                .ok_or_else(|| crate::raise_failure!("Can't convert value `{:?}` to str", arg))?;
-
-            if set.split(arg).is_ok() {
-                for opt in set.iter() {
-                    if opt.mat_style(Style::Argument) && opt.name() == arg {
-                        self.incomplete_opt = Some(opt.uid());
-                        break;
-                    }
-                }
-            }
+            self.process_last_arg(set, &last)?;
         }
         if self.incomplete_opt.is_none() && !self.display_cmd {
             for opt in set.iter() {
