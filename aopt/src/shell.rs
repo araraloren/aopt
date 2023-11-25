@@ -148,7 +148,8 @@ where
         use crate::set::SetExt;
 
         if matches!(shell, Shell::Zsh) {
-            writeln!(writer, "local -a subcmds\nsubcmds=(\n").map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
+            writeln!(writer, "local -a subcmds\nsubcmds=(\n")
+                .map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
         }
         if self.display_cmd {
             for uid in self.avail_cmd.iter() {
@@ -156,10 +157,10 @@ where
                 let name = opt.name();
                 let help = opt.help();
 
-                Self::write_to(writer, &name, help, shell)?;
+                Self::write_to(writer, name, help, shell)?;
                 if let Some(alias) = opt.alias() {
                     for alias in alias {
-                        Self::write_to(writer, &alias, help, shell)?;
+                        Self::write_to(writer, alias, help, shell)?;
                     }
                 }
             }
@@ -170,21 +171,19 @@ where
                 let hint = opt.hint();
                 let mut help = opt.help().to_string();
 
-                if opt.mat_style(Style::Argument) {
-                    if !hint.is_empty() {
-                        if let Some((_, val)) = hint.split_once(' ') {
-                            let val = val.trim();
+                if opt.mat_style(Style::Argument) && !hint.is_empty() {
+                    if let Some((_, val)) = hint.split_once(' ') {
+                        let val = val.trim();
 
-                            if !val.is_empty() {
-                                help = format!("{}: {}", help, val);
-                            }
+                        if !val.is_empty() {
+                            help = format!("{}: {}", help, val);
                         }
                     }
                 }
-                Self::write_to(writer, &name, &help, shell)?;
+                Self::write_to(writer, name, &help, shell)?;
                 if let Some(alias) = opt.alias() {
                     for alias in alias {
-                        Self::write_to(writer, &alias, &help, shell)?;
+                        Self::write_to(writer, alias, &help, shell)?;
                     }
                 }
             }
@@ -193,11 +192,12 @@ where
                 let hint = opt.hint();
                 let help = opt.help();
 
-                Self::write_to(writer, &hint, &help, shell)?;
+                Self::write_to(writer, hint, help, shell)?;
             }
         }
         if matches!(shell, Shell::Zsh) {
-            writeln!(writer, ")\n_describe 'available values' subcmds\n").map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
+            writeln!(writer, ")\n_describe 'available values' subcmds\n")
+                .map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
         }
         Ok(())
     }
@@ -311,16 +311,27 @@ where
         if let Some(last) = last {
             use crate::args::AOsStrExt;
 
+            #[cfg(target_os = "windows")]
+            #[allow(unused)]
+            let mut win_os_string = None;
             let mut arg = last.as_os_str();
 
             if let Some((opt, _)) = arg.split_once('=') {
-                arg = opt;
+                #[cfg(target_os = "windows")]
+                {
+                    win_os_string = Some(opt);
+                    arg = win_os_string.as_deref().unwrap();
+                }
+                #[cfg(target_os = "unix")]
+                {
+                    arg = opt;
+                }
             }
             let arg = arg
                 .to_str()
                 .ok_or_else(|| crate::raise_failure!("Can't convert value `{:?}` to str", arg))?;
 
-            if let Ok(_) = set.split(arg).map_err(Into::into) {
+            if set.split(arg).is_ok() {
                 for opt in set.iter() {
                     if opt.mat_style(Style::Argument) && opt.name() == arg {
                         self.incomplete_opt = Some(opt.uid());
@@ -329,14 +340,13 @@ where
                 }
             }
         }
-        if self.incomplete_opt.is_none() {
-            if !self.display_cmd {
-                for opt in set.iter() {
-                    if opt.mat_style(Style::Pos) && !opt.matched() {
-                        if opt.mat_index(Some((tot, tot + 1))) {
-                            self.avail_pos.push(opt.uid());
-                        }
-                    }
+        if self.incomplete_opt.is_none() && !self.display_cmd {
+            for opt in set.iter() {
+                if opt.mat_style(Style::Pos)
+                    && !opt.matched()
+                    && opt.mat_index(Some((tot, tot + 1)))
+                {
+                    self.avail_pos.push(opt.uid());
                 }
             }
         }

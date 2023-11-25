@@ -177,7 +177,7 @@ where
         let mut ret = None;
 
         if !self.opts.is_empty() {
-            ret = Some(std::mem::replace(&mut self.opts, vec![]));
+            ret = Some(std::mem::take(&mut self.opts));
         }
         ret
     }

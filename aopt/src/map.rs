@@ -203,6 +203,6 @@ where
 {
     #[allow(clippy::or_fun_call)]
     pub fn or_default(self) -> &'a mut T {
-        self.or_insert(T::default())
+        self.or_insert_with(|| T::default())
     }
 }
