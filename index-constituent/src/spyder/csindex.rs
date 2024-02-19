@@ -130,7 +130,7 @@ impl super::Spyder for CSIndex {
                                 return Ok(ret);
                             }
                             "total" => {
-                                ret.set_total(value.as_i64().unwrap_or(0) as usize);
+                                ret.set_total(value.as_i64().unwrap_or(0) as _);
                             }
                             _ => {}
                         }

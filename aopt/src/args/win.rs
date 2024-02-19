@@ -130,7 +130,7 @@ impl ArgParser for RawVal {
             }
             Ok(Self::Output {
                 name: astr(name),
-                value: Some(ARef::new(value.into())),
+                value: Some(value.into()),
             })
         } else {
             let name = self

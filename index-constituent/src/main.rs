@@ -95,8 +95,8 @@ async fn main() -> color_eyre::Result<()> {
     let mut ctx = SearchCtx::new(&stock, &stock.args, stock.type_)
         .with_all(stock.all)
         .with_debug(stock.debug)
-        .with_page_size(stock.page_size as usize)
-        .with_page_number(stock.page_number as usize);
+        .with_page_size(stock.page_size as _)
+        .with_page_number(stock.page_number as _);
     let mut data = vec![];
     let id_only = stock.id_only;
     let reverse = stock.reverse;

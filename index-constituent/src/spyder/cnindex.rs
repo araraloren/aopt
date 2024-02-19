@@ -156,7 +156,7 @@ impl super::Spyder for CNIndex {
                                     }
                                     return Ok(ret);
                                 } else if name == "total" {
-                                    ret.set_total(value.as_i64().unwrap_or(0) as usize);
+                                    ret.set_total(value.as_i64().unwrap_or(0) as _);
                                 }
                             }
                         }
@@ -225,7 +225,7 @@ impl super::Spyder for CNIndex {
                                 }
                             }
                         } else if name == "total" {
-                            ret.set_total(value.as_i64().unwrap_or(0) as usize);
+                            ret.set_total(value.as_i64().unwrap_or(0) as _);
                         }
                     }
                 }
