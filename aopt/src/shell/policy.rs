@@ -172,31 +172,30 @@ where
         while let Some((idx, (opt, next))) = iter.next() {
             let mut matched = false;
             let mut consume = false;
-            let next = next.map(|v| ARef::new(v.clone()));
 
             if let Ok(clopt) = opt.parse_arg() {
-                if let Some(name) = clopt.name() {
-                    if set.check(name.as_str()).map_err(Into::into)? {
-                        let arg = clopt.value().cloned();
-                        let mut guess = CompleteGuess {
-                            idx,
-                            arg,
-                            set,
-                            inv,
-                            ser,
-                            tot,
-                            ctx,
-                            next: next.clone(),
-                            name: Some(name.clone()),
-                        };
+                let name = clopt.name;
 
-                        for style in opt_styles.iter() {
-                            if let Some(ret) = guess.guess_complete(style)? {
-                                (matched, consume) = (ret.matched, ret.consume);
-                            }
-                            if matched {
-                                break;
-                            }
+                if set.check(name.as_str()).map_err(Into::into)? {
+                    let arg = clopt.value;
+                    let mut guess = CompleteGuess {
+                        idx,
+                        arg,
+                        set,
+                        inv,
+                        ser,
+                        tot,
+                        ctx,
+                        next: next.cloned(),
+                        name: Some(name.clone()),
+                    };
+
+                    for style in opt_styles.iter() {
+                        if let Some(ret) = guess.guess_complete(style)? {
+                            (matched, consume) = (ret.matched, ret.consume);
+                        }
+                        if matched {
+                            break;
                         }
                     }
                 }

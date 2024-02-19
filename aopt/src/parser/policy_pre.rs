@@ -84,13 +84,13 @@ use crate::Str;
 /// )?;
 ///
 /// let ret = getopt!(
-///     Args::from_array(["--load", "cxx", "-check", "cc"]),
+///     Args::from(["--load", "cxx", "-check", "cc"]),
 ///     &mut cfg_loader
 /// )?;
 /// let next_args = ret.ret.clone_args();
 /// let mut parser = cfg_loader.service_mut().sve_take_val::<AFwdParser>()?;
 ///
-/// getopt!(Args::from_vec(next_args), &mut parser)?;
+/// getopt!(Args::from(next_args), &mut parser)?;
 ///
 /// assert!(*parser.find_val::<bool>("-check")?);
 ///
@@ -98,13 +98,13 @@ use crate::Str;
 /// cfg_loader.set_app_data(parser)?;
 ///
 /// let ret = getopt!(
-///     Args::from_array(["--load", "c", "-check", "c"]),
+///     Args::from(["--load", "c", "-check", "c"]),
 ///     &mut cfg_loader
 /// )?;
 /// let next_args = ret.ret.clone_args();
 /// let mut parser = cfg_loader.service_mut().sve_take_val::<AFwdParser>()?;
 ///
-/// getopt!(Args::from_vec(next_args), &mut parser)?;
+/// getopt!(Args::from(next_args), &mut parser)?;
 ///
 /// assert!(*parser.find_val::<bool>("-check")?);
 /// #
@@ -318,52 +318,46 @@ where
             let mut consume = false;
             let mut stopped = false;
             let mut like_opt = false;
-            let next = next.map(|v| ARef::new(v.clone()));
 
             if let Ok(clopt) = opt.parse_arg() {
-                if let Some(name) = clopt.name() {
-                    if let Some(valid) =
-                        Self::ig_failure(set.check(name.as_str()).map_err(Into::into))?
-                    {
-                        if valid {
-                            like_opt = true;
-                            let arg = clopt.value().cloned();
-                            let mut guess = InvokeGuess {
-                                idx,
-                                arg,
-                                set,
-                                inv,
-                                ser,
-                                tot,
-                                ctx,
-                                next: next.clone(),
-                                fail: &mut opt_fail,
-                                name: Some(name.clone()),
-                            };
+                let name = clopt.name;
 
-                            trace_log!(
-                                "Guess command line clopt = {:?} & next = {:?}",
-                                clopt,
-                                next
-                            );
-                            for style in opt_styles.iter() {
-                                if let Some(Some(ret)) =
-                                    Self::ig_failure(guess.guess_and_invoke(style, overload))?
-                                {
-                                    (matched, consume) = (ret.matched, ret.consume);
-                                }
-                                if let Some(error_cmd) = guess.fail.find_err_command() {
-                                    match error_cmd {
-                                        ErrorCmd::StopPolicy => {
-                                            stopped = true;
-                                            break;
-                                        }
-                                        ErrorCmd::QuitPolicy => return Ok(()),
+                if let Some(valid) = Self::ig_failure(set.check(name.as_str()).map_err(Into::into))?
+                {
+                    if valid {
+                        like_opt = true;
+                        let arg = clopt.value;
+                        let mut guess = InvokeGuess {
+                            idx,
+                            arg,
+                            set,
+                            inv,
+                            ser,
+                            tot,
+                            ctx,
+                            next: next.cloned(),
+                            fail: &mut opt_fail,
+                            name: Some(name.clone()),
+                        };
+
+                        trace_log!("Guess command line clopt = {:?} & next = {:?}", clopt, next);
+                        for style in opt_styles.iter() {
+                            if let Some(Some(ret)) =
+                                Self::ig_failure(guess.guess_and_invoke(style, overload))?
+                            {
+                                (matched, consume) = (ret.matched, ret.consume);
+                            }
+                            if let Some(error_cmd) = guess.fail.find_err_command() {
+                                match error_cmd {
+                                    ErrorCmd::StopPolicy => {
+                                        stopped = true;
+                                        break;
                                     }
+                                    ErrorCmd::QuitPolicy => return Ok(()),
                                 }
-                                if matched {
-                                    break;
-                                }
+                            }
+                            if matched {
+                                break;
                             }
                         }
                     }
@@ -617,7 +611,7 @@ mod test {
         let mut set = policy.default_set();
         let mut inv = policy.default_inv();
         let mut ser = policy.default_ser();
-        let args = Args::from_array([
+        let args = Args::from([
             "app", // 0
             "--copt",
             "--iopt=63",

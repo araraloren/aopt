@@ -63,7 +63,7 @@ pub const BOOL_FALSE: &str = "false";
 ///
 /// // `Cmd` has a default position `@1`.
 /// parser.add_opt_i::<Cmd>("list: Set the list sub command")?;
-/// parser.parse(ARef::new(Args::from_array(["app", "list"])))?;
+/// parser.parse(ARef::new(Args::from(["app", "list"])))?;
 ///
 /// // Get the value by `Infer::Val` type of `bool`.
 /// assert_eq!(parser.find_val::<bool>("list")?, &true);
@@ -113,7 +113,7 @@ impl DerefMut for Cmd {
 /// // Name is not important.
 /// parser.add_opt_i::<Pos<String>>("pos_accept_string@1: Set the string value")?;
 ///
-/// parser.parse(ARef::new(Args::from_array(["app", "value"])))?;
+/// parser.parse(ARef::new(Args::from(["app", "value"])))?;
 ///
 /// // Get the value by `Infer::Val` type of `String`.
 /// assert_eq!(parser.find_val::<String>("pos_accept_string")?, &String::from("value"));
@@ -169,7 +169,7 @@ impl<T> DerefMut for Pos<T> {
 ///             Ok(Some(String::from("main_function called")))
 ///       })?;
 ///
-/// parser.parse(ARef::new(Args::from_array(["app", "list"])))?;
+/// parser.parse(ARef::new(Args::from(["app", "list"])))?;
 ///
 /// // Get the value of main function returned.
 /// assert_eq!(parser.find_val::<String>("main_function")?, &String::from("main_function called"));
@@ -229,7 +229,7 @@ impl<T> DerefMut for Main<T> {
 /// // add the option wrap with `MutOpt`
 /// parser.add_opt_i::<MutOpt<Name>>("-e: Set the name")?;
 ///
-/// parser.parse(ARef::new(Args::from_array(["app", "-e=foo"])))?;
+/// parser.parse(ARef::new(Args::from(["app", "-e=foo"])))?;
 ///
 /// // Get the value through value type `Name`
 /// assert_eq!(parser.find_val::<Name>("-e")?, &Name("foo".to_owned()));
@@ -289,7 +289,7 @@ impl<T> DerefMut for MutOpt<T> {
 /// // add the option wrap with `RefOpt`
 /// parser.add_opt_i::<RefOpt<'_, Name>>("-e: Set the name")?;
 ///
-/// parser.parse(ARef::new(Args::from_array(["app", "-e=foo"])))?;
+/// parser.parse(ARef::new(Args::from(["app", "-e=foo"])))?;
 ///
 /// // Get the value through value type `Name`
 /// assert_eq!(parser.find_val::<Name>("-e")?, &Name("foo".to_owned()));

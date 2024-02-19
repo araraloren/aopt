@@ -489,7 +489,7 @@ where
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
         F: FnMut(P::Ret, &'b mut Self) -> Result<R, Error>,
     {
-        let args = Args::from_env().into_inner();
+        let args: Vec<aopt::raw::RawVal> = Args::from_env().into();
         self.run_mut_with(args.into_iter(), policy, r)
     }
 
@@ -567,7 +567,7 @@ where
         F: FnMut(P::Ret, &'b mut Self) -> FUT,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
     {
-        let args = Args::from_env().into_inner();
+        let args: Vec<aopt::raw::RawVal> = Args::from_env().into();
         self.run_async_mut_with(args.into_iter(), policy, r).await
     }
 
@@ -627,7 +627,7 @@ where
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
         F: FnMut(P::Ret, &'b Self) -> Result<R, Error>,
     {
-        let args = Args::from_env().into_inner();
+        let args: Vec<aopt::raw::RawVal> = Args::from_env().into();
         self.run_with(args.into_iter(), policy, r)
     }
 
@@ -705,7 +705,7 @@ where
         F: FnMut(P::Ret, &'b Self) -> FUT,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
     {
-        let args = Args::from_env().into_inner();
+        let args: Vec<aopt::raw::RawVal> = Args::from_env().into();
         self.run_async_with(args.into_iter(), policy, r).await
     }
 }

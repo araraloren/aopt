@@ -236,20 +236,17 @@ where
         Ok(())
     }
 
-    #[cfg(not(feature = "utf8"))]
     fn process_last_arg(
         &mut self,
         set: &mut <Self as Policy>::Set,
         last: &RawVal,
     ) -> Result<(), Error> {
-        use crate::args::AOsStrExt;
-
         #[allow(unused)]
         let mut win_os_string = None;
-        let mut arg = last.as_os_str();
+        let mut arg: &std::ffi::OsStr = last.as_ref();
 
         #[allow(clippy::needless_option_as_deref)]
-        if let Some((opt, _)) = arg.split_once('=') {
+        if let Some((opt, _)) = crate::args::split_once(arg, '=') {
             win_os_string = Some(opt);
             arg = win_os_string.as_deref().unwrap();
         }
@@ -259,20 +256,6 @@ where
             arg.to_str()
                 .ok_or_else(|| crate::raise_failure!("Can't convert value `{:?}` to str", arg))?,
         )
-    }
-
-    #[cfg(feature = "utf8")]
-    fn process_last_arg(
-        &mut self,
-        set: &mut <Self as Policy>::Set,
-        last: &RawVal,
-    ) -> Result<(), Error> {
-        let mut arg = last.as_str();
-
-        if let Some((opt, _)) = arg.split_once('=') {
-            arg = opt;
-        }
-        self.set_incomplete_opt(set, arg)
     }
 
     fn set_incomplete_opt(

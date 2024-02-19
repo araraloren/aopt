@@ -23,15 +23,6 @@ If you want the utils of current crate implement `Send` and `Sync`, you can enab
 cote = { version = "*", features = [ "sync" ] }
 ```
 
-### Enable `utf8` feature
-
-By default, the command line parsing support `OsString`, enable `utf8` using `String` instead.
-
-```toml
-[dependencies]
-cote = { version = "*", features = [ "utf8" ] }
-```
-
 ## Documents 
 
 See [`reference`](crate::_reference) for more information.
@@ -65,7 +56,7 @@ fn main() -> Result<(), CoteError> {
         #[pos(index = 2..)]
         to: Vec<String>,
     }
-    let cli = Cli::parse(Args::from_array(["app", "-nLily", "src", "foo", "bar"]))?;
+    let cli = Cli::parse(Args::from(["app", "-nLily", "src", "foo", "bar"]))?;
 
     assert_eq!(cli.flag, false);
     assert_eq!(cli.name, String::from("Lily"));
@@ -73,7 +64,7 @@ fn main() -> Result<(), CoteError> {
     assert_eq!(cli.from, Pos(String::from("src")));
     assert_eq!(cli.to, vec![String::from("foo"), String::from("bar")]);
 
-    let cli = Cli::parse(Args::from_array(["app", "--name", "Lily", "src", "foo", "bar"]))?;
+    let cli = Cli::parse(Args::from(["app", "--name", "Lily", "src", "foo", "bar"]))?;
 
     assert_eq!(cli.flag, false);
     assert_eq!(cli.name, String::from("Lily"));
@@ -81,7 +72,7 @@ fn main() -> Result<(), CoteError> {
     assert_eq!(cli.from, Pos(String::from("src")));
     assert_eq!(cli.to, vec![String::from("foo"), String::from("bar")]);
 
-    assert!(Cli::parse(Args::from_array(["app", "--nick", "Lily", "src", "foo", "bar"])).is_err());
+    assert!(Cli::parse(Args::from(["app", "--nick", "Lily", "src", "foo", "bar"])).is_err());
 
     Ok(())
 }

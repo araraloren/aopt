@@ -10,7 +10,8 @@ use crate::parser::ReturnVal;
 use crate::Error;
 use crate::RawVal;
 
-pub use self::osstr_ext::AOsStrExt;
+pub use self::osstr_ext::split_once;
+pub use self::osstr_ext::strip_prefix;
 pub use self::osstr_ext::CLOpt;
 
 pub trait ArgParser {
@@ -19,7 +20,6 @@ pub trait ArgParser {
 
     fn parse_arg(&self) -> Result<Self::Output, Self::Error>;
 }
-
 #[derive(Debug, Clone, Default)]
 pub struct Args {
     inner: Vec<RawVal>,
@@ -32,60 +32,43 @@ impl Args {
         }
     }
 
-    #[cfg(not(feature = "utf8"))]
     /// Create from [`args_os`](std::env::args_os()).
     pub fn from_env() -> Self {
         Self::new(std::env::args_os())
     }
 
-    #[cfg(feature = "utf8")]
-    /// Create from [`args`](std::env::args()).
-    pub fn from_env() -> Self {
-        Self::new(std::env::args())
-    }
-
-    pub fn from_vec(raw: Vec<RawVal>) -> Self {
-        Self::new(raw.into_iter())
-    }
-
-    pub fn clone_from_slice(raw: &[RawVal]) -> Self {
-        Self::new(raw.iter().cloned())
-    }
-
-    pub fn from_array<const N: usize, T: Into<RawVal>>(raw: [T; N]) -> Self {
-        Self::new(raw.into_iter().map(|v| v.into()))
-    }
-
     pub fn guess_iter(&self) -> Iter<'_> {
         Iter::new(&self.inner)
     }
+}
 
-    pub fn into_inner(self) -> Vec<RawVal> {
-        self.inner
+impl<T: Into<RawVal>, I: IntoIterator<Item = T>> From<I> for Args {
+    fn from(value: I) -> Self {
+        Self::new(value.into_iter())
     }
 }
 
-impl<S: Into<RawVal>, I: Iterator<Item = S>> From<I> for Args {
-    fn from(iter: I) -> Self {
-        Self::new(iter)
+impl From<Args> for Vec<RawVal> {
+    fn from(value: Args) -> Self {
+        value.inner
     }
 }
 
 impl From<ReturnVal> for Args {
     fn from(value: ReturnVal) -> Self {
-        Self::from(value.clone_args().into_iter())
+        Self::new(value.clone_args().into_iter())
     }
 }
 
 impl<'a> From<&'a ReturnVal> for Args {
     fn from(value: &'a ReturnVal) -> Self {
-        Self::from(value.args().iter().cloned())
+        Self::new(value.args().iter().cloned())
     }
 }
 
 impl<'a> From<&'a mut ReturnVal> for Args {
     fn from(value: &'a mut ReturnVal) -> Self {
-        Self::from(value.clone_args().into_iter())
+        Self::new(value.clone_args().into_iter())
     }
 }
 
@@ -110,7 +93,7 @@ impl Display for Args {
             "Args {{[{}]}}",
             self.inner
                 .iter()
-                .map(|v| format!("{}", v))
+                .map(|v| format!("{:?}", v))
                 .collect::<Vec<String>>()
                 .join(", ")
         )
@@ -144,11 +127,14 @@ impl<'a> Iterator for Iter<'a> {
     type Item = (&'a RawVal, Option<&'a RawVal>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.len() {
-            let index = self.index;
+        let index = self.index;
+
+        if index < self.len() {
+            let may_opt = &self.inner[index];
+            let may_arg = (index + 1 < self.len()).then(|| &self.inner[index + 1]);
 
             self.index += 1;
-            Some((&self.inner[index], self.inner.get(index + 1)))
+            Some((may_opt, may_arg))
         } else {
             None
         }
@@ -169,7 +155,7 @@ mod test {
 
     #[test]
     fn test_args() {
-        let args = Args::from_array(["--opt", "value", "--bool", "pos"]);
+        let args = Args::from(["--opt", "value", "--bool", "pos"]);
         let mut iter = args.guess_iter().enumerate();
 
         if let Some((idx, (opt, arg))) = iter.next() {

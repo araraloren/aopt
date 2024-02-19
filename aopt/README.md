@@ -51,10 +51,6 @@ A flexible and typed getopt like command line framwork for rust.
 
 If you want the utils of current crate implement `Send` and `Sync`, you can enable `sync` feature.
 
-### `utf8` feature
-
-By default, the command line parsing support `OsString`, enable `utf8` using `String` instead.
-
 ## Simple flow chart
 
 ```txt

@@ -15,12 +15,12 @@ readme = "README.md"
 [dependencies]
 ahash = "0.8"
 neure = "0.3"
-serde = { version = "1.0", features = [ "derive" ], optional = true }
+serde = { version = "1.0", features = ["derive"], optional = true }
 tracing = { version = "0.1", optional = true }
 
 [features]
+default = ["shell"]
 sync = []
-utf8 = []
 shell = []
 log = ["tracing"]
 serde = ["serde/derive"]

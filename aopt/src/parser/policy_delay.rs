@@ -478,53 +478,52 @@ where
             let mut matched = false;
             let mut consume = false;
             let mut stopped = false;
-            let next = next.map(|v| ARef::new(v.clone()));
 
             // parsing current argument
             if let Ok(clopt) = opt.parse_arg() {
-                if let Some(name) = clopt.name() {
-                    if set.check(name.as_str()).map_err(Into::into)? {
-                        let arg = clopt.value().cloned();
-                        let mut guess = InvokeGuess {
-                            idx,
-                            arg,
-                            set,
-                            inv,
-                            ser,
-                            tot,
-                            ctx,
-                            next: next.clone(),
-                            fail: &mut opt_fail,
-                            name: Some(name.clone()),
-                        };
+                let name = clopt.name;
 
-                        trace_log!("Guess command line clopt = {:?} & next = {:?}", clopt, next);
-                        for style in opt_styles.iter() {
-                            if let Some(ret) = guess.guess_and_collect(style, overload)? {
-                                // pretend we are matched, cause it is delay
-                                matched = true;
-                                consume = ret.consume;
-                                if let Some(ret) = self.save_or_call(&mut guess, ret)? {
-                                    // if the call returned, set the real return value
-                                    (matched, consume) = (ret.matched, ret.consume);
-                                }
-                                if matched {
+                if set.check(name.as_str()).map_err(Into::into)? {
+                    let arg = clopt.value;
+                    let mut guess = InvokeGuess {
+                        idx,
+                        arg,
+                        set,
+                        inv,
+                        ser,
+                        tot,
+                        ctx,
+                        next: next.cloned(),
+                        fail: &mut opt_fail,
+                        name: Some(name.clone()),
+                    };
+
+                    trace_log!("Guess command line clopt = {:?} & next = {:?}", clopt, next);
+                    for style in opt_styles.iter() {
+                        if let Some(ret) = guess.guess_and_collect(style, overload)? {
+                            // pretend we are matched, cause it is delay
+                            matched = true;
+                            consume = ret.consume;
+                            if let Some(ret) = self.save_or_call(&mut guess, ret)? {
+                                // if the call returned, set the real return value
+                                (matched, consume) = (ret.matched, ret.consume);
+                            }
+                            if matched {
+                                break;
+                            }
+                        }
+                        if let Some(error_cmd) = guess.fail.find_err_command() {
+                            match error_cmd {
+                                ErrorCmd::StopPolicy => {
+                                    stopped = true;
                                     break;
                                 }
-                            }
-                            if let Some(error_cmd) = guess.fail.find_err_command() {
-                                match error_cmd {
-                                    ErrorCmd::StopPolicy => {
-                                        stopped = true;
-                                        break;
-                                    }
-                                    ErrorCmd::QuitPolicy => return Ok(()),
-                                }
+                                ErrorCmd::QuitPolicy => return Ok(()),
                             }
                         }
-                        if !stopped && !matched && self.strict() {
-                            return Err(opt_fail.cause(Error::sp_option_not_found(name)));
-                        }
+                    }
+                    if !stopped && !matched && self.strict() {
+                        return Err(opt_fail.cause(Error::sp_option_not_found(name)));
                     }
                 }
             }
@@ -797,7 +796,7 @@ mod test {
         let mut inv = policy.default_inv();
         let mut set = policy.default_set();
 
-        let args = Args::from_array([
+        let args = Args::from([
             "app",
             "filter",
             "+>",

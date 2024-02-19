@@ -147,7 +147,7 @@ pub trait PolicyConfig {
 
     fn style(&self) -> Style;
 
-    fn arg(&self) -> Option<ARef<RawVal>>;
+    fn arg(&self) -> Option<RawVal>;
 
     fn uids(&self) -> &[Uid];
 
@@ -163,7 +163,7 @@ pub trait PolicyBuild {
 
     fn with_tot(self, total: usize) -> Self;
 
-    fn with_arg(self, argument: Option<ARef<RawVal>>) -> Self;
+    fn with_arg(self, argument: Option<RawVal>) -> Self;
 
     fn with_args(self, args: ARef<Args>) -> Self;
 }

@@ -17,18 +17,18 @@ pub struct Cli {
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
-    assert!(Cli::parse(Args::from_array(["app", "--bar", "qux"])).is_err());
+    assert!(Cli::parse(Args::from(["app", "--bar", "qux"])).is_err());
 
-    assert!(Cli::parse(Args::from_array(["app", "--bar", "baz", "--foo=0"])).is_err());
+    assert!(Cli::parse(Args::from(["app", "--bar", "baz", "--foo=0"])).is_err());
 
-    assert!(Cli::parse(Args::from_array(["app", "--bar", "baz", "68", "--foo=0"])).is_err());
+    assert!(Cli::parse(Args::from(["app", "--bar", "baz", "68", "--foo=0"])).is_err());
 
-    let cli = Cli::parse(Args::from_array(["app", "--bar", "qux", "--foo=42"]))?;
+    let cli = Cli::parse(Args::from(["app", "--bar", "qux", "--foo=42"]))?;
 
     assert_eq!(cli.foo, 42);
     assert_eq!(cli.bar.as_deref(), Some("qux"));
 
-    let cli = Cli::parse(Args::from_array(["app", "--bar", "qux", "--foo=42", "6"]))?;
+    let cli = Cli::parse(Args::from(["app", "--bar", "qux", "--foo=42", "6"]))?;
 
     assert_eq!(cli.foo, 42);
     assert_eq!(cli.bar.as_deref(), Some("qux"));

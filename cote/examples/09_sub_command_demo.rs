@@ -32,7 +32,7 @@ pub struct Qux {
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
-    let cli = Cli::parse(Args::from_array(["app", "--bar=42", "z"]))?;
+    let cli = Cli::parse(Args::from(["app", "--bar=42", "z"]))?;
 
     assert_eq!(cli.bar, 42);
     assert_eq!(
@@ -44,9 +44,7 @@ fn main() -> color_eyre::Result<()> {
     );
     assert_eq!(cli.qux, None);
 
-    let cli = Cli::parse(Args::from_array([
-        "app", "--bar=42", "x", "--fred", "plugh",
-    ]))?;
+    let cli = Cli::parse(Args::from(["app", "--bar=42", "x", "--fred", "plugh"]))?;
 
     assert_eq!(cli.bar, 42);
     assert_eq!(cli.baz, None);

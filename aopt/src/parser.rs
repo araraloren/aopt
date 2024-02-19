@@ -178,7 +178,7 @@ where
 /// }
 ///
 /// let ret = getopt!(
-///     Args::from_array(["app", "Where", "are", "you", "from", "?"]),
+///     Args::from(["app", "Where", "are", "you", "from", "?"]),
 ///     &mut parser1,
 ///     &mut parser2
 /// )?;

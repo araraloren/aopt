@@ -272,7 +272,7 @@ mod test {
             bar: Pos<usize>,
         }
 
-        let example = Example::parse(Args::from_array(["app", "--foo", "42"]));
+        let example = Example::parse(Args::from(["app", "--foo", "42"]));
 
         assert!(example.is_ok());
 
@@ -313,11 +313,11 @@ mod test {
             sources: Vec<Pos<PathBuf>>,
         }
 
-        let example = CopyTool::parse(Args::from_array(["app", "--force"]));
+        let example = CopyTool::parse(Args::from(["app", "--force"]));
 
         assert!(example.is_err());
 
-        let example = CopyTool::parse(Args::from_array([
+        let example = CopyTool::parse(Args::from([
             "app", "--force", ".", "../foo", "../bar/", "other",
         ]))
         .unwrap();
@@ -397,7 +397,7 @@ mod test {
             Ok(Some(()))
         }
 
-        let args = Args::from_array(["app", ".", "-H", "-name=foo", "-size", "42"]);
+        let args = Args::from(["app", ".", "-H", "-name=foo", "-size", "42"]);
 
         let CoteRes { ret, .. } = Find::parse_args(args).unwrap();
 
@@ -451,7 +451,7 @@ mod test {
             path: Pos<PathBuf>,
         }
 
-        let args = Args::from_array(["app", "ls", "--all", "--depth=42", "."]);
+        let args = Args::from(["app", "ls", "--all", "--depth=42", "."]);
 
         let app = App::parse(args)?;
 
@@ -468,13 +468,13 @@ mod test {
             }
         );
 
-        let args = Args::from_array(["app", "list", "--all", "--depth=6", "."]);
+        let args = Args::from(["app", "list", "--all", "--depth=6", "."]);
 
         let app = App::parse(args);
 
         assert!(app.is_err());
 
-        let args = Args::from_array(["app", "--count=8", "find", "something"]);
+        let args = Args::from(["app", "--count=8", "find", "something"]);
 
         let app = App::parse(args)?;
 
@@ -490,13 +490,13 @@ mod test {
             }
         );
 
-        let args = Args::from_array(["app", "--count", "42"]);
+        let args = Args::from(["app", "--count", "42"]);
 
         let app = App::parse(args);
 
         assert!(app.is_err());
 
-        let args = Args::from_array(["app", "--count=42", "list"]);
+        let args = Args::from(["app", "--count=42", "list"]);
 
         let CoteRes {
             ret,

@@ -40,7 +40,7 @@ use crate::Uid;
 ///  let mut ser = ASer::default();
 ///  let mut is = Invoker::new();
 ///  let mut set = ASet::default();
-///  let args = ARef::new(Args::from_array(["--foo", "bar", "doo"]));
+///  let args = ARef::new(Args::from(["--foo", "bar", "doo"]));
 ///  let mut ctx = Ctx::default().with_args(args);
 ///
 ///  ser.sve_insert(ser::Value::new(42i64));

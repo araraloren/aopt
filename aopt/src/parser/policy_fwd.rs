@@ -63,7 +63,7 @@ use crate::Str;
 ///     },
 /// );
 ///
-/// let args = Args::from_array(["app", "set", "42", "foo", "bar"]);
+/// let args = Args::from(["app", "set", "42", "foo", "bar"]);
 ///
 /// for opt in set.iter_mut() {
 ///     opt.init()?;
@@ -76,7 +76,7 @@ use crate::Str;
 /// assert_eq!(values[0], "set");
 /// assert_eq!(values[1], "42");
 ///
-/// let args = Args::from_array(["app", "--/filter", "set", "42", "foo", "bar"]);
+/// let args = Args::from(["app", "--/filter", "set", "42", "foo", "bar"]);
 ///
 /// for opt in set.iter_mut() {
 ///     opt.init()?;
@@ -285,46 +285,45 @@ where
             let mut matched = false;
             let mut consume = false;
             let mut stopped = false;
-            let next = next.map(|v| ARef::new(v.clone()));
 
             if let Ok(clopt) = opt.parse_arg() {
-                if let Some(name) = clopt.name() {
-                    if set.check(name.as_str()).map_err(Into::into)? {
-                        let arg = clopt.value().cloned();
-                        let mut guess = InvokeGuess {
-                            idx,
-                            arg,
-                            set,
-                            inv,
-                            ser,
-                            tot,
-                            ctx,
-                            next: next.clone(),
-                            fail: &mut opt_fail,
-                            name: Some(name.clone()),
-                        };
+                let name = clopt.name;
 
-                        trace_log!("Guess command line clopt = {:?} & next = {:?}", clopt, next);
-                        for style in opt_styles.iter() {
-                            if let Some(ret) = guess.guess_and_invoke(style, overload)? {
-                                (matched, consume) = (ret.matched, ret.consume);
-                            }
-                            if let Some(error_cmd) = guess.fail.find_err_command() {
-                                match error_cmd {
-                                    ErrorCmd::StopPolicy => {
-                                        stopped = true;
-                                        break;
-                                    }
-                                    ErrorCmd::QuitPolicy => return Ok(()),
+                if set.check(name.as_str()).map_err(Into::into)? {
+                    let arg = clopt.value;
+                    let mut guess = InvokeGuess {
+                        idx,
+                        arg,
+                        set,
+                        inv,
+                        ser,
+                        tot,
+                        ctx,
+                        next: next.cloned(),
+                        fail: &mut opt_fail,
+                        name: Some(name.clone()),
+                    };
+
+                    trace_log!("Guess command line clopt = {:?} & next = {:?}", clopt, next);
+                    for style in opt_styles.iter() {
+                        if let Some(ret) = guess.guess_and_invoke(style, overload)? {
+                            (matched, consume) = (ret.matched, ret.consume);
+                        }
+                        if let Some(error_cmd) = guess.fail.find_err_command() {
+                            match error_cmd {
+                                ErrorCmd::StopPolicy => {
+                                    stopped = true;
+                                    break;
                                 }
-                            }
-                            if matched {
-                                break;
+                                ErrorCmd::QuitPolicy => return Ok(()),
                             }
                         }
-                        if !stopped && !matched && self.strict() {
-                            return Err(opt_fail.cause(Error::sp_option_not_found(name)));
+                        if matched {
+                            break;
                         }
+                    }
+                    if !stopped && !matched && self.strict() {
+                        return Err(opt_fail.cause(Error::sp_option_not_found(name)));
                     }
                 }
             }
@@ -577,7 +576,7 @@ mod test {
         let mut set = policy.default_set();
         let mut inv = policy.default_inv();
         let mut ser = policy.default_ser();
-        let args = Args::from_array([
+        let args = Args::from([
             "app",
             "--copt",
             "--iopt=63",

@@ -71,7 +71,7 @@ pub struct Value<T: ?Sized>(ARef<T>);
 ///         },
 ///     );
 ///
-/// let args = Args::from_array(["app", "--/bool", "set", "42", "foo", "bar"]);
+/// let args = Args::from(["app", "--/bool", "set", "42", "foo", "bar"]);
 ///
 /// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///

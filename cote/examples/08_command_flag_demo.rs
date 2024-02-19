@@ -15,11 +15,11 @@ fn main() -> Result<(), aopt::Error> {
     assert_eq!(app["foo"].index(), Some(&Index::forward(1)));
     assert_eq!(app["bar"].index(), Some(&Index::forward(2)));
 
-    let cli = Cli::parse(Args::from_array(["app", "foo", "42"]))?;
+    let cli = Cli::parse(Args::from(["app", "foo", "42"]))?;
 
     assert_eq!(cli.bar.as_deref(), Some("42"));
 
-    assert!(Cli::parse(Args::from_array(["app", "42", "foo"])).is_err());
-    assert!(Cli::parse(Args::from_array(["app", "42"])).is_err());
+    assert!(Cli::parse(Args::from(["app", "42", "foo"])).is_err());
+    assert!(Cli::parse(Args::from(["app", "42"])).is_err());
     Ok(())
 }

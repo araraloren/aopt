@@ -51,7 +51,7 @@
 //!     },
 //! );
 //!
-//! let args = Args::from_array(["app", "--/bool", "set", "42", "foo", "bar"]);
+//! let args = Args::from(["app", "--/bool", "set", "42", "foo", "bar"]);
 //!
 //! policy
 //!     .parse(&mut set, &mut inv, &mut ser, ARef::new(args))?
@@ -116,7 +116,7 @@ impl<Set, Ser> Extract<Set, Ser> for Ctx {
 ///           Ok(Some(false))
 ///       });
 ///
-///   let args = Args::from_array(["app", "--/bool", ]);
+///   let args = Args::from(["app", "--/bool", ]);
 ///
 ///   policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
@@ -212,7 +212,7 @@ impl Display for Uid {
 ///         Ok(Some(2i64))
 ///     });
 ///
-/// let args = Args::from_array(["app", "--/bool", "set", "value"]);
+/// let args = Args::from(["app", "--/bool", "set", "value"]);
 ///
 /// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
@@ -297,7 +297,7 @@ impl Display for Index {
 ///         Ok(Some(2i64))
 ///     });
 ///
-/// let args = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
+/// let args = Args::from(["app", "--/bool", "set", "value", "foo"]);
 ///
 /// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
@@ -366,7 +366,7 @@ impl Display for Total {
 /// set.add_opt("pos_2=p@2")?.run()?;
 /// inv.entry(0)
 ///     .on(|_: &mut ASet, _: &mut ASer, args: ctx::Args| {
-///         let test = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
+///         let test = Args::from(["app", "--/bool", "set", "value", "foo"]);
 ///         for (idx, arg) in args.deref().deref().iter().enumerate() {
 ///             assert_eq!(arg, &test[idx], "Args is arguments used in Policy");
 ///         }
@@ -375,7 +375,7 @@ impl Display for Total {
 ///
 /// inv.entry(1)
 ///     .on(|_: &mut ASet, _: &mut ASer, args: ctx::Args| {
-///         let test = Args::from_array(["app", "set", "value", "foo"]);
+///         let test = Args::from(["app", "set", "value", "foo"]);
 ///         for (idx, arg) in args.deref().deref().iter().enumerate() {
 ///             assert_eq!(arg, &test[idx], "Args is arguments used in Policy");
 ///         }
@@ -384,14 +384,14 @@ impl Display for Total {
 ///
 /// inv.entry(2)
 ///     .on(|_: &mut ASet, _: &mut ASer, args: ctx::Args| {
-///         let test = Args::from_array(["app", "set", "value", "foo"]);
+///         let test = Args::from(["app", "set", "value", "foo"]);
 ///         for (idx, arg) in args.deref().deref().iter().enumerate() {
 ///             assert_eq!(arg, &test[idx], "Args is arguments used in Policy");
 ///         }
 ///         Ok(Some(2i64))
 ///     });
 ///
-/// let args = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
+/// let args = Args::from(["app", "--/bool", "set", "value", "foo"]);
 ///
 /// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
@@ -475,7 +475,7 @@ impl<Set, Ser> Extract<Set, Ser> for Args {
 ///         Ok(Some(2i64))
 ///     });
 ///
-/// let args = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
+/// let args = Args::from(["app", "--/bool", "set", "value", "foo"]);
 ///
 /// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
@@ -580,7 +580,7 @@ impl Display for Name {
 ///         Ok(Some(2i64))
 ///     });
 ///
-/// let args = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
+/// let args = Args::from(["app", "--/bool", "set", "value", "foo"]);
 ///
 /// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
@@ -677,7 +677,7 @@ impl<Set, Ser> Extract<Set, Ser> for Style {
 ///         Ok(Some(2i64))
 ///     });
 ///
-/// let args = Args::from_array(["app", "--/bool", "set", "value", "foo"]);
+/// let args = Args::from(["app", "--/bool", "set", "value", "foo"]);
 ///
 /// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
@@ -688,8 +688,8 @@ impl<Set, Ser> Extract<Set, Ser> for Style {
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct RawVal(ARef<crate::RawVal>);
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct RawVal(crate::RawVal);
 
 impl RawVal {
     pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
@@ -701,7 +701,7 @@ impl RawVal {
     }
 
     pub fn clone_rawval(&self) -> crate::RawVal {
-        self.0.as_ref().clone()
+        self.0.clone()
     }
 }
 
@@ -769,7 +769,7 @@ impl<Set, Ser> Extract<Set, Ser> for RawVal {
 ///         Ok(Some(*val.deref()))
 ///     });
 ///
-/// let args = Args::from_array(["app", "--/bool", "set", "42", "foo"]);
+/// let args = Args::from(["app", "--/bool", "set", "42", "foo"]);
 ///
 /// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?.unwrap();
 ///
@@ -863,7 +863,7 @@ impl<Set: crate::set::Set, Ser, T: RawValParser> Extract<Set, Ser> for Value<T> 
 
     fn extract(_: &Set, _ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error> {
         let arg = ctx.arg()?;
-        let arg = arg.as_ref().map(|v| v.as_ref());
+        let arg = arg.as_ref();
         let uid = ctx.uid()?;
 
         Ok(Value(T::parse(arg, ctx).map_err(|e| {

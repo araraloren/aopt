@@ -94,7 +94,7 @@ pub struct GetoptRes<R, T> {
 ///         },
 ///     )?;
 ///
-///     assert!(getopt!(Args::from_array(["-a", "--bopt=42", "foo"]), &mut parser).is_ok());
+///     assert!(getopt!(Args::from(["-a", "--bopt=42", "foo"]), &mut parser).is_ok());
 ///     assert_eq!(parser.find_val::<bool>("-a")?, &true);
 ///     assert_eq!(parser.find_val::<i64>("--bopt")?, &42i64);
 /// }
@@ -103,7 +103,7 @@ pub struct GetoptRes<R, T> {
 ///     pre_parser.add_opt("--eopt=s")?;
 ///
 ///     let ret = getopt!(
-///         Args::from_array(["-dbar", "-d", "foo", "--eopt=pre", "foo"]),
+///         Args::from(["-dbar", "-d", "foo", "--eopt=pre", "foo"]),
 ///         &mut pre_parser
 ///     )?;
 ///     let args = ret.ret.clone_args();
@@ -122,7 +122,7 @@ pub struct GetoptRes<R, T> {
 ///
 /// {
 ///     let ret = getopt!(
-///         Args::from_array(["-a", "--bopt=42", "foo"]),
+///         Args::from(["-a", "--bopt=42", "foo"]),
 ///         "parser" => &mut parser,
 ///         "pre" => &mut pre_parser
 ///     )?;
@@ -133,7 +133,7 @@ pub struct GetoptRes<R, T> {
 /// }
 /// {
 ///     let res = getopt!(
-///         Args::from_array(["-dbar", "-d", "foo", "--eopt=pre", "foo"]),
+///         Args::from(["-dbar", "-d", "foo", "--eopt=pre", "foo"]),
 ///         "parser" => &mut parser,
 ///         "pre" => &mut pre_parser
 ///     )?;

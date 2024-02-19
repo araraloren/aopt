@@ -35,11 +35,11 @@ pub struct CompleteGuess<'a, Set, Inv, Ser> {
 
     pub tot: usize,
 
-    pub arg: Option<ARef<RawVal>>,
+    pub arg: Option<RawVal>,
 
     pub name: Option<Str>,
 
-    pub next: Option<ARef<RawVal>>,
+    pub next: Option<RawVal>,
 
     pub ctx: &'a mut Ctx,
 
@@ -95,7 +95,7 @@ impl<'a, Set, Inv, Ser> CompleteGuess<'a, Set, Inv, Ser> {
         self
     }
 
-    pub fn set_arg(&mut self, arg: Option<ARef<RawVal>>) -> &mut Self {
+    pub fn set_arg(&mut self, arg: Option<RawVal>) -> &mut Self {
         self.arg = arg;
         self
     }
@@ -105,7 +105,7 @@ impl<'a, Set, Inv, Ser> CompleteGuess<'a, Set, Inv, Ser> {
         self
     }
 
-    pub fn set_next(&mut self, next: Option<ARef<RawVal>>) -> &mut Self {
+    pub fn set_next(&mut self, next: Option<RawVal>) -> &mut Self {
         self.next = next;
         self
     }
@@ -140,7 +140,7 @@ impl<'a, Set, Inv, Ser> CompleteGuess<'a, Set, Inv, Ser> {
         self
     }
 
-    pub fn with_arg(mut self, arg: Option<ARef<RawVal>>) -> Self {
+    pub fn with_arg(mut self, arg: Option<RawVal>) -> Self {
         self.arg = arg;
         self
     }
@@ -150,7 +150,7 @@ impl<'a, Set, Inv, Ser> CompleteGuess<'a, Set, Inv, Ser> {
         self
     }
 
-    pub fn with_next(mut self, next: Option<ARef<RawVal>>) -> Self {
+    pub fn with_next(mut self, next: Option<RawVal>) -> Self {
         self.next = next;
         self
     }
@@ -412,7 +412,7 @@ where
         let idx = self.idx;
         let tot = self.tot;
         let style = Style::Boolean;
-        let arg = Some(ARef::new(RawVal::from(BOOL_TRUE)));
+        let arg = Some(RawVal::from(BOOL_TRUE));
 
         if self.arg.is_none() {
             if let Some(name) = &self.name {
@@ -456,7 +456,7 @@ where
                         .with_idx(self.idx)
                         .with_tot(self.tot)
                         .with_name(Some(name.clone()))
-                        .with_arg(Some(ARef::new(RawVal::from(BOOL_TRUE))))
+                        .with_arg(Some(RawVal::from(BOOL_TRUE)))
                         .with_style(Style::Boolean),
                 ));
             }

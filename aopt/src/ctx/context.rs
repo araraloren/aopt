@@ -17,7 +17,7 @@ pub struct InnerCtx {
 
     style: Style,
 
-    arg: Option<ARef<RawVal>>,
+    arg: Option<RawVal>,
 
     index: usize,
 
@@ -50,7 +50,7 @@ impl InnerCtx {
         self
     }
 
-    pub fn with_arg(mut self, argument: Option<ARef<RawVal>>) -> Self {
+    pub fn with_arg(mut self, argument: Option<RawVal>) -> Self {
         self.arg = argument;
         self
     }
@@ -83,7 +83,7 @@ impl InnerCtx {
     }
 
     /// The argument which set in [`invoke`](crate::guess::InvokeGuess#method.invoke).
-    pub fn arg(&self) -> Option<ARef<RawVal>> {
+    pub fn arg(&self) -> Option<RawVal> {
         self.arg.clone()
     }
 
@@ -114,7 +114,7 @@ impl InnerCtx {
         self
     }
 
-    pub fn set_arg(&mut self, argument: Option<ARef<RawVal>>) -> &mut Self {
+    pub fn set_arg(&mut self, argument: Option<RawVal>) -> &mut Self {
         self.arg = argument;
         self
     }
@@ -198,7 +198,7 @@ impl Ctx {
     }
 
     /// The argument which set in [`invoke`](crate::guess::InvokeGuess#method.invoke).
-    pub fn arg(&self) -> Result<Option<ARef<RawVal>>, Error> {
+    pub fn arg(&self) -> Result<Option<RawVal>, Error> {
         Ok(self.inner_ctx()?.arg())
     }
 
@@ -267,7 +267,7 @@ impl Ctx {
         Ok(self)
     }
 
-    pub fn set_arg(&mut self, argument: Option<ARef<RawVal>>) -> Result<&mut Self, Error> {
+    pub fn set_arg(&mut self, argument: Option<RawVal>) -> Result<&mut Self, Error> {
         self.inner_ctx_mut()?.set_arg(argument);
         Ok(self)
     }

@@ -287,7 +287,7 @@ impl<'a> SubGenerator<'a> {
                 move |set: &mut cote::Parser<'inv, Set, Ser>, ser: &mut Ser, args: cote::ctx::Args, index: cote::ctx::Index| {
                     use std::ops::Deref;
 
-                    let mut args = args.deref().clone().into_inner();
+                    let mut args: Vec<cote::RawVal> = args.deref().clone().into();
                     let mut next_ctx = cote::RunningCtx::default();
                     let cmd = args.remove(*index.deref()); // remove current cmd from args
                     let cmd = cmd.get_str();
@@ -296,7 +296,7 @@ impl<'a> SubGenerator<'a> {
                     #pass_help_to_next
                     next_ctx.add_name(cmd.to_owned());
 
-                    let args = cote::ARef::new(cote::Args::from_vec(args));
+                    let args = cote::ARef::new(cote::Args::from(args));
                     let sub_parser = set.parser_mut(#sub_id)?;
                     let mut policy = #policy_ty::default();
                     let mut helper = <#without_option_ty>::into_internal::<'_, 'inv, Set, Ser, #policy_ty>();

@@ -65,7 +65,7 @@ pub enum Way {
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
-    let cli = Cli::parse(Args::from_array(["app", "-s", "40", "-d=Left", "bike"]))?;
+    let cli = Cli::parse(Args::from(["app", "-s", "40", "-d=Left", "bike"]))?;
 
     assert_eq!(cli.speed.0, 40);
     assert_eq!(cli.direction, Direction::Left);

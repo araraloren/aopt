@@ -15,7 +15,7 @@ pub struct Cli {
 
 fn main() -> Result<(), aopt::Error> {
     // set three options in one item
-    let cli = Cli::parse(Args::from_array(["app", "-rdf"]))?;
+    let cli = Cli::parse(Args::from(["app", "-rdf"]))?;
 
     assert!(cli.debug);
     assert!(cli.recursive);

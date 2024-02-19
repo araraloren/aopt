@@ -26,11 +26,11 @@ pub struct Cli {
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
-    assert!(Cli::parse(Args::from_array(["app", "--baz=6"])).is_err());
+    assert!(Cli::parse(Args::from(["app", "--baz=6"])).is_err());
 
-    assert!(Cli::parse(Args::from_array(["app", "foo", "--baz=6"])).is_err());
+    assert!(Cli::parse(Args::from(["app", "foo", "--baz=6"])).is_err());
 
-    assert!(Cli::parse(Args::from_array(["app", "--qux", "-5", "foo", "--baz=6"])).is_ok());
+    assert!(Cli::parse(Args::from(["app", "--qux", "-5", "foo", "--baz=6"])).is_ok());
 
     Ok(())
 }

@@ -170,7 +170,7 @@ where
     ///   },
     /// )?;
     ///
-    /// getopt!(Args::from_array(["--guess", "42"]), &mut parser)?;
+    /// getopt!(Args::from(["--guess", "42"]), &mut parser)?;
     /// #
     /// # Ok(())
     /// # }
@@ -207,7 +207,7 @@ where
     ///   },
     /// )?;
     ///
-    /// getopt!(Args::from_array(["--guess", "42"]), &mut parser)?;
+    /// getopt!(Args::from(["--guess", "42"]), &mut parser)?;
     /// #
     /// # Ok(())
     /// # }
@@ -296,7 +296,7 @@ where
     ///     })?
     ///     .then(file_count_storer);
     ///
-    /// getopt!(Args::from_array(["app", "foo", "-s", "10", "bar"]), &mut parser1)?;
+    /// getopt!(Args::from(["app", "foo", "-s", "10", "bar"]), &mut parser1)?;
     ///
     /// assert_eq!(parser1.find_val::<u64>("file=p")?, &0);
     /// assert_eq!(parser1.find_val::<usize>("--size")?, &10);
@@ -586,7 +586,7 @@ mod test {
 
         PolicyParser::<AFwdPolicy>::parse(
             &mut set,
-            ARef::new(Args::from_array(["app", "ls", "--aopt", "--bopt=42"])),
+            ARef::new(Args::from(["app", "ls", "--aopt", "--bopt=42"])),
         )?;
 
         assert_eq!(set.find_val::<bool>("ls")?, &true);

@@ -27,7 +27,7 @@ fn main() -> color_eyre::Result<()> {
         Some(&Index::range(Some(3), Some(5)))
     );
 
-    let app = Cli::parse(Args::from_array([
+    let app = Cli::parse(Args::from([
         "app",    // index 0
         "88",     // index 1
         "--baz",  // option --baz

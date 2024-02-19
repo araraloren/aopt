@@ -15,7 +15,7 @@ pub struct Cli {
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
-    let cli = Cli::parse(Args::from_array([
+    let cli = Cli::parse(Args::from([
         "app", "--foo", "--foo", "--bar=42", "--bar=88",
     ]))?;
 

@@ -73,7 +73,6 @@ impl_raw_val_parser!(f64);
 impl_raw_val_parser!(isize);
 impl_raw_val_parser!(usize);
 
-#[cfg(not(feature = "utf8"))]
 impl RawValParser for String {
     type Error = Error;
 
@@ -82,37 +81,14 @@ impl RawValParser for String {
     }
 }
 
-#[cfg(not(feature = "utf8"))]
 impl RawValParser for OsString {
     type Error = Error;
 
     fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error> {
         let uid = ctx.uid()?;
-        Ok(Self::clone(raw.ok_or_else(|| {
-            raise_failure!("Unexcepted empty value").with_uid(uid)
-        })?))
-    }
-}
-
-#[cfg(feature = "utf8")]
-impl RawValParser for String {
-    type Error = Error;
-
-    fn parse(raw: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(raw2str(raw)?.to_owned())
-    }
-}
-
-#[cfg(feature = "utf8")]
-impl RawValParser for OsString {
-    type Error = Error;
-
-    fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error> {
-        let uid = ctx.uid()?;
-        let raw: &std::ffi::OsStr = raw
+        Ok(raw
             .ok_or_else(|| raise_failure!("Unexcepted empty value").with_uid(uid))?
-            .as_ref();
-        Ok(raw.to_owned())
+            .to_os_string())
     }
 }
 

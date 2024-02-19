@@ -30,7 +30,7 @@ impl Alter for Speed {
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
-    let cli = Cli::parse(Args::from_array(["app", "--speed", "65"]))?;
+    let cli = Cli::parse(Args::from(["app", "--speed", "65"]))?;
 
     assert_eq!(cli.speed.0, 65);
 
