@@ -717,6 +717,7 @@ mod test {
     }
 
     fn testing_1_main() -> Result<(), Error> {
+        #[allow(clippy::too_many_arguments)]
         fn check_opt_val<T: std::fmt::Debug + PartialEq + ErasedTy + 'static>(
             opt: &AOpt,
             uid: Uid,

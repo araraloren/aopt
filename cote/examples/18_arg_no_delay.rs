@@ -56,7 +56,7 @@ fn main() -> color_eyre::Result<()> {
         &mut policy,
         |_, app| {
             let cli = Cli::try_extract(app.optset_mut())?;
-            assert_eq!(cli.foo, true);
+            assert!(cli.foo);
             assert_eq!(cli.bar, 4);
             assert_eq!(cli.qux, 1);
             assert_eq!(cli.baz, 3);

@@ -315,7 +315,7 @@ mod test {
             Some(Index::anywhere()),
             None,
         ];
-        let parser = StrParser::default();
+        let parser = StrParser;
 
         for (option, option_test) in options.iter().zip(options_test.iter()) {
             for (help, help_test) in helps.iter().zip(helps_test.iter()) {

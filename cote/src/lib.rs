@@ -278,7 +278,7 @@ mod test {
 
         let example = example.unwrap();
 
-        assert_eq!(example.foo, true);
+        assert!(example.foo);
         assert_eq!(example.bar.0, 42);
 
         let parser = Example::into_parser().unwrap();
@@ -322,8 +322,8 @@ mod test {
         ]))
         .unwrap();
 
-        assert_eq!(example.force, true);
-        assert_eq!(example.recursive, false);
+        assert!(example.force);
+        assert!(!example.recursive);
         assert_eq!(example.destination.0, String::from("."));
         assert_eq!(
             example.sources,
@@ -381,9 +381,9 @@ mod test {
         {
             let tool = Find::try_extract(set)?;
 
-            assert_eq!(tool.hard, true);
-            assert_eq!(tool.symbol, false);
-            assert_eq!(tool.never, true);
+            assert!(tool.hard,);
+            assert!(!tool.symbol);
+            assert!(tool.never);
             assert_eq!(tool.name, Some("foo".to_owned()));
             assert_eq!(tool.size, Some(42));
             assert_eq!(
@@ -504,7 +504,7 @@ mod test {
             ..
         } = App::parse_args(args)?;
 
-        assert_eq!(ret.status(), false);
+        assert!(!ret.status());
         assert_eq!(
             app.extract_type::<App>()?,
             App {

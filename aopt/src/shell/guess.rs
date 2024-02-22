@@ -4,7 +4,6 @@ use crate::opt::Style;
 use crate::opt::BOOL_TRUE;
 use crate::parser::UserStyle;
 use crate::set::OptValidator;
-use crate::ARef;
 use crate::Error;
 use crate::RawVal;
 use crate::Str;
@@ -336,7 +335,7 @@ where
                 // only check first letter `--v42` ==> `--v 42`
                 if let Some((char_idx, _)) = splited.1.char_indices().nth(1) {
                     let (name, arg) = name.split_at(prefix_len + char_idx);
-                    let arg = Some(RawVal::from(arg).into());
+                    let arg = Some(RawVal::from(arg));
                     let name = Some(name.into());
 
                     return Ok(Some(
@@ -381,7 +380,7 @@ where
                 // for `--opt42` check the option like `--op t42`, `--opt 42`, `--opt4 2`
                 for (char_idx, _) in char_indices {
                     let (name, arg) = name.split_at(prefix_len + char_idx);
-                    let arg = Some(RawVal::from(arg).into());
+                    let arg = Some(RawVal::from(arg));
                     let name = Some(name.into());
 
                     policy.add_sub_policy(
@@ -500,7 +499,7 @@ where
         let style = Style::Main;
         let name = self.name.clone();
         let args = self.ctx.args().clone();
-        let arg = args.get(idx).map(|v| v.clone().into());
+        let arg = args.get(idx).cloned();
 
         Ok(Some(
             T::default()
@@ -526,7 +525,7 @@ where
         let style = Style::Pos;
         let name = self.name.clone();
         let args = self.ctx.args().clone();
-        let arg = args.get(idx).map(|v| v.clone().into());
+        let arg = args.get(idx).cloned();
 
         Ok(Some(
             T::default()
@@ -552,7 +551,7 @@ where
         let style = Style::Cmd;
         let name = self.name.clone();
         let args = self.ctx.args().clone();
-        let arg = Some(RawVal::from(BOOL_TRUE).into());
+        let arg = Some(RawVal::from(BOOL_TRUE));
 
         Ok(Some(
             T::default()

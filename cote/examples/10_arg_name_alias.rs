@@ -26,13 +26,13 @@ fn main() -> color_eyre::Result<()> {
 
     let cli = Cli::parse(Args::from(["app", "--baz", "qux", "foo", "42"]))?;
 
-    assert_eq!(cli.cmd, true);
+    assert!(cli.cmd);
     assert_eq!(cli.pos, 42);
     assert_eq!(cli.opt, "qux");
 
     let cli = Cli::parse(Args::from(["app", "f", "-b=quux", "88"]))?;
 
-    assert_eq!(cli.cmd, true);
+    assert!(cli.cmd);
     assert_eq!(cli.pos, 88);
     assert_eq!(cli.opt, "quux");
 

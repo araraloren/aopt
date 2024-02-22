@@ -797,7 +797,7 @@ mod test {
         assert_eq!(set["s"].uid(), 0);
         assert_eq!(set[2].name(), "vala");
         assert_eq!(set["vali"].index(), Some(&Index::anywhere()));
-        assert_eq!(set["/booli"].force(), true);
+        assert!(set["/booli"].force());
         assert_eq!(set["--floata"].name(), "-fa");
         assert_eq!(set["-ib=i"].r#type(), &TypeId::of::<i64>());
         assert_eq!(set.opt(43)?.name(), "--strb");

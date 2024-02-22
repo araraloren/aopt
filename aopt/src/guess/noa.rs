@@ -160,7 +160,7 @@ impl<S> SingleNonOpt<S> {
     }
 
     pub fn reset_arg(mut self) -> Self {
-        self.arg = self.args.get(self.idx()).map(|v| v.clone().into());
+        self.arg = self.args.get(self.idx()).cloned();
         self
     }
 }
