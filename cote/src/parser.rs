@@ -343,7 +343,7 @@ where
 
     type Error = Set::Error;
 
-    fn parse_opt(&self, pattern: aopt::Str) -> Result<Self::Output, Self::Error> {
+    fn parse_opt(&self, pattern: aopt::AStr) -> Result<Self::Output, Self::Error> {
         OptParser::parse_opt(&self.set, pattern)
     }
 }
@@ -367,29 +367,29 @@ impl<'a, Set, Ser> SetValueFindExt for Parser<'a, Set, Ser>
 where
     Set: SetValueFindExt,
 {
-    fn find_uid(&self, opt: impl Into<aopt::Str>) -> Result<Uid, Error> {
+    fn find_uid(&self, opt: impl Into<aopt::AStr>) -> Result<Uid, Error> {
         SetValueFindExt::find_uid(&self.set, opt)
     }
 
-    fn find_opt(&self, opt: impl Into<aopt::Str>) -> Result<&SetOpt<Self>, Error> {
+    fn find_opt(&self, opt: impl Into<aopt::AStr>) -> Result<&SetOpt<Self>, Error> {
         SetValueFindExt::find_opt(&self.set, opt)
     }
 
-    fn find_opt_mut(&mut self, opt: impl Into<aopt::Str>) -> Result<&mut SetOpt<Self>, Error> {
+    fn find_opt_mut(&mut self, opt: impl Into<aopt::AStr>) -> Result<&mut SetOpt<Self>, Error> {
         SetValueFindExt::find_opt_mut(&mut self.set, opt)
     }
 
-    fn find_uid_i<U: 'static>(&self, opt: impl Into<aopt::Str>) -> Result<Uid, Error> {
+    fn find_uid_i<U: 'static>(&self, opt: impl Into<aopt::AStr>) -> Result<Uid, Error> {
         SetValueFindExt::find_uid_i::<U>(&self.set, opt)
     }
 
-    fn find_opt_i<U: 'static>(&self, opt: impl Into<aopt::Str>) -> Result<&SetOpt<Self>, Error> {
+    fn find_opt_i<U: 'static>(&self, opt: impl Into<aopt::AStr>) -> Result<&SetOpt<Self>, Error> {
         SetValueFindExt::find_opt_i::<U>(&self.set, opt)
     }
 
     fn find_opt_mut_i<U: 'static>(
         &mut self,
-        opt: impl Into<aopt::Str>,
+        opt: impl Into<aopt::AStr>,
     ) -> Result<&mut SetOpt<Self>, Error> {
         SetValueFindExt::find_opt_mut_i::<U>(&mut self.set, opt)
     }

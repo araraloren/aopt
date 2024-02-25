@@ -9,12 +9,12 @@ use crate::opt::OptParser;
 use crate::typeid;
 use crate::value::ValInitializer;
 use crate::value::ValStorer;
-use crate::Str;
+use crate::AStr;
 
 use super::Style;
 
 pub trait Config {
-    fn new<Parser>(parser: &Parser, pattern: Str) -> Result<Self, Error>
+    fn new<Parser>(parser: &Parser, pattern: AStr) -> Result<Self, Error>
     where
         Self: Sized,
         Parser: OptParser,
@@ -23,19 +23,19 @@ pub trait Config {
 
 pub trait ConfigValue {
     /// The hint message used in usage of option.
-    fn hint(&self) -> &Str;
+    fn hint(&self) -> &AStr;
 
     /// The help message of option.
-    fn help(&self) -> &Str;
+    fn help(&self) -> &AStr;
 
     /// The style support by current option.
     fn style(&self) -> Option<&Vec<Style>>;
 
     /// The creator name of option.
-    fn ctor(&self) -> Option<&Str>;
+    fn ctor(&self) -> Option<&AStr>;
 
     /// The name of option.
-    fn name(&self) -> Option<&Str>;
+    fn name(&self) -> Option<&AStr>;
 
     /// The type name of option.
     fn r#type(&self) -> Option<&TypeId>;
@@ -44,7 +44,7 @@ pub trait ConfigValue {
     fn index(&self) -> Option<&Index>;
 
     /// The alias name and prefix of option.
-    fn alias(&self) -> Option<&Vec<Str>>;
+    fn alias(&self) -> Option<&Vec<AStr>>;
 
     /// If the option is force required.
     fn force(&self) -> Option<bool>;
@@ -102,21 +102,21 @@ pub trait ConfigValue {
 
     fn set_force(&mut self, force: bool) -> &mut Self;
 
-    fn set_ctor(&mut self, ctor: impl Into<Str>) -> &mut Self;
+    fn set_ctor(&mut self, ctor: impl Into<AStr>) -> &mut Self;
 
-    fn set_name(&mut self, name: impl Into<Str>) -> &mut Self;
+    fn set_name(&mut self, name: impl Into<AStr>) -> &mut Self;
 
-    fn set_hint(&mut self, hint: impl Into<Str>) -> &mut Self;
+    fn set_hint(&mut self, hint: impl Into<AStr>) -> &mut Self;
 
-    fn set_help(&mut self, help: impl Into<Str>) -> &mut Self;
+    fn set_help(&mut self, help: impl Into<AStr>) -> &mut Self;
 
     fn set_style(&mut self, styles: Vec<Style>) -> &mut Self;
 
     fn clr_alias(&mut self) -> &mut Self;
 
-    fn add_alias(&mut self, alias: impl Into<Str>) -> &mut Self;
+    fn add_alias(&mut self, alias: impl Into<AStr>) -> &mut Self;
 
-    fn rem_alias(&mut self, alias: impl Into<Str>) -> &mut Self;
+    fn rem_alias(&mut self, alias: impl Into<AStr>) -> &mut Self;
 
     fn set_type<T: 'static>(&mut self) -> &mut Self;
 
@@ -132,17 +132,17 @@ pub trait ConfigValue {
 /// Contain the information used for create option instance.
 #[derive(Debug, Default)]
 pub struct OptConfig {
-    ctor: Option<Str>,
+    ctor: Option<AStr>,
 
     r#type: Option<TypeId>,
 
-    name: Option<Str>,
+    name: Option<AStr>,
 
     force: Option<bool>,
 
     index: Option<Index>,
 
-    alias: Vec<Str>,
+    alias: Vec<AStr>,
 
     help: Help,
 
@@ -174,12 +174,12 @@ impl OptConfig {
         self
     }
 
-    pub fn with_ctor(mut self, ctor: impl Into<Str>) -> Self {
+    pub fn with_ctor(mut self, ctor: impl Into<AStr>) -> Self {
         self.ctor = Some(ctor.into());
         self
     }
 
-    pub fn with_name(mut self, name: impl Into<Str>) -> Self {
+    pub fn with_name(mut self, name: impl Into<AStr>) -> Self {
         self.name = Some(name.into());
         self
     }
@@ -189,17 +189,17 @@ impl OptConfig {
         self
     }
 
-    pub fn with_hint(mut self, hint: impl Into<Str>) -> Self {
+    pub fn with_hint(mut self, hint: impl Into<AStr>) -> Self {
         self.help.set_hint(hint.into());
         self
     }
 
-    pub fn with_help(mut self, help: impl Into<Str>) -> Self {
+    pub fn with_help(mut self, help: impl Into<AStr>) -> Self {
         self.help.set_help(help.into());
         self
     }
 
-    pub fn with_alias(mut self, alias: Vec<impl Into<Str>>) -> Self {
+    pub fn with_alias(mut self, alias: Vec<impl Into<AStr>>) -> Self {
         self.alias = alias.into_iter().map(|v| v.into()).collect();
         self
     }
@@ -239,7 +239,7 @@ impl OptConfig {
         self
     }
 
-    pub fn take_alias(&mut self) -> Vec<Str> {
+    pub fn take_alias(&mut self) -> Vec<AStr> {
         std::mem::take(&mut self.alias)
     }
 
@@ -251,7 +251,7 @@ impl OptConfig {
         self.initializer.take()
     }
 
-    pub fn gen_name(&self) -> Result<Str, Error> {
+    pub fn gen_name(&self) -> Result<AStr, Error> {
         Ok(self
             .name
             .as_ref()
@@ -321,7 +321,7 @@ impl OptConfig {
 }
 
 impl Config for OptConfig {
-    fn new<Parser>(parser: &Parser, pattern: Str) -> Result<Self, Error>
+    fn new<Parser>(parser: &Parser, pattern: AStr) -> Result<Self, Error>
     where
         Self: Sized,
         Parser: OptParser,
@@ -355,11 +355,11 @@ impl Config for OptConfig {
 }
 
 impl ConfigValue for OptConfig {
-    fn hint(&self) -> &Str {
+    fn hint(&self) -> &AStr {
         self.help.hint()
     }
 
-    fn help(&self) -> &Str {
+    fn help(&self) -> &AStr {
         self.help.help()
     }
 
@@ -367,11 +367,11 @@ impl ConfigValue for OptConfig {
         self.styles.as_ref()
     }
 
-    fn ctor(&self) -> Option<&Str> {
+    fn ctor(&self) -> Option<&AStr> {
         self.ctor.as_ref()
     }
 
-    fn name(&self) -> Option<&Str> {
+    fn name(&self) -> Option<&AStr> {
         self.name.as_ref()
     }
 
@@ -383,7 +383,7 @@ impl ConfigValue for OptConfig {
         self.index.as_ref()
     }
 
-    fn alias(&self) -> Option<&Vec<Str>> {
+    fn alias(&self) -> Option<&Vec<AStr>> {
         Some(self.alias.as_ref())
     }
 
@@ -497,22 +497,22 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn set_ctor(&mut self, ctor: impl Into<Str>) -> &mut Self {
+    fn set_ctor(&mut self, ctor: impl Into<AStr>) -> &mut Self {
         self.ctor = Some(ctor.into());
         self
     }
 
-    fn set_name(&mut self, name: impl Into<Str>) -> &mut Self {
+    fn set_name(&mut self, name: impl Into<AStr>) -> &mut Self {
         self.name = Some(name.into());
         self
     }
 
-    fn set_hint(&mut self, hint: impl Into<Str>) -> &mut Self {
+    fn set_hint(&mut self, hint: impl Into<AStr>) -> &mut Self {
         self.help.set_hint(hint);
         self
     }
 
-    fn set_help(&mut self, help: impl Into<Str>) -> &mut Self {
+    fn set_help(&mut self, help: impl Into<AStr>) -> &mut Self {
         self.help.set_help(help);
         self
     }
@@ -527,12 +527,12 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn add_alias(&mut self, alias: impl Into<Str>) -> &mut Self {
+    fn add_alias(&mut self, alias: impl Into<AStr>) -> &mut Self {
         self.alias.push(alias.into());
         self
     }
 
-    fn rem_alias(&mut self, alias: impl Into<Str>) -> &mut Self {
+    fn rem_alias(&mut self, alias: impl Into<AStr>) -> &mut Self {
         let alias = alias.into();
 
         for (index, value) in self.alias.iter().enumerate() {

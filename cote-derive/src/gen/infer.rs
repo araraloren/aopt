@@ -59,7 +59,7 @@ impl<'a> InferGenerator<'a> {
                 }
                 InferKind::Ctor => {
                     quote! {
-                        fn infer_ctor() -> cote::Str {
+                        fn infer_ctor() -> cote::AStr {
                             #value
                         }
                     }

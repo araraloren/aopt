@@ -29,8 +29,8 @@ use crate::ctx::InnerCtx;
 use crate::ext::APolicyExt;
 use crate::set::Set;
 use crate::ARef;
+use crate::AStr;
 use crate::Error;
-use crate::Str;
 use crate::Uid;
 
 #[derive(Debug, Clone)]
@@ -102,7 +102,7 @@ pub trait PolicySettings {
 
     fn styles(&self) -> &[UserStyle];
 
-    fn no_delay(&self) -> Option<&[Str]>;
+    fn no_delay(&self) -> Option<&[AStr]>;
 
     fn overload(&self) -> bool;
 
@@ -110,7 +110,7 @@ pub trait PolicySettings {
 
     fn set_styles(&mut self, styles: Vec<UserStyle>) -> &mut Self;
 
-    fn set_no_delay(&mut self, name: impl Into<Str>) -> &mut Self;
+    fn set_no_delay(&mut self, name: impl Into<AStr>) -> &mut Self;
 
     fn set_overload(&mut self, overload: bool) -> &mut Self;
 }
@@ -315,7 +315,7 @@ where
         self.policy().styles()
     }
 
-    fn no_delay(&self) -> Option<&[Str]> {
+    fn no_delay(&self) -> Option<&[AStr]> {
         self.policy().no_delay()
     }
 
@@ -333,7 +333,7 @@ where
         self
     }
 
-    fn set_no_delay(&mut self, name: impl Into<Str>) -> &mut Self {
+    fn set_no_delay(&mut self, name: impl Into<AStr>) -> &mut Self {
         self.policy_mut().set_no_delay(name);
         self
     }

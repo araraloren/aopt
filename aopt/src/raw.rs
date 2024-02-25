@@ -1,5 +1,5 @@
 use crate::ARef;
-use crate::Str;
+use crate::AStr;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::ops::{Deref, DerefMut};
@@ -69,8 +69,8 @@ impl<'a> From<&'a str> for RawVal {
     }
 }
 
-impl From<Str> for RawVal {
-    fn from(v: Str) -> Self {
+impl From<AStr> for RawVal {
+    fn from(v: AStr) -> Self {
         Self(AsRef::<OsStr>::as_ref(v.as_str()).into())
     }
 }

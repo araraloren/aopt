@@ -38,8 +38,8 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 
 use crate::value::ValAccessor;
+use crate::AStr;
 use crate::Error;
-use crate::Str;
 use crate::Uid;
 
 pub const BOOL_TRUE: &str = "true";
@@ -343,7 +343,7 @@ pub trait OptParser {
     type Output;
     type Error: Into<Error>;
 
-    fn parse_opt(&self, pattern: Str) -> Result<Self::Output, Self::Error>;
+    fn parse_opt(&self, pattern: AStr) -> Result<Self::Output, Self::Error>;
 }
 
 pub trait Opt: Debug {
@@ -352,16 +352,16 @@ pub trait Opt: Debug {
     fn uid(&self) -> Uid;
 
     /// The name of option.
-    fn name(&self) -> &Str;
+    fn name(&self) -> &AStr;
 
     /// The type of option.
     fn r#type(&self) -> &TypeId;
 
     /// The help hint of option such as `--flag`.
-    fn hint(&self) -> &Str;
+    fn hint(&self) -> &AStr;
 
     /// The help message of option.
-    fn help(&self) -> &Str;
+    fn help(&self) -> &AStr;
 
     fn valid(&self) -> bool;
 
@@ -378,7 +378,7 @@ pub trait Opt: Debug {
     fn index(&self) -> Option<&Index>;
 
     /// The alias the option.
-    fn alias(&self) -> Option<&Vec<Str>>;
+    fn alias(&self) -> Option<&Vec<AStr>>;
 
     fn accessor(&self) -> &ValAccessor;
 
@@ -398,9 +398,9 @@ pub trait Opt: Debug {
 
     fn mat_force(&self, force: bool) -> bool;
 
-    fn mat_name(&self, name: Option<&Str>) -> bool;
+    fn mat_name(&self, name: Option<&AStr>) -> bool;
 
-    fn mat_alias(&self, name: &Str) -> bool;
+    fn mat_alias(&self, name: &AStr) -> bool;
 
     fn mat_index(&self, index: Option<(usize, usize)>) -> bool;
 

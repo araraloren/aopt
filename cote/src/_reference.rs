@@ -864,7 +864,7 @@
 //!| `val`     |  true      | value type |
 //!| `action`  |  true      | [`Action`](crate::Action) |
 //!| `force`   |  true      | boolean |
-//!| `ctor`    |  true      | [`Str`](crate::aopt::Str) |
+//!| `ctor`    |  true      | [`AStr`](crate::aopt::AStr) |
 //!| `index`   |  true      | Option<[`Index`](crate::Index)> |
 //!| `style`   |  true      | Vec<[`Style`](crate::Style)> |
 //!| `igname`  |  true      | boolean |

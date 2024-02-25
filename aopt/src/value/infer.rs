@@ -21,9 +21,9 @@ use crate::trace_log;
 use crate::typeid;
 use crate::value::ValInitializer;
 use crate::value::ValValidator;
+use crate::AStr;
 use crate::Error;
 use crate::RawVal;
-use crate::Str;
 
 use super::AnyValue;
 use super::RawValParser;
@@ -41,7 +41,7 @@ pub trait Infer {
         false
     }
 
-    fn infer_ctor() -> Str {
+    fn infer_ctor() -> AStr {
         crate::set::ctor_default_name()
     }
 
@@ -446,7 +446,7 @@ impl Infer for Placeholder {
         trace_log!("In default, fill info in Placeholder");
         match ctor {
             BuiltInCtor::Int => <i64>::infer_fill_info(cfg),
-            BuiltInCtor::Str => <String>::infer_fill_info(cfg),
+            BuiltInCtor::AStr => <String>::infer_fill_info(cfg),
             BuiltInCtor::Flt => <f64>::infer_fill_info(cfg),
             BuiltInCtor::Uint => <u64>::infer_fill_info(cfg),
             BuiltInCtor::Bool => bool::infer_fill_info(cfg),

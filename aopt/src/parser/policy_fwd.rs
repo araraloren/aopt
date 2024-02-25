@@ -20,8 +20,8 @@ use crate::set::SetChecker;
 use crate::set::SetOpt;
 use crate::trace_log;
 use crate::ARef;
+use crate::AStr;
 use crate::Error;
-use crate::Str;
 
 /// [`FwdPolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
 /// The option would match failed if any special [`Error`] raised during option processing.
@@ -228,7 +228,7 @@ impl<Set, Ser, Chk> PolicySettings for FwdPolicy<Set, Ser, Chk> {
         &self.style_manager
     }
 
-    fn no_delay(&self) -> Option<&[Str]> {
+    fn no_delay(&self) -> Option<&[AStr]> {
         None
     }
 
@@ -246,7 +246,7 @@ impl<Set, Ser, Chk> PolicySettings for FwdPolicy<Set, Ser, Chk> {
         self
     }
 
-    fn set_no_delay(&mut self, _: impl Into<Str>) -> &mut Self {
+    fn set_no_delay(&mut self, _: impl Into<AStr>) -> &mut Self {
         self
     }
 
@@ -354,7 +354,7 @@ where
             let name = noa_args
                 .get(Self::noa_cmd())
                 .and_then(|v| v.get_str())
-                .map(Str::from);
+                .map(AStr::from);
             let mut guess = InvokeGuess {
                 set,
                 inv,
@@ -396,7 +396,7 @@ where
                 guess.name = noa_args
                     .get(Self::noa_pos(idx))
                     .and_then(|v| v.get_str())
-                    .map(Str::from);
+                    .map(AStr::from);
                 trace_log!("Guess POS argument = {:?} @ {}", guess.name, guess.idx);
                 guess.guess_and_invoke(&UserStyle::Pos, overload)?;
                 if let Some(error_cmd) = guess.fail.find_err_command() {
@@ -422,7 +422,7 @@ where
         let name = main_args
             .get(Self::noa_main())
             .and_then(|v| v.get_str())
-            .map(Str::from);
+            .map(AStr::from);
         let mut guess = InvokeGuess {
             set,
             inv,

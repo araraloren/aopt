@@ -8,9 +8,9 @@ use crate::args::Args;
 use crate::ctx::InnerCtx;
 use crate::opt::Style;
 use crate::ARef;
+use crate::AStr;
 use crate::Error;
 use crate::RawVal;
-use crate::Str;
 use crate::Uid;
 
 pub use self::invoke::InvokeGuess;
@@ -143,7 +143,7 @@ pub trait PolicyConfig {
 
     fn tot(&self) -> usize;
 
-    fn name(&self) -> Option<&Str>;
+    fn name(&self) -> Option<&AStr>;
 
     fn style(&self) -> Style;
 
@@ -155,7 +155,7 @@ pub trait PolicyConfig {
 }
 
 pub trait PolicyBuild {
-    fn with_name(self, name: Option<Str>) -> Self;
+    fn with_name(self, name: Option<AStr>) -> Self;
 
     fn with_style(self, style: Style) -> Self;
 

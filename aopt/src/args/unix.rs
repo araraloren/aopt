@@ -3,9 +3,9 @@ use std::os::unix::ffi::OsStrExt;
 
 use crate::args::ArgParser;
 use crate::astr;
+use crate::AStr;
 use crate::Error;
 use crate::RawVal;
-use crate::Str;
 
 pub fn strip_prefix<'a>(str: &'a OsStr, prefix: &str) -> Option<&'a OsStr> {
     let enc = str.as_bytes();
@@ -78,7 +78,7 @@ pub fn split_once(str: &OsStr, ch: char) -> Option<(&OsStr, &OsStr)> {
 /// ```
 #[derive(Debug, Clone, Default)]
 pub struct CLOpt {
-    pub name: Str,
+    pub name: AStr,
 
     pub value: Option<RawVal>,
 }

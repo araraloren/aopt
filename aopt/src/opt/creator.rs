@@ -8,15 +8,15 @@ use crate::opt::OptConfig;
 use crate::set::Ctor;
 use crate::trace_log;
 use crate::value::ValAccessor;
+use crate::AStr;
 use crate::Error;
-use crate::Str;
 
 #[cfg(feature = "sync")]
 mod __creator {
     use super::*;
 
     pub struct Creator<O, C, E: Into<Error>> {
-        pub(crate) name: Str,
+        pub(crate) name: AStr,
 
         pub(crate) callback: Box<dyn FnMut(C) -> Result<O, E> + Send + Sync + 'static>,
     }
@@ -32,7 +32,7 @@ mod __creator {
 
     impl<O: Opt, C, E: Into<Error>> Creator<O, C, E> {
         pub fn new(
-            name: Str,
+            name: AStr,
             callback: impl FnMut(C) -> Result<O, E> + Send + Sync + 'static,
         ) -> Self {
             Self {
@@ -48,7 +48,7 @@ mod __creator {
     use super::*;
 
     pub struct Creator<O, C, E: Into<Error>> {
-        pub(crate) name: Str,
+        pub(crate) name: AStr,
 
         pub(crate) callback: Box<dyn FnMut(C) -> Result<O, E> + 'static>,
     }
@@ -63,7 +63,7 @@ mod __creator {
     }
 
     impl<O: Opt, C, E: Into<Error>> Creator<O, C, E> {
-        pub fn new(name: Str, callback: impl FnMut(C) -> Result<O, E> + 'static) -> Self {
+        pub fn new(name: AStr, callback: impl FnMut(C) -> Result<O, E> + 'static) -> Self {
             Self {
                 name,
                 callback: Box::new(callback),
@@ -81,7 +81,7 @@ impl<O: Opt, C, E: Into<Error>> Ctor for Creator<O, C, E> {
 
     type Error = E;
 
-    fn name(&self) -> &Str {
+    fn name(&self) -> &AStr {
         &self.name
     }
 
@@ -124,7 +124,7 @@ pub enum BuiltInCtor {
     Int,
 
     /// Create names: `s`, `str`, `string`
-    Str,
+    AStr,
 
     /// Create names: `f`, `flt`, `f64`
     Flt,
@@ -158,7 +158,7 @@ impl BuiltInCtor {
     pub fn name(&self) -> &str {
         match self {
             BuiltInCtor::Int => BUILTIN_CTOR_INT_SHORT,
-            BuiltInCtor::Str => BUILTIN_CTOR_STR_SHORT,
+            BuiltInCtor::AStr => BUILTIN_CTOR_STR_SHORT,
             BuiltInCtor::Flt => BUILTIN_CTOR_FLT_SHORT,
             BuiltInCtor::Uint => BUILTIN_CTOR_UINT_SHORT,
             BuiltInCtor::Bool => BUILTIN_CTOR_BOOL_SHORT,
@@ -177,7 +177,7 @@ impl BuiltInCtor {
                 BuiltInCtor::Int
             }
             BUILTIN_CTOR_STR_SHORT | BUILTIN_CTOR_STR_LONG | BUILTIN_CTOR_STR_TYPE => {
-                BuiltInCtor::Str
+                BuiltInCtor::AStr
             }
             BUILTIN_CTOR_FLT_SHORT | BUILTIN_CTOR_FLT_LONG | BUILTIN_CTOR_FLT_TYPE => {
                 BuiltInCtor::Flt
@@ -269,7 +269,7 @@ impl Creator<AOpt, OptConfig, Error> {
         if ctor == BuiltInCtor::Fallback {
             return Self::fallback();
         }
-        let name = Str::from(ctor.name());
+        let name = AStr::from(ctor.name());
 
         Self::new(name, move |mut config: OptConfig| {
             trace_log!("Construct option with config {:?}", &config);
@@ -343,7 +343,7 @@ impl From<BuiltInCtor> for Creator<AOpt, OptConfig, Error> {
 /// * [`Int`](BuiltInCtor::Int)
 /// * [`Bool`](BuiltInCtor::Bool)
 /// * [`Flt`](BuiltInCtor::Flt)
-/// * [`Str`](BuiltInCtor::Str)
+/// * [`AStr`](BuiltInCtor::AStr)
 /// * [`Uint`](BuiltInCtor::Uint)
 /// * [`Cmd`](BuiltInCtor::Cmd)
 /// * [`Pos`](BuiltInCtor::Pos)

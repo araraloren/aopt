@@ -26,8 +26,8 @@ use crate::set::SetExt;
 use crate::set::SetOpt;
 use crate::trace_log;
 use crate::ARef;
+use crate::AStr;
 use crate::Error;
-use crate::Str;
 use crate::Uid;
 
 #[derive(Debug, Clone, Default)]
@@ -131,7 +131,7 @@ pub struct DelayPolicy<Set, Ser, Chk> {
 
     style_manager: OptStyleManager,
 
-    no_delay_opt: Vec<Str>,
+    no_delay_opt: Vec<AStr>,
 
     marker_s: PhantomData<(Set, Ser)>,
 }
@@ -211,7 +211,7 @@ impl<Set, Ser, Chk> DelayPolicy<Set, Ser, Chk> {
         self
     }
 
-    pub fn with_no_delay(mut self, name: impl Into<Str>) -> Self {
+    pub fn with_no_delay(mut self, name: impl Into<AStr>) -> Self {
         self.no_delay_opt.push(name.into());
         self
     }
@@ -269,7 +269,7 @@ impl<Set, Ser, Chk> PolicySettings for DelayPolicy<Set, Ser, Chk> {
         &self.style_manager
     }
 
-    fn no_delay(&self) -> Option<&[Str]> {
+    fn no_delay(&self) -> Option<&[AStr]> {
         Some(&self.no_delay_opt)
     }
 
@@ -287,7 +287,7 @@ impl<Set, Ser, Chk> PolicySettings for DelayPolicy<Set, Ser, Chk> {
         self
     }
 
-    fn set_no_delay(&mut self, name: impl Into<Str>) -> &mut Self {
+    fn set_no_delay(&mut self, name: impl Into<AStr>) -> &mut Self {
         self.no_delay_opt.push(name.into());
         self
     }
@@ -553,7 +553,7 @@ where
             let name = noa_args
                 .get(Self::noa_cmd())
                 .and_then(|v| v.get_str())
-                .map(Str::from);
+                .map(AStr::from);
             let mut guess = InvokeGuess {
                 set,
                 inv,
@@ -595,7 +595,7 @@ where
                 guess.name = noa_args
                     .get(Self::noa_pos(idx))
                     .and_then(|v| v.get_str())
-                    .map(Str::from);
+                    .map(AStr::from);
                 trace_log!("Guess POS argument = {:?} @ {}", guess.name, guess.idx);
                 guess.guess_and_invoke(&UserStyle::Pos, overload)?;
                 if let Some(error_cmd) = guess.fail.find_err_command() {
@@ -643,7 +643,7 @@ where
         let name = main_args
             .get(Self::noa_main())
             .and_then(|v| v.get_str())
-            .map(Str::from);
+            .map(AStr::from);
         let mut guess = InvokeGuess {
             set,
             inv,

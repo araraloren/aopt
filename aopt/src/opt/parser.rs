@@ -9,8 +9,8 @@ use neure::SpanStorer;
 
 use super::{ConstrctInfo, OptParser};
 use crate::opt::Index;
+use crate::AStr;
 use crate::Error;
-use crate::Str;
 
 /// Parse the option string with given prefixes, return an [`ConstrctInfo`].
 ///
@@ -125,7 +125,7 @@ impl StrParser {
         parser(storer, str)
     }
 
-    pub fn parse_creator_string(&self, pattern: Str) -> Result<ConstrctInfo, Error> {
+    pub fn parse_creator_string(&self, pattern: AStr) -> Result<ConstrctInfo, Error> {
         let pattern_clone = pattern.clone();
         let pattern = pattern.as_str();
 
@@ -159,7 +159,7 @@ impl StrParser {
                     if let Ok(vals) = storer.substrs(pattern, KEY_ALIAS) {
                         alias = Some(
                             vals.filter(|v| !v.trim().is_empty())
-                                .map(|v| Str::from(v.trim()))
+                                .map(|v| AStr::from(v.trim()))
                                 .collect(),
                         );
                     }
@@ -170,9 +170,9 @@ impl StrParser {
                         .with_force(force)
                         .with_index(idx)
                         .with_pat(pattern_clone)
-                        .with_name(name.map(|v| Str::from(v.trim())))
-                        .with_help(help.map(|v| Str::from(v.trim())))
-                        .with_ctor(ctor.map(|v| Str::from(v.trim())))
+                        .with_name(name.map(|v| AStr::from(v.trim())))
+                        .with_help(help.map(|v| AStr::from(v.trim())))
+                        .with_ctor(ctor.map(|v| AStr::from(v.trim())))
                         .with_alias(alias))
                 } else {
                     Err(Error::invalid_create_str(
@@ -200,7 +200,7 @@ impl OptParser for StrParser {
 
     type Error = Error;
 
-    fn parse_opt(&self, pattern: Str) -> Result<Self::Output, Self::Error> {
+    fn parse_opt(&self, pattern: AStr) -> Result<Self::Output, Self::Error> {
         if pattern.trim().is_empty() {
             Ok(Self::Output::default())
         } else {

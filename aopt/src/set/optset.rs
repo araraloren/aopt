@@ -23,8 +23,8 @@ use crate::set::SetIndex;
 use crate::value::Infer;
 use crate::value::Placeholder;
 use crate::value::RawValParser;
+use crate::AStr;
 use crate::Error;
-use crate::Str;
 use crate::Uid;
 
 use super::OptValidator;
@@ -185,14 +185,14 @@ where
 
 macro_rules! add_interface {
     ($name:ident, $forward_to:ident, $ret:ty) => {
-        pub fn $name(&self, opt: impl Into<Str>) -> Result<$ret, Error> {
+        pub fn $name(&self, opt: impl Into<AStr>) -> Result<$ret, Error> {
             self.$forward_to(opt, |f| {
                 Self::fill_type(f);
             })
         }
     };
     (mut $name:ident, $forward_to:ident, $ret:ty) => {
-        pub fn $name(&mut self, opt: impl Into<Str>) -> Result<$ret, Error> {
+        pub fn $name(&mut self, opt: impl Into<AStr>) -> Result<$ret, Error> {
             self.$forward_to(opt, |f| {
                 Self::fill_type(f);
             })
@@ -202,14 +202,14 @@ macro_rules! add_interface {
 
 macro_rules! add_interface_i {
     ($name:ident, $forward_to:ident, $ret:ty) => {
-        pub fn $name<U: 'static>(&self, opt: impl Into<Str>) -> Result<$ret, Error> {
+        pub fn $name<U: 'static>(&self, opt: impl Into<AStr>) -> Result<$ret, Error> {
             self.$forward_to(opt, |f| {
                 f.set_type::<U>();
             })
         }
     };
     (mut $name:ident, $forward_to:ident, $ret:ty) => {
-        pub fn $name<U: 'static>(&mut self, opt: impl Into<Str>) -> Result<$ret, Error> {
+        pub fn $name<U: 'static>(&mut self, opt: impl Into<AStr>) -> Result<$ret, Error> {
             self.$forward_to(opt, |f| {
                 f.set_type::<U>();
             })
@@ -254,7 +254,7 @@ where
     /// For option string, reference [`StrParser`](crate::opt::StrParser).
     pub fn add_opt(
         &mut self,
-        opt_str: impl Into<Str>,
+        opt_str: impl Into<AStr>,
     ) -> Result<SetCommit<'_, Self, Placeholder>, Error> {
         Ok(SetCommit::new_placeholder(
             self,
@@ -266,7 +266,10 @@ where
     ///
     /// It parsing the given option string `S` using inner [`OptParser`], return an [`SetCommit`].
     /// For option string, reference [`StrParser`](crate::opt::StrParser).
-    pub fn add_opt_i<U>(&mut self, opt_str: impl Into<Str>) -> Result<SetCommit<'_, Self, U>, Error>
+    pub fn add_opt_i<U>(
+        &mut self,
+        opt_str: impl Into<AStr>,
+    ) -> Result<SetCommit<'_, Self, U>, Error>
     where
         U: Infer + 'static,
         U::Val: RawValParser,
@@ -285,7 +288,7 @@ where
 
             match built_in_ctor {
                 BuiltInCtor::Int => cfg.set_type::<i64>(),
-                BuiltInCtor::Str => cfg.set_type::<String>(),
+                BuiltInCtor::AStr => cfg.set_type::<String>(),
                 BuiltInCtor::Flt => cfg.set_type::<f64>(),
                 BuiltInCtor::Uint => cfg.set_type::<u64>(),
                 BuiltInCtor::Bool => cfg.set_type::<bool>(),
@@ -313,7 +316,7 @@ where
     /// For option string, reference [`StrParser`](crate::opt::StrParser).
     pub fn filter_raw(
         &self,
-        opt: impl Into<Str>,
+        opt: impl Into<AStr>,
         mut func: impl FnMut(&mut C::Config),
     ) -> Result<Filter<'_, Self>, Error> {
         let mut info = <C::Config as Config>::new(self.parser(), opt.into())?;
@@ -329,7 +332,7 @@ where
     /// Filter the option, return the reference of first matched [`Opt`].
     pub fn find_raw(
         &self,
-        opt: impl Into<Str>,
+        opt: impl Into<AStr>,
         mut func: impl FnMut(&mut C::Config),
     ) -> Result<Option<&C::Opt>, Error> {
         let mut info = <C::Config as Config>::new(self.parser(), opt.into())?;
@@ -345,7 +348,7 @@ where
     /// Filter the option, return an iterator of reference of [`Opt`]s.
     pub fn find_all_raw(
         &self,
-        opt: impl Into<Str>,
+        opt: impl Into<AStr>,
         mut func: impl FnMut(&mut C::Config),
     ) -> Result<impl Iterator<Item = &C::Opt>, Error> {
         let mut info = <C::Config as Config>::new(self.parser(), opt.into())?;
@@ -364,7 +367,7 @@ where
     /// For option string, reference [`StrParser`](crate::opt::StrParser).
     pub fn filter_mut_raw(
         &mut self,
-        opt: impl Into<Str>,
+        opt: impl Into<AStr>,
         mut func: impl FnMut(&mut C::Config),
     ) -> Result<FilterMut<'_, Self>, Error> {
         let mut info = <C::Config as Config>::new(self.parser(), opt.into())?;
@@ -380,7 +383,7 @@ where
     /// Filter the option, return the mutable reference of first matched [`Opt`].
     pub fn find_mut_raw(
         &mut self,
-        opt: impl Into<Str>,
+        opt: impl Into<AStr>,
         mut func: impl FnMut(&mut C::Config),
     ) -> Result<Option<&mut C::Opt>, Error> {
         let mut info = <C::Config as Config>::new(self.parser(), opt.into())?;
@@ -404,7 +407,7 @@ where
     /// Filter the option, return an iterator of mutable reference of [`Opt`]s.
     pub fn find_all_mut_raw(
         &mut self,
-        opt: impl Into<Str>,
+        opt: impl Into<AStr>,
         mut func: impl FnMut(&mut C::Config),
     ) -> Result<impl Iterator<Item = &mut C::Opt>, Error> {
         let mut info = <C::Config as Config>::new(self.parser(), opt.into())?;
@@ -423,16 +426,16 @@ where
     P::Output: Information,
     C::Config: Config + ConfigValue + Default,
 {
-    fn find_uid(&self, opt: impl Into<Str>) -> Result<Uid, Error> {
-        let opt: Str = opt.into();
+    fn find_uid(&self, opt: impl Into<AStr>) -> Result<Uid, Error> {
+        let opt: AStr = opt.into();
 
         self.find(opt.clone())?
             .map(|v| v.uid())
             .ok_or_else(|| raise_error!("Can not find option `{}` in option set", opt))
     }
 
-    fn find_uid_i<U: 'static>(&self, opt: impl Into<Str>) -> Result<Uid, Error> {
-        let opt: Str = opt.into();
+    fn find_uid_i<U: 'static>(&self, opt: impl Into<AStr>) -> Result<Uid, Error> {
+        let opt: AStr = opt.into();
 
         self.find_i::<U>(opt.clone())?
             .map(|v| v.uid())
@@ -445,15 +448,15 @@ where
             })
     }
 
-    fn find_opt(&self, opt: impl Into<Str>) -> Result<&SetOpt<Self>, Error> {
-        let opt: Str = opt.into();
+    fn find_opt(&self, opt: impl Into<AStr>) -> Result<&SetOpt<Self>, Error> {
+        let opt: AStr = opt.into();
 
         self.find(opt.clone())?
             .ok_or_else(|| raise_error!("Can not find option(ref) `{}` in option set", opt))
     }
 
-    fn find_opt_i<U: 'static>(&self, opt: impl Into<Str>) -> Result<&SetOpt<Self>, Error> {
-        let opt: Str = opt.into();
+    fn find_opt_i<U: 'static>(&self, opt: impl Into<AStr>) -> Result<&SetOpt<Self>, Error> {
+        let opt: AStr = opt.into();
 
         self.find_i::<U>(opt.clone())?.ok_or_else(|| {
             raise_error!(
@@ -464,8 +467,8 @@ where
         })
     }
 
-    fn find_opt_mut(&mut self, opt: impl Into<Str>) -> Result<&mut SetOpt<Self>, Error> {
-        let opt: Str = opt.into();
+    fn find_opt_mut(&mut self, opt: impl Into<AStr>) -> Result<&mut SetOpt<Self>, Error> {
+        let opt: AStr = opt.into();
 
         self.find_mut(opt.clone())?
             .ok_or_else(|| raise_error!("Can not find option(mut) `{}` in option set", opt))
@@ -473,9 +476,9 @@ where
 
     fn find_opt_mut_i<U: 'static>(
         &mut self,
-        opt: impl Into<Str>,
+        opt: impl Into<AStr>,
     ) -> Result<&mut SetOpt<Self>, Error> {
-        let opt: Str = opt.into();
+        let opt: AStr = opt.into();
 
         self.find_mut_i::<U>(opt.clone())?.ok_or_else(|| {
             raise_error!(
@@ -611,7 +614,7 @@ where
 
     type Error = P::Error;
 
-    fn parse_opt(&self, pattern: Str) -> Result<Self::Output, Self::Error> {
+    fn parse_opt(&self, pattern: AStr) -> Result<Self::Output, Self::Error> {
         self.parser().parse_opt(pattern)
     }
 }

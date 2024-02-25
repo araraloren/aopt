@@ -24,8 +24,8 @@ use crate::value::Infer;
 use crate::value::Placeholder;
 use crate::value::RawValParser;
 use crate::ARef;
+use crate::AStr;
 use crate::Error;
-use crate::Str;
 use crate::Uid;
 
 use super::Parser;
@@ -306,7 +306,7 @@ where
     /// ```
     pub fn add_opt(
         &mut self,
-        opt: impl Into<Str>,
+        opt: impl Into<AStr>,
     ) -> Result<ParserCommit<'a, '_, Inv, Set, Ser, Placeholder>, Error> {
         let info = <SetCfg<Set>>::new(&self.set, opt.into())?;
 
@@ -318,7 +318,7 @@ where
 
     pub fn add_opt_i<U>(
         &mut self,
-        opt: impl Into<Str>,
+        opt: impl Into<AStr>,
     ) -> Result<ParserCommit<'a, '_, Inv, Set, Ser, U>, Error>
     where
         U: Infer + 'static,
@@ -525,7 +525,7 @@ where
 
     type Error = Set::Error;
 
-    fn parse_opt(&self, pattern: Str) -> Result<Self::Output, Self::Error> {
+    fn parse_opt(&self, pattern: AStr) -> Result<Self::Output, Self::Error> {
         OptParser::parse_opt(&self.set, pattern)
     }
 }
@@ -534,29 +534,29 @@ impl<Set, Inv, Ser> SetValueFindExt for HCOptSet<Set, Inv, Ser>
 where
     Set: SetValueFindExt,
 {
-    fn find_uid(&self, opt: impl Into<Str>) -> Result<Uid, Error> {
+    fn find_uid(&self, opt: impl Into<AStr>) -> Result<Uid, Error> {
         SetValueFindExt::find_uid(&self.set, opt)
     }
 
-    fn find_uid_i<U: 'static>(&self, opt: impl Into<Str>) -> Result<Uid, Error> {
+    fn find_uid_i<U: 'static>(&self, opt: impl Into<AStr>) -> Result<Uid, Error> {
         SetValueFindExt::find_uid_i::<U>(&self.set, opt)
     }
 
-    fn find_opt(&self, opt: impl Into<Str>) -> Result<&SetOpt<Self>, Error> {
+    fn find_opt(&self, opt: impl Into<AStr>) -> Result<&SetOpt<Self>, Error> {
         SetValueFindExt::find_opt(&self.set, opt)
     }
 
-    fn find_opt_i<U: 'static>(&self, opt: impl Into<Str>) -> Result<&SetOpt<Self>, Error> {
+    fn find_opt_i<U: 'static>(&self, opt: impl Into<AStr>) -> Result<&SetOpt<Self>, Error> {
         SetValueFindExt::find_opt_i::<U>(&self.set, opt)
     }
 
-    fn find_opt_mut(&mut self, opt: impl Into<Str>) -> Result<&mut SetOpt<Self>, Error> {
+    fn find_opt_mut(&mut self, opt: impl Into<AStr>) -> Result<&mut SetOpt<Self>, Error> {
         SetValueFindExt::find_opt_mut(&mut self.set, opt)
     }
 
     fn find_opt_mut_i<U: 'static>(
         &mut self,
-        opt: impl Into<Str>,
+        opt: impl Into<AStr>,
     ) -> Result<&mut SetOpt<Self>, Error> {
         SetValueFindExt::find_opt_mut_i::<U>(&mut self.set, opt)
     }

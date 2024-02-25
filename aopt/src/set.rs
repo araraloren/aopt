@@ -28,8 +28,8 @@ use crate::opt::OptValueExt;
 use crate::raise_error;
 use crate::value::ValInitializer;
 use crate::value::ValStorer;
+use crate::AStr;
 use crate::Error;
-use crate::Str;
 use crate::Uid;
 
 /// An type alias for `<<I as Set>::Ctor as Ctor>::Opt`
@@ -48,7 +48,7 @@ impl<Opt: crate::opt::Opt, Config: Send + Sync, Err: Into<Error>> Ctor
 
     type Error = Err;
 
-    fn name(&self) -> &Str {
+    fn name(&self) -> &AStr {
         Ctor::name(self.as_ref())
     }
 
@@ -77,7 +77,7 @@ impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Ctor
 
     type Error = Err;
 
-    fn name(&self) -> &Str {
+    fn name(&self) -> &AStr {
         Ctor::name(self.as_ref())
     }
 
@@ -98,8 +98,8 @@ impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Debug
 pub const CTOR_DEFAULT: &str = "fallback";
 
 /// Get default creator name.
-pub fn ctor_default_name() -> Str {
-    Str::from(CTOR_DEFAULT)
+pub fn ctor_default_name() -> AStr {
+    AStr::from(CTOR_DEFAULT)
 }
 
 /// Create [`Opt`](crate::set::Ctor::Opt) with given [`Config`](crate::set::Ctor::Config).
@@ -108,7 +108,7 @@ pub trait Ctor {
     type Config;
     type Error: Into<Error>;
 
-    fn name(&self) -> &Str;
+    fn name(&self) -> &AStr;
 
     fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error>;
 }
@@ -124,15 +124,15 @@ pub trait Set {
 
     fn ctor_iter_mut(&mut self) -> IterMut<'_, Self::Ctor>;
 
-    fn contain_ctor(&self, name: &Str) -> bool {
+    fn contain_ctor(&self, name: &AStr) -> bool {
         self.ctor_iter().any(|v| v.name() == name)
     }
 
-    fn get_ctor(&self, name: &Str) -> Option<&Self::Ctor> {
+    fn get_ctor(&self, name: &AStr) -> Option<&Self::Ctor> {
         self.ctor_iter().find(|v| v.name() == name)
     }
 
-    fn get_ctor_mut(&mut self, name: &Str) -> Option<&mut Self::Ctor> {
+    fn get_ctor_mut(&mut self, name: &AStr) -> Option<&mut Self::Ctor> {
         self.ctor_iter_mut().find(|v| v.name() == name)
     }
 
@@ -174,9 +174,9 @@ pub trait SetExt<C: Ctor> {
 
     fn opt_mut(&mut self, uid: Uid) -> Result<&mut C::Opt, Error>;
 
-    fn ctor(&self, name: &Str) -> Result<&C, Error>;
+    fn ctor(&self, name: &AStr) -> Result<&C, Error>;
 
-    fn ctor_mut(&mut self, name: &Str) -> Result<&mut C, Error>;
+    fn ctor_mut(&mut self, name: &AStr) -> Result<&mut C, Error>;
 }
 
 impl<S: Set> SetExt<S::Ctor> for S {
@@ -190,12 +190,12 @@ impl<S: Set> SetExt<S::Ctor> for S {
             .ok_or_else(|| raise_error!("Can not find option `{}` by uid", uid).with_uid(uid))
     }
 
-    fn ctor(&self, name: &Str) -> Result<&S::Ctor, Error> {
+    fn ctor(&self, name: &AStr) -> Result<&S::Ctor, Error> {
         self.get_ctor(name)
             .ok_or_else(|| raise_error!("Can not find option `{}` by name", name))
     }
 
-    fn ctor_mut(&mut self, name: &Str) -> Result<&mut S::Ctor, Error> {
+    fn ctor_mut(&mut self, name: &AStr) -> Result<&mut S::Ctor, Error> {
         self.get_ctor_mut(name)
             .ok_or_else(|| raise_error!("Can not find option `{}` by name", name))
     }
@@ -205,47 +205,47 @@ pub trait SetValueFindExt
 where
     Self: Set + Sized,
 {
-    fn find_uid(&self, opt: impl Into<Str>) -> Result<Uid, Error>;
+    fn find_uid(&self, opt: impl Into<AStr>) -> Result<Uid, Error>;
 
-    fn find_uid_i<U: 'static>(&self, opt: impl Into<Str>) -> Result<Uid, Error>;
+    fn find_uid_i<U: 'static>(&self, opt: impl Into<AStr>) -> Result<Uid, Error>;
 
-    fn find_opt(&self, opt: impl Into<Str>) -> Result<&SetOpt<Self>, Error> {
+    fn find_opt(&self, opt: impl Into<AStr>) -> Result<&SetOpt<Self>, Error> {
         self.opt(self.find_uid(opt)?)
     }
 
-    fn find_opt_i<U: 'static>(&self, opt: impl Into<Str>) -> Result<&SetOpt<Self>, Error> {
+    fn find_opt_i<U: 'static>(&self, opt: impl Into<AStr>) -> Result<&SetOpt<Self>, Error> {
         self.opt(self.find_uid_i::<U>(opt)?)
     }
 
-    fn find_opt_mut(&mut self, opt: impl Into<Str>) -> Result<&mut SetOpt<Self>, Error> {
+    fn find_opt_mut(&mut self, opt: impl Into<AStr>) -> Result<&mut SetOpt<Self>, Error> {
         self.opt_mut(self.find_uid(opt)?)
     }
 
     fn find_opt_mut_i<U: 'static>(
         &mut self,
-        opt: impl Into<Str>,
+        opt: impl Into<AStr>,
     ) -> Result<&mut SetOpt<Self>, Error> {
         self.opt_mut(self.find_uid_i::<U>(opt)?)
     }
 
-    fn find_val<U: ErasedTy>(&self, opt: impl Into<Str>) -> Result<&U, Error> {
+    fn find_val<U: ErasedTy>(&self, opt: impl Into<AStr>) -> Result<&U, Error> {
         self.opt(self.find_uid(opt)?)?.val::<U>()
     }
 
-    fn find_val_mut<U: ErasedTy>(&mut self, opt: impl Into<Str>) -> Result<&mut U, Error> {
+    fn find_val_mut<U: ErasedTy>(&mut self, opt: impl Into<AStr>) -> Result<&mut U, Error> {
         self.opt_mut(self.find_uid(opt)?)?.val_mut()
     }
 
-    fn find_vals<U: ErasedTy>(&self, opt: impl Into<Str>) -> Result<&Vec<U>, Error> {
+    fn find_vals<U: ErasedTy>(&self, opt: impl Into<AStr>) -> Result<&Vec<U>, Error> {
         self.opt(self.find_uid(opt)?)?.vals()
     }
 
-    fn find_vals_mut<U: ErasedTy>(&mut self, opt: impl Into<Str>) -> Result<&mut Vec<U>, Error> {
+    fn find_vals_mut<U: ErasedTy>(&mut self, opt: impl Into<AStr>) -> Result<&mut Vec<U>, Error> {
         self.opt_mut(self.find_uid(opt)?)?.vals_mut()
     }
 
-    fn take_val<U: ErasedTy>(&mut self, opt: impl Into<Str>) -> Result<U, Error> {
-        let name: Str = opt.into();
+    fn take_val<U: ErasedTy>(&mut self, opt: impl Into<AStr>) -> Result<U, Error> {
+        let name: AStr = opt.into();
         let opt = self.find_uid(name.clone())?;
         let vals = self.opt_mut(opt)?.vals_mut::<U>()?;
 
@@ -259,8 +259,8 @@ where
         })
     }
 
-    fn take_vals<U: ErasedTy>(&mut self, opt: impl Into<Str>) -> Result<Vec<U>, Error> {
-        let name: Str = opt.into();
+    fn take_vals<U: ErasedTy>(&mut self, opt: impl Into<AStr>) -> Result<Vec<U>, Error> {
+        let name: AStr = opt.into();
         let uid = self.find_uid(name.clone())?;
         let vals = self.find_vals_mut::<U>(name.clone());
 
@@ -295,12 +295,12 @@ where
         self
     }
 
-    fn set_name(mut self, name: impl Into<Str>) -> Self {
+    fn set_name(mut self, name: impl Into<AStr>) -> Self {
         self.cfg_mut().set_name(name);
         self
     }
 
-    fn set_ctor(mut self, ctor: impl Into<Str>) -> Self {
+    fn set_ctor(mut self, ctor: impl Into<AStr>) -> Self {
         self.cfg_mut().set_ctor(ctor);
         self
     }
@@ -310,12 +310,12 @@ where
         self
     }
 
-    fn rem_alias(mut self, alias: impl Into<Str>) -> Self {
+    fn rem_alias(mut self, alias: impl Into<AStr>) -> Self {
         self.cfg_mut().rem_alias(alias);
         self
     }
 
-    fn add_alias(mut self, alias: impl Into<Str>) -> Self {
+    fn add_alias(mut self, alias: impl Into<AStr>) -> Self {
         self.cfg_mut().add_alias(alias);
         self
     }
@@ -325,12 +325,12 @@ where
         self
     }
 
-    fn set_hint(mut self, hint: impl Into<Str>) -> Self {
+    fn set_hint(mut self, hint: impl Into<AStr>) -> Self {
         self.cfg_mut().set_hint(hint);
         self
     }
 
-    fn set_help(mut self, help: impl Into<Str>) -> Self {
+    fn set_help(mut self, help: impl Into<AStr>) -> Self {
         self.cfg_mut().set_help(help);
         self
     }

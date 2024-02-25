@@ -16,8 +16,8 @@ use crate::set::OptValidator;
 use crate::set::SetOpt;
 use crate::shell::CompleteGuess;
 use crate::ARef;
+use crate::AStr;
 use crate::Error;
-use crate::Str;
 
 pub struct CompletePolicy<Set, Ser> {
     strict: bool,
@@ -123,7 +123,7 @@ impl<Set, Ser> PolicySettings for CompletePolicy<Set, Ser> {
         &self.style_manager
     }
 
-    fn no_delay(&self) -> Option<&[Str]> {
+    fn no_delay(&self) -> Option<&[AStr]> {
         None
     }
 
@@ -141,7 +141,7 @@ impl<Set, Ser> PolicySettings for CompletePolicy<Set, Ser> {
         self
     }
 
-    fn set_no_delay(&mut self, _: impl Into<Str>) -> &mut Self {
+    fn set_no_delay(&mut self, _: impl Into<AStr>) -> &mut Self {
         self
     }
 
@@ -218,7 +218,7 @@ where
             let name = noa_args
                 .get(Self::noa_cmd())
                 .and_then(|v| v.get_str())
-                .map(Str::from);
+                .map(AStr::from);
             let mut guess = CompleteGuess {
                 set,
                 inv,
@@ -251,7 +251,7 @@ where
                     guess.name = noa_args
                         .get(Self::noa_pos(idx))
                         .and_then(|v| v.get_str())
-                        .map(Str::from);
+                        .map(AStr::from);
                     guess.guess_complete(&UserStyle::Pos)?;
                 }
             }
@@ -264,7 +264,7 @@ where
         let name = main_args
             .get(Self::noa_main())
             .and_then(|v| v.get_str())
-            .map(Str::from);
+            .map(AStr::from);
         let mut guess = CompleteGuess {
             set,
             inv,

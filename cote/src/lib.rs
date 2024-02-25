@@ -210,7 +210,7 @@ impl<'inv, Set, Ser> PolicySettings for NullPolicy<'inv, Set, Ser> {
         &self.style_manager
     }
 
-    fn no_delay(&self) -> Option<&[aopt::Str]> {
+    fn no_delay(&self) -> Option<&[aopt::AStr]> {
         None
     }
 
@@ -226,7 +226,7 @@ impl<'inv, Set, Ser> PolicySettings for NullPolicy<'inv, Set, Ser> {
         self
     }
 
-    fn set_no_delay(&mut self, _: impl Into<aopt::Str>) -> &mut Self {
+    fn set_no_delay(&mut self, _: impl Into<aopt::AStr>) -> &mut Self {
         self
     }
 

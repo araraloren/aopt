@@ -46,7 +46,7 @@ pub(crate) fn display_option<T: Display>(option_value: &Option<T>) -> String {
 pub use crate::err::Error;
 pub use crate::err::Result;
 pub use crate::str::astr;
-pub use crate::str::Str;
+pub use crate::str::AStr;
 pub use crate::str::StrJoin;
 
 use std::any::TypeId;

@@ -4,9 +4,9 @@ use crate::opt::Style;
 use crate::opt::BOOL_TRUE;
 use crate::parser::UserStyle;
 use crate::set::OptValidator;
+use crate::AStr;
 use crate::Error;
 use crate::RawVal;
-use crate::Str;
 use crate::Uid;
 
 use crate::guess::style::*;
@@ -36,7 +36,7 @@ pub struct CompleteGuess<'a, Set, Inv, Ser> {
 
     pub arg: Option<RawVal>,
 
-    pub name: Option<Str>,
+    pub name: Option<AStr>,
 
     pub next: Option<RawVal>,
 
@@ -99,7 +99,7 @@ impl<'a, Set, Inv, Ser> CompleteGuess<'a, Set, Inv, Ser> {
         self
     }
 
-    pub fn set_name(&mut self, name: Option<Str>) -> &mut Self {
+    pub fn set_name(&mut self, name: Option<AStr>) -> &mut Self {
         self.name = name;
         self
     }
@@ -144,7 +144,7 @@ impl<'a, Set, Inv, Ser> CompleteGuess<'a, Set, Inv, Ser> {
         self
     }
 
-    pub fn with_name(mut self, name: Option<Str>) -> Self {
+    pub fn with_name(mut self, name: Option<AStr>) -> Self {
         self.name = name;
         self
     }

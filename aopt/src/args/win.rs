@@ -5,9 +5,9 @@ use std::os::windows::ffi::{OsStrExt, OsStringExt};
 use crate::args::ArgParser;
 use crate::astr;
 use crate::ARef;
+use crate::AStr;
 use crate::Error;
 use crate::RawVal;
-use crate::Str;
 
 /// Return an [`OsString`] with the prefix removed if the prefix exists.
 pub fn strip_prefix(str: &OsStr, prefix: &str) -> Option<OsString> {
@@ -100,7 +100,7 @@ pub fn split_once(str: &OsStr, ch: char) -> Option<(OsString, OsString)> {
 /// ```
 #[derive(Debug, Clone, Default)]
 pub struct CLOpt {
-    pub name: Str,
+    pub name: AStr,
 
     pub value: Option<RawVal>,
 }

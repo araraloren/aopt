@@ -80,8 +80,8 @@ use crate::ctx::Ctx;
 use crate::ctx::Extract;
 use crate::value::RawValParser;
 use crate::ARef;
+use crate::AStr;
 use crate::Error;
-use crate::Str;
 
 impl<Set, Ser> Extract<Set, Ser> for Ctx {
     type Error = Error;
@@ -488,7 +488,7 @@ impl<Set, Ser> Extract<Set, Ser> for Args {
 /// ```
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Name(Str);
+pub struct Name(AStr);
 
 impl Name {
     pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
@@ -513,7 +513,7 @@ impl<Set, Ser> Extract<Set, Ser> for Name {
 }
 
 impl Deref for Name {
-    type Target = Str;
+    type Target = AStr;
 
     fn deref(&self) -> &Self::Target {
         &self.0

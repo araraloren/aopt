@@ -1,5 +1,5 @@
 use super::Index;
-use crate::Str;
+use crate::AStr;
 
 pub trait Information {
     fn has_name(&self) -> bool;
@@ -14,66 +14,66 @@ pub trait Information {
 
     fn has_ctor(&self) -> bool;
 
-    fn name(&self) -> Option<&Str>;
+    fn name(&self) -> Option<&AStr>;
 
     fn force(&self) -> Option<bool>;
 
-    fn alias(&self) -> Option<&Vec<Str>>;
+    fn alias(&self) -> Option<&Vec<AStr>>;
 
     fn index(&self) -> Option<&Index>;
 
-    fn help(&self) -> Option<&Str>;
+    fn help(&self) -> Option<&AStr>;
 
-    fn ctor(&self) -> Option<&Str>;
+    fn ctor(&self) -> Option<&AStr>;
 
-    fn take_name(&mut self) -> Option<Str>;
+    fn take_name(&mut self) -> Option<AStr>;
 
     fn take_force(&mut self) -> Option<bool>;
 
-    fn take_alias(&mut self) -> Option<Vec<Str>>;
+    fn take_alias(&mut self) -> Option<Vec<AStr>>;
 
     fn take_index(&mut self) -> Option<Index>;
 
-    fn take_help(&mut self) -> Option<Str>;
+    fn take_help(&mut self) -> Option<AStr>;
 
-    fn take_ctor(&mut self) -> Option<Str>;
+    fn take_ctor(&mut self) -> Option<AStr>;
 }
 
 /// Parsing result of option constructor string.
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ConstrctInfo {
-    pub(crate) pattern: Str,
+    pub(crate) pattern: AStr,
 
-    pub(crate) name: Option<Str>,
+    pub(crate) name: Option<AStr>,
 
-    pub(crate) alias: Option<Vec<Str>>,
+    pub(crate) alias: Option<Vec<AStr>>,
 
     pub(crate) force: Option<bool>,
 
     pub(crate) index: Option<Index>,
 
-    pub(crate) help: Option<Str>,
+    pub(crate) help: Option<AStr>,
 
-    pub(crate) ctor: Option<Str>,
+    pub(crate) ctor: Option<AStr>,
 }
 
 impl ConstrctInfo {
-    pub fn with_pat(mut self, pattern: Str) -> Self {
+    pub fn with_pat(mut self, pattern: AStr) -> Self {
         self.pattern = pattern;
         self
     }
 
-    pub fn with_name(mut self, name: Option<Str>) -> Self {
+    pub fn with_name(mut self, name: Option<AStr>) -> Self {
         self.name = name;
         self
     }
 
-    pub fn with_help(mut self, help: Option<Str>) -> Self {
+    pub fn with_help(mut self, help: Option<AStr>) -> Self {
         self.help = help;
         self
     }
 
-    pub fn with_alias(mut self, alias: Option<Vec<Str>>) -> Self {
+    pub fn with_alias(mut self, alias: Option<Vec<AStr>>) -> Self {
         self.alias = alias;
         self
     }
@@ -88,7 +88,7 @@ impl ConstrctInfo {
         self
     }
 
-    pub fn with_ctor(mut self, ctor: Option<Str>) -> Self {
+    pub fn with_ctor(mut self, ctor: Option<AStr>) -> Self {
         self.ctor = ctor;
         self
     }
@@ -119,7 +119,7 @@ impl Information for ConstrctInfo {
         self.ctor.is_some()
     }
 
-    fn name(&self) -> Option<&Str> {
+    fn name(&self) -> Option<&AStr> {
         self.name.as_ref()
     }
 
@@ -127,7 +127,7 @@ impl Information for ConstrctInfo {
         self.force
     }
 
-    fn alias(&self) -> Option<&Vec<Str>> {
+    fn alias(&self) -> Option<&Vec<AStr>> {
         self.alias.as_ref()
     }
 
@@ -135,15 +135,15 @@ impl Information for ConstrctInfo {
         self.index.as_ref()
     }
 
-    fn help(&self) -> Option<&Str> {
+    fn help(&self) -> Option<&AStr> {
         self.help.as_ref()
     }
 
-    fn ctor(&self) -> Option<&Str> {
+    fn ctor(&self) -> Option<&AStr> {
         self.ctor.as_ref()
     }
 
-    fn take_name(&mut self) -> Option<Str> {
+    fn take_name(&mut self) -> Option<AStr> {
         self.name.take()
     }
 
@@ -151,7 +151,7 @@ impl Information for ConstrctInfo {
         self.force.take()
     }
 
-    fn take_alias(&mut self) -> Option<Vec<Str>> {
+    fn take_alias(&mut self) -> Option<Vec<AStr>> {
         self.alias.take()
     }
 
@@ -159,11 +159,11 @@ impl Information for ConstrctInfo {
         self.index.take()
     }
 
-    fn take_help(&mut self) -> Option<Str> {
+    fn take_help(&mut self) -> Option<AStr> {
         self.help.take()
     }
 
-    fn take_ctor(&mut self) -> Option<Str> {
+    fn take_ctor(&mut self) -> Option<AStr> {
         self.ctor.take()
     }
 }

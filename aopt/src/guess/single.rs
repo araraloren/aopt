@@ -8,9 +8,9 @@ use crate::opt::Style;
 use crate::set::Set;
 use crate::set::SetOpt;
 use crate::ARef;
+use crate::AStr;
 use crate::Error;
 use crate::RawVal;
-use crate::Str;
 use crate::Uid;
 
 use super::MatchPolicy;
@@ -19,7 +19,7 @@ use super::PolicyConfig;
 use super::PolicyInnerCtx;
 
 pub struct SingleOpt<S> {
-    name: Option<Str>,
+    name: Option<AStr>,
 
     style: Style,
 
@@ -81,7 +81,7 @@ impl<S> Default for SingleOpt<S> {
 }
 
 impl<S> PolicyBuild for SingleOpt<S> {
-    fn with_name(mut self, name: Option<Str>) -> Self {
+    fn with_name(mut self, name: Option<AStr>) -> Self {
         self.name = name;
         self
     }
@@ -121,7 +121,7 @@ impl<S> PolicyConfig for SingleOpt<S> {
         self.total
     }
 
-    fn name(&self) -> Option<&Str> {
+    fn name(&self) -> Option<&AStr> {
         self.name.as_ref()
     }
 
