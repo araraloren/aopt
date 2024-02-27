@@ -2,7 +2,6 @@ use std::any::TypeId;
 
 use crate::err::Error;
 use crate::opt::Action;
-use crate::opt::Help;
 use crate::opt::Index;
 use crate::opt::Information;
 use crate::opt::OptParser;
@@ -22,23 +21,17 @@ pub trait Config {
 }
 
 pub trait ConfigValue {
-    /// The hint message used in usage of option.
-    fn hint(&self) -> &AStr;
-
-    /// The help message of option.
-    fn help(&self) -> &AStr;
-
-    /// The style support by current option.
-    fn style(&self) -> Option<&Vec<Style>>;
-
     /// The creator name of option.
     fn ctor(&self) -> Option<&AStr>;
+
+    /// The [`TypeId`] of option.
+    fn r#type(&self) -> Option<&TypeId>;
 
     /// The name of option.
     fn name(&self) -> Option<&AStr>;
 
-    /// The type name of option.
-    fn r#type(&self) -> Option<&TypeId>;
+    /// If the option is force required.
+    fn force(&self) -> Option<bool>;
 
     /// The index configuration of option.
     fn index(&self) -> Option<&Index>;
@@ -46,8 +39,11 @@ pub trait ConfigValue {
     /// The alias name and prefix of option.
     fn alias(&self) -> Option<&Vec<AStr>>;
 
-    /// If the option is force required.
-    fn force(&self) -> Option<bool>;
+    /// The hint message used in usage of option.
+    fn hint(&self) -> Option<&AStr>;
+
+    /// The help message of option.
+    fn help(&self) -> Option<&AStr>;
 
     /// Value action of option.
     fn action(&self) -> Option<&Action>;
@@ -55,8 +51,47 @@ pub trait ConfigValue {
     /// Value validator for option.
     fn storer(&self) -> Option<&ValStorer>;
 
+    /// The style support by current option.
+    fn style(&self) -> Option<&Vec<Style>>;
+
     /// Value initializer for option.
     fn initializer(&self) -> Option<&ValInitializer>;
+
+    /// The creator name of option.
+    fn ctor_mut(&mut self) -> Option<&mut AStr>;
+
+    /// The [`TypeId`] of option.
+    fn type_mut(&mut self) -> Option<&mut TypeId>;
+
+    /// The name of option.
+    fn name_mut(&mut self) -> Option<&mut AStr>;
+
+    /// If the option is force required.
+    fn force_mut(&mut self) -> Option<&mut bool>;
+
+    /// The index configuration of option.
+    fn index_mut(&mut self) -> Option<&mut Index>;
+
+    /// The alias name and prefix of option.
+    fn alias_mut(&mut self) -> Option<&mut Vec<AStr>>;
+
+    /// The hint message used in usage of option.
+    fn hint_mut(&mut self) -> Option<&mut AStr>;
+
+    /// The help message of option.
+    fn help_mut(&mut self) -> Option<&mut AStr>;
+
+    /// Value action of option.
+    fn action_mut(&mut self) -> Option<&mut Action>;
+
+    /// Value validator for option.
+    fn storer_mut(&mut self) -> Option<&mut ValStorer>;
+
+    /// The style support by current option.
+    fn style_mut(&mut self) -> Option<&mut Vec<Style>>;
+
+    /// Value initializer for option.
+    fn initializer_mut(&mut self) -> Option<&mut ValInitializer>;
 
     fn ignore_name(&self) -> bool;
 
@@ -64,15 +99,15 @@ pub trait ConfigValue {
 
     fn ignore_index(&self) -> bool;
 
-    fn has_infer(&self) -> bool;
-
-    fn has_index(&self) -> bool;
-
     fn has_ctor(&self) -> bool;
+
+    fn has_type(&self) -> bool;
 
     fn has_name(&self) -> bool;
 
-    fn has_type(&self) -> bool;
+    fn has_force(&self) -> bool;
+
+    fn has_index(&self) -> bool;
 
     fn has_hint(&self) -> bool;
 
@@ -80,37 +115,27 @@ pub trait ConfigValue {
 
     fn has_alias(&self) -> bool;
 
-    fn has_force(&self) -> bool;
-
-    fn has_style(&self) -> bool;
-
     fn has_action(&self) -> bool;
 
     fn has_storer(&self) -> bool;
 
+    fn has_style(&self) -> bool;
+
     fn has_initializer(&self) -> bool;
-
-    fn set_ignore_name(&mut self, ignore_name: bool) -> &mut Self;
-
-    fn set_ignore_alias(&mut self, ignore_alias: bool) -> &mut Self;
-
-    fn set_ignore_index(&mut self, ignore_index: bool) -> &mut Self;
-
-    fn set_infer(&mut self, infered: bool) -> &mut Self;
-
-    fn set_index(&mut self, index: Index) -> &mut Self;
-
-    fn set_force(&mut self, force: bool) -> &mut Self;
 
     fn set_ctor(&mut self, ctor: impl Into<AStr>) -> &mut Self;
 
+    fn set_type<T: 'static>(&mut self) -> &mut Self;
+
+    fn set_type_id(&mut self, type_id: TypeId) -> &mut Self;
+
     fn set_name(&mut self, name: impl Into<AStr>) -> &mut Self;
 
-    fn set_hint(&mut self, hint: impl Into<AStr>) -> &mut Self;
+    fn set_force(&mut self, force: bool) -> &mut Self;
 
-    fn set_help(&mut self, help: impl Into<AStr>) -> &mut Self;
+    fn set_index(&mut self, index: Index) -> &mut Self;
 
-    fn set_style(&mut self, styles: Vec<Style>) -> &mut Self;
+    fn set_alias(&mut self, alias: Vec<impl Into<AStr>>) -> &mut Self;
 
     fn clr_alias(&mut self) -> &mut Self;
 
@@ -118,15 +143,47 @@ pub trait ConfigValue {
 
     fn rem_alias(&mut self, alias: impl Into<AStr>) -> &mut Self;
 
-    fn set_type<T: 'static>(&mut self) -> &mut Self;
+    fn set_hint(&mut self, hint: impl Into<AStr>) -> &mut Self;
 
-    fn set_type_id(&mut self, type_id: TypeId) -> &mut Self;
+    fn set_help(&mut self, help: impl Into<AStr>) -> &mut Self;
 
     fn set_action(&mut self, action: Action) -> &mut Self;
 
     fn set_storer(&mut self, storer: ValStorer) -> &mut Self;
 
+    fn set_style(&mut self, styles: Vec<Style>) -> &mut Self;
+
     fn set_initializer(&mut self, initializer: ValInitializer) -> &mut Self;
+
+    fn set_ignore_name(&mut self, ignore_name: bool) -> &mut Self;
+
+    fn set_ignore_alias(&mut self, ignore_alias: bool) -> &mut Self;
+
+    fn set_ignore_index(&mut self, ignore_index: bool) -> &mut Self;
+
+    fn take_ctor(&mut self) -> Option<AStr>;
+
+    fn take_type(&mut self) -> Option<TypeId>;
+
+    fn take_name(&mut self) -> Option<AStr>;
+
+    fn take_force(&mut self) -> Option<bool>;
+
+    fn take_index(&mut self) -> Option<Index>;
+
+    fn take_alias(&mut self) -> Option<Vec<AStr>>;
+
+    fn take_hint(&mut self) -> Option<AStr>;
+
+    fn take_help(&mut self) -> Option<AStr>;
+
+    fn take_action(&mut self) -> Option<Action>;
+
+    fn take_storer(&mut self) -> Option<ValStorer>;
+
+    fn take_style(&mut self) -> Option<Vec<Style>>;
+
+    fn take_initializer(&mut self) -> Option<ValInitializer>;
 }
 
 /// Contain the information used for create option instance.
@@ -142,9 +199,11 @@ pub struct OptConfig {
 
     index: Option<Index>,
 
-    alias: Vec<AStr>,
+    alias: Option<Vec<AStr>>,
 
-    help: Help,
+    hint: Option<AStr>,
+
+    help: Option<AStr>,
 
     action: Option<Action>,
 
@@ -157,8 +216,6 @@ pub struct OptConfig {
     ignore_alias: bool,
 
     ignore_index: bool,
-
-    infered: bool,
 
     styles: Option<Vec<Style>>,
 }
@@ -190,17 +247,17 @@ impl OptConfig {
     }
 
     pub fn with_hint(mut self, hint: impl Into<AStr>) -> Self {
-        self.help.set_hint(hint.into());
+        self.help = Some(hint.into());
         self
     }
 
     pub fn with_help(mut self, help: impl Into<AStr>) -> Self {
-        self.help.set_help(help.into());
+        self.help = Some(help.into());
         self
     }
 
     pub fn with_alias(mut self, alias: Vec<impl Into<AStr>>) -> Self {
-        self.alias = alias.into_iter().map(|v| v.into()).collect();
+        self.alias = Some(alias.into_iter().map(|v| v.into()).collect());
         self
     }
 
@@ -238,86 +295,6 @@ impl OptConfig {
         self.initializer = Some(initializer);
         self
     }
-
-    pub fn take_alias(&mut self) -> Vec<AStr> {
-        std::mem::take(&mut self.alias)
-    }
-
-    pub fn take_storer(&mut self) -> Option<ValStorer> {
-        self.storer.take()
-    }
-
-    pub fn take_initializer(&mut self) -> Option<ValInitializer> {
-        self.initializer.take()
-    }
-
-    pub fn gen_name(&self) -> Result<AStr, Error> {
-        Ok(self
-            .name
-            .as_ref()
-            .ok_or_else(|| {
-                crate::raise_error!("Incomplete option configuration: missing option name")
-            })?
-            .clone())
-    }
-
-    pub fn gen_type(&mut self) -> Result<TypeId, Error> {
-        self.r#type.take().ok_or_else(|| {
-            crate::raise_error!("Incomplete option configuration: missing option value type")
-        })
-    }
-
-    pub fn gen_storer(&mut self) -> Result<ValStorer, Error> {
-        self.storer.take().ok_or_else(|| {
-            crate::raise_error!("Incomplete option configuration: missing ValStorer")
-        })
-    }
-
-    pub fn gen_initializer(&mut self) -> Result<ValInitializer, Error> {
-        self.initializer.take().ok_or_else(|| {
-            crate::raise_error!("Incomplete option configuration: missing ValInitializer")
-        })
-    }
-
-    pub fn gen_styles(&mut self) -> Result<Vec<Style>, Error> {
-        self.styles
-            .take()
-            .ok_or_else(|| crate::raise_error!("Incomplete option configuration: missing Style"))
-    }
-
-    pub fn gen_opt_help(&self) -> Result<Help, Error> {
-        let mut ret = self.help.clone();
-
-        if ret.hint().is_empty() {
-            let mut names = vec![String::default()];
-
-            // add name
-            names[0] += self.gen_name()?.as_ref();
-
-            // add alias
-            if let Some(alias_vec) = self.alias() {
-                for alias in alias_vec {
-                    names.push(format!("{}", alias));
-                }
-            }
-            // sort name by len
-            names.sort_by_key(|v| v.len());
-
-            if let Some(index) = &self.index {
-                let index_string = index.to_help();
-
-                // add index string
-                if index_string.is_empty() {
-                    ret.set_hint(names.join(","));
-                } else {
-                    ret.set_hint(format!("{}@{}", names.join(","), index_string));
-                }
-            } else {
-                ret.set_hint(names.join(","));
-            }
-        }
-        Ok(ret)
-    }
 }
 
 impl Config for OptConfig {
@@ -346,37 +323,27 @@ impl Config for OptConfig {
             ret.set_ctor(v);
         }
         if let Some(v) = output.take_alias() {
-            for item in v {
-                ret.add_alias(item);
-            }
+            ret.set_alias(v);
         }
         Ok(ret)
     }
 }
 
 impl ConfigValue for OptConfig {
-    fn hint(&self) -> &AStr {
-        self.help.hint()
-    }
-
-    fn help(&self) -> &AStr {
-        self.help.help()
-    }
-
-    fn style(&self) -> Option<&Vec<Style>> {
-        self.styles.as_ref()
-    }
-
     fn ctor(&self) -> Option<&AStr> {
         self.ctor.as_ref()
+    }
+
+    fn r#type(&self) -> Option<&TypeId> {
+        self.r#type.as_ref()
     }
 
     fn name(&self) -> Option<&AStr> {
         self.name.as_ref()
     }
 
-    fn r#type(&self) -> Option<&TypeId> {
-        self.r#type.as_ref()
+    fn force(&self) -> Option<bool> {
+        self.force
     }
 
     fn index(&self) -> Option<&Index> {
@@ -384,11 +351,15 @@ impl ConfigValue for OptConfig {
     }
 
     fn alias(&self) -> Option<&Vec<AStr>> {
-        Some(self.alias.as_ref())
+        self.alias.as_ref()
     }
 
-    fn force(&self) -> Option<bool> {
-        self.force
+    fn hint(&self) -> Option<&AStr> {
+        self.help.as_ref()
+    }
+
+    fn help(&self) -> Option<&AStr> {
+        self.help.as_ref()
     }
 
     fn action(&self) -> Option<&Action> {
@@ -399,8 +370,60 @@ impl ConfigValue for OptConfig {
         self.storer.as_ref()
     }
 
+    fn style(&self) -> Option<&Vec<Style>> {
+        self.styles.as_ref()
+    }
+
     fn initializer(&self) -> Option<&ValInitializer> {
         self.initializer.as_ref()
+    }
+
+    fn ctor_mut(&mut self) -> Option<&mut AStr> {
+        self.ctor.as_mut()
+    }
+
+    fn type_mut(&mut self) -> Option<&mut TypeId> {
+        self.r#type.as_mut()
+    }
+
+    fn name_mut(&mut self) -> Option<&mut AStr> {
+        self.name.as_mut()
+    }
+
+    fn force_mut(&mut self) -> Option<&mut bool> {
+        self.force.as_mut()
+    }
+
+    fn index_mut(&mut self) -> Option<&mut Index> {
+        self.index.as_mut()
+    }
+
+    fn alias_mut(&mut self) -> Option<&mut Vec<AStr>> {
+        self.alias.as_mut()
+    }
+
+    fn hint_mut(&mut self) -> Option<&mut AStr> {
+        self.hint.as_mut()
+    }
+
+    fn help_mut(&mut self) -> Option<&mut AStr> {
+        self.help.as_mut()
+    }
+
+    fn action_mut(&mut self) -> Option<&mut Action> {
+        self.action.as_mut()
+    }
+
+    fn storer_mut(&mut self) -> Option<&mut ValStorer> {
+        self.storer.as_mut()
+    }
+
+    fn style_mut(&mut self) -> Option<&mut Vec<Style>> {
+        self.styles.as_mut()
+    }
+
+    fn initializer_mut(&mut self) -> Option<&mut ValInitializer> {
+        self.initializer.as_mut()
     }
 
     fn ignore_name(&self) -> bool {
@@ -415,44 +438,36 @@ impl ConfigValue for OptConfig {
         self.ignore_index
     }
 
-    fn has_infer(&self) -> bool {
-        self.infered
-    }
-
-    fn has_index(&self) -> bool {
-        self.index.is_some()
-    }
-
     fn has_ctor(&self) -> bool {
         self.ctor.is_some()
-    }
-
-    fn has_name(&self) -> bool {
-        self.name.is_some()
     }
 
     fn has_type(&self) -> bool {
         self.r#type.is_some()
     }
 
-    fn has_hint(&self) -> bool {
-        true
-    }
-
-    fn has_help(&self) -> bool {
-        true
-    }
-
-    fn has_alias(&self) -> bool {
-        !self.alias.is_empty()
+    fn has_name(&self) -> bool {
+        self.name.is_some()
     }
 
     fn has_force(&self) -> bool {
         self.force.is_some()
     }
 
-    fn has_style(&self) -> bool {
-        self.styles.is_some()
+    fn has_index(&self) -> bool {
+        self.index.is_some()
+    }
+
+    fn has_hint(&self) -> bool {
+        self.hint.is_some()
+    }
+
+    fn has_help(&self) -> bool {
+        self.help.is_some()
+    }
+
+    fn has_alias(&self) -> bool {
+        self.alias.is_some()
     }
 
     fn has_action(&self) -> bool {
@@ -463,8 +478,103 @@ impl ConfigValue for OptConfig {
         self.storer.is_some()
     }
 
+    fn has_style(&self) -> bool {
+        self.styles.is_some()
+    }
+
     fn has_initializer(&self) -> bool {
         self.initializer.is_some()
+    }
+
+    fn set_ctor(&mut self, ctor: impl Into<AStr>) -> &mut Self {
+        self.ctor = Some(ctor.into());
+        self
+    }
+
+    fn set_type<T: 'static>(&mut self) -> &mut Self {
+        self.r#type = Some(typeid::<T>());
+        self
+    }
+
+    fn set_type_id(&mut self, type_id: TypeId) -> &mut Self {
+        self.r#type = Some(type_id);
+        self
+    }
+
+    fn set_name(&mut self, name: impl Into<AStr>) -> &mut Self {
+        self.name = Some(name.into());
+        self
+    }
+
+    fn set_force(&mut self, force: bool) -> &mut Self {
+        self.force = Some(force);
+        self
+    }
+
+    fn set_index(&mut self, index: Index) -> &mut Self {
+        self.index = Some(index);
+        self
+    }
+
+    fn set_alias(&mut self, alias: Vec<impl Into<AStr>>) -> &mut Self {
+        self.alias = Some(alias.into_iter().map(Into::into).collect::<Vec<_>>());
+        self
+    }
+
+    fn clr_alias(&mut self) -> &mut Self {
+        if let Some(alias) = self.alias.as_mut() {
+            alias.clear();
+        }
+        self
+    }
+
+    fn add_alias(&mut self, alias: impl Into<AStr>) -> &mut Self {
+        self.alias.get_or_insert(vec![]).push(alias.into());
+        self
+    }
+
+    fn rem_alias(&mut self, alias: impl Into<AStr>) -> &mut Self {
+        let alias = alias.into();
+
+        if let Some(v) = self.alias.as_mut() {
+            for (index, value) in v.iter().enumerate() {
+                if value == &alias {
+                    v.remove(index);
+                    break;
+                }
+            }
+        }
+        self
+    }
+
+    fn set_hint(&mut self, hint: impl Into<AStr>) -> &mut Self {
+        self.hint = Some(hint.into());
+        self
+    }
+
+    fn set_help(&mut self, help: impl Into<AStr>) -> &mut Self {
+        self.help = Some(help.into());
+        self
+    }
+
+    fn set_action(&mut self, action: Action) -> &mut Self {
+        self.action = Some(action);
+        self
+    }
+
+    fn set_storer(&mut self, storer: ValStorer) -> &mut Self {
+        self.storer = Some(storer);
+        self
+    }
+
+    fn set_style(&mut self, styles: Vec<Style>) -> &mut Self {
+        self.styles = Some(styles);
+        self
+    }
+
+    fn set_initializer(&mut self, initializer: ValInitializer) -> &mut Self {
+        self.initializer = Some(initializer);
+        self
     }
 
     fn set_ignore_name(&mut self, ignore_name: bool) -> &mut Self {
@@ -482,90 +592,51 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn set_infer(&mut self, fix_infer: bool) -> &mut Self {
-        self.infered = fix_infer;
-        self
+    fn take_ctor(&mut self) -> Option<AStr> {
+        self.ctor.take()
     }
 
-    fn set_index(&mut self, index: Index) -> &mut Self {
-        self.index = Some(index);
-        self
+    fn take_type(&mut self) -> Option<TypeId> {
+        self.r#type.take()
     }
 
-    fn set_force(&mut self, force: bool) -> &mut Self {
-        self.force = Some(force);
-        self
+    fn take_name(&mut self) -> Option<AStr> {
+        self.name.take()
     }
 
-    fn set_ctor(&mut self, ctor: impl Into<AStr>) -> &mut Self {
-        self.ctor = Some(ctor.into());
-        self
+    fn take_force(&mut self) -> Option<bool> {
+        self.force.take()
     }
 
-    fn set_name(&mut self, name: impl Into<AStr>) -> &mut Self {
-        self.name = Some(name.into());
-        self
+    fn take_index(&mut self) -> Option<Index> {
+        self.index.take()
     }
 
-    fn set_hint(&mut self, hint: impl Into<AStr>) -> &mut Self {
-        self.help.set_hint(hint);
-        self
+    fn take_alias(&mut self) -> Option<Vec<AStr>> {
+        self.alias.take()
     }
 
-    fn set_help(&mut self, help: impl Into<AStr>) -> &mut Self {
-        self.help.set_help(help);
-        self
+    fn take_hint(&mut self) -> Option<AStr> {
+        self.hint.take()
     }
 
-    fn set_style(&mut self, styles: Vec<Style>) -> &mut Self {
-        self.styles = Some(styles);
-        self
+    fn take_help(&mut self) -> Option<AStr> {
+        self.help.take()
     }
 
-    fn clr_alias(&mut self) -> &mut Self {
-        self.alias.clear();
-        self
+    fn take_action(&mut self) -> Option<Action> {
+        self.action.take()
     }
 
-    fn add_alias(&mut self, alias: impl Into<AStr>) -> &mut Self {
-        self.alias.push(alias.into());
-        self
+    fn take_storer(&mut self) -> Option<ValStorer> {
+        self.storer.take()
     }
 
-    fn rem_alias(&mut self, alias: impl Into<AStr>) -> &mut Self {
-        let alias = alias.into();
-
-        for (index, value) in self.alias.iter().enumerate() {
-            if value == &alias {
-                self.alias.remove(index);
-                break;
-            }
-        }
-        self
+    fn take_style(&mut self) -> Option<Vec<Style>> {
+        self.styles.take()
     }
 
-    fn set_type<T: 'static>(&mut self) -> &mut Self {
-        self.r#type = Some(typeid::<T>());
-        self
-    }
-
-    fn set_type_id(&mut self, type_id: TypeId) -> &mut Self {
-        self.r#type = Some(type_id);
-        self
-    }
-
-    fn set_action(&mut self, action: Action) -> &mut Self {
-        self.action = Some(action);
-        self
-    }
-
-    fn set_storer(&mut self, storer: ValStorer) -> &mut Self {
-        self.storer = Some(storer);
-        self
-    }
-
-    fn set_initializer(&mut self, initializer: ValInitializer) -> &mut Self {
-        self.initializer = Some(initializer);
-        self
+    fn take_initializer(&mut self) -> Option<ValInitializer> {
+        self.initializer.take()
     }
 }

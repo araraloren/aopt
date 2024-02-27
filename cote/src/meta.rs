@@ -207,10 +207,8 @@ impl<T: ErasedTy + Clone> IntoConfig for OptionMeta<T> {
         if let Some(values) = self.take_value() {
             cfg.set_initializer(ValInitializer::new_values(values));
         }
-        if let Some(aliases) = self.take_alias() {
-            for alias in aliases {
-                cfg.add_alias(alias);
-            }
+        if let Some(alias) = self.take_alias() {
+            cfg.set_alias(alias);
         }
         Ok(cfg)
     }

@@ -655,6 +655,11 @@ mod test {
     fn test_add_option_impl() -> Result<(), Error> {
         let mut set = ASet::default();
 
+        #[cfg(not(target_os = "windows"))]
+        {
+            set.validator_mut().add_prefix("/");
+        }
+
         assert!(set.add_opt("set;s=c")?.run().is_ok());
         assert!(set.add_opt_i::<Cmd>("g;get")?.run().is_ok());
 

@@ -31,7 +31,7 @@ fn main() -> color_eyre::Result<()> {
 
     assert_eq!(app["foo"].hint(), "foo@1");
     assert_eq!(app["bar"].hint(), "[BAR]");
-    assert_eq!(app["--baz"].hint(), "-b,--baz");
+    assert_eq!(app["--baz"].hint(), "-b, --baz");
 
     assert_eq!(app["foo"].help(), "Switch the mode to foo command");
     assert_eq!(app["bar"].help(), "Set the value of bar [42usize]");
