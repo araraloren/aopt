@@ -42,8 +42,6 @@ pub trait Information {
 /// Parsing result of option constructor string.
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ConstrctInfo {
-    pub(crate) pattern: AStr,
-
     pub(crate) name: Option<AStr>,
 
     pub(crate) alias: Option<Vec<AStr>>,
@@ -58,11 +56,6 @@ pub struct ConstrctInfo {
 }
 
 impl ConstrctInfo {
-    pub fn with_pat(mut self, pattern: AStr) -> Self {
-        self.pattern = pattern;
-        self
-    }
-
     pub fn with_name(mut self, name: Option<AStr>) -> Self {
         self.name = name;
         self

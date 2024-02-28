@@ -525,7 +525,7 @@ where
 
     type Error = Set::Error;
 
-    fn parse_opt(&self, pattern: AStr) -> Result<Self::Output, Self::Error> {
+    fn parse_opt(&self, pattern: &str) -> Result<Self::Output, Self::Error> {
         OptParser::parse_opt(&self.set, pattern)
     }
 }

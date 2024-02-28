@@ -614,7 +614,7 @@ where
 
     type Error = P::Error;
 
-    fn parse_opt(&self, pattern: AStr) -> Result<Self::Output, Self::Error> {
+    fn parse_opt(&self, pattern: &str) -> Result<Self::Output, Self::Error> {
         self.parser().parse_opt(pattern)
     }
 }
