@@ -269,7 +269,7 @@ impl<'a> ArgGenerator<'a> {
         let mut codes = vec![];
         let mut value = None;
         let mut config = quote! {
-            let mut config = cote::SetCfg::<Set>::default();
+            let mut config = <cote::SetCfg<Set>>::default();
             config.set_name(#name);
         };
 

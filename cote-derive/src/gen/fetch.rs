@@ -98,16 +98,18 @@ impl<'a> FetchGenerator<'a> {
         }
         Ok(quote! {
             impl #impl_ cote::Fetch<'set> for #ident #type_ #where_ {
-                fn fetch<S: cote::SetValueFindExt>(name: &str, set: &'set mut S) -> Result<Self, aopt::Error>
+                fn fetch<S: cote::SetValueFindExt>(name: impl cote::ConfigBuild<cote::SetCfg<S>>, set: &'set mut S) -> Result<Self, aopt::Error>
                 where
                     Self: cote::ErasedTy + Sized,
+                    cote::SetCfg<S>: cote::ConfigValue + Default,
                 {
                     #scalar
                 }
 
-                fn fetch_vec<S: cote::SetValueFindExt>(name: &str, set: &'set mut S) -> Result<Vec<Self>, aopt::Error>
+                fn fetch_vec<S: cote::SetValueFindExt>(name: impl cote::ConfigBuild<cote::SetCfg<S>>, set: &'set mut S) -> Result<Vec<Self>, aopt::Error>
                 where
                     Self: cote::ErasedTy + Sized,
+                    cote::SetCfg<S>: cote::ConfigValue + Default,
                 {
                     #vector
                 }

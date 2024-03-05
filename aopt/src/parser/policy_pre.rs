@@ -523,6 +523,7 @@ mod test {
     use std::ops::Deref;
 
     use crate::opt::Cmd;
+    use crate::opt::ConfigBuildInferHelp;
     use crate::opt::Pos;
     use crate::prelude::*;
     use crate::ARef;
@@ -727,7 +728,7 @@ mod test {
             .set_pos_type_only::<u64>()
             .run()?;
         let cpos_uid = set
-            .add_opt_i::<Pos<String>>("cpos@4..5")?
+            .add_opt("cpos@4..5".infer::<Pos<String>>())?
             .set_validator(ValValidator::contains2(vec!["average", "plus"]))
             .run()?;
         let dpos_uid = set.add_opt("dpos=p@5..7")?.set_action(Action::Set).run()?;

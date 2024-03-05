@@ -1,3 +1,7 @@
+use aopt::opt::ConfigBuild;
+use aopt::opt::ConfigValue;
+use aopt::set::SetCfg;
+
 use crate::Any;
 use crate::ErasedTy;
 use crate::Main;
@@ -9,16 +13,24 @@ use crate::{Cmd, Pos};
 
 /// Using for generate code for procedural macro.
 pub trait Fetch<'a> {
-    fn fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
+    fn fetch<S: SetValueFindExt>(
+        name: impl ConfigBuild<SetCfg<S>>,
+        set: &'a mut S,
+    ) -> Result<Self, aopt::Error>
     where
         Self: ErasedTy + Sized,
+        SetCfg<S>: ConfigValue + Default,
     {
         set.take_val(name)
     }
 
-    fn fetch_vec<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Vec<Self>, aopt::Error>
+    fn fetch_vec<S: SetValueFindExt>(
+        name: impl ConfigBuild<SetCfg<S>>,
+        set: &'a mut S,
+    ) -> Result<Vec<Self>, aopt::Error>
     where
         Self: ErasedTy + Sized,
+        SetCfg<S>: ConfigValue + Default,
     {
         set.take_vals(name)
     }
@@ -35,21 +47,23 @@ macro_rules! impl_fetch {
             T: $crate::ErasedTy,
         {
             fn fetch<S: $crate::SetValueFindExt>(
-                name: &str,
+                name: impl ConfigBuild<SetCfg<S>>,
                 set: &'a mut S,
             ) -> Result<Self, aopt::Error>
             where
                 Self: $crate::ErasedTy + Sized,
+                $crate::SetCfg<S>: $crate::ConfigValue + Default,
             {
                 set.take_val::<T>(name).map(|v| $map(v))
             }
 
             fn fetch_vec<S: $crate::SetValueFindExt>(
-                name: &str,
+                name: impl ConfigBuild<SetCfg<S>>,
                 set: &'a mut S,
             ) -> Result<Vec<Self>, aopt::Error>
             where
                 Self: $crate::ErasedTy + Sized,
+                $crate::SetCfg<S>: $crate::ConfigValue + Default,
             {
                 set.take_vals::<T>(name)
                     .map(|v| v.into_iter().map(|v| $map(v)).collect())
@@ -59,21 +73,23 @@ macro_rules! impl_fetch {
     ($name:path, $inner_type:path, $map:expr) => {
         impl<'a> $crate::Fetch<'a> for $name {
             fn fetch<S: $crate::SetValueFindExt>(
-                name: &str,
+                name: impl ConfigBuild<SetCfg<S>>,
                 set: &'a mut S,
             ) -> Result<Self, aopt::Error>
             where
                 Self: $crate::ErasedTy + Sized,
+                $crate::SetCfg<S>: $crate::ConfigValue + Default,
             {
                 set.take_val::<$inner_type>(name).map(|v| $map(v))
             }
 
             fn fetch_vec<S: $crate::SetValueFindExt>(
-                name: &str,
+                name: impl ConfigBuild<SetCfg<S>>,
                 set: &'a mut S,
             ) -> Result<Vec<Self>, aopt::Error>
             where
                 Self: $crate::ErasedTy + Sized,
+                $crate::SetCfg<S>: $crate::ConfigValue + Default,
             {
                 set.take_vals::<$inner_type>(name)
                     .map(|v| v.into_iter().map(|v| $map(v)).collect())
@@ -82,26 +98,26 @@ macro_rules! impl_fetch {
     };
     (&$a:lifetime $name:path) => {
         impl<$a> $crate::Fetch<$a> for &$a $name {
-            fn fetch<S: $crate::SetValueFindExt>(name: &str, set: &$a mut S) -> Result<Self, aopt::Error>
-            where Self: ErasedTy + Sized {
+            fn fetch<S: $crate::SetValueFindExt>(name: impl ConfigBuild<SetCfg<S>>, set: &$a mut S) -> Result<Self, aopt::Error>
+            where Self: ErasedTy + Sized, $crate::SetCfg<S>: $crate::ConfigValue + Default, {
                 set.find_val::<$name>(name)
             }
 
-            fn fetch_vec<S: $crate::SetValueFindExt>(name: &str, set: &$a mut S) -> Result<Vec<Self>, aopt::Error>
-            where Self: $crate::ErasedTy + Sized {
+            fn fetch_vec<S: $crate::SetValueFindExt>(name: impl ConfigBuild<SetCfg<S>>, set: &$a mut S) -> Result<Vec<Self>, aopt::Error>
+            where Self: $crate::ErasedTy + Sized, $crate::SetCfg<S>: $crate::ConfigValue + Default, {
                 Ok(set.find_vals::<$name>(name)?.iter().collect())
             }
         }
     };
     (&$a:lifetime $name:path, $inner:path, $map:expr) => {
         impl<$a> $crate::Fetch<$a> for &$a $name {
-            fn fetch<S: $crate::SetValueFindExt>(name: &str, set: &$a mut S) -> Result<Self, aopt::Error>
-            where Self: $crate::ErasedTy + Sized {
+            fn fetch<S: $crate::SetValueFindExt>(name: impl ConfigBuild<SetCfg<S>>, set: &$a mut S) -> Result<Self, aopt::Error>
+            where Self: $crate::ErasedTy + Sized, $crate::SetCfg<S>: $crate::ConfigValue + Default, {
                 set.find_val::<$inner>(name).map(|v|$map(v))
             }
 
-            fn fetch_vec<S: $crate::SetValueFindExt>(name: &str, set: &$a mut S) -> Result<Vec<Self>, aopt::Error>
-            where Self: $crate::ErasedTy + Sized {
+            fn fetch_vec<S: $crate::SetValueFindExt>(name: impl ConfigBuild<SetCfg<S>>, set: &$a mut S) -> Result<Vec<Self>, aopt::Error>
+            where Self: $crate::ErasedTy + Sized, $crate::SetCfg<S>: $crate::ConfigValue + Default, {
                 Ok(set.find_vals::<$inner>(name)?.iter().map(|v|$map(v)).collect())
             }
         }
@@ -115,21 +131,23 @@ macro_rules! value_fetch_forward {
             T: $crate::ErasedTy + $crate::Fetch<'a>,
         {
             fn fetch<S: $crate::SetValueFindExt>(
-                name: &str,
+                name: impl ConfigBuild<SetCfg<S>>,
                 set: &'a mut S,
             ) -> Result<Self, aopt::Error>
             where
                 Self: $crate::ErasedTy + Sized,
+                $crate::SetCfg<S>: $crate::ConfigValue + Default,
             {
                 <T as $crate::Fetch>::fetch(name, set).map(|v| $map(v))
             }
 
             fn fetch_vec<S: $crate::SetValueFindExt>(
-                name: &str,
+                name: impl ConfigBuild<SetCfg<S>>,
                 set: &'a mut S,
             ) -> Result<Vec<Self>, aopt::Error>
             where
                 Self: $crate::ErasedTy + Sized,
+                $crate::SetCfg<S>: $crate::ConfigValue + Default,
             {
                 <T as $crate::Fetch>::fetch_vec(name, set)
                     .map(|v| v.into_iter().map(|v| $map(v)).collect())
@@ -139,21 +157,23 @@ macro_rules! value_fetch_forward {
     ($name:path, $inner_type:path, $map:expr) => {
         impl<'a> $crate::Fetch<'a> for $name {
             fn fetch<S: $crate::SetValueFindExt>(
-                name: &str,
+                name: impl ConfigBuild<SetCfg<S>>,
                 set: &'a mut S,
             ) -> Result<Self, aopt::Error>
             where
                 Self: $crate::ErasedTy + Sized,
+                $crate::SetCfg<S>: $crate::ConfigValue + Default,
             {
                 <$inner_type as $crate::Fetch>::fetch(name, set).map(|v| $map(v))
             }
 
             fn fetch_vec<S: $crate::SetValueFindExt>(
-                name: &str,
+                name: impl ConfigBuild<SetCfg<S>>,
                 set: &'a mut S,
             ) -> Result<Vec<Self>, aopt::Error>
             where
                 Self: $crate::ErasedTy + Sized,
+                $crate::SetCfg<S>: $crate::ConfigValue + Default,
             {
                 <$inner_type as $crate::Fetch>::fetch_vec(name, set)
                     .map(|v| v.into_iter().map(|v| $map(v)).collect())
@@ -241,16 +261,24 @@ impl<'a, 'b, T: ErasedTy> Fetch<'a> for RefOpt<'b, T>
 where
     'a: 'b,
 {
-    fn fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
+    fn fetch<S: SetValueFindExt>(
+        name: impl ConfigBuild<SetCfg<S>>,
+        set: &'a mut S,
+    ) -> Result<Self, aopt::Error>
     where
         Self: ErasedTy + Sized,
+        SetCfg<S>: ConfigValue + Default,
     {
         Ok(RefOpt::new(set.find_val::<T>(name)?))
     }
 
-    fn fetch_vec<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Vec<Self>, aopt::Error>
+    fn fetch_vec<S: SetValueFindExt>(
+        name: impl ConfigBuild<SetCfg<S>>,
+        set: &'a mut S,
+    ) -> Result<Vec<Self>, aopt::Error>
     where
         Self: ErasedTy + Sized,
+        SetCfg<S>: ConfigValue + Default,
     {
         Ok(set
             .find_vals(name)?

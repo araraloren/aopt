@@ -13,7 +13,12 @@ pub(crate) mod value;
 
 pub use self::action::Action;
 pub use self::aopt::AOpt;
-pub use self::config::Config;
+pub use self::config::ConfigBuild;
+pub use self::config::ConfigBuildHelpMutable;
+pub use self::config::ConfigBuildHelpWith;
+pub use self::config::ConfigBuildInferHelp;
+pub use self::config::ConfigBuilder;
+pub use self::config::ConfigBuilderWith;
 pub use self::config::ConfigValue;
 pub use self::config::OptConfig;
 pub use self::creator::BuiltInCtor;

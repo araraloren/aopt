@@ -15,9 +15,13 @@ impl Infer for Speed {
 }
 
 impl<'a> Fetch<'a> for Speed {
-    fn fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
+    fn fetch<S: SetValueFindExt>(
+        name: impl ConfigBuild<SetCfg<S>>,
+        set: &'a mut S,
+    ) -> Result<Self, aopt::Error>
     where
         Self: Sized,
+        cote::SetCfg<S>: cote::ConfigValue + Default,
     {
         Ok(Speed(set.take_val(name)?))
     }

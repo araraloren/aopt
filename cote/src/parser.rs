@@ -4,7 +4,7 @@ use std::ops::DerefMut;
 
 use aopt::ctx::HandlerEntry;
 use aopt::prelude::Args;
-use aopt::prelude::Config;
+use aopt::prelude::ConfigBuild;
 use aopt::prelude::ConfigValue;
 use aopt::prelude::ErasedTy;
 use aopt::prelude::Extract;
@@ -18,6 +18,7 @@ use aopt::prelude::Policy;
 use aopt::prelude::PolicyParser;
 use aopt::prelude::SetCfg;
 use aopt::prelude::SetOpt;
+use aopt::raise_error;
 use aopt::ser::ServicesValExt;
 use aopt::set::SetValueFindExt;
 use aopt::ARef;
@@ -25,9 +26,9 @@ use aopt::Error;
 use aopt::RawVal;
 use aopt::Uid;
 
+use crate::prelude::RunningCtx;
 use crate::ExtractFromSetDerive;
-use crate::HelpDisplayCtx;
-use crate::RunningCtx;
+use crate::HelpContext;
 
 #[derive(Debug)]
 pub struct Parser<'a, Set, Ser> {
@@ -285,6 +286,7 @@ impl<'a, 'b, Set, Ser> Parser<'a, Set, Ser>
 where
     'a: 'b,
     Set: SetValueFindExt,
+    SetCfg<Set>: ConfigValue + Default,
 {
     pub fn extract_type<T>(&'b mut self) -> Result<T, Error>
     where
@@ -366,32 +368,21 @@ where
 impl<'a, Set, Ser> SetValueFindExt for Parser<'a, Set, Ser>
 where
     Set: SetValueFindExt,
+    SetCfg<Set>: ConfigValue + Default,
 {
-    fn find_uid(&self, opt: impl Into<aopt::AStr>) -> Result<Uid, Error> {
-        SetValueFindExt::find_uid(&self.set, opt)
+    fn find_uid(&self, cb: impl ConfigBuild<SetCfg<Self>>) -> Result<Uid, Error> {
+        SetValueFindExt::find_uid(&self.set, cb)
     }
 
-    fn find_opt(&self, opt: impl Into<aopt::AStr>) -> Result<&SetOpt<Self>, Error> {
-        SetValueFindExt::find_opt(&self.set, opt)
+    fn find_opt(&self, cb: impl ConfigBuild<SetCfg<Self>>) -> Result<&SetOpt<Self>, Error> {
+        SetValueFindExt::find_opt(&self.set, cb)
     }
 
-    fn find_opt_mut(&mut self, opt: impl Into<aopt::AStr>) -> Result<&mut SetOpt<Self>, Error> {
-        SetValueFindExt::find_opt_mut(&mut self.set, opt)
-    }
-
-    fn find_uid_i<U: 'static>(&self, opt: impl Into<aopt::AStr>) -> Result<Uid, Error> {
-        SetValueFindExt::find_uid_i::<U>(&self.set, opt)
-    }
-
-    fn find_opt_i<U: 'static>(&self, opt: impl Into<aopt::AStr>) -> Result<&SetOpt<Self>, Error> {
-        SetValueFindExt::find_opt_i::<U>(&self.set, opt)
-    }
-
-    fn find_opt_mut_i<U: 'static>(
+    fn find_opt_mut(
         &mut self,
-        opt: impl Into<aopt::AStr>,
+        cb: impl ConfigBuild<SetCfg<Self>>,
     ) -> Result<&mut SetOpt<Self>, Error> {
-        SetValueFindExt::find_opt_mut_i::<U>(&mut self.set, opt)
+        SetValueFindExt::find_opt_mut(&mut self.set, cb)
     }
 }
 
@@ -431,7 +422,7 @@ where
     SetOpt<Set>: Opt,
     Set: aopt::set::Set + OptValidator + OptParser,
     <Set as OptParser>::Output: Information,
-    SetCfg<Set>: Config + ConfigValue + Default,
+    SetCfg<Set>: ConfigValue + Default,
 {
     /// Running function after parsing.
     ///
@@ -719,17 +710,16 @@ where
 
     pub fn display_help(
         &self,
-        author: impl Into<String>,
-        version: impl Into<String>,
-        description: impl Into<String>,
+        author: &str,
+        version: &str,
+        description: &str,
     ) -> Result<(), Error> {
         let set = self.optset();
-        let (author, version, description) = (author.into(), version.into(), description.into());
-        let name = self.name.to_string();
+        let name = self.name.as_str();
 
         crate::display_help!(
             set,
-            &name,
+            name,
             author,
             version,
             description,
@@ -738,7 +728,47 @@ where
         )
     }
 
-    pub fn display_help_ctx(&self, ctx: HelpDisplayCtx) -> Result<(), Error> {
+    pub fn display_sub_help(&self, ctx: Vec<HelpContext>) -> Result<(), Error> {
+        self.display_sub_help_impl(ctx, 0)
+    }
+
+    fn display_sub_help_impl(&self, hcs: Vec<HelpContext>, i: usize) -> Result<(), Error> {
+        if !hcs.is_empty() {
+            let max = hcs.len() - 1;
+
+            if let Some(hc) = hcs.get(i) {
+                if i == max && (i > 0 || hc.name() == self.name()) {
+                    let names: Vec<&str> = hcs.iter().map(|v| v.name().as_str()).collect();
+                    let name = names.join(" ");
+                    let optset = self.optset();
+
+                    return crate::display_help!(
+                        optset,
+                        &name,
+                        hc.head(),
+                        hc.foot(),
+                        hc.width(),
+                        hc.usagew()
+                    );
+                } else if i < max && hc.name() == self.name() {
+                    if let Some(hc) = hcs.get(i + 1) {
+                        let sub_parsers = self.parsers();
+
+                        for sub_parser in sub_parsers {
+                            if sub_parser.name() == hc.name() {
+                                return sub_parser.display_sub_help_impl(hcs, i + 1);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Err(raise_error!(
+            "Can not display help message for ctxs: {hcs:?}"
+        ))
+    }
+
+    pub fn display_help_ctx(&self, ctx: HelpContext) -> Result<(), Error> {
         let name = ctx.generate_name();
         let set = self.optset();
 
@@ -756,13 +786,14 @@ where
 impl<'a, Set, Ser> Parser<'a, Set, Ser>
 where
     Set: SetValueFindExt,
+    SetCfg<Set>: ConfigValue + Default,
 {
     pub fn display_help_if(
         &self,
-        option: &str,
-        author: impl Into<String>,
-        version: impl Into<String>,
-        description: impl Into<String>,
+        option: impl ConfigBuild<SetCfg<Set>>,
+        author: &str,
+        version: &str,
+        description: &str,
     ) -> Result<bool, Error> {
         self.display_help_if_width(
             option,
@@ -774,7 +805,11 @@ where
         )
     }
 
-    pub fn display_help_if_ctx(&self, option: &str, ctx: &HelpDisplayCtx) -> Result<bool, Error> {
+    pub fn display_help_if_ctx(
+        &self,
+        option: impl ConfigBuild<SetCfg<Set>>,
+        ctx: &HelpContext,
+    ) -> Result<bool, Error> {
         let set = self.optset();
 
         if let Ok(help_option) = set.find_val::<bool>(option) {
@@ -799,10 +834,10 @@ where
 
     pub fn display_help_if_width(
         &self,
-        option: &str,
-        author: impl Into<String>,
-        version: impl Into<String>,
-        description: impl Into<String>,
+        option: impl ConfigBuild<SetCfg<Set>>,
+        author: &str,
+        version: &str,
+        description: &str,
         option_width: usize,
         usage_width: usize,
     ) -> Result<bool, Error> {
@@ -810,9 +845,7 @@ where
 
         if let Ok(help_option) = set.find_val::<bool>(option) {
             if *help_option {
-                let (author, version, description) =
-                    (author.into(), version.into(), description.into());
-                let name = self.name.to_string();
+                let name = self.name.as_str();
 
                 crate::display_help!(
                     set,

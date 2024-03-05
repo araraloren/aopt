@@ -267,7 +267,9 @@ impl<'a> Analyzer<'a> {
         where_predicate: Option<&Punctuated<WherePredicate, Token![,]>>,
     ) -> TokenStream {
         let default_where = quote! {
-            where Set: cote::SetValueFindExt,
+            where
+                Set: cote::SetValueFindExt,
+                cote::SetCfg<Set>: cote::ConfigValue + Default
         };
         if let Some(where_predicate) = where_predicate {
             quote! {
@@ -286,7 +288,7 @@ impl<'a> Analyzer<'a> {
         let default_where = quote! {
             where
             Ser: cote::ServicesValExt + Default + 'inv,
-            cote::SetCfg<Set>: cote::Config + cote::ConfigValue + Default,
+            cote::SetCfg<Set>: cote::ConfigValue + Default,
             Set: cote::Set + cote::OptParser + cote::OptValidator + cote::SetValueFindExt + Default + 'inv,
         };
         if let Some(where_predicate) = where_predicate {
@@ -468,7 +470,7 @@ impl<'a> Analyzer<'a> {
             P::Error: Into<cote::CoteError>,
             P::Ret: cote::Status,
             Ser: cote::ServicesValExt + Default + 'inv,
-            cote::SetCfg<Set>: cote::Config + cote::ConfigValue + Default,
+            cote::SetCfg<Set>: cote::ConfigValue + Default,
             Set: cote::Set + cote::OptParser + cote::OptValidator + cote::SetValueFindExt + Default + 'inv,
             P: cote::Policy<
                 Set = cote::Parser<'inv, Set, Ser>,
@@ -496,7 +498,7 @@ impl<'a> Analyzer<'a> {
             pub fn into_parser_with<'inv, Set, Ser>() -> Result<cote::Parser<'inv, Set, Ser>, cote::CoteError>
             where
                 Ser: cote::ServicesValExt + Default + 'inv,
-                cote::SetCfg<Set>: cote::Config + cote::ConfigValue + Default,
+                cote::SetCfg<Set>: cote::ConfigValue + Default,
                 Set: cote::Set + cote::OptParser + cote::OptValidator + cote::SetValueFindExt + Default + 'inv {
                 let mut parser = <Self as cote::IntoParserDerive<'inv, Set, Ser>>::into_parser()?;
 
@@ -637,13 +639,13 @@ impl<'a> Analyzer<'a> {
             #major_helper_define
 
             impl<'a, Parser, Policy> #major_helper_ty<'a, Parser, Policy> {
-                pub fn display_ctx() -> cote::HelpDisplayCtx {
+                pub fn display_ctx() -> cote::HelpContext {
                     #help_display_ctx
                 }
             }
 
             impl<'a, 'inv, Set, Ser, Policy> #major_helper_ty<'a, cote::Parser<'inv, Set, Ser>, Policy>
-            where Ser: cote::ServicesValExt, Set: cote::SetValueFindExt, Policy: cote::Policy, Policy::Ret: cote::Status {
+            where Ser: cote::ServicesValExt, Set: cote::SetValueFindExt, Policy: cote::Policy, Policy::Ret: cote::Status, cote::SetCfg<Set>: cote::ConfigValue + Default {
                 pub fn sync_rctx(&mut self, ret: &Result<Policy::Ret, cote::CoteError>, sub_parser: bool)
                     -> Result<&mut Self, cote::CoteError> {
                     #sync_running_ctx
@@ -657,6 +659,7 @@ impl<'a> Analyzer<'a> {
                 Policy::Ret: cote::Status,
                 Ser: cote::ServicesValExt,
                 Set: cote::Set + cote::OptParser + cote::OptValidator + cote::SetValueFindExt,
+                cote::SetCfg<Set>: cote::ConfigValue + Default,
                 Policy: cote::Policy<
                         Set = cote::Parser<'inv, Set, Ser>,
                         Ser = Ser,
@@ -701,13 +704,13 @@ impl<'a> Analyzer<'a> {
             impl<'a, 'inv, Set, Ser, Policy> #major_helper_ty<'a, cote::Parser<'inv, Set, Ser>, Policy>
             where
                 Ser: cote::ServicesValExt + Default,
-                cote::SetCfg<Set>: cote::Config + cote::ConfigValue + Default,
+                cote::SetCfg<Set>: cote::ConfigValue + Default,
                 Set: cote::Set + cote::OptParser + cote::OptValidator + cote::SetValueFindExt + Default {
                 pub fn display_help(&self) -> Result<(), cote::CoteError> {
                     self.display_help_with(Self::display_ctx())
                 }
 
-                pub fn display_help_with(&self, context: cote::HelpDisplayCtx) -> Result<(), cote::CoteError> {
+                pub fn display_help_with(&self, context: cote::HelpContext) -> Result<(), cote::CoteError> {
                     let name = context.generate_name();
                     let optset = self.inner_parser().optset();
 

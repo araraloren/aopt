@@ -3,9 +3,9 @@ use aopt::prelude::*;
 pub fn main() -> Result<(), aopt::Error> {
     let mut parser = AFwdParser::default();
 
-    parser.add_opt_i::<i32>("-flag")?;
-    parser.add_opt_i::<String>("-flag")?;
-    parser.add_opt_i::<bool>("-flag")?;
+    parser.add_opt("-flag".infer::<i32>())?;
+    parser.add_opt("-flag".infer::<String>())?;
+    parser.add_opt("-flag".infer::<bool>())?;
 
     // enable combination style
     parser.set_overload(true);
@@ -15,15 +15,12 @@ pub fn main() -> Result<(), aopt::Error> {
         )))?
         .ok()?;
 
-    assert_eq!(parser.find_i::<i32>("-flag")?.unwrap().val::<i32>()?, &42);
+    assert_eq!(parser.find("-flag".infer::<i32>())?.val::<i32>()?, &42);
     assert_eq!(
-        parser.find_i::<String>("-flag")?.unwrap().val::<String>()?,
+        parser.find("-flag".infer::<String>())?.val::<String>()?,
         "foo"
     );
-    assert_eq!(
-        parser.find_i::<bool>("-flag")?.unwrap().val::<bool>()?,
-        &true
-    );
+    assert_eq!(parser.find("-flag".infer::<bool>())?.val::<bool>()?, &true);
 
     Ok(())
 }

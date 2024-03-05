@@ -34,7 +34,9 @@ pub use aopt::prelude::ASet;
 pub use aopt::prelude::Action;
 pub use aopt::prelude::Args;
 pub use aopt::prelude::Commit;
-pub use aopt::prelude::Config;
+pub use aopt::prelude::ConfigBuild;
+pub use aopt::prelude::ConfigBuildHelpWith;
+pub use aopt::prelude::ConfigBuilder;
 pub use aopt::prelude::ConfigValue;
 pub use aopt::prelude::Ctor;
 pub use aopt::prelude::Ctx;
@@ -87,18 +89,108 @@ pub use cote_derive::CoteVal;
 pub use alter::Alter;
 pub use alter::Hint;
 pub use help::display_set_help;
-pub use help::HelpDisplayCtx;
-pub use meta::IntoConfig;
+pub use help::HelpContext;
 pub use meta::OptionMeta;
 pub use parser::Parser;
 pub use rctx::FailedInfo;
 pub use rctx::RunningCtx;
 pub use value::Fetch;
 
+pub mod prelude {
+
+    pub use aopt;
+    pub use aopt::ext::ctx;
+    pub use aopt::opt::Any;
+    pub use aopt::opt::Cmd;
+    pub use aopt::opt::Main;
+    pub use aopt::opt::MutOpt;
+    pub use aopt::opt::Pos;
+    pub use aopt::opt::RefOpt;
+    pub use aopt::parser::UserStyle;
+    pub use aopt::prelude::ctor_default_name;
+    pub use aopt::prelude::AOpt;
+    pub use aopt::prelude::APolicyExt;
+    pub use aopt::prelude::ARef;
+    pub use aopt::prelude::ASer;
+    pub use aopt::prelude::ASet;
+    pub use aopt::prelude::Action;
+    pub use aopt::prelude::Args;
+    pub use aopt::prelude::Commit;
+    pub use aopt::prelude::ConfigBuild;
+    pub use aopt::prelude::ConfigValue;
+    pub use aopt::prelude::Ctor;
+    pub use aopt::prelude::Ctx;
+    pub use aopt::prelude::DefaultSetChecker;
+    pub use aopt::prelude::ErasedTy;
+    pub use aopt::prelude::ErasedValue;
+    pub use aopt::prelude::Extract;
+    pub use aopt::prelude::FilterMatcher;
+    pub use aopt::prelude::Handler;
+    pub use aopt::prelude::HandlerCollection;
+    pub use aopt::prelude::Index;
+    pub use aopt::prelude::Infer;
+    pub use aopt::prelude::Information;
+    pub use aopt::prelude::InitializeValue;
+    pub use aopt::prelude::Invoker;
+    pub use aopt::prelude::Opt;
+    pub use aopt::prelude::OptParser;
+    pub use aopt::prelude::OptValidator;
+    pub use aopt::prelude::OptValueExt;
+    pub use aopt::prelude::Policy;
+    pub use aopt::prelude::PolicyParser;
+    pub use aopt::prelude::PolicySettings;
+    pub use aopt::prelude::PrefixOptValidator;
+    pub use aopt::prelude::RawValParser;
+    pub use aopt::prelude::ReturnVal;
+    pub use aopt::prelude::ServicesValExt;
+    pub use aopt::prelude::Set;
+    pub use aopt::prelude::SetCfg;
+    pub use aopt::prelude::SetChecker;
+    pub use aopt::prelude::SetExt;
+    pub use aopt::prelude::SetValueFindExt;
+    pub use aopt::prelude::Store;
+    pub use aopt::prelude::Style;
+    pub use aopt::prelude::ValInitializer;
+    pub use aopt::prelude::ValStorer;
+    pub use aopt::prelude::ValValidator;
+    pub use aopt::prelude::VecStore;
+    pub use aopt::raise_error;
+    pub use aopt::raise_failure;
+    pub use aopt::value::raw2str;
+    pub use aopt::value::Placeholder;
+    pub use aopt::Error as CoteError;
+    pub use aopt::GetoptRes;
+    pub use aopt::RawVal;
+    pub use aopt::Uid;
+    pub use aopt_help;
+    pub use cote_derive;
+    pub use cote_derive::Cote;
+    pub use cote_derive::CoteOpt;
+    pub use cote_derive::CoteVal;
+
+    pub use crate::alter::Alter;
+    pub use crate::alter::Hint;
+    pub use crate::help::display_set_help;
+    pub use crate::help::HelpContext;
+    pub use crate::meta::OptionMeta;
+    pub use crate::parser::Parser;
+    pub use crate::rctx::FailedInfo;
+    pub use crate::rctx::RunningCtx;
+    pub use crate::value::Fetch;
+    pub use crate::CoteRes;
+    pub use crate::DelayPolicy;
+    pub use crate::ExtractFromSetDerive;
+    pub use crate::FwdPolicy;
+    pub use crate::IntoParserDerive;
+    pub use crate::NullPolicy;
+    pub use crate::PrePolicy;
+    pub use crate::Status;
+}
+
 pub trait IntoParserDerive<'inv, Set, Ser>
 where
     Ser: ServicesValExt + Default,
-    SetCfg<Set>: Config + ConfigValue + Default,
+    SetCfg<Set>: ConfigValue + Default,
     Set: crate::Set + OptParser + OptValidator + Default,
 {
     fn into_parser() -> Result<Parser<'inv, Set, Ser>, aopt::Error> {
@@ -109,7 +201,10 @@ where
     fn update(parser: &mut Parser<'inv, Set, Ser>) -> Result<(), aopt::Error>;
 }
 
-pub trait ExtractFromSetDerive<'set, Set: SetValueFindExt> {
+pub trait ExtractFromSetDerive<'set, Set: SetValueFindExt>
+where
+    SetCfg<Set>: ConfigValue + Default,
+{
     fn try_extract(set: &'set mut Set) -> Result<Self, aopt::Error>
     where
         Self: Sized;
@@ -378,6 +473,7 @@ mod test {
         fn find_main<Set, Ser>(set: &mut Set, _: &mut Ser) -> Result<Option<()>, aopt::Error>
         where
             Set: SetValueFindExt,
+            cote::SetCfg<Set>: cote::ConfigValue + Default,
         {
             let tool = Find::try_extract(set)?;
 

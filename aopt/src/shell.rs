@@ -13,6 +13,7 @@ use crate::ext::APolicyExt;
 use crate::ext::ASer;
 use crate::ext::ASet;
 use crate::opt::Action;
+use crate::opt::ConfigBuildInferHelp;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::opt::Style;
@@ -368,8 +369,9 @@ where
 pub fn try_get_complete() -> Result<Option<(String, Shell)>, Error> {
     let mut try_parser = AFwdParser::default();
 
-    try_parser.add_opt_i::<String>("--_completes: Get complete option or sub command")?;
-    try_parser.add_opt_i::<MutOpt<Shell>>("--_shell!: Set shell type, support zsh fish bash")?;
+    try_parser.add_opt("--_completes: Get complete option or sub command".infer::<String>())?;
+    try_parser
+        .add_opt("--_shell!: Set shell type, support zsh fish bash".infer::<MutOpt<Shell>>())?;
     try_parser.parse_env()?;
 
     if let Ok(cl) = try_parser.take_val("--_completes") {

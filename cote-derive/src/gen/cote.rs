@@ -357,7 +357,7 @@ impl<'a> CoteGenerator<'a> {
         let name = &self.name;
 
         quote! {
-            cote::HelpDisplayCtx::default()
+            cote::HelpContext::default()
                 .with_name(#name)
                 .with_head(#head)
                 .with_foot(#foot)

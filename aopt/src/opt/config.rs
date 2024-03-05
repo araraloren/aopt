@@ -1,4 +1,6 @@
 use std::any::TypeId;
+use std::fmt::Debug;
+use std::marker::PhantomData;
 
 use crate::err::Error;
 use crate::opt::Action;
@@ -6,18 +8,146 @@ use crate::opt::Index;
 use crate::opt::Information;
 use crate::opt::OptParser;
 use crate::typeid;
+use crate::value::Placeholder;
 use crate::value::ValInitializer;
 use crate::value::ValStorer;
 use crate::AStr;
 
+use super::BuiltInCtor;
 use super::Style;
 
-pub trait Config {
-    fn new<Parser>(parser: &Parser, pattern: AStr) -> Result<Self, Error>
+pub trait ConfigBuild<C> {
+    type Val;
+
+    fn build<P>(self, parser: &P) -> Result<C, Error>
     where
-        Self: Sized,
-        Parser: OptParser,
-        Parser::Output: Information;
+        P: OptParser,
+        P::Output: Information;
+}
+
+impl<C: ConfigValue + Default> ConfigBuild<C> for &'_ str {
+    type Val = Placeholder;
+
+    fn build<P>(self, parser: &P) -> Result<C, Error>
+    where
+        P: OptParser,
+        P::Output: Information,
+    {
+        let mut output = parser.parse_opt(self).map_err(Into::into)?;
+        let mut ret = C::default();
+
+        if let Some(v) = output.take_name() {
+            ret.set_name(v);
+        }
+        if let Some(v) = output.take_index() {
+            ret.set_index(v);
+        }
+        if let Some(v) = output.take_force() {
+            ret.set_force(v);
+        }
+        if let Some(v) = output.take_help() {
+            ret.set_help(v);
+        }
+        if let Some(v) = output.take_ctor() {
+            ret.set_ctor(v);
+        }
+        if let Some(v) = output.take_alias() {
+            ret.set_alias(v);
+        }
+        Ok(ret)
+    }
+}
+
+impl<C: ConfigValue + Default> ConfigBuild<C> for AStr {
+    type Val = Placeholder;
+
+    fn build<P>(self, parser: &P) -> Result<C, Error>
+    where
+        P: OptParser,
+        P::Output: Information,
+    {
+        <&str as ConfigBuild<C>>::build(self.as_str(), parser)
+    }
+}
+
+impl<C: ConfigValue + Default> ConfigBuild<C> for String {
+    type Val = Placeholder;
+
+    fn build<P>(self, parser: &P) -> Result<C, Error>
+    where
+        P: OptParser,
+        P::Output: Information,
+    {
+        <&str as ConfigBuild<C>>::build(self.as_str(), parser)
+    }
+}
+
+impl<C: ConfigValue + Default> ConfigBuild<C> for &'_ String {
+    type Val = Placeholder;
+
+    fn build<P>(self, parser: &P) -> Result<C, Error>
+    where
+        P: OptParser,
+        P::Output: Information,
+    {
+        <&str as ConfigBuild<C>>::build(self.as_str(), parser)
+    }
+}
+
+impl<C: ConfigValue, I: 'static> ConfigBuild<C> for ConfigBuilder<C, I> {
+    type Val = I;
+
+    fn build<P>(self, _: &P) -> Result<C, Error>
+    where
+        P: OptParser,
+        P::Output: Information,
+    {
+        Ok(self.config.with_type::<I>())
+    }
+}
+
+impl<C, T, I> ConfigBuild<C> for ConfigBuilderWith<C, T, I>
+where
+    I: 'static,
+    T: ConfigBuild<C>,
+    C: ConfigValue + Default,
+{
+    type Val = I;
+
+    fn build<P>(self, parser: &P) -> Result<C, Error>
+    where
+        P: OptParser,
+        P::Output: Information,
+    {
+        let mut init = self.init.build(parser)?;
+        let mut config = self.inner.build(parser)?;
+
+        macro_rules! merge {
+            ($has:ident, $set:ident, $take:ident) => {
+                if !config.$has() {
+                    if let Some(value) = init.$take() {
+                        config.$set(value);
+                    }
+                }
+            };
+        }
+        merge!(has_ctor, set_ctor, take_ctor);
+        merge!(has_type, set_type_id, take_type);
+        merge!(has_name, set_name, take_name);
+        merge!(has_force, set_force, take_force);
+        merge!(has_index, set_index, take_index);
+        merge!(has_alias, set_alias, take_alias);
+        merge!(has_hint, set_hint, take_hint);
+        merge!(has_help, set_help, take_help);
+        merge!(has_action, set_action, take_action);
+        merge!(has_storer, set_storer, take_storer);
+        merge!(has_style, set_style, take_style);
+        merge!(has_initializer, set_initializer, take_initializer);
+        config.set_ignore_name(config.ignore_name() || init.ignore_name());
+        config.set_ignore_alias(config.ignore_alias() || init.ignore_alias());
+        config.set_ignore_index(config.ignore_index() || init.ignore_index());
+        Ok(config)
+    }
 }
 
 pub trait ConfigValue {
@@ -184,6 +314,38 @@ pub trait ConfigValue {
     fn take_style(&mut self) -> Option<Vec<Style>>;
 
     fn take_initializer(&mut self) -> Option<ValInitializer>;
+
+    fn infer_builtin_ty(&mut self);
+
+    fn with_index(self, index: Index) -> Self;
+
+    fn with_force(self, force: bool) -> Self;
+
+    fn with_ctor(self, ctor: impl Into<AStr>) -> Self;
+
+    fn with_name(self, name: impl Into<AStr>) -> Self;
+
+    fn with_type<T: 'static>(self) -> Self;
+
+    fn with_hint(self, hint: impl Into<AStr>) -> Self;
+
+    fn with_help(self, help: impl Into<AStr>) -> Self;
+
+    fn with_alias(self, alias: Vec<impl Into<AStr>>) -> Self;
+
+    fn with_style(self, styles: Vec<Style>) -> Self;
+
+    fn with_action(self, action: Action) -> Self;
+
+    fn with_storer(self, storer: ValStorer) -> Self;
+
+    fn with_ignore_alias(self, ignore_alias: bool) -> Self;
+
+    fn with_ignore_index(self, ignore_index: bool) -> Self;
+
+    fn with_ignore_name(self, ignore_name: bool) -> Self;
+
+    fn with_initializer(self, initializer: ValInitializer) -> Self;
 }
 
 /// Contain the information used for create option instance.
@@ -218,115 +380,6 @@ pub struct OptConfig {
     ignore_index: bool,
 
     styles: Option<Vec<Style>>,
-}
-
-impl OptConfig {
-    pub fn with_index(mut self, index: Index) -> Self {
-        self.index = Some(index);
-        self
-    }
-
-    pub fn with_force(mut self, force: bool) -> Self {
-        self.force = Some(force);
-        self
-    }
-
-    pub fn with_ctor(mut self, ctor: impl Into<AStr>) -> Self {
-        self.ctor = Some(ctor.into());
-        self
-    }
-
-    pub fn with_name(mut self, name: impl Into<AStr>) -> Self {
-        self.name = Some(name.into());
-        self
-    }
-
-    pub fn with_type<T: 'static>(mut self) -> Self {
-        self.r#type = Some(typeid::<T>());
-        self
-    }
-
-    pub fn with_hint(mut self, hint: impl Into<AStr>) -> Self {
-        self.help = Some(hint.into());
-        self
-    }
-
-    pub fn with_help(mut self, help: impl Into<AStr>) -> Self {
-        self.help = Some(help.into());
-        self
-    }
-
-    pub fn with_alias(mut self, alias: Vec<impl Into<AStr>>) -> Self {
-        self.alias = Some(alias.into_iter().map(|v| v.into()).collect());
-        self
-    }
-
-    pub fn with_styles(mut self, styles: Vec<Style>) -> Self {
-        self.styles = Some(styles);
-        self
-    }
-
-    pub fn with_action(mut self, action: Action) -> Self {
-        self.action = Some(action);
-        self
-    }
-
-    pub fn with_storer(mut self, storer: ValStorer) -> Self {
-        self.storer = Some(storer);
-        self
-    }
-
-    pub fn with_ignore_alias(mut self, ignore_alias: bool) -> Self {
-        self.ignore_alias = ignore_alias;
-        self
-    }
-
-    pub fn with_ignore_index(mut self, ignore_index: bool) -> Self {
-        self.ignore_index = ignore_index;
-        self
-    }
-
-    pub fn with_ignore_name(mut self, ignore_name: bool) -> Self {
-        self.ignore_name = ignore_name;
-        self
-    }
-
-    pub fn with_initializer(mut self, initializer: ValInitializer) -> Self {
-        self.initializer = Some(initializer);
-        self
-    }
-}
-
-impl Config for OptConfig {
-    fn new<Parser>(parser: &Parser, pattern: AStr) -> Result<Self, Error>
-    where
-        Self: Sized,
-        Parser: OptParser,
-        Parser::Output: Information,
-    {
-        let mut output = parser.parse_opt(&pattern).map_err(|e| e.into())?;
-        let mut ret = Self::default();
-
-        if let Some(v) = output.take_name() {
-            ret.set_name(v);
-        }
-        if let Some(v) = output.take_index() {
-            ret.set_index(v);
-        }
-        if let Some(v) = output.take_force() {
-            ret.set_force(v);
-        }
-        if let Some(v) = output.take_help() {
-            ret.set_help(v);
-        }
-        if let Some(v) = output.take_ctor() {
-            ret.set_ctor(v);
-        }
-        if let Some(v) = output.take_alias() {
-            ret.set_alias(v);
-        }
-        Ok(ret)
-    }
 }
 
 impl ConfigValue for OptConfig {
@@ -639,4 +692,516 @@ impl ConfigValue for OptConfig {
     fn take_initializer(&mut self) -> Option<ValInitializer> {
         self.initializer.take()
     }
+
+    fn infer_builtin_ty(&mut self) {
+        if let Some(ctor) = self.ctor() {
+            let built_in_ctor = BuiltInCtor::from_name(ctor);
+
+            self.set_type_id(match built_in_ctor {
+                BuiltInCtor::Int => typeid::<i64>(),
+                BuiltInCtor::AStr => typeid::<String>(),
+                BuiltInCtor::Flt => typeid::<f64>(),
+                BuiltInCtor::Uint => typeid::<u64>(),
+                BuiltInCtor::Bool => typeid::<bool>(),
+                BuiltInCtor::Cmd => typeid::<crate::opt::Cmd>(),
+                BuiltInCtor::Pos => typeid::<crate::opt::Pos<bool>>(),
+                BuiltInCtor::Main => typeid::<crate::opt::Main>(),
+                BuiltInCtor::Any => typeid::<crate::opt::Any>(),
+                BuiltInCtor::Raw => typeid::<std::ffi::OsString>(),
+                BuiltInCtor::Fallback => {
+                    unreachable!("Fallback creator can't infer any type")
+                }
+            });
+        }
+    }
+
+    fn with_index(mut self, index: Index) -> Self {
+        self.index = Some(index);
+        self
+    }
+
+    fn with_force(mut self, force: bool) -> Self {
+        self.force = Some(force);
+        self
+    }
+
+    fn with_ctor(mut self, ctor: impl Into<AStr>) -> Self {
+        self.ctor = Some(ctor.into());
+        self
+    }
+
+    fn with_name(mut self, name: impl Into<AStr>) -> Self {
+        self.name = Some(name.into());
+        self
+    }
+
+    fn with_type<T: 'static>(mut self) -> Self {
+        self.r#type = Some(typeid::<T>());
+        self
+    }
+
+    fn with_hint(mut self, hint: impl Into<AStr>) -> Self {
+        self.help = Some(hint.into());
+        self
+    }
+
+    fn with_help(mut self, help: impl Into<AStr>) -> Self {
+        self.help = Some(help.into());
+        self
+    }
+
+    fn with_alias(mut self, alias: Vec<impl Into<AStr>>) -> Self {
+        self.alias = Some(alias.into_iter().map(|v| v.into()).collect());
+        self
+    }
+
+    fn with_style(mut self, styles: Vec<Style>) -> Self {
+        self.styles = Some(styles);
+        self
+    }
+
+    fn with_action(mut self, action: Action) -> Self {
+        self.action = Some(action);
+        self
+    }
+
+    fn with_storer(mut self, storer: ValStorer) -> Self {
+        self.storer = Some(storer);
+        self
+    }
+
+    fn with_ignore_alias(mut self, ignore_alias: bool) -> Self {
+        self.ignore_alias = ignore_alias;
+        self
+    }
+
+    fn with_ignore_index(mut self, ignore_index: bool) -> Self {
+        self.ignore_index = ignore_index;
+        self
+    }
+
+    fn with_ignore_name(mut self, ignore_name: bool) -> Self {
+        self.ignore_name = ignore_name;
+        self
+    }
+
+    fn with_initializer(mut self, initializer: ValInitializer) -> Self {
+        self.initializer = Some(initializer);
+        self
+    }
 }
+
+pub trait ConfigBuildHelpMutable {
+    type Cfg;
+
+    fn config_mut(&mut self) -> &mut Self::Cfg;
+}
+
+impl<C, I> ConfigBuildHelpMutable for ConfigBuilder<C, I> {
+    type Cfg = C;
+
+    fn config_mut(&mut self) -> &mut C {
+        &mut self.config
+    }
+}
+
+impl<C, T, I> ConfigBuildHelpMutable for ConfigBuilderWith<C, T, I>
+where
+    C: Default,
+{
+    type Cfg = C;
+
+    fn config_mut(&mut self) -> &mut C {
+        self.inner_mut().config_mut()
+    }
+}
+
+pub trait ConfigBuildInferHelp<C> {
+    type Output<T>;
+
+    fn infer<T: 'static>(self) -> Self::Output<T>;
+}
+
+impl<C> ConfigBuildInferHelp<C> for &'_ str
+where
+    C: ConfigValue + Default,
+{
+    type Output<T> = ConfigBuilderWith<C, Self, T>;
+
+    fn infer<T: 'static>(self) -> Self::Output<T> {
+        ConfigBuilderWith::new(self, ConfigBuilder::new(C::default().with_type::<T>()))
+    }
+}
+
+impl<C> ConfigBuildInferHelp<C> for AStr
+where
+    C: ConfigValue + Default,
+{
+    type Output<T> = ConfigBuilderWith<C, Self, T>;
+
+    fn infer<T: 'static>(self) -> Self::Output<T> {
+        ConfigBuilderWith::new(self, ConfigBuilder::new(C::default().with_type::<T>()))
+    }
+}
+
+impl<C> ConfigBuildInferHelp<C> for String
+where
+    C: ConfigValue + Default,
+{
+    type Output<T> = ConfigBuilderWith<C, Self, T>;
+
+    fn infer<T: 'static>(self) -> Self::Output<T> {
+        ConfigBuilderWith::new(self, ConfigBuilder::new(C::default().with_type::<T>()))
+    }
+}
+
+impl<C> ConfigBuildInferHelp<C> for &'_ String
+where
+    C: ConfigValue + Default,
+{
+    type Output<T> = ConfigBuilderWith<C, Self, T>;
+
+    fn infer<T: 'static>(self) -> Self::Output<T> {
+        ConfigBuilderWith::new(self, ConfigBuilder::new(C::default().with_type::<T>()))
+    }
+}
+
+impl<C, I> ConfigBuildInferHelp<C> for ConfigBuilder<C, I> {
+    type Output<T> = ConfigBuilder<C, T>;
+
+    fn infer<T: 'static>(self) -> Self::Output<T> {
+        ConfigBuilder {
+            config: self.config,
+            marker: PhantomData,
+        }
+    }
+}
+
+pub trait ConfigBuildHelpWith {
+    type Output;
+
+    fn with_ctor(self, ctor: impl Into<AStr>) -> Self::Output;
+
+    fn with_name(self, name: impl Into<AStr>) -> Self::Output;
+
+    fn with_force(self, force: bool) -> Self::Output;
+
+    fn with_index(self, index: Index) -> Self::Output;
+
+    fn with_alias(self, alias: Vec<impl Into<AStr>>) -> Self::Output;
+
+    fn with_hint(self, hint: impl Into<AStr>) -> Self::Output;
+
+    fn with_help(self, help: impl Into<AStr>) -> Self::Output;
+
+    fn with_action(self, action: Action) -> Self::Output;
+
+    fn with_storer(self, storer: ValStorer) -> Self::Output;
+
+    fn with_initializer(self, initializer: ValInitializer) -> Self::Output;
+
+    fn with_ignore_alias(self, ignore_alias: bool) -> Self::Output;
+
+    fn with_ignore_index(self, ignore_index: bool) -> Self::Output;
+
+    fn with_ignore_name(self, ignore_name: bool) -> Self::Output;
+
+    fn with_style(self, styles: Vec<Style>) -> Self::Output;
+}
+
+impl<T> ConfigBuildHelpWith for T
+where
+    T: ConfigBuildHelpMutable,
+    T::Cfg: ConfigValue,
+{
+    type Output = Self;
+
+    fn with_ctor(mut self, ctor: impl Into<AStr>) -> Self::Output {
+        self.config_mut().set_ctor(ctor);
+        self
+    }
+
+    fn with_name(mut self, name: impl Into<AStr>) -> Self::Output {
+        self.config_mut().set_name(name);
+        self
+    }
+
+    fn with_force(mut self, force: bool) -> Self::Output {
+        self.config_mut().set_force(force);
+        self
+    }
+
+    fn with_index(mut self, index: Index) -> Self::Output {
+        self.config_mut().set_index(index);
+        self
+    }
+
+    fn with_alias(mut self, alias: Vec<impl Into<AStr>>) -> Self::Output {
+        self.config_mut().set_alias(alias);
+        self
+    }
+
+    fn with_hint(mut self, hint: impl Into<AStr>) -> Self::Output {
+        self.config_mut().set_hint(hint);
+        self
+    }
+
+    fn with_help(mut self, help: impl Into<AStr>) -> Self::Output {
+        self.config_mut().set_help(help);
+        self
+    }
+
+    fn with_action(mut self, action: Action) -> Self::Output {
+        self.config_mut().set_action(action);
+        self
+    }
+
+    fn with_storer(mut self, storer: ValStorer) -> Self::Output {
+        self.config_mut().set_storer(storer);
+        self
+    }
+
+    fn with_initializer(mut self, initializer: ValInitializer) -> Self::Output {
+        self.config_mut().set_initializer(initializer);
+        self
+    }
+
+    fn with_ignore_alias(mut self, ignore_alias: bool) -> Self::Output {
+        self.config_mut().set_ignore_alias(ignore_alias);
+        self
+    }
+
+    fn with_ignore_index(mut self, ignore_index: bool) -> Self::Output {
+        self.config_mut().set_ignore_index(ignore_index);
+        self
+    }
+
+    fn with_ignore_name(mut self, ignore_name: bool) -> Self::Output {
+        self.config_mut().set_ignore_name(ignore_name);
+        self
+    }
+
+    fn with_style(mut self, styles: Vec<Style>) -> Self::Output {
+        self.config_mut().set_style(styles);
+        self
+    }
+}
+
+pub struct ConfigBuilder<C, I> {
+    config: C,
+
+    marker: PhantomData<I>,
+}
+
+impl<C, I> Default for ConfigBuilder<C, I>
+where
+    C: Default,
+{
+    fn default() -> Self {
+        Self {
+            config: C::default(),
+            marker: Default::default(),
+        }
+    }
+}
+
+impl<C, I> Debug for ConfigBuilder<C, I>
+where
+    C: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ConfigBuilder")
+            .field("config", &self.config)
+            .finish()
+    }
+}
+
+impl<C, I> ConfigBuilder<C, I> {
+    pub fn new(config: C) -> Self {
+        Self {
+            config,
+            marker: PhantomData,
+        }
+    }
+
+    pub fn config(&self) -> &C {
+        &self.config
+    }
+
+    pub fn config_mut(&mut self) -> &mut C {
+        &mut self.config
+    }
+}
+
+pub struct ConfigBuilderWith<C, T, I> {
+    init: T,
+    inner: ConfigBuilder<C, I>,
+}
+
+impl<C, T, I> Default for ConfigBuilderWith<C, T, I>
+where
+    T: Default,
+    C: Default,
+{
+    fn default() -> Self {
+        Self {
+            init: Default::default(),
+            inner: Default::default(),
+        }
+    }
+}
+
+impl<C, T, I> Debug for ConfigBuilderWith<C, T, I>
+where
+    T: Debug,
+    C: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ConfigBuilderWith")
+            .field("init", &self.init)
+            .field("inner", &self.inner)
+            .finish()
+    }
+}
+
+impl<C, T, I> ConfigBuilderWith<C, T, I> {
+    pub fn new(init: T, inner: ConfigBuilder<C, I>) -> Self {
+        Self { init, inner }
+    }
+
+    pub fn inner(&self) -> &ConfigBuilder<C, I> {
+        &self.inner
+    }
+
+    pub fn inner_mut(&mut self) -> &mut ConfigBuilder<C, I> {
+        &mut self.inner
+    }
+
+    pub fn config(&self) -> &C {
+        self.inner.config()
+    }
+
+    pub fn config_mut(&mut self) -> &mut C {
+        self.inner.config_mut()
+    }
+}
+
+impl<C, T, I> From<T> for ConfigBuilderWith<C, T, I>
+where
+    C: Default,
+{
+    fn from(value: T) -> Self {
+        ConfigBuilderWith::new(value, Default::default())
+    }
+}
+
+macro_rules! def_help_for {
+    ($type:ty) => {
+        impl ConfigBuildHelpWith for $type {
+            type Output = ConfigBuilderWith<OptConfig, Self, Placeholder>;
+
+            fn with_ctor(self, ctor: impl Into<AStr>) -> Self::Output {
+                ConfigBuilderWith::new(
+                    self,
+                    ConfigBuilder::new(OptConfig::default().with_ctor(ctor)),
+                )
+            }
+
+            fn with_name(self, name: impl Into<AStr>) -> Self::Output {
+                ConfigBuilderWith::new(
+                    self,
+                    ConfigBuilder::new(OptConfig::default().with_name(name)),
+                )
+            }
+
+            fn with_force(self, force: bool) -> Self::Output {
+                ConfigBuilderWith::new(
+                    self,
+                    ConfigBuilder::new(OptConfig::default().with_force(force)),
+                )
+            }
+
+            fn with_index(self, index: Index) -> Self::Output {
+                ConfigBuilderWith::new(
+                    self,
+                    ConfigBuilder::new(OptConfig::default().with_index(index)),
+                )
+            }
+
+            fn with_alias(self, alias: Vec<impl Into<AStr>>) -> Self::Output {
+                ConfigBuilderWith::new(
+                    self,
+                    ConfigBuilder::new(OptConfig::default().with_alias(alias)),
+                )
+            }
+
+            fn with_hint(self, hint: impl Into<AStr>) -> Self::Output {
+                ConfigBuilderWith::new(
+                    self,
+                    ConfigBuilder::new(OptConfig::default().with_hint(hint)),
+                )
+            }
+
+            fn with_help(self, help: impl Into<AStr>) -> Self::Output {
+                ConfigBuilderWith::new(
+                    self,
+                    ConfigBuilder::new(OptConfig::default().with_help(help)),
+                )
+            }
+
+            fn with_action(self, action: Action) -> Self::Output {
+                ConfigBuilderWith::new(
+                    self,
+                    ConfigBuilder::new(OptConfig::default().with_action(action)),
+                )
+            }
+
+            fn with_storer(self, storer: ValStorer) -> Self::Output {
+                ConfigBuilderWith::new(
+                    self,
+                    ConfigBuilder::new(OptConfig::default().with_storer(storer)),
+                )
+            }
+
+            fn with_initializer(self, initializer: ValInitializer) -> Self::Output {
+                ConfigBuilderWith::new(
+                    self,
+                    ConfigBuilder::new(OptConfig::default().with_initializer(initializer)),
+                )
+            }
+
+            fn with_ignore_alias(self, ignore_alias: bool) -> Self::Output {
+                ConfigBuilderWith::new(
+                    self,
+                    ConfigBuilder::new(OptConfig::default().with_ignore_alias(ignore_alias)),
+                )
+            }
+
+            fn with_ignore_index(self, ignore_index: bool) -> Self::Output {
+                ConfigBuilderWith::new(
+                    self,
+                    ConfigBuilder::new(OptConfig::default().with_ignore_index(ignore_index)),
+                )
+            }
+
+            fn with_ignore_name(self, ignore_name: bool) -> Self::Output {
+                ConfigBuilderWith::new(
+                    self,
+                    ConfigBuilder::new(OptConfig::default().with_ignore_name(ignore_name)),
+                )
+            }
+
+            fn with_style(self, styles: Vec<Style>) -> Self::Output {
+                ConfigBuilderWith::new(
+                    self,
+                    ConfigBuilder::new(OptConfig::default().with_style(styles)),
+                )
+            }
+        }
+    };
+}
+
+def_help_for!(AStr);
+def_help_for!(&'_ str);
+def_help_for!(&'_ String);
+def_help_for!(String);

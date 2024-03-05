@@ -17,7 +17,7 @@ fn error<T>(spanned: impl Spanned, msg: String) -> syn::Result<T> {
     Err(syn::Error::new(spanned.span(), msg))
 }
 
-#[proc_macro_derive(Cote, attributes(cote, arg, pos, cmd, sub, infer, alter, fetch))]
+#[proc_macro_derive(Cote, attributes(cote, arg, pos, cmd, sub))]
 pub fn parser(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input: DeriveInput = parse_macro_input!(input);
     let analyzer = Analyzer::new(&input).unwrap_or_else(|e| {

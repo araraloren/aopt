@@ -7,7 +7,7 @@ use crate::ctx::Handler;
 use crate::ctx::HandlerCollection;
 use crate::ctx::HandlerEntry;
 use crate::map::ErasedTy;
-use crate::opt::Config;
+use crate::opt::ConfigBuild;
 use crate::opt::ConfigValue;
 use crate::opt::Information;
 use crate::opt::Opt;
@@ -24,7 +24,6 @@ use crate::value::Infer;
 use crate::value::Placeholder;
 use crate::value::RawValParser;
 use crate::ARef;
-use crate::AStr;
 use crate::Error;
 use crate::Uid;
 
@@ -220,7 +219,7 @@ where
 impl<'a, Set, Inv, Ser> HCOptSet<Set, Inv, Ser>
 where
     SetOpt<Set>: Opt,
-    SetCfg<Set>: Config + ConfigValue + Default,
+    SetCfg<Set>: ConfigValue + Default,
     <Set as OptParser>::Output: Information,
     Inv: HandlerCollection<'a, Set, Ser>,
     Set: crate::set::Set + OptParser + OptValidator,
@@ -304,32 +303,20 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    pub fn add_opt(
+    pub fn add_opt<B>(
         &mut self,
-        opt: impl Into<AStr>,
-    ) -> Result<ParserCommit<'a, '_, Inv, Set, Ser, Placeholder>, Error> {
-        let info = <SetCfg<Set>>::new(&self.set, opt.into())?;
-
-        Ok(ParserCommit::new(
-            SetCommit::new_placeholder(&mut self.set, info),
-            &mut self.inv,
-        ))
-    }
-
-    pub fn add_opt_i<U>(
-        &mut self,
-        opt: impl Into<AStr>,
-    ) -> Result<ParserCommit<'a, '_, Inv, Set, Ser, U>, Error>
+        cb: B,
+    ) -> Result<ParserCommit<'a, '_, Inv, Set, Ser, B::Val>, Error>
     where
-        U: Infer + 'static,
-        U::Val: RawValParser,
+        B::Val: Infer + 'static,
+        B: ConfigBuild<SetCfg<Set>>,
+        <B::Val as Infer>::Val: RawValParser,
     {
-        let info = <SetCfg<Set>>::new(&self.set, opt.into())?;
+        let cfg = cb.build(&self.set)?;
+        let set = &mut self.set;
+        let inv = &mut self.inv;
 
-        Ok(ParserCommit::new(
-            SetCommit::new(&mut self.set, info),
-            &mut self.inv,
-        ))
+        Ok(ParserCommit::new(SetCommit::new(set, cfg), inv))
     }
 
     /// Add an option to the [`Set`](Policy::Set), return a [`ParserCommit`].
@@ -533,38 +520,27 @@ where
 impl<Set, Inv, Ser> SetValueFindExt for HCOptSet<Set, Inv, Ser>
 where
     Set: SetValueFindExt,
+    SetCfg<Set>: ConfigValue + Default,
 {
-    fn find_uid(&self, opt: impl Into<AStr>) -> Result<Uid, Error> {
-        SetValueFindExt::find_uid(&self.set, opt)
+    fn find_uid(&self, cb: impl ConfigBuild<SetCfg<Self>>) -> Result<Uid, Error> {
+        SetValueFindExt::find_uid(&self.set, cb)
     }
 
-    fn find_uid_i<U: 'static>(&self, opt: impl Into<AStr>) -> Result<Uid, Error> {
-        SetValueFindExt::find_uid_i::<U>(&self.set, opt)
+    fn find_opt(&self, cb: impl ConfigBuild<SetCfg<Self>>) -> Result<&SetOpt<Self>, Error> {
+        SetValueFindExt::find_opt(&self.set, cb)
     }
 
-    fn find_opt(&self, opt: impl Into<AStr>) -> Result<&SetOpt<Self>, Error> {
-        SetValueFindExt::find_opt(&self.set, opt)
-    }
-
-    fn find_opt_i<U: 'static>(&self, opt: impl Into<AStr>) -> Result<&SetOpt<Self>, Error> {
-        SetValueFindExt::find_opt_i::<U>(&self.set, opt)
-    }
-
-    fn find_opt_mut(&mut self, opt: impl Into<AStr>) -> Result<&mut SetOpt<Self>, Error> {
-        SetValueFindExt::find_opt_mut(&mut self.set, opt)
-    }
-
-    fn find_opt_mut_i<U: 'static>(
+    fn find_opt_mut(
         &mut self,
-        opt: impl Into<AStr>,
+        cb: impl ConfigBuild<SetCfg<Self>>,
     ) -> Result<&mut SetOpt<Self>, Error> {
-        SetValueFindExt::find_opt_mut_i::<U>(&mut self.set, opt)
+        SetValueFindExt::find_opt_mut(&mut self.set, cb)
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::prelude::*;
+    use crate::{opt::config::ConfigBuildInferHelp, prelude::*};
     use std::ops::Deref;
 
     #[test]
@@ -582,7 +558,7 @@ mod test {
                 assert_eq!(val.deref(), &true);
                 Ok(Some(val.take()))
             });
-        set.add_opt_i::<Cmd>("ls")?;
+        set.add_opt("ls".infer::<Cmd>())?;
 
         PolicyParser::<AFwdPolicy>::parse(
             &mut set,

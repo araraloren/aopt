@@ -46,6 +46,7 @@ fn main() -> color_eyre::Result<()> {
 fn display_cli<Set, Ser>(set: &mut Set, _: &mut Ser) -> Result<Option<()>, aopt::Error>
 where
     Set: SetValueFindExt + cote::Set,
+    cote::SetCfg<Set>: cote::ConfigValue + Default,
 {
     println!("Got client: {:?}", Cli::try_extract(set)?);
     Ok(None)
@@ -68,6 +69,7 @@ fn foo_storer<Set, Ser>(
 ) -> Result<bool, aopt::Error>
 where
     Set: SetValueFindExt + cote::Set,
+    cote::SetCfg<Set>: cote::ConfigValue + Default,
 {
     let has_value = val.is_some();
 
@@ -106,6 +108,7 @@ fn debug_of_bar<Set, Ser>(
 fn process_qux<Set, Ser>(_: &mut Set, _: &mut Ser) -> Result<Option<()>, aopt::Error>
 where
     Set: SetValueFindExt + cote::Set,
+    cote::SetCfg<Set>: cote::ConfigValue + Default,
 {
     println!("return Ok(None) call the default handler of Qux");
     Ok(None)
@@ -120,6 +123,7 @@ fn unreachable_storer<Set, Ser>(
 ) -> Result<bool, aopt::Error>
 where
     Set: SetValueFindExt + cote::Set,
+    cote::SetCfg<Set>: cote::ConfigValue + Default,
 {
     unreachable!("Never go here")
 }

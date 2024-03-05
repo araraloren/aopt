@@ -6,7 +6,7 @@ pub fn main() -> Result<(), aopt::Error> {
     // add option need argument with type `i`, i.e. i64
     parser.add_opt("-f=i")?;
     parser.add_opt("--flag=s")?;
-    parser.add_opt_i::<f32>("-flag")?;
+    parser.add_opt("-flag".infer::<f32>())?;
 
     parser
         .parse(ARef::new(Args::from(

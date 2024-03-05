@@ -6,7 +6,7 @@ use aopt_help::store::Store;
 use std::borrow::Cow;
 
 #[derive(Debug, Clone, Default)]
-pub struct HelpDisplayCtx {
+pub struct HelpContext {
     name: String,
 
     head: String,
@@ -22,7 +22,7 @@ pub struct HelpDisplayCtx {
     submode: bool,
 }
 
-impl HelpDisplayCtx {
+impl HelpContext {
     pub fn with_name(mut self, name: impl Into<String>) -> Self {
         self.name = name.into();
         self
@@ -218,19 +218,8 @@ macro_rules! display_help {
             a
         }
 
-        fn __check_name<T: Into<String>>(a: T) -> String {
-            a.into()
-        }
-
-        $crate::display_set_help(
-            __check_set($set),
-            __check_name($name),
-            $head,
-            $foot,
-            $width,
-            $usage_width,
-        )
-        .map_err(|e| aopt::Error::raise_error(format!("Can not show help message: {:?}", e)))
+        $crate::display_set_help(__check_set($set), $name, $head, $foot, $width, $usage_width)
+            .map_err(|e| aopt::Error::raise_error(format!("Can not show help message: {:?}", e)))
     }};
     ($set:ident, $name:expr, $author:expr, $version:expr, $description:expr, $width:expr, $usage_width:expr) => {{
         let foot = format!("Create by {} v{}", $author, $version,);
@@ -240,18 +229,11 @@ macro_rules! display_help {
             a
         }
 
-        fn __check_name<T: Into<String>>(a: T) -> String {
-            a.into()
-        }
-
-        $crate::help::display_set_help(
-            __check_set($set),
-            __check_name($name),
-            head,
-            foot,
-            $width,
-            $usage_width,
-        )
-        .map_err(|e| aopt::Error::raise_error(format!("Can not show help message: {:?}", e)))
+        $crate::help::display_set_help(__check_set($set), $name, head, foot, $width, $usage_width)
+            .map_err(|e| aopt::Error::raise_error(format!("Can not show help message: {:?}", e)))
     }};
+}
+
+pub trait HelpContextGen {
+    fn generate(&self) -> HelpContext;
 }

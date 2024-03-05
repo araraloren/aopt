@@ -5,7 +5,7 @@ pub fn main() -> Result<(), aopt::Error> {
 
     // add option with value type `b`, i.e. option with bool value or flag
     parser.add_opt("-f=b")?;
-    parser.add_opt_i::<bool>("--flag")?;
+    parser.add_opt("--flag".infer::<bool>())?;
 
     parser
         .parse(ARef::new(Args::from(["app", "-f"].into_iter())))?

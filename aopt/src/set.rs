@@ -21,6 +21,7 @@ use std::slice::IterMut;
 
 use crate::map::ErasedTy;
 use crate::opt::Action;
+use crate::opt::ConfigBuild;
 use crate::opt::ConfigValue;
 use crate::opt::Index;
 use crate::opt::Opt;
@@ -204,70 +205,68 @@ impl<S: Set> SetExt<S::Ctor> for S {
 pub trait SetValueFindExt
 where
     Self: Set + Sized,
+    SetCfg<Self>: ConfigValue + Default,
 {
-    fn find_uid(&self, opt: impl Into<AStr>) -> Result<Uid, Error>;
+    fn find_uid(&self, cb: impl ConfigBuild<SetCfg<Self>>) -> Result<Uid, Error>;
 
-    fn find_uid_i<U: 'static>(&self, opt: impl Into<AStr>) -> Result<Uid, Error>;
-
-    fn find_opt(&self, opt: impl Into<AStr>) -> Result<&SetOpt<Self>, Error> {
-        self.opt(self.find_uid(opt)?)
+    fn find_opt(&self, cb: impl ConfigBuild<SetCfg<Self>>) -> Result<&SetOpt<Self>, Error> {
+        self.opt(self.find_uid(cb)?)
     }
 
-    fn find_opt_i<U: 'static>(&self, opt: impl Into<AStr>) -> Result<&SetOpt<Self>, Error> {
-        self.opt(self.find_uid_i::<U>(opt)?)
-    }
-
-    fn find_opt_mut(&mut self, opt: impl Into<AStr>) -> Result<&mut SetOpt<Self>, Error> {
-        self.opt_mut(self.find_uid(opt)?)
-    }
-
-    fn find_opt_mut_i<U: 'static>(
+    fn find_opt_mut(
         &mut self,
-        opt: impl Into<AStr>,
+        cb: impl ConfigBuild<SetCfg<Self>>,
     ) -> Result<&mut SetOpt<Self>, Error> {
-        self.opt_mut(self.find_uid_i::<U>(opt)?)
+        self.opt_mut(self.find_uid(cb)?)
     }
 
-    fn find_val<U: ErasedTy>(&self, opt: impl Into<AStr>) -> Result<&U, Error> {
-        self.opt(self.find_uid(opt)?)?.val::<U>()
+    fn find_val<T: ErasedTy>(&self, cb: impl ConfigBuild<SetCfg<Self>>) -> Result<&T, Error> {
+        self.opt(self.find_uid(cb)?)?.val::<T>()
     }
 
-    fn find_val_mut<U: ErasedTy>(&mut self, opt: impl Into<AStr>) -> Result<&mut U, Error> {
-        self.opt_mut(self.find_uid(opt)?)?.val_mut()
+    fn find_val_mut<T: ErasedTy>(
+        &mut self,
+        cb: impl ConfigBuild<SetCfg<Self>>,
+    ) -> Result<&mut T, Error> {
+        self.opt_mut(self.find_uid(cb)?)?.val_mut()
     }
 
-    fn find_vals<U: ErasedTy>(&self, opt: impl Into<AStr>) -> Result<&Vec<U>, Error> {
-        self.opt(self.find_uid(opt)?)?.vals()
+    fn find_vals<T: ErasedTy>(&self, cb: impl ConfigBuild<SetCfg<Self>>) -> Result<&Vec<T>, Error> {
+        self.opt(self.find_uid(cb)?)?.vals()
     }
 
-    fn find_vals_mut<U: ErasedTy>(&mut self, opt: impl Into<AStr>) -> Result<&mut Vec<U>, Error> {
-        self.opt_mut(self.find_uid(opt)?)?.vals_mut()
+    fn find_vals_mut<T: ErasedTy>(
+        &mut self,
+        cb: impl ConfigBuild<SetCfg<Self>>,
+    ) -> Result<&mut Vec<T>, Error> {
+        self.opt_mut(self.find_uid(cb)?)?.vals_mut()
     }
 
-    fn take_val<U: ErasedTy>(&mut self, opt: impl Into<AStr>) -> Result<U, Error> {
-        let name: AStr = opt.into();
-        let opt = self.find_uid(name.clone())?;
-        let vals = self.opt_mut(opt)?.vals_mut::<U>()?;
+    fn take_val<T: ErasedTy>(&mut self, cb: impl ConfigBuild<SetCfg<Self>>) -> Result<T, Error> {
+        let opt = self.opt_mut(self.find_uid(cb)?)?;
+        let (name, uid) = (opt.name().clone(), opt.uid());
 
-        vals.pop().ok_or_else(|| {
+        opt.vals_mut::<T>()?.pop().ok_or_else(|| {
             raise_error!(
                 "Not enough value({}) can take from option `{}`",
-                type_name::<U>(),
+                type_name::<T>(),
                 name
             )
-            .with_uid(opt)
+            .with_uid(uid)
         })
     }
 
-    fn take_vals<U: ErasedTy>(&mut self, opt: impl Into<AStr>) -> Result<Vec<U>, Error> {
-        let name: AStr = opt.into();
-        let uid = self.find_uid(name.clone())?;
-        let vals = self.find_vals_mut::<U>(name.clone());
+    fn take_vals<T: ErasedTy>(
+        &mut self,
+        cb: impl ConfigBuild<SetCfg<Self>>,
+    ) -> Result<Vec<T>, Error> {
+        let opt = self.opt_mut(self.find_uid(cb)?)?;
+        let (name, uid) = (opt.name().clone(), opt.uid());
 
-        Ok(std::mem::take(vals.map_err(|e| {
+        Ok(std::mem::take(opt.vals_mut::<T>().map_err(|e| {
             raise_error!(
                 "Can not take values({}) of option `{}`",
-                type_name::<U>(),
+                type_name::<T>(),
                 name
             )
             .with_uid(uid)

@@ -250,7 +250,12 @@ pub mod prelude {
     pub use crate::opt::AOpt;
     pub use crate::opt::Action;
     pub use crate::opt::Cmd;
-    pub use crate::opt::Config;
+    pub use crate::opt::ConfigBuild;
+    pub use crate::opt::ConfigBuildHelpMutable;
+    pub use crate::opt::ConfigBuildHelpWith;
+    pub use crate::opt::ConfigBuildInferHelp;
+    pub use crate::opt::ConfigBuilder;
+    pub use crate::opt::ConfigBuilderWith;
     pub use crate::opt::ConfigValue;
     pub use crate::opt::ConstrctInfo;
     pub use crate::opt::Creator;
