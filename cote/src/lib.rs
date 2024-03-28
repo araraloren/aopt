@@ -9,96 +9,23 @@ pub(crate) mod value;
 
 pub mod valid;
 
-use std::marker::PhantomData;
-
 pub use aopt;
+use aopt::args::Args;
+use aopt::ctx::Invoker;
+use aopt::ext::APolicyExt;
+use aopt::parser::DefaultSetChecker;
+use aopt::parser::Policy;
+use aopt::parser::PolicySettings;
+use aopt::parser::ReturnVal;
+use aopt::parser::UserStyle;
+use aopt::ARef;
+pub use aopt::Error;
 pub use aopt_help;
 pub use cote_derive;
 
-use aopt::prelude::OptStyleManager;
-
-pub use aopt::ext::ctx;
-pub use aopt::opt::Any;
-pub use aopt::opt::Cmd;
-pub use aopt::opt::Main;
-pub use aopt::opt::MutOpt;
-pub use aopt::opt::Pos;
-pub use aopt::opt::RefOpt;
-pub use aopt::parser::UserStyle;
-pub use aopt::prelude::ctor_default_name;
-pub use aopt::prelude::AOpt;
-pub use aopt::prelude::APolicyExt;
-pub use aopt::prelude::ARef;
-pub use aopt::prelude::ASer;
-pub use aopt::prelude::ASet;
-pub use aopt::prelude::Action;
-pub use aopt::prelude::Args;
-pub use aopt::prelude::Commit;
-pub use aopt::prelude::ConfigBuild;
-pub use aopt::prelude::ConfigBuildHelpWith;
-pub use aopt::prelude::ConfigBuilder;
-pub use aopt::prelude::ConfigValue;
-pub use aopt::prelude::Ctor;
-pub use aopt::prelude::Ctx;
-pub use aopt::prelude::DefaultSetChecker;
-pub use aopt::prelude::ErasedTy;
-pub use aopt::prelude::ErasedValue;
-pub use aopt::prelude::Extract;
-pub use aopt::prelude::FilterMatcher;
-pub use aopt::prelude::Handler;
-pub use aopt::prelude::HandlerCollection;
-pub use aopt::prelude::Index;
-pub use aopt::prelude::Infer;
-pub use aopt::prelude::Information;
-pub use aopt::prelude::InitializeValue;
-pub use aopt::prelude::Invoker;
-pub use aopt::prelude::Opt;
-pub use aopt::prelude::OptParser;
-pub use aopt::prelude::OptValidator;
-pub use aopt::prelude::OptValueExt;
-pub use aopt::prelude::Policy;
-pub use aopt::prelude::PolicyParser;
-pub use aopt::prelude::PolicySettings;
-pub use aopt::prelude::PrefixOptValidator;
-pub use aopt::prelude::RawValParser;
-pub use aopt::prelude::ReturnVal;
-pub use aopt::prelude::ServicesValExt;
-pub use aopt::prelude::Set;
-pub use aopt::prelude::SetCfg;
-pub use aopt::prelude::SetChecker;
-pub use aopt::prelude::SetExt;
-pub use aopt::prelude::SetValueFindExt;
-pub use aopt::prelude::Store;
-pub use aopt::prelude::Style;
-pub use aopt::prelude::ValInitializer;
-pub use aopt::prelude::ValStorer;
-pub use aopt::prelude::ValValidator;
-pub use aopt::prelude::VecStore;
-pub use aopt::raise_error;
-pub use aopt::raise_failure;
-pub use aopt::value::raw2str;
-pub use aopt::value::Placeholder;
-pub use aopt::Error as CoteError;
-pub use aopt::GetoptRes;
-pub use aopt::RawVal;
-pub use aopt::Uid;
-pub use cote_derive::Cote;
-pub use cote_derive::CoteOpt;
-pub use cote_derive::CoteVal;
-
-pub use alter::Alter;
-pub use alter::Hint;
-pub use help::display_set_help;
-pub use help::HelpContext;
-pub use meta::OptionMeta;
-pub use parser::Parser;
-pub use rctx::FailedInfo;
-pub use rctx::RunningCtx;
-pub use value::Fetch;
+pub type Result<T> = std::result::Result<T, Error>;
 
 pub mod prelude {
-
-    pub use aopt;
     pub use aopt::ext::ctx;
     pub use aopt::opt::Any;
     pub use aopt::opt::Cmd;
@@ -117,6 +44,10 @@ pub mod prelude {
     pub use aopt::prelude::Args;
     pub use aopt::prelude::Commit;
     pub use aopt::prelude::ConfigBuild;
+    pub use aopt::prelude::ConfigBuildHelpWith;
+    pub use aopt::prelude::ConfigBuildInferHelp;
+    pub use aopt::prelude::ConfigBuilder;
+    pub use aopt::prelude::ConfigBuilderWith;
     pub use aopt::prelude::ConfigValue;
     pub use aopt::prelude::Ctor;
     pub use aopt::prelude::Ctx;
@@ -158,12 +89,9 @@ pub mod prelude {
     pub use aopt::raise_failure;
     pub use aopt::value::raw2str;
     pub use aopt::value::Placeholder;
-    pub use aopt::Error as CoteError;
     pub use aopt::GetoptRes;
     pub use aopt::RawVal;
     pub use aopt::Uid;
-    pub use aopt_help;
-    pub use cote_derive;
     pub use cote_derive::Cote;
     pub use cote_derive::CoteOpt;
     pub use cote_derive::CoteVal;
@@ -176,6 +104,8 @@ pub mod prelude {
     pub use crate::parser::Parser;
     pub use crate::rctx::FailedInfo;
     pub use crate::rctx::RunningCtx;
+    pub use crate::value::fetch_uid_impl;
+    pub use crate::value::fetch_vec_uid_impl;
     pub use crate::value::Fetch;
     pub use crate::CoteRes;
     pub use crate::DelayPolicy;
@@ -187,25 +117,35 @@ pub mod prelude {
     pub use crate::Status;
 }
 
+use crate::prelude::Parser;
+use aopt::prelude::ConfigValue;
+use aopt::prelude::OptParser;
+use aopt::prelude::OptStyleManager;
+use aopt::prelude::OptValidator;
+use aopt::prelude::ServicesValExt;
+use aopt::prelude::SetCfg;
+use aopt::prelude::SetValueFindExt;
+use std::marker::PhantomData;
+
 pub trait IntoParserDerive<'inv, Set, Ser>
 where
     Ser: ServicesValExt + Default,
     SetCfg<Set>: ConfigValue + Default,
-    Set: crate::Set + OptParser + OptValidator + Default,
+    Set: crate::prelude::Set + OptParser + OptValidator + Default,
 {
-    fn into_parser() -> Result<Parser<'inv, Set, Ser>, aopt::Error> {
+    fn into_parser() -> Result<Parser<'inv, Set, Ser>> {
         let mut parser = Parser::default();
         Self::update(&mut parser)?;
         Ok(parser)
     }
-    fn update(parser: &mut Parser<'inv, Set, Ser>) -> Result<(), aopt::Error>;
+    fn update(parser: &mut Parser<'inv, Set, Ser>) -> Result<()>;
 }
 
 pub trait ExtractFromSetDerive<'set, Set: SetValueFindExt>
 where
     SetCfg<Set>: ConfigValue + Default,
 {
-    fn try_extract(set: &'set mut Set) -> Result<Self, aopt::Error>
+    fn try_extract(set: &'set mut Set) -> Result<Self>
     where
         Self: Sized;
 }
@@ -213,7 +153,7 @@ where
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct CoteRes<P, Policy>
 where
-    Policy: crate::Policy,
+    Policy: crate::prelude::Policy,
 {
     pub policy: P,
 
@@ -275,7 +215,7 @@ impl<'inv, Set, Ser> Policy for NullPolicy<'inv, Set, Ser> {
 
     type Ser = Ser;
 
-    type Error = aopt::Error;
+    type Error = crate::Error;
 
     fn parse(
         &mut self,
@@ -283,7 +223,7 @@ impl<'inv, Set, Ser> Policy for NullPolicy<'inv, Set, Ser> {
         _: &mut Self::Inv<'_>,
         _: &mut Self::Ser,
         _: ARef<Args>,
-    ) -> Result<Self::Ret, Self::Error> {
+    ) -> Result<Self::Ret> {
         Ok(ReturnVal::default())
     }
 }
@@ -353,7 +293,7 @@ mod test {
     #[test]
     fn test_example_simple() {
         use crate as cote;
-        use crate::*;
+        use crate::prelude::*;
         // macro generate the code depend on crate name
         use aopt::opt::Pos;
 
@@ -384,7 +324,7 @@ mod test {
 
     #[test]
     fn test_multiple_pos_arguments() {
-        use crate::*;
+        use crate::prelude::*;
         // macro generate the code depend on crate name
         use crate as cote;
         use aopt::opt::Pos;

@@ -24,13 +24,13 @@ impl Kind for FetchKind {
             "map" => Ok((Self::Map, true)),
             "scalar" => Ok((Self::Scalar, true)),
             "vector" => Ok((Self::Vector, true)),
-            _ => error(
+            _ => Err(error(
                 input.span(),
                 format!(
                     "unknown configuration name `{}` in attribute fetch",
                     option.as_str()
                 ),
-            ),
+            )),
         }
     }
 }

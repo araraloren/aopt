@@ -54,13 +54,13 @@ impl Kind for InferKind {
             "ty" => Ok((Self::Type, true)),
             "tweak" => Ok((Self::Tweak, true)),
             "fill" => Ok((Self::Fill, true)),
-            _ => error(
+            _ => Err(error(
                 input.span(),
                 format!(
                     "unknown configuration name `{}` in attribute infer",
                     option.as_str()
                 ),
-            ),
+            )),
         }
     }
 }

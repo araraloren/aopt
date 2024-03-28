@@ -3,7 +3,7 @@ mod gen;
 mod value;
 
 use gen::AlterGenerator;
-use gen::Analyzer;
+use gen::CoteGenerator;
 use gen::FetchGenerator;
 use gen::InferGenerator;
 use gen::ValueGenerator;
@@ -13,26 +13,23 @@ use syn::spanned::Spanned;
 use syn::DataEnum;
 use syn::DeriveInput;
 
-fn error<T>(spanned: impl Spanned, msg: String) -> syn::Result<T> {
-    Err(syn::Error::new(spanned.span(), msg))
+fn error(spanned: impl Spanned, msg: impl Into<String>) -> syn::Error {
+    syn::Error::new(spanned.span(), msg.into())
 }
 
 #[proc_macro_derive(Cote, attributes(cote, arg, pos, cmd, sub))]
 pub fn parser(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input: DeriveInput = parse_macro_input!(input);
-    let analyzer = Analyzer::new(&input).unwrap_or_else(|e| {
-        error(
-            input.span(),
-            format!("Failed to analyzer `cote` configuration on struct: {:?}", e),
-        )
-        .unwrap()
-    });
-    let impl_code = analyzer
-        .gen_all()
-        .unwrap_or_else(syn::Error::into_compile_error);
+    let generator = |input: DeriveInput| -> syn::Result<proc_macro2::TokenStream> {
+        let mut cg = CoteGenerator::new(&input)?;
+
+        cg.gen_impl_for_struct()
+    };
+
+    let ts = generator(input).unwrap_or_else(syn::Error::into_compile_error);
 
     quote! {
-        #impl_code
+        #ts
     }
     .into()
 }

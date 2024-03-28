@@ -52,10 +52,10 @@ impl<'a> ValueGenerator<'a> {
         let ignore_case = self.configs.has_cfg(ValueKind::IgCase);
         let impl_code = if let (Some(forward_cfg), Some(map_cfg)) = (forward_cfg, map_cfg) {
             if map_raw_cfg.is_some() || map_str_cfg.is_some() || ignore_case {
-                return error(
+                return Err(error(
                     ident.span(),
-                    "`CoteVal` error: `forward` can only using pair with `map`".to_owned(),
-                );
+                    "`CoteVal` error: `forward` can only using pair with `map`",
+                ));
             }
             let forward = forward_cfg.value();
             let map = map_cfg.value();
@@ -65,20 +65,20 @@ impl<'a> ValueGenerator<'a> {
             }
         } else {
             if map_raw_cfg.is_some() && map_str_cfg.is_some() {
-                return error(
+                return Err(error(
                     ident.span(),
-                    "`CoteVal` error: `mapraw` or `mapstr` can not using on same type".to_owned(),
-                );
+                    "`CoteVal` error: `mapraw` or `mapstr` can not using on same type",
+                ));
             } else if map_cfg.is_some() {
-                return error(
+                return Err(error(
                     ident.span(),
-                    "`CoteVal` error: `mapraw` or `mapstr` can not using with `map`".to_owned(),
-                );
+                    "`CoteVal` error: `mapraw` or `mapstr` can not using with `map`",
+                ));
             } else if map_raw_cfg.is_some() && ignore_case {
-                return error(
+                return Err(error(
                     ident.span(),
-                    "`CoteVal` error: `mapraw` can not using with `igcase`".to_owned(),
-                );
+                    "`CoteVal` error: `mapraw` can not using with `igcase`",
+                ));
             }
 
             let str_convert = if ignore_case {
@@ -106,10 +106,10 @@ impl<'a> ValueGenerator<'a> {
                 }
             } else {
                 if self.variants.is_empty() {
-                    return  error(
+                    return  Err(error(
                         ident.span(),
-                        "`CoteVal` error: only can generate parsing code for enum type currently, conside using `forward` and `map` on struct".to_owned()
-                    );
+                        "`CoteVal` error: only can generate parsing code for enum type currently, conside using `forward` and `map` on struct"
+                    ));
                 }
                 let mut mat_branchs = vec![];
                 let enum_type = ident.to_string();

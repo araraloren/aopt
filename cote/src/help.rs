@@ -16,10 +16,6 @@ pub struct HelpContext {
     width: usize,
 
     usagew: usize,
-
-    subnames: Vec<String>,
-
-    submode: bool,
 }
 
 impl HelpContext {
@@ -48,16 +44,6 @@ impl HelpContext {
         self
     }
 
-    pub fn with_subnames(mut self, subnames: Vec<String>) -> Self {
-        self.subnames = subnames;
-        self
-    }
-
-    pub fn with_submode(mut self, submode: bool) -> Self {
-        self.submode = submode;
-        self
-    }
-
     pub fn set_name(&mut self, name: impl Into<String>) -> &mut Self {
         self.name = name.into();
         self
@@ -83,16 +69,6 @@ impl HelpContext {
         self
     }
 
-    pub fn set_subnames(&mut self, subnames: Vec<String>) -> &mut Self {
-        self.subnames = subnames;
-        self
-    }
-
-    pub fn set_submode(&mut self, submode: bool) -> &mut Self {
-        self.submode = submode;
-        self
-    }
-
     pub fn name(&self) -> &String {
         &self.name
     }
@@ -111,31 +87,6 @@ impl HelpContext {
 
     pub fn usagew(&self) -> usize {
         self.usagew
-    }
-
-    pub fn subnames(&self) -> &[String] {
-        &self.subnames
-    }
-
-    pub fn submode(&self) -> bool {
-        self.submode
-    }
-
-    pub fn generate_name(&self) -> String {
-        if self.submode {
-            std::iter::once(self.name())
-                .chain(self.subnames().iter())
-                .map(|v| v.as_str())
-                .collect::<Vec<&str>>()
-                .join(" ")
-        } else {
-            self.subnames()
-                .iter()
-                .chain(std::iter::once(self.name()))
-                .map(|v| v.as_str())
-                .collect::<Vec<&str>>()
-                .join(" ")
-        }
     }
 }
 
@@ -218,8 +169,15 @@ macro_rules! display_help {
             a
         }
 
-        $crate::display_set_help(__check_set($set), $name, $head, $foot, $width, $usage_width)
-            .map_err(|e| aopt::Error::raise_error(format!("Can not show help message: {:?}", e)))
+        $crate::prelude::display_set_help(
+            __check_set($set),
+            $name,
+            $head,
+            $foot,
+            $width,
+            $usage_width,
+        )
+        .map_err(|e| aopt::Error::raise_error(format!("Can not show help message: {:?}", e)))
     }};
     ($set:ident, $name:expr, $author:expr, $version:expr, $description:expr, $width:expr, $usage_width:expr) => {{
         let foot = format!("Create by {} v{}", $author, $version,);
@@ -232,8 +190,4 @@ macro_rules! display_help {
         $crate::help::display_set_help(__check_set($set), $name, head, foot, $width, $usage_width)
             .map_err(|e| aopt::Error::raise_error(format!("Can not show help message: {:?}", e)))
     }};
-}
-
-pub trait HelpContextGen {
-    fn generate(&self) -> HelpContext;
 }

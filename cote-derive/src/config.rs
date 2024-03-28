@@ -1,5 +1,6 @@
 use std::ops::Deref;
 
+use quote::ToTokens;
 use syn::parse::Parse;
 use syn::parse::ParseStream;
 use syn::punctuated::Punctuated;
@@ -65,6 +66,12 @@ impl<T: Kind> Parse for Config<T> {
     }
 }
 
+impl<T> ToTokens for Config<T> {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        ToTokens::to_tokens(&self.value, tokens)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Configs<T>(Vec<Config<T>>);
 
@@ -79,6 +86,10 @@ where
     pub fn find_cfg(&self, kind: T) -> Option<&Config<T>> {
         self.0.iter().find(|v| v.kind() == &kind)
     }
+
+    pub fn find_value(&self, kind: T) -> Option<&Value> {
+        self.0.iter().find(|v| v.kind() == &kind).map(|v| v.value())
+    }
 }
 
 impl<T: Kind> Configs<T> {
@@ -88,11 +99,13 @@ impl<T: Kind> Configs<T> {
             attr.parse_args_with(Punctuated::<Config<T>, Token![,]>::parse_terminated)
                 .map(|res| res.into_iter())
                 .unwrap_or_else(|e| {
-                    error(
-                        attr.span(),
-                        format!("can not parsing `{}` attributes: {:?}", name, e),
+                    panic!(
+                        "{:?}",
+                        error(
+                            attr.span(),
+                            format!("can not parsing `{}` attributes: {:?}", name, e),
+                        )
                     )
-                    .unwrap()
                 })
         });
 
@@ -108,13 +121,13 @@ impl<T> Deref for Configs<T> {
     }
 }
 
-pub fn find_cfg_name<'a>(names: &[&'a str], attrs: &[Attribute]) -> Option<&'a str> {
-    for attr in attrs {
-        for name in names {
-            if attr.path.is_ident(*name) {
-                return Some(*name);
-            }
-        }
-    }
-    None
-}
+// pub fn find_cfg_name<'a>(names: &[&'a str], attrs: &[Attribute]) -> Option<&'a str> {
+//     for attr in attrs {
+//         for name in names {
+//             if attr.path.is_ident(*name) {
+//                 return Some(*name);
+//             }
+//         }
+//     }
+//     None
+// }

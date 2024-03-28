@@ -1,3 +1,4 @@
+use crate::prelude::HelpContext;
 use crate::ReturnVal;
 use std::ops::Deref;
 use std::ops::DerefMut;
@@ -50,6 +51,8 @@ pub struct RunningCtx {
     exit_sub: bool,
 
     failed_info: Vec<FailedInfo>,
+
+    help_context: Option<HelpContext>,
 }
 
 impl RunningCtx {
@@ -78,6 +81,11 @@ impl RunningCtx {
         self
     }
 
+    pub fn with_help_context(mut self, help_context: HelpContext) -> Self {
+        self.help_context = Some(help_context);
+        self
+    }
+
     pub fn set_names(&mut self, names: Vec<String>) -> &mut Self {
         self.names = names;
         self
@@ -100,6 +108,11 @@ impl RunningCtx {
 
     pub fn set_exit_sub(&mut self, exit_sub: bool) -> &mut Self {
         self.exit_sub = exit_sub;
+        self
+    }
+
+    pub fn set_help_context(&mut self, help_context: HelpContext) -> &mut Self {
+        self.help_context = Some(help_context);
         self
     }
 
@@ -132,8 +145,16 @@ impl RunningCtx {
         &self.failed_info
     }
 
+    pub fn help_context(&self) -> Option<&HelpContext> {
+        self.help_context.as_ref()
+    }
+
     pub fn take_failed_info(&mut self) -> Vec<FailedInfo> {
         std::mem::take(&mut self.failed_info)
+    }
+
+    pub fn take_help_context(&mut self) -> Option<HelpContext> {
+        self.help_context.take()
     }
 
     pub fn clear_failed_info(&mut self) {
@@ -143,6 +164,10 @@ impl RunningCtx {
     pub fn add_name(&mut self, name: String) -> &mut Self {
         self.names.push(name);
         self
+    }
+
+    pub fn pop_name(&mut self) -> Option<String> {
+        self.names.pop()
     }
 
     pub fn sync_ctx(&mut self, ctx: &mut Self, failed_info: Option<FailedInfo>) -> &mut Self {

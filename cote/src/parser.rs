@@ -26,9 +26,9 @@ use aopt::Error;
 use aopt::RawVal;
 use aopt::Uid;
 
+use crate::prelude::HelpContext;
 use crate::prelude::RunningCtx;
 use crate::ExtractFromSetDerive;
-use crate::HelpContext;
 
 #[derive(Debug)]
 pub struct Parser<'a, Set, Ser> {
@@ -266,7 +266,7 @@ where
 
 impl<'a, Set, Ser> Parser<'a, Set, Ser>
 where
-    Set: crate::Set,
+    Set: crate::prelude::Set,
     Ser: ServicesValExt,
 {
     pub fn app_data<T: ErasedTy>(&self) -> Result<&T, Error> {
@@ -728,35 +728,52 @@ where
         )
     }
 
-    pub fn display_sub_help(&self, ctx: Vec<HelpContext>) -> Result<(), Error> {
-        self.display_sub_help_impl(ctx, 0)
+    pub fn display_help_ctx(&self, ctx: HelpContext) -> Result<(), Error> {
+        let set = self.optset();
+
+        crate::display_help!(
+            set,
+            ctx.name(),
+            ctx.head(),
+            ctx.foot(),
+            ctx.width(),
+            ctx.usagew()
+        )
     }
 
-    fn display_sub_help_impl(&self, hcs: Vec<HelpContext>, i: usize) -> Result<(), Error> {
-        if !hcs.is_empty() {
-            let max = hcs.len() - 1;
+    pub fn display_sub_help(&self, names: Vec<&str>, ctx: &HelpContext) -> Result<(), Error> {
+        self.display_sub_help_impl(names, ctx, 0)
+    }
 
-            if let Some(hc) = hcs.get(i) {
-                if i == max && (i > 0 || hc.name() == self.name()) {
-                    let names: Vec<&str> = hcs.iter().map(|v| v.name().as_str()).collect();
+    fn display_sub_help_impl(
+        &self,
+        names: Vec<&str>,
+        ctx: &HelpContext,
+        i: usize,
+    ) -> Result<(), Error> {
+        if !names.is_empty() {
+            let max = names.len() - 1;
+
+            if let Some(name) = names.get(i) {
+                if i == max && (i > 0 || name == self.name()) {
                     let name = names.join(" ");
                     let optset = self.optset();
 
                     return crate::display_help!(
                         optset,
                         &name,
-                        hc.head(),
-                        hc.foot(),
-                        hc.width(),
-                        hc.usagew()
+                        ctx.head(),
+                        ctx.foot(),
+                        ctx.width(),
+                        ctx.usagew()
                     );
-                } else if i < max && hc.name() == self.name() {
-                    if let Some(hc) = hcs.get(i + 1) {
+                } else if i < max && name == self.name() {
+                    if let Some(name) = names.get(i + 1) {
                         let sub_parsers = self.parsers();
 
                         for sub_parser in sub_parsers {
-                            if sub_parser.name() == hc.name() {
-                                return sub_parser.display_sub_help_impl(hcs, i + 1);
+                            if sub_parser.name() == name {
+                                return sub_parser.display_sub_help_impl(names, ctx, i + 1);
                             }
                         }
                     }
@@ -764,22 +781,8 @@ where
             }
         }
         Err(raise_error!(
-            "Can not display help message for ctxs: {hcs:?}"
+            "Can not display help message for names `{names:?}` with context: {ctx:?}"
         ))
-    }
-
-    pub fn display_help_ctx(&self, ctx: HelpContext) -> Result<(), Error> {
-        let name = ctx.generate_name();
-        let set = self.optset();
-
-        crate::display_help!(
-            set,
-            &name,
-            ctx.head(),
-            ctx.foot(),
-            ctx.width(),
-            ctx.usagew()
-        )
     }
 }
 
@@ -814,12 +817,11 @@ where
 
         if let Ok(help_option) = set.find_val::<bool>(option) {
             if *help_option {
-                let name = ctx.generate_name();
                 let set = self.optset();
 
                 crate::help::display_set_help(
                     set,
-                    name,
+                    ctx.name(),
                     ctx.head(),
                     ctx.foot(),
                     ctx.width(),

@@ -32,10 +32,10 @@ impl Value {
                 return Ok((variable, Self::Call(args)));
             }
         }
-        error(
+        Err(error(
             span,
             "You must specify the context variable name for raw method call".to_owned(),
-        )
+        ))
     }
 }
 
@@ -72,13 +72,13 @@ impl Parse for Value {
             } else {
                 match input.parse::<Expr>() {
                     Ok(expr) => Ok(Value::Expr(expr)),
-                    Err(e) => error(
+                    Err(e) => Err(error(
                         assign_token,
                         format!(
                             "excepted `string literal` or `expression` after `=`: {:?}",
                             e
                         ),
-                    ),
+                    )),
                 }
             }
         } else if input.peek(Paren) {
@@ -91,7 +91,10 @@ impl Parse for Value {
 
             Ok(Self::Call(Vec::from_iter(method_args)))
         } else {
-            error(input.span(), "invalid configuration value".to_owned())
+            Err(error(
+                input.span(),
+                "invalid configuration value".to_owned(),
+            ))
         }
     }
 }
