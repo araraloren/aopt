@@ -201,7 +201,7 @@ impl<'a> ArgGenerator<'a> {
                     value = Some(cfg_value.clone());
                     codes.push(kind.simple(
                         &cfg_ident,
-                        quote!( <<InferedOptVal<#inner_ty>>::from(#cfg_value) ),
+                        quote!( <InferedOptVal<#inner_ty>>::from(#cfg_value) ),
                     )?);
                 }
                 ArgKind::Values => {

@@ -12,8 +12,6 @@ use crate::{
     value::Value,
 };
 
-use super::{arg::ArgGenerator, sub::SubGenerator};
-
 pub const CONFIG_SUB: &str = "sub";
 pub const CONFIG_ARG: &str = "arg";
 pub const CONFIG_CMD: &str = "cmd";
@@ -480,6 +478,8 @@ impl GenericsModifier {
 
     pub fn mod_for_ipd(&mut self, used: &[&Ident]) -> &mut Self {
         let orig_where = self.0.where_clause.as_ref().map(|v| &v.predicates);
+        let alter = Self::gen_alter_for_ty(used);
+        let fetch = Self::gen_fetch_for_ty(used, quote!('set), quote!(Set), true);
         let new_where: WhereClause = parse_quote! {
             where
             Set: cote::prelude::Set + cote::prelude::OptParser + cote::prelude::OptValidator + cote::prelude::SetValueFindExt + Default + 'inv,
@@ -488,7 +488,8 @@ impl GenericsModifier {
             <Set as cote::prelude::OptParser>::Output: cote::prelude::Information,
             #(#used: cote::prelude::Infer + cote::prelude::ErasedTy,)*
             #(<#used as cote::prelude::Infer>::Val: cote::prelude::RawValParser,)*
-            #(#used: for<'set> cote::prelude::Fetch<'set, Set>,)*
+            #alter
+            #fetch
             #orig_where
         };
 
@@ -509,11 +510,12 @@ impl GenericsModifier {
 
     pub fn mod_for_esd(&mut self, used: &[&Ident]) -> &mut Self {
         let orig_where = self.0.where_clause.as_ref().map(|v| &v.predicates);
+        let fetch = Self::gen_fetch_for_ty(used, quote!('t), quote!(Set), true);
         let new_where: WhereClause = parse_quote! {
             where
             Set: cote::prelude::SetValueFindExt,
             cote::prelude::SetCfg<Set>: cote::prelude::ConfigValue + Default,
-            #(#used: cote::prelude::Fetch<'set, Set>,)*
+            #fetch
             #orig_where
         };
 
@@ -552,25 +554,53 @@ impl GenericsModifier {
         self.0.split_for_impl()
     }
 
-    pub fn find_generics_t<'a>(
-        _self: &'a Generics,
-        fields: &[FieldGenerator],
-    ) -> syn::Result<Vec<&'a Ident>> {
-        let mut ret = vec![];
+    pub fn mod_for_fetch(&mut self, used: &[&Ident]) -> &mut Self {
+        let orig_where = self.0.where_clause.as_ref().map(|v| &v.predicates);
+        let fetch = Self::gen_fetch_for_ty(used, quote!('set), quote!(Set), false);
+        let new_where: WhereClause = parse_quote! {
+            where
+                Set: cote::prelude::SetValueFindExt,
+                cote::prelude::SetCfg<Set>: cote::prelude::ConfigValue + Default,
+                Self: cote::prelude::ErasedTy + Sized,
+                #fetch
+                #orig_where
+        };
 
-        for param in _self.params.iter() {
-            if let syn::GenericParam::Type(ty_param) = param {
-                let ident = &ty_param.ident;
+        self.0.where_clause = Some(new_where);
+        self.insert_lifetime("'set");
+        self.append_type("Set");
+        self
+    }
 
-                if fields.iter().any(|v| {
-                    Utils::check_in_ty(v.orig_ty(), &ident.to_string()).unwrap_or_default()
-                }) {
-                    ret.push(ident);
-                }
+    pub fn split_for_impl_fetch(
+        &mut self,
+        used: &[&Ident],
+    ) -> (ImplGenerics, TypeGenerics, Option<&WhereClause>) {
+        self.mod_for_fetch(used);
+        self.0.split_for_impl()
+    }
+
+    pub fn gen_alter_for_ty(used: &[&Ident]) -> TokenStream {
+        quote! {
+            #(#used: cote::prelude::Alter,)*
+        }
+    }
+
+    pub fn gen_fetch_for_ty(
+        used: &[&Ident],
+        lifetime: TokenStream,
+        set: TokenStream,
+        for_: bool,
+    ) -> TokenStream {
+        if for_ {
+            quote! {
+                #(#used: for <#lifetime> cote::prelude::Fetch<#lifetime, #set>,)*
+            }
+        } else {
+            quote! {
+                #(#used: cote::prelude::Fetch<#lifetime, #set>,)*
             }
         }
-
-        Ok(ret)
     }
 }
 
@@ -659,56 +689,5 @@ impl<'a> WrapperTy<'a> {
             }
         }
         (false, ty)
-    }
-}
-
-#[derive(Debug)]
-pub enum FieldGenerator<'a> {
-    Sub(SubGenerator<'a>),
-    Arg(ArgGenerator<'a>),
-}
-
-impl<'a> FieldGenerator<'a> {
-    pub fn is_sub(&self) -> bool {
-        matches!(self, Self::Sub(_))
-    }
-
-    pub fn is_arg(&self) -> bool {
-        matches!(self, Self::Arg(_))
-    }
-
-    pub fn as_arg(&self) -> &ArgGenerator<'a> {
-        match self {
-            FieldGenerator::Sub(_) => panic!("Not a ArgGenerator"),
-            FieldGenerator::Arg(ag) => ag,
-        }
-    }
-
-    // pub fn as_sub(&self) -> &SubGenerator<'a> {
-    //     match self {
-    //         FieldGenerator::Sub(sg) => sg,
-    //         FieldGenerator::Arg(_) => panic!("Not a SubGenerator"),
-    //     }
-    // }
-
-    pub fn orig_ty(&self) -> &Type {
-        match self {
-            FieldGenerator::Sub(sg) => sg.ty(),
-            FieldGenerator::Arg(ag) => ag.ty(),
-        }
-    }
-
-    pub fn gen_option(&mut self, help_uid: Option<u64>) -> syn::Result<OptUpdate> {
-        match self {
-            FieldGenerator::Sub(sg) => sg.gen_opt_update(help_uid),
-            FieldGenerator::Arg(ag) => ag.gen_opt_update(),
-        }
-    }
-
-    pub fn gen_try_extract(&mut self) -> syn::Result<(bool, TokenStream)> {
-        match self {
-            FieldGenerator::Sub(sg) => sg.gen_try_extract(),
-            FieldGenerator::Arg(ag) => ag.gen_try_extract(),
-        }
     }
 }

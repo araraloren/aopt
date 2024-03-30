@@ -10,6 +10,7 @@ use syn::DeriveInput;
 use syn::Field;
 use syn::Fields;
 use syn::GenericParam;
+use syn::Type;
 use syn::{Data, Generics};
 
 use crate::config::Configs;
@@ -20,7 +21,6 @@ use crate::gen::GenericsModifier;
 use super::arg::ArgGenerator;
 use super::sub::SubGenerator;
 use super::AttrKind;
-use super::FieldGenerator;
 use super::OptUpdate;
 use super::Utils;
 use super::CONFIG_ARG;
@@ -179,7 +179,7 @@ impl<'a> CoteGenerator<'a> {
     pub fn gen_impl_for_struct(&mut self) -> syn::Result<TokenStream> {
         let generics = self.generics.clone();
         let orig_ident = self.orig_ident;
-        let used_generics = GenericsModifier::find_generics_t(&generics, &self.field_generators)?;
+        let used_generics = Self::find_generics_t(&generics, &self.field_generators)?;
         let (_, type_generics, _) = generics.split_for_impl();
         let mut ipd_generics = GenericsModifier::new(generics.clone());
         let (impl_ipd, _, where_ipd) = ipd_generics.split_for_impl_ipd(&used_generics);
@@ -414,6 +414,19 @@ impl<'a> CoteGenerator<'a> {
         let parser_name = &self.name;
         let abort = self.configs.find_cfg(CoteKind::AbortHelp);
         let help = self.configs.find_cfg(CoteKind::Help);
+        let alter = GenericsModifier::gen_alter_for_ty(used);
+        let fetch_generics =
+            GenericsModifier::gen_fetch_for_ty(used, quote!('set), quote!(Set), true);
+        let fetch_alter = {
+            let fetch = GenericsModifier::gen_fetch_for_ty(
+                used,
+                quote!('set),
+                quote!(cote::prelude::ASet),
+                true,
+            );
+
+            quote! { #alter #fetch }
+        };
         let sync_rctx_from_ret =
             Utils::gen_sync_ret(abort.is_some(), help.is_some(), self.help_uid())?;
         let where_clause = quote! {
@@ -428,7 +441,8 @@ impl<'a> CoteGenerator<'a> {
                 Ser = Ser,
                 Inv<'inv> = cote::prelude::Invoker<'inv, cote::prelude::Parser<'inv, Set, Ser>, Ser>
             > + cote::prelude::APolicyExt<P> + cote::prelude::PolicySettings + Default,
-            #(#used: for<'set> cote::prelude::Fetch<'set, Set>,)*
+            #alter
+            #fetch_generics
         };
 
         Ok(quote! {
@@ -447,7 +461,7 @@ impl<'a> CoteGenerator<'a> {
             }
 
             pub fn into_parser<'inv>() -> cote::Result<cote::prelude::Parser<'inv, cote::prelude::ASet, cote::prelude::ASer>>
-            where #(#used: for<'set> cote::prelude::Fetch<'set, cote::prelude::ASet>,)* {
+            where #fetch_alter {
                 Self::into_parser_with::<cote::prelude::ASet, cote::prelude::ASer>()
             }
 
@@ -457,7 +471,8 @@ impl<'a> CoteGenerator<'a> {
                 cote::prelude::SetCfg<Set>: cote::prelude::ConfigValue + Default,
                 <Set as cote::prelude::OptParser>::Output: cote::prelude::Information,
                 Set: cote::prelude::Set + cote::prelude::OptParser + cote::prelude::OptValidator + cote::prelude::SetValueFindExt + Default + 'inv,
-                #(#used: for<'set> cote::prelude::Fetch<'set, Set>,)* {
+                #alter
+                #fetch_generics {
                 let mut parser = <Self as cote::IntoParserDerive<'inv, Set, Ser>>::into_parser()?;
 
                 #sub_parsers
@@ -504,12 +519,18 @@ impl<'a> CoteGenerator<'a> {
                         rctx.set_help_context(Self::new_help_context());
                     }
                 }
+
+                // insert back
+                parser.set_rctx(rctx);
+                let mut rctx = parser.rctx()?;
+
                 if rctx.display_help() {
-                    let help_context = rctx.take_help_context().unwrap();
                     let names = rctx.names().iter().map(|v|v.as_str()).collect::<Vec<&str>>();
+                    let help_context = rctx.help_context().unwrap();
                     let exit = rctx.exit();
 
                     parser.display_sub_help(names, &help_context)?;
+
                     // process exit, or force not exit
                     if exit {
                         std::process::exit(0);
@@ -520,7 +541,7 @@ impl<'a> CoteGenerator<'a> {
             }
 
             pub fn parse_args<'inv>(args: cote::prelude::Args) -> cote::Result<cote::prelude::CoteRes<#policy_def_ty, #policy_def_ty>>
-                where #(#used: for<'set> cote::prelude::Fetch<'set, cote::prelude::ASet>,)* {
+                where #fetch_alter {
                 let mut policy = Self::into_policy();
                 let cote::prelude::CoteRes { ret, parser, .. } = Self::parse_args_with(args, &mut policy)?;
 
@@ -528,7 +549,7 @@ impl<'a> CoteGenerator<'a> {
             }
 
             pub fn parse(args: cote::prelude::Args) -> cote::Result<Self>
-            where #(#used: for<'set> cote::prelude::Fetch<'set, cote::prelude::ASet>,)* {
+            where #fetch_alter {
                 let cote::prelude::CoteRes { mut ret, mut parser, .. } = Self::parse_args(args)?;
                 let okay = ret.status();
 
@@ -580,12 +601,12 @@ impl<'a> CoteGenerator<'a> {
             }
 
             pub fn parse_env_args<'inv>() -> cote::Result<cote::prelude::CoteRes<#policy_def_ty, #policy_def_ty>>
-                where #(#used: for<'set> cote::prelude::Fetch<'set, cote::prelude::ASet>,)* {
+                where #fetch_alter {
                 Self::parse_args(cote::prelude::Args::from_env())
             }
 
             pub fn parse_env() -> cote::Result<Self>
-            where #(#used: for<'set> cote::prelude::Fetch<'set, cote::prelude::ASet>,)* {
+            where #fetch_alter {
                 Self::parse(cote::prelude::Args::from_env())
             }
         })
@@ -706,5 +727,77 @@ impl<'a> CoteGenerator<'a> {
             }
         }
         Ok(ret)
+    }
+
+    pub fn find_generics_t<'b>(
+        _self: &'b Generics,
+        fields: &[FieldGenerator],
+    ) -> syn::Result<Vec<&'b Ident>> {
+        let mut ret = vec![];
+
+        for param in _self.params.iter() {
+            if let syn::GenericParam::Type(ty_param) = param {
+                let ident = &ty_param.ident;
+
+                if fields.iter().any(|v| {
+                    Utils::check_in_ty(v.orig_ty(), &ident.to_string()).unwrap_or_default()
+                }) {
+                    ret.push(ident);
+                }
+            }
+        }
+
+        Ok(ret)
+    }
+}
+
+#[derive(Debug)]
+pub enum FieldGenerator<'a> {
+    Sub(SubGenerator<'a>),
+    Arg(ArgGenerator<'a>),
+}
+
+impl<'a> FieldGenerator<'a> {
+    pub fn is_sub(&self) -> bool {
+        matches!(self, Self::Sub(_))
+    }
+
+    pub fn is_arg(&self) -> bool {
+        matches!(self, Self::Arg(_))
+    }
+
+    pub fn as_arg(&self) -> &ArgGenerator<'a> {
+        match self {
+            FieldGenerator::Sub(_) => panic!("Not a ArgGenerator"),
+            FieldGenerator::Arg(ag) => ag,
+        }
+    }
+
+    // pub fn as_sub(&self) -> &SubGenerator<'a> {
+    //     match self {
+    //         FieldGenerator::Sub(sg) => sg,
+    //         FieldGenerator::Arg(_) => panic!("Not a SubGenerator"),
+    //     }
+    // }
+
+    pub fn orig_ty(&self) -> &Type {
+        match self {
+            FieldGenerator::Sub(sg) => sg.ty(),
+            FieldGenerator::Arg(ag) => ag.ty(),
+        }
+    }
+
+    pub fn gen_option(&mut self, help_uid: Option<u64>) -> syn::Result<OptUpdate> {
+        match self {
+            FieldGenerator::Sub(sg) => sg.gen_opt_update(help_uid),
+            FieldGenerator::Arg(ag) => ag.gen_opt_update(),
+        }
+    }
+
+    pub fn gen_try_extract(&mut self) -> syn::Result<(bool, TokenStream)> {
+        match self {
+            FieldGenerator::Sub(sg) => sg.gen_try_extract(),
+            FieldGenerator::Arg(ag) => ag.gen_try_extract(),
+        }
     }
 }

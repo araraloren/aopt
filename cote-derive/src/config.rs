@@ -87,8 +87,20 @@ where
         self.0.iter().find(|v| v.kind() == &kind)
     }
 
+    // pub fn find_cfgs(&self, kind: T) -> Vec<&Config<T>> {
+    //     self.0.iter().filter(|v| v.kind() == &kind).collect()
+    // }
+
     pub fn find_value(&self, kind: T) -> Option<&Value> {
         self.0.iter().find(|v| v.kind() == &kind).map(|v| v.value())
+    }
+
+    pub fn find_values(&self, kind: T) -> Vec<&Value> {
+        self.0
+            .iter()
+            .filter(|v| v.kind() == &kind)
+            .map(|v| v.value())
+            .collect()
     }
 }
 
