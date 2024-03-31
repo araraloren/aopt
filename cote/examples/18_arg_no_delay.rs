@@ -1,4 +1,4 @@
-use cote::*;
+use cote::prelude::*;
 use std::ops::Deref;
 
 #[derive(Debug, Cote, PartialEq, Eq)]

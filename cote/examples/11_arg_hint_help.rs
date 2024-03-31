@@ -1,5 +1,5 @@
 use aopt::prelude::AOpt;
-use cote::*;
+use cote::prelude::*;
 
 #[derive(Debug, Cote, PartialEq, Eq)]
 #[cote(help)]
