@@ -421,30 +421,34 @@ impl Utils {
 
     // variable name: `ret`, `rctx`, and `parser`
     pub fn gen_sync_ret(
-        abort: bool,
-        help: bool,
+        enable_abort: bool,
+        enable_normal: bool,
         help_uid: Option<u64>,
     ) -> syn::Result<TokenStream> {
-        let abort_help = abort.then(|| {
+        let abort_help = enable_abort.then(|| {
             Some(quote! {
-                if ret.is_err() ||
-                    !ret.as_ref().map(cote::prelude::Status::status).unwrap_or(true) {
+                if !ret_okay || !status_okay {
                     rctx.set_display_help(true);
                     rctx.set_exit(false);
                 }
             })
         });
-        let normal_help = help.then(|| {
+        let normal_help = enable_normal.then(|| {
             let uid_literal = Utils::id2uid_literal(help_uid.unwrap());
             Some(quote! {
-                if set.opt(#uid_literal)?.val::<bool>().ok() == Some(&true) {
-                    rctx.set_display_help(true);
-                    rctx.set_exit(true);
+                if (ret_okay && status_okay) || sub_parser {
+                    if set.opt(#uid_literal)?.val::<bool>().ok() == Some(&true) {
+                        rctx.set_display_help(true);
+                        rctx.set_exit(true);
+                    }
                 }
             })
         });
 
         Ok(quote! {
+            let ret_okay = ret.is_ok();
+            let status_okay = ret.as_ref().map(cote::prelude::Status::status).unwrap_or(true);
+
             #abort_help
             #normal_help
         })

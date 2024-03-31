@@ -96,7 +96,7 @@ impl<'a> CoteGenerator<'a> {
             Data::Struct(DataStruct {
                 fields: Fields::Unit,
                 ..
-            }) => todo!(),
+            }) => {}
             _ => return Err(error(input, "Cote only support struct type")),
         }
 
@@ -452,7 +452,7 @@ impl<'a> CoteGenerator<'a> {
             }
 
             #[doc(hidden)]
-            pub fn sync_rctx<'a, Set, Ret>(rctx: &'a mut cote::prelude::RunningCtx, ret: &cote::Result<Ret>, set: &Set)
+            pub fn sync_rctx<'a, Set, Ret>(rctx: &'a mut cote::prelude::RunningCtx, ret: &cote::Result<Ret>, set: &Set, sub_parser: bool)
             -> cote::Result<&'a mut cote::prelude::RunningCtx>
                 where Set: cote::prelude::SetValueFindExt, Ret: cote::prelude::Status,
                     cote::prelude::SetCfg<Set>: cote::prelude::ConfigValue + Default {
@@ -514,7 +514,7 @@ impl<'a> CoteGenerator<'a> {
 
                 // process help
                 if !rctx.display_help() {
-                    Self::sync_rctx::<Set, _>(&mut rctx, &ret, parser.optset())?;
+                    Self::sync_rctx::<Set, _>(&mut rctx, &ret, parser.optset(), false)?;
                     if rctx.display_help() {
                         rctx.set_help_context(Self::new_help_context());
                     }

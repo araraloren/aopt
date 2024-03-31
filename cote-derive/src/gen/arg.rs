@@ -192,7 +192,7 @@ impl<'a> ArgGenerator<'a> {
 
                     codes.push(match caller.as_str() {
                         "config" | "cfg" => quote! {
-                            $cfg_ident.#method(#args);
+                            #cfg_ident.#method(#args);
                         },
                         _ => quote! { #method(#cfg_value); },
                     })
@@ -260,7 +260,7 @@ impl<'a> ArgGenerator<'a> {
         codes.push(if let Some(ty) = self.config.find_value(ArgKind::Type) {
             quote! {
                 <#ty as cote::prelude::Alter>::alter(cote::prelude::Hint::Null, &mut #cfg_ident);
-                <#ty as cote::prelude::Infer>::infer_fill_info(&mut cfg_ident)?;
+                <#ty as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
             }
         } else {
             self.kind().gen_infer(self.ident(), &cfg_ident, &wrap_ty)?

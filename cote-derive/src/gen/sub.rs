@@ -146,7 +146,7 @@ impl<'a> SubGenerator<'a> {
 
                     // check if we need display help for sub parser
                     if !rctx.display_help() {
-                        <#inner_ty>::sync_rctx(&mut rctx, &ret, parser.optset())?;
+                        <#inner_ty>::sync_rctx(&mut rctx, &ret, parser.optset(), true)?;
                         if rctx.display_help() {
                             rctx.set_help_context(<#inner_ty>::new_help_context());
                         }
