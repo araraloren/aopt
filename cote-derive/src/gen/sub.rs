@@ -132,10 +132,11 @@ impl<'a> SubGenerator<'a> {
                     let args = cote::prelude::ARef::new(cote::prelude::Args::from(args));
                     let parser = set.parser_mut(#sub_index)?;
                     let mut policy = <#policy_ty>::default();
+                    let name = parser.name().clone();
 
                     // setup running ctx
                     parser.set_rctx(ser.sve_take_val::<cote::prelude::RunningCtx>()?);
-                    parser.rctx_mut()?.add_name(cmd.to_owned());
+                    parser.rctx_mut()?.add_name(name);
 
                     // apply policy settings
                     <#inner_ty>::apply_policy_settings(&mut policy);

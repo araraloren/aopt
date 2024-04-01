@@ -647,9 +647,9 @@ impl<'a> CoteGenerator<'a> {
 
             ty_generator(&policy_name).unwrap_or_else(|| {
                 if default {
-                    quote! { <#policy_ty>::<'inv, cote::prelude::ASet, cote::prelude::ASer> }
+                    quote! { #policy_ty<'inv, cote::prelude::ASet, cote::prelude::ASer> }
                 } else {
-                    quote! { <#policy_ty>::<'inv, Set, Ser> }
+                    quote! { #policy_ty<'inv, Set, Ser> }
                 }
             })
         } else if self.has_sub_command() {

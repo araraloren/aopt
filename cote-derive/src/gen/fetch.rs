@@ -55,21 +55,21 @@ impl<'a> FetchGenerator<'a> {
             let inner = inner.unwrap();
             let scalar = if let Some(map) = &map {
                 quote! {
-                    cote::prelude::fetch_uid_impl::<#inner, S>(uid, set).map(#map)
+                    cote::prelude::fetch_uid_impl::<#inner, Set>(uid, set).map(#map)
                 }
             } else {
                 quote! {
-                    cote::prelude::fetch_uid_impl::<#inner, S>(uid, set)
+                    cote::prelude::fetch_uid_impl::<#inner, Set>(uid, set)
                 }
             };
             let vector = if let Some(map) = &map {
                 quote! {
-                    cote::prelude::fetch_vec_uid_impl::<#inner, S>(uid, set)
+                    cote::prelude::fetch_vec_uid_impl::<#inner, Set>(uid, set)
                         .map(|v|v.into_iter().map(#map).collect())
                 }
             } else {
                 quote! {
-                    cote::prelude::fetch_vec_uid_impl::<#inner, S>(uid, set)
+                    cote::prelude::fetch_vec_uid_impl::<#inner, Set>(uid, set)
                 }
             };
             let inner_ident = Ident::new(&inner.to_token_stream().to_string(), span);
