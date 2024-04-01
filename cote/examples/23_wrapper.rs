@@ -1,4 +1,4 @@
-use cote::*;
+use cote::prelude::*;
 
 #[derive(Debug, Cote, PartialEq, Eq)]
 #[cote(help, aborthelp)]
@@ -14,16 +14,14 @@ impl Infer for Speed {
     type Val = i32;
 }
 
-impl<'a> Fetch<'a> for Speed {
-    fn fetch<S: SetValueFindExt>(
-        name: impl ConfigBuild<SetCfg<S>>,
-        set: &'a mut S,
-    ) -> Result<Self, aopt::Error>
-    where
-        Self: Sized,
-        cote::SetCfg<S>: cote::ConfigValue + Default,
-    {
-        Ok(Speed(set.take_val(name)?))
+impl<'a, S> Fetch<'a, S> for Speed
+where
+    S: SetValueFindExt,
+    SetCfg<S>: ConfigValue + Default,
+    Self: ErasedTy + Sized,
+{
+    fn fetch_uid(uid: Uid, set: &'a mut S) -> cote::Result<Self> {
+        Ok(Speed(fetch_uid_impl(uid, set)?))
     }
 }
 
