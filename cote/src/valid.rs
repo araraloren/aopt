@@ -163,8 +163,7 @@ where
 ///
 /// # Example
 /// ```rust
-/// # use cote::*;
-/// # use cote::valid;
+/// # use cote::prelude::*;
 /// #
 /// #[derive(Debug, Cote, PartialEq, Eq)]
 /// #[cote(help)]

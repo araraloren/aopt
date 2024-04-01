@@ -30,7 +30,7 @@
 //! 6. [How it works](#how-it-works)
 //!     1. [Traits](#traits)
 //!     2. [`Cote` Configurations list](#cote-configurations-list)
-//!     2. [`CoteOpt` Configurations list](#copt-configurations-list)
+//!     2. [`CoteOpt` Configurations list](#coteopt-configurations-list)
 //!     2. [`CoteVal` Configurations list](#coteval-configurations-list)
 //!
 //! ## Quick Start
@@ -466,7 +466,7 @@
 //! The default [`Policy`](crate::Policy) of sub command is [`FwdPolicy`](crate::FwdPolicy).
 //! For the sub commands to have sub commands, you should use [`PrePolicy`](crate::PrePolicy) instead.
 //! For example, `sport` sub command does have two sub commands, it is configured with `#[sub(policy = pre)]`.
-//! Without `policy = pre`, you will got output when running `cli -g=42 sport walk -d 4`:
+//! _Without_ `policy = pre`, you will got output when running `cli -g=42 sport walk -d 4`:
 //!
 //! ```!
 //! Usage: cli sport [-h,-?,--help] <COMMAND>
@@ -481,8 +481,9 @@
 //!
 //! Create by araraloren <blackcatoverwall@gmail.com> v0.1.8
 //! Error:
-//!    0: Parsing command `sport` failed: None
-//!    1: Can not find option `-d`
+//!     0: Parsing command `sport` failed: None
+//!     1: Command `eat@1 | sport@1` are force required (uid = 1)
+//!     2: Can not find option `-d`
 //!
 //! Location:
 //!    src\main.rs:90
@@ -561,11 +562,10 @@
 #![doc = include_str!("../examples/22_sub_optional.rs")]
 //! ```
 //!
-//! Instead display the help and error message, the output of commands `cli -g8 sport` is:
+//! Instead display the help and error message, the output of commands `cli -g8 sp` is:
 //!
 //! ```!
 //! You age is set to 8
-//!
 //! ```
 //!
 //! ## How it works
@@ -641,7 +641,7 @@
 //! Configure the policy of current struct, its value should be `fwd`, `pre` or `delay.
 //! The default value is `fwd` if no sub command in the struct, otherwise it will be `pre`.
 //! ```rust
-#![doc = include_str!("../test/01_policy.rs")]
+#![doc = include_str!("../tests/01_policy.rs")]
 //! ```
 //!
 //! * `name`
@@ -661,7 +661,7 @@
 //! Custom the help message display.
 //!
 //! ```rust
-#![doc = include_str!("../test/02_head_foot.rs")]
+#![doc = include_str!("../tests/02_head_foot.rs")]
 //! ```
 //!
 //! * `width`, `usagew`
@@ -680,14 +680,14 @@
 //! the return value of handler will store as the value of option.
 //!
 //! ```rust
-#![doc = include_str!("../test/04_on.rs")]
+#![doc = include_str!("../tests/04_on.rs")]
 //! ```
 //!
 //! The `fallback` do same things as `on` except the [`fallback`](crate::Invoker::fallback) will be called
 //! if the handler returns [`None`].
 //!
 //! ```rust
-#![doc = include_str!("../test/05_fallback.rs")]
+#![doc = include_str!("../tests/05_fallback.rs")]
 //! ```
 //!
 //! * `strict`
@@ -696,7 +696,7 @@
 //! If the option
 //!
 //! ```rust
-#![doc = include_str!("../test/03_strict.rs")]
+#![doc = include_str!("../tests/03_strict.rs")]
 //! ```
 //!
 //! * `combine`, `embedded`, `flag`
@@ -740,7 +740,7 @@
 //! Configure the default value of option, `cote-derive` using [`From`] convert given value to option value.
 //!
 //! ```rust
-#![doc = include_str!("../test/06_value.rs")]
+#![doc = include_str!("../tests/06_value.rs")]
 //! ```
 //!
 //! * `index`
@@ -748,7 +748,7 @@
 //! Configure the index of option, it is using for `pos`([`Pos`](crate::Pos)) attribute generally.
 //!
 //! ```rust
-#![doc = include_str!("../test/07_index.rs")]
+#![doc = include_str!("../tests/07_index.rs")]
 //! ```
 //!
 //! * `force`
@@ -756,7 +756,7 @@
 //! Make the option force required.
 //!
 //! ```rust
-#![doc = include_str!("../test/08_force.rs")]
+#![doc = include_str!("../tests/08_force.rs")]
 //! ```
 //!
 //! * `action`, `ty`, `append`, `count`
@@ -765,7 +765,7 @@
 //! Using `ty` specify the option type when using [`Action::Cnt`](crate::Action::Cnt).
 //!  
 //! ```rust
-#![doc = include_str!("../test/09_action.rs")]
+#![doc = include_str!("../tests/09_action.rs")]
 //! ```
 //!
 //! `append` is an alias of "action = [`Action::App`](crate::Action::App)",
@@ -776,7 +776,7 @@
 //! Configure the handler which is used to extract value from [`set`](crate::Set).
 //!
 //! ```rust
-#![doc = include_str!("../test/10_fetch.rs")]
+#![doc = include_str!("../tests/10_fetch.rs")]
 //! ```
 //!
 //! * `valid`
@@ -784,7 +784,7 @@
 //! Using [`valid!`](crate::valid!) validate the value set by user. See also [`Validate values`](#validate-values).
 //!
 //! ```rust
-#![doc = include_str!("../test/11_valid.rs")]
+#![doc = include_str!("../tests/11_valid.rs")]
 //! ```
 //!
 //! * `on`, `fallback`, `then`
@@ -796,7 +796,7 @@
 //! the return value of handler will store as the value of option.
 //!
 //! ```rust
-#![doc = include_str!("../test/12_on.rs")]
+#![doc = include_str!("../tests/12_on.rs")]
 //! ```
 //!
 //! The `fallback` do same things as `on` except the [`fallback`](crate::Invoker::fallback) will be called
@@ -826,7 +826,7 @@
 //! Override the `policy` of sub command.
 //!
 //! ```rust
-#![doc = include_str!("../test/13_policy.rs")]
+#![doc = include_str!("../tests/13_policy.rs")]
 //! ```
 //!
 //! * `name`, `alias`
@@ -842,7 +842,7 @@
 //! Configure the head and foot of help message of sub command.
 //!
 //! ```rust
-#![doc = include_str!("../test/14_help.rs")]
+#![doc = include_str!("../tests/14_help.rs")]
 //! ```
 //!
 //! * `force`
@@ -850,7 +850,7 @@
 //! Configure the sub command optional, in default one of sub commands must be set.
 //!
 //! ```rust
-#![doc = include_str!("../test/15_force.rs")]
+#![doc = include_str!("../tests/15_force.rs")]
 //! ```
 //!
 //! ### `CoteOpt` Configurations list
@@ -881,7 +881,7 @@
 //! ##### Example
 //!
 //! ```rust
-#![doc = include_str!("../test/16_infer.rs")]
+#![doc = include_str!("../tests/16_infer.rs")]
 //! ```
 //!
 //! #### `alter`
@@ -905,7 +905,7 @@
 //! ##### Example
 //!
 //! ```rust
-#![doc = include_str!("../test/17_fetch.rs")]
+#![doc = include_str!("../tests/17_fetch.rs")]
 //! ```
 //!
 //! ### `CoteVal` Configurations list
@@ -936,11 +936,11 @@
 //! ##### Example 1
 //!
 //! ```rust
-#![doc = include_str!("../test/18_value.rs")]
+#![doc = include_str!("../tests/18_value.rs")]
 //! ```
 //!
 //! ##### Example of `mapraw` and `mapstr`
 //!
 //! ```rust
-#![doc = include_str!("../test/19_map.rs")]
+#![doc = include_str!("../tests/19_map.rs")]
 //! ```

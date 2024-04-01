@@ -10,15 +10,6 @@ pub(crate) mod value;
 pub mod valid;
 
 pub use aopt;
-use aopt::args::Args;
-use aopt::ctx::Invoker;
-use aopt::ext::APolicyExt;
-use aopt::parser::DefaultSetChecker;
-use aopt::parser::Policy;
-use aopt::parser::PolicySettings;
-use aopt::parser::ReturnVal;
-use aopt::parser::UserStyle;
-use aopt::ARef;
 pub use aopt::Error;
 pub use aopt_help;
 pub use cote_derive;
@@ -104,6 +95,7 @@ pub mod prelude {
     pub use crate::parser::Parser;
     pub use crate::rctx::FailedInfo;
     pub use crate::rctx::RunningCtx;
+    pub use crate::valid;
     pub use crate::value::fetch_uid_impl;
     pub use crate::value::fetch_vec_uid_impl;
     pub use crate::value::Fetch;
@@ -118,6 +110,14 @@ pub mod prelude {
 }
 
 use crate::prelude::Parser;
+use aopt::args::Args;
+use aopt::ctx::Invoker;
+use aopt::ext::APolicyExt;
+use aopt::parser::DefaultSetChecker;
+use aopt::parser::Policy;
+use aopt::parser::PolicySettings;
+use aopt::parser::ReturnVal;
+use aopt::parser::UserStyle;
 use aopt::prelude::ConfigValue;
 use aopt::prelude::OptParser;
 use aopt::prelude::OptStyleManager;
@@ -125,6 +125,7 @@ use aopt::prelude::OptValidator;
 use aopt::prelude::ServicesValExt;
 use aopt::prelude::SetCfg;
 use aopt::prelude::SetValueFindExt;
+use aopt::ARef;
 use std::marker::PhantomData;
 
 pub trait IntoParserDerive<'inv, Set, Ser>
@@ -371,7 +372,7 @@ mod test {
 
     #[test]
     fn test_fallback() {
-        use crate::*;
+        use crate::prelude::*;
         // macro generate the code depend on crate name
         use crate as cote;
         use aopt::opt::Pos;
@@ -401,6 +402,7 @@ mod test {
             destination: Vec<Pos<String>>,
         }
 
+        #[allow(dead_code)]
         fn search<Set, Ser>(_: &mut Set, _: &mut Ser) -> Result<Option<Vec<String>>, aopt::Error> {
             Ok(Some(
                 ["file1", "file2", "dir1", "dir2"]
@@ -413,7 +415,7 @@ mod test {
         fn find_main<Set, Ser>(set: &mut Set, _: &mut Ser) -> Result<Option<()>, aopt::Error>
         where
             Set: SetValueFindExt,
-            cote::SetCfg<Set>: cote::ConfigValue + Default,
+            SetCfg<Set>: ConfigValue + Default,
         {
             let tool = Find::try_extract(set)?;
 
@@ -446,7 +448,7 @@ mod test {
     }
 
     fn sub_test_impl() -> Result<(), aopt::Error> {
-        use crate::*;
+        use crate::prelude::*;
         // macro generate the code depend on crate name
         use crate as cote;
         use std::path::PathBuf;

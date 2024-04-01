@@ -430,7 +430,7 @@ where
     ///
     ///```rust
     /// # use aopt::Error;
-    /// # use cote::*;
+    /// # use cote::prelude::*;
     /// #
     /// # fn main() -> Result<(), Error> {
     ///     let mut policy = FwdPolicy::default();
@@ -490,7 +490,7 @@ where
     ///
     /// ```rust
     /// # use aopt::Error;
-    /// # use cote::*;
+    /// # use cote::prelude::*;
     /// #
     /// #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
@@ -568,7 +568,7 @@ where
     ///
     ///```rust
     /// # use aopt::Error;
-    /// # use cote::*;
+    /// # use cote::prelude::*;
     /// #
     /// # fn main() -> Result<(), Error> {
     ///     let mut policy = FwdPolicy::default();
@@ -628,7 +628,7 @@ where
     ///
     /// ```rust
     /// # use aopt::Error;
-    /// # use cote::*;
+    /// # use cote::prelude::*;
     /// #
     /// #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
