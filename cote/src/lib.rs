@@ -35,8 +35,8 @@ pub mod prelude {
     pub use aopt::prelude::Args;
     pub use aopt::prelude::Commit;
     pub use aopt::prelude::ConfigBuild;
-    pub use aopt::prelude::ConfigBuildHelpWith;
-    pub use aopt::prelude::ConfigBuildInferHelp;
+    pub use aopt::prelude::ConfigBuildInfer;
+    pub use aopt::prelude::ConfigBuildWith;
     pub use aopt::prelude::ConfigBuilder;
     pub use aopt::prelude::ConfigBuilderWith;
     pub use aopt::prelude::ConfigValue;

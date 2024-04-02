@@ -99,7 +99,7 @@ pub struct GetoptRes<R, T> {
 ///     assert_eq!(parser.find_val::<i64>("--bopt")?, &42i64);
 /// }
 /// {
-///     pre_parser.add_opt_i::<String>("-d")?.set_values(vec![]);
+///     pre_parser.add_opt("-d".infer::<String>())?.set_values(vec![]);
 ///     pre_parser.add_opt("--eopt=s")?;
 ///
 ///     let ret = getopt!(
@@ -251,9 +251,9 @@ pub mod prelude {
     pub use crate::opt::Action;
     pub use crate::opt::Cmd;
     pub use crate::opt::ConfigBuild;
-    pub use crate::opt::ConfigBuildHelpMutable;
-    pub use crate::opt::ConfigBuildHelpWith;
-    pub use crate::opt::ConfigBuildInferHelp;
+    pub use crate::opt::ConfigBuildInfer;
+    pub use crate::opt::ConfigBuildMutable;
+    pub use crate::opt::ConfigBuildWith;
     pub use crate::opt::ConfigBuilder;
     pub use crate::opt::ConfigBuilderWith;
     pub use crate::opt::ConfigValue;

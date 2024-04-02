@@ -155,7 +155,8 @@ impl<'a> SubGenerator<'a> {
                             rctx.pop_name(); // pop current name if not need display help
                         }
                     }
-
+                    // indicate we have accessed sub parser
+                    rctx.set_sub_parser(true);
                     // insert back to owned parser
                     ser.sve_insert(rctx);
 

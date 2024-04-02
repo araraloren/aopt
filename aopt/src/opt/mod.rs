@@ -14,9 +14,9 @@ pub(crate) mod value;
 pub use self::action::Action;
 pub use self::aopt::AOpt;
 pub use self::config::ConfigBuild;
-pub use self::config::ConfigBuildHelpMutable;
-pub use self::config::ConfigBuildHelpWith;
-pub use self::config::ConfigBuildInferHelp;
+pub use self::config::ConfigBuildInfer;
+pub use self::config::ConfigBuildMutable;
+pub use self::config::ConfigBuildWith;
 pub use self::config::ConfigBuilder;
 pub use self::config::ConfigBuilderWith;
 pub use self::config::ConfigValue;
@@ -67,7 +67,7 @@ pub const BOOL_FALSE: &str = "false";
 /// let mut parser = AFwdParser::default();
 ///
 /// // `Cmd` has a default position `@1`.
-/// parser.add_opt_i::<Cmd>("list: Set the list sub command")?;
+/// parser.add_opt("list: Set the list sub command".infer::<Cmd>())?;
 /// parser.parse(ARef::new(Args::from(["app", "list"])))?;
 ///
 /// // Get the value by `Infer::Val` type of `bool`.
@@ -116,7 +116,7 @@ impl DerefMut for Cmd {
 /// let mut parser = AFwdParser::default();
 ///
 /// // Name is not important.
-/// parser.add_opt_i::<Pos<String>>("pos_accept_string@1: Set the string value")?;
+/// parser.add_opt("pos_accept_string@1: Set the string value".infer::<Pos<String>>())?;
 ///
 /// parser.parse(ARef::new(Args::from(["app", "value"])))?;
 ///
@@ -166,7 +166,7 @@ impl<T> DerefMut for Pos<T> {
 /// let mut parser = AFwdParser::default();
 ///
 /// // `Main` has a default position `@*`.
-/// parser.add_opt_i::<Main>("main_function: Call the main function")?
+/// parser.add_opt("main_function: Call the main function".infer::<Main>())?
 ///       // Main do nothing in default, you must change the `Action` if you want save value
 ///       .set_action(Action::Set)
 ///       .on(|_: &mut ASet, _: &mut ASer, val: ctx::RawVal|{
@@ -232,7 +232,7 @@ impl<T> DerefMut for Main<T> {
 /// let mut parser = AFwdParser::default();
 ///
 /// // add the option wrap with `MutOpt`
-/// parser.add_opt_i::<MutOpt<Name>>("-e: Set the name")?;
+/// parser.add_opt("-e: Set the name".infer::<MutOpt<Name>>())?;
 ///
 /// parser.parse(ARef::new(Args::from(["app", "-e=foo"])))?;
 ///
@@ -292,7 +292,7 @@ impl<T> DerefMut for MutOpt<T> {
 /// let mut parser = AFwdParser::default();
 ///
 /// // add the option wrap with `RefOpt`
-/// parser.add_opt_i::<RefOpt<'_, Name>>("-e: Set the name")?;
+/// parser.add_opt("-e: Set the name".infer::<RefOpt<'_, Name>>())?;
 ///
 /// parser.parse(ARef::new(Args::from(["app", "-e=foo"])))?;
 ///

@@ -22,7 +22,7 @@ pub struct Eat {
     #[arg(alias = "-m")]
     meal: String,
 
-    /// What did you wat?
+    /// What did you want?
     #[pos(value = "rice")]
     what: Option<String>,
 }

@@ -487,7 +487,7 @@ mod test {
     use std::ops::Deref;
 
     use crate::opt::Cmd;
-    use crate::opt::ConfigBuildInferHelp;
+    use crate::opt::ConfigBuildInfer;
     use crate::opt::Pos;
     use crate::prelude::*;
     use crate::ARef;

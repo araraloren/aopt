@@ -791,13 +791,13 @@ impl ConfigValue for OptConfig {
     }
 }
 
-pub trait ConfigBuildHelpMutable {
+pub trait ConfigBuildMutable {
     type Cfg;
 
     fn config_mut(&mut self) -> &mut Self::Cfg;
 }
 
-impl<C, I> ConfigBuildHelpMutable for ConfigBuilder<C, I> {
+impl<C, I> ConfigBuildMutable for ConfigBuilder<C, I> {
     type Cfg = C;
 
     fn config_mut(&mut self) -> &mut C {
@@ -805,7 +805,7 @@ impl<C, I> ConfigBuildHelpMutable for ConfigBuilder<C, I> {
     }
 }
 
-impl<C, T, I> ConfigBuildHelpMutable for ConfigBuilderWith<C, T, I>
+impl<C, T, I> ConfigBuildMutable for ConfigBuilderWith<C, T, I>
 where
     C: Default,
 {
@@ -816,13 +816,13 @@ where
     }
 }
 
-pub trait ConfigBuildInferHelp<C> {
+pub trait ConfigBuildInfer<C> {
     type Output<T>;
 
     fn infer<T: 'static>(self) -> Self::Output<T>;
 }
 
-impl<C> ConfigBuildInferHelp<C> for &'_ str
+impl<C> ConfigBuildInfer<C> for &'_ str
 where
     C: ConfigValue + Default,
 {
@@ -833,7 +833,7 @@ where
     }
 }
 
-impl<C> ConfigBuildInferHelp<C> for AStr
+impl<C> ConfigBuildInfer<C> for AStr
 where
     C: ConfigValue + Default,
 {
@@ -844,7 +844,7 @@ where
     }
 }
 
-impl<C> ConfigBuildInferHelp<C> for String
+impl<C> ConfigBuildInfer<C> for String
 where
     C: ConfigValue + Default,
 {
@@ -855,7 +855,7 @@ where
     }
 }
 
-impl<C> ConfigBuildInferHelp<C> for &'_ String
+impl<C> ConfigBuildInfer<C> for &'_ String
 where
     C: ConfigValue + Default,
 {
@@ -866,7 +866,7 @@ where
     }
 }
 
-impl<C, I> ConfigBuildInferHelp<C> for ConfigBuilder<C, I> {
+impl<C, I> ConfigBuildInfer<C> for ConfigBuilder<C, I> {
     type Output<T> = ConfigBuilder<C, T>;
 
     fn infer<T: 'static>(self) -> Self::Output<T> {
@@ -877,7 +877,7 @@ impl<C, I> ConfigBuildInferHelp<C> for ConfigBuilder<C, I> {
     }
 }
 
-pub trait ConfigBuildHelpWith {
+pub trait ConfigBuildWith {
     type Output;
 
     fn with_ctor(self, ctor: impl Into<AStr>) -> Self::Output;
@@ -909,9 +909,9 @@ pub trait ConfigBuildHelpWith {
     fn with_style(self, styles: Vec<Style>) -> Self::Output;
 }
 
-impl<T> ConfigBuildHelpWith for T
+impl<T> ConfigBuildWith for T
 where
-    T: ConfigBuildHelpMutable,
+    T: ConfigBuildMutable,
     T::Cfg: ConfigValue,
 {
     type Output = Self;
@@ -1097,7 +1097,7 @@ where
 
 macro_rules! def_help_for {
     ($type:ty) => {
-        impl ConfigBuildHelpWith for $type {
+        impl ConfigBuildWith for $type {
             type Output = ConfigBuilderWith<OptConfig, Self, Placeholder>;
 
             fn with_ctor(self, ctor: impl Into<AStr>) -> Self::Output {

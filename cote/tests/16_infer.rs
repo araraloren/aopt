@@ -1,4 +1,5 @@
-use cote::{aopt::value::AnyValue, *};
+use aopt::value::AnyValue;
+use cote::prelude::*;
 use std::{any::TypeId, fmt::Debug};
 
 #[derive(Debug, PartialEq, Eq, CoteOpt)]
@@ -6,7 +7,12 @@ use std::{any::TypeId, fmt::Debug};
 #[infer(init = Some(ValInitializer::new_value(42i32)))]
 pub struct Speed(i32);
 
-fn main() -> color_eyre::Result<()> {
+#[test]
+fn infer() {
+    assert!(infer_impl().is_ok());
+}
+
+fn infer_impl() -> color_eyre::Result<()> {
     color_eyre::install()?;
     assert_eq!(
         TypeId::of::<<Speed as Infer>::Val>(),
@@ -14,13 +20,13 @@ fn main() -> color_eyre::Result<()> {
         "same type"
     );
     assert_eq!(<Speed as Infer>::infer_act(), Action::App);
-    assert_eq!(<Speed as Infer>::infer_force(), false);
+    assert!(!<Speed as Infer>::infer_force());
     assert_eq!(<Speed as Infer>::infer_ctor(), ctor_default_name());
     assert_eq!(<Speed as Infer>::infer_index(), None);
     assert_eq!(<Speed as Infer>::infer_style(), vec![Style::Argument]);
-    assert_eq!(<Speed as Infer>::infer_ignore_name(), false);
-    assert_eq!(<Speed as Infer>::infer_ignore_index(), true);
-    assert_eq!(<Speed as Infer>::infer_ignore_alias(), false);
+    assert!(!<Speed as Infer>::infer_ignore_name());
+    assert!(<Speed as Infer>::infer_ignore_index());
+    assert!(!<Speed as Infer>::infer_ignore_alias());
     assert!(<Speed as Infer>::infer_validator().is_none());
     assert_eq!(<Speed as Infer>::infer_type_id(), TypeId::of::<i32>());
     check_initializer(<Speed as Infer>::infer_initializer(), 42)?;

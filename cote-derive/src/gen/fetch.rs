@@ -84,7 +84,7 @@ impl<'a> FetchGenerator<'a> {
         } else {
             let scalar = if let Some(scalar) = self.configs.find_value(FetchKind::Scalar) {
                 quote! {
-                #scalar(uid, set)
+                    #scalar(uid, set)
                 }
             } else {
                 quote! {

@@ -44,11 +44,9 @@ pub struct RunningCtx {
 
     display_help: bool,
 
-    display_sub_help: bool,
+    sub_parser: bool,
 
     exit: bool,
-
-    exit_sub: bool,
 
     failed_info: Vec<FailedInfo>,
 
@@ -66,18 +64,13 @@ impl RunningCtx {
         self
     }
 
-    pub fn with_display_sub_help(mut self, display_sub_help: bool) -> Self {
-        self.display_sub_help = display_sub_help;
+    pub fn with_sub_parser(mut self, sub_parser: bool) -> Self {
+        self.sub_parser = sub_parser;
         self
     }
 
     pub fn with_exit(mut self, exit: bool) -> Self {
         self.exit = exit;
-        self
-    }
-
-    pub fn with_exit_sub(mut self, exit_sub: bool) -> Self {
-        self.exit_sub = exit_sub;
         self
     }
 
@@ -96,18 +89,13 @@ impl RunningCtx {
         self
     }
 
-    pub fn set_display_sub_help(&mut self, display_sub_help: bool) -> &mut Self {
-        self.display_sub_help = display_sub_help;
+    pub fn set_sub_parser(&mut self, sub_parser: bool) -> &mut Self {
+        self.sub_parser = sub_parser;
         self
     }
 
     pub fn set_exit(&mut self, exit: bool) -> &mut Self {
         self.exit = exit;
-        self
-    }
-
-    pub fn set_exit_sub(&mut self, exit_sub: bool) -> &mut Self {
-        self.exit_sub = exit_sub;
         self
     }
 
@@ -129,16 +117,12 @@ impl RunningCtx {
         self.display_help
     }
 
-    pub fn display_sub_help(&self) -> bool {
-        self.display_sub_help
+    pub fn sub_parser(&self) -> bool {
+        self.sub_parser
     }
 
     pub fn exit(&self) -> bool {
         self.exit
-    }
-
-    pub fn exit_sub(&self) -> bool {
-        self.exit_sub
     }
 
     pub fn failed_info(&self) -> &[FailedInfo] {
@@ -168,23 +152,6 @@ impl RunningCtx {
 
     pub fn pop_name(&mut self) -> Option<String> {
         self.names.pop()
-    }
-
-    pub fn sync_ctx(&mut self, ctx: &mut Self, failed_info: Option<FailedInfo>) -> &mut Self {
-        self.names.append(&mut ctx.names);
-        self.display_help = self.display_help() || ctx.display_help();
-        self.display_sub_help = self.display_sub_help() || ctx.display_sub_help();
-        self.exit = self.exit() || ctx.exit();
-        self.exit_sub = self.exit_sub() || ctx.exit_sub();
-        match failed_info {
-            Some(failed_info) => {
-                self.sync_failed_info(ctx).add_failed_info(failed_info);
-            }
-            None => {
-                self.clear_failed_info();
-            }
-        }
-        self
     }
 
     pub fn sync_failed_info(&mut self, ctx: &mut Self) -> &mut Self {

@@ -26,9 +26,14 @@ pub struct Query {
     format: String,
 }
 
-fn main() -> color_eyre::Result<()> {
+#[test]
+fn help() {
+    assert!(help_impl().is_ok());
+}
+
+fn help_impl() -> color_eyre::Result<()> {
     color_eyre::install()?;
-    Cli::parse(Args::from(["app", "q", "--help"].into_iter()))?;
+    Cli::parse(Args::from(["app", "q", "--help"]))?;
     // Output:
     // Usage: cli q [-h,--help] <--row <usize>> [ARGS]
     //

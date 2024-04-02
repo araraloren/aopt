@@ -249,7 +249,7 @@ where
     /// let _len_id = parser1.add_opt("--len=u")?.run()?;
     ///
     /// // Add an option `--size` with type `usize`, it has an alias `-s`.
-    /// parser1.add_opt_i::<usize>("--size;-s")?;
+    /// parser1.add_opt("--size;-s".infer::<usize>())?;
     ///
     /// // Add an option `--path` with type `s`.
     /// // Set its value action to `Action::Set`.
@@ -334,7 +334,7 @@ where
     ///         OptConfig::default()
     ///             .with_ctor("b")
     ///             .with_type::<bool>()
-    ///             .with_styles(vec![Style::Boolean, Style::Combined])
+    ///             .with_style(vec![Style::Boolean, Style::Combined])
     ///             .with_action(Action::Set)
     ///             .with_storer(ValStorer::fallback::<bool>())
     ///             .with_ignore_index(true)
@@ -348,7 +348,7 @@ where
     ///     fn from(_: Int64) -> Self {
     ///         OptConfig::default()
     ///             .with_ctor(ctor_default_name())
-    ///             .with_styles(vec![Style::Argument])
+    ///             .with_style(vec![Style::Argument])
     ///             .with_type::<i64>()
     ///             .with_action(Action::Set)
     ///             .with_storer(ValStorer::fallback::<i64>())
@@ -540,7 +540,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{opt::config::ConfigBuildInferHelp, prelude::*};
+    use crate::{opt::config::ConfigBuildInfer, prelude::*};
     use std::ops::Deref;
 
     #[test]

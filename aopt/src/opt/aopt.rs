@@ -24,7 +24,7 @@ use crate::Uid;
 /// Some types support by default, they all implement [`Infer`](crate::value::Infer).
 /// When create the option with `creator` using [`add_opt`](crate::set::OptSet::add_opt), the [`Creator`] will retrieve
 /// other informations from the `infer type` list on the table.
-/// When create the option from type using [`add_opt_i`](crate::set::OptSet::add_opt_i), the [`Creator`] will retrieve
+/// When create the option from type using [`infer`](crate::opt::ConfigBuildInfer::infer), the [`Creator`] will retrieve
 /// other informations from given type.
 ///
 /// | type | action | ignore name | styles | index | alias | default value | creator | infer type |

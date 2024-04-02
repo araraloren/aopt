@@ -8,7 +8,12 @@ pub struct Cli {
     verbose: u64,
 }
 
-fn main() -> color_eyre::Result<()> {
+#[test]
+fn action() {
+    assert!(action_impl().is_ok());
+}
+
+fn action_impl() -> color_eyre::Result<()> {
     color_eyre::install()?;
     let cli = Cli::parse(Args::from(["app", "-v", "-v", "-v"].into_iter()))?;
     assert_eq!(cli.verbose, 3);

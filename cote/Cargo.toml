@@ -29,3 +29,6 @@ sync = ["aopt/sync"]
 serde = ["aopt/serde", "serde/derive"]
 log = ["aopt/log"]
 shell = ["aopt/shell"]
+
+[package.metadata.docs.rs]
+cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]

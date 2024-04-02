@@ -148,7 +148,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     list.add_opt("-debug=b")?;
     list.add_opt("-force=b")?.add_alias("-f");
     list.add_opt("-local-only=b")?.add_alias("-l");
-    list.add_opt_i::<String>("-source")?
+    list.add_opt("-source".infer::<String>())?
         .add_alias("-s")
         .set_value(String::from("lib.rs"));
     list.add_opt("main=m")?

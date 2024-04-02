@@ -33,9 +33,9 @@ See [`reference`](crate::_reference) for more information.
 
 ```rust
 use aopt::opt::Pos;
-use cote::*;
+use cote::prelude::*;
 
-fn main() -> Result<(), CoteError> {
+fn main() -> cote::Result<()> {
     #[derive(Debug, Cote)]
     pub struct Cli {
         /// A flag option named `--flag`
@@ -58,7 +58,7 @@ fn main() -> Result<(), CoteError> {
     }
     let cli = Cli::parse(Args::from(["app", "-nLily", "src", "foo", "bar"]))?;
 
-    assert_eq!(cli.flag, false);
+    assert!(!cli.flag);
     assert_eq!(cli.name, String::from("Lily"));
     assert_eq!(cli.nick, None);
     assert_eq!(cli.from, Pos(String::from("src")));
@@ -66,7 +66,7 @@ fn main() -> Result<(), CoteError> {
 
     let cli = Cli::parse(Args::from(["app", "--name", "Lily", "src", "foo", "bar"]))?;
 
-    assert_eq!(cli.flag, false);
+    assert!(!cli.flag);
     assert_eq!(cli.name, String::from("Lily"));
     assert_eq!(cli.nick, None);
     assert_eq!(cli.from, Pos(String::from("src")));

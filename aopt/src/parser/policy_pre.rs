@@ -46,7 +46,7 @@ use crate::Error;
 ///         let mut found = false;
 ///
 ///         for name in ["-c", "-cxx"] {
-///             if let Some(opt) = set.find(name)? {
+///             if let Ok(opt) = set.find(name) {
 ///                 if let Ok(file) = opt.vals::<String>() {
 ///                     if file.contains(ext.deref()) {
 ///                         found = true;
@@ -63,7 +63,7 @@ use crate::Error;
 ///
 ///         match cfg.as_str() {
 ///             "cxx" => {
-///                 parser.add_opt_i::<String>("-cxx")?.set_values(
+///                 parser.add_opt("-cxx".infer::<String>())?.set_values(
 ///                     ["cxx", "cpp", "c++", "cc", "hpp", "hxx", "h"]
 ///                         .map(|v| v.to_owned())
 ///                         .to_vec(),
@@ -523,7 +523,7 @@ mod test {
     use std::ops::Deref;
 
     use crate::opt::Cmd;
-    use crate::opt::ConfigBuildInferHelp;
+    use crate::opt::ConfigBuildInfer;
     use crate::opt::Pos;
     use crate::prelude::*;
     use crate::ARef;

@@ -13,7 +13,7 @@ use crate::ext::APolicyExt;
 use crate::ext::ASer;
 use crate::ext::ASet;
 use crate::opt::Action;
-use crate::opt::ConfigBuildInferHelp;
+use crate::opt::ConfigBuildInfer;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::opt::Style;

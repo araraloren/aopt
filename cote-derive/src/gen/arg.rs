@@ -284,13 +284,13 @@ impl<'a> ArgGenerator<'a> {
                 WrapperTy::Opt(_) | WrapperTy::OptVec(_) => Ok((
                     false,
                     quote! {
-                        #ident: #func::<#inner_ty>(#uid_literal, set).ok()
+                        #ident: #func::<#inner_ty, Set>(#uid_literal, set).ok()
                     },
                 )),
                 WrapperTy::Vec(_) | WrapperTy::Null(_) => Ok((
                     false,
                     quote! {
-                        #ident: #func::<#inner_ty>(#uid_literal, set)?
+                        #ident: #func::<#inner_ty, Set>(#uid_literal, set)?
                     },
                 )),
             }

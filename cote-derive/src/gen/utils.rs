@@ -421,13 +421,15 @@ impl Utils {
 
     // variable name: `ret`, `rctx`, and `parser`
     pub fn gen_sync_ret(
+        has_sub: bool,
         enable_abort: bool,
         enable_normal: bool,
         help_uid: Option<u64>,
     ) -> syn::Result<TokenStream> {
         let abort_help = enable_abort.then(|| {
             Some(quote! {
-                if !ret_okay || !status_okay {
+                if !ret.is_ok()
+                    || !ret.as_ref().map(cote::prelude::Status::status).unwrap_or(true) {
                     rctx.set_display_help(true);
                     rctx.set_exit(false);
                 }
@@ -436,19 +438,20 @@ impl Utils {
         let normal_help = enable_normal.then(|| {
             let uid_literal = Utils::id2uid_literal(help_uid.unwrap());
             Some(quote! {
-                if (ret_okay && status_okay) || sub_parser {
-                    if set.opt(#uid_literal)?.val::<bool>().ok() == Some(&true) {
-                        rctx.set_display_help(true);
-                        rctx.set_exit(true);
+                if set.opt(#uid_literal)?.val::<bool>().ok() == Some(&true) {
+                    rctx.set_display_help(true);
+                    rctx.set_exit(true);
+                    // if we have sub parsers and we not in sub parser
+                    // running ctx not have sub parser flag
+                    // then we should not exit to show the error of sub command
+                    if #has_sub && !sub_parser && !rctx.sub_parser() {
+                        rctx.set_exit(false);
                     }
                 }
             })
         });
 
         Ok(quote! {
-            let ret_okay = ret.is_ok();
-            let status_okay = ret.as_ref().map(cote::prelude::Status::status).unwrap_or(true);
-
             #abort_help
             #normal_help
         })

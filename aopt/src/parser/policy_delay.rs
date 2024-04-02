@@ -704,7 +704,7 @@ where
 #[cfg(test)]
 mod test {
 
-    use crate::opt::ConfigBuildInferHelp;
+    use crate::opt::ConfigBuildInfer;
     use crate::opt::Pos;
     use crate::prelude::*;
     use crate::ARef;

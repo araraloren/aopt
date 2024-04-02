@@ -151,14 +151,18 @@ impl<'a> CoteGenerator<'a> {
                 field,
                 "Can not support more than one configuration on same field!",
             ))
+        } else if has_arg_cfg {
+            Ok(AttrKind::Arg)
         } else if has_sub_cfg {
             Ok(AttrKind::Sub)
-        } else if has_cmd_cfg || Utils::check_in_ty(&field.ty, "Cmd")? {
+        } else if has_cmd_cfg {
             Ok(AttrKind::Cmd)
         } else if has_pos_cfg || Utils::check_in_ty(&field.ty, "Pos")? {
             Ok(AttrKind::Pos)
         } else if Utils::check_in_ty(&field.ty, "Main")? {
             Ok(AttrKind::Main)
+        } else if Utils::check_in_ty(&field.ty, "Cmd")? {
+            Ok(AttrKind::Cmd)
         } else {
             Ok(AttrKind::Arg)
         }
@@ -427,8 +431,12 @@ impl<'a> CoteGenerator<'a> {
 
             quote! { #alter #fetch }
         };
-        let sync_rctx_from_ret =
-            Utils::gen_sync_ret(abort.is_some(), help.is_some(), self.help_uid())?;
+        let sync_rctx_from_ret = Utils::gen_sync_ret(
+            self.has_sub_command(),
+            abort.is_some(),
+            help.is_some(),
+            self.help_uid(),
+        )?;
         let where_clause = quote! {
             P::Error: Into<cote::Error>,
             P::Ret: cote::prelude::Status,

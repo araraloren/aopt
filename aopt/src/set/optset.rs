@@ -40,12 +40,12 @@ use super::SetValueFindExt;
 /// set.register(Creator::from(aopt::opt::BuiltInCtor::Bool));
 ///
 /// // create a bool option
-/// set.add_opt_i::<bool>("--flag")?;
+/// set.add_opt("--flag".infer::<bool>())?;
 /// assert_eq!(set.add_opt("/flag=b!")?.run()?, 1);
 ///
 /// // filter the set option
 /// assert_eq!(set.filter("/flag")?.find_all().count(), 1);
-/// assert!(set.find("--flag")?.is_some());
+/// assert!(set.find("--flag").is_ok());
 /// # Ok(())
 /// # }
 /// ```
@@ -452,7 +452,7 @@ mod test {
     use std::ffi::OsString;
 
     use crate::opt::Cmd;
-    use crate::opt::ConfigBuildInferHelp;
+    use crate::opt::ConfigBuildInfer;
     use crate::opt::Pos;
     use crate::prelude::*;
     use crate::Error;

@@ -40,7 +40,12 @@ pub struct Query {
     format: String,
 }
 
-fn main() -> color_eyre::Result<()> {
+#[test]
+fn policy() {
+    assert!(policy_impl().is_ok());
+}
+
+fn policy_impl() -> color_eyre::Result<()> {
     color_eyre::install()?;
     Cli::parse(Args::from(
         ["app", "query", "--col=1", "--row=2", "Query msg: {:?}"].into_iter(),

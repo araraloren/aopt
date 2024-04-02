@@ -1,8 +1,7 @@
 mod spyder;
 
-use aopt::Error;
-use cote::aopt::raise_failure;
-use cote::*;
+use cote::prelude::*;
+use cote::Error;
 use spyder::cnindex::CNIndex;
 use spyder::csindex::CSIndex;
 use spyder::Spyder;
@@ -53,35 +52,11 @@ pub struct Stock {
     args: String,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, CoteOpt, CoteVal)]
 pub enum SearchType {
     CS,
     CN,
 }
-
-impl Infer for SearchType {
-    type Val = String;
-
-    fn infer_force() -> bool {
-        true
-    }
-}
-
-impl<'a> Fetch<'a> for SearchType {
-    fn fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
-    where
-        Self: ErasedTy + Sized,
-    {
-        let value = set.find_val::<String>(name)?.to_lowercase();
-        match value.as_str() {
-            "cs" => Ok(Self::CS),
-            "cn" => Ok(Self::CN),
-            _ => Err(raise_failure!("Unknow search type provide: {}", value)),
-        }
-    }
-}
-
-impl_alter!(SearchType);
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {

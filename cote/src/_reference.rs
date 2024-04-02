@@ -311,7 +311,7 @@
 //!   -b,--baz          Set the string value of baz
 //!
 //! Args:
-//!   [BAR]         Set the value of bar [42usize]
+//!   [BAR]         Set the value of bar [42]
 //!   quux@3..
 //!
 //! Create by araraloren <blackcatoverwall@gmail.com> v0.1.8

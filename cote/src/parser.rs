@@ -436,8 +436,8 @@ where
     ///     let mut policy = FwdPolicy::default();
     ///     let mut parser = Parser::<ASet, ASer>::default().with_name("example");
     ///
-    ///     parser.add_opt_i::<bool>("-a!")?;
-    ///     parser.add_opt_i::<i64>("-b")?;
+    ///     parser.add_opt("-a!".infer::<bool>())?;
+    ///     parser.add_opt("-b".infer::<i64>())?;
     ///
     ///     parser.run_mut_with(
     ///         ["-a", "-b", "42"].into_iter(),
@@ -497,8 +497,8 @@ where
     ///     let mut policy = FwdPolicy::default();
     ///     let mut parser = Parser::<ASet, ASer>::default().with_name("example");
     ///
-    ///     parser.add_opt_i::<bool>("-a!")?;
-    ///     parser.add_opt_i::<i64>("-b")?;
+    ///     parser.add_opt("-a!".infer::<bool>())?;
+    ///     parser.add_opt("-b".infer::<i64>())?;
     ///
     ///     parser
     ///         .run_async_mut_with(
@@ -574,8 +574,8 @@ where
     ///     let mut policy = FwdPolicy::default();
     ///     let mut parser = Parser::<ASet, ASer>::default().with_name("example");
     ///
-    ///     parser.add_opt_i::<bool>("-a!")?;
-    ///     parser.add_opt_i::<i64>("-b")?;
+    ///     parser.add_opt("-a!".infer::<bool>())?;
+    ///     parser.add_opt("-b".infer::<i64>())?;
     ///
     ///     parser.run_with(
     ///         ["-a", "-b", "42"].into_iter(),
@@ -635,8 +635,8 @@ where
     ///     let mut policy = FwdPolicy::default();
     ///     let mut parser = Parser::<ASet, ASer>::default().with_name("example");
     ///
-    ///     parser.add_opt_i::<bool>("-a!")?;
-    ///     parser.add_opt_i::<i64>("-b")?;
+    ///     parser.add_opt("-a!".infer::<bool>())?;
+    ///     parser.add_opt("-b".infer::<i64>())?;
     ///
     ///     parser
     ///         .run_async_with(
