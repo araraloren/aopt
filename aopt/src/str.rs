@@ -13,7 +13,7 @@ pub trait StrJoin {
     fn join(&self, sep: &str) -> String;
 }
 
-/// A simple wrapper of [`ARef`](crate::ARef)\<str\>.
+/// A simple wrapper of [`ARef`]\<str\>.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AStr(ARef<str>);
 

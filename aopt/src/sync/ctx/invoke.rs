@@ -191,7 +191,7 @@ where
         let uid = ctx.uid()?;
         let opt = set.get_mut(uid).unwrap();
         let arg = ctx.arg()?;
-        let raw = arg.as_ref().map(|v| v.as_ref());
+        let raw = arg.as_ref();
         let act = *opt.action();
 
         trace_log!("Invoke fallback for {}({act}) {{{ctx:?}}}", opt.name());

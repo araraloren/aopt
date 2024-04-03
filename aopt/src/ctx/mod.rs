@@ -54,7 +54,7 @@ mod __wrapper {
 
             if val.is_some() {
                 let arg = ctx.arg()?;
-                let arg = arg.as_ref().map(|v| v.as_ref());
+                let arg = arg.as_ref();
                 let uid = ctx.uid()?;
                 let mut act = *set.opt(uid)?.action();
 
@@ -87,7 +87,7 @@ mod __wrapper {
 
             if val.is_some() {
                 let arg = ctx.arg()?;
-                let arg = arg.as_ref().map(|v| v.as_ref());
+                let arg = arg.as_ref();
                 let uid = ctx.uid()?;
 
                 store.process(uid, set, ser, arg, val).map_err(Into::into)
@@ -114,7 +114,7 @@ mod __wrapper {
                 .invoke(set, ser, A::extract(set, ser, ctx).map_err(Into::into)?)
                 .map_err(Into::into)?;
             let arg = ctx.arg()?;
-            let arg = arg.as_ref().map(|v| v.as_ref());
+            let arg = arg.as_ref();
             let uid = ctx.uid()?;
             let mut act = *set.opt(uid)?.action();
 
@@ -137,7 +137,7 @@ mod __wrapper {
             let ext_args = A::extract(set, ser, ctx).map_err(Into::into)?;
             let val = handler.invoke(set, ser, ext_args).map_err(Into::into)?;
             let arg = ctx.arg()?;
-            let arg = arg.as_ref().map(|v| v.as_ref());
+            let arg = arg.as_ref();
             let uid = ctx.uid()?;
 
             store.process(uid, set, ser, arg, val).map_err(Into::into)

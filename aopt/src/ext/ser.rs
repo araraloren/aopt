@@ -18,7 +18,7 @@ pub struct Value<T: ?Sized>(ARef<T>);
 #[cfg(not(feature = "sync"))]
 /// Simple wrapper of user value saved in [`UsrValService`](crate::ser::UsrValService).
 ///
-/// Value internally use [ARef](crate::ARef), it is cheap to clone.
+/// Value internally use [`ARef`], it is cheap to clone.
 /// Before used it in `handler` which register in [`Invoker`](crate::ctx::Invoker),
 /// you need add it to [`UsrValService`](crate::ser::UsrValService).
 ///

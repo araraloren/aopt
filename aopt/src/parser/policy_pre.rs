@@ -320,6 +320,7 @@ where
             let mut like_opt = false;
 
             if let Ok(clopt) = opt.parse_arg() {
+                trace_log!("Guess command line clopt = {:?} & next = {:?}", clopt, next);
                 let name = clopt.name;
 
                 if let Some(valid) = Self::ig_failure(set.check(name.as_str()).map_err(Into::into))?
@@ -340,7 +341,6 @@ where
                             name: Some(name.clone()),
                         };
 
-                        trace_log!("Guess command line clopt = {:?} & next = {:?}", clopt, next);
                         for style in opt_styles.iter() {
                             if let Some(Some(ret)) =
                                 Self::ig_failure(guess.guess_and_invoke(style, overload))?

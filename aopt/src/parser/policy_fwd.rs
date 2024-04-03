@@ -287,6 +287,7 @@ where
             let mut stopped = false;
 
             if let Ok(clopt) = opt.parse_arg() {
+                trace_log!("Guess command line clopt = {:?} & next = {:?}", clopt, next);
                 let name = clopt.name;
 
                 if set.check(name.as_str()).map_err(Into::into)? {
@@ -304,7 +305,6 @@ where
                         name: Some(name.clone()),
                     };
 
-                    trace_log!("Guess command line clopt = {:?} & next = {:?}", clopt, next);
                     for style in opt_styles.iter() {
                         if let Some(ret) = guess.guess_and_invoke(style, overload)? {
                             (matched, consume) = (ret.matched, ret.consume);

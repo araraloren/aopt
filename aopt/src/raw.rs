@@ -5,7 +5,6 @@ use std::ffi::OsString;
 use std::ops::{Deref, DerefMut};
 
 /// Raw value used when parsing command line argument, it is wrapper of [`ARef<OsStr>`].
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RawVal(ARef<OsStr>);
 
