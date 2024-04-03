@@ -226,8 +226,8 @@
 //! - `flag` - Add support for [`Flag`](crate::UserStyle::Flag).
 //!
 //! Options such as `--opt`, in general, it is named flag, the value type of option is always `bool`.
-//! Unlike [`Boolean`](crate::UserStyle::Boolean) pass [`TRUE`](crate::aopt::opt::BOOL_TRUE) to [`parse`](crate::RawValParser::parse),
-//! [`Flag`](crate::UserStyle::Flag) pass [`None`] to [`parse`](crate::RawValParser::parse).
+//! Unlike [`Boolean`](crate::UserStyle::Boolean) pass [`TRUE`](crate::aopt::opt::BOOL_TRUE) to [`parse`](crate::prelude::RawValParser::parse),
+//! [`Flag`](crate::UserStyle::Flag) pass [`None`] to [`parse`](crate::prelude::RawValParser::parse).
 //!
 //! ```rust
 #![doc = include_str!("../examples/25_flag.rs")]
@@ -276,7 +276,7 @@
 //! The default name of options consists of prefixs and identifiers of the field.
 //! The default prefix is `--` if count of characters bigger than 1, otherwise `-` is using.
 //! You can use `name` or `alias` configure the name and alias of the option.
-//! For prefix information reference [`PrefixOptValidator`](crate::PrefixOptValidator).
+//! For prefix information reference [`PrefixOptValidator`](crate::prelude::PrefixOptValidator).
 //!
 //! ```rust
 #![doc = include_str!("../examples/10_arg_name_alias.rs")]
@@ -321,7 +321,7 @@
 //!
 //! Index is only support positions and command flags.
 //! For command flags, the index is fixed position `@1` by default.
-//! For more informations about index, reference [`Index`](crate::Index).
+//! For more informations about index, reference [`Index`](crate::prelude::Index).
 //!
 //! #### Example1
 //!
@@ -350,9 +350,9 @@
 //!
 //! ### Configurating action
 //!
-//! The type that implements [`Infer`](crate::Infer) has different [`Action`](crate::Action).
-//! The [`Action`](crate::Action) defines the behavior when saving the value.
-//! For more information, see [`Action::process`](crate::Action#method.process) and [`AOpt`](crate::AOpt).
+//! The type that implements [`Infer`](crate::prelude::Infer) has different [`Action`](crate::prelude::Action).
+//! The [`Action`](crate::prelude::Action) defines the behavior when saving the value.
+//! For more information, see [`Action::process`](crate::prelude::Action#method.process) and [`AOpt`](crate::prelude::AOpt).
 //!
 //! ```rust
 #![doc = include_str!("../examples/15_arg_action.rs")]
@@ -574,36 +574,36 @@
 //!
 //! Implement follow traits, you can using the type in the struct filed.
 //!
-//! - [`Infer`](crate::Infer)
+//! - [`Infer`](crate::prelude::Infer)
 //!
-//! `Cote` using [`infer_fill_info`](crate::Infer::infer_fill_info) inference the default settings of
+//! `Cote` using [`infer_fill_info`](crate::prelude::Infer::infer_fill_info) inference the default settings of
 //! given type.
 //!
-//! - [`Fetch`](crate::Fetch)
+//! - [`Fetch`](crate::prelude::Fetch)
 //!
-//! `Cote` using [`fetch`](crate::Fetch::fetch) fetch the value from [`Set`](aopt::set::Set).
+//! `Cote` using [`fetch`](crate::prelude::Fetch::fetch) fetch the value from [`Set`](aopt::set::Set).
 //!
-//! - [`RawValParser`](crate::RawValParser)
+//! - [`RawValParser`](crate::prelude::RawValParser)
 //!
-//! `Cote` using [`parse`](crate::RawValParser::parse) parsing the value from command line arguments.
+//! `Cote` using [`parse`](crate::prelude::RawValParser::parse) parsing the value from command line arguments.
 //!
-//! - [`Alter`](crate::Alter)
+//! - [`Alter`](crate::prelude::Alter)
 //!
-//! `Cote` using the trait override the action or optional behavior of [`Infer`](crate::Infer).
+//! `Cote` using the trait override the action or optional behavior of [`Infer`](crate::prelude::Infer).
 //!
 //!| type | action | force required | force required if has default value |
 //!|------|--------|----------|----------|
-//!| `T` | [`Action::Set`](crate::Action::Set) | `true` | `false` |
-//!| `Option<T>` | [`Action::Set`](crate::Action::Set) | `false` | `false` |
-//!| `Vec<T>` | [`Action::App`](crate::Action::App) | `true` | `false` |
-//!| `Option<Vec<T>>` | [`Action::App`](crate::Action::App) | `false` | `false` |
-//!| [`Pos<T>`](crate::Pos) | [`Action::Set`](crate::Action::Set) | `true` | `false` |
-//!| `bool` | [`Action::Set`](crate::Action::Set) | `false` | `false` |
-//!| [`Cmd`](crate::Cmd) | [`Action::Set`](crate::Action::Set) | `true` | `true` |
+//!| `T` | [`Action::Set`](crate::prelude::Action::Set) | `true` | `false` |
+//!| `Option<T>` | [`Action::Set`](crate::prelude::Action::Set) | `false` | `false` |
+//!| `Vec<T>` | [`Action::App`](crate::prelude::Action::App) | `true` | `false` |
+//!| `Option<Vec<T>>` | [`Action::App`](crate::prelude::Action::App) | `false` | `false` |
+//!| [`Pos<T>`](crate::prelude::Pos) | [`Action::Set`](crate::prelude::Action::Set) | `true` | `false` |
+//!| `bool` | [`Action::Set`](crate::prelude::Action::Set) | `false` | `false` |
+//!| [`Cmd`](crate::prelude::Cmd) | [`Action::Set`](crate::prelude::Action::Set) | `true` | `true` |
 //!
 //! ### Example
 //!
-//! The type `Speed` base on the type `i32` which already implemented [`RawValParser`](crate::RawValParser).
+//! The type `Speed` base on the type `i32` which already implemented [`RawValParser`](crate::prelude::RawValParser).
 //!
 //! ```rust
 #![doc = include_str!("../examples/23_wrapper.rs")]
@@ -673,8 +673,8 @@
 //!
 //! Using `then` you can configure a handler which is responsible for storing the option value
 //! (which is generated from the struct and inserted by cote-derive).
-//! In default the handler is [`process`](crate::Action#method.process),
-//! and the action is [`App`](crate::Action::App) or [`Set`](crate::Action::Set).
+//! In default the handler is [`process`](crate::prelude::Action#method.process),
+//! and the action is [`App`](crate::prelude::Action::App) or [`Set`](crate::prelude::Action::Set).
 //!
 //! And with `on`, you can set a handler will be invoked by [`policy`](crate::Policy),
 //! the return value of handler will store as the value of option.
@@ -716,7 +716,7 @@
 //!| `alias`   |  true      | string literal |
 //!| `index`   |  true      | range or integer |
 //!| `force`   |  true      | boolean |
-//!| `action`  |  true      | [`Action`](crate::Action) |
+//!| `action`  |  true      | [`Action`](crate::prelude::Action) |
 //!| `valid`   |  true      | [`valid!`](crate::valid!) |
 //!| `on`      |  true      | function or closure |
 //!| `fallback`|  true      | function or closure |
@@ -745,7 +745,7 @@
 //!
 //! * `index`
 //!
-//! Configure the index of option, it is using for `pos`([`Pos`](crate::Pos)) attribute generally.
+//! Configure the index of option, it is using for `pos`([`Pos`](crate::prelude::Pos)) attribute generally.
 //!
 //! ```rust
 #![doc = include_str!("../tests/07_index.rs")]
@@ -761,19 +761,19 @@
 //!
 //! * `action`, `ty`, `append`, `count`
 //!
-//! `action` can configure the [`Action`](crate::Action) which responsible for saving value of option.
-//! Using `ty` specify the option type when using [`Action::Cnt`](crate::Action::Cnt).
+//! `action` can configure the [`Action`](crate::prelude::Action) which responsible for saving value of option.
+//! Using `ty` specify the option type when using [`Action::Cnt`](crate::prelude::Action::Cnt).
 //!  
 //! ```rust
 #![doc = include_str!("../tests/09_action.rs")]
 //! ```
 //!
-//! `append` is an alias of "action = [`Action::App`](crate::Action::App)",
-//! `count` is an alias of "action = [`Action::Cnt`](crate::Action::Cnt)"
+//! `append` is an alias of "action = [`Action::App`](crate::prelude::Action::App)",
+//! `count` is an alias of "action = [`Action::Cnt`](crate::prelude::Action::Cnt)"
 //!
 //! * `fetch`
 //!
-//! Configure the handler which is used to extract value from [`set`](crate::Set).
+//! Configure the handler which is used to extract value from [`set`](crate::prelude::Set).
 //!
 //! ```rust
 #![doc = include_str!("../tests/10_fetch.rs")]
@@ -790,7 +790,7 @@
 //! * `on`, `fallback`, `then`
 //!
 //! Using `then` you can configure a handler which is responsible for storing the option value.
-//! In default the handler is [`process`](crate::Action#method.process), and the action is [`Null`](crate::Action::Null).
+//! In default the handler is [`process`](crate::prelude::Action#method.process), and the action is [`Null`](crate::prelude::Action::Null).
 //!
 //! And with `on`, you can set a handler will be invoked by [`policy`](crate::Policy),
 //! the return value of handler will store as the value of option.
@@ -855,28 +855,28 @@
 //!
 //! ### `CoteOpt` Configurations list
 //!
-//! `CoteOpt` derive the default behavior of [`Infer`](crate::Infer), [`Fetch`](crate::Fetch`) and [`Alter`](crate::Alter).
+//! `CoteOpt` derive the default behavior of [`Infer`](crate::prelude::Infer), [`Fetch`](crate::prelude::Fetch`) and [`Alter`](crate::prelude::Alter).
 //!
 //! #### `infer`
 //!
 //!| name      | need value | available value |
 //!|-----------|------------|-----------|
 //!| `val`     |  true      | value type |
-//!| `action`  |  true      | [`Action`](crate::Action) |
+//!| `action`  |  true      | [`Action`](crate::prelude::Action) |
 //!| `force`   |  true      | boolean |
 //!| `ctor`    |  true      | [`AStr`](crate::aopt::AStr) |
-//!| `index`   |  true      | Option<[`Index`](crate::Index)> |
-//!| `style`   |  true      | Vec<[`Style`](crate::Style)> |
+//!| `index`   |  true      | Option<[`Index`](crate::prelude::Index)> |
+//!| `style`   |  true      | Vec<[`Style`](crate::prelude::Style)> |
 //!| `igname`  |  true      | boolean |
 //!| `igalias` |  true      | boolean |
 //!| `igindex` |  true      | boolean |
-//!| `valid`   |  true      | Option<[`ValValidator`](crate::ValValidator)\<[`Val`](crate::Infer::Val)\>> |
-//!| `init`    |  true      | Option<[`ValInitializer`](crate::ValInitializer)> |
+//!| `valid`   |  true      | Option<[`ValValidator`](crate::prelude::ValValidator)\<[`Val`](crate::prelude::Infer::Val)\>> |
+//!| `init`    |  true      | Option<[`ValInitializer`](crate::prelude::ValInitializer)> |
 //!| `ty`      |  true      | [`TypeId`](std::any::TypeId) |
 //!| `tweak`   |  true      | function |
 //!| `fill`    |  true      | function |
 //!
-//! `infer` can configure the behavior of [`Infer`](crate::Infer), the configures are mostly using to providing default value.
+//! `infer` can configure the behavior of [`Infer`](crate::prelude::Infer), the configures are mostly using to providing default value.
 //!
 //! ##### Example
 //!
@@ -897,10 +897,10 @@
 //!| `scalar`  |  true      |  function |
 //!| `vector`  |  true      |  function |
 //!
-//! `fetch` can configure the behavior of [`Fetch`](crate::Fetch).
+//! `fetch` can configure the behavior of [`Fetch`](crate::prelude::Fetch).
 //!
 //! You can use `inner` and `map` configure the type and map function.
-//! Or use `scalar` or `vector` configure the [`fetch`](crate::Fetch#method.fetch) and [`fetch_vec`](crate::Fetch#method.fetch_vec) separately.
+//! Or use `scalar` or `vector` configure the [`fetch`](crate::prelude::Fetch#method.fetch) and [`fetch_vec`](crate::prelude::Fetch#method.fetch_vec) separately.
 //!
 //! ##### Example
 //!
@@ -910,7 +910,7 @@
 //!
 //! ### `CoteVal` Configurations list
 //!
-//! `CoteVal` derive the default behavior of [`RawValParser`](crate::RawValParser).
+//! `CoteVal` derive the default behavior of [`RawValParser`](crate::prelude::RawValParser).
 //!
 //! #### `coteval`
 //!
@@ -924,10 +924,10 @@
 //!| `name`    |  true      | string literal |
 //!| `alias`   |  true      | string literal |
 //!
-//! `coteval` can configure the behavior of [`RawValParser`](crate::RawValParser).
+//! `coteval` can configure the behavior of [`RawValParser`](crate::prelude::RawValParser).
 //!
 //! Using `forward` and `map` you can forward the call to another type, and then map the value to current type.
-//! Or you can use `mapraw`, `mapstr` pass a parser called by [`parse`](crate::RawValParser#method.parse).
+//! Or you can use `mapraw`, `mapstr` pass a parser called by [`parse`](crate::prelude::RawValParser#method.parse).
 //!
 //! `CoteVal` also support generate default parsing code for simple enum type.
 //! For enum type, you can use `igcase` ignore case when matching, `name` configure the name of matching

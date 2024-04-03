@@ -220,7 +220,7 @@ where
         Ok(self)
     }
 
-    /// Call the [`init`](crate::Opt::init) of [`Opt`](crate::Opt) initialize the option value.
+    /// Call the [`init`](crate::prelude::Opt::init) of [`Opt`](crate::prelude::Opt) initialize the option value.
     pub fn init(&mut self) -> Result<(), Error> {
         let optset = self.optset_mut();
 
