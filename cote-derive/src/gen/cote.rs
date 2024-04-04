@@ -509,7 +509,7 @@ impl<'a> CoteGenerator<'a> {
                 let mut parser = Self::into_parser_with::<'inv, Set, Ser>()?;
 
                 // call on parser or policy set by user
-                #(#method_calls)*
+                #(#method_calls)* // todo! do we need apply this in sub handler ?
 
                 let mut rctx = cote::prelude::RunningCtx::default();
 
