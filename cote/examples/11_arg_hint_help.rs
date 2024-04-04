@@ -20,7 +20,7 @@ pub struct Cli {
 }
 
 // Access the default value need invoke initialize handler, not recommend do this
-fn default_value<T: ErasedTy>(opt: &mut AOpt) -> Result<Option<Vec<T>>, aopt::Error> {
+fn default_value<T: ErasedTy>(opt: &mut AOpt) -> cote::Result<Option<Vec<T>>> {
     opt.accessor_mut().initializer_mut().values::<T>()
 }
 

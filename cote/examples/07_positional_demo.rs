@@ -2,8 +2,8 @@ use cote::prelude::*;
 
 #[derive(Debug, Cote, PartialEq, Eq)]
 pub struct Cli {
-    #[pos()]
-    foo: Option<String>, // if not specific, index will automate generated base on field index
+    #[pos()] // index will set to 1
+    foo: Option<String>, // if not specific, index will automate generated
 
     #[pos(index = "2")]
     bar: Option<String>,

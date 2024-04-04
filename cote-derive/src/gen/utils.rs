@@ -20,6 +20,7 @@ pub const CONFIG_DOC: &str = "doc";
 pub const POLICY_PRE: &str = "pre";
 pub const POLICY_FWD: &str = "fwd";
 pub const POLICY_DELAY: &str = "delay";
+pub const HELP_OPTION: &str = "--help;-h=b: Display help message";
 
 #[derive(Debug, Clone, Copy)]
 pub enum AttrKind {

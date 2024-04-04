@@ -27,6 +27,7 @@ use super::CONFIG_ARG;
 use super::CONFIG_CMD;
 use super::CONFIG_POS;
 use super::CONFIG_SUB;
+use super::HELP_OPTION;
 use super::POLICY_FWD;
 use super::POLICY_PRE;
 
@@ -332,7 +333,7 @@ impl<'a> CoteGenerator<'a> {
                 .configs
                 .find_cfg(CoteKind::HelpOpt)
                 .map(|v| v.to_token_stream())
-                .unwrap_or_else(|| "--help;-h=b: Display help message".to_token_stream());
+                .unwrap_or_else(|| HELP_OPTION.to_token_stream());
 
             // safe here
             let help_uid = self.help_uid().unwrap();

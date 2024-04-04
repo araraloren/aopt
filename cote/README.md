@@ -5,12 +5,7 @@ A simple option manager manage the [`AOpt`](aopt::opt::AOpt), support auto gener
 
 ## Setup
 
-`cargo add cote` or add following to your `Cargo.toml` file:
-
-```toml
-[dependencies]
-cote = "0.4"
-```
+`cargo add cote`
 
 ## Enable Features from aopt
 
