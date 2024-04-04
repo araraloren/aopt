@@ -9,108 +9,144 @@ pub(crate) mod value;
 
 pub mod valid;
 
-use std::marker::PhantomData;
-
 pub use aopt;
+pub use aopt::Error;
 pub use aopt_help;
 pub use cote_derive;
 
+pub type Result<T> = std::result::Result<T, Error>;
+
+pub mod prelude {
+    pub use aopt::ext::ctx;
+    pub use aopt::opt::Any;
+    pub use aopt::opt::Cmd;
+    pub use aopt::opt::Main;
+    pub use aopt::opt::MutOpt;
+    pub use aopt::opt::Pos;
+    pub use aopt::opt::RefOpt;
+    pub use aopt::parser::UserStyle;
+    pub use aopt::prelude::ctor_default_name;
+    pub use aopt::prelude::AOpt;
+    pub use aopt::prelude::APolicyExt;
+    pub use aopt::prelude::ARef;
+    pub use aopt::prelude::ASer;
+    pub use aopt::prelude::ASet;
+    pub use aopt::prelude::Action;
+    pub use aopt::prelude::Args;
+    pub use aopt::prelude::Commit;
+    pub use aopt::prelude::ConfigBuild;
+    pub use aopt::prelude::ConfigBuildInfer;
+    pub use aopt::prelude::ConfigBuildWith;
+    pub use aopt::prelude::ConfigBuilder;
+    pub use aopt::prelude::ConfigBuilderWith;
+    pub use aopt::prelude::ConfigValue;
+    pub use aopt::prelude::Ctor;
+    pub use aopt::prelude::Ctx;
+    pub use aopt::prelude::DefaultSetChecker;
+    pub use aopt::prelude::ErasedTy;
+    pub use aopt::prelude::ErasedValue;
+    pub use aopt::prelude::Extract;
+    pub use aopt::prelude::FilterMatcher;
+    pub use aopt::prelude::Handler;
+    pub use aopt::prelude::HandlerCollection;
+    pub use aopt::prelude::Index;
+    pub use aopt::prelude::Infer;
+    pub use aopt::prelude::Information;
+    pub use aopt::prelude::InitializeValue;
+    pub use aopt::prelude::Invoker;
+    pub use aopt::prelude::Opt;
+    pub use aopt::prelude::OptParser;
+    pub use aopt::prelude::OptValidator;
+    pub use aopt::prelude::OptValueExt;
+    pub use aopt::prelude::Policy;
+    pub use aopt::prelude::PolicyParser;
+    pub use aopt::prelude::PolicySettings;
+    pub use aopt::prelude::PrefixOptValidator;
+    pub use aopt::prelude::RawValParser;
+    pub use aopt::prelude::ReturnVal;
+    pub use aopt::prelude::ServicesValExt;
+    pub use aopt::prelude::Set;
+    pub use aopt::prelude::SetCfg;
+    pub use aopt::prelude::SetChecker;
+    pub use aopt::prelude::SetExt;
+    pub use aopt::prelude::SetValueFindExt;
+    pub use aopt::prelude::Store;
+    pub use aopt::prelude::Style;
+    pub use aopt::prelude::ValInitializer;
+    pub use aopt::prelude::ValStorer;
+    pub use aopt::prelude::ValValidator;
+    pub use aopt::prelude::VecStore;
+    pub use aopt::raise_error;
+    pub use aopt::raise_failure;
+    pub use aopt::value::raw2str;
+    pub use aopt::value::Placeholder;
+    pub use aopt::GetoptRes;
+    pub use aopt::RawVal;
+    pub use aopt::Uid;
+    pub use cote_derive::Cote;
+    pub use cote_derive::CoteOpt;
+    pub use cote_derive::CoteVal;
+
+    pub use crate::alter::Alter;
+    pub use crate::alter::Hint;
+    pub use crate::help::display_set_help;
+    pub use crate::help::HelpContext;
+    pub use crate::meta::OptionMeta;
+    pub use crate::parser::Parser;
+    pub use crate::rctx::FailedInfo;
+    pub use crate::rctx::RunningCtx;
+    pub use crate::valid;
+    pub use crate::value::fetch_uid_impl;
+    pub use crate::value::fetch_vec_uid_impl;
+    pub use crate::value::Fetch;
+    pub use crate::CoteRes;
+    pub use crate::DelayPolicy;
+    pub use crate::ExtractFromSetDerive;
+    pub use crate::FwdPolicy;
+    pub use crate::IntoParserDerive;
+    pub use crate::NullPolicy;
+    pub use crate::PrePolicy;
+    pub use crate::Status;
+}
+
+use crate::prelude::Parser;
+use aopt::args::Args;
+use aopt::ctx::Invoker;
+use aopt::ext::APolicyExt;
+use aopt::parser::DefaultSetChecker;
+use aopt::parser::Policy;
+use aopt::parser::PolicySettings;
+use aopt::parser::ReturnVal;
+use aopt::parser::UserStyle;
+use aopt::prelude::ConfigValue;
+use aopt::prelude::OptParser;
 use aopt::prelude::OptStyleManager;
-
-pub use aopt::ext::ctx;
-pub use aopt::opt::Any;
-pub use aopt::opt::Cmd;
-pub use aopt::opt::Main;
-pub use aopt::opt::MutOpt;
-pub use aopt::opt::Pos;
-pub use aopt::opt::RefOpt;
-pub use aopt::parser::UserStyle;
-pub use aopt::prelude::ctor_default_name;
-pub use aopt::prelude::AOpt;
-pub use aopt::prelude::APolicyExt;
-pub use aopt::prelude::ARef;
-pub use aopt::prelude::ASer;
-pub use aopt::prelude::ASet;
-pub use aopt::prelude::Action;
-pub use aopt::prelude::Args;
-pub use aopt::prelude::Commit;
-pub use aopt::prelude::Config;
-pub use aopt::prelude::ConfigValue;
-pub use aopt::prelude::Ctor;
-pub use aopt::prelude::Ctx;
-pub use aopt::prelude::DefaultSetChecker;
-pub use aopt::prelude::ErasedTy;
-pub use aopt::prelude::ErasedValue;
-pub use aopt::prelude::Extract;
-pub use aopt::prelude::FilterMatcher;
-pub use aopt::prelude::Handler;
-pub use aopt::prelude::HandlerCollection;
-pub use aopt::prelude::Index;
-pub use aopt::prelude::Infer;
-pub use aopt::prelude::Information;
-pub use aopt::prelude::InitializeValue;
-pub use aopt::prelude::Invoker;
-pub use aopt::prelude::Opt;
-pub use aopt::prelude::OptParser;
-pub use aopt::prelude::OptValidator;
-pub use aopt::prelude::OptValueExt;
-pub use aopt::prelude::Policy;
-pub use aopt::prelude::PolicyParser;
-pub use aopt::prelude::PolicySettings;
-pub use aopt::prelude::PrefixOptValidator;
-pub use aopt::prelude::RawValParser;
-pub use aopt::prelude::ReturnVal;
-pub use aopt::prelude::ServicesValExt;
-pub use aopt::prelude::Set;
-pub use aopt::prelude::SetCfg;
-pub use aopt::prelude::SetChecker;
-pub use aopt::prelude::SetExt;
-pub use aopt::prelude::SetValueFindExt;
-pub use aopt::prelude::Store;
-pub use aopt::prelude::Style;
-pub use aopt::prelude::ValInitializer;
-pub use aopt::prelude::ValStorer;
-pub use aopt::prelude::ValValidator;
-pub use aopt::prelude::VecStore;
-pub use aopt::raise_error;
-pub use aopt::raise_failure;
-pub use aopt::value::raw2str;
-pub use aopt::value::Placeholder;
-pub use aopt::Error as CoteError;
-pub use aopt::GetoptRes;
-pub use aopt::RawVal;
-pub use aopt::Uid;
-pub use cote_derive::Cote;
-pub use cote_derive::CoteOpt;
-pub use cote_derive::CoteVal;
-
-pub use alter::Alter;
-pub use alter::Hint;
-pub use help::display_set_help;
-pub use help::HelpDisplayCtx;
-pub use meta::IntoConfig;
-pub use meta::OptionMeta;
-pub use parser::Parser;
-pub use rctx::FailedInfo;
-pub use rctx::RunningCtx;
-pub use value::Fetch;
+use aopt::prelude::OptValidator;
+use aopt::prelude::ServicesValExt;
+use aopt::prelude::SetCfg;
+use aopt::prelude::SetValueFindExt;
+use aopt::ARef;
+use std::marker::PhantomData;
 
 pub trait IntoParserDerive<'inv, Set, Ser>
 where
     Ser: ServicesValExt + Default,
-    SetCfg<Set>: Config + ConfigValue + Default,
-    Set: crate::Set + OptParser + OptValidator + Default,
+    SetCfg<Set>: ConfigValue + Default,
+    Set: crate::prelude::Set + OptParser + OptValidator + Default,
 {
-    fn into_parser() -> Result<Parser<'inv, Set, Ser>, aopt::Error> {
+    fn into_parser() -> Result<Parser<'inv, Set, Ser>> {
         let mut parser = Parser::default();
         Self::update(&mut parser)?;
         Ok(parser)
     }
-    fn update(parser: &mut Parser<'inv, Set, Ser>) -> Result<(), aopt::Error>;
+    fn update(parser: &mut Parser<'inv, Set, Ser>) -> Result<()>;
 }
 
-pub trait ExtractFromSetDerive<'set, Set: SetValueFindExt> {
-    fn try_extract(set: &'set mut Set) -> Result<Self, aopt::Error>
+pub trait ExtractFromSetDerive<'set, Set: SetValueFindExt>
+where
+    SetCfg<Set>: ConfigValue + Default,
+{
+    fn try_extract(set: &'set mut Set) -> Result<Self>
     where
         Self: Sized;
 }
@@ -118,7 +154,7 @@ pub trait ExtractFromSetDerive<'set, Set: SetValueFindExt> {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct CoteRes<P, Policy>
 where
-    Policy: crate::Policy,
+    Policy: crate::prelude::Policy,
 {
     pub policy: P,
 
@@ -180,7 +216,7 @@ impl<'inv, Set, Ser> Policy for NullPolicy<'inv, Set, Ser> {
 
     type Ser = Ser;
 
-    type Error = aopt::Error;
+    type Error = crate::Error;
 
     fn parse(
         &mut self,
@@ -188,7 +224,7 @@ impl<'inv, Set, Ser> Policy for NullPolicy<'inv, Set, Ser> {
         _: &mut Self::Inv<'_>,
         _: &mut Self::Ser,
         _: ARef<Args>,
-    ) -> Result<Self::Ret, Self::Error> {
+    ) -> Result<Self::Ret> {
         Ok(ReturnVal::default())
     }
 }
@@ -210,7 +246,7 @@ impl<'inv, Set, Ser> PolicySettings for NullPolicy<'inv, Set, Ser> {
         &self.style_manager
     }
 
-    fn no_delay(&self) -> Option<&[aopt::Str]> {
+    fn no_delay(&self) -> Option<&[aopt::AStr]> {
         None
     }
 
@@ -226,7 +262,7 @@ impl<'inv, Set, Ser> PolicySettings for NullPolicy<'inv, Set, Ser> {
         self
     }
 
-    fn set_no_delay(&mut self, _: impl Into<aopt::Str>) -> &mut Self {
+    fn set_no_delay(&mut self, _: impl Into<aopt::AStr>) -> &mut Self {
         self
     }
 
@@ -258,7 +294,7 @@ mod test {
     #[test]
     fn test_example_simple() {
         use crate as cote;
-        use crate::*;
+        use crate::prelude::*;
         // macro generate the code depend on crate name
         use aopt::opt::Pos;
 
@@ -272,13 +308,13 @@ mod test {
             bar: Pos<usize>,
         }
 
-        let example = Example::parse(Args::from_array(["app", "--foo", "42"]));
+        let example = Example::parse(Args::from(["app", "--foo", "42"]));
 
         assert!(example.is_ok());
 
         let example = example.unwrap();
 
-        assert_eq!(example.foo, true);
+        assert!(example.foo);
         assert_eq!(example.bar.0, 42);
 
         let parser = Example::into_parser().unwrap();
@@ -289,7 +325,7 @@ mod test {
 
     #[test]
     fn test_multiple_pos_arguments() {
-        use crate::*;
+        use crate::prelude::*;
         // macro generate the code depend on crate name
         use crate as cote;
         use aopt::opt::Pos;
@@ -313,17 +349,17 @@ mod test {
             sources: Vec<Pos<PathBuf>>,
         }
 
-        let example = CopyTool::parse(Args::from_array(["app", "--force"]));
+        let example = CopyTool::parse(Args::from(["app", "--force"]));
 
         assert!(example.is_err());
 
-        let example = CopyTool::parse(Args::from_array([
+        let example = CopyTool::parse(Args::from([
             "app", "--force", ".", "../foo", "../bar/", "other",
         ]))
         .unwrap();
 
-        assert_eq!(example.force, true);
-        assert_eq!(example.recursive, false);
+        assert!(example.force);
+        assert!(!example.recursive);
         assert_eq!(example.destination.0, String::from("."));
         assert_eq!(
             example.sources,
@@ -336,7 +372,7 @@ mod test {
 
     #[test]
     fn test_fallback() {
-        use crate::*;
+        use crate::prelude::*;
         // macro generate the code depend on crate name
         use crate as cote;
         use aopt::opt::Pos;
@@ -366,6 +402,7 @@ mod test {
             destination: Vec<Pos<String>>,
         }
 
+        #[allow(dead_code)]
         fn search<Set, Ser>(_: &mut Set, _: &mut Ser) -> Result<Option<Vec<String>>, aopt::Error> {
             Ok(Some(
                 ["file1", "file2", "dir1", "dir2"]
@@ -378,12 +415,13 @@ mod test {
         fn find_main<Set, Ser>(set: &mut Set, _: &mut Ser) -> Result<Option<()>, aopt::Error>
         where
             Set: SetValueFindExt,
+            SetCfg<Set>: ConfigValue + Default,
         {
             let tool = Find::try_extract(set)?;
 
-            assert_eq!(tool.hard, true);
-            assert_eq!(tool.symbol, false);
-            assert_eq!(tool.never, true);
+            assert!(tool.hard,);
+            assert!(!tool.symbol);
+            assert!(tool.never);
             assert_eq!(tool.name, Some("foo".to_owned()));
             assert_eq!(tool.size, Some(42));
             assert_eq!(
@@ -397,7 +435,7 @@ mod test {
             Ok(Some(()))
         }
 
-        let args = Args::from_array(["app", ".", "-H", "-name=foo", "-size", "42"]);
+        let args = Args::from(["app", ".", "-H", "-name=foo", "-size", "42"]);
 
         let CoteRes { ret, .. } = Find::parse_args(args).unwrap();
 
@@ -410,7 +448,7 @@ mod test {
     }
 
     fn sub_test_impl() -> Result<(), aopt::Error> {
-        use crate::*;
+        use crate::prelude::*;
         // macro generate the code depend on crate name
         use crate as cote;
         use std::path::PathBuf;
@@ -451,7 +489,7 @@ mod test {
             path: Pos<PathBuf>,
         }
 
-        let args = Args::from_array(["app", "ls", "--all", "--depth=42", "."]);
+        let args = Args::from(["app", "ls", "--all", "--depth=42", "."]);
 
         let app = App::parse(args)?;
 
@@ -468,13 +506,13 @@ mod test {
             }
         );
 
-        let args = Args::from_array(["app", "list", "--all", "--depth=6", "."]);
+        let args = Args::from(["app", "list", "--all", "--depth=6", "."]);
 
         let app = App::parse(args);
 
         assert!(app.is_err());
 
-        let args = Args::from_array(["app", "--count=8", "find", "something"]);
+        let args = Args::from(["app", "--count=8", "find", "something"]);
 
         let app = App::parse(args)?;
 
@@ -490,13 +528,13 @@ mod test {
             }
         );
 
-        let args = Args::from_array(["app", "--count", "42"]);
+        let args = Args::from(["app", "--count", "42"]);
 
         let app = App::parse(args);
 
         assert!(app.is_err());
 
-        let args = Args::from_array(["app", "--count=42", "list"]);
+        let args = Args::from(["app", "--count=42", "list"]);
 
         let CoteRes {
             ret,
@@ -504,7 +542,7 @@ mod test {
             ..
         } = App::parse_args(args)?;
 
-        assert_eq!(ret.status(), false);
+        assert!(!ret.status());
         assert_eq!(
             app.extract_type::<App>()?,
             App {

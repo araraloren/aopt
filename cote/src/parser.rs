@@ -4,7 +4,7 @@ use std::ops::DerefMut;
 
 use aopt::ctx::HandlerEntry;
 use aopt::prelude::Args;
-use aopt::prelude::Config;
+use aopt::prelude::ConfigBuild;
 use aopt::prelude::ConfigValue;
 use aopt::prelude::ErasedTy;
 use aopt::prelude::Extract;
@@ -18,6 +18,7 @@ use aopt::prelude::Policy;
 use aopt::prelude::PolicyParser;
 use aopt::prelude::SetCfg;
 use aopt::prelude::SetOpt;
+use aopt::raise_error;
 use aopt::ser::ServicesValExt;
 use aopt::set::SetValueFindExt;
 use aopt::ARef;
@@ -25,9 +26,9 @@ use aopt::Error;
 use aopt::RawVal;
 use aopt::Uid;
 
+use crate::prelude::HelpContext;
+use crate::prelude::RunningCtx;
 use crate::ExtractFromSetDerive;
-use crate::HelpDisplayCtx;
-use crate::RunningCtx;
 
 #[derive(Debug)]
 pub struct Parser<'a, Set, Ser> {
@@ -219,7 +220,7 @@ where
         Ok(self)
     }
 
-    /// Call the [`init`](crate::Opt::init) of [`Opt`](crate::Opt) initialize the option value.
+    /// Call the [`init`](crate::prelude::Opt::init) of [`Opt`](crate::prelude::Opt) initialize the option value.
     pub fn init(&mut self) -> Result<(), Error> {
         let optset = self.optset_mut();
 
@@ -265,7 +266,7 @@ where
 
 impl<'a, Set, Ser> Parser<'a, Set, Ser>
 where
-    Set: crate::Set,
+    Set: crate::prelude::Set,
     Ser: ServicesValExt,
 {
     pub fn app_data<T: ErasedTy>(&self) -> Result<&T, Error> {
@@ -285,6 +286,7 @@ impl<'a, 'b, Set, Ser> Parser<'a, Set, Ser>
 where
     'a: 'b,
     Set: SetValueFindExt,
+    SetCfg<Set>: ConfigValue + Default,
 {
     pub fn extract_type<T>(&'b mut self) -> Result<T, Error>
     where
@@ -343,7 +345,7 @@ where
 
     type Error = Set::Error;
 
-    fn parse_opt(&self, pattern: aopt::Str) -> Result<Self::Output, Self::Error> {
+    fn parse_opt(&self, pattern: &str) -> Result<Self::Output, Self::Error> {
         OptParser::parse_opt(&self.set, pattern)
     }
 }
@@ -366,32 +368,21 @@ where
 impl<'a, Set, Ser> SetValueFindExt for Parser<'a, Set, Ser>
 where
     Set: SetValueFindExt,
+    SetCfg<Set>: ConfigValue + Default,
 {
-    fn find_uid(&self, opt: impl Into<aopt::Str>) -> Result<Uid, Error> {
-        SetValueFindExt::find_uid(&self.set, opt)
+    fn find_uid(&self, cb: impl ConfigBuild<SetCfg<Self>>) -> Result<Uid, Error> {
+        SetValueFindExt::find_uid(&self.set, cb)
     }
 
-    fn find_opt(&self, opt: impl Into<aopt::Str>) -> Result<&SetOpt<Self>, Error> {
-        SetValueFindExt::find_opt(&self.set, opt)
+    fn find_opt(&self, cb: impl ConfigBuild<SetCfg<Self>>) -> Result<&SetOpt<Self>, Error> {
+        SetValueFindExt::find_opt(&self.set, cb)
     }
 
-    fn find_opt_mut(&mut self, opt: impl Into<aopt::Str>) -> Result<&mut SetOpt<Self>, Error> {
-        SetValueFindExt::find_opt_mut(&mut self.set, opt)
-    }
-
-    fn find_uid_i<U: 'static>(&self, opt: impl Into<aopt::Str>) -> Result<Uid, Error> {
-        SetValueFindExt::find_uid_i::<U>(&self.set, opt)
-    }
-
-    fn find_opt_i<U: 'static>(&self, opt: impl Into<aopt::Str>) -> Result<&SetOpt<Self>, Error> {
-        SetValueFindExt::find_opt_i::<U>(&self.set, opt)
-    }
-
-    fn find_opt_mut_i<U: 'static>(
+    fn find_opt_mut(
         &mut self,
-        opt: impl Into<aopt::Str>,
+        cb: impl ConfigBuild<SetCfg<Self>>,
     ) -> Result<&mut SetOpt<Self>, Error> {
-        SetValueFindExt::find_opt_mut_i::<U>(&mut self.set, opt)
+        SetValueFindExt::find_opt_mut(&mut self.set, cb)
     }
 }
 
@@ -431,7 +422,7 @@ where
     SetOpt<Set>: Opt,
     Set: aopt::set::Set + OptValidator + OptParser,
     <Set as OptParser>::Output: Information,
-    SetCfg<Set>: Config + ConfigValue + Default,
+    SetCfg<Set>: ConfigValue + Default,
 {
     /// Running function after parsing.
     ///
@@ -439,14 +430,14 @@ where
     ///
     ///```rust
     /// # use aopt::Error;
-    /// # use cote::*;
+    /// # use cote::prelude::*;
     /// #
     /// # fn main() -> Result<(), Error> {
     ///     let mut policy = FwdPolicy::default();
     ///     let mut parser = Parser::<ASet, ASer>::default().with_name("example");
     ///
-    ///     parser.add_opt_i::<bool>("-a!")?;
-    ///     parser.add_opt_i::<i64>("-b")?;
+    ///     parser.add_opt("-a!".infer::<bool>())?;
+    ///     parser.add_opt("-b".infer::<i64>())?;
     ///
     ///     parser.run_mut_with(
     ///         ["-a", "-b", "42"].into_iter(),
@@ -489,7 +480,7 @@ where
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
         F: FnMut(P::Ret, &'b mut Self) -> Result<R, Error>,
     {
-        let args = Args::from_env().into_inner();
+        let args: Vec<aopt::raw::RawVal> = Args::from_env().into();
         self.run_mut_with(args.into_iter(), policy, r)
     }
 
@@ -499,15 +490,15 @@ where
     ///
     /// ```rust
     /// # use aopt::Error;
-    /// # use cote::*;
+    /// # use cote::prelude::*;
     /// #
     /// #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
     ///     let mut policy = FwdPolicy::default();
     ///     let mut parser = Parser::<ASet, ASer>::default().with_name("example");
     ///
-    ///     parser.add_opt_i::<bool>("-a!")?;
-    ///     parser.add_opt_i::<i64>("-b")?;
+    ///     parser.add_opt("-a!".infer::<bool>())?;
+    ///     parser.add_opt("-b".infer::<i64>())?;
     ///
     ///     parser
     ///         .run_async_mut_with(
@@ -567,7 +558,7 @@ where
         F: FnMut(P::Ret, &'b mut Self) -> FUT,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
     {
-        let args = Args::from_env().into_inner();
+        let args: Vec<aopt::raw::RawVal> = Args::from_env().into();
         self.run_async_mut_with(args.into_iter(), policy, r).await
     }
 
@@ -577,14 +568,14 @@ where
     ///
     ///```rust
     /// # use aopt::Error;
-    /// # use cote::*;
+    /// # use cote::prelude::*;
     /// #
     /// # fn main() -> Result<(), Error> {
     ///     let mut policy = FwdPolicy::default();
     ///     let mut parser = Parser::<ASet, ASer>::default().with_name("example");
     ///
-    ///     parser.add_opt_i::<bool>("-a!")?;
-    ///     parser.add_opt_i::<i64>("-b")?;
+    ///     parser.add_opt("-a!".infer::<bool>())?;
+    ///     parser.add_opt("-b".infer::<i64>())?;
     ///
     ///     parser.run_with(
     ///         ["-a", "-b", "42"].into_iter(),
@@ -627,7 +618,7 @@ where
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
         F: FnMut(P::Ret, &'b Self) -> Result<R, Error>,
     {
-        let args = Args::from_env().into_inner();
+        let args: Vec<aopt::raw::RawVal> = Args::from_env().into();
         self.run_with(args.into_iter(), policy, r)
     }
 
@@ -637,15 +628,15 @@ where
     ///
     /// ```rust
     /// # use aopt::Error;
-    /// # use cote::*;
+    /// # use cote::prelude::*;
     /// #
     /// #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
     ///     let mut policy = FwdPolicy::default();
     ///     let mut parser = Parser::<ASet, ASer>::default().with_name("example");
     ///
-    ///     parser.add_opt_i::<bool>("-a!")?;
-    ///     parser.add_opt_i::<i64>("-b")?;
+    ///     parser.add_opt("-a!".infer::<bool>())?;
+    ///     parser.add_opt("-b".infer::<i64>())?;
     ///
     ///     parser
     ///         .run_async_with(
@@ -705,7 +696,7 @@ where
         F: FnMut(P::Ret, &'b Self) -> FUT,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
     {
-        let args = Args::from_env().into_inner();
+        let args: Vec<aopt::raw::RawVal> = Args::from_env().into();
         self.run_async_with(args.into_iter(), policy, r).await
     }
 }
@@ -719,17 +710,16 @@ where
 
     pub fn display_help(
         &self,
-        author: impl Into<String>,
-        version: impl Into<String>,
-        description: impl Into<String>,
+        author: &str,
+        version: &str,
+        description: &str,
     ) -> Result<(), Error> {
         let set = self.optset();
-        let (author, version, description) = (author.into(), version.into(), description.into());
-        let name = self.name.to_string();
+        let name = self.name.as_str();
 
         crate::display_help!(
             set,
-            &name,
+            name,
             author,
             version,
             description,
@@ -738,31 +728,75 @@ where
         )
     }
 
-    pub fn display_help_ctx(&self, ctx: HelpDisplayCtx) -> Result<(), Error> {
-        let name = ctx.generate_name();
+    pub fn display_help_ctx(&self, ctx: HelpContext) -> Result<(), Error> {
         let set = self.optset();
 
         crate::display_help!(
             set,
-            &name,
+            ctx.name(),
             ctx.head(),
             ctx.foot(),
             ctx.width(),
             ctx.usagew()
         )
     }
+
+    pub fn display_sub_help(&self, names: Vec<&str>, ctx: &HelpContext) -> Result<(), Error> {
+        self.display_sub_help_impl(names, ctx, 0)
+    }
+
+    fn display_sub_help_impl(
+        &self,
+        names: Vec<&str>,
+        ctx: &HelpContext,
+        i: usize,
+    ) -> Result<(), Error> {
+        if !names.is_empty() {
+            let max = names.len() - 1;
+
+            if let Some(name) = names.get(i) {
+                if i == max && (i > 0 || name == self.name()) {
+                    let name = names.join(" ");
+                    let optset = self.optset();
+
+                    return crate::display_help!(
+                        optset,
+                        &name,
+                        ctx.head(),
+                        ctx.foot(),
+                        ctx.width(),
+                        ctx.usagew()
+                    );
+                } else if i < max && name == self.name() {
+                    if let Some(name) = names.get(i + 1) {
+                        let sub_parsers = self.parsers();
+
+                        for sub_parser in sub_parsers {
+                            if sub_parser.name() == name {
+                                return sub_parser.display_sub_help_impl(names, ctx, i + 1);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Err(raise_error!(
+            "Can not display help message for names `{names:?}` with context: {ctx:?}"
+        ))
+    }
 }
 
 impl<'a, Set, Ser> Parser<'a, Set, Ser>
 where
     Set: SetValueFindExt,
+    SetCfg<Set>: ConfigValue + Default,
 {
     pub fn display_help_if(
         &self,
-        option: &str,
-        author: impl Into<String>,
-        version: impl Into<String>,
-        description: impl Into<String>,
+        option: impl ConfigBuild<SetCfg<Set>>,
+        author: &str,
+        version: &str,
+        description: &str,
     ) -> Result<bool, Error> {
         self.display_help_if_width(
             option,
@@ -774,17 +808,20 @@ where
         )
     }
 
-    pub fn display_help_if_ctx(&self, option: &str, ctx: &HelpDisplayCtx) -> Result<bool, Error> {
+    pub fn display_help_if_ctx(
+        &self,
+        option: impl ConfigBuild<SetCfg<Set>>,
+        ctx: &HelpContext,
+    ) -> Result<bool, Error> {
         let set = self.optset();
 
         if let Ok(help_option) = set.find_val::<bool>(option) {
             if *help_option {
-                let name = ctx.generate_name();
                 let set = self.optset();
 
                 crate::help::display_set_help(
                     set,
-                    name,
+                    ctx.name(),
                     ctx.head(),
                     ctx.foot(),
                     ctx.width(),
@@ -799,10 +836,10 @@ where
 
     pub fn display_help_if_width(
         &self,
-        option: &str,
-        author: impl Into<String>,
-        version: impl Into<String>,
-        description: impl Into<String>,
+        option: impl ConfigBuild<SetCfg<Set>>,
+        author: &str,
+        version: &str,
+        description: &str,
         option_width: usize,
         usage_width: usize,
     ) -> Result<bool, Error> {
@@ -810,9 +847,7 @@ where
 
         if let Ok(help_option) = set.find_val::<bool>(option) {
             if *help_option {
-                let (author, version, description) =
-                    (author.into(), version.into(), description.into());
-                let name = self.name.to_string();
+                let name = self.name.as_str();
 
                 crate::display_help!(
                     set,

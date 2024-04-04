@@ -7,7 +7,7 @@ use crate::ctx::Handler;
 use crate::ctx::HandlerCollection;
 use crate::ctx::HandlerEntry;
 use crate::map::ErasedTy;
-use crate::opt::Config;
+use crate::opt::ConfigBuild;
 use crate::opt::ConfigValue;
 use crate::opt::Information;
 use crate::opt::Opt;
@@ -25,7 +25,6 @@ use crate::value::Placeholder;
 use crate::value::RawValParser;
 use crate::ARef;
 use crate::Error;
-use crate::Str;
 use crate::Uid;
 
 use super::Parser;
@@ -170,7 +169,7 @@ where
     ///   },
     /// )?;
     ///
-    /// getopt!(Args::from_array(["--guess", "42"]), &mut parser)?;
+    /// getopt!(Args::from(["--guess", "42"]), &mut parser)?;
     /// #
     /// # Ok(())
     /// # }
@@ -207,7 +206,7 @@ where
     ///   },
     /// )?;
     ///
-    /// getopt!(Args::from_array(["--guess", "42"]), &mut parser)?;
+    /// getopt!(Args::from(["--guess", "42"]), &mut parser)?;
     /// #
     /// # Ok(())
     /// # }
@@ -220,7 +219,7 @@ where
 impl<'a, Set, Inv, Ser> HCOptSet<Set, Inv, Ser>
 where
     SetOpt<Set>: Opt,
-    SetCfg<Set>: Config + ConfigValue + Default,
+    SetCfg<Set>: ConfigValue + Default,
     <Set as OptParser>::Output: Information,
     Inv: HandlerCollection<'a, Set, Ser>,
     Set: crate::set::Set + OptParser + OptValidator,
@@ -250,7 +249,7 @@ where
     /// let _len_id = parser1.add_opt("--len=u")?.run()?;
     ///
     /// // Add an option `--size` with type `usize`, it has an alias `-s`.
-    /// parser1.add_opt_i::<usize>("--size;-s")?;
+    /// parser1.add_opt("--size;-s".infer::<usize>())?;
     ///
     /// // Add an option `--path` with type `s`.
     /// // Set its value action to `Action::Set`.
@@ -296,7 +295,7 @@ where
     ///     })?
     ///     .then(file_count_storer);
     ///
-    /// getopt!(Args::from_array(["app", "foo", "-s", "10", "bar"]), &mut parser1)?;
+    /// getopt!(Args::from(["app", "foo", "-s", "10", "bar"]), &mut parser1)?;
     ///
     /// assert_eq!(parser1.find_val::<u64>("file=p")?, &0);
     /// assert_eq!(parser1.find_val::<usize>("--size")?, &10);
@@ -304,32 +303,20 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    pub fn add_opt(
+    pub fn add_opt<B>(
         &mut self,
-        opt: impl Into<Str>,
-    ) -> Result<ParserCommit<'a, '_, Inv, Set, Ser, Placeholder>, Error> {
-        let info = <SetCfg<Set>>::new(&self.set, opt.into())?;
-
-        Ok(ParserCommit::new(
-            SetCommit::new_placeholder(&mut self.set, info),
-            &mut self.inv,
-        ))
-    }
-
-    pub fn add_opt_i<U>(
-        &mut self,
-        opt: impl Into<Str>,
-    ) -> Result<ParserCommit<'a, '_, Inv, Set, Ser, U>, Error>
+        cb: B,
+    ) -> Result<ParserCommit<'a, '_, Inv, Set, Ser, B::Val>, Error>
     where
-        U: Infer + 'static,
-        U::Val: RawValParser,
+        B::Val: Infer + 'static,
+        B: ConfigBuild<SetCfg<Set>>,
+        <B::Val as Infer>::Val: RawValParser,
     {
-        let info = <SetCfg<Set>>::new(&self.set, opt.into())?;
+        let cfg = cb.build(&self.set)?;
+        let set = &mut self.set;
+        let inv = &mut self.inv;
 
-        Ok(ParserCommit::new(
-            SetCommit::new(&mut self.set, info),
-            &mut self.inv,
-        ))
+        Ok(ParserCommit::new(SetCommit::new(set, cfg), inv))
     }
 
     /// Add an option to the [`Set`](Policy::Set), return a [`ParserCommit`].
@@ -347,7 +334,7 @@ where
     ///         OptConfig::default()
     ///             .with_ctor("b")
     ///             .with_type::<bool>()
-    ///             .with_styles(vec![Style::Boolean, Style::Combined])
+    ///             .with_style(vec![Style::Boolean, Style::Combined])
     ///             .with_action(Action::Set)
     ///             .with_storer(ValStorer::fallback::<bool>())
     ///             .with_ignore_index(true)
@@ -361,7 +348,7 @@ where
     ///     fn from(_: Int64) -> Self {
     ///         OptConfig::default()
     ///             .with_ctor(ctor_default_name())
-    ///             .with_styles(vec![Style::Argument])
+    ///             .with_style(vec![Style::Argument])
     ///             .with_type::<i64>()
     ///             .with_action(Action::Set)
     ///             .with_storer(ValStorer::fallback::<i64>())
@@ -525,7 +512,7 @@ where
 
     type Error = Set::Error;
 
-    fn parse_opt(&self, pattern: Str) -> Result<Self::Output, Self::Error> {
+    fn parse_opt(&self, pattern: &str) -> Result<Self::Output, Self::Error> {
         OptParser::parse_opt(&self.set, pattern)
     }
 }
@@ -533,38 +520,27 @@ where
 impl<Set, Inv, Ser> SetValueFindExt for HCOptSet<Set, Inv, Ser>
 where
     Set: SetValueFindExt,
+    SetCfg<Set>: ConfigValue + Default,
 {
-    fn find_uid(&self, opt: impl Into<Str>) -> Result<Uid, Error> {
-        SetValueFindExt::find_uid(&self.set, opt)
+    fn find_uid(&self, cb: impl ConfigBuild<SetCfg<Self>>) -> Result<Uid, Error> {
+        SetValueFindExt::find_uid(&self.set, cb)
     }
 
-    fn find_uid_i<U: 'static>(&self, opt: impl Into<Str>) -> Result<Uid, Error> {
-        SetValueFindExt::find_uid_i::<U>(&self.set, opt)
+    fn find_opt(&self, cb: impl ConfigBuild<SetCfg<Self>>) -> Result<&SetOpt<Self>, Error> {
+        SetValueFindExt::find_opt(&self.set, cb)
     }
 
-    fn find_opt(&self, opt: impl Into<Str>) -> Result<&SetOpt<Self>, Error> {
-        SetValueFindExt::find_opt(&self.set, opt)
-    }
-
-    fn find_opt_i<U: 'static>(&self, opt: impl Into<Str>) -> Result<&SetOpt<Self>, Error> {
-        SetValueFindExt::find_opt_i::<U>(&self.set, opt)
-    }
-
-    fn find_opt_mut(&mut self, opt: impl Into<Str>) -> Result<&mut SetOpt<Self>, Error> {
-        SetValueFindExt::find_opt_mut(&mut self.set, opt)
-    }
-
-    fn find_opt_mut_i<U: 'static>(
+    fn find_opt_mut(
         &mut self,
-        opt: impl Into<Str>,
+        cb: impl ConfigBuild<SetCfg<Self>>,
     ) -> Result<&mut SetOpt<Self>, Error> {
-        SetValueFindExt::find_opt_mut_i::<U>(&mut self.set, opt)
+        SetValueFindExt::find_opt_mut(&mut self.set, cb)
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::prelude::*;
+    use crate::{opt::config::ConfigBuildInfer, prelude::*};
     use std::ops::Deref;
 
     #[test]
@@ -582,11 +558,11 @@ mod test {
                 assert_eq!(val.deref(), &true);
                 Ok(Some(val.take()))
             });
-        set.add_opt_i::<Cmd>("ls")?;
+        set.add_opt("ls".infer::<Cmd>())?;
 
         PolicyParser::<AFwdPolicy>::parse(
             &mut set,
-            ARef::new(Args::from_array(["app", "ls", "--aopt", "--bopt=42"])),
+            ARef::new(Args::from(["app", "ls", "--aopt", "--bopt=42"])),
         )?;
 
         assert_eq!(set.find_val::<bool>("ls")?, &true);

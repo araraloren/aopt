@@ -1,4 +1,4 @@
-use cote::*;
+use cote::prelude::*;
 
 #[derive(Debug, Cote)]
 #[cote()]
@@ -8,7 +8,12 @@ pub struct Cli {
     name: Option<String>,
 }
 
-fn main() -> color_eyre::Result<()> {
+#[test]
+fn force() {
+    assert!(force_impl().is_ok());
+}
+
+fn force_impl() -> color_eyre::Result<()> {
     color_eyre::install()?;
     // name is not set, parse failed
     assert!(Cli::parse(Args::from(["app"].into_iter())).is_err());

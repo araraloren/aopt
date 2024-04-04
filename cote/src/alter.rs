@@ -1,12 +1,12 @@
 use aopt::prelude::RefOpt;
 
-use crate::Any;
-use crate::Cmd;
-use crate::ConfigValue;
-use crate::Main;
-use crate::MutOpt;
-use crate::Placeholder;
-use crate::Pos;
+use crate::prelude::Any;
+use crate::prelude::Cmd;
+use crate::prelude::ConfigValue;
+use crate::prelude::Main;
+use crate::prelude::MutOpt;
+use crate::prelude::Placeholder;
+use crate::prelude::Pos;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Hint {
@@ -26,10 +26,10 @@ pub enum Hint {
 pub trait Alter {
     fn alter(hint: Hint, cfg: &mut impl ConfigValue) {
         let (action, force) = match hint {
-            Hint::Opt => (crate::Action::Set, false),
-            Hint::Vec => (crate::Action::App, true),
-            Hint::OptVec => (crate::Action::App, false),
-            Hint::Null => (crate::Action::Set, true),
+            Hint::Opt => (crate::prelude::Action::Set, false),
+            Hint::Vec => (crate::prelude::Action::App, true),
+            Hint::OptVec => (crate::prelude::Action::App, false),
+            Hint::Null => (crate::prelude::Action::Set, true),
         };
 
         (!cfg.has_force()).then(|| cfg.set_force(force));
@@ -40,16 +40,17 @@ pub trait Alter {
 impl Alter for Cmd {
     fn alter(_: Hint, cfg: &mut impl ConfigValue) {
         (!cfg.has_force()).then(|| cfg.set_force(true));
-        (!cfg.has_action()).then(|| cfg.set_action(crate::Action::Set));
+        (!cfg.has_action()).then(|| cfg.set_action(crate::prelude::Action::Set));
     }
 }
 
 impl Alter for bool {
     fn alter(hint: Hint, cfg: &mut impl ConfigValue) {
         let action = match hint {
-            Hint::Opt | Hint::Null => crate::Action::Set,
-            Hint::Vec | Hint::OptVec => crate::Action::App,
+            Hint::Opt | Hint::Null => crate::prelude::Action::Set,
+            Hint::Vec | Hint::OptVec => crate::prelude::Action::App,
         };
+
         (!cfg.has_force()).then(|| cfg.set_force(false));
         (!cfg.has_action()).then(|| cfg.set_action(action));
     }
@@ -58,13 +59,13 @@ impl Alter for bool {
 #[macro_export]
 macro_rules! impl_alter {
     ($what:path) => {
-        impl Alter for $what { }
+        impl $crate::prelude::Alter for $what { }
     };
     ($what:ident, $inner:ident) => {
-        impl<$inner> Alter for $what<$inner> { }
+        impl<$inner> $crate::prelude::Alter for $what<$inner> { }
     };
     (&$a:lifetime $what:path) => {
-        impl<$a> Alter for &$a $what { }
+        impl<$a> $crate::prelude::Alter for &$a $what { }
     };
 }
 
@@ -142,10 +143,10 @@ impl_alter!(&'a std::ffi::OsStr);
 impl<'a, T> Alter for RefOpt<'a, T> {
     fn alter(hint: Hint, cfg: &mut impl ConfigValue) {
         let (action, force) = match hint {
-            Hint::Opt => (crate::Action::Set, false),
-            Hint::Vec => (crate::Action::App, true),
-            Hint::OptVec => (crate::Action::App, false),
-            Hint::Null => (crate::Action::Set, true),
+            Hint::Opt => (crate::prelude::Action::Set, false),
+            Hint::Vec => (crate::prelude::Action::App, true),
+            Hint::OptVec => (crate::prelude::Action::App, false),
+            Hint::Null => (crate::prelude::Action::Set, true),
         };
 
         (!cfg.has_force()).then(|| cfg.set_force(force));

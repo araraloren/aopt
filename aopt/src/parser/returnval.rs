@@ -75,7 +75,7 @@ impl ReturnVal {
     pub fn clone_args(&self) -> Vec<RawVal> {
         let args = self.ctx.args().as_ref();
 
-        args.clone().into_inner()
+        args.clone().into()
     }
 }
 

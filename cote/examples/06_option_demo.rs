@@ -1,4 +1,4 @@
-use cote::*;
+use cote::prelude::*;
 
 #[derive(Debug, Cote, PartialEq, Eq)]
 pub struct Cli {
@@ -9,17 +9,17 @@ pub struct Cli {
 }
 
 fn main() -> Result<(), aopt::Error> {
-    let cli = Cli::parse(Args::from_array(["app"]))?;
+    let cli = Cli::parse(Args::from(["app"]))?;
 
     assert_eq!(cli.foo.as_deref(), None);
     assert_eq!(cli.bar.as_deref(), None);
 
-    let cli = Cli::parse(Args::from_array(["app", "--foo", "bar", "-b=foo"]))?;
+    let cli = Cli::parse(Args::from(["app", "--foo", "bar", "-b=foo"]))?;
 
     assert_eq!(cli.foo.as_deref(), Some("bar"));
     assert_eq!(cli.bar.as_deref(), Some("foo"));
 
-    let cli = Cli::parse(Args::from_array(["app", "-b", "foo", "--foo=bar"]))?;
+    let cli = Cli::parse(Args::from(["app", "-b", "foo", "--foo=bar"]))?;
 
     assert_eq!(cli.foo.as_deref(), Some("bar"));
     assert_eq!(cli.bar.as_deref(), Some("foo"));

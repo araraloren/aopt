@@ -11,12 +11,12 @@ impl Kind for AlterKind {
         let ident: Ident = input.parse()?;
         let option = ident.to_string();
 
-        error(
+        Err(error(
             input.span(),
             format!(
                 "alter not support any configuration currently: {}",
                 option.as_str()
             ),
-        )
+        ))
     }
 }

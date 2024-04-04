@@ -1,4 +1,4 @@
-use cote::*;
+use cote::prelude::*;
 
 #[derive(Debug, Cote, PartialEq, Eq)]
 #[cote(help, aborthelp)]
@@ -30,15 +30,21 @@ impl Infer for Direction {
     type Val = Direction;
 }
 
-impl Fetch<'_> for Direction {}
+impl<S> Fetch<'_, S> for Direction
+where
+    S: SetValueFindExt,
+    SetCfg<S>: ConfigValue + Default,
+    Self: ErasedTy + Sized,
+{
+}
 
 impl Alter for Direction {}
 
-impl cote::RawValParser for Direction {
-    type Error = cote::aopt::Error;
+impl RawValParser for Direction {
+    type Error = cote::Error;
 
-    fn parse(raw: Option<&cote::RawVal>, ctx: &cote::Ctx) -> Result<Self, Self::Error> {
-        let name = cote::raw2str(raw)?.to_lowercase();
+    fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> cote::Result<Self> {
+        let name = raw2str(raw)?.to_lowercase();
         let uid = ctx.uid()?;
 
         match name.as_str() {
@@ -65,7 +71,7 @@ pub enum Way {
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
-    let cli = Cli::parse(Args::from_array(["app", "-s", "40", "-d=Left", "bike"]))?;
+    let cli = Cli::parse(Args::from(["app", "-s", "40", "-d=Left", "bike"]))?;
 
     assert_eq!(cli.speed.0, 40);
     assert_eq!(cli.direction, Direction::Left);

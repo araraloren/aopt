@@ -1,4 +1,4 @@
-use cote::*;
+use cote::prelude::*;
 use std::path::PathBuf;
 
 #[derive(Debug, Cote)]

@@ -1,4 +1,4 @@
-use cote::*;
+use cote::prelude::*;
 
 #[derive(Debug, Cote, PartialEq, Eq)]
 #[cote(help, // Generate help for current struct
@@ -35,6 +35,6 @@ fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     // pass `--help` to program display help message
-    Cli::parse(Args::from_array(["app", "--help"]))?;
+    Cli::parse(Args::from(["app", "--help"]))?;
     Ok(())
 }

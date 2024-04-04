@@ -1,10 +1,19 @@
-use cote::*;
+use cote::prelude::*;
 
 #[derive(Debug, Cote)]
-#[cote(help, head = "Set the head message here", foot = "Set the foot message here")]
+#[cote(
+    help,
+    head = "Set the head message here",
+    foot = "Set the foot message here"
+)]
 pub struct Cli;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[test]
+fn head_foot() {
+    assert!(head_foot_impl().is_ok());
+}
+
+fn head_foot_impl() -> Result<(), Box<dyn std::error::Error>> {
     Cli::parse(Args::from(["app", "-h"].into_iter()))?;
     // Output:
     //

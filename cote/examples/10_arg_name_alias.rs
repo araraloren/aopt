@@ -1,4 +1,4 @@
-use cote::*;
+use cote::prelude::*;
 
 #[derive(Debug, Cote, PartialEq, Eq)]
 pub struct Cli {
@@ -24,15 +24,15 @@ fn main() -> color_eyre::Result<()> {
     assert_eq!(app["--baz"].name(), "--baz");
     assert_eq!(app["-b"].name(), "--baz");
 
-    let cli = Cli::parse(Args::from_array(["app", "--baz", "qux", "foo", "42"]))?;
+    let cli = Cli::parse(Args::from(["app", "--baz", "qux", "foo", "42"]))?;
 
-    assert_eq!(cli.cmd, true);
+    assert!(cli.cmd);
     assert_eq!(cli.pos, 42);
     assert_eq!(cli.opt, "qux");
 
-    let cli = Cli::parse(Args::from_array(["app", "f", "-b=quux", "88"]))?;
+    let cli = Cli::parse(Args::from(["app", "f", "-b=quux", "88"]))?;
 
-    assert_eq!(cli.cmd, true);
+    assert!(cli.cmd);
     assert_eq!(cli.pos, 88);
     assert_eq!(cli.opt, "quux");
 

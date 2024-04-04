@@ -1,22 +1,25 @@
 use std::fmt::Debug;
 
+use crate::astr;
 use crate::opt::AOpt;
 use crate::opt::Action;
 use crate::opt::ConfigValue;
 use crate::opt::Opt;
 use crate::opt::OptConfig;
+use crate::prelude::Help;
+use crate::raise_error;
 use crate::set::Ctor;
 use crate::trace_log;
 use crate::value::ValAccessor;
+use crate::AStr;
 use crate::Error;
-use crate::Str;
 
 #[cfg(feature = "sync")]
 mod __creator {
     use super::*;
 
     pub struct Creator<O, C, E: Into<Error>> {
-        pub(crate) name: Str,
+        pub(crate) name: AStr,
 
         pub(crate) callback: Box<dyn FnMut(C) -> Result<O, E> + Send + Sync + 'static>,
     }
@@ -32,7 +35,7 @@ mod __creator {
 
     impl<O: Opt, C, E: Into<Error>> Creator<O, C, E> {
         pub fn new(
-            name: Str,
+            name: AStr,
             callback: impl FnMut(C) -> Result<O, E> + Send + Sync + 'static,
         ) -> Self {
             Self {
@@ -48,7 +51,7 @@ mod __creator {
     use super::*;
 
     pub struct Creator<O, C, E: Into<Error>> {
-        pub(crate) name: Str,
+        pub(crate) name: AStr,
 
         pub(crate) callback: Box<dyn FnMut(C) -> Result<O, E> + 'static>,
     }
@@ -63,7 +66,7 @@ mod __creator {
     }
 
     impl<O: Opt, C, E: Into<Error>> Creator<O, C, E> {
-        pub fn new(name: Str, callback: impl FnMut(C) -> Result<O, E> + 'static) -> Self {
+        pub fn new(name: AStr, callback: impl FnMut(C) -> Result<O, E> + 'static) -> Self {
             Self {
                 name,
                 callback: Box::new(callback),
@@ -74,6 +77,8 @@ mod __creator {
 
 pub use __creator::Creator;
 
+use super::Index;
+
 impl<O: Opt, C, E: Into<Error>> Ctor for Creator<O, C, E> {
     type Opt = O;
 
@@ -81,7 +86,7 @@ impl<O: Opt, C, E: Into<Error>> Ctor for Creator<O, C, E> {
 
     type Error = E;
 
-    fn name(&self) -> &Str {
+    fn name(&self) -> &AStr {
         &self.name
     }
 
@@ -124,7 +129,7 @@ pub enum BuiltInCtor {
     Int,
 
     /// Create names: `s`, `str`, `string`
-    Str,
+    AStr,
 
     /// Create names: `f`, `flt`, `f64`
     Flt,
@@ -158,7 +163,7 @@ impl BuiltInCtor {
     pub fn name(&self) -> &str {
         match self {
             BuiltInCtor::Int => BUILTIN_CTOR_INT_SHORT,
-            BuiltInCtor::Str => BUILTIN_CTOR_STR_SHORT,
+            BuiltInCtor::AStr => BUILTIN_CTOR_STR_SHORT,
             BuiltInCtor::Flt => BUILTIN_CTOR_FLT_SHORT,
             BuiltInCtor::Uint => BUILTIN_CTOR_UINT_SHORT,
             BuiltInCtor::Bool => BUILTIN_CTOR_BOOL_SHORT,
@@ -177,7 +182,7 @@ impl BuiltInCtor {
                 BuiltInCtor::Int
             }
             BUILTIN_CTOR_STR_SHORT | BUILTIN_CTOR_STR_LONG | BUILTIN_CTOR_STR_TYPE => {
-                BuiltInCtor::Str
+                BuiltInCtor::AStr
             }
             BUILTIN_CTOR_FLT_SHORT | BUILTIN_CTOR_FLT_LONG | BUILTIN_CTOR_FLT_TYPE => {
                 BuiltInCtor::Flt
@@ -201,6 +206,37 @@ impl BuiltInCtor {
     }
 }
 
+fn gen_hint(hint: Option<&AStr>, n: &AStr, idx: Option<&Index>, alias: Option<&Vec<AStr>>) -> AStr {
+    let hint_generator = || {
+        let mut names = Vec::with_capacity(1 + alias.map(|v| v.len()).unwrap_or_default());
+
+        // add name
+        names.push(n.as_str());
+        // add alias
+        if let Some(alias_vec) = alias {
+            for alias in alias_vec {
+                names.push(alias.as_str());
+            }
+        }
+        // sort name by len
+        names.sort_by_key(|v| v.len());
+        astr(if let Some(index) = idx {
+            let index_string = index.to_help();
+
+            // add index string
+            if index_string.is_empty() {
+                names.join(", ")
+            } else {
+                format!("{}@{}", names.join(", "), index_string)
+            }
+        } else {
+            names.join(", ")
+        })
+    };
+
+    hint.cloned().unwrap_or_else(hint_generator)
+}
+
 impl Creator<AOpt, OptConfig, Error> {
     pub fn fallback() -> Self {
         Self::new(
@@ -208,20 +244,41 @@ impl Creator<AOpt, OptConfig, Error> {
             move |mut config: OptConfig| {
                 trace_log!("Construct option with config {:?}", &config);
 
-                let force = config.force().unwrap_or(false);
-                let action = *config.action().unwrap_or(&Action::App);
-                let storer = config.gen_storer()?;
-                let initializer = config.gen_initializer()?;
+                let r#type = config.take_type();
+                let name = config.take_name();
+                let force = config.take_force();
+                let index = config.take_index();
+                let alias = config.take_alias();
+                let hint = config.take_hint();
+                let help = config.take_help();
+                let action = config.take_action();
+                let storer = config.take_storer();
+                let styles = config.take_style();
+                let initializer = config.take_initializer();
                 let ignore_name = config.ignore_name();
                 let ignore_alias = config.ignore_alias();
                 let ignore_index = config.ignore_index();
-                let styles = config.gen_styles()?;
-                let name = config.gen_name()?;
-                let help = config.gen_opt_help()?;
-                let r#type = config.gen_type()?;
-                let index = config.index().cloned();
-                let alias = config.take_alias();
-                let alias = if alias.is_empty() { None } else { Some(alias) };
+
+                let force = force.unwrap_or(false);
+                let action = action.unwrap_or(Action::App);
+                let storer = storer.ok_or_else(|| {
+                    raise_error!("Incomplete option configuration: missing ValStorer")
+                })?;
+                let initializer = initializer.ok_or_else(|| {
+                    raise_error!("Incomplete option configuration: missing ValInitializer")
+                })?;
+                let styles = styles.ok_or_else(|| {
+                    raise_error!("Incomplete option configuration: missing Style")
+                })?;
+                let name = name.ok_or_else(|| {
+                    raise_error!("Incomplete option configuration: missing option name")
+                })?;
+                let hint = gen_hint(hint.as_ref(), &name, index.as_ref(), alias.as_ref());
+                let help = help.unwrap_or_default();
+                let r#type = r#type.ok_or_else(|| {
+                    raise_error!("Incomplete option configuration: missing option value type")
+                })?;
+                let help = Help::default().with_help(help).with_hint(hint);
 
                 if ignore_alias {
                     if let Some(alias) = &alias {
@@ -269,25 +326,45 @@ impl Creator<AOpt, OptConfig, Error> {
         if ctor == BuiltInCtor::Fallback {
             return Self::fallback();
         }
-        let name = Str::from(ctor.name());
+        let name = AStr::from(ctor.name());
 
         Self::new(name, move |mut config: OptConfig| {
             trace_log!("Construct option with config {:?}", &config);
 
-            let force = config.force().unwrap_or(false);
-            let action = *config.action().unwrap_or(&Action::App);
-            let storer = config.gen_storer()?;
-            let initializer = config.gen_initializer()?;
+            let r#type = config.take_type();
+            let name = config.take_name();
+            let force = config.take_force();
+            let index = config.take_index();
+            let alias = config.take_alias();
+            let hint = config.take_hint();
+            let help = config.take_help();
+            let action = config.take_action();
+            let storer = config.take_storer();
+            let styles = config.take_style();
+            let initializer = config.take_initializer();
             let ignore_name = config.ignore_name();
             let ignore_alias = config.ignore_alias();
             let ignore_index = config.ignore_index();
-            let styles = config.gen_styles()?;
-            let name = config.gen_name()?;
-            let help = config.gen_opt_help()?;
-            let r#type = config.gen_type()?;
-            let index = config.index().cloned();
-            let alias = config.take_alias();
-            let alias = if alias.is_empty() { None } else { Some(alias) };
+
+            let force = force.unwrap_or(false);
+            let action = action.unwrap_or(Action::App);
+            let storer = storer.ok_or_else(|| {
+                raise_error!("Incomplete option configuration: missing ValStorer")
+            })?;
+            let initializer = initializer.ok_or_else(|| {
+                raise_error!("Incomplete option configuration: missing ValInitializer")
+            })?;
+            let styles = styles
+                .ok_or_else(|| raise_error!("Incomplete option configuration: missing Style"))?;
+            let name = name.ok_or_else(|| {
+                raise_error!("Incomplete option configuration: missing option name")
+            })?;
+            let hint = gen_hint(hint.as_ref(), &name, index.as_ref(), alias.as_ref());
+            let help = help.unwrap_or_default();
+            let r#type = r#type.ok_or_else(|| {
+                raise_error!("Incomplete option configuration: missing option value type")
+            })?;
+            let help = Help::default().with_help(help).with_hint(hint);
 
             if ignore_alias {
                 if let Some(alias) = &alias {
@@ -343,7 +420,7 @@ impl From<BuiltInCtor> for Creator<AOpt, OptConfig, Error> {
 /// * [`Int`](BuiltInCtor::Int)
 /// * [`Bool`](BuiltInCtor::Bool)
 /// * [`Flt`](BuiltInCtor::Flt)
-/// * [`Str`](BuiltInCtor::Str)
+/// * [`AStr`](BuiltInCtor::AStr)
 /// * [`Uint`](BuiltInCtor::Uint)
 /// * [`Cmd`](BuiltInCtor::Cmd)
 /// * [`Pos`](BuiltInCtor::Pos)

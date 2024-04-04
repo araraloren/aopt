@@ -33,13 +33,13 @@ impl Kind for ValueKind {
             "igcase" => Ok((Self::IgCase, false)),
             "name" => Ok((Self::Name, true)),
             "alias" => Ok((Self::Alias, true)),
-            _ => error(
+            _ => Err(error(
                 input.span(),
                 format!(
                     "unknown configuration name `{}` in attribute rawvalparser",
                     option.as_str()
                 ),
-            ),
+            )),
         }
     }
 }

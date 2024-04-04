@@ -1,5 +1,5 @@
-use proc_macro2::{Ident, TokenStream};
-use quote::quote;
+use proc_macro2::{Ident, Span, TokenStream};
+use quote::{quote, ToTokens};
 use syn::{punctuated::Punctuated, token::Comma, DeriveInput, Variant};
 
 use crate::config::{Configs, ValueKind};
@@ -11,7 +11,7 @@ pub struct ValueGenerator<'a> {
 
     variants: Vec<&'a Variant>,
 
-    variants_configs: Vec<Configs<ValueKind>>,
+    var_configs: Vec<Configs<ValueKind>>,
 
     configs: Configs<ValueKind>,
 }
@@ -23,7 +23,7 @@ impl<'a> ValueGenerator<'a> {
     ) -> syn::Result<Self> {
         let ident = &input.ident;
         let configs = Configs::<ValueKind>::parse_attrs("coteval", &input.attrs);
-        let (variants, variants_configs) = if let Some(variants) = variants {
+        let (variants, var_configs) = if let Some(variants) = variants {
             let variants: Vec<&Variant> = variants.iter().collect();
             let configs = variants
                 .iter()
@@ -39,136 +39,119 @@ impl<'a> ValueGenerator<'a> {
             ident,
             configs,
             variants,
-            variants_configs,
+            var_configs,
         })
     }
 
-    pub fn gen_impl(&self) -> syn::Result<TokenStream> {
+    pub fn gen_impl_for_enum(&self) -> syn::Result<TokenStream> {
         let ident = self.ident;
-        let forward_cfg = self.configs.find_cfg(ValueKind::Forward);
-        let map_cfg = self.configs.find_cfg(ValueKind::Map);
-        let map_raw_cfg = self.configs.find_cfg(ValueKind::MapRaw);
-        let map_str_cfg = self.configs.find_cfg(ValueKind::MapStr);
-        let ignore_case = self.configs.has_cfg(ValueKind::IgCase);
-        let impl_code = if let (Some(forward_cfg), Some(map_cfg)) = (forward_cfg, map_cfg) {
-            if map_raw_cfg.is_some() || map_str_cfg.is_some() || ignore_case {
-                return error(
-                    ident.span(),
-                    "`CoteVal` error: `forward` can only using pair with `map`".to_owned(),
-                );
+        let span = ident.span();
+        let forward_cfg = self.configs.find_value(ValueKind::Forward);
+        let map_cfg = self.configs.find_value(ValueKind::Map);
+        let map_raw_cfg = self.configs.find_value(ValueKind::MapRaw);
+        let map_str_cfg = self.configs.find_value(ValueKind::MapStr);
+        let igcase = self.configs.has_cfg(ValueKind::IgCase);
+        let impl_code = if let (Some(forward), Some(map)) = (forward_cfg, map_cfg) {
+            if map_raw_cfg.is_some() || map_str_cfg.is_some() || igcase {
+                return Err(error(
+                    span,
+                    "`CoteVal` error: `forward` can only using pair with `map`",
+                ));
             }
-            let forward = forward_cfg.value();
-            let map = map_cfg.value();
-
+            // map value using forward to other function
             quote! {
-                <#forward as cote::RawValParser>::parse(raw, ctx).map(#map)
+                <#forward as cote::prelude::RawValParser>::parse(raw, ctx).map(#map)
             }
         } else {
-            if map_raw_cfg.is_some() && map_str_cfg.is_some() {
-                return error(
-                    ident.span(),
-                    "`CoteVal` error: `mapraw` or `mapstr` can not using on same type".to_owned(),
-                );
-            } else if map_cfg.is_some() {
-                return error(
-                    ident.span(),
-                    "`CoteVal` error: `mapraw` or `mapstr` can not using with `map`".to_owned(),
-                );
-            } else if map_raw_cfg.is_some() && ignore_case {
-                return error(
-                    ident.span(),
-                    "`CoteVal` error: `mapraw` can not using with `igcase`".to_owned(),
-                );
-            }
-
-            let str_convert = if ignore_case {
-                quote! {
-                    cote::raw2str(raw)?.to_lowercase();
-                }
+            Self::check_config(
+                span,
+                map_raw_cfg.is_some(),
+                map_str_cfg.is_some(),
+                map_cfg.is_some(),
+                igcase,
+            )?;
+            let str_convert = if igcase {
+                quote! { cote::prelude::raw2str(raw)?.to_lowercase() }
             } else {
-                quote! {
-                    cote::raw2str(raw)?;
-                }
+                quote! { cote::prelude::raw2str(raw)? }
             };
+            let ty_name = ident.to_string();
 
-            if let Some(cfg) = map_raw_cfg {
-                let value = cfg.value();
-
-                quote! {
-                    #value(raw, ctx)
-                }
-            } else if let Some(cfg) = map_str_cfg {
-                let value = cfg.value();
-
-                quote! {
-                    let name = #str_convert;
-                    #value(name)
-                }
+            if let Some(value) = map_raw_cfg {
+                // map raw value to Self
+                quote! { #value(raw, ctx) }
+            } else if let Some(value) = map_str_cfg {
+                // map str value to Self
+                quote! { #value( #str_convert ) }
             } else {
-                if self.variants.is_empty() {
-                    return  error(
-                        ident.span(),
-                        "`CoteVal` error: only can generate parsing code for enum type currently, conside using `forward` and `map` on struct".to_owned()
-                    );
-                }
-                let mut mat_branchs = vec![];
-                let enum_type = ident.to_string();
+                let mut branches = vec![];
 
-                for (variant, configs) in self.variants.iter().zip(self.variants_configs.iter()) {
-                    let variant_ident = &variant.ident;
-                    let variant_name = if ignore_case {
-                        variant_ident.to_string().to_lowercase()
+                for (var, config) in self.variants.iter().zip(self.var_configs.iter()) {
+                    let var_ident = &var.ident;
+                    let var_name = if igcase {
+                        var_ident.to_string().to_lowercase()
                     } else {
-                        variant_ident.to_string()
+                        var_ident.to_string()
                     };
+                    let name_cfg = config
+                        .find_value(ValueKind::Name)
+                        .map(|v| v.to_token_stream())
+                        .unwrap_or(var_name.to_token_stream());
+                    let alias_cfg = config.find_values(ValueKind::Alias);
 
-                    if let Some(name) = configs.find_cfg(ValueKind::Name) {
-                        let name = name.value();
-
-                        mat_branchs.push(quote! {
-                            #name => Ok(#ident::#variant_ident),
-                        });
-                    } else {
-                        mat_branchs.push(quote! {
-                            #variant_name => Ok(#ident::#variant_ident),
-                        });
-                    }
-                    configs.iter().for_each(|v| {
-                        if v.kind() == &ValueKind::Alias {
-                            let alias = v.value();
-
-                            mat_branchs.push(quote! {
-                                #alias => Ok(#ident::#variant_ident),
-                            });
-                        }
+                    branches.push(quote! {
+                        #name_cfg #(| #alias_cfg)* => Ok(#ident::#var_ident),
                     })
                 }
-                mat_branchs.push(quote! {
-                    _ => Err(cote::raise_failure!("Unknow value for enum type `{}`: {}", #enum_type, name).with_uid(uid)),
-                });
-                let mut match_code = quote! {};
 
-                match_code.extend(mat_branchs);
                 quote! {
                     let name = #str_convert;
-                    let name = name.as_ref();
                     let uid = ctx.uid()?;
 
-                    match name {
-                        #match_code
+                    match name.as_ref() {
+                        #(#branches)*
+
+                        _ => Err(cote::prelude::raise_failure!("Unknow value for enum type `{}`: {}", #ty_name, name).with_uid(uid)),
                     }
                 }
             }
         };
 
         Ok(quote! {
-            impl cote::RawValParser for #ident {
-                type Error = cote::aopt::Error;
+            impl cote::prelude::RawValParser for #ident {
+                type Error = cote::Error;
 
-                fn parse(raw: Option<&cote::RawVal>, ctx: &cote::Ctx) -> Result<Self, Self::Error> {
+                fn parse(raw: Option<&cote::prelude::RawVal>, ctx: &cote::prelude::Ctx) -> Result<Self, Self::Error> {
                     #impl_code
                 }
             }
         })
+    }
+
+    pub fn check_config(
+        span: Span,
+        raw: bool,
+        str: bool,
+        map: bool,
+        igcase: bool,
+    ) -> syn::Result<()> {
+        if raw && str {
+            Err(error(
+                span,
+                "`CoteVal` error: `mapraw` or `mapstr` can not using on same type",
+            ))
+        } else if map {
+            Err(error(
+                span,
+                "`CoteVal` error: `mapraw` or `mapstr` can not using with `map`",
+            ))
+        } else if raw && igcase {
+            Err(error(
+                span,
+                "`CoteVal` error: `mapraw` can not using with `igcase`",
+            ))
+        } else {
+            Ok(())
+        }
     }
 }

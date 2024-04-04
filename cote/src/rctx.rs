@@ -1,3 +1,4 @@
+use crate::prelude::HelpContext;
 use crate::ReturnVal;
 use std::ops::Deref;
 use std::ops::DerefMut;
@@ -43,13 +44,13 @@ pub struct RunningCtx {
 
     display_help: bool,
 
-    display_sub_help: bool,
+    sub_parser: bool,
 
     exit: bool,
 
-    exit_sub: bool,
-
     failed_info: Vec<FailedInfo>,
+
+    help_context: Option<HelpContext>,
 }
 
 impl RunningCtx {
@@ -63,8 +64,8 @@ impl RunningCtx {
         self
     }
 
-    pub fn with_display_sub_help(mut self, display_sub_help: bool) -> Self {
-        self.display_sub_help = display_sub_help;
+    pub fn with_sub_parser(mut self, sub_parser: bool) -> Self {
+        self.sub_parser = sub_parser;
         self
     }
 
@@ -73,8 +74,8 @@ impl RunningCtx {
         self
     }
 
-    pub fn with_exit_sub(mut self, exit_sub: bool) -> Self {
-        self.exit_sub = exit_sub;
+    pub fn with_help_context(mut self, help_context: HelpContext) -> Self {
+        self.help_context = Some(help_context);
         self
     }
 
@@ -88,8 +89,8 @@ impl RunningCtx {
         self
     }
 
-    pub fn set_display_sub_help(&mut self, display_sub_help: bool) -> &mut Self {
-        self.display_sub_help = display_sub_help;
+    pub fn set_sub_parser(&mut self, sub_parser: bool) -> &mut Self {
+        self.sub_parser = sub_parser;
         self
     }
 
@@ -98,8 +99,8 @@ impl RunningCtx {
         self
     }
 
-    pub fn set_exit_sub(&mut self, exit_sub: bool) -> &mut Self {
-        self.exit_sub = exit_sub;
+    pub fn set_help_context(&mut self, help_context: HelpContext) -> &mut Self {
+        self.help_context = Some(help_context);
         self
     }
 
@@ -116,24 +117,28 @@ impl RunningCtx {
         self.display_help
     }
 
-    pub fn display_sub_help(&self) -> bool {
-        self.display_sub_help
+    pub fn sub_parser(&self) -> bool {
+        self.sub_parser
     }
 
     pub fn exit(&self) -> bool {
         self.exit
     }
 
-    pub fn exit_sub(&self) -> bool {
-        self.exit_sub
-    }
-
     pub fn failed_info(&self) -> &[FailedInfo] {
         &self.failed_info
     }
 
+    pub fn help_context(&self) -> Option<&HelpContext> {
+        self.help_context.as_ref()
+    }
+
     pub fn take_failed_info(&mut self) -> Vec<FailedInfo> {
         std::mem::take(&mut self.failed_info)
+    }
+
+    pub fn take_help_context(&mut self) -> Option<HelpContext> {
+        self.help_context.take()
     }
 
     pub fn clear_failed_info(&mut self) {
@@ -145,21 +150,8 @@ impl RunningCtx {
         self
     }
 
-    pub fn sync_ctx(&mut self, ctx: &mut Self, failed_info: Option<FailedInfo>) -> &mut Self {
-        self.names.append(&mut ctx.names);
-        self.display_help = self.display_help() || ctx.display_help();
-        self.display_sub_help = self.display_sub_help() || ctx.display_sub_help();
-        self.exit = self.exit() || ctx.exit();
-        self.exit_sub = self.exit_sub() || ctx.exit_sub();
-        match failed_info {
-            Some(failed_info) => {
-                self.sync_failed_info(ctx).add_failed_info(failed_info);
-            }
-            None => {
-                self.clear_failed_info();
-            }
-        }
-        self
+    pub fn pop_name(&mut self) -> Option<String> {
+        self.names.pop()
     }
 
     pub fn sync_failed_info(&mut self, ctx: &mut Self) -> &mut Self {

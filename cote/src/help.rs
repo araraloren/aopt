@@ -6,7 +6,7 @@ use aopt_help::store::Store;
 use std::borrow::Cow;
 
 #[derive(Debug, Clone, Default)]
-pub struct HelpDisplayCtx {
+pub struct HelpContext {
     name: String,
 
     head: String,
@@ -16,13 +16,9 @@ pub struct HelpDisplayCtx {
     width: usize,
 
     usagew: usize,
-
-    subnames: Vec<String>,
-
-    submode: bool,
 }
 
-impl HelpDisplayCtx {
+impl HelpContext {
     pub fn with_name(mut self, name: impl Into<String>) -> Self {
         self.name = name.into();
         self
@@ -45,16 +41,6 @@ impl HelpDisplayCtx {
 
     pub fn with_usagew(mut self, usagew: usize) -> Self {
         self.usagew = usagew;
-        self
-    }
-
-    pub fn with_subnames(mut self, subnames: Vec<String>) -> Self {
-        self.subnames = subnames;
-        self
-    }
-
-    pub fn with_submode(mut self, submode: bool) -> Self {
-        self.submode = submode;
         self
     }
 
@@ -83,16 +69,6 @@ impl HelpDisplayCtx {
         self
     }
 
-    pub fn set_subnames(&mut self, subnames: Vec<String>) -> &mut Self {
-        self.subnames = subnames;
-        self
-    }
-
-    pub fn set_submode(&mut self, submode: bool) -> &mut Self {
-        self.submode = submode;
-        self
-    }
-
     pub fn name(&self) -> &String {
         &self.name
     }
@@ -111,31 +87,6 @@ impl HelpDisplayCtx {
 
     pub fn usagew(&self) -> usize {
         self.usagew
-    }
-
-    pub fn subnames(&self) -> &[String] {
-        &self.subnames
-    }
-
-    pub fn submode(&self) -> bool {
-        self.submode
-    }
-
-    pub fn generate_name(&self) -> String {
-        if self.submode {
-            std::iter::once(self.name())
-                .chain(self.subnames().iter())
-                .map(|v| v.as_str())
-                .collect::<Vec<&str>>()
-                .join(" ")
-        } else {
-            self.subnames()
-                .iter()
-                .chain(std::iter::once(self.name()))
-                .map(|v| v.as_str())
-                .collect::<Vec<&str>>()
-                .join(" ")
-        }
     }
 }
 
@@ -218,13 +169,9 @@ macro_rules! display_help {
             a
         }
 
-        fn __check_name<T: Into<String>>(a: T) -> String {
-            a.into()
-        }
-
-        $crate::display_set_help(
+        $crate::prelude::display_set_help(
             __check_set($set),
-            __check_name($name),
+            $name,
             $head,
             $foot,
             $width,
@@ -240,18 +187,7 @@ macro_rules! display_help {
             a
         }
 
-        fn __check_name<T: Into<String>>(a: T) -> String {
-            a.into()
-        }
-
-        $crate::help::display_set_help(
-            __check_set($set),
-            __check_name($name),
-            head,
-            foot,
-            $width,
-            $usage_width,
-        )
-        .map_err(|e| aopt::Error::raise_error(format!("Can not show help message: {:?}", e)))
+        $crate::help::display_set_help(__check_set($set), $name, head, foot, $width, $usage_width)
+            .map_err(|e| aopt::Error::raise_error(format!("Can not show help message: {:?}", e)))
     }};
 }

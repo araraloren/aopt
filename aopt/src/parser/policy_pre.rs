@@ -20,8 +20,8 @@ use crate::set::SetChecker;
 use crate::set::SetOpt;
 use crate::trace_log;
 use crate::ARef;
+use crate::AStr;
 use crate::Error;
-use crate::Str;
 
 /// [`PrePolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
 /// [`PrePolicy`] will skip any special [`Error`] during [`parse`](Policy::parse) process.
@@ -46,7 +46,7 @@ use crate::Str;
 ///         let mut found = false;
 ///
 ///         for name in ["-c", "-cxx"] {
-///             if let Some(opt) = set.find(name)? {
+///             if let Ok(opt) = set.find(name) {
 ///                 if let Ok(file) = opt.vals::<String>() {
 ///                     if file.contains(ext.deref()) {
 ///                         found = true;
@@ -63,7 +63,7 @@ use crate::Str;
 ///
 ///         match cfg.as_str() {
 ///             "cxx" => {
-///                 parser.add_opt_i::<String>("-cxx")?.set_values(
+///                 parser.add_opt("-cxx".infer::<String>())?.set_values(
 ///                     ["cxx", "cpp", "c++", "cc", "hpp", "hxx", "h"]
 ///                         .map(|v| v.to_owned())
 ///                         .to_vec(),
@@ -84,13 +84,13 @@ use crate::Str;
 /// )?;
 ///
 /// let ret = getopt!(
-///     Args::from_array(["--load", "cxx", "-check", "cc"]),
+///     Args::from(["--load", "cxx", "-check", "cc"]),
 ///     &mut cfg_loader
 /// )?;
 /// let next_args = ret.ret.clone_args();
 /// let mut parser = cfg_loader.service_mut().sve_take_val::<AFwdParser>()?;
 ///
-/// getopt!(Args::from_vec(next_args), &mut parser)?;
+/// getopt!(Args::from(next_args), &mut parser)?;
 ///
 /// assert!(*parser.find_val::<bool>("-check")?);
 ///
@@ -98,13 +98,13 @@ use crate::Str;
 /// cfg_loader.set_app_data(parser)?;
 ///
 /// let ret = getopt!(
-///     Args::from_array(["--load", "c", "-check", "c"]),
+///     Args::from(["--load", "c", "-check", "c"]),
 ///     &mut cfg_loader
 /// )?;
 /// let next_args = ret.ret.clone_args();
 /// let mut parser = cfg_loader.service_mut().sve_take_val::<AFwdParser>()?;
 ///
-/// getopt!(Args::from_vec(next_args), &mut parser)?;
+/// getopt!(Args::from(next_args), &mut parser)?;
 ///
 /// assert!(*parser.find_val::<bool>("-check")?);
 /// #
@@ -260,7 +260,7 @@ impl<Set, Ser, Chk> PolicySettings for PrePolicy<Set, Ser, Chk> {
         &self.style_manager
     }
 
-    fn no_delay(&self) -> Option<&[Str]> {
+    fn no_delay(&self) -> Option<&[AStr]> {
         None
     }
 
@@ -278,7 +278,7 @@ impl<Set, Ser, Chk> PolicySettings for PrePolicy<Set, Ser, Chk> {
         self
     }
 
-    fn set_no_delay(&mut self, _: impl Into<Str>) -> &mut Self {
+    fn set_no_delay(&mut self, _: impl Into<AStr>) -> &mut Self {
         self
     }
 
@@ -318,52 +318,46 @@ where
             let mut consume = false;
             let mut stopped = false;
             let mut like_opt = false;
-            let next = next.map(|v| ARef::new(v.clone()));
 
             if let Ok(clopt) = opt.parse_arg() {
-                if let Some(name) = clopt.name() {
-                    if let Some(valid) =
-                        Self::ig_failure(set.check(name.as_str()).map_err(Into::into))?
-                    {
-                        if valid {
-                            like_opt = true;
-                            let arg = clopt.value().cloned();
-                            let mut guess = InvokeGuess {
-                                idx,
-                                arg,
-                                set,
-                                inv,
-                                ser,
-                                tot,
-                                ctx,
-                                next: next.clone(),
-                                fail: &mut opt_fail,
-                                name: Some(name.clone()),
-                            };
+                trace_log!("Guess command line clopt = {:?} & next = {:?}", clopt, next);
+                let name = clopt.name;
 
-                            trace_log!(
-                                "Guess command line clopt = {:?} & next = {:?}",
-                                clopt,
-                                next
-                            );
-                            for style in opt_styles.iter() {
-                                if let Some(Some(ret)) =
-                                    Self::ig_failure(guess.guess_and_invoke(style, overload))?
-                                {
-                                    (matched, consume) = (ret.matched, ret.consume);
-                                }
-                                if let Some(error_cmd) = guess.fail.find_err_command() {
-                                    match error_cmd {
-                                        ErrorCmd::StopPolicy => {
-                                            stopped = true;
-                                            break;
-                                        }
-                                        ErrorCmd::QuitPolicy => return Ok(()),
+                if let Some(valid) = Self::ig_failure(set.check(name.as_str()).map_err(Into::into))?
+                {
+                    if valid {
+                        like_opt = true;
+                        let arg = clopt.value;
+                        let mut guess = InvokeGuess {
+                            idx,
+                            arg,
+                            set,
+                            inv,
+                            ser,
+                            tot,
+                            ctx,
+                            next: next.cloned(),
+                            fail: &mut opt_fail,
+                            name: Some(name.clone()),
+                        };
+
+                        for style in opt_styles.iter() {
+                            if let Some(Some(ret)) =
+                                Self::ig_failure(guess.guess_and_invoke(style, overload))?
+                            {
+                                (matched, consume) = (ret.matched, ret.consume);
+                            }
+                            if let Some(error_cmd) = guess.fail.find_err_command() {
+                                match error_cmd {
+                                    ErrorCmd::StopPolicy => {
+                                        stopped = true;
+                                        break;
                                     }
+                                    ErrorCmd::QuitPolicy => return Ok(()),
                                 }
-                                if matched {
-                                    break;
-                                }
+                            }
+                            if matched {
+                                break;
                             }
                         }
                     }
@@ -395,7 +389,7 @@ where
             let name = noa_args
                 .get(Self::noa_cmd())
                 .and_then(|v| v.get_str())
-                .map(Str::from);
+                .map(AStr::from);
             let mut guess = InvokeGuess {
                 set,
                 inv,
@@ -439,7 +433,7 @@ where
                 guess.name = noa_args
                     .get(Self::noa_pos(idx))
                     .and_then(|v| v.get_str())
-                    .map(Str::from);
+                    .map(AStr::from);
                 trace_log!("Guess POS argument = {:?} @ {}", guess.name, guess.idx);
                 Self::ig_failure(guess.guess_and_invoke(&UserStyle::Pos, overload))?;
                 if let Some(error_cmd) = guess.fail.find_err_command() {
@@ -462,7 +456,7 @@ where
         let name = main_args
             .get(Self::noa_main())
             .and_then(|v| v.get_str())
-            .map(Str::from);
+            .map(AStr::from);
 
         ctx.set_args(main_args);
         let mut guess = InvokeGuess {
@@ -529,6 +523,7 @@ mod test {
     use std::ops::Deref;
 
     use crate::opt::Cmd;
+    use crate::opt::ConfigBuildInfer;
     use crate::opt::Pos;
     use crate::prelude::*;
     use crate::ARef;
@@ -541,6 +536,7 @@ mod test {
     }
 
     fn testing_1_main() -> Result<(), Error> {
+        #[allow(clippy::too_many_arguments)]
         fn check_opt_val<T: std::fmt::Debug + PartialEq + ErasedTy + 'static>(
             opt: &AOpt,
             uid: Uid,
@@ -617,7 +613,7 @@ mod test {
         let mut set = policy.default_set();
         let mut inv = policy.default_inv();
         let mut ser = policy.default_ser();
-        let args = Args::from_array([
+        let args = Args::from([
             "app", // 0
             "--copt",
             "--iopt=63",
@@ -732,7 +728,7 @@ mod test {
             .set_pos_type_only::<u64>()
             .run()?;
         let cpos_uid = set
-            .add_opt_i::<Pos<String>>("cpos@4..5")?
+            .add_opt("cpos@4..5".infer::<Pos<String>>())?
             .set_validator(ValValidator::contains2(vec!["average", "plus"]))
             .run()?;
         let dpos_uid = set.add_opt("dpos=p@5..7")?.set_action(Action::Set).run()?;

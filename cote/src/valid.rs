@@ -163,8 +163,7 @@ where
 ///
 /// # Example
 /// ```rust
-/// # use cote::*;
-/// # use cote::valid;
+/// # use cote::prelude::*;
 /// #
 /// #[derive(Debug, Cote, PartialEq, Eq)]
 /// #[cote(help)]
@@ -175,9 +174,9 @@ where
 ///
 /// fn main() -> Result<(), Box<dyn std::error::Error>> {
 ///    
-///     assert!(Cli::parse(Args::from_array(["app", "-v41"])).is_err());
+///     assert!(Cli::parse(Args::from(["app", "-v41"])).is_err());
 ///
-///     assert!(Cli::parse(Args::from_array(["app", "-v42"])).is_ok());
+///     assert!(Cli::parse(Args::from(["app", "-v42"])).is_ok());
 ///
 ///     Ok(())
 /// }

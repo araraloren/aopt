@@ -1,4 +1,4 @@
-use cote::*;
+use cote::prelude::*;
 
 #[derive(Debug, Cote)]
 #[cote()]
@@ -10,7 +10,12 @@ pub struct Cli {
     args: Vec<String>,
 }
 
-fn main() -> color_eyre::Result<()> {
+#[test]
+fn value() {
+    assert!(value_impl().is_ok());
+}
+
+fn value_impl() -> color_eyre::Result<()> {
     color_eyre::install()?;
     let cli = Cli::parse(Args::from(["app", "c"].into_iter()))?;
     assert_eq!(cli.name.as_str(), "tools");

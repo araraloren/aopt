@@ -157,16 +157,16 @@ impl SnowBall {
 fn parser_command_line<'a>() -> Result<AFwdParser<'a>, Error> {
     let mut parser = AFwdParser::default();
 
-    parser.add_opt_i::<bool>("-d;--debug: Print debug message")?;
-    parser.add_opt_i::<bool>("-h;--help: Display help message")?;
+    parser.add_opt("-d;--debug: Print debug message".infer::<bool>())?;
+    parser.add_opt("-h;--help: Display help message".infer::<bool>())?;
     parser
-        .add_opt_i::<u64>("-i;--interval: Set access interval")?
+        .add_opt("-i;--interval: Set access interval".infer::<u64>())?
         .set_value(1000);
     parser
-        .add_opt_i::<i64>("-s;--start: Set start parameter of request")?
+        .add_opt("-s;--start: Set start parameter of request".infer::<i64>())?
         .set_value(0);
     parser
-        .add_opt_i::<i64>("-c;--count: Set count parameter of request")?
+        .add_opt("-c;--count: Set count parameter of request".infer::<i64>())?
         .set_value(14);
 
     // process single stock id

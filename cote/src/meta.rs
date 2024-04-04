@@ -1,14 +1,6 @@
 use aopt::prelude::*;
+use aopt::value::Placeholder;
 use aopt::Error;
-
-pub trait IntoConfig {
-    type Ret: Config + ConfigValue;
-
-    fn into_config<Parser>(self, parser: &Parser) -> Result<Self::Ret, Error>
-    where
-        Parser: OptParser,
-        Parser::Output: Information;
-}
 
 /// Hold the option information from configuration files.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -185,15 +177,19 @@ where
     }
 }
 
-impl<T: ErasedTy + Clone> IntoConfig for OptionMeta<T> {
-    type Ret = OptConfig;
+impl<C, T> ConfigBuild<C> for OptionMeta<T>
+where
+    T: ErasedTy + Clone,
+    C: ConfigValue + Default,
+{
+    type Val = Placeholder;
 
-    fn into_config<Parser>(mut self, parser: &Parser) -> Result<Self::Ret, Error>
+    fn build<P>(mut self, parser: &P) -> Result<C, Error>
     where
-        Parser: OptParser,
-        Parser::Output: Information,
+        P: OptParser,
+        P::Output: Information,
     {
-        let mut cfg = Self::Ret::new(parser, self.take_option().into())?;
+        let mut cfg: C = self.take_option().build(parser)?;
 
         if let Some(hint) = self.take_hint() {
             cfg.set_hint(hint);
@@ -207,10 +203,8 @@ impl<T: ErasedTy + Clone> IntoConfig for OptionMeta<T> {
         if let Some(values) = self.take_value() {
             cfg.set_initializer(ValInitializer::new_values(values));
         }
-        if let Some(aliases) = self.take_alias() {
-            for alias in aliases {
-                cfg.add_alias(alias);
-            }
+        if let Some(alias) = self.take_alias() {
+            cfg.set_alias(alias);
         }
         Ok(cfg)
     }

@@ -12,6 +12,6 @@ members = [
 resolver = "2"
 
 [patch.crates-io]
-cote = {path = "cote"}
+cote = { path = "cote" }
 aopt = { path = "aopt" }
 cote-derive = { path = "cote-derive" }

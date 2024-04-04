@@ -1,4 +1,4 @@
-use cote::*;
+use cote::prelude::*;
 use std::any::Any;
 
 // The default policy is `fwd`(FwdPolicy)
@@ -27,7 +27,12 @@ pub struct Button {
 #[cote(policy = NullPolicy)]
 pub struct LineEditor;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[test]
+fn policy() {
+    assert!(policy_impl().is_ok());
+}
+
+fn policy_impl() -> Result<(), Box<dyn std::error::Error>> {
     let widget = Widget::into_policy();
 
     assert!(check_t::<FwdPolicy<'_, ASet, ASer>>(&widget));

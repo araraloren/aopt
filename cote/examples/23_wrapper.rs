@@ -1,4 +1,4 @@
-use cote::*;
+use cote::prelude::*;
 
 #[derive(Debug, Cote, PartialEq, Eq)]
 #[cote(help, aborthelp)]
@@ -14,12 +14,14 @@ impl Infer for Speed {
     type Val = i32;
 }
 
-impl<'a> Fetch<'a> for Speed {
-    fn fetch<S: SetValueFindExt>(name: &str, set: &'a mut S) -> Result<Self, aopt::Error>
-    where
-        Self: Sized,
-    {
-        Ok(Speed(set.take_val(name)?))
+impl<'a, S> Fetch<'a, S> for Speed
+where
+    S: SetValueFindExt,
+    SetCfg<S>: ConfigValue + Default,
+    Self: ErasedTy + Sized,
+{
+    fn fetch_uid(uid: Uid, set: &'a mut S) -> cote::Result<Self> {
+        Ok(Speed(fetch_uid_impl(uid, set)?))
     }
 }
 
@@ -30,7 +32,7 @@ impl Alter for Speed {
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
-    let cli = Cli::parse(Args::from_array(["app", "--speed", "65"]))?;
+    let cli = Cli::parse(Args::from(["app", "--speed", "65"]))?;
 
     assert_eq!(cli.speed.0, 65);
 

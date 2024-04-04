@@ -51,10 +51,6 @@ A flexible and typed getopt like command line framwork for rust.
 
 If you want the utils of current crate implement `Send` and `Sync`, you can enable `sync` feature.
 
-### `utf8` feature
-
-By default, the command line parsing support `OsString`, enable `utf8` using `String` instead.
-
 ## Simple flow chart
 
 ```txt
@@ -152,7 +148,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     list.add_opt("-debug=b")?;
     list.add_opt("-force=b")?.add_alias("-f");
     list.add_opt("-local-only=b")?.add_alias("-l");
-    list.add_opt_i::<String>("-source")?
+    list.add_opt("-source".infer::<String>())?
         .add_alias("-s")
         .set_value(String::from("lib.rs"));
     list.add_opt("main=m")?
@@ -220,7 +216,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 * `app.exe in software -/o -s crates.io` output
 
-    invoke install command: debug=false, override=true, source=Str("crates.io")
+    invoke install command: debug=false, override=true, source=AStr("crates.io")
 
 * `app.exe in aopt` output
 

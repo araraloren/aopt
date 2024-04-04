@@ -6,10 +6,10 @@ pub fn main() -> Result<(), aopt::Error> {
     // combination style only support bool type
     parser.add_opt("-a=b")?;
     parser.add_opt("-b=b")?;
-    parser.add_opt_i::<bool>("-c")?;
+    parser.add_opt("-c".infer::<bool>())?;
     parser.add_opt("d=b")?;
     parser.add_opt("e=b")?;
-    parser.add_opt_i::<bool>("f")?;
+    parser.add_opt("f".infer::<bool>())?;
 
     // enable combination style
     parser.enable_combined();

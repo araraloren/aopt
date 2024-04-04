@@ -1,4 +1,4 @@
-use cote::*;
+use cote::prelude::*;
 
 #[derive(Debug, Cote)]
 #[cote(help, aborthelp)]
@@ -21,7 +21,12 @@ pub struct Query {
     format: String,
 }
 
-fn main() -> color_eyre::Result<()> {
+#[test]
+fn force() {
+    assert!(force_impl().is_ok());
+}
+
+fn force_impl() -> color_eyre::Result<()> {
     color_eyre::install()?;
     assert_eq!(Cli::parse(Args::from(["app"].into_iter()))?.query, None);
     Ok(())

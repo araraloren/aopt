@@ -30,7 +30,7 @@ impl<'a> AlterGenerator<'a> {
         let (impl_, type_, where_) = self.generics.split_for_impl();
 
         Ok(quote! {
-            impl #impl_ cote::Alter for #ident #type_ #where_ { }
+            impl #impl_ cote::prelude::Alter for #ident #type_ #where_ { }
         })
     }
 }

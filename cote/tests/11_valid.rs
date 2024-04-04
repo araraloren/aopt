@@ -1,4 +1,4 @@
-use cote::*;
+use cote::prelude::*;
 
 #[derive(Debug, Cote)]
 #[cote()]
@@ -8,7 +8,12 @@ pub struct Cli {
     name: String,
 }
 
-fn main() -> color_eyre::Result<()> {
+#[test]
+fn valid() {
+    assert!(valid_impl().is_ok());
+}
+
+fn valid_impl() -> color_eyre::Result<()> {
     color_eyre::install()?;
     assert!(Cli::parse(Args::from(["app", "lily"].into_iter())).is_ok());
     assert!(Cli::parse(Args::from(["app", "jim"].into_iter())).is_err());

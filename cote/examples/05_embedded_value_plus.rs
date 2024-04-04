@@ -1,4 +1,4 @@
-use cote::*;
+use cote::prelude::*;
 
 #[derive(Debug, Cote, PartialEq, Eq)]
 #[cote(embedded)]
@@ -7,7 +7,7 @@ pub struct Cli {
 }
 
 fn main() -> Result<(), aopt::Error> {
-    let cli = Cli::parse(Args::from_array(["app", "--foobar"]))?;
+    let cli = Cli::parse(Args::from(["app", "--foobar"]))?;
 
     assert_eq!(cli.foo, "bar");
 

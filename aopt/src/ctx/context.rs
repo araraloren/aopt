@@ -4,20 +4,20 @@ use crate::args::Args;
 use crate::opt::Style;
 use crate::parser::ReturnVal;
 use crate::ARef;
+use crate::AStr;
 use crate::Error;
 use crate::RawVal;
-use crate::Str;
 use crate::Uid;
 
 #[derive(Debug, Clone, Default)]
 pub struct InnerCtx {
     uid: Uid,
 
-    name: Option<Str>,
+    name: Option<AStr>,
 
     style: Style,
 
-    arg: Option<ARef<RawVal>>,
+    arg: Option<RawVal>,
 
     index: usize,
 
@@ -40,7 +40,7 @@ impl InnerCtx {
         self
     }
 
-    pub fn with_name(mut self, name: Option<Str>) -> Self {
+    pub fn with_name(mut self, name: Option<AStr>) -> Self {
         self.name = name;
         self
     }
@@ -50,7 +50,7 @@ impl InnerCtx {
         self
     }
 
-    pub fn with_arg(mut self, argument: Option<ARef<RawVal>>) -> Self {
+    pub fn with_arg(mut self, argument: Option<RawVal>) -> Self {
         self.arg = argument;
         self
     }
@@ -73,7 +73,7 @@ impl InnerCtx {
     /// The name of matched option.
     /// For option it is the option name, for NOA it is the argument,
     /// which set in [`invoke`](crate::guess::InvokeGuess#method.invoke).
-    pub fn name(&self) -> Option<&Str> {
+    pub fn name(&self) -> Option<&AStr> {
         self.name.as_ref()
     }
 
@@ -83,7 +83,7 @@ impl InnerCtx {
     }
 
     /// The argument which set in [`invoke`](crate::guess::InvokeGuess#method.invoke).
-    pub fn arg(&self) -> Option<ARef<RawVal>> {
+    pub fn arg(&self) -> Option<RawVal> {
         self.arg.clone()
     }
 
@@ -104,7 +104,7 @@ impl InnerCtx {
         self
     }
 
-    pub fn set_name(&mut self, name: Option<Str>) -> &mut Self {
+    pub fn set_name(&mut self, name: Option<AStr>) -> &mut Self {
         self.name = name;
         self
     }
@@ -114,7 +114,7 @@ impl InnerCtx {
         self
     }
 
-    pub fn set_arg(&mut self, argument: Option<ARef<RawVal>>) -> &mut Self {
+    pub fn set_arg(&mut self, argument: Option<RawVal>) -> &mut Self {
         self.arg = argument;
         self
     }
@@ -182,7 +182,7 @@ impl Ctx {
     /// The name of matched option.
     /// For option it is the option name, for NOA it is the argument,
     /// which set in [`invoke`](crate::guess::InvokeGuess#method.invoke).
-    pub fn name(&self) -> Result<Option<&Str>, Error> {
+    pub fn name(&self) -> Result<Option<&AStr>, Error> {
         Ok(self.inner_ctx()?.name())
     }
 
@@ -198,7 +198,7 @@ impl Ctx {
     }
 
     /// The argument which set in [`invoke`](crate::guess::InvokeGuess#method.invoke).
-    pub fn arg(&self) -> Result<Option<ARef<RawVal>>, Error> {
+    pub fn arg(&self) -> Result<Option<RawVal>, Error> {
         Ok(self.inner_ctx()?.arg())
     }
 
@@ -257,7 +257,7 @@ impl Ctx {
         self
     }
 
-    pub fn set_name(&mut self, name: Option<Str>) -> Result<&mut Self, Error> {
+    pub fn set_name(&mut self, name: Option<AStr>) -> Result<&mut Self, Error> {
         self.inner_ctx_mut()?.set_name(name);
         Ok(self)
     }
@@ -267,7 +267,7 @@ impl Ctx {
         Ok(self)
     }
 
-    pub fn set_arg(&mut self, argument: Option<ARef<RawVal>>) -> Result<&mut Self, Error> {
+    pub fn set_arg(&mut self, argument: Option<RawVal>) -> Result<&mut Self, Error> {
         self.inner_ctx_mut()?.set_arg(argument);
         Ok(self)
     }

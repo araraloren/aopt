@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 
-use cote::*;
+use cote::prelude::*;
 
 static GLOBAL_CNT: Mutex<i32> = Mutex::new(0);
 
@@ -29,9 +29,8 @@ pub struct Cli {
 pub struct Query {
     #[allow(unused)]
     #[arg(nodelay, on = order!(1, usize))]
-    row: usize, // `nodelay` option will be process immediately, 
-                // before `col` and `format`
-
+    row: usize, // `nodelay` option will be process immediately,
+    // before `col` and `format`
     #[allow(unused)]
     #[arg(on = order!(3, usize))]
     col: usize, // `col` is process after `format` when using `DelayPolicy`
@@ -41,7 +40,12 @@ pub struct Query {
     format: String,
 }
 
-fn main() -> color_eyre::Result<()> {
+#[test]
+fn policy() {
+    assert!(policy_impl().is_ok());
+}
+
+fn policy_impl() -> color_eyre::Result<()> {
     color_eyre::install()?;
     Cli::parse(Args::from(
         ["app", "query", "--col=1", "--row=2", "Query msg: {:?}"].into_iter(),

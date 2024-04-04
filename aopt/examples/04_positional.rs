@@ -10,7 +10,7 @@ pub fn main() -> Result<(), aopt::Error> {
     // A special positional argument match the name, and force required
     parser.add_opt("list=c")?;
     // Add a positional argument has String value
-    parser.add_opt_i::<Pos<String>>("second@2")?;
+    parser.add_opt("second@2".infer::<Pos<String>>())?;
 
     // enable combination style
     parser.enable_combined();

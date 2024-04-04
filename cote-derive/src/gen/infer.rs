@@ -31,7 +31,7 @@ impl<'a> InferGenerator<'a> {
 
     pub fn gen_impl_for_struct(&self) -> syn::Result<TokenStream> {
         let ident = self.ident;
-        let (impl_, type_, where_) = self.generics.split_for_impl();
+        let (impl_inf, type_inf, where_inf) = self.generics.split_for_impl();
         let mut codes = vec![];
 
         for config in self.configs.iter() {
@@ -45,7 +45,7 @@ impl<'a> InferGenerator<'a> {
                 }
                 InferKind::Action => {
                     quote! {
-                        fn infer_act() -> cote::Action {
+                        fn infer_act() -> cote::prelude::Action {
                             #value
                         }
                     }
@@ -59,18 +59,18 @@ impl<'a> InferGenerator<'a> {
                 }
                 InferKind::Ctor => {
                     quote! {
-                        fn infer_ctor() -> cote::Str {
+                        fn infer_ctor() -> cote::prelude::AStr {
                             #value
                         }
                     }
                 }
                 InferKind::Index => quote! {
-                    fn infer_index() -> Option<cote::Index> {
+                    fn infer_index() -> Option<cote::prelude::Index> {
                         #value
                     }
                 },
                 InferKind::Style => quote! {
-                    fn infer_style() -> Vec<cote::Style> {
+                    fn infer_style() -> Vec<cote::prelude::Style> {
                         #value
                     }
                 },
@@ -90,12 +90,12 @@ impl<'a> InferGenerator<'a> {
                     }
                 },
                 InferKind::Valid => quote! {
-                    fn infer_validator() -> Option<cote::ValValidator<Self::Val>> {
+                    fn infer_validator() -> Option<cote::prelude::ValValidator<Self::Val>> {
                         #value
                     }
                 },
                 InferKind::Init => quote! {
-                    fn infer_initializer() -> Option<ValInitializer> {
+                    fn infer_initializer() -> Option<cote::prelude::ValInitializer> {
                         #value
                     }
                 },
@@ -105,22 +105,22 @@ impl<'a> InferGenerator<'a> {
                     }
                 },
                 InferKind::Tweak => quote! {
-                    fn infer_tweak_info<C>(cfg: &mut C) -> Result<(), cote::CoteError>
+                    fn infer_tweak_info<C>(cfg: &mut C) -> cote::Result<()>
                     where
                         Self: Sized + 'static,
-                        Self::Val: cote::RawValParser,
-                        C: cote::ConfigValue + Default,
+                        Self::Val: cote::prelude::RawValParser,
+                        C: cote::prelude::ConfigValue + Default,
                     {
                         #value(cfg);
                         Ok(())
                     }
                 },
                 InferKind::Fill => quote! {
-                    fn infer_fill_info<C>(cfg: &mut C) -> Result<(), cote::CoteError>
+                    fn infer_fill_info<C>(cfg: &mut C) -> cote::Result<()>
                     where
                         Self: Sized + 'static,
-                        Self::Val: cote::RawValParser,
-                        C: cote::ConfigValue + Default,
+                        Self::Val: cote::prelude::RawValParser,
+                        C: cote::prelude::ConfigValue + Default,
                     {
                         #value(cfg, ignore_infer);
                         Ok(())
@@ -133,12 +133,9 @@ impl<'a> InferGenerator<'a> {
                 type Val = Self;
             })
         }
-        let mut code = quote! {};
-
-        code.extend(codes);
         Ok(quote! {
-            impl #impl_ cote::Infer for #ident #type_ #where_ {
-                #code
+            impl #impl_inf cote::prelude::Infer for #ident #type_inf #where_inf {
+                #(#codes)*
             }
         })
     }

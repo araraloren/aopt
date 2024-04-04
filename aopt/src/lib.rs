@@ -46,7 +46,7 @@ pub(crate) fn display_option<T: Display>(option_value: &Option<T>) -> String {
 pub use crate::err::Error;
 pub use crate::err::Result;
 pub use crate::str::astr;
-pub use crate::str::Str;
+pub use crate::str::AStr;
 pub use crate::str::StrJoin;
 
 use std::any::TypeId;
@@ -94,16 +94,16 @@ pub struct GetoptRes<R, T> {
 ///         },
 ///     )?;
 ///
-///     assert!(getopt!(Args::from_array(["-a", "--bopt=42", "foo"]), &mut parser).is_ok());
+///     assert!(getopt!(Args::from(["-a", "--bopt=42", "foo"]), &mut parser).is_ok());
 ///     assert_eq!(parser.find_val::<bool>("-a")?, &true);
 ///     assert_eq!(parser.find_val::<i64>("--bopt")?, &42i64);
 /// }
 /// {
-///     pre_parser.add_opt_i::<String>("-d")?.set_values(vec![]);
+///     pre_parser.add_opt("-d".infer::<String>())?.set_values(vec![]);
 ///     pre_parser.add_opt("--eopt=s")?;
 ///
 ///     let ret = getopt!(
-///         Args::from_array(["-dbar", "-d", "foo", "--eopt=pre", "foo"]),
+///         Args::from(["-dbar", "-d", "foo", "--eopt=pre", "foo"]),
 ///         &mut pre_parser
 ///     )?;
 ///     let args = ret.ret.clone_args();
@@ -122,7 +122,7 @@ pub struct GetoptRes<R, T> {
 ///
 /// {
 ///     let ret = getopt!(
-///         Args::from_array(["-a", "--bopt=42", "foo"]),
+///         Args::from(["-a", "--bopt=42", "foo"]),
 ///         "parser" => &mut parser,
 ///         "pre" => &mut pre_parser
 ///     )?;
@@ -133,7 +133,7 @@ pub struct GetoptRes<R, T> {
 /// }
 /// {
 ///     let res = getopt!(
-///         Args::from_array(["-dbar", "-d", "foo", "--eopt=pre", "foo"]),
+///         Args::from(["-dbar", "-d", "foo", "--eopt=pre", "foo"]),
 ///         "parser" => &mut parser,
 ///         "pre" => &mut pre_parser
 ///     )?;
@@ -250,7 +250,12 @@ pub mod prelude {
     pub use crate::opt::AOpt;
     pub use crate::opt::Action;
     pub use crate::opt::Cmd;
-    pub use crate::opt::Config;
+    pub use crate::opt::ConfigBuild;
+    pub use crate::opt::ConfigBuildInfer;
+    pub use crate::opt::ConfigBuildMutable;
+    pub use crate::opt::ConfigBuildWith;
+    pub use crate::opt::ConfigBuilder;
+    pub use crate::opt::ConfigBuilderWith;
     pub use crate::opt::ConfigValue;
     pub use crate::opt::ConstrctInfo;
     pub use crate::opt::Creator;

@@ -9,8 +9,8 @@ use neure::SpanStorer;
 
 use super::{ConstrctInfo, OptParser};
 use crate::opt::Index;
+use crate::AStr;
 use crate::Error;
-use crate::Str;
 
 /// Parse the option string with given prefixes, return an [`ConstrctInfo`].
 ///
@@ -125,10 +125,7 @@ impl StrParser {
         parser(storer, str)
     }
 
-    pub fn parse_creator_string(&self, pattern: Str) -> Result<ConstrctInfo, Error> {
-        let pattern_clone = pattern.clone();
-        let pattern = pattern.as_str();
-
+    pub fn parse_creator_string(&self, pattern: &str) -> Result<ConstrctInfo, Error> {
         STR_PARSER
             .try_with(|storer| {
                 if Self::parse_ctx(storer.borrow_mut().reset(), pattern).is_ok() {
@@ -159,7 +156,7 @@ impl StrParser {
                     if let Ok(vals) = storer.substrs(pattern, KEY_ALIAS) {
                         alias = Some(
                             vals.filter(|v| !v.trim().is_empty())
-                                .map(|v| Str::from(v.trim()))
+                                .map(|v| AStr::from(v.trim()))
                                 .collect(),
                         );
                     }
@@ -169,14 +166,13 @@ impl StrParser {
                     Ok(ConstrctInfo::default()
                         .with_force(force)
                         .with_index(idx)
-                        .with_pat(pattern_clone)
-                        .with_name(name.map(|v| Str::from(v.trim())))
-                        .with_help(help.map(|v| Str::from(v.trim())))
-                        .with_ctor(ctor.map(|v| Str::from(v.trim())))
+                        .with_name(name.map(|v| AStr::from(v.trim())))
+                        .with_help(help.map(|v| AStr::from(v.trim())))
+                        .with_ctor(ctor.map(|v| AStr::from(v.trim())))
                         .with_alias(alias))
                 } else {
                     Err(Error::invalid_create_str(
-                        pattern_clone.as_str(),
+                        pattern,
                         "option create string parsing failed",
                     ))
                 }
@@ -200,7 +196,7 @@ impl OptParser for StrParser {
 
     type Error = Error;
 
-    fn parse_opt(&self, pattern: Str) -> Result<Self::Output, Self::Error> {
+    fn parse_opt(&self, pattern: &str) -> Result<Self::Output, Self::Error> {
         if pattern.trim().is_empty() {
             Ok(Self::Output::default())
         } else {
@@ -315,16 +311,16 @@ mod test {
             Some(Index::anywhere()),
             None,
         ];
-        let parser = StrParser::default();
+        let parser = StrParser;
 
         for (option, option_test) in options.iter().zip(options_test.iter()) {
             for (help, help_test) in helps.iter().zip(helps_test.iter()) {
                 for (force, force_test) in forces.iter().zip(forces_test.iter()) {
                     for (position, position_test) in positions.iter().zip(positions_test.iter()) {
-                        let creator = astr(format!("{}{}{}{}", option, force, position, help));
+                        let creator = format!("{}{}{}{}", option, force, position, help);
 
                         println!("\"{}\",", creator);
-                        if let Ok(cap) = parser.parse_opt(creator) {
+                        if let Ok(cap) = parser.parse_opt(&creator) {
                             assert_eq!(option_test.0.as_ref(), cap.name());
                             assert_eq!(option_test.1.as_ref(), cap.alias());
                             assert_eq!(help_test.as_ref(), cap.help());

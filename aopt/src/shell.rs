@@ -13,6 +13,7 @@ use crate::ext::APolicyExt;
 use crate::ext::ASer;
 use crate::ext::ASet;
 use crate::opt::Action;
+use crate::opt::ConfigBuildInfer;
 use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::opt::Style;
@@ -236,20 +237,17 @@ where
         Ok(())
     }
 
-    #[cfg(not(feature = "utf8"))]
     fn process_last_arg(
         &mut self,
         set: &mut <Self as Policy>::Set,
         last: &RawVal,
     ) -> Result<(), Error> {
-        use crate::args::AOsStrExt;
-
         #[allow(unused)]
         let mut win_os_string = None;
-        let mut arg = last.as_os_str();
+        let mut arg: &std::ffi::OsStr = last.as_ref();
 
         #[allow(clippy::needless_option_as_deref)]
-        if let Some((opt, _)) = arg.split_once('=') {
+        if let Some((opt, _)) = crate::args::split_once(arg, '=') {
             win_os_string = Some(opt);
             arg = win_os_string.as_deref().unwrap();
         }
@@ -259,20 +257,6 @@ where
             arg.to_str()
                 .ok_or_else(|| crate::raise_failure!("Can't convert value `{:?}` to str", arg))?,
         )
-    }
-
-    #[cfg(feature = "utf8")]
-    fn process_last_arg(
-        &mut self,
-        set: &mut <Self as Policy>::Set,
-        last: &RawVal,
-    ) -> Result<(), Error> {
-        let mut arg = last.as_str();
-
-        if let Some((opt, _)) = arg.split_once('=') {
-            arg = opt;
-        }
-        self.set_incomplete_opt(set, arg)
     }
 
     fn set_incomplete_opt(
@@ -385,8 +369,9 @@ where
 pub fn try_get_complete() -> Result<Option<(String, Shell)>, Error> {
     let mut try_parser = AFwdParser::default();
 
-    try_parser.add_opt_i::<String>("--_completes: Get complete option or sub command")?;
-    try_parser.add_opt_i::<MutOpt<Shell>>("--_shell!: Set shell type, support zsh fish bash")?;
+    try_parser.add_opt("--_completes: Get complete option or sub command".infer::<String>())?;
+    try_parser
+        .add_opt("--_shell!: Set shell type, support zsh fish bash".infer::<MutOpt<Shell>>())?;
     try_parser.parse_env()?;
 
     if let Ok(cl) = try_parser.take_val("--_completes") {

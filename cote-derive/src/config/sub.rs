@@ -1,5 +1,6 @@
-use quote::ToTokens;
-use syn::Path;
+use proc_macro2::TokenStream;
+use quote::{quote, ToTokens};
+use syn::{Ident, Path};
 
 use super::Kind;
 
@@ -53,6 +54,30 @@ impl Kind for SubKind {
             let method = method.replace(char::is_whitespace, "");
 
             Ok((Self::MethodCall(method), true))
+        }
+    }
+}
+
+impl SubKind {
+    pub fn simple(&self, ident: &Ident, val: &TokenStream) -> syn::Result<TokenStream> {
+        match self {
+            SubKind::Name => Ok(quote! {
+                #ident.set_name(#val);
+            }),
+            SubKind::Hint => Ok(quote! {
+                #ident.set_hint(#val);
+            }),
+
+            SubKind::Help => Ok(quote! {
+                #ident.set_help(#val);
+            }),
+            SubKind::Alias => Ok(quote! {
+                #ident.add_alias(#val);
+            }),
+            SubKind::Force => Ok(quote! {
+                #ident.set_force(#val);
+            }),
+            _ => Err(crate::error(ident.span(), "")),
         }
     }
 }

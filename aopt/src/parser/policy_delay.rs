@@ -26,8 +26,8 @@ use crate::set::SetExt;
 use crate::set::SetOpt;
 use crate::trace_log;
 use crate::ARef;
+use crate::AStr;
 use crate::Error;
-use crate::Str;
 use crate::Uid;
 
 #[derive(Debug, Clone, Default)]
@@ -131,7 +131,7 @@ pub struct DelayPolicy<Set, Ser, Chk> {
 
     style_manager: OptStyleManager,
 
-    no_delay_opt: Vec<Str>,
+    no_delay_opt: Vec<AStr>,
 
     marker_s: PhantomData<(Set, Ser)>,
 }
@@ -211,7 +211,7 @@ impl<Set, Ser, Chk> DelayPolicy<Set, Ser, Chk> {
         self
     }
 
-    pub fn with_no_delay(mut self, name: impl Into<Str>) -> Self {
+    pub fn with_no_delay(mut self, name: impl Into<AStr>) -> Self {
         self.no_delay_opt.push(name.into());
         self
     }
@@ -269,7 +269,7 @@ impl<Set, Ser, Chk> PolicySettings for DelayPolicy<Set, Ser, Chk> {
         &self.style_manager
     }
 
-    fn no_delay(&self) -> Option<&[Str]> {
+    fn no_delay(&self) -> Option<&[AStr]> {
         Some(&self.no_delay_opt)
     }
 
@@ -287,7 +287,7 @@ impl<Set, Ser, Chk> PolicySettings for DelayPolicy<Set, Ser, Chk> {
         self
     }
 
-    fn set_no_delay(&mut self, name: impl Into<Str>) -> &mut Self {
+    fn set_no_delay(&mut self, name: impl Into<AStr>) -> &mut Self {
         self.no_delay_opt.push(name.into());
         self
     }
@@ -478,53 +478,52 @@ where
             let mut matched = false;
             let mut consume = false;
             let mut stopped = false;
-            let next = next.map(|v| ARef::new(v.clone()));
 
             // parsing current argument
             if let Ok(clopt) = opt.parse_arg() {
-                if let Some(name) = clopt.name() {
-                    if set.check(name.as_str()).map_err(Into::into)? {
-                        let arg = clopt.value().cloned();
-                        let mut guess = InvokeGuess {
-                            idx,
-                            arg,
-                            set,
-                            inv,
-                            ser,
-                            tot,
-                            ctx,
-                            next: next.clone(),
-                            fail: &mut opt_fail,
-                            name: Some(name.clone()),
-                        };
+                trace_log!("Guess command line clopt = {:?} & next = {:?}", clopt, next);
+                let name = clopt.name;
 
-                        trace_log!("Guess command line clopt = {:?} & next = {:?}", clopt, next);
-                        for style in opt_styles.iter() {
-                            if let Some(ret) = guess.guess_and_collect(style, overload)? {
-                                // pretend we are matched, cause it is delay
-                                matched = true;
-                                consume = ret.consume;
-                                if let Some(ret) = self.save_or_call(&mut guess, ret)? {
-                                    // if the call returned, set the real return value
-                                    (matched, consume) = (ret.matched, ret.consume);
-                                }
-                                if matched {
+                if set.check(name.as_str()).map_err(Into::into)? {
+                    let arg = clopt.value;
+                    let mut guess = InvokeGuess {
+                        idx,
+                        arg,
+                        set,
+                        inv,
+                        ser,
+                        tot,
+                        ctx,
+                        next: next.cloned(),
+                        fail: &mut opt_fail,
+                        name: Some(name.clone()),
+                    };
+
+                    for style in opt_styles.iter() {
+                        if let Some(ret) = guess.guess_and_collect(style, overload)? {
+                            // pretend we are matched, cause it is delay
+                            matched = true;
+                            consume = ret.consume;
+                            if let Some(ret) = self.save_or_call(&mut guess, ret)? {
+                                // if the call returned, set the real return value
+                                (matched, consume) = (ret.matched, ret.consume);
+                            }
+                            if matched {
+                                break;
+                            }
+                        }
+                        if let Some(error_cmd) = guess.fail.find_err_command() {
+                            match error_cmd {
+                                ErrorCmd::StopPolicy => {
+                                    stopped = true;
                                     break;
                                 }
-                            }
-                            if let Some(error_cmd) = guess.fail.find_err_command() {
-                                match error_cmd {
-                                    ErrorCmd::StopPolicy => {
-                                        stopped = true;
-                                        break;
-                                    }
-                                    ErrorCmd::QuitPolicy => return Ok(()),
-                                }
+                                ErrorCmd::QuitPolicy => return Ok(()),
                             }
                         }
-                        if !stopped && !matched && self.strict() {
-                            return Err(opt_fail.cause(Error::sp_option_not_found(name)));
-                        }
+                    }
+                    if !stopped && !matched && self.strict() {
+                        return Err(opt_fail.cause(Error::sp_option_not_found(name)));
                     }
                 }
             }
@@ -554,7 +553,7 @@ where
             let name = noa_args
                 .get(Self::noa_cmd())
                 .and_then(|v| v.get_str())
-                .map(Str::from);
+                .map(AStr::from);
             let mut guess = InvokeGuess {
                 set,
                 inv,
@@ -596,7 +595,7 @@ where
                 guess.name = noa_args
                     .get(Self::noa_pos(idx))
                     .and_then(|v| v.get_str())
-                    .map(Str::from);
+                    .map(AStr::from);
                 trace_log!("Guess POS argument = {:?} @ {}", guess.name, guess.idx);
                 guess.guess_and_invoke(&UserStyle::Pos, overload)?;
                 if let Some(error_cmd) = guess.fail.find_err_command() {
@@ -644,7 +643,7 @@ where
         let name = main_args
             .get(Self::noa_main())
             .and_then(|v| v.get_str())
-            .map(Str::from);
+            .map(AStr::from);
         let mut guess = InvokeGuess {
             set,
             inv,
@@ -705,6 +704,7 @@ where
 #[cfg(test)]
 mod test {
 
+    use crate::opt::ConfigBuildInfer;
     use crate::opt::Pos;
     use crate::prelude::*;
     use crate::ARef;
@@ -718,6 +718,7 @@ mod test {
     }
 
     fn testing_1_main() -> Result<(), Error> {
+        #[allow(clippy::too_many_arguments)]
         fn check_opt_val<T: std::fmt::Debug + PartialEq + ErasedTy + 'static>(
             opt: &AOpt,
             uid: Uid,
@@ -797,7 +798,7 @@ mod test {
         let mut inv = policy.default_inv();
         let mut set = policy.default_set();
 
-        let args = Args::from_array([
+        let args = Args::from([
             "app",
             "filter",
             "+>",
@@ -825,12 +826,11 @@ mod test {
             .set_pos_type_only::<f64>()
             .run()?;
 
-        inv.entry(set.add_opt_i::<bool>("--no-delay")?.run()?).on(
-            |set: &mut ASet, _: &mut ASer| {
+        inv.entry(set.add_opt("--no-delay".infer::<bool>())?.run()?)
+            .on(|set: &mut ASet, _: &mut ASer| {
                 assert_eq!(set["filter"].val::<bool>()?, &false);
                 Ok(Some(true))
-            },
-        );
+            });
         policy.set_no_delay("--no-delay");
 
         inv.entry(set.add_opt("--positive=b")?.add_alias("+>").run()?)

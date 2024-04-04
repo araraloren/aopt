@@ -11,6 +11,8 @@ pub enum CoteKind {
 
     Help,
 
+    HelpOpt,
+
     Head,
 
     Foot,
@@ -51,6 +53,7 @@ impl Kind for CoteKind {
                 "policy" => (Self::Policy, true),
                 "name" => (Self::Name, true),
                 "help" => (Self::Help, false),
+                "helpopt" => (Self::HelpOpt, true),
                 "head" => (Self::Head, true),
                 "foot" => (Self::Foot, true),
                 "width" => (Self::HelpWidth, true),

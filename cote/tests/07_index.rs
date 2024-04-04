@@ -1,4 +1,4 @@
-use cote::*;
+use cote::prelude::*;
 
 #[derive(Debug, Cote)]
 #[cote()]
@@ -10,7 +10,12 @@ pub struct Cli {
     args: Vec<u64>,
 }
 
-fn main() -> color_eyre::Result<()> {
+#[test]
+fn index() {
+    assert!(index_impl().is_ok());
+}
+
+fn index_impl() -> color_eyre::Result<()> {
     color_eyre::install()?;
     let cli = Cli::parse(Args::from(["app", "index", "2", "3", "4"].into_iter()))?;
     assert_eq!(cli.name.as_str(), "index");

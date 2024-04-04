@@ -1,4 +1,4 @@
-use cote::*;
+use cote::prelude::*;
 use std::{fmt::Debug, ops::Deref};
 
 // The handler must be a generic function.
@@ -45,7 +45,8 @@ fn main() -> color_eyre::Result<()> {
 
 fn display_cli<Set, Ser>(set: &mut Set, _: &mut Ser) -> Result<Option<()>, aopt::Error>
 where
-    Set: SetValueFindExt + cote::Set,
+    Set: SetValueFindExt + cote::prelude::Set,
+    SetCfg<Set>: ConfigValue + Default,
 {
     println!("Got client: {:?}", Cli::try_extract(set)?);
     Ok(None)
@@ -67,7 +68,8 @@ fn foo_storer<Set, Ser>(
     val: Option<u64>,
 ) -> Result<bool, aopt::Error>
 where
-    Set: SetValueFindExt + cote::Set,
+    Set: SetValueFindExt + cote::prelude::Set,
+    SetCfg<Set>: ConfigValue + Default,
 {
     let has_value = val.is_some();
 
@@ -105,7 +107,8 @@ fn debug_of_bar<Set, Ser>(
 
 fn process_qux<Set, Ser>(_: &mut Set, _: &mut Ser) -> Result<Option<()>, aopt::Error>
 where
-    Set: SetValueFindExt + cote::Set,
+    Set: SetValueFindExt + cote::prelude::Set,
+    SetCfg<Set>: ConfigValue + Default,
 {
     println!("return Ok(None) call the default handler of Qux");
     Ok(None)
@@ -119,7 +122,8 @@ fn unreachable_storer<Set, Ser>(
     _: Option<()>,
 ) -> Result<bool, aopt::Error>
 where
-    Set: SetValueFindExt + cote::Set,
+    Set: SetValueFindExt + cote::prelude::Set,
+    SetCfg<Set>: ConfigValue + Default,
 {
     unreachable!("Never go here")
 }

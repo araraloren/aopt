@@ -1,4 +1,5 @@
-use cote::{aopt::prelude::AFwdParser, *};
+use aopt::prelude::AFwdParser;
+use cote::prelude::*;
 
 #[derive(Debug, PartialEq, Eq, CoteOpt, CoteVal)]
 #[coteval(forward = i32, map = Speed)]
@@ -19,12 +20,17 @@ pub enum IM {
     WeChat,
 }
 
-fn main() -> color_eyre::Result<()> {
+#[test]
+fn value() {
+    assert!(value_impl().is_ok());
+}
+
+fn value_impl() -> color_eyre::Result<()> {
     color_eyre::install()?;
     let mut parser = AFwdParser::default();
 
-    parser.add_opt_i::<Speed>("--speed")?;
-    parser.add_opt_i::<IM>("-im;--instant-message")?;
+    parser.add_opt("--speed".infer::<Speed>())?;
+    parser.add_opt("-im;--instant-message".infer::<IM>())?;
     parser.parse(ARef::new(Args::from(
         ["app", "--speed=42", "-im=qq"].into_iter(),
     )))?;

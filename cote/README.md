@@ -5,12 +5,7 @@ A simple option manager manage the [`AOpt`](aopt::opt::AOpt), support auto gener
 
 ## Setup
 
-`cargo add cote` or add following to your `Cargo.toml` file:
-
-```toml
-[dependencies]
-cote = "0.4"
-```
+`cargo add cote`
 
 ## Enable Features from aopt
 
@@ -23,15 +18,6 @@ If you want the utils of current crate implement `Send` and `Sync`, you can enab
 cote = { version = "*", features = [ "sync" ] }
 ```
 
-### Enable `utf8` feature
-
-By default, the command line parsing support `OsString`, enable `utf8` using `String` instead.
-
-```toml
-[dependencies]
-cote = { version = "*", features = [ "utf8" ] }
-```
-
 ## Documents 
 
 See [`reference`](crate::_reference) for more information.
@@ -42,9 +28,9 @@ See [`reference`](crate::_reference) for more information.
 
 ```rust
 use aopt::opt::Pos;
-use cote::*;
+use cote::prelude::*;
 
-fn main() -> Result<(), CoteError> {
+fn main() -> cote::Result<()> {
     #[derive(Debug, Cote)]
     pub struct Cli {
         /// A flag option named `--flag`
@@ -65,23 +51,23 @@ fn main() -> Result<(), CoteError> {
         #[pos(index = 2..)]
         to: Vec<String>,
     }
-    let cli = Cli::parse(Args::from_array(["app", "-nLily", "src", "foo", "bar"]))?;
+    let cli = Cli::parse(Args::from(["app", "-nLily", "src", "foo", "bar"]))?;
 
-    assert_eq!(cli.flag, false);
+    assert!(!cli.flag);
     assert_eq!(cli.name, String::from("Lily"));
     assert_eq!(cli.nick, None);
     assert_eq!(cli.from, Pos(String::from("src")));
     assert_eq!(cli.to, vec![String::from("foo"), String::from("bar")]);
 
-    let cli = Cli::parse(Args::from_array(["app", "--name", "Lily", "src", "foo", "bar"]))?;
+    let cli = Cli::parse(Args::from(["app", "--name", "Lily", "src", "foo", "bar"]))?;
 
-    assert_eq!(cli.flag, false);
+    assert!(!cli.flag);
     assert_eq!(cli.name, String::from("Lily"));
     assert_eq!(cli.nick, None);
     assert_eq!(cli.from, Pos(String::from("src")));
     assert_eq!(cli.to, vec![String::from("foo"), String::from("bar")]);
 
-    assert!(Cli::parse(Args::from_array(["app", "--nick", "Lily", "src", "foo", "bar"])).is_err());
+    assert!(Cli::parse(Args::from(["app", "--nick", "Lily", "src", "foo", "bar"])).is_err());
 
     Ok(())
 }

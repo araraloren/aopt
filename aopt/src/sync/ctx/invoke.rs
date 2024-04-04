@@ -40,7 +40,7 @@ use crate::Uid;
 ///  let mut ser = ASer::default();
 ///  let mut is = Invoker::new();
 ///  let mut set = ASet::default();
-///  let args = ARef::new(Args::from_array(["--foo", "bar", "doo"]));
+///  let args = ARef::new(Args::from(["--foo", "bar", "doo"]));
 ///  let mut ctx = Ctx::default().with_args(args);
 ///
 ///  ser.sve_insert(ser::Value::new(42i64));
@@ -191,7 +191,7 @@ where
         let uid = ctx.uid()?;
         let opt = set.get_mut(uid).unwrap();
         let arg = ctx.arg()?;
-        let raw = arg.as_ref().map(|v| v.as_ref());
+        let raw = arg.as_ref();
         let act = *opt.action();
 
         trace_log!("Invoke fallback for {}({act}) {{{ctx:?}}}", opt.name());
