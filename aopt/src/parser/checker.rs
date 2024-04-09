@@ -95,7 +95,7 @@ where
                 || opt.mat_style(Style::Flag)
         }) {
             if !opt.valid() {
-                return Err(Error::sp_opt_force_require(opt.hint()).with_uid(opt.uid()));
+                return Err(Error::raise_sp_opt_require(opt.hint()).with_uid(opt.uid()));
             }
         }
         Ok(true)
@@ -158,7 +158,7 @@ where
                 }
             }
             if !pos_valid {
-                return Err(Error::sp_pos_force_require(names.join(" | ")).with_uid(uids[0]));
+                return Err(Error::raise_sp_pos_require(names.join(" | ")).with_uid(uids[0]));
             }
             names.clear();
         }
@@ -170,7 +170,7 @@ where
                     names.push(Self::opt(set, uid).hint().clone());
                 });
             if !names.is_empty() {
-                return Err(Error::sp_pos_force_require(names.join(" | ")).with_uid(float_vec[0]));
+                return Err(Error::raise_sp_pos_require(names.join(" | ")).with_uid(float_vec[0]));
             }
         }
         Ok(true)
@@ -196,7 +196,7 @@ where
         }
         trace_log!("Cmd Check, any one of the cmd matched: {}", valid);
         if !valid && !names.is_empty() {
-            return Err(Error::sp_cmd_force_require(names.join(" | ")).with_uid(uids[0]));
+            return Err(Error::raise_sp_cmd_require(names.join(" | ")).with_uid(uids[0]));
         }
         Ok(true)
     }

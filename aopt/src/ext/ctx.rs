@@ -495,7 +495,7 @@ impl Name {
         Ok(Self(
             ctx.name()?
                 .ok_or_else(|| {
-                    Error::sp_raise_extract_error(
+                    Error::raise_sp_extract(
                         "consider using Option<Name> instead, Name maybe not exist",
                     )
                 })?
@@ -694,9 +694,7 @@ pub struct RawVal(crate::RawVal);
 impl RawVal {
     pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
         Ok(Self(ctx.arg()?.ok_or_else(|| {
-            Error::sp_raise_extract_error(
-                "consider using Option<RawVal> instead, RawVal maybe not exist",
-            )
+            Error::raise_sp_extract("consider using Option<RawVal> instead, RawVal maybe not exist")
         })?))
     }
 
@@ -867,7 +865,7 @@ impl<Set: crate::set::Set, Ser, T: RawValParser> Extract<Set, Ser> for Value<T> 
         let uid = ctx.uid()?;
 
         Ok(Value(T::parse(arg, ctx).map_err(|e| {
-            Error::sp_raise_extract_error(format!("failed parsing raw value of {{{}}}", uid,))
+            Error::raise_sp_extract(format!("failed parsing raw value of {{{}}}", uid,))
                 .cause_by(e.into())
         })?))
     }

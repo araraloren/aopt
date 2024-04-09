@@ -98,7 +98,7 @@ impl<T: ErasedTy> Value<T> {
         Ok(ser
             .sve_val::<Value<T>>()
             .map_err(|e| {
-                e.cause(Error::sp_raise_extract_error(format!(
+                e.cause(Error::raise_sp_extract(format!(
                     "can not get value of type {}",
                     std::any::type_name::<Value<T>>(),
                 )))

@@ -142,9 +142,9 @@ const KEY_TOTAL: usize = 7;
 
 impl Index {
     // the index number is small in generally
-    pub(crate) fn parse_as_usize(pattern: &str, data: &str) -> Result<usize, Error> {
+    pub(crate) fn parse_as_usize(pat: &str, data: &str) -> Result<usize, Error> {
         data.parse::<usize>().map_err(|e| {
-            Error::invalid_opt_index(pattern, "invalid usize number").cause_by(e.into())
+            Error::raise_index(format!("invalid usize number `{pat}`")).cause_by(e.into())
         })
     }
 
@@ -210,7 +210,7 @@ impl Index {
 
                         match (range_beg, range_end) {
                             (None, None) => {
-                                return Err(Error::invalid_opt_index(pat, "index can not be empty"))
+                                return Err(Error::raise_index("index can not be empty"))
                             }
                             (None, Some(end)) => {
                                 Ok(Self::range(None, Some(Self::parse_as_usize(pat, end)?)))
@@ -225,10 +225,9 @@ impl Index {
                                 if beg <= end {
                                     Ok(Self::range(Some(beg), Some(end)))
                                 } else {
-                                    return Err(Error::invalid_opt_index(
-                                        pat,
-                                        "assert failed on (beg <= end)",
-                                    ));
+                                    return Err(Error::raise_index(format!(
+                                        "assert failed on (beg <= end): `{pat}`"
+                                    )));
                                 }
                             }
                         }
@@ -257,17 +256,16 @@ impl Index {
                             Ok(Self::forward(index))
                         }
                     } else {
-                        Err(Error::invalid_opt_index(pat, "unknown index create string"))
+                        Err(Error::raise_index(format!(
+                            "unknown index create string `{pat}`"
+                        )))
                     }
                 } else {
-                    Err(Error::invalid_opt_index(
-                        pat,
-                        "index create string parsing failed",
-                    ))
+                    Err(Error::raise_index(format!("failed parsing index `{pat}`")))
                 }
             })
             .map_err(|e| {
-                Error::local_access("can not access index parsing regex").cause_by(e.into())
+                Error::raise_local_access("can not access index parsing regex").cause_by(e.into())
             })?
     }
 

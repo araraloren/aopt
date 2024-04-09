@@ -171,14 +171,13 @@ impl StrParser {
                         .with_ctor(ctor.map(|v| AStr::from(v.trim())))
                         .with_alias(alias))
                 } else {
-                    Err(Error::invalid_create_str(
-                        pattern,
-                        "option create string parsing failed",
-                    ))
+                    Err(Error::raise_create_str(format!(
+                        "can not parsing string `{pattern}`"
+                    )))
                 }
             })
             .map_err(|e| {
-                Error::local_access("can not access str parser regex").cause_by(e.into())
+                Error::raise_local_access("can not access str parser regex").cause_by(e.into())
             })?
     }
 }

@@ -95,14 +95,14 @@ impl ArgParser for RawVal {
             let name = name
                 .to_str()
                 .ok_or_else(|| {
-                    Error::invalid_arg_name(format!(
+                    Error::raise_args_name(format!(
                         "failed convert argument name `{}` to str",
                         self
                     ))
                 })?
                 .trim();
             if name.is_empty() {
-                return Err(Error::invalid_arg_name("argument name can not be empty"));
+                return Err(Error::raise_args_name("argument name can not be empty"));
             }
 
             Ok(Self::Output {
@@ -113,7 +113,7 @@ impl ArgParser for RawVal {
             let name = self
                 .to_str()
                 .ok_or_else(|| {
-                    Error::invalid_arg_name(format!(
+                    Error::raise_args_name(format!(
                         "failed convert argument name `{}` to str",
                         self
                     ))

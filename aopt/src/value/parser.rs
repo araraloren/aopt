@@ -4,7 +4,6 @@ use std::path::PathBuf;
 
 use crate::ctx::Ctx;
 use crate::raise_command;
-use crate::raise_failure;
 use crate::value::Stop;
 use crate::Error;
 use crate::RawVal;
@@ -21,10 +20,10 @@ where
 
 /// Convert raw value to &[`str`].
 pub fn raw2str(raw: Option<&RawVal>) -> Result<&str, Error> {
-    let raw = raw.ok_or_else(|| raise_failure!("Unexcepted empty value in raw2str"))?;
+    let raw = raw.ok_or_else(|| Error::raise_sp_rawval("Unexcepted empty value"))?;
 
     raw.get_str()
-        .ok_or_else(|| raise_failure!("Can't convert value `{}` to str", raw))
+        .ok_or_else(|| Error::raise_sp_rawval(format!("Can't convert value `{raw}` to str")))
 }
 
 impl RawValParser for () {
@@ -32,6 +31,15 @@ impl RawValParser for () {
 
     fn parse(_: Option<&RawVal>, _: &Ctx) -> Result<Self, Self::Error> {
         Ok(())
+    }
+}
+
+impl RawValParser for RawVal {
+    type Error = Error;
+
+    fn parse(raw: Option<&RawVal>, _: &Ctx) -> Result<Self, Self::Error> {
+        raw.cloned()
+            .ok_or_else(|| Error::raise_sp_rawval("Unexcepted empty value"))
     }
 }
 
@@ -45,11 +53,10 @@ macro_rules! impl_raw_val_parser {
                 let uid = ctx.uid()?;
 
                 val.parse::<$int>().map_err(|e| {
-                    $crate::raise_failure!(
-                        "Can not convert value `{}` to {}",
-                        val,
-                        stringify!($int),
-                    )
+                    $crate::err::Error::raise_sp_rawval(format!(
+                        "Can not convert value `{val}` to {}",
+                        stringify!($int)
+                    ))
                     .with_uid(uid)
                     .cause_by(e.into())
                 })
@@ -87,7 +94,7 @@ impl RawValParser for OsString {
     fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error> {
         let uid = ctx.uid()?;
         Ok(raw
-            .ok_or_else(|| raise_failure!("Unexcepted empty value").with_uid(uid))?
+            .ok_or_else(|| Error::raise_sp_rawval("Unexcepted empty value").with_uid(uid))?
             .to_os_string())
     }
 }
@@ -101,10 +108,10 @@ impl RawValParser for bool {
         match val {
             crate::opt::BOOL_TRUE => Ok(true),
             crate::opt::BOOL_FALSE => Ok(false),
-            _ => {
-                Err(raise_failure!("Except true or false, found value: {}", val)
-                    .with_uid(ctx.uid()?))
-            }
+            _ => Err(
+                Error::raise_sp_rawval(format!("Except true or false, found value: {}", val))
+                    .with_uid(ctx.uid()?),
+            ),
         }
     }
 }
@@ -114,7 +121,7 @@ impl RawValParser for PathBuf {
 
     fn parse(raw: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(PathBuf::from(
-            raw.ok_or_else(|| raise_failure!("Can not construct PathBuf from None"))?
+            raw.ok_or_else(|| Error::raise_sp_rawval("Can not construct PathBuf from None"))?
                 .clone()
                 .into_os_string(),
         ))
@@ -132,7 +139,10 @@ impl RawValParser for Stdin {
                 return Ok(std::io::stdin());
             }
         }
-        Err(raise_failure!("Stdin value only support value `-`: {:?}", raw).with_uid(ctx.uid()?))
+        Err(
+            Error::raise_sp_rawval(format!("Stdin value only support value `-`: {raw:?}"))
+                .with_uid(ctx.uid()?),
+        )
     }
 }
 
@@ -168,6 +178,9 @@ impl RawValParser for Stop {
                 }
             }
         }
-        Err(raise_failure!("Stop value only support value `--`: {:?}", raw).with_uid(ctx.uid()?))
+        Err(
+            Error::raise_sp_rawval(format!("Stop value only support value `--`: {raw:?}"))
+                .with_uid(ctx.uid()?),
+        )
     }
 }

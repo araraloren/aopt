@@ -323,7 +323,7 @@ where
                         }
                     }
                     if !stopped && !matched && self.strict() {
-                        return Err(opt_fail.cause(Error::sp_option_not_found(name)));
+                        return Err(opt_fail.cause(Error::raise_sp_not_found(name)));
                     }
                 }
             }
