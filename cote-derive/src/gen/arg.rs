@@ -1,11 +1,8 @@
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
-use syn::{spanned::Spanned, Field, Ident,  Type};
+use syn::{spanned::Spanned, Field, Ident, Type};
 
-use crate::{
-    config::ArgKind,
-    error,
-};
+use crate::{config::ArgKind, error};
 
 use super::{AttrKind, Utils, WrapperTy};
 use super::{FieldCfg, OptUpdate};
@@ -213,7 +210,7 @@ impl<'a> ArgGenerator<'a> {
                         ),
                     )?);
                 }
-                ArgKind::NoDelay => { 
+                ArgKind::NoDelay => {
                     // will process in policy settings 
                 },
                 ArgKind::Fetch => {
