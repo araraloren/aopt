@@ -157,15 +157,13 @@ where
     /// // Register a value can access in handler parameter.
     /// parser.set_app_data(ser::Value::new(Int(42)))?;
     /// parser.add_opt("--guess=i!")?.on(
-    ///   |_: &mut ASet, _: &mut ASer, mut val: ctx::Value<i64>, answer: ser::Value<Int>| {
-    ///       if &answer.0 == val.deref() {
-    ///           println!("Congratulation, you win!");
-    ///       } else if &answer.0 > val.deref() {
-    ///           println!("Oops, too bigger!")
-    ///       } else {
-    ///           println!("Oops, too little!")
+    ///   |_: &mut ASet, _: &mut ASer, ctx::Value(val), answer: ser::Value<Int>| {
+    ///       match answer.deref().0.cmp(&val) {
+    ///         std::cmp::Ordering::Equal => println!("Congratulation, you win!"),
+    ///         std::cmp::Ordering::Greater => println!("Oops, too bigger!"),
+    ///         std::cmp::Ordering::Less => println!("Oops, too little!"),
     ///       }
-    ///       Ok(Some(val.take()))
+    ///       Ok(Some(val))
     ///   },
     /// )?;
     ///

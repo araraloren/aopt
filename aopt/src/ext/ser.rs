@@ -85,7 +85,7 @@ pub struct Value<T: ?Sized>(ARef<T>);
 /// # Ok(())
 /// # }
 /// ```
-pub struct Value<T: ?Sized>(ARef<T>);
+pub struct Value<T: ?Sized>(pub ARef<T>);
 
 impl<T> Value<T> {
     pub fn new(value: T) -> Self {

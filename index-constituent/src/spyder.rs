@@ -7,8 +7,6 @@ use json::JsonValue;
 
 #[async_trait::async_trait]
 pub trait Spyder {
-    async fn list(&self, page_number: usize) -> reqwest::Result<SpyderIndexData>;
-
     async fn search(&self, keyword: &str, page_number: usize) -> reqwest::Result<SpyderIndexData>;
 
     async fn fetch_cons(&self, code: &str, page_number: usize) -> reqwest::Result<SpyderIndexData>;

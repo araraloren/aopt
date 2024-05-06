@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::fmt::Display;
 use std::ops::Range;
 use std::ops::RangeBounds;
 use std::ops::RangeFrom;
@@ -477,34 +478,38 @@ impl Index {
     }
 }
 
-impl ToString for Index {
-    fn to_string(&self) -> String {
-        match self {
-            Index::AnyWhere => "*".to_string(),
-            Index::Null => String::default(),
-            Index::Forward(v) => {
-                format!("{}", v)
-            }
-            Index::Backward(v) => {
-                format!("-{}", v)
-            }
-            Index::Range(s, None) => {
-                format!("{}..", s,)
-            }
-            Index::Range(s, Some(e)) => {
-                format!("{}..{}", s, e)
-            }
-            Index::List(v) => {
-                let strs: Vec<String> = v.iter().map(|v| format!("{}", v)).collect();
+impl Display for Index {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Index::AnyWhere => "*".to_string(),
+                Index::Null => String::default(),
+                Index::Forward(v) => {
+                    format!("{}", v)
+                }
+                Index::Backward(v) => {
+                    format!("-{}", v)
+                }
+                Index::Range(s, None) => {
+                    format!("{}..", s,)
+                }
+                Index::Range(s, Some(e)) => {
+                    format!("{}..{}", s, e)
+                }
+                Index::List(v) => {
+                    let strs: Vec<String> = v.iter().map(|v| format!("{}", v)).collect();
 
-                format!("[{}]", strs.join(", "))
-            }
-            Index::Except(v) => {
-                let strs: Vec<String> = v.iter().map(|v| format!("{}", v)).collect();
+                    format!("[{}]", strs.join(", "))
+                }
+                Index::Except(v) => {
+                    let strs: Vec<String> = v.iter().map(|v| format!("{}", v)).collect();
 
-                format!("-[{}]", strs.join(", "))
+                    format!("-[{}]", strs.join(", "))
+                }
             }
-        }
+        )
     }
 }
 

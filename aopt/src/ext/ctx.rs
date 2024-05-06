@@ -128,7 +128,7 @@ impl<Set, Ser> Extract<Set, Ser> for Ctx {
 /// ```
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Uid(crate::Uid);
+pub struct Uid(pub crate::Uid);
 
 impl Uid {
     pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
@@ -225,7 +225,7 @@ impl Display for Uid {
 /// ```
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Index(usize);
+pub struct Index(pub usize);
 
 impl Index {
     pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
@@ -310,7 +310,7 @@ impl Display for Index {
 /// ```
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Total(usize);
+pub struct Total(pub usize);
 
 impl Total {
     pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
@@ -403,7 +403,7 @@ impl Display for Total {
 /// # }
 /// ```
 #[derive(Debug, Clone, Default)]
-pub struct Args(ARef<crate::args::Args>);
+pub struct Args(pub ARef<crate::args::Args>);
 
 impl Args {
     pub fn extract_ctx(ctx: &Ctx) -> Self {
@@ -488,7 +488,7 @@ impl<Set, Ser> Extract<Set, Ser> for Args {
 /// ```
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Name(AStr);
+pub struct Name(pub AStr);
 
 impl Name {
     pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
@@ -592,7 +592,7 @@ impl Display for Name {
 /// # }
 /// ```
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Style(crate::opt::Style);
+pub struct Style(pub crate::opt::Style);
 
 impl Style {
     pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
@@ -689,7 +689,7 @@ impl<Set, Ser> Extract<Set, Ser> for Style {
 /// # }
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct RawVal(crate::RawVal);
+pub struct RawVal(pub crate::RawVal);
 
 impl RawVal {
     pub fn extract_ctx(ctx: &Ctx) -> Result<Self, Error> {
@@ -778,7 +778,7 @@ impl<Set, Ser> Extract<Set, Ser> for RawVal {
 /// # Ok(())
 /// # }
 /// ```
-pub struct Value<T>(T);
+pub struct Value<T>(pub T);
 
 impl<T> Value<T> {
     pub fn replace(&mut self, val: T) -> T {

@@ -4,6 +4,7 @@ mod policy;
 use std::io::Write;
 
 pub use self::guess::CompleteGuess;
+pub use self::guess::CompleteRet;
 pub use self::policy::CompletePolicy;
 
 use crate::args::Args;

@@ -93,10 +93,6 @@ impl CNIndex {
 
 #[async_trait::async_trait]
 impl super::Spyder for CNIndex {
-    async fn list(&self, _page_number: usize) -> reqwest::Result<SpyderIndexData> {
-        todo!()
-    }
-
     async fn search(&self, keyword: &str, page_number: usize) -> reqwest::Result<SpyderIndexData> {
         let search_page_uri = self.get_search_page_uri(keyword);
         let res = self.client.get(search_page_uri).header("Accept", " text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8").send().await?;
