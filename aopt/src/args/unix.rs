@@ -1,5 +1,8 @@
 use std::ffi::OsStr;
+#[cfg(target_family = "unix")]
 use std::os::unix::ffi::OsStrExt;
+#[cfg(target_family = "wasm")]
+use std::os::wasi::ffi::OsStrExt;
 
 use crate::args::ArgParser;
 use crate::astr;

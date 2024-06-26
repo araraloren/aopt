@@ -1,5 +1,5 @@
 #[cfg_attr(windows, path = "args/win.rs")]
-#[cfg_attr(unix, path = "args/unix.rs")]
+#[cfg_attr(not(windows), path = "args/unix.rs")]
 pub(crate) mod osstr_ext;
 
 use std::fmt::Display;
