@@ -15,7 +15,7 @@ categories = ["command-line-interface"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aopt.workspace = true
+aopt = { workspace = true }
 aopt-help.workspace = true
 cote-derive.workspace = true
 serde = { workspace = true, optional = true }
