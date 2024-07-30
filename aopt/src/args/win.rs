@@ -54,7 +54,7 @@ pub fn split_once(str: &OsStr, ch: char) -> Option<(OsString, OsString)> {
 ///
 /// The struct of the input option string are:
 ///
-/// ```!
+/// ```plaintext
 /// [--/option][=][value]
 ///        |    |    |
 ///        |    |    |

@@ -1,7 +1,9 @@
 [package]
 name = "cote"
-version = "0.5.0"
-authors = ["araraloren <blackcatoverwall@gmail.com>"]
+version = "0.5.1"
+authors = [
+    "araraloren <blackcatoverwall@gmail.com>",
+]
 edition = "2021"
 license = "MPL-2.0"
 description = "Quickly build your command line utils"
@@ -13,16 +15,16 @@ categories = ["command-line-interface"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aopt = "0.12"
-cote-derive = "0.3"
-aopt-help = "0.3"
-serde = { version = "1.0", features = ["derive"], optional = true }
+aopt.workspace = true
+aopt-help.workspace = true
+cote-derive.workspace = true
+serde = { workspace = true, optional = true }
 
 [dev-dependencies]
-serde_json = "1.0"
-tokio = { version = "1.26", features = ["full"] }
-color-eyre = "0.5"
-regex = "1.9"
+color-eyre.workspace = true
+regex.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
 
 [features]
 sync = ["aopt/sync"]
@@ -31,4 +33,7 @@ log = ["aopt/log"]
 shell = ["aopt/shell"]
 
 [package.metadata.docs.rs]
-cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]
+cargo-args = [
+    "-Zunstable-options",
+    "-Zrustdoc-scrape-examples",
+]

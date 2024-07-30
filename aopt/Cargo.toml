@@ -1,7 +1,9 @@
 [package]
 name = "aopt"
-version = "0.12.3"
-authors = ["araraloren <blackcatoverwall@gmail.com>"]
+version = "0.12.4"
+authors = [
+    "araraloren <blackcatoverwall@gmail.com>",
+]
 edition = "2021"
 license = "MPL-2.0"
 description = "A flexible and typed getopt tools"
@@ -13,10 +15,10 @@ readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ahash = "0.8"
-neure = "0.3"
-serde = { version = "1.0", features = ["derive"], optional = true }
-tracing = { version = "0.1", optional = true }
+ahash.workspace = true
+neure.workspace = true
+serde = { workspace = true, optional = true }
+tracing = { workspace = true, optional = true }
 
 [features]
 default = []
@@ -26,4 +28,7 @@ log = ["tracing"]
 serde = ["serde/derive"]
 
 [package.metadata.docs.rs]
-cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]
+cargo-args = [
+    "-Zunstable-options",
+    "-Zrustdoc-scrape-examples",
+]

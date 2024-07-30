@@ -3,7 +3,7 @@ use super::Ctx;
 use crate::Error;
 
 /// Implement the trait if your want use your type in the [`Invoker`](crate::ctx::Invoker).
-/// Return an [`Error::sp_raise_extract_error`] if any error occured.
+/// Return an [`Error::raise_sp_extract`] if any error occured.
 pub trait Extract<Set, Ser>
 where
     Self: Sized,

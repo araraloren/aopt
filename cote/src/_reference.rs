@@ -45,7 +45,7 @@
 //!
 //! - Output of `cli --help`:
 //!
-//! ```!
+//! ```plaintext
 //! Usage: cli [-h,-?,--help] [-d,--debug] [-c,--config [CFG]] <COMMAND>
 //!
 //! Generate help message for command line program
@@ -64,7 +64,7 @@
 //!
 //! - Output of `cli ls --help`:
 //!
-//! ```!
+//! ```plaintext
 //! Usage: cli ls [-h,-?,--help] [--recursive] [ARGS]
 //!
 //! List the given directory
@@ -83,7 +83,7 @@
 //!
 //! Output of `cli se --depth 2`:
 //!
-//! ```!
+//! ```plaintext
 //! loading config from "default.json"
 //! search the file under directory `Some(".")` with depth 2
 //! ```
@@ -96,7 +96,7 @@
 //!
 //! Output of `cli se --depth www` or `cli se --depth`:
 //!
-//! ```!
+//! ```plaintext
 //! Usage: cli [-h,-?,--help] [-d,--debug] [-c,--config [CFG]] <COMMAND>
 //!
 //! Generate help message for command line program
@@ -164,7 +164,7 @@
 //!
 //! The help message output like this:
 //!
-//! ```!
+//! ```plaintext
 //! Usage: app [-h,-?,--help] [--debug] <--name>
 //!        <COMMAND> [ARGS]
 //!
@@ -301,7 +301,7 @@
 //!
 //! Running the code, it's output should be:
 //!
-//! ```!
+//! ```plaintext
 //! Usage: cli [-h,-?,--help] <-b,--baz> <COMMAND> [ARGS]
 //!
 //! Generate help message for command line program
@@ -399,21 +399,21 @@
 //!
 //! - Output of command line `cli --foo 6`:
 //!
-//! ```!
+//! ```plaintext
 //! Saving the value of `--foo` to 7
 //! Got client: Cli { foo: 7, bar: None, qux: None }
 //! ```
 //!
 //! - Output of command line `cli --foo 8 bar a2i`:
 //!
-//! ```!
+//! ```plaintext
 //! Saving the value of `--foo` to 9
 //! Got client: Cli { foo: 9, bar: Some(Bar { debug: false, quux: "a2i" }), qux: None }
 //! ```
 //!
 //! - Output of command line `cli --foo 8 bar a2i --debug`:
 //!
-//! ```!
+//! ```plaintext
 //! Saving the value of `--foo` to 9
 //! Got value of `--debug`: RawVal("true") --> true
 //! Got client: Cli { foo: 9, bar: Some(Bar { debug: false, quux: "a2i" }), qux: None }
@@ -421,7 +421,7 @@
 //!
 //! - Output of command line `cli --foo 9 qux c`:
 //!
-//! ```!
+//! ```plaintext
 //! Saving the value of `--foo` to 10
 //! return Ok(None) call the default handler of Qux
 //! Got client: Cli { foo: 9, bar: None, qux: Some(Qux { corge: true, grault: None }) }
@@ -429,7 +429,7 @@
 //!
 //! - Output of command line `cli --foo 9 qux c --grault=42`:
 //!
-//! ```!
+//! ```plaintext
 //! Saving the value of `--foo` to 10
 //! return Ok(None) call the default handler of Qux
 //! Got client: Cli { foo: 9, bar: None, qux: Some(Qux { corge: true, grault: Some(42) }) }
@@ -471,7 +471,7 @@
 //! For example, `sport` sub command does have two sub commands, it is configured with `#[sub(policy = pre)]`.
 //! _Without_ `policy = pre`, you will got output when running `cli -g=42 sport walk -d 4`:
 //!
-//! ```!
+//! ```plaintext
 //! Usage: cli sport [-h,-?,--help] <COMMAND>
 //! Generate help message for command line program
 //!
@@ -496,7 +496,7 @@
 //! Run with RUST_BACKTRACE=full to include source snippets.
 //! ```
 //! And the right output should be:
-//! ```!
+//! ```plaintext
 //! You age is set to 42
 //! You are going to walk 4 kilometers
 //! ```
@@ -513,7 +513,7 @@
 //!
 //! The output of commands `cli -g22 e --help` is:
 //!
-//! ```!
+//! ```plaintext
 //! Usage: cli e [-h,-?,--help] <-m,--meal> [ARGS]
 //!
 //! Generate help message for command line program
@@ -539,7 +539,7 @@
 //!
 //! The output of commands `cli -g8 sport --help` is:
 //!
-//! ```!
+//! ```plaintext
 //! Usage: cli sport [-h,-?,--help] <COMMAND>
 //!
 //! This is head message of sport sub command.
@@ -567,7 +567,7 @@
 //!
 //! Instead display the help and error message, the output of commands `cli -g8 sp` is:
 //!
-//! ```!
+//! ```plaintext
 //! You age is set to 8
 //! ```
 //!

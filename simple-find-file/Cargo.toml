@@ -1,7 +1,9 @@
 [package]
 name = "ff"
-version = "0.5.0"
-authors = ["araraloren <blackcatoverwall@gmail.com>"]
+version = "0.5.1"
+authors = [
+    "araraloren <blackcatoverwall@gmail.com>",
+]
 edition = "2021"
 license = "MPL-2.0"
 description = "Example - simple file search tools"
@@ -11,8 +13,8 @@ categories = ["command-line-interface"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aopt = "0.12"
-aopt-help = "0.3.3"
-tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }
-color-eyre = "0.5.11"
-regex = "1.5.4"
+regex.workspace = true
+aopt.workspace = true
+aopt-help.workspace = true
+color-eyre.workspace = true
+tracing-subscriber.workspace = true

@@ -65,7 +65,7 @@ use crate::RawVal;
 /// }
 /// ```
 ///
-/// ```!
+/// ```plaintext
 /// POSIX.1-2017
 ///
 /// 12.2 Utility Syntax Guidelines

@@ -2,7 +2,7 @@ use proc_macro2::{Span, TokenStream};
 use quote::{quote, ToTokens};
 use syn::{
     parse_quote, spanned::Spanned, Attribute, Field, GenericArgument, Generics, Ident,
-    ImplGenerics, Lifetime, LifetimeDef, Lit, PathArguments, Type, TypeGenerics, TypeParam,
+    ImplGenerics, Lifetime, LifetimeParam, Lit, PathArguments, Type, TypeGenerics, TypeParam,
     WhereClause,
 };
 
@@ -192,13 +192,13 @@ impl<'a, T: config::Kind + PartialEq> FieldCfg<'a, T> {
     }
 
     pub fn filter_comment_doc(attrs: &[Attribute]) -> Vec<Lit> {
-        let attrs = attrs.iter().filter(|v| v.path.is_ident(CONFIG_DOC));
+        let attrs = attrs.iter().filter(|v| v.path().is_ident(CONFIG_DOC));
         let mut ret = vec![];
 
         for attr in attrs {
-            if let Ok(syn::Meta::NameValue(meta)) = attr.parse_meta() {
-                if let syn::Lit::Str(_) = &meta.lit {
-                    ret.push(meta.lit);
+            if let syn::Meta::NameValue(meta) = &attr.meta {
+                if let syn::Expr::Lit(syn::ExprLit { lit, .. }) = &meta.value {
+                    ret.push(lit.clone());
                 }
             }
         }
@@ -469,7 +469,7 @@ impl GenericsModifier {
     pub fn insert_lifetime(&mut self, lifetime: &str) -> &mut Self {
         self.0.params.insert(
             0,
-            syn::GenericParam::from(LifetimeDef::new(Lifetime::new(lifetime, self.0.span()))),
+            syn::GenericParam::from(LifetimeParam::new(Lifetime::new(lifetime, self.0.span()))),
         );
         self
     }
