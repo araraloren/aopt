@@ -8,7 +8,7 @@ use crate::ctx::Ctx;
 use crate::map::ErasedTy;
 use crate::opt::Action;
 use crate::opt::Any;
-use crate::opt::BuiltInCtor;
+use crate::opt::Cid;
 use crate::opt::Cmd;
 use crate::opt::ConfigValue;
 use crate::opt::Index;
@@ -42,7 +42,7 @@ pub trait Infer {
     }
 
     fn infer_ctor() -> AStr {
-        crate::set::ctor_default_name()
+        AStr::from(crate::set::CTOR_DEFAULT)
     }
 
     fn infer_index() -> Option<Index> {
@@ -441,21 +441,21 @@ impl Infer for Placeholder {
         let ctor = cfg
             .ctor()
             .ok_or_else(|| crate::raise_error!("Incomplete configuration, `ctor` must be set"))?;
-        let ctor = BuiltInCtor::from_name(ctor);
+        let cid = Cid::from(ctor);
 
         trace_log!("In default, fill info in Placeholder");
-        match ctor {
-            BuiltInCtor::Int => <i64>::infer_fill_info(cfg),
-            BuiltInCtor::AStr => <String>::infer_fill_info(cfg),
-            BuiltInCtor::Flt => <f64>::infer_fill_info(cfg),
-            BuiltInCtor::Uint => <u64>::infer_fill_info(cfg),
-            BuiltInCtor::Bool => bool::infer_fill_info(cfg),
-            BuiltInCtor::Cmd => Cmd::infer_fill_info(cfg),
-            BuiltInCtor::Pos => <Pos<bool>>::infer_fill_info(cfg),
-            BuiltInCtor::Main => Main::<()>::infer_fill_info(cfg),
-            BuiltInCtor::Any => Any::<()>::infer_fill_info(cfg),
-            BuiltInCtor::Raw => <OsString>::infer_fill_info(cfg),
-            BuiltInCtor::Fallback => Ok(()),
+        match cid {
+            Cid::Int => <i64>::infer_fill_info(cfg),
+            Cid::AStr => <String>::infer_fill_info(cfg),
+            Cid::Flt => <f64>::infer_fill_info(cfg),
+            Cid::Uint => <u64>::infer_fill_info(cfg),
+            Cid::Bool => bool::infer_fill_info(cfg),
+            Cid::Cmd => Cmd::infer_fill_info(cfg),
+            Cid::Pos => <Pos<bool>>::infer_fill_info(cfg),
+            Cid::Main => Main::<()>::infer_fill_info(cfg),
+            Cid::Any => Any::<()>::infer_fill_info(cfg),
+            Cid::Raw => <OsString>::infer_fill_info(cfg),
+            _ => Ok(()),
         }
     }
 }

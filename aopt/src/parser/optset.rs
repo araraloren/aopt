@@ -345,7 +345,7 @@ where
     /// impl From<Int64> for OptConfig {
     ///     fn from(_: Int64) -> Self {
     ///         OptConfig::default()
-    ///             .with_ctor(ctor_default_name())
+    ///             .with_ctor(aopt::prelude::CTOR_DEFAULT)
     ///             .with_style(vec![Style::Argument])
     ///             .with_type::<i64>()
     ///             .with_action(Action::Set)

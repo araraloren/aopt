@@ -19,7 +19,7 @@ mod __creator {
     use super::*;
 
     pub struct Creator<O, C, E: Into<Error>> {
-        pub(crate) name: AStr,
+        pub(crate) cid: Cid,
 
         pub(crate) callback: Box<dyn FnMut(C) -> Result<O, E> + Send + Sync + 'static>,
     }
@@ -27,7 +27,7 @@ mod __creator {
     impl<O: Opt, C, E: Into<Error>> Debug for Creator<O, C, E> {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             f.debug_struct("Creator")
-                .field("name", &self.name)
+                .field("cid", &self.cid)
                 .field("callback", &"{...}")
                 .finish()
         }
@@ -35,11 +35,11 @@ mod __creator {
 
     impl<O: Opt, C, E: Into<Error>> Creator<O, C, E> {
         pub fn new(
-            name: AStr,
+            cid: Cid,
             callback: impl FnMut(C) -> Result<O, E> + Send + Sync + 'static,
         ) -> Self {
             Self {
-                name,
+                cid,
                 callback: Box::new(callback),
             }
         }
@@ -51,7 +51,7 @@ mod __creator {
     use super::*;
 
     pub struct Creator<O, C, E: Into<Error>> {
-        pub(crate) name: AStr,
+        pub(crate) cid: Cid,
 
         pub(crate) callback: Box<dyn FnMut(C) -> Result<O, E> + 'static>,
     }
@@ -59,16 +59,16 @@ mod __creator {
     impl<O: Opt, C, E: Into<Error>> Debug for Creator<O, C, E> {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             f.debug_struct("Creator")
-                .field("name", &self.name)
+                .field("cid", &self.cid)
                 .field("callback", &"{...}")
                 .finish()
         }
     }
 
     impl<O: Opt, C, E: Into<Error>> Creator<O, C, E> {
-        pub fn new(name: AStr, callback: impl FnMut(C) -> Result<O, E> + 'static) -> Self {
+        pub fn new(cid: Cid, callback: impl FnMut(C) -> Result<O, E> + 'static) -> Self {
             Self {
-                name,
+                cid,
                 callback: Box::new(callback),
             }
         }
@@ -86,8 +86,8 @@ impl<O: Opt, C, E: Into<Error>> Ctor for Creator<O, C, E> {
 
     type Error = E;
 
-    fn name(&self) -> &AStr {
-        &self.name
+    fn cid(&self) -> &Cid {
+        &self.cid
     }
 
     fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
@@ -95,36 +95,36 @@ impl<O: Opt, C, E: Into<Error>> Ctor for Creator<O, C, E> {
     }
 }
 
-const BUILTIN_CTOR_INT_SHORT: &str = "i";
-const BUILTIN_CTOR_INT_LONG: &str = "int";
-const BUILTIN_CTOR_INT_TYPE: &str = "i64";
-const BUILTIN_CTOR_BOOL_SHORT: &str = "b";
-const BUILTIN_CTOR_BOOL_LONG: &str = "boolean";
-const BUILTIN_CTOR_BOOL_TYPE: &str = "bool";
-const BUILTIN_CTOR_UINT_SHORT: &str = "u";
-const BUILTIN_CTOR_UINT_LONG: &str = "uint";
-const BUILTIN_CTOR_UINT_TYPE: &str = "u64";
-const BUILTIN_CTOR_STR_SHORT: &str = "s";
-const BUILTIN_CTOR_STR_LONG: &str = "str";
-const BUILTIN_CTOR_STR_TYPE: &str = "string";
-const BUILTIN_CTOR_FLT_SHORT: &str = "f";
-const BUILTIN_CTOR_FLT_LONG: &str = "flt";
-const BUILTIN_CTOR_FLT_TYPE: &str = "f64";
-const BUILTIN_CTOR_CMD_SHORT: &str = "c";
-const BUILTIN_CTOR_CMD_LONG: &str = "cmd";
-const BUILTIN_CTOR_POS_SHORT: &str = "p";
-const BUILTIN_CTOR_POS_LONG: &str = "pos";
-const BUILTIN_CTOR_MAIN_SHORT: &str = "m";
-const BUILTIN_CTOR_MAIN_LONG: &str = "main";
-const BUILTIN_CTOR_ANY_SHORT: &str = "a";
-const BUILTIN_CTOR_ANY_LONG: &str = "any";
-const BUILTIN_CTOR_RAW_SHORT: &str = "r";
-const BUILTIN_CTOR_RAW_LONG: &str = "raw";
-const BUILTIN_CTOR_FALLBACK: &str = "fallback";
+pub(crate) const CID_INT_SHORT: &str = "i";
+pub(crate) const CID_INT_LONG: &str = "int";
+pub(crate) const CID_INT_TYPE: &str = "i64";
+pub(crate) const CID_BOOL_SHORT: &str = "b";
+pub(crate) const CID_BOOL_LONG: &str = "boolean";
+pub(crate) const CID_BOOL_TYPE: &str = "bool";
+pub(crate) const CID_UINT_SHORT: &str = "u";
+pub(crate) const CID_UINT_LONG: &str = "uint";
+pub(crate) const CID_UINT_TYPE: &str = "u64";
+pub(crate) const CID_STR_SHORT: &str = "s";
+pub(crate) const CID_STR_LONG: &str = "str";
+pub(crate) const CID_STR_TYPE: &str = "string";
+pub(crate) const CID_FLT_SHORT: &str = "f";
+pub(crate) const CID_FLT_LONG: &str = "flt";
+pub(crate) const CID_FLT_TYPE: &str = "f64";
+pub(crate) const CID_CMD_SHORT: &str = "c";
+pub(crate) const CID_CMD_LONG: &str = "cmd";
+pub(crate) const CID_POS_SHORT: &str = "p";
+pub(crate) const CID_POS_LONG: &str = "pos";
+pub(crate) const CID_MAIN_SHORT: &str = "m";
+pub(crate) const CID_MAIN_LONG: &str = "main";
+pub(crate) const CID_ANY_SHORT: &str = "a";
+pub(crate) const CID_ANY_LONG: &str = "any";
+pub(crate) const CID_RAW_SHORT: &str = "r";
+pub(crate) const CID_RAW_LONG: &str = "raw";
+pub(crate) const CID_FALLBACK: &str = "fallback";
 
 #[non_exhaustive]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum BuiltInCtor {
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Cid {
     /// Create names: `i`, `int`, `i64`
     Int,
 
@@ -157,51 +157,48 @@ pub enum BuiltInCtor {
 
     /// Create names: `fallback`
     Fallback,
+
+    Name(String),
 }
 
-impl BuiltInCtor {
-    pub fn name(&self) -> &str {
+impl Cid {
+    pub fn is_suit<S: AsRef<str>>(&self, s: &S) -> bool {
+        let s = s.as_ref();
+
         match self {
-            BuiltInCtor::Int => BUILTIN_CTOR_INT_SHORT,
-            BuiltInCtor::AStr => BUILTIN_CTOR_STR_SHORT,
-            BuiltInCtor::Flt => BUILTIN_CTOR_FLT_SHORT,
-            BuiltInCtor::Uint => BUILTIN_CTOR_UINT_SHORT,
-            BuiltInCtor::Bool => BUILTIN_CTOR_BOOL_SHORT,
-            BuiltInCtor::Cmd => BUILTIN_CTOR_CMD_SHORT,
-            BuiltInCtor::Pos => BUILTIN_CTOR_POS_SHORT,
-            BuiltInCtor::Main => BUILTIN_CTOR_MAIN_SHORT,
-            BuiltInCtor::Any => BUILTIN_CTOR_ANY_SHORT,
-            BuiltInCtor::Raw => BUILTIN_CTOR_RAW_SHORT,
-            BuiltInCtor::Fallback => BUILTIN_CTOR_FALLBACK,
+            Cid::Int => matches!(s, CID_INT_SHORT | CID_INT_LONG | CID_INT_TYPE),
+            Cid::AStr => matches!(s, CID_STR_SHORT | CID_STR_LONG | CID_STR_TYPE),
+            Cid::Flt => matches!(s, CID_FLT_SHORT | CID_FLT_LONG | CID_FLT_TYPE),
+            Cid::Uint => matches!(s, CID_UINT_SHORT | CID_UINT_LONG | CID_UINT_TYPE),
+            Cid::Bool => matches!(s, CID_BOOL_SHORT | CID_BOOL_LONG | CID_BOOL_TYPE),
+            Cid::Cmd => matches!(s, CID_CMD_SHORT | CID_CMD_LONG),
+            Cid::Pos => matches!(s, CID_POS_SHORT | CID_POS_LONG),
+            Cid::Main => matches!(s, CID_MAIN_SHORT | CID_MAIN_LONG),
+            Cid::Any => matches!(s, CID_ANY_SHORT | CID_ANY_LONG),
+            Cid::Raw => matches!(s, CID_RAW_SHORT | CID_RAW_LONG),
+            Cid::Fallback => matches!(s, CID_FALLBACK),
+            Cid::Name(name) => s == name,
         }
     }
+}
 
-    pub fn from_name<S: AsRef<str>>(ctor: &S) -> Self {
-        match ctor.as_ref() {
-            BUILTIN_CTOR_INT_SHORT | BUILTIN_CTOR_INT_LONG | BUILTIN_CTOR_INT_TYPE => {
-                BuiltInCtor::Int
-            }
-            BUILTIN_CTOR_STR_SHORT | BUILTIN_CTOR_STR_LONG | BUILTIN_CTOR_STR_TYPE => {
-                BuiltInCtor::AStr
-            }
-            BUILTIN_CTOR_FLT_SHORT | BUILTIN_CTOR_FLT_LONG | BUILTIN_CTOR_FLT_TYPE => {
-                BuiltInCtor::Flt
-            }
-            BUILTIN_CTOR_UINT_SHORT | BUILTIN_CTOR_UINT_LONG | BUILTIN_CTOR_UINT_TYPE => {
-                BuiltInCtor::Uint
-            }
-            BUILTIN_CTOR_BOOL_SHORT | BUILTIN_CTOR_BOOL_LONG | BUILTIN_CTOR_BOOL_TYPE => {
-                BuiltInCtor::Bool
-            }
-            BUILTIN_CTOR_CMD_SHORT | BUILTIN_CTOR_CMD_LONG => BuiltInCtor::Cmd,
-            BUILTIN_CTOR_POS_SHORT | BUILTIN_CTOR_POS_LONG => BuiltInCtor::Pos,
-            BUILTIN_CTOR_MAIN_SHORT | BUILTIN_CTOR_MAIN_LONG => BuiltInCtor::Main,
-            BUILTIN_CTOR_ANY_SHORT | BUILTIN_CTOR_ANY_LONG => BuiltInCtor::Any,
-            BUILTIN_CTOR_RAW_SHORT | BUILTIN_CTOR_RAW_LONG => BuiltInCtor::Raw,
-            BUILTIN_CTOR_FALLBACK => BuiltInCtor::Fallback,
-            name => {
-                panic!("Unknow creator name: {}", name)
-            }
+impl<S: AsRef<str>> From<S> for Cid {
+    fn from(s: S) -> Self {
+        let s = s.as_ref();
+
+        match s {
+            CID_INT_SHORT | CID_INT_LONG | CID_INT_TYPE => Cid::Int,
+            CID_STR_SHORT | CID_STR_LONG | CID_STR_TYPE => Cid::AStr,
+            CID_FLT_SHORT | CID_FLT_LONG | CID_FLT_TYPE => Cid::Flt,
+            CID_UINT_SHORT | CID_UINT_LONG | CID_UINT_TYPE => Cid::Uint,
+            CID_BOOL_SHORT | CID_BOOL_LONG | CID_BOOL_TYPE => Cid::Bool,
+            CID_CMD_SHORT | CID_CMD_LONG => Cid::Cmd,
+            CID_POS_SHORT | CID_POS_LONG => Cid::Pos,
+            CID_MAIN_SHORT | CID_MAIN_LONG => Cid::Main,
+            CID_ANY_SHORT | CID_ANY_LONG => Cid::Any,
+            CID_RAW_SHORT | CID_RAW_LONG => Cid::Raw,
+            CID_FALLBACK => Cid::Fallback,
+            name => Cid::Name(name.to_string()),
         }
     }
 }
@@ -239,96 +236,90 @@ fn gen_hint(hint: Option<&AStr>, n: &AStr, idx: Option<&Index>, alias: Option<&V
 
 impl Creator<AOpt, OptConfig, Error> {
     pub fn fallback() -> Self {
-        Self::new(
-            crate::set::ctor_default_name(),
-            move |mut config: OptConfig| {
-                trace_log!("Construct option with config {:?}", &config);
+        Self::new(Cid::Fallback, move |mut config: OptConfig| {
+            trace_log!("Construct option with config {:?}", &config);
 
-                let r#type = config.take_type();
-                let name = config.take_name();
-                let force = config.take_force();
-                let index = config.take_index();
-                let alias = config.take_alias();
-                let hint = config.take_hint();
-                let help = config.take_help();
-                let action = config.take_action();
-                let storer = config.take_storer();
-                let styles = config.take_style();
-                let initializer = config.take_initializer();
-                let ignore_name = config.ignore_name();
-                let ignore_alias = config.ignore_alias();
-                let ignore_index = config.ignore_index();
+            let r#type = config.take_type();
+            let name = config.take_name();
+            let force = config.take_force();
+            let index = config.take_index();
+            let alias = config.take_alias();
+            let hint = config.take_hint();
+            let help = config.take_help();
+            let action = config.take_action();
+            let storer = config.take_storer();
+            let styles = config.take_style();
+            let initializer = config.take_initializer();
+            let ignore_name = config.ignore_name();
+            let ignore_alias = config.ignore_alias();
+            let ignore_index = config.ignore_index();
 
-                let force = force.unwrap_or(false);
-                let action = action.unwrap_or(Action::App);
-                let storer = storer.ok_or_else(|| {
-                    raise_error!("Incomplete option configuration: missing ValStorer")
-                })?;
-                let initializer = initializer.ok_or_else(|| {
-                    raise_error!("Incomplete option configuration: missing ValInitializer")
-                })?;
-                let styles = styles.ok_or_else(|| {
-                    raise_error!("Incomplete option configuration: missing Style")
-                })?;
-                let name = name.ok_or_else(|| {
-                    raise_error!("Incomplete option configuration: missing option name")
-                })?;
-                let hint = gen_hint(hint.as_ref(), &name, index.as_ref(), alias.as_ref());
-                let help = help.unwrap_or_default();
-                let r#type = r#type.ok_or_else(|| {
-                    raise_error!("Incomplete option configuration: missing option value type")
-                })?;
-                let help = Help::default().with_help(help).with_hint(hint);
+            let force = force.unwrap_or(false);
+            let action = action.unwrap_or(Action::App);
+            let storer = storer.ok_or_else(|| {
+                raise_error!("Incomplete option configuration: missing ValStorer")
+            })?;
+            let initializer = initializer.ok_or_else(|| {
+                raise_error!("Incomplete option configuration: missing ValInitializer")
+            })?;
+            let styles = styles
+                .ok_or_else(|| raise_error!("Incomplete option configuration: missing Style"))?;
+            let name = name.ok_or_else(|| {
+                raise_error!("Incomplete option configuration: missing option name")
+            })?;
+            let hint = gen_hint(hint.as_ref(), &name, index.as_ref(), alias.as_ref());
+            let help = help.unwrap_or_default();
+            let r#type = r#type.ok_or_else(|| {
+                raise_error!("Incomplete option configuration: missing option value type")
+            })?;
+            let help = Help::default().with_help(help).with_hint(hint);
 
-                if ignore_alias {
-                    if let Some(alias) = &alias {
-                        debug_assert!(
-                            !alias.is_empty(),
-                            "Option {} not support alias: {:?}",
-                            name,
-                            alias
-                        );
-                    }
+            if ignore_alias {
+                if let Some(alias) = &alias {
+                    debug_assert!(
+                        !alias.is_empty(),
+                        "Option {} not support alias: {:?}",
+                        name,
+                        alias
+                    );
                 }
-                if ignore_index {
-                    if let Some(index) = &index {
-                        debug_assert!(
+            }
+            if ignore_index {
+                if let Some(index) = &index {
+                    debug_assert!(
                             !index.is_null(),
                             "Please remove the index, option `{}` not support positional parameters: {:?}",
                             name,
                             index
                         );
-                    }
-                } else {
-                    debug_assert!(
+                }
+            } else {
+                debug_assert!(
                         index.is_some(),
                         "Please provide an index, indicate the position you want to capture for option `{}`.",
                         name
                     );
-                }
-                Ok(
-                    AOpt::new(name, r#type, ValAccessor::new(storer, initializer))
-                        .with_force(force)
-                        .with_idx(index)
-                        .with_action(action)
-                        .with_alias(alias)
-                        .with_style(styles)
-                        .with_opt_help(help)
-                        .with_ignore_name(ignore_name)
-                        .with_ignore_alias(ignore_alias)
-                        .with_ignore_index(ignore_index),
-                )
-            },
-        )
+            }
+            Ok(
+                AOpt::new(name, r#type, ValAccessor::new(storer, initializer))
+                    .with_force(force)
+                    .with_idx(index)
+                    .with_action(action)
+                    .with_alias(alias)
+                    .with_style(styles)
+                    .with_opt_help(help)
+                    .with_ignore_name(ignore_name)
+                    .with_ignore_alias(ignore_alias)
+                    .with_ignore_index(ignore_index),
+            )
+        })
     }
 
-    pub fn new_type_ctor(ctor: BuiltInCtor) -> Self {
-        if ctor == BuiltInCtor::Fallback {
+    pub fn new_type_ctor(ctor: Cid) -> Self {
+        if ctor == Cid::Fallback {
             return Self::fallback();
         }
-        let name = AStr::from(ctor.name());
-
-        Self::new(name, move |mut config: OptConfig| {
+        Self::new(ctor, move |mut config: OptConfig| {
             trace_log!("Construct option with config {:?}", &config);
 
             let r#type = config.take_type();
@@ -408,8 +399,8 @@ impl Creator<AOpt, OptConfig, Error> {
     }
 }
 
-impl From<BuiltInCtor> for Creator<AOpt, OptConfig, Error> {
-    fn from(value: BuiltInCtor) -> Self {
+impl From<Cid> for Creator<AOpt, OptConfig, Error> {
+    fn from(value: Cid) -> Self {
         Self::new_type_ctor(value)
     }
 }
@@ -450,9 +441,8 @@ macro_rules! ctors {
             vec![
                 $(
                     <$type>::from(
-                        $crate::opt::BuiltInCtor::from_name(
-                            &stringify!($creator)
-                    )),
+                        $crate::opt::Cid::from( &stringify!($creator) )
+                    ),
                 )+
             ]
         }
