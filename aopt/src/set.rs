@@ -50,8 +50,8 @@ impl<Opt: crate::opt::Opt, Config: Send + Sync, Err: Into<Error>> Ctor
 
     type Error = Err;
 
-    fn name(&self) -> &AStr {
-        Ctor::name(self.as_ref())
+    fn cid(&self) -> &Cid {
+        Ctor::cid(self.as_ref())
     }
 
     fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
@@ -121,21 +121,13 @@ pub trait Set {
     /// Register a option creator type into option set.
     fn register(&mut self, ctor: Self::Ctor) -> Option<Self::Ctor>;
 
-    fn ctor_iter(&self) -> Iter<'_, Self::Ctor>;
-
-    fn ctor_iter_mut(&mut self) -> IterMut<'_, Self::Ctor>;
-
     fn contain_ctor(&self, name: &AStr) -> bool {
-        self.ctor_iter().any(|v| v.cid().is_suit(name))
+        self.get_ctor(name).is_some()
     }
 
-    fn get_ctor(&self, name: &AStr) -> Option<&Self::Ctor> {
-        self.ctor_iter().find(|v| v.cid().is_suit(name))
-    }
+    fn get_ctor(&self, name: &AStr) -> Option<&Self::Ctor>;
 
-    fn get_ctor_mut(&mut self, name: &AStr) -> Option<&mut Self::Ctor> {
-        self.ctor_iter_mut().find(|v| v.cid().is_suit(name))
-    }
+    fn get_ctor_mut(&mut self, name: &AStr) -> Option<&mut Self::Ctor>;
 
     fn reset(&mut self);
 

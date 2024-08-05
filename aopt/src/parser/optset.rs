@@ -345,7 +345,7 @@ where
     /// impl From<Int64> for OptConfig {
     ///     fn from(_: Int64) -> Self {
     ///         OptConfig::default()
-    ///             .with_ctor(aopt::prelude::CTOR_DEFAULT)
+    ///             .with_ctor(aopt::prelude::ctor_default_name())
     ///             .with_style(vec![Style::Argument])
     ///             .with_type::<i64>()
     ///             .with_action(Action::Set)
@@ -437,12 +437,12 @@ where
         Set::register(&mut self.set, ctor)
     }
 
-    fn ctor_iter(&self) -> std::slice::Iter<'_, Self::Ctor> {
-        Set::ctor_iter(&self.set)
+    fn get_ctor(&self, name: &crate::AStr) -> Option<&Self::Ctor> {
+        Set::get_ctor(&self.set, name)
     }
 
-    fn ctor_iter_mut(&mut self) -> std::slice::IterMut<'_, Self::Ctor> {
-        Set::ctor_iter_mut(&mut self.set)
+    fn get_ctor_mut(&mut self, name: &crate::AStr) -> Option<&mut Self::Ctor> {
+        Set::get_ctor_mut(&mut self.set, name)
     }
 
     fn reset(&mut self) {

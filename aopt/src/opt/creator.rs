@@ -158,7 +158,7 @@ pub enum Cid {
     /// Create names: `fallback`
     Fallback,
 
-    Name(String),
+    Name(AStr),
 }
 
 impl Cid {
@@ -177,14 +177,14 @@ impl Cid {
             Cid::Any => matches!(s, CID_ANY_SHORT | CID_ANY_LONG),
             Cid::Raw => matches!(s, CID_RAW_SHORT | CID_RAW_LONG),
             Cid::Fallback => matches!(s, CID_FALLBACK),
-            Cid::Name(name) => s == name,
+            Cid::Name(name) => s == name.as_str(),
         }
     }
 }
 
-impl<S: AsRef<str>> From<S> for Cid {
-    fn from(s: S) -> Self {
-        let s = s.as_ref();
+impl From<AStr> for Cid {
+    fn from(value: AStr) -> Self {
+        let s = value.as_str();
 
         match s {
             CID_INT_SHORT | CID_INT_LONG | CID_INT_TYPE => Cid::Int,
@@ -198,7 +198,32 @@ impl<S: AsRef<str>> From<S> for Cid {
             CID_ANY_SHORT | CID_ANY_LONG => Cid::Any,
             CID_RAW_SHORT | CID_RAW_LONG => Cid::Raw,
             CID_FALLBACK => Cid::Fallback,
-            name => Cid::Name(name.to_string()),
+            _ => Cid::Name(value),
+        }
+    }
+}
+
+impl From<&AStr> for Cid {
+    fn from(value: &AStr) -> Self {
+        Cid::from(value.clone())
+    }
+}
+
+impl From<&str> for Cid {
+    fn from(s: &str) -> Self {
+        match s {
+            CID_INT_SHORT | CID_INT_LONG | CID_INT_TYPE => Cid::Int,
+            CID_STR_SHORT | CID_STR_LONG | CID_STR_TYPE => Cid::AStr,
+            CID_FLT_SHORT | CID_FLT_LONG | CID_FLT_TYPE => Cid::Flt,
+            CID_UINT_SHORT | CID_UINT_LONG | CID_UINT_TYPE => Cid::Uint,
+            CID_BOOL_SHORT | CID_BOOL_LONG | CID_BOOL_TYPE => Cid::Bool,
+            CID_CMD_SHORT | CID_CMD_LONG => Cid::Cmd,
+            CID_POS_SHORT | CID_POS_LONG => Cid::Pos,
+            CID_MAIN_SHORT | CID_MAIN_LONG => Cid::Main,
+            CID_ANY_SHORT | CID_ANY_LONG => Cid::Any,
+            CID_RAW_SHORT | CID_RAW_LONG => Cid::Raw,
+            CID_FALLBACK => Cid::Fallback,
+            s => Cid::Name(AStr::from(s)),
         }
     }
 }
@@ -438,13 +463,17 @@ macro_rules! ctors {
     };
     ($type:ident, $($creator:ident),+) => {
         {
-            vec![
-                $(
+            let mut ret = $crate::HashMap::new();
+
+            $(
+                ret.insert(
+                    $crate::opt::Cid::from( stringify!($creator) ),
                     <$type>::from(
-                        $crate::opt::Cid::from( &stringify!($creator) )
-                    ),
-                )+
-            ]
+                        $crate::opt::Cid::from( stringify!($creator) )
+                    )
+                );
+            )+
+            ret
         }
     };
 }

@@ -22,6 +22,7 @@ use aopt::raise_error;
 use aopt::ser::ServicesValExt;
 use aopt::set::SetValueFindExt;
 use aopt::ARef;
+use aopt::AStr;
 use aopt::Error;
 use aopt::RawVal;
 use aopt::Uid;
@@ -308,12 +309,12 @@ where
         Set::register(&mut self.set, ctor)
     }
 
-    fn ctor_iter(&self) -> std::slice::Iter<'_, Self::Ctor> {
-        Set::ctor_iter(&self.set)
+    fn get_ctor(&self, name: &AStr) -> Option<&Self::Ctor> {
+        Set::get_ctor(&self.set, name)
     }
 
-    fn ctor_iter_mut(&mut self) -> std::slice::IterMut<'_, Self::Ctor> {
-        Set::ctor_iter_mut(&mut self.set)
+    fn get_ctor_mut(&mut self, name: &AStr) -> Option<&mut Self::Ctor> {
+        Set::get_ctor_mut(&mut self.set, name)
     }
 
     fn reset(&mut self) {
