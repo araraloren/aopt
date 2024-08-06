@@ -235,7 +235,7 @@ where
                 }
                 if matched {
                     if consume && self.arg.is_none() {
-                        return Err(Error::raise_sp_missing_value(opt.hint()).with_uid(uid));
+                        return Err(Error::sp_missing_value(opt.hint()).with_uid(uid));
                     }
                     self.set_uid(uid);
                 }

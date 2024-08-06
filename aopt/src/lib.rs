@@ -47,7 +47,6 @@ pub use crate::err::Error;
 pub use crate::err::Result;
 pub use crate::str::astr;
 pub use crate::str::AStr;
-pub use crate::str::StrJoin;
 
 use std::any::TypeId;
 use std::fmt::Display;

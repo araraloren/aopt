@@ -1,7 +1,6 @@
 use std::ops::Deref;
 use std::ops::DerefMut;
 
-use crate::err::ErrorCmd;
 use crate::Error;
 
 #[derive(Debug, Default)]
@@ -58,15 +57,6 @@ impl FailManager {
             Ok(v) => Ok(v),
             Err(e) => Err(self.cause_uid(e.into())),
         }
-    }
-
-    pub fn find_err_command(&self) -> Option<ErrorCmd> {
-        for fail in self.fails.iter() {
-            if let Some(error_cmd) = fail.command() {
-                return Some(error_cmd);
-            }
-        }
-        None
     }
 }
 

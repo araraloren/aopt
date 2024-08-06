@@ -112,20 +112,17 @@ impl ArgParser for RawVal {
     type Error = Error;
 
     fn parse_arg(&self) -> Result<Self::Output, Self::Error> {
+        let error_name = format!("{}", self);
+
         if let Some((name, value)) = split_once(self, EQUAL) {
             // - convert the name to &str, the name must be valid utf8
             let name = name
                 .to_str()
-                .ok_or_else(|| {
-                    Error::raise_args_name(format!(
-                        "failed convert argument name `{}` to str",
-                        self
-                    ))
-                })?
+                .ok_or_else(|| Error::raise_args_name(&error_name, "failed convert RawVal to str"))?
                 .trim();
 
             if name.is_empty() {
-                return Err(Error::raise_args_name("argument name can not be empty"));
+                return Err(Error::raise_args_name(error_name, "can not be empty"));
             }
             Ok(Self::Output {
                 name: astr(name),
@@ -134,12 +131,7 @@ impl ArgParser for RawVal {
         } else {
             let name = self
                 .to_str()
-                .ok_or_else(|| {
-                    Error::raise_args_name(format!(
-                        "failed convert argument name `{}` to str",
-                        self
-                    ))
-                })?
+                .ok_or_else(|| Error::raise_args_name(&error_name, "failed convert RawVal to str"))?
                 .trim();
 
             Ok(Self::Output {

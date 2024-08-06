@@ -93,6 +93,13 @@ pub trait Policy {
     ) -> Result<Self::Ret, Self::Error>;
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Action {
+    StopPolicy,
+    QuitPolicy,
+}
+
 pub trait PolicySettings {
     fn style_manager(&self) -> &OptStyleManager;
 

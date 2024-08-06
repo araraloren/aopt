@@ -4,106 +4,100 @@ use std::num::ParseIntError;
 use std::ops::Deref;
 use std::thread::AccessError;
 
+use crate::RawVal;
 use crate::Uid;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Debug, Clone, Copy)]
-pub enum ErrorCmd {
-    StopPolicy,
-    QuitPolicy,
-}
-
 #[derive(Debug, Clone)]
 pub enum Internal {
-    Null,
-
     UnexceptedPos,
-
-    Command(ErrorCmd),
-
-    RawValParse(String),
 
     Failure(String),
 
     Error(String),
 
-    ArgsName(String),
-
-    Index(String),
-
-    CreateStr(String),
-
     MissingValue(String),
 
-    PosRequired(String),
+    PosRequired(Vec<String>),
 
-    OptRequired(String),
+    OptRequired(Vec<String>),
 
-    CmdRequired(String),
+    CmdRequired(Vec<String>),
 
     OptionNotFound(String),
 
     ExtractValue(String),
 
     ThreadLocalAccess(String),
-}
 
-impl Default for Internal {
-    fn default() -> Self {
-        Self::Null
-    }
+    RawValParse { val: String, hint: String },
+
+    ArgsName { name: String, hint: String },
+
+    Index { pat: String, hint: String },
+
+    CreateStr { pat: String, hint: String },
 }
 
 impl Internal {
     pub fn display(&self) -> String {
         match self {
-            Internal::Null => "Null".to_owned(),
-
-            Internal::RawValParse(msg) => {
-                format!("Failed parsing raw value: `{msg}`")
-            }
-
-            Internal::Command(command) => {
-                format!("Command using for policy: {:?}", command)
+            Internal::RawValParse { val, hint } => {
+                format!("invalid value `{val}`: {hint}",)
             }
 
             Internal::Failure(msg) => msg.clone(),
 
             Internal::Error(msg) => msg.clone(),
 
-            Internal::ArgsName(msg) => {
-                format!("Invalid argument name: {msg}")
+            Internal::ArgsName { name, hint } => {
+                format!("invalid argument name `{name}`: {hint}")
             }
 
-            Internal::UnexceptedPos => "Can not insert Pos@1 if Cmd exist".to_owned(),
+            Internal::UnexceptedPos => "can not insert Pos@1 if Cmd exist".to_owned(),
 
-            Internal::Index(msg) => {
-                format!("Invalid index string : {msg}")
+            Internal::Index { pat, hint } => {
+                format!("invalid index string `{pat}`: {hint}")
             }
-            Internal::CreateStr(msg) => {
-                format!("Invalid option create string: {msg}")
+            Internal::CreateStr { pat, hint } => {
+                format!("invalid option create string `{pat}`: {hint}")
             }
-            Internal::MissingValue(hint) => {
-                format!("Missing value for `{hint}`")
+            Internal::MissingValue(name) => {
+                format!("missing value for option `{name}`")
             }
-            Internal::PosRequired(names) => {
-                format!("Positional `{names}` are force required")
-            }
-            Internal::OptRequired(names) => {
-                format!("Option `{names}` are force required",)
-            }
-            Internal::CmdRequired(names) => {
-                format!("Command `{names}` are force required",)
-            }
+            Internal::PosRequired(names) => match names.len() {
+                1 => {
+                    format!("positional `{}` is force required", names[0])
+                }
+                _ => {
+                    format!("positional `{}` are force required", names.join(", "))
+                }
+            },
+            Internal::OptRequired(names) => match names.len() {
+                1 => {
+                    format!("option `{}` is force required", names[0])
+                }
+                _ => {
+                    format!("option `{}` are force required", names.join(", "))
+                }
+            },
+            Internal::CmdRequired(names) => match names.len() {
+                1 => {
+                    format!("command `{}` is force required", names[0])
+                }
+                _ => {
+                    format!("command `{}` are force required", names.join(", "))
+                }
+            },
             Internal::OptionNotFound(name) => {
-                format!("Can not find option `{name}`")
+                format!("unkown option `{name}`")
             }
             Internal::ExtractValue(msg) => {
-                format!("Extract value failed: `{msg}`")
+                format!("extract value failed: `{msg}`")
             }
-            Internal::ThreadLocalAccess(msg) => {
-                format!("Can not access thread local variable: `{msg}`")
+            Internal::ThreadLocalAccess(hint) => {
+                format!("failed access thread local variable: {hint}")
             }
         }
     }
@@ -117,7 +111,7 @@ impl Display for Internal {
 
 impl std::error::Error for Internal {}
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Error {
     uid: Option<Uid>,
 
@@ -167,10 +161,6 @@ impl Error {
         self
     }
 
-    pub fn null() -> Self {
-        Self::new(Internal::Null)
-    }
-
     pub fn uid(&self) -> Option<Uid> {
         self.uid
     }
@@ -179,27 +169,14 @@ impl Error {
         self.inner.display()
     }
 
-    pub fn command(&self) -> Option<ErrorCmd> {
-        if let Internal::Command(cmd) = self.inner {
-            Some(cmd)
-        } else {
-            None
-        }
-    }
-
-    pub fn is_null(&self) -> bool {
-        matches!(self.inner, Internal::Null)
-    }
-
     /// The error can be moitted if [`is_failure`](Error::is_failure) return true.
     pub fn is_failure(&self) -> bool {
-        if matches!(self.inner, Internal::Command(_)) {
+        if matches!(self.inner, Internal::RawValParse { val: _, hint: _ }) {
             true
         } else {
             matches!(
                 self.inner,
                 Internal::Failure(_)
-                    | Internal::RawValParse(_)
                     | Internal::ExtractValue(_)
                     | Internal::OptionNotFound(_)
                     | Internal::CmdRequired(_)
@@ -214,64 +191,83 @@ impl Error {
         Self::new(Internal::Error(format!("{}", error)))
     }
 
-    pub fn raise_args_name(msg: impl Into<String>) -> Self {
-        Self::new(Internal::ArgsName(msg.into()))
+    pub fn args_name(name: impl Into<String>, hint: impl Into<String>) -> Self {
+        Self::new(Internal::ArgsName {
+            name: name.into(),
+            hint: hint.into(),
+        })
     }
 
-    pub fn raise_sp_rawval(msg: impl Into<String>) -> Self {
-        Self::new(Internal::RawValParse(msg.into()))
+    pub fn sp_rawval(val: Option<&RawVal>, hint: impl Into<String>) -> Self {
+        let val = if let Some(val) = val {
+            format!("Some({})", val)
+        } else {
+            "None".to_string()
+        };
+        Self::new(Internal::RawValParse {
+            val,
+            hint: hint.into(),
+        })
     }
 
     /// No Pos@1 allowed if the option set has cmd.
-    pub fn unexcepted_pos_if_has_cmd() -> Self {
+    pub fn unexcepted_pos() -> Self {
         Self::new(Internal::UnexceptedPos)
     }
 
-    pub fn raise_index(msg: impl Into<String>) -> Self {
-        Self::new(Internal::Index(msg.into()))
+    pub fn index(pat: impl Into<String>, hint: impl Into<String>) -> Self {
+        Self::new(Internal::Index {
+            pat: pat.into(),
+            hint: hint.into(),
+        })
     }
 
-    pub fn raise_create_str(pat: impl Into<String>) -> Self {
-        Self::new(Internal::CreateStr(pat.into()))
+    pub fn create_str(pat: impl Into<String>, hint: impl Into<String>) -> Self {
+        Self::new(Internal::CreateStr {
+            pat: pat.into(),
+            hint: hint.into(),
+        })
     }
 
-    pub fn raise_local_access(msg: impl Into<String>) -> Self {
-        Self::new(Internal::ThreadLocalAccess(msg.into()))
+    pub fn local_access(hint: impl Into<String>) -> Self {
+        Self::new(Internal::ThreadLocalAccess(hint.into()))
     }
 
-    pub fn raise_error(msg: impl Into<String>) -> Self {
-        Self::new(Internal::Error(msg.into()))
+    pub fn raise_error(hint: impl Into<String>) -> Self {
+        Self::new(Internal::Error(hint.into()))
     }
 
-    pub fn raise_failure(msg: impl Into<String>) -> Self {
-        Self::new(Internal::Failure(msg.into()))
+    pub fn raise_failure(hint: impl Into<String>) -> Self {
+        Self::new(Internal::Failure(hint.into()))
     }
 
-    pub fn raise_command(cmd: ErrorCmd) -> Self {
-        Self::new(Internal::Command(cmd))
+    pub fn sp_missing_value(name: impl Into<String>) -> Self {
+        Self::new(Internal::MissingValue(name.into()))
     }
 
-    pub fn raise_sp_missing_value(names: impl Into<String>) -> Self {
-        Self::new(Internal::MissingValue(names.into()))
+    pub fn sp_pos_require<S: Into<String>>(names: Vec<S>) -> Self {
+        Self::new(Internal::PosRequired(
+            names.into_iter().map(Into::into).collect(),
+        ))
     }
 
-    pub fn raise_sp_pos_require(names: impl Into<String>) -> Self {
-        Self::new(Internal::PosRequired(names.into()))
+    pub fn sp_opt_require<S: Into<String>>(names: Vec<S>) -> Self {
+        Self::new(Internal::OptRequired(
+            names.into_iter().map(Into::into).collect(),
+        ))
     }
 
-    pub fn raise_sp_opt_require(names: impl Into<String>) -> Self {
-        Self::new(Internal::OptRequired(names.into()))
+    pub fn sp_cmd_require<S: Into<String>>(names: Vec<S>) -> Self {
+        Self::new(Internal::CmdRequired(
+            names.into_iter().map(Into::into).collect(),
+        ))
     }
 
-    pub fn raise_sp_cmd_require(names: impl Into<String>) -> Self {
-        Self::new(Internal::CmdRequired(names.into()))
+    pub fn sp_not_found(name: impl Into<String>) -> Self {
+        Self::new(Internal::OptionNotFound(name.into()))
     }
 
-    pub fn raise_sp_not_found(hint: impl Into<String>) -> Self {
-        Self::new(Internal::OptionNotFound(hint.into()))
-    }
-
-    pub fn raise_sp_extract(msg: impl Into<String>) -> Self {
+    pub fn sp_extract(msg: impl Into<String>) -> Self {
         Self::new(Internal::ExtractValue(msg.into()))
     }
 }
@@ -305,12 +301,5 @@ macro_rules! raise_error {
 macro_rules! raise_failure {
     ($($arg:tt)*) => {
         $crate::Error::raise_failure(format!($($arg)*))
-    };
-}
-
-#[macro_export]
-macro_rules! raise_command {
-    ($cmd:expr) => {
-        $crate::Error::raise_command($cmd)
     };
 }

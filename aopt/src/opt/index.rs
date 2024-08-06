@@ -144,9 +144,8 @@ const KEY_TOTAL: usize = 7;
 impl Index {
     // the index number is small in generally
     pub(crate) fn parse_as_usize(pat: &str, data: &str) -> Result<usize, Error> {
-        data.parse::<usize>().map_err(|e| {
-            Error::raise_index(format!("invalid usize number `{pat}`")).cause_by(e.into())
-        })
+        data.parse::<usize>()
+            .map_err(|e| Error::index(pat, "invalid index value").cause_by(e.into()))
     }
 
     #[inline(always)]
@@ -211,7 +210,7 @@ impl Index {
 
                         match (range_beg, range_end) {
                             (None, None) => {
-                                return Err(Error::raise_index("index can not be empty"))
+                                return Err(Error::index(pat, "index can not be empty"))
                             }
                             (None, Some(end)) => {
                                 Ok(Self::range(None, Some(Self::parse_as_usize(pat, end)?)))
@@ -226,9 +225,10 @@ impl Index {
                                 if beg <= end {
                                     Ok(Self::range(Some(beg), Some(end)))
                                 } else {
-                                    return Err(Error::raise_index(format!(
-                                        "assert failed on (beg <= end): `{pat}`"
-                                    )));
+                                    return Err(Error::index(
+                                        pat,
+                                        "end index must bigger than begin",
+                                    ));
                                 }
                             }
                         }
@@ -257,17 +257,13 @@ impl Index {
                             Ok(Self::forward(index))
                         }
                     } else {
-                        Err(Error::raise_index(format!(
-                            "unknown index create string `{pat}`"
-                        )))
+                        Err(Error::index(pat, "invalid index create string"))
                     }
                 } else {
-                    Err(Error::raise_index(format!("failed parsing index `{pat}`")))
+                    Err(Error::index(pat, "failed parsing index"))
                 }
             })
-            .map_err(|e| {
-                Error::raise_local_access("can not access index parsing regex").cause_by(e.into())
-            })?
+            .map_err(|e| Error::local_access("regex of index parser").cause_by(e.into()))?
     }
 
     pub fn is_null(&self) -> bool {

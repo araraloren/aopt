@@ -76,7 +76,8 @@ impl From<AStr> for RawVal {
 
 impl std::fmt::Display for RawVal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.0)
+        // trick here: OsStr::display is not stable yet
+        write!(f, "{}", std::path::Path::new(&self.0).display())
     }
 }
 
