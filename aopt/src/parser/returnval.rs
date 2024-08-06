@@ -41,7 +41,7 @@ impl ReturnVal {
     /// The [`status`](ReturnVal::status) is true if parsing successes
     /// otherwise it will be false if any [`failure`](Error::is_failure) raised.
     pub fn status(&self) -> bool {
-        self.failure.is_some()
+        self.failure.is_none()
     }
 
     /// Unwrap the [`Ctx`] from [`ReturnVal`].
