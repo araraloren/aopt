@@ -15,10 +15,7 @@ fn strict_impl() -> color_eyre::Result<()> {
 
     assert!(ret.is_err());
     if let Some(err) = ret.err() {
-        assert_eq!(
-            err.to_string(),
-            "Parsing arguments `\"--opt-a\"` failed: None"
-        );
+        assert_eq!(err.to_string(), "Parsing arguments `--opt-a` failed: None");
     }
     Ok(())
 }

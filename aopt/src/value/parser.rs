@@ -121,6 +121,38 @@ impl RawValParser for PathBuf {
     }
 }
 
+/// A special option value, using for implement `-`.
+///
+/// # Example
+/// ```
+/// use aopt::prelude::*;
+///
+/// fn main() -> Result<(), Box<dyn std::error::Error>> {
+///
+///     let mut parser = AFwdParser::default();
+///
+///     parser.set_strict(true);
+///     parser.add_opt("stdin=b".infer::<std::io::Stdin>())?;
+///
+///     // -w will processed, it is set before `--`
+///     parser.add_opt("-w=i")?;
+///
+///     // -o will not processed, it is set after `--`
+///     parser.add_opt("-o=s")?;
+///
+///     // fo will processed, it is not an option
+///     parser.add_opt("foo=p@1")?;
+///
+///     parser.parse(ARef::new(Args::from(
+///         ["app", "-w=42", "-", "foo"].into_iter(),
+///     )))?;
+///
+///     assert_eq!(parser.find_val::<i64>("-w")?, &42);
+///     assert!(parser.find_val::<std::io::Stdin>("-").is_ok());
+///     assert_eq!(parser.find_val::<bool>("foo")?, &true);
+///     Ok(())
+/// }
+/// ```
 impl RawValParser for Stdin {
     type Error = Error;
 

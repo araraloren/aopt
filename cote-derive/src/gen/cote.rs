@@ -560,14 +560,9 @@ impl<'a> CoteGenerator<'a> {
             pub fn parse(args: cote::prelude::Args) -> cote::Result<Self>
             where #fetch_alter {
                 let cote::prelude::CoteRes { mut ret, mut parser, .. } = Self::parse_args(args)?;
-                let okay = ret.status();
 
-                if okay {
-                    <Self as cote::ExtractFromSetDerive::<cote::prelude::ASet>>::try_extract(parser.optset_mut())
-                }
-                else {
+                if let Some(mut error) = ret.take_failure() {
                     let mut rctx = parser.take_rctx()?;
-                    let mut error = ret.take_failure();
 
                     if let Some(chain_error) = rctx.chain_error() {
                         error = error.cause_by(chain_error);
@@ -601,6 +596,9 @@ impl<'a> CoteGenerator<'a> {
                     };
 
                     Err(e)
+                }
+                else {
+                    <Self as cote::ExtractFromSetDerive::<cote::prelude::ASet>>::try_extract(parser.optset_mut())
                 }
             }
 

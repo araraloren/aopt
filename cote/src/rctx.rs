@@ -163,10 +163,10 @@ impl RunningCtx {
         let mut iter = self.failed_info.iter_mut();
 
         if let Some(failed_info) = iter.next() {
-            let mut error = failed_info.take_failure();
+            let mut error = failed_info.take_failure()?;
 
             for failed_info in iter {
-                error = error.cause(failed_info.take_failure());
+                error = error.cause(failed_info.take_failure()?);
             }
             Some(error)
         } else {
