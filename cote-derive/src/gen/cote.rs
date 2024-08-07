@@ -138,10 +138,10 @@ impl<'a> CoteGenerator<'a> {
 
     pub fn detect_attr_kind(field: &Field) -> syn::Result<AttrKind> {
         let attrs = &field.attrs;
-        let has_sub_cfg = attrs.iter().any(|v| v.path.is_ident(CONFIG_SUB));
-        let has_arg_cfg = attrs.iter().any(|v| v.path.is_ident(CONFIG_ARG));
-        let has_cmd_cfg = attrs.iter().any(|v| v.path.is_ident(CONFIG_CMD));
-        let has_pos_cfg = attrs.iter().any(|v| v.path.is_ident(CONFIG_POS));
+        let has_sub_cfg = attrs.iter().any(|v| v.path().is_ident(CONFIG_SUB));
+        let has_arg_cfg = attrs.iter().any(|v| v.path().is_ident(CONFIG_ARG));
+        let has_cmd_cfg = attrs.iter().any(|v| v.path().is_ident(CONFIG_CMD));
+        let has_pos_cfg = attrs.iter().any(|v| v.path().is_ident(CONFIG_POS));
 
         // check in attr or in path
         if has_sub_cfg && (has_arg_cfg || has_cmd_cfg || has_pos_cfg)

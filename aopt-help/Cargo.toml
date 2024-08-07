@@ -1,6 +1,6 @@
 [package]
 name = "aopt-help"
-version = "0.3.4"
+version = "0.3.5"
 authors = ["araraloren <araraloren@gmail.com>"]
 edition = "2021"
 license = "MPL-2.0"
@@ -13,8 +13,8 @@ categories = ["command-line-interface"]
 
 
 [[bin]]
-name="temp"
-path="src/temp.rs"
+name = "temp"
+path = "src/temp.rs"
 
 [dependencies]
-textwrap = { version = "0.16", default-features = false, features = ["unicode-width", "smawk"]}
+textwrap.workspace = true

@@ -5,7 +5,6 @@ use quote::quote;
 use quote::ToTokens;
 use syn::parenthesized;
 use syn::parse::Parse;
-use syn::punctuated::Punctuated;
 use syn::token::Paren;
 use syn::Expr;
 use syn::Lit;
@@ -87,7 +86,7 @@ impl Parse for Value {
 
             parenthesized!(nested in input);
 
-            let method_args: Punctuated<_, Token![,]> = nested.parse_terminated(Expr::parse)?;
+            let method_args = nested.parse_terminated(Expr::parse, Token![,])?;
 
             Ok(Self::Call(Vec::from_iter(method_args)))
         } else {

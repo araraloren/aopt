@@ -106,7 +106,7 @@ where
 
 impl<T: Kind> Configs<T> {
     pub fn parse_attrs(name: &str, attrs: &[Attribute]) -> Self {
-        let attrs = attrs.iter().filter(|v| v.path.is_ident(name));
+        let attrs = attrs.iter().filter(|v| v.path().is_ident(name));
         let cfgs = attrs.map(|attr| {
             attr.parse_args_with(Punctuated::<Config<T>, Token![,]>::parse_terminated)
                 .map(|res| res.into_iter())
