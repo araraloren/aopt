@@ -335,12 +335,22 @@ impl Infer for Stdin {
         vec![Style::Boolean]
     }
 
-    fn infer_ignore_name() -> bool {
+    fn infer_ignore_alias() -> bool {
         true
     }
 
-    fn infer_ignore_alias() -> bool {
-        true
+    /// For type Stop, swap the name and default alias(`-`) when build configuration.
+    fn infer_tweak_info<C>(cfg: &mut C) -> Result<(), Error>
+    where
+        Self: Sized + 'static,
+        Self::Val: RawValParser,
+        C: ConfigValue + Default,
+    {
+        if let Some(name) = cfg.name().cloned() {
+            cfg.add_alias(name);
+        }
+        cfg.set_name("-");
+        Ok(())
     }
 }
 
@@ -355,12 +365,22 @@ impl Infer for Stop {
         vec![Style::Boolean]
     }
 
-    fn infer_ignore_name() -> bool {
+    fn infer_ignore_alias() -> bool {
         true
     }
 
-    fn infer_ignore_alias() -> bool {
-        true
+    /// For type Stop, swap the name and default alias(`--`) when build configuration.
+    fn infer_tweak_info<C>(cfg: &mut C) -> Result<(), Error>
+    where
+        Self: Sized + 'static,
+        Self::Val: RawValParser,
+        C: ConfigValue + Default,
+    {
+        if let Some(name) = cfg.name().cloned() {
+            cfg.add_alias(name);
+        }
+        cfg.set_name("--");
+        Ok(())
     }
 }
 

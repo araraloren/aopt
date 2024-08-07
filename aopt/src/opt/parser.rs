@@ -174,7 +174,7 @@ impl StrParser {
                     Err(Error::create_str(pattern, "can not parsing string"))
                 }
             })
-            .map_err(|e| Error::local_access("regex of create string parser").cause_by(e.into()))?
+            .map_err(|e| Error::thread_local_access().cause_by(e.into()))?
     }
 }
 

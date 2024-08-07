@@ -9,115 +9,56 @@ use crate::Uid;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Debug, Clone)]
-pub enum Internal {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Kind {
+    MissingValue,
+
+    PosRequired,
+
+    OptRequired,
+
+    CmdRequired,
+
+    OptionNotFound,
+
+    ExtractValue,
+
+    RawValParse,
+
+    ArgsName,
+
+    IndexParse,
+
+    CreateStrParse,
+
+    Failure,
+
+    Error,
+
     UnexceptedPos,
 
-    Failure(String),
-
-    Error(String),
-
-    MissingValue(String),
-
-    PosRequired(Vec<String>),
-
-    OptRequired(Vec<String>),
-
-    CmdRequired(Vec<String>),
-
-    OptionNotFound(String),
-
-    ExtractValue(String),
-
-    ThreadLocalAccess(String),
-
-    RawValParse { val: String, hint: String },
-
-    ArgsName { name: String, hint: String },
-
-    Index { pat: String, hint: String },
-
-    CreateStr { pat: String, hint: String },
+    ThreadLocalAccess,
 }
 
-impl Internal {
-    pub fn display(&self) -> String {
+impl Kind {
+    const fn desp(&self) -> Option<&'static str> {
         match self {
-            Internal::RawValParse { val, hint } => {
-                format!("invalid value `{val}`: {hint}",)
-            }
-
-            Internal::Failure(msg) => msg.clone(),
-
-            Internal::Error(msg) => msg.clone(),
-
-            Internal::ArgsName { name, hint } => {
-                format!("invalid argument name `{name}`: {hint}")
-            }
-
-            Internal::UnexceptedPos => "can not insert Pos@1 if Cmd exist".to_owned(),
-
-            Internal::Index { pat, hint } => {
-                format!("invalid index string `{pat}`: {hint}")
-            }
-            Internal::CreateStr { pat, hint } => {
-                format!("invalid option create string `{pat}`: {hint}")
-            }
-            Internal::MissingValue(name) => {
-                format!("missing value for option `{name}`")
-            }
-            Internal::PosRequired(names) => match names.len() {
-                1 => {
-                    format!("positional `{}` is force required", names[0])
-                }
-                _ => {
-                    format!("positional `{}` are force required", names.join(", "))
-                }
-            },
-            Internal::OptRequired(names) => match names.len() {
-                1 => {
-                    format!("option `{}` is force required", names[0])
-                }
-                _ => {
-                    format!("option `{}` are force required", names.join(", "))
-                }
-            },
-            Internal::CmdRequired(names) => match names.len() {
-                1 => {
-                    format!("command `{}` is force required", names[0])
-                }
-                _ => {
-                    format!("command `{}` are force required", names.join(", "))
-                }
-            },
-            Internal::OptionNotFound(name) => {
-                format!("unkown option `{name}`")
-            }
-            Internal::ExtractValue(msg) => {
-                format!("extract value failed: `{msg}`")
-            }
-            Internal::ThreadLocalAccess(hint) => {
-                format!("failed access thread local variable: {hint}")
-            }
+            Kind::UnexceptedPos => Some("can not insert Pos@1 if Cmd exist"),
+            Kind::ThreadLocalAccess => Some("failed access thread local variable"),
+            _ => None,
         }
     }
 }
-
-impl Display for Internal {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.display())
-    }
-}
-
-impl std::error::Error for Internal {}
 
 #[derive(Debug, Clone)]
 pub struct Error {
     uid: Option<Uid>,
 
-    cause: Option<Box<Error>>,
+    kind: Kind,
 
-    inner: Internal,
+    desp: Option<String>,
+
+    cause: Option<Box<Error>>,
 }
 
 impl std::error::Error for Error {
@@ -130,21 +71,34 @@ impl std::error::Error for Error {
 
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let desp = self.desp.as_deref().or(self.kind.desp());
+
+        assert!(
+            desp.is_some(),
+            "need description for error `{:?}`",
+            self.kind
+        );
+
         if let Some(uid) = self.uid {
-            write!(f, "{} (uid = {})", self.display(), uid)
+            write!(f, "{} (uid = {})", desp.unwrap(), uid)
         } else {
-            write!(f, "{}", self.display())
+            write!(f, "{}", desp.unwrap())
         }
     }
 }
 
 impl Error {
-    pub fn new(error: Internal) -> Self {
+    pub fn new(kind: Kind) -> Self {
         Self {
-            inner: error,
+            kind,
             uid: None,
+            desp: None,
             cause: None,
         }
+    }
+
+    pub fn cause(self, error: Self) -> Self {
+        error.cause_by(self)
     }
 
     pub fn cause_by(mut self, cause_by: Self) -> Self {
@@ -152,12 +106,13 @@ impl Error {
         self
     }
 
-    pub fn cause(self, error: Self) -> Self {
-        error.cause_by(self)
-    }
-
     pub fn with_uid(mut self, uid: Uid) -> Self {
         self.uid = Some(uid);
+        self
+    }
+
+    pub fn with_desp(mut self, desp: String) -> Self {
+        self.desp = Some(desp);
         self
     }
 
@@ -165,110 +120,143 @@ impl Error {
         self.uid
     }
 
-    pub fn display(&self) -> String {
-        self.inner.display()
+    pub fn kind(&self) -> &Kind {
+        &self.kind
+    }
+
+    pub fn caused_by(&self) -> Option<&Error> {
+        self.cause.as_deref()
     }
 
     /// The error can be moitted if [`is_failure`](Error::is_failure) return true.
     pub fn is_failure(&self) -> bool {
-        if matches!(self.inner, Internal::RawValParse { val: _, hint: _ }) {
-            true
-        } else {
-            matches!(
-                self.inner,
-                Internal::Failure(_)
-                    | Internal::ExtractValue(_)
-                    | Internal::OptionNotFound(_)
-                    | Internal::CmdRequired(_)
-                    | Internal::PosRequired(_)
-                    | Internal::OptRequired(_)
-                    | Internal::MissingValue(_)
-            )
-        }
+        let kind = &self.kind;
+
+        matches!(
+            kind,
+            Kind::RawValParse
+                | Kind::Failure
+                | Kind::ExtractValue
+                | Kind::OptionNotFound
+                | Kind::CmdRequired
+                | Kind::PosRequired
+                | Kind::OptRequired
+                | Kind::MissingValue
+        )
     }
 
     pub fn from<E: std::error::Error + Display>(error: E) -> Self {
-        Self::new(Internal::Error(format!("{}", error)))
+        Self::raise_error(error.to_string())
     }
 
     pub fn args_name(name: impl Into<String>, hint: impl Into<String>) -> Self {
-        Self::new(Internal::ArgsName {
-            name: name.into(),
-            hint: hint.into(),
-        })
+        let desp = format!("invalid argument name `{}`: {}", name.into(), hint.into());
+
+        Self::new(Kind::ArgsName).with_desp(desp)
     }
 
     pub fn sp_rawval(val: Option<&RawVal>, hint: impl Into<String>) -> Self {
-        let val = if let Some(val) = val {
-            format!("Some({})", val)
-        } else {
-            "None".to_string()
-        };
-        Self::new(Internal::RawValParse {
-            val,
-            hint: hint.into(),
-        })
+        let desp = format!(
+            "invalid value `{}`: {}",
+            val.map(|v| format!("Some({v})"))
+                .unwrap_or(String::from("None")),
+            hint.into()
+        );
+
+        Self::new(Kind::RawValParse).with_desp(desp)
     }
 
     /// No Pos@1 allowed if the option set has cmd.
     pub fn unexcepted_pos() -> Self {
-        Self::new(Internal::UnexceptedPos)
+        Self::new(Kind::UnexceptedPos)
     }
 
-    pub fn index(pat: impl Into<String>, hint: impl Into<String>) -> Self {
-        Self::new(Internal::Index {
-            pat: pat.into(),
-            hint: hint.into(),
-        })
+    pub fn index_parse(pat: impl Into<String>, hint: impl Into<String>) -> Self {
+        let desp = format!("invalid index string `{}`: {}", pat.into(), hint.into());
+
+        Self::new(Kind::IndexParse).with_desp(desp)
     }
 
     pub fn create_str(pat: impl Into<String>, hint: impl Into<String>) -> Self {
-        Self::new(Internal::CreateStr {
-            pat: pat.into(),
-            hint: hint.into(),
-        })
+        let desp = format!(
+            "invalid option create string `{}`: {}",
+            pat.into(),
+            hint.into()
+        );
+
+        Self::new(Kind::CreateStrParse).with_desp(desp)
     }
 
-    pub fn local_access(hint: impl Into<String>) -> Self {
-        Self::new(Internal::ThreadLocalAccess(hint.into()))
+    pub fn thread_local_access() -> Self {
+        Self::new(Kind::ThreadLocalAccess)
     }
 
-    pub fn raise_error(hint: impl Into<String>) -> Self {
-        Self::new(Internal::Error(hint.into()))
+    pub fn raise_error(msg: impl Into<String>) -> Self {
+        Self::new(Kind::Error).with_desp(msg.into())
     }
 
-    pub fn raise_failure(hint: impl Into<String>) -> Self {
-        Self::new(Internal::Failure(hint.into()))
+    pub fn raise_failure(msg: impl Into<String>) -> Self {
+        Self::new(Kind::Failure).with_desp(msg.into())
     }
 
     pub fn sp_missing_value(name: impl Into<String>) -> Self {
-        Self::new(Internal::MissingValue(name.into()))
+        let desp = format!("missing value for option `{}`", name.into());
+
+        Self::new(Kind::MissingValue).with_desp(desp)
     }
 
     pub fn sp_pos_require<S: Into<String>>(names: Vec<S>) -> Self {
-        Self::new(Internal::PosRequired(
-            names.into_iter().map(Into::into).collect(),
-        ))
+        let names: Vec<_> = names.into_iter().map(Into::into).collect();
+        let desp = match names.len() {
+            1 => {
+                format!("positional `{}` is force required", names[0])
+            }
+            _ => {
+                format!("positional `{}` are force required", names.join(", "))
+            }
+        };
+
+        Self::new(Kind::PosRequired).with_desp(desp)
     }
 
     pub fn sp_opt_require<S: Into<String>>(names: Vec<S>) -> Self {
-        Self::new(Internal::OptRequired(
-            names.into_iter().map(Into::into).collect(),
-        ))
+        let names: Vec<_> = names.into_iter().map(Into::into).collect();
+        let desp = match names.len() {
+            1 => {
+                format!("option `{}` is force required", names[0])
+            }
+            _ => {
+                format!("option `{}` are force required", names.join(", "))
+            }
+        };
+
+        Self::new(Kind::OptRequired).with_desp(desp)
     }
 
     pub fn sp_cmd_require<S: Into<String>>(names: Vec<S>) -> Self {
-        Self::new(Internal::CmdRequired(
-            names.into_iter().map(Into::into).collect(),
-        ))
+        let names: Vec<_> = names.into_iter().map(Into::into).collect();
+        let desp = match names.len() {
+            1 => {
+                format!("command `{}` is force required", names[0])
+            }
+            _ => {
+                format!("command `{}` are force required", names.join(", "))
+            }
+        };
+
+        Self::new(Kind::CmdRequired).with_desp(desp)
     }
 
     pub fn sp_not_found(name: impl Into<String>) -> Self {
-        Self::new(Internal::OptionNotFound(name.into()))
+        let desp = format!("can not find option `{}`", name.into());
+
+        Self::new(Kind::OptionNotFound).with_desp(desp)
     }
 
     pub fn sp_extract(msg: impl Into<String>) -> Self {
-        Self::new(Internal::ExtractValue(msg.into()))
+        let desp = format!("extract value failed: `{}`", msg.into());
+
+        Self::new(Kind::ExtractValue).with_desp(desp)
     }
 }
 
