@@ -237,6 +237,8 @@ impl_fetch!(std::ffi::OsString);
 
 impl_fetch!(std::io::Stdin);
 
+impl_fetch!(aopt::value::Stop);
+
 impl_fetch!(Cmd, bool, Cmd::new);
 
 impl_fetch!(&'a f64);

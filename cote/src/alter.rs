@@ -107,6 +107,8 @@ impl_alter!(std::ffi::OsString);
 
 impl_alter!(std::io::Stdin);
 
+impl_alter!(aopt::value::Stop);
+
 impl_alter!(Pos, T);
 
 impl_alter!(Main, T);

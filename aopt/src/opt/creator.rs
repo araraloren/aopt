@@ -432,17 +432,17 @@ impl From<Cid> for Creator<AOpt, OptConfig, Error> {
 
 /// Return an array of creators:
 ///
-/// * [`Fallback`](BuiltInCtor::Fallback)
-/// * [`Int`](BuiltInCtor::Int)
-/// * [`Bool`](BuiltInCtor::Bool)
-/// * [`Flt`](BuiltInCtor::Flt)
-/// * [`AStr`](BuiltInCtor::AStr)
-/// * [`Uint`](BuiltInCtor::Uint)
-/// * [`Cmd`](BuiltInCtor::Cmd)
-/// * [`Pos`](BuiltInCtor::Pos)
-/// * [`Main`](BuiltInCtor::Main)
-/// * [`Any`](BuiltInCtor::Any)
-/// * [`Raw`](BuiltInCtor::Raw)
+/// * [`Fallback`](Cid::Fallback)
+/// * [`Int`](Cid::Int)
+/// * [`Bool`](Cid::Bool)
+/// * [`Flt`](Cid::Flt)
+/// * [`AStr`](Cid::AStr)
+/// * [`Uint`](Cid::Uint)
+/// * [`Cmd`](Cid::Cmd)
+/// * [`Pos`](Cid::Pos)
+/// * [`Main`](Cid::Main)
+/// * [`Any`](Cid::Any)
+/// * [`Raw`](Cid::Raw)
 #[macro_export]
 macro_rules! ctors {
     ($type:ident) => {

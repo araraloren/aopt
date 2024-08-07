@@ -72,7 +72,7 @@ pub struct GetoptRes<R, T> {
 /// For style `getopt!(..., "first" => &mut parser1, "second" => &mut parser2)`,
 /// will return an Ok([`GetoptRes`]\(T is the literal type\)) if any [`Parser`](crate::parser::Parser) parsing successed.
 ///
-/// Will return Err([`Error::default()`]) if all [`Parser`](crate::parser::Parser) parsing failed, otherwise return Err(_).
+/// Will return Err([`Error::no_parser_matched()`]) if all [`Parser`](crate::parser::Parser) parsing failed, otherwise return Err(_).
 /// # Example
 ///
 /// ```rust
@@ -161,7 +161,7 @@ macro_rules! getopt {
                 { p }
             fn __check_a(a: $crate::prelude::Args) -> $crate::prelude::Args { a }
 
-            let mut ret = None;
+            let mut ret = $crate::Error::no_parser_matched();
             let args = $crate::ARef::new(__check_a($args));
 
             loop {
@@ -170,22 +170,22 @@ macro_rules! getopt {
 
                     match $crate::parser::Parser::parse(parser, args.clone()) {
                         Ok(mut parser_ret) => {
-                            if parser_ret.status() {
+                            if let Some(error) = parser_ret.take_failure() {
+                                ret = error;
+                            }
+                            else {
                                 break Ok($crate::GetoptRes {
                                     ret: parser_ret,
                                     parser: parser,
                                 });
                             }
-                            else {
-                                ret = parser_ret.take_failure();
-                            }
                         }
                         Err(e) => {
-                            ret = Some(e);
+                            ret = e;
                         }
                     }
                 )+
-                break Err(ret.unwrap());
+                break Err(ret);
             }
         }
     };
@@ -199,7 +199,7 @@ macro_rules! getopt {
                 { p }
             fn __check_a(a: $crate::prelude::Args) -> $crate::prelude::Args { a }
 
-            let mut ret = None;
+            let mut ret = $crate::Error::no_parser_matched();
             let args = $crate::ARef::new(__check_a($args));
 
             loop {
@@ -208,22 +208,22 @@ macro_rules! getopt {
 
                     match $crate::parser::Parser::parse(parser, args.clone()) {
                         Ok(mut parser_ret) => {
-                            if parser_ret.status() {
+                            if let Some(error) = parser_ret.take_failure() {
+                                ret = error;
+                            }
+                            else {
                                 break Ok($crate::GetoptRes {
                                     ret: parser_ret,
                                     parser: $parser_name,
                                 });
                             }
-                            else {
-                                ret = parser_ret.take_failure();
-                            }
                         }
                         Err(e) => {
-                            ret = Some(e);
+                            ret = e;
                         }
                     }
                 )+
-                break Err(ret.unwrap());
+                break Err(ret);
             }
         }
     };

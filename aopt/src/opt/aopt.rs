@@ -43,8 +43,8 @@ use crate::Uid;
 /// | [`Cmd`] | [`Action::Set`] | `false` | [`Style::Cmd`] | [`Forward(1)`](Index::Forward)  | true  |false | `c` | [`Cmd`] |
 /// | [`Pos`] | [`Action::App`] | `true` | [`Style::Pos`] | yes | false | None | `p` | [`Pos`] |
 /// | [`Main`] | [`Action::Null`] | `true` | [`Style::Main`] | [`AnyWhere`](Index::AnyWhere) | false | None | `m` | [`Main`] |
-/// | [`Stdin`](std::io::Stdin) | [`Action::Set`] | [`true`] | [`Style::Pos`] | [`AnyWhere`](Index::AnyWhere) | true | None | None | None |
-///
+/// | [`Stdin`](std::io::Stdin) | [`Action::Set`] | [`false`] | [`Style::Boolean`] | None | true | None | None | [`Stdin`](std::io::Stdin) |
+/// | [`Stop`](crate::value::Stop) | [`Action::Set`] | [`false`] | [`Style::Boolean`] | None |  true | None | None | [`Stop`](crate::value::Stop) |
 ///
 /// For the value parser support, see [`RawValParser`](crate::value::RawValParser).
 #[derive(Debug)]

@@ -35,6 +35,8 @@ pub enum Kind {
 
     Error,
 
+    NoParserMatched,
+
     UnexceptedPos,
 
     ThreadLocalAccess,
@@ -45,6 +47,7 @@ impl Kind {
         match self {
             Kind::UnexceptedPos => Some("can not insert Pos@1 if Cmd exist"),
             Kind::ThreadLocalAccess => Some("failed access thread local variable"),
+            Kind::NoParserMatched => Some("all parser passed to `getopt!` match failed"),
             _ => None,
         }
     }
@@ -145,6 +148,19 @@ impl Error {
         )
     }
 
+    /// No Pos@1 allowed if the option set has cmd.
+    pub fn unexcepted_pos() -> Self {
+        Self::new(Kind::UnexceptedPos)
+    }
+
+    pub fn thread_local_access() -> Self {
+        Self::new(Kind::ThreadLocalAccess)
+    }
+
+    pub fn no_parser_matched() -> Self {
+        Self::new(Kind::NoParserMatched)
+    }
+
     pub fn from<E: std::error::Error + Display>(error: E) -> Self {
         Self::raise_error(error.to_string())
     }
@@ -166,11 +182,6 @@ impl Error {
         Self::new(Kind::RawValParse).with_desp(desp)
     }
 
-    /// No Pos@1 allowed if the option set has cmd.
-    pub fn unexcepted_pos() -> Self {
-        Self::new(Kind::UnexceptedPos)
-    }
-
     pub fn index_parse(pat: impl Into<String>, hint: impl Into<String>) -> Self {
         let desp = format!("invalid index string `{}`: {}", pat.into(), hint.into());
 
@@ -185,10 +196,6 @@ impl Error {
         );
 
         Self::new(Kind::CreateStrParse).with_desp(desp)
-    }
-
-    pub fn thread_local_access() -> Self {
-        Self::new(Kind::ThreadLocalAccess)
     }
 
     pub fn raise_error(msg: impl Into<String>) -> Self {

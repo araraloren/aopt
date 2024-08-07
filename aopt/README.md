@@ -16,6 +16,8 @@ A flexible and typed getopt like command line framwork for rust.
 
     - Positional arguments support, see [`Index`](crate::opt::Index).
 
+    - Special option `-` and `--` support, see [`Stop`](crate::value::Stop) and [`Stdin`](std::io::Stdin).
+
     - Type support, you can validator the value of option during parsing.
 
     See the built-in option type [`AOpt`](crate::opt::AOpt)
