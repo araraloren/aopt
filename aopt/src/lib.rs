@@ -161,7 +161,7 @@ macro_rules! getopt {
                 { p }
             fn __check_a(a: $crate::prelude::Args) -> $crate::prelude::Args { a }
 
-            let mut ret = Err($crate::err::Error::default());
+            let mut ret = None;
             let args = $crate::ARef::new(__check_a($args));
 
             loop {
@@ -177,15 +177,15 @@ macro_rules! getopt {
                                 });
                             }
                             else {
-                                ret = Err(parser_ret.take_failure());
+                                ret = parser_ret.take_failure();
                             }
                         }
                         Err(e) => {
-                            ret = Err(e);
+                            ret = Some(e);
                         }
                     }
                 )+
-                break ret;
+                break Err(ret.unwrap());
             }
         }
     };
@@ -199,7 +199,7 @@ macro_rules! getopt {
                 { p }
             fn __check_a(a: $crate::prelude::Args) -> $crate::prelude::Args { a }
 
-            let mut ret = Err($crate::err::Error::default());
+            let mut ret = None;
             let args = $crate::ARef::new(__check_a($args));
 
             loop {
@@ -215,15 +215,15 @@ macro_rules! getopt {
                                 });
                             }
                             else {
-                                ret = Err(parser_ret.take_failure());
+                                ret = parser_ret.take_failure();
                             }
                         }
                         Err(e) => {
-                            ret = Err(e);
+                            ret = Some(e);
                         }
                     }
                 )+
-                break ret;
+                break Err(ret.unwrap());
             }
         }
     };

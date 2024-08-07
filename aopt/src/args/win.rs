@@ -54,7 +54,7 @@ pub fn split_once(str: &OsStr, ch: char) -> Option<(OsString, OsString)> {
 ///
 /// The struct of the input option string are:
 ///
-/// ```!
+/// ```plaintext
 /// [--/option][=][value]
 ///        |    |    |
 ///        |    |    |
@@ -118,11 +118,11 @@ impl ArgParser for RawVal {
             // - convert the name to &str, the name must be valid utf8
             let name = name
                 .to_str()
-                .ok_or_else(|| Error::raise_args_name(&error_name, "failed convert RawVal to str"))?
+                .ok_or_else(|| Error::args_name(&error_name, "failed convert RawVal to str"))?
                 .trim();
 
             if name.is_empty() {
-                return Err(Error::raise_args_name(error_name, "can not be empty"));
+                return Err(Error::args_name(error_name, "can not be empty"));
             }
             Ok(Self::Output {
                 name: astr(name),
@@ -131,7 +131,7 @@ impl ArgParser for RawVal {
         } else {
             let name = self
                 .to_str()
-                .ok_or_else(|| Error::raise_args_name(&error_name, "failed convert RawVal to str"))?
+                .ok_or_else(|| Error::args_name(&error_name, "failed convert RawVal to str"))?
                 .trim();
 
             Ok(Self::Output {

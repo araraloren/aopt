@@ -46,7 +46,7 @@ impl ReturnVal {
 
     /// Unwrap the [`Ctx`] from [`ReturnVal`].
     pub fn unwrap(self) -> Ctx {
-        Result::unwrap(if self.failure.is_some() {
+        Result::unwrap(if self.failure.is_none() {
             Ok(self.ctx)
         } else {
             Err(self.failure)

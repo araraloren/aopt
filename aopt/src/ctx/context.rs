@@ -147,10 +147,10 @@ pub struct Ctx {
     inner_ctx: Option<InnerCtx>,
 
     #[cfg(not(feature = "sync"))]
-    action: std::cell::RefCell<Option<Action>>,
+    action: ARef<std::cell::RefCell<Option<Action>>>,
 
     #[cfg(feature = "sync")]
-    action: std::sync::Mutex<Option<Action>>,
+    action: ARef<std::sync::Mutex<Option<Action>>>,
 }
 
 impl Ctx {

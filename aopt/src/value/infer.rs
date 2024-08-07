@@ -208,7 +208,7 @@ where
     /// Will add default type storer when value type is bool.
     ///
     /// # Storer
-    /// ```!
+    /// ```plaintext
     /// Box::new(
     ///     |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
     ///         let val = raw.is_some();

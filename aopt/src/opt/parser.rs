@@ -16,7 +16,7 @@ use crate::Error;
 ///
 /// The struct of the option string are:
 ///
-/// ```!
+/// ```plaintext
 /// [--option][=][type][!*][@index]
 ///      |     |    |   |   |
 ///      |     |    |   |   |
