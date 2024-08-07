@@ -1,6 +1,8 @@
 use std::fmt::Debug;
 
-use crate::opt::BuiltInCtor;
+use ahash::HashMapExt;
+
+use crate::opt::Cid;
 use crate::opt::ConfigBuild;
 use crate::opt::ConfigValue;
 use crate::opt::Information;
@@ -17,7 +19,9 @@ use crate::set::SetCommit;
 use crate::set::SetIndex;
 use crate::value::Infer;
 use crate::value::RawValParser;
+use crate::AStr;
 use crate::Error;
+use crate::HashMap;
 use crate::Uid;
 
 use super::OptValidator;
@@ -37,7 +41,7 @@ use super::SetValueFindExt;
 ///
 /// // add default and bool creator
 /// set.register(Creator::fallback());
-/// set.register(Creator::from(aopt::opt::BuiltInCtor::Bool));
+/// set.register(Creator::from(aopt::opt::Cid::Bool));
 ///
 /// // create a bool option
 /// set.add_opt("--flag".infer::<bool>())?;
@@ -58,7 +62,7 @@ where
     parser: P,
     validator: V,
     opts: Vec<C::Opt>,
-    creators: Vec<C>,
+    creators: HashMap<Cid, C>,
 }
 
 impl<P, C, V> OptSet<P, C, V>
@@ -72,7 +76,7 @@ where
             parser,
             validator,
             opts: vec![],
-            creators: vec![],
+            creators: HashMap::new(),
         }
     }
 }
@@ -97,7 +101,7 @@ where
 
 impl<P, C, V> Default for OptSet<P, C, V>
 where
-    C: Ctor + From<BuiltInCtor>,
+    C: Ctor + From<Cid>,
     P: OptParser + Default,
     V: OptValidator + Default,
 {
@@ -359,16 +363,16 @@ where
     type Ctor = C;
 
     fn register(&mut self, ctor: Self::Ctor) -> Option<Self::Ctor> {
-        self.creators.push(ctor);
+        self.creators.insert(ctor.cid().clone(), ctor);
         None
     }
 
-    fn ctor_iter(&self) -> std::slice::Iter<'_, Self::Ctor> {
-        self.creators.iter()
+    fn get_ctor(&self, name: &AStr) -> Option<&Self::Ctor> {
+        self.creators.get(&Cid::from(name))
     }
 
-    fn ctor_iter_mut(&mut self) -> std::slice::IterMut<'_, Self::Ctor> {
-        self.creators.iter_mut()
+    fn get_ctor_mut(&mut self, name: &AStr) -> Option<&mut Self::Ctor> {
+        self.creators.get_mut(&Cid::from(name))
     }
 
     fn reset(&mut self) {

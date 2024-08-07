@@ -13,7 +13,7 @@ use crate::value::ValInitializer;
 use crate::value::ValStorer;
 use crate::AStr;
 
-use super::BuiltInCtor;
+use super::Cid;
 use super::Style;
 
 pub trait ConfigBuild<C> {
@@ -695,21 +695,21 @@ impl ConfigValue for OptConfig {
 
     fn infer_builtin_ty(&mut self) {
         if let Some(ctor) = self.ctor() {
-            let built_in_ctor = BuiltInCtor::from_name(ctor);
+            let cid = Cid::from(ctor);
 
-            self.set_type_id(match built_in_ctor {
-                BuiltInCtor::Int => typeid::<i64>(),
-                BuiltInCtor::AStr => typeid::<String>(),
-                BuiltInCtor::Flt => typeid::<f64>(),
-                BuiltInCtor::Uint => typeid::<u64>(),
-                BuiltInCtor::Bool => typeid::<bool>(),
-                BuiltInCtor::Cmd => typeid::<crate::opt::Cmd>(),
-                BuiltInCtor::Pos => typeid::<crate::opt::Pos<bool>>(),
-                BuiltInCtor::Main => typeid::<crate::opt::Main>(),
-                BuiltInCtor::Any => typeid::<crate::opt::Any>(),
-                BuiltInCtor::Raw => typeid::<std::ffi::OsString>(),
-                BuiltInCtor::Fallback => {
-                    unreachable!("Fallback creator can't infer any type")
+            self.set_type_id(match cid {
+                Cid::Int => typeid::<i64>(),
+                Cid::AStr => typeid::<String>(),
+                Cid::Flt => typeid::<f64>(),
+                Cid::Uint => typeid::<u64>(),
+                Cid::Bool => typeid::<bool>(),
+                Cid::Cmd => typeid::<crate::opt::Cmd>(),
+                Cid::Pos => typeid::<crate::opt::Pos<bool>>(),
+                Cid::Main => typeid::<crate::opt::Main>(),
+                Cid::Any => typeid::<crate::opt::Any>(),
+                Cid::Raw => typeid::<std::ffi::OsString>(),
+                _ => {
+                    unreachable!("creator `{ctor}` can't infer any type")
                 }
             });
         }

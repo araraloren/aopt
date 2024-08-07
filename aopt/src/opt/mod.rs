@@ -21,7 +21,7 @@ pub use self::config::ConfigBuilder;
 pub use self::config::ConfigBuilderWith;
 pub use self::config::ConfigValue;
 pub use self::config::OptConfig;
-pub use self::creator::BuiltInCtor;
+pub use self::creator::Cid;
 pub use self::creator::Creator;
 pub use self::help::Help;
 pub use self::index::Index;

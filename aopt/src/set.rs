@@ -21,6 +21,7 @@ use std::slice::IterMut;
 
 use crate::map::ErasedTy;
 use crate::opt::Action;
+use crate::opt::Cid;
 use crate::opt::ConfigBuild;
 use crate::opt::ConfigValue;
 use crate::opt::Index;
@@ -49,8 +50,8 @@ impl<Opt: crate::opt::Opt, Config: Send + Sync, Err: Into<Error>> Ctor
 
     type Error = Err;
 
-    fn name(&self) -> &AStr {
-        Ctor::name(self.as_ref())
+    fn cid(&self) -> &Cid {
+        Ctor::cid(self.as_ref())
     }
 
     fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
@@ -78,8 +79,8 @@ impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Ctor
 
     type Error = Err;
 
-    fn name(&self) -> &AStr {
-        Ctor::name(self.as_ref())
+    fn cid(&self) -> &Cid {
+        Ctor::cid(self.as_ref())
     }
 
     fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error> {
@@ -96,9 +97,8 @@ impl<Opt: crate::opt::Opt, Config, Err: Into<Error>> Debug
     }
 }
 
-pub const CTOR_DEFAULT: &str = "fallback";
+pub const CTOR_DEFAULT: &str = crate::opt::creator::CID_FALLBACK;
 
-/// Get default creator name.
 pub fn ctor_default_name() -> AStr {
     AStr::from(CTOR_DEFAULT)
 }
@@ -109,7 +109,7 @@ pub trait Ctor {
     type Config;
     type Error: Into<Error>;
 
-    fn name(&self) -> &AStr;
+    fn cid(&self) -> &Cid;
 
     fn new_with(&mut self, config: Self::Config) -> Result<Self::Opt, Self::Error>;
 }
@@ -121,21 +121,13 @@ pub trait Set {
     /// Register a option creator type into option set.
     fn register(&mut self, ctor: Self::Ctor) -> Option<Self::Ctor>;
 
-    fn ctor_iter(&self) -> Iter<'_, Self::Ctor>;
-
-    fn ctor_iter_mut(&mut self) -> IterMut<'_, Self::Ctor>;
-
     fn contain_ctor(&self, name: &AStr) -> bool {
-        self.ctor_iter().any(|v| v.name() == name)
+        self.get_ctor(name).is_some()
     }
 
-    fn get_ctor(&self, name: &AStr) -> Option<&Self::Ctor> {
-        self.ctor_iter().find(|v| v.name() == name)
-    }
+    fn get_ctor(&self, name: &AStr) -> Option<&Self::Ctor>;
 
-    fn get_ctor_mut(&mut self, name: &AStr) -> Option<&mut Self::Ctor> {
-        self.ctor_iter_mut().find(|v| v.name() == name)
-    }
+    fn get_ctor_mut(&mut self, name: &AStr) -> Option<&mut Self::Ctor>;
 
     fn reset(&mut self);
 
@@ -187,18 +179,19 @@ impl<S: Set> SetExt<S::Ctor> for S {
     }
 
     fn opt_mut(&mut self, uid: Uid) -> Result<&mut <S::Ctor as Ctor>::Opt, Error> {
-        self.get_mut(uid)
-            .ok_or_else(|| raise_error!("Can not find option `{}` by uid", uid).with_uid(uid))
+        self.get_mut(uid).ok_or_else(|| {
+            raise_error!("Can not find option mutable `{}` by uid", uid).with_uid(uid)
+        })
     }
 
     fn ctor(&self, name: &AStr) -> Result<&S::Ctor, Error> {
         self.get_ctor(name)
-            .ok_or_else(|| raise_error!("Can not find option `{}` by name", name))
+            .ok_or_else(|| raise_error!("Can not find creator `{}` by name", name))
     }
 
     fn ctor_mut(&mut self, name: &AStr) -> Result<&mut S::Ctor, Error> {
         self.get_ctor_mut(name)
-            .ok_or_else(|| raise_error!("Can not find option `{}` by name", name))
+            .ok_or_else(|| raise_error!("Can not find creator mutable `{}` by name", name))
     }
 }
 
