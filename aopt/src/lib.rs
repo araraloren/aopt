@@ -25,12 +25,12 @@ pub type ARef<T> = std::sync::Arc<T>;
 pub type ARef<T> = std::rc::Rc<T>;
 
 #[cfg(feature = "log")]
-pub(crate) use tracing::trace as trace_log;
+pub(crate) use tracing::trace;
 #[cfg(not(feature = "log"))]
 #[macro_use]
 pub(crate) mod log {
     #[macro_export]
-    macro_rules! trace_log {
+    macro_rules! trace {
         ($($arg:tt)*) => {};
     }
 }

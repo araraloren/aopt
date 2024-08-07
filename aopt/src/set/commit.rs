@@ -12,7 +12,7 @@ use crate::set::Ctor;
 use crate::set::Set;
 use crate::set::SetCfg;
 use crate::set::SetExt;
-use crate::trace_log;
+use crate::trace;
 use crate::value::Infer;
 use crate::value::Placeholder;
 use crate::value::RawValParser;
@@ -162,12 +162,12 @@ where
                 .ok_or_else(|| crate::raise_error!("Invalid configuration: missing creator name!"))?
                 .clone();
 
-            trace_log!("Register a opt {:?} with creator({})", info.name(), ctor);
+            trace!("Register a opt {:?} with creator({})", info.name(), ctor);
 
             let opt = set.ctor_mut(&ctor)?.new_with(info).map_err(|e| e.into())?;
             let uid = set.insert(opt);
 
-            trace_log!("--> register okay: {uid}");
+            trace!("--> register okay: {uid}");
             self.uid = Some(uid);
             Ok(uid)
         }

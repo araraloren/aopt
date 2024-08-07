@@ -6,7 +6,7 @@ use crate::opt::Opt;
 use crate::opt::Style;
 use crate::set::SetChecker;
 use crate::set::SetOpt;
-use crate::trace_log;
+use crate::trace;
 use crate::Error;
 use crate::HashMap;
 use crate::Uid;
@@ -63,7 +63,7 @@ where
 
         const MAX_INDEX: usize = usize::MAX;
 
-        trace_log!("Pre Check {{has_cmd: {}}}", has_cmd);
+        trace!("Pre Check {{has_cmd: {}}}", has_cmd);
         if has_cmd {
             for opt in set.iter() {
                 if opt.mat_style(Style::Pos) {
@@ -86,7 +86,7 @@ where
     /// [`Boolean`](crate::opt::Style::Boolean), [`Combined`](crate::opt::Style::Combined)),
     /// [`Flag`](crate::opt::Style::Flag)
     fn opt_check(&self, set: &mut S) -> Result<bool, Error> {
-        trace_log!("Opt Check, call valid on all Opt ...");
+        trace!("Opt Check, call valid on all Opt ...");
         for opt in set.iter().filter(|opt| {
             opt.mat_style(Style::Argument)
                 || opt.mat_style(Style::Boolean)
@@ -142,7 +142,7 @@ where
         }
         let mut names = vec![];
 
-        trace_log!("Pos Check, index: {{{index_map:?}}}, float: {{{float_vec:?}}}");
+        trace!("Pos Check, index: {{{index_map:?}}}, float: {{{float_vec:?}}}");
         for (_, uids) in index_map {
             // if any of POS is force required, then it must set by user
             let mut pos_valid = true;
@@ -193,7 +193,7 @@ where
                 }
             }
         }
-        trace_log!("Cmd Check, any one of the cmd matched: {}", valid);
+        trace!("Cmd Check, any one of the cmd matched: {}", valid);
         if !valid && !names.is_empty() {
             return Err(Error::sp_cmd_require(names).with_uid(uids[0]));
         }
@@ -202,7 +202,7 @@ where
 
     /// Call [`valid`](crate::opt::Opt::valid) on options those style are [`Main`](Style::Main).
     fn post_check(&self, set: &mut S) -> Result<bool, Error> {
-        trace_log!("Post Check, call valid on Main ...");
+        trace!("Post Check, call valid on Main ...");
         Ok(set
             .iter()
             .filter(|opt| opt.mat_style(Style::Main))

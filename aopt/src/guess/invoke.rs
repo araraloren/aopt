@@ -6,7 +6,7 @@ use crate::opt::BOOL_TRUE;
 use crate::parser::FailManager;
 use crate::parser::UserStyle;
 use crate::set::OptValidator;
-use crate::trace_log;
+use crate::trace;
 use crate::AStr;
 use crate::Error;
 use crate::RawVal;
@@ -279,7 +279,7 @@ where
                 }
             }
         }
-        trace_log!(
+        trace!(
             "Guess style = {:?}, overload = {} ---> matched = {}, consume = {}",
             style,
             overload,
@@ -411,7 +411,7 @@ where
             }
         }
         if ret.is_some() {
-            trace_log!(
+            trace!(
                 "Guess style = {:?}, overload = {}, ret == {:?}",
                 style,
                 overload,
@@ -752,7 +752,7 @@ where
                 }
             }
         }
-        trace_log!("Matching Policy [ idx: {}, tot: {}, name: {:?}, style: {:?}, arg: {:?}, comsume: {} ] ==> {:?}", 
+        trace!("Matching Policy [ idx: {}, tot: {}, name: {:?}, style: {:?}, arg: {:?}, comsume: {} ] ==> {:?}", 
             policy.idx(), policy.tot(), policy.name(), policy.style(), policy.arg(), consume, policy.uids());
         Ok(policy.matched())
     }
@@ -766,7 +766,7 @@ where
         let uids = self.set.keys();
         let any_match = policy.any_match();
 
-        trace_log!("Any match = {}", any_match);
+        trace!("Any match = {}", any_match);
         for sub_policy in policy.sub_policys_mut() {
             // process all uids with each policy first
             for uid in uids.iter() {

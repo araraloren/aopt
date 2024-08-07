@@ -61,7 +61,7 @@ impl Action {
 
     /// Save the value in [`handler`](AnyValue).
     pub fn store1<U: ErasedTy>(&self, val: Option<U>, handler: &mut AnyValue) -> bool {
-        crate::trace_log!(
+        crate::trace!(
             "Saving value {:?}({:?}) [ty = {}] = {:?} in store1",
             val,
             self,
@@ -89,7 +89,7 @@ impl Action {
                     // NOTHING
                 }
             }
-            crate::trace_log!("After saving handler: {:?}", handler);
+            crate::trace!("After saving handler: {:?}", handler);
             true
         } else {
             false
@@ -151,7 +151,7 @@ where
     ) -> Result<Self::Ret, Self::Error> {
         let opt = set.opt_mut(uid)?;
 
-        crate::trace_log!("Store the value of {} ==> {:?}", opt.name().clone(), raw);
+        crate::trace!("Store the value of {} ==> {:?}", opt.name().clone(), raw);
 
         let (raw_handler, handler) = opt.accessor_mut().handlers();
 

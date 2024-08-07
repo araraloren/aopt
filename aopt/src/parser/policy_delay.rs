@@ -24,7 +24,7 @@ use crate::set::OptValidator;
 use crate::set::SetChecker;
 use crate::set::SetExt;
 use crate::set::SetOpt;
-use crate::trace_log;
+use crate::trace;
 use crate::ARef;
 use crate::AStr;
 use crate::Error;
@@ -351,7 +351,7 @@ where
             let inner_ctx = delay_ctx.inner_ctx;
             let mut matched = false;
 
-            trace_log!("Invoke the handler: Inner = {:?}", &inner_ctx);
+            trace!("Invoke the handler: Inner = {:?}", &inner_ctx);
             for (uid, cache_matched) in delay_ctx.uids.iter().zip(delay_ctx.matched.iter()) {
                 let ret = if let Some(cache_matched) = cache_matched {
                     *cache_matched
@@ -471,7 +471,7 @@ where
         let mut iter = args.guess_iter().enumerate();
         let mut opt_fail = FailManager::default();
 
-        trace_log!("Parsing {ctx:?} using delay policy");
+        trace!("Parsing {ctx:?} using delay policy");
         // set option args, and args length
         ctx.set_args(args.clone());
         while let Some((idx, (opt, next))) = iter.next() {
@@ -481,7 +481,7 @@ where
 
             // parsing current argument
             if let Ok(clopt) = opt.parse_arg() {
-                trace_log!("Guess command line clopt = {:?} & next = {:?}", clopt, next);
+                trace!("Guess command line clopt = {:?} & next = {:?}", clopt, next);
                 let name = clopt.name;
 
                 if set.check(name.as_str()).map_err(Into::into)? {
@@ -568,7 +568,7 @@ where
                 idx: Self::noa_cmd(),
             };
 
-            trace_log!("Guess CMD = {:?}", guess.name);
+            trace!("Guess CMD = {:?}", guess.name);
             guess.guess_and_invoke(&UserStyle::Cmd, overload)?;
             if let Some(Action::QuitPolicy) = ctx.policy_act() {
                 return Ok(());
@@ -594,7 +594,7 @@ where
                     .get(Self::noa_pos(idx))
                     .and_then(|v| v.get_str())
                     .map(AStr::from);
-                trace_log!("Guess POS argument = {:?} @ {}", guess.name, guess.idx);
+                trace!("Guess POS argument = {:?} @ {}", guess.name, guess.idx);
                 guess.guess_and_invoke(&UserStyle::Pos, overload)?;
                 if let Some(act) = guess.ctx.policy_act() {
                     match act {
@@ -610,7 +610,7 @@ where
             cmd_fail.process_check(self.checker().cmd_check(set))?;
         }
 
-        trace_log!("Invoke the handler of option");
+        trace!("Invoke the handler of option");
         // after cmd and pos callback invoked, invoke the callback of option
         for saver in std::mem::take(&mut self.contexts) {
             let ret = self.process_delay_ctx(&mut prev_ctx, set, inv, ser, &mut opt_fail, saver)?;

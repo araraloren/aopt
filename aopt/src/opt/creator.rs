@@ -9,7 +9,7 @@ use crate::opt::OptConfig;
 use crate::prelude::Help;
 use crate::raise_error;
 use crate::set::Ctor;
-use crate::trace_log;
+use crate::trace;
 use crate::value::ValAccessor;
 use crate::AStr;
 use crate::Error;
@@ -262,7 +262,7 @@ fn gen_hint(hint: Option<&AStr>, n: &AStr, idx: Option<&Index>, alias: Option<&V
 impl Creator<AOpt, OptConfig, Error> {
     pub fn fallback() -> Self {
         Self::new(Cid::Fallback, move |mut config: OptConfig| {
-            trace_log!("Construct option with config {:?}", &config);
+            trace!("Construct option with config {:?}", &config);
 
             let r#type = config.take_type();
             let name = config.take_name();
@@ -345,7 +345,7 @@ impl Creator<AOpt, OptConfig, Error> {
             return Self::fallback();
         }
         Self::new(ctor, move |mut config: OptConfig| {
-            trace_log!("Construct option with config {:?}", &config);
+            trace!("Construct option with config {:?}", &config);
 
             let r#type = config.take_type();
             let name = config.take_name();

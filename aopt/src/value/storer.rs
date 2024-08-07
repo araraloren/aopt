@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use crate::ctx::Ctx;
 use crate::map::ErasedTy;
 use crate::opt::Action;
-use crate::trace_log;
+use crate::trace;
 use crate::Error;
 use crate::RawVal;
 
@@ -52,7 +52,7 @@ impl ValStorer {
         act: &Action,
         arg: &mut AnyValue,
     ) -> Result<(), Error> {
-        crate::trace_log!("Saving raw value({:?}) for {}", raw, ctx.uid()?);
+        crate::trace!("Saving raw value({:?}) for {}", raw, ctx.uid()?);
         (self.0)(raw, ctx, act, arg)
     }
 
@@ -66,7 +66,7 @@ impl ValStorer {
                 if !validator.invoke(&val) {
                     let uid = ctx.uid()?;
 
-                    trace_log!(
+                    trace!(
                         "Validator value storer failed, parsing {:?} -> {:?}",
                         raw,
                         val
@@ -77,7 +77,7 @@ impl ValStorer {
                     )
                     .with_uid(uid))
                 } else {
-                    trace_log!(
+                    trace!(
                         "Validator value storer okay, parsing {:?} -> {:?}",
                         raw,
                         val
@@ -94,7 +94,7 @@ impl ValStorer {
             |raw: Option<&RawVal>, ctx: &Ctx, act: &Action, handler: &mut AnyValue| {
                 let val = U::parse(raw, ctx).map_err(Into::into);
 
-                trace_log!("Fallback value storer, parsing {:?} -> {:?}", raw, val);
+                trace!("Fallback value storer, parsing {:?} -> {:?}", raw, val);
                 act.store1(Some(val?), handler);
                 Ok(())
             },

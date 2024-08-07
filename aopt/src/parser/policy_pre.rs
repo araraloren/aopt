@@ -18,7 +18,7 @@ use crate::parser::Action;
 use crate::set::OptValidator;
 use crate::set::SetChecker;
 use crate::set::SetOpt;
-use crate::trace_log;
+use crate::trace;
 use crate::ARef;
 use crate::AStr;
 use crate::Error;
@@ -311,7 +311,7 @@ where
         let mut iter = args.guess_iter().enumerate();
         let mut opt_fail = FailManager::default();
 
-        trace_log!("Parsing {ctx:?} using pre policy");
+        trace!("Parsing {ctx:?} using pre policy");
         ctx.set_args(args.clone());
         while let Some((idx, (opt, next))) = iter.next() {
             let mut matched = false;
@@ -320,7 +320,7 @@ where
             let mut like_opt = false;
 
             if let Ok(clopt) = opt.parse_arg() {
-                trace_log!("Guess command line clopt = {:?} & next = {:?}", clopt, next);
+                trace!("Guess command line clopt = {:?} & next = {:?}", clopt, next);
                 let name = clopt.name;
 
                 if let Some(valid) = Self::ig_failure(set.check(name.as_str()).map_err(Into::into))?
@@ -404,7 +404,7 @@ where
                 idx: Self::noa_cmd(),
             };
 
-            trace_log!("Guess CMD = {:?}", guess.name);
+            trace!("Guess CMD = {:?}", guess.name);
             Self::ig_failure(guess.guess_and_invoke(&UserStyle::Cmd, overload))?;
             if let Some(Action::QuitPolicy) = ctx.policy_act() {
                 return Ok(());
@@ -430,7 +430,7 @@ where
                     .get(Self::noa_pos(idx))
                     .and_then(|v| v.get_str())
                     .map(AStr::from);
-                trace_log!("Guess POS argument = {:?} @ {}", guess.name, guess.idx);
+                trace!("Guess POS argument = {:?} @ {}", guess.name, guess.idx);
                 Self::ig_failure(guess.guess_and_invoke(&UserStyle::Pos, overload))?;
                 if let Some(act) = guess.ctx.policy_act() {
                     match act {

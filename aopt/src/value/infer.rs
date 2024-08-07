@@ -17,7 +17,7 @@ use crate::opt::MutOpt;
 use crate::opt::Pos;
 use crate::opt::RefOpt;
 use crate::opt::Style;
-use crate::trace_log;
+use crate::trace;
 use crate::typeid;
 use crate::value::ValInitializer;
 use crate::value::ValValidator;
@@ -213,7 +213,7 @@ where
     ///     |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
     ///         let val = raw.is_some();
     ///
-    ///         trace_log!("Pos value storer, parsing {:?} -> {:?}", raw, val);
+    ///         trace!("Pos value storer, parsing {:?} -> {:?}", raw, val);
     ///         act.store1(Some(val), handler);
     ///         Ok(())
     ///     },
@@ -229,7 +229,7 @@ where
             let type_id = std::any::TypeId::of::<T>();
             let bool_type = std::any::TypeId::of::<bool>();
 
-            trace_log!(
+            trace!(
                 "Tweak the storer for Pos<bool> for {:?}?: type = {:?}",
                 cfg.name(),
                 std::any::type_name::<T>()
@@ -240,7 +240,7 @@ where
                     |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
                         let val = raw.is_some();
 
-                        trace_log!("Pos value storer, parsing {:?} -> {:?}", raw, val);
+                        trace!("Pos value storer, parsing {:?} -> {:?}", raw, val);
                         act.store1(Some(val), handler);
                         Ok(())
                     },
@@ -480,7 +480,7 @@ impl Infer for Placeholder {
             .ok_or_else(|| crate::raise_error!("Incomplete configuration, `ctor` must be set"))?;
         let cid = Cid::from(ctor);
 
-        trace_log!("In default, fill info in Placeholder");
+        trace!("In default, fill info in Placeholder");
         match cid {
             Cid::Int => <i64>::infer_fill_info(cfg),
             Cid::AStr => <String>::infer_fill_info(cfg),

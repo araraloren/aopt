@@ -13,7 +13,7 @@ use crate::map::ErasedTy;
 use crate::opt::Opt;
 use crate::set::SetExt;
 use crate::set::SetOpt;
-use crate::trace_log;
+use crate::trace;
 use crate::Error;
 use crate::HashMap;
 use crate::Uid;
@@ -191,7 +191,7 @@ where
         let raw = arg.as_ref();
         let act = *opt.action();
 
-        trace_log!("Invoke fallback for {}({act}) {{{ctx:?}}}", opt.name());
+        trace!("Invoke fallback for {}({act}) {{{ctx:?}}}", opt.name());
         opt.accessor_mut().store_all(raw, ctx, &act)
     }
 }
@@ -220,7 +220,7 @@ where
         ser: &mut Ser,
         ctx: &mut Ctx,
     ) -> Result<bool, Error> {
-        trace_log!("Invoking callback of {} {:?}", uid, ctx);
+        trace!("Invoking callback of {} {:?}", uid, ctx);
         if let Some(callback) = self.get_handler(uid) {
             return (callback)(set, ser, ctx);
         }
@@ -239,10 +239,10 @@ where
         ctx: &mut Ctx,
     ) -> Result<bool, Error> {
         if let Some(callback) = self.get_handler(uid) {
-            trace_log!("Invoking(fb) callback of {} {:?}", uid, ctx);
+            trace!("Invoking(fb) callback of {} {:?}", uid, ctx);
             (callback)(set, ser, ctx)
         } else {
-            trace_log!("Invoking(fb) handler_fallback of {} {:?}", uid, ctx);
+            trace!("Invoking(fb) handler_fallback of {} {:?}", uid, ctx);
             Invoker::fallback(set, ser, ctx)
         }
     }
