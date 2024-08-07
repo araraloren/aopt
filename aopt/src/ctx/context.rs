@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use crate::args::Args;
 use crate::opt::Style;
+use crate::parser::Action;
 use crate::parser::ReturnVal;
 use crate::ARef;
 use crate::AStr;
@@ -144,6 +145,12 @@ pub struct Ctx {
     orig_args: ARef<Args>,
 
     inner_ctx: Option<InnerCtx>,
+
+    #[cfg(not(feature = "sync"))]
+    action: ARef<std::cell::RefCell<Option<Action>>>,
+
+    #[cfg(feature = "sync")]
+    action: ARef<std::sync::Mutex<Option<Action>>>,
 }
 
 impl Ctx {
@@ -281,6 +288,38 @@ impl Ctx {
         crate::trace_log!("Switching InnerCtx to {:?}", inner_ctx);
         self.inner_ctx = inner_ctx;
         self
+    }
+}
+
+impl Ctx {
+    #[cfg(not(feature = "sync"))]
+    pub fn policy_act(&self) -> Option<Action> {
+        *self.action.borrow()
+    }
+
+    #[cfg(feature = "sync")]
+    pub fn policy_act(&self) -> Option<Action> {
+        *self.action.lock().unwrap()
+    }
+
+    #[cfg(not(feature = "sync"))]
+    pub fn set_policy_act(&self, act: Action) {
+        *self.action.borrow_mut() = Some(act);
+    }
+
+    #[cfg(feature = "sync")]
+    pub fn set_policy_act(&self, act: Action) {
+        *self.action.lock().unwrap() = Some(act);
+    }
+
+    #[cfg(not(feature = "sync"))]
+    pub fn reset_policy_act(&self) {
+        *self.action.borrow_mut() = None;
+    }
+
+    #[cfg(feature = "sync")]
+    pub fn reset_policy_act(&self) {
+        *self.action.lock().unwrap() = None;
     }
 }
 

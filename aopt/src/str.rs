@@ -9,10 +9,6 @@ pub fn astr<T: Into<AStr>>(value: T) -> AStr {
     value.into()
 }
 
-pub trait StrJoin {
-    fn join(&self, sep: &str) -> String;
-}
-
 /// A simple wrapper of [`ARef`]\<str\>.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AStr(ARef<str>);
@@ -167,23 +163,5 @@ impl<'de> serde::Deserialize<'de> for AStr {
         D: serde::Deserializer<'de>,
     {
         deserializer.deserialize_str(StrVisitor)
-    }
-}
-
-impl StrJoin for Vec<AStr> {
-    fn join(&self, sep: &str) -> String {
-        match self.len() {
-            0 => String::new(),
-            _ => {
-                let mut iter = self.iter();
-                let mut ret = String::from(iter.next().unwrap().as_str());
-
-                iter.for_each(|v| {
-                    ret.push_str(sep);
-                    ret.push_str(v.as_str());
-                });
-                ret
-            }
-        }
     }
 }

@@ -27,6 +27,7 @@ use crate::RawVal;
 
 use super::AnyValue;
 use super::RawValParser;
+use super::Stop;
 use super::ValStorer;
 
 /// Implement this if you want the type can used for create option.
@@ -330,20 +331,56 @@ impl Infer for Stdin {
         Action::Set
     }
 
-    fn infer_index() -> Option<Index> {
-        Some(Index::anywhere())
-    }
-
     fn infer_style() -> Vec<Style> {
-        vec![Style::Pos]
+        vec![Style::Boolean]
     }
 
-    fn infer_ignore_name() -> bool {
+    fn infer_ignore_alias() -> bool {
         true
     }
 
-    fn infer_ignore_index() -> bool {
-        false
+    /// For type Stop, swap the name and default alias(`-`) when build configuration.
+    fn infer_tweak_info<C>(cfg: &mut C) -> Result<(), Error>
+    where
+        Self: Sized + 'static,
+        Self::Val: RawValParser,
+        C: ConfigValue + Default,
+    {
+        if let Some(name) = cfg.name().cloned() {
+            cfg.add_alias(name);
+        }
+        cfg.set_name("-");
+        Ok(())
+    }
+}
+
+impl Infer for Stop {
+    type Val = Stop;
+
+    fn infer_act() -> Action {
+        Action::Set
+    }
+
+    fn infer_style() -> Vec<Style> {
+        vec![Style::Boolean]
+    }
+
+    fn infer_ignore_alias() -> bool {
+        true
+    }
+
+    /// For type Stop, swap the name and default alias(`--`) when build configuration.
+    fn infer_tweak_info<C>(cfg: &mut C) -> Result<(), Error>
+    where
+        Self: Sized + 'static,
+        Self::Val: RawValParser,
+        C: ConfigValue + Default,
+    {
+        if let Some(name) = cfg.name().cloned() {
+            cfg.add_alias(name);
+        }
+        cfg.set_name("--");
+        Ok(())
     }
 }
 

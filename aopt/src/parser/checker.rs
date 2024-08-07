@@ -9,7 +9,6 @@ use crate::set::SetOpt;
 use crate::trace_log;
 use crate::Error;
 use crate::HashMap;
-use crate::StrJoin;
 use crate::Uid;
 
 /// Check the option base on [`Style`].
@@ -73,7 +72,7 @@ where
 
                         if index == 1 && opt.force() {
                             // if we have cmd, can not have force required POS @1
-                            return Err(Error::unexcepted_pos_if_has_cmd().with_uid(opt.uid()));
+                            return Err(Error::unexcepted_pos().with_uid(opt.uid()));
                         }
                     }
                 }
@@ -95,7 +94,7 @@ where
                 || opt.mat_style(Style::Flag)
         }) {
             if !opt.valid() {
-                return Err(Error::raise_sp_opt_require(opt.hint()).with_uid(opt.uid()));
+                return Err(Error::sp_opt_require(vec![opt.hint()]).with_uid(opt.uid()));
             }
         }
         Ok(true)
@@ -158,7 +157,7 @@ where
                 }
             }
             if !pos_valid {
-                return Err(Error::raise_sp_pos_require(names.join(" | ")).with_uid(uids[0]));
+                return Err(Error::sp_pos_require(names).with_uid(uids[0]));
             }
             names.clear();
         }
@@ -170,7 +169,7 @@ where
                     names.push(Self::opt(set, uid).hint().clone());
                 });
             if !names.is_empty() {
-                return Err(Error::raise_sp_pos_require(names.join(" | ")).with_uid(float_vec[0]));
+                return Err(Error::sp_pos_require(names).with_uid(float_vec[0]));
             }
         }
         Ok(true)
@@ -196,7 +195,7 @@ where
         }
         trace_log!("Cmd Check, any one of the cmd matched: {}", valid);
         if !valid && !names.is_empty() {
-            return Err(Error::raise_sp_cmd_require(names.join(" | ")).with_uid(uids[0]));
+            return Err(Error::sp_cmd_require(names).with_uid(uids[0]));
         }
         Ok(true)
     }

@@ -11,10 +11,10 @@ use crate::args::ArgParser;
 use crate::args::Args;
 use crate::ctx::Ctx;
 use crate::ctx::Invoker;
-use crate::err::ErrorCmd;
 use crate::guess::InvokeGuess;
 use crate::opt::Opt;
 use crate::opt::OptParser;
+use crate::parser::Action;
 use crate::set::OptValidator;
 use crate::set::SetChecker;
 use crate::set::SetOpt;
@@ -309,13 +309,14 @@ where
                         if let Some(ret) = guess.guess_and_invoke(style, overload)? {
                             (matched, consume) = (ret.matched, ret.consume);
                         }
-                        if let Some(error_cmd) = guess.fail.find_err_command() {
-                            match error_cmd {
-                                ErrorCmd::StopPolicy => {
+                        if let Some(act) = guess.ctx.policy_act() {
+                            match act {
+                                Action::StopPolicy => {
                                     stopped = true;
+                                    guess.ctx.reset_policy_act();
                                     break;
                                 }
-                                ErrorCmd::QuitPolicy => return Ok(()),
+                                Action::QuitPolicy => return Ok(()),
                             }
                         }
                         if matched {
@@ -323,7 +324,7 @@ where
                         }
                     }
                     if !stopped && !matched && self.strict() {
-                        return Err(opt_fail.cause(Error::raise_sp_not_found(name)));
+                        return Err(opt_fail.cause(Error::sp_not_found(name)));
                     }
                 }
             }
@@ -370,11 +371,8 @@ where
 
             trace_log!("Guess CMD = {:?}", guess.name);
             guess.guess_and_invoke(&UserStyle::Cmd, overload)?;
-            if let Some(error_cmd) = guess.fail.find_err_command() {
-                match error_cmd {
-                    ErrorCmd::StopPolicy => {}
-                    ErrorCmd::QuitPolicy => return Ok(()),
-                }
+            if let Some(Action::QuitPolicy) = ctx.policy_act() {
+                return Ok(());
             }
             cmd_fail.process_check(self.checker().cmd_check(set))?;
 
@@ -399,12 +397,13 @@ where
                     .map(AStr::from);
                 trace_log!("Guess POS argument = {:?} @ {}", guess.name, guess.idx);
                 guess.guess_and_invoke(&UserStyle::Pos, overload)?;
-                if let Some(error_cmd) = guess.fail.find_err_command() {
-                    match error_cmd {
-                        ErrorCmd::StopPolicy => {
+                if let Some(act) = guess.ctx.policy_act() {
+                    match act {
+                        Action::StopPolicy => {
+                            guess.ctx.reset_policy_act();
                             break;
                         }
-                        ErrorCmd::QuitPolicy => return Ok(()),
+                        Action::QuitPolicy => return Ok(()),
                     }
                 }
             }

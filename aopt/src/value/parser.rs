@@ -3,7 +3,6 @@ use std::io::Stdin;
 use std::path::PathBuf;
 
 use crate::ctx::Ctx;
-use crate::raise_command;
 use crate::value::Stop;
 use crate::Error;
 use crate::RawVal;
@@ -18,12 +17,15 @@ where
     fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error>;
 }
 
+fn ok_or_else(raw: Option<&RawVal>) -> Result<&RawVal, Error> {
+    raw.ok_or_else(|| Error::sp_rawval(None, "unexcepted empty value"))
+}
+
 /// Convert raw value to &[`str`].
 pub fn raw2str(raw: Option<&RawVal>) -> Result<&str, Error> {
-    let raw = raw.ok_or_else(|| Error::raise_sp_rawval("Unexcepted empty value"))?;
-
-    raw.get_str()
-        .ok_or_else(|| Error::raise_sp_rawval(format!("Can't convert value `{raw}` to str")))
+    ok_or_else(raw)?
+        .get_str()
+        .ok_or_else(|| Error::sp_rawval(raw, "can not convert RawVal to str"))
 }
 
 impl RawValParser for () {
@@ -38,8 +40,7 @@ impl RawValParser for RawVal {
     type Error = Error;
 
     fn parse(raw: Option<&RawVal>, _: &Ctx) -> Result<Self, Self::Error> {
-        raw.cloned()
-            .ok_or_else(|| Error::raise_sp_rawval("Unexcepted empty value"))
+        ok_or_else(raw).cloned()
     }
 }
 
@@ -53,10 +54,10 @@ macro_rules! impl_raw_val_parser {
                 let uid = ctx.uid()?;
 
                 val.parse::<$int>().map_err(|e| {
-                    $crate::err::Error::raise_sp_rawval(format!(
-                        "Can not convert value `{val}` to {}",
-                        stringify!($int)
-                    ))
+                    $crate::err::Error::sp_rawval(
+                        raw.clone(),
+                        format!("not a valid value of type {}", stringify!($int)),
+                    )
                     .with_uid(uid)
                     .cause_by(e.into())
                 })
@@ -93,9 +94,8 @@ impl RawValParser for OsString {
 
     fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error> {
         let uid = ctx.uid()?;
-        Ok(raw
-            .ok_or_else(|| Error::raise_sp_rawval("Unexcepted empty value").with_uid(uid))?
-            .to_os_string())
+
+        Ok(ok_or_else(raw).map_err(|e| e.with_uid(uid))?.to_os_string())
     }
 }
 
@@ -108,10 +108,7 @@ impl RawValParser for bool {
         match val {
             crate::opt::BOOL_TRUE => Ok(true),
             crate::opt::BOOL_FALSE => Ok(false),
-            _ => Err(
-                Error::raise_sp_rawval(format!("Except true or false, found value: {}", val))
-                    .with_uid(ctx.uid()?),
-            ),
+            _ => Err(Error::sp_rawval(raw, "except true or false").with_uid(ctx.uid()?)),
         }
     }
 }
@@ -120,11 +117,7 @@ impl RawValParser for PathBuf {
     type Error = Error;
 
     fn parse(raw: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(PathBuf::from(
-            raw.ok_or_else(|| Error::raise_sp_rawval("Can not construct PathBuf from None"))?
-                .clone()
-                .into_os_string(),
-        ))
+        Ok(PathBuf::from(ok_or_else(raw)?.clone().into_os_string()))
     }
 }
 
@@ -134,15 +127,11 @@ impl RawValParser for Stdin {
     fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error> {
         const STDIN: &str = "-";
 
-        if let Some(raw) = raw {
-            if raw.get_str() == Some(STDIN) {
-                return Ok(std::io::stdin());
-            }
+        if ctx.name()?.map(|v| v.as_str()) == Some(STDIN) {
+            Ok(std::io::stdin())
+        } else {
+            Err(Error::sp_rawval(raw, "except `-` for Stdin").with_uid(ctx.uid()?))
         }
-        Err(
-            Error::raise_sp_rawval(format!("Stdin value only support value `-`: {raw:?}"))
-                .with_uid(ctx.uid()?),
-        )
     }
 }
 
@@ -152,35 +141,11 @@ impl RawValParser for Stop {
     fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error> {
         const STOP: &str = "--";
 
-        let inner_ctx = ctx.inner_ctx()?;
-
-        match inner_ctx.style() {
-            crate::prelude::Style::Null => {
-                unreachable!("Unexcepted null style in ctx({:?})", ctx)
-            }
-            crate::prelude::Style::Pos
-            | crate::prelude::Style::Cmd
-            | crate::prelude::Style::Main => {
-                // check value for noa
-                if let Some(raw) = raw {
-                    if raw.get_str() == Some(STOP) {
-                        return Err(raise_command!(crate::err::ErrorCmd::StopPolicy));
-                    }
-                }
-            }
-            crate::prelude::Style::Boolean
-            | crate::prelude::Style::Argument
-            | crate::prelude::Style::Combined
-            | crate::prelude::Style::Flag => {
-                // check name for option
-                if inner_ctx.name().map(|v| v.as_str()) == Some(STOP) {
-                    return Err(raise_command!(crate::err::ErrorCmd::StopPolicy));
-                }
-            }
+        if ctx.name()?.map(|v| v.as_str()) == Some(STOP) {
+            ctx.set_policy_act(crate::parser::Action::StopPolicy);
+            Ok(Stop)
+        } else {
+            Err(Error::sp_rawval(raw, "except `--` for Stop").with_uid(ctx.uid()?))
         }
-        Err(
-            Error::raise_sp_rawval(format!("Stop value only support value `--`: {raw:?}"))
-                .with_uid(ctx.uid()?),
-        )
     }
 }

@@ -41,9 +41,7 @@ use crate::RawVal;
 ///     let mut parser = AFwdParser::default();
 ///
 ///     parser.set_strict(true);
-///     parser
-///         .add_opt("--=b")?
-///         .set_value_type::<aopt::value::Stop>();
+///     parser.add_opt("stop=b".infer::<aopt::value::Stop>())?;
 ///
 ///     // -w will processed, it is set before `--`
 ///     parser.add_opt("-w=i")?;
