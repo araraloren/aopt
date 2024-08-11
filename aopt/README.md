@@ -86,7 +86,7 @@ If you want the utils of current crate implement `Send` and `Sync`, you can enab
 
 - Using [`AFwdParser`](crate::ext::AFwdParser) parsing process the command line.
 
-```no_run
+```rust ,no_run
 use aopt::prelude::*;
 use std::ops::Deref;
 
@@ -133,9 +133,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+* `app.exe --depth=98 +S github --depth=42 +S gitlab gitcode` output
+
+```txt
+Adding location(github) with depth(98)
+Adding location(gitlab) with depth(42)
+Save destination location(gitcode)
+Application target\debug\example.exe will copy location(github, depth=98) to destination(gitcode)
+Application target\debug\example.exe will copy location(gitlab, depth=42) to destination(gitcode)
+```
+
 - Using [`getopt!`](crate::getopt) parsing multiple sub command.
 
-```no_run
+```rust ,no_run
 use aopt::prelude::*;
 use aopt::Error;
 use std::ops::Deref;
