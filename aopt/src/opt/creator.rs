@@ -1,16 +1,9 @@
 use std::fmt::Debug;
 
-use crate::astr;
-use crate::opt::AOpt;
-use crate::opt::Action;
 use crate::opt::ConfigValue;
 use crate::opt::Opt;
-use crate::opt::OptConfig;
-use crate::prelude::Help;
-use crate::raise_error;
 use crate::set::Ctor;
 use crate::trace;
-use crate::value::ValAccessor;
 use crate::AStr;
 use crate::Error;
 
@@ -76,8 +69,6 @@ mod __creator {
 }
 
 pub use __creator::Creator;
-
-use super::Index;
 
 impl<O: Opt, C, E: Into<Error>> Ctor for Creator<O, C, E> {
     type Opt = O;
@@ -228,115 +219,12 @@ impl From<&str> for Cid {
     }
 }
 
-fn gen_hint(hint: Option<&AStr>, n: &AStr, idx: Option<&Index>, alias: Option<&Vec<AStr>>) -> AStr {
-    let hint_generator = || {
-        let mut names = Vec::with_capacity(1 + alias.map(|v| v.len()).unwrap_or_default());
-
-        // add name
-        names.push(n.as_str());
-        // add alias
-        if let Some(alias_vec) = alias {
-            for alias in alias_vec {
-                names.push(alias.as_str());
-            }
-        }
-        // sort name by len
-        names.sort_by_key(|v| v.len());
-        astr(if let Some(index) = idx {
-            let index_string = index.to_help();
-
-            // add index string
-            if index_string.is_empty() {
-                names.join(", ")
-            } else {
-                format!("{}@{}", names.join(", "), index_string)
-            }
-        } else {
-            names.join(", ")
-        })
-    };
-
-    hint.cloned().unwrap_or_else(hint_generator)
-}
-
-impl Creator<AOpt, OptConfig, Error> {
+impl<T: Opt + TryFrom<C, Error: Into<Error>>, C: ConfigValue + Debug> Creator<T, C, Error> {
     pub fn fallback() -> Self {
-        Self::new(Cid::Fallback, move |mut config: OptConfig| {
-            trace!("Construct option with config {:?}", &config);
+        Self::new(Cid::Fallback, move |config: C| {
+            trace!("in fallback, construct option with config {:?}", &config);
 
-            let r#type = config.take_type();
-            let name = config.take_name();
-            let force = config.take_force();
-            let index = config.take_index();
-            let alias = config.take_alias();
-            let hint = config.take_hint();
-            let help = config.take_help();
-            let action = config.take_action();
-            let storer = config.take_storer();
-            let styles = config.take_style();
-            let initializer = config.take_initializer();
-            let ignore_name = config.ignore_name();
-            let ignore_alias = config.ignore_alias();
-            let ignore_index = config.ignore_index();
-
-            let force = force.unwrap_or(false);
-            let action = action.unwrap_or(Action::App);
-            let storer = storer.ok_or_else(|| {
-                raise_error!("Incomplete option configuration: missing ValStorer")
-            })?;
-            let initializer = initializer.ok_or_else(|| {
-                raise_error!("Incomplete option configuration: missing ValInitializer")
-            })?;
-            let styles = styles
-                .ok_or_else(|| raise_error!("Incomplete option configuration: missing Style"))?;
-            let name = name.ok_or_else(|| {
-                raise_error!("Incomplete option configuration: missing option name")
-            })?;
-            let hint = gen_hint(hint.as_ref(), &name, index.as_ref(), alias.as_ref());
-            let help = help.unwrap_or_default();
-            let r#type = r#type.ok_or_else(|| {
-                raise_error!("Incomplete option configuration: missing option value type")
-            })?;
-            let help = Help::default().with_help(help).with_hint(hint);
-
-            if ignore_alias {
-                if let Some(alias) = &alias {
-                    debug_assert!(
-                        !alias.is_empty(),
-                        "Option {} not support alias: {:?}",
-                        name,
-                        alias
-                    );
-                }
-            }
-            if ignore_index {
-                if let Some(index) = &index {
-                    debug_assert!(
-                            !index.is_null(),
-                            "Please remove the index, option `{}` not support positional parameters: {:?}",
-                            name,
-                            index
-                        );
-                }
-            } else {
-                debug_assert!(
-                        index.is_some(),
-                        "Please provide an index, indicate the position you want to capture for option `{}`.",
-                        name
-                    );
-            }
-            Ok(
-                AOpt::new(name, r#type, ValAccessor::new(storer, initializer))
-                    .with_force(force)
-                    .with_idx(index)
-                    .with_action(action)
-                    .with_alias(alias)
-                    .with_style(styles)
-                    .with_opt_help(help)
-                    .with_ignore_name(ignore_name)
-                    .with_ignore_alias(ignore_alias)
-                    .with_ignore_index(ignore_index),
-            )
+            T::try_from(config).map_err(Into::into)
         })
     }
 
@@ -344,87 +232,17 @@ impl Creator<AOpt, OptConfig, Error> {
         if ctor == Cid::Fallback {
             return Self::fallback();
         }
-        Self::new(ctor, move |mut config: OptConfig| {
-            trace!("Construct option with config {:?}", &config);
+        Self::new(ctor, move |config: C| {
+            trace!("construct option with config {:?}", &config);
 
-            let r#type = config.take_type();
-            let name = config.take_name();
-            let force = config.take_force();
-            let index = config.take_index();
-            let alias = config.take_alias();
-            let hint = config.take_hint();
-            let help = config.take_help();
-            let action = config.take_action();
-            let storer = config.take_storer();
-            let styles = config.take_style();
-            let initializer = config.take_initializer();
-            let ignore_name = config.ignore_name();
-            let ignore_alias = config.ignore_alias();
-            let ignore_index = config.ignore_index();
-
-            let force = force.unwrap_or(false);
-            let action = action.unwrap_or(Action::App);
-            let storer = storer.ok_or_else(|| {
-                raise_error!("Incomplete option configuration: missing ValStorer")
-            })?;
-            let initializer = initializer.ok_or_else(|| {
-                raise_error!("Incomplete option configuration: missing ValInitializer")
-            })?;
-            let styles = styles
-                .ok_or_else(|| raise_error!("Incomplete option configuration: missing Style"))?;
-            let name = name.ok_or_else(|| {
-                raise_error!("Incomplete option configuration: missing option name")
-            })?;
-            let hint = gen_hint(hint.as_ref(), &name, index.as_ref(), alias.as_ref());
-            let help = help.unwrap_or_default();
-            let r#type = r#type.ok_or_else(|| {
-                raise_error!("Incomplete option configuration: missing option value type")
-            })?;
-            let help = Help::default().with_help(help).with_hint(hint);
-
-            if ignore_alias {
-                if let Some(alias) = &alias {
-                    debug_assert!(
-                        !alias.is_empty(),
-                        "Option {} not support alias: {:?}",
-                        name,
-                        alias
-                    );
-                }
-            }
-            if ignore_index {
-                if let Some(index) = &index {
-                    debug_assert!(
-                        !index.is_null(),
-                        "Please remove the index, option `{}` not support positional parameters: {:?}",
-                        name,
-                        index
-                    );
-                }
-            } else {
-                debug_assert!(
-                    index.is_some(),
-                    "Please provide an index, indicate the position you want to capture for option `{}`.",
-                    name
-                );
-            }
-            Ok(
-                AOpt::new(name, r#type, ValAccessor::new(storer, initializer))
-                    .with_force(force)
-                    .with_idx(index)
-                    .with_action(action)
-                    .with_alias(alias)
-                    .with_style(styles)
-                    .with_opt_help(help)
-                    .with_ignore_name(ignore_name)
-                    .with_ignore_alias(ignore_alias)
-                    .with_ignore_index(ignore_index),
-            )
+            T::try_from(config).map_err(Into::into)
         })
     }
 }
 
-impl From<Cid> for Creator<AOpt, OptConfig, Error> {
+impl<T: Opt + TryFrom<C, Error: Into<Error>>, C: ConfigValue + Debug> From<Cid>
+    for Creator<T, C, Error>
+{
     fn from(value: Cid) -> Self {
         Self::new_type_ctor(value)
     }

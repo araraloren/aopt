@@ -13,11 +13,15 @@ use crate::opt::Opt;
 #[allow(unused)]
 use crate::opt::Pos;
 use crate::opt::Style;
+use crate::raise_error;
 use crate::value::ErasedValue;
 use crate::value::ValAccessor;
 use crate::AStr;
 use crate::Error;
 use crate::Uid;
+
+use super::ConfigValue;
+use super::OptConfig;
 
 /// A multiple features option type.
 ///
@@ -362,5 +366,114 @@ impl Opt for AOpt {
 
     fn init(&mut self) -> Result<(), Error> {
         self.accessor.initialize()
+    }
+}
+
+fn gen_hint(hint: Option<&AStr>, n: &AStr, idx: Option<&Index>, alias: Option<&Vec<AStr>>) -> AStr {
+    let hint_generator = || {
+        let mut names = Vec::with_capacity(1 + alias.map(|v| v.len()).unwrap_or_default());
+
+        // add name
+        names.push(n.as_str());
+        // add alias
+        if let Some(alias_vec) = alias {
+            for alias in alias_vec {
+                names.push(alias.as_str());
+            }
+        }
+        // sort name by len
+        names.sort_by_key(|v| v.len());
+        crate::astr(if let Some(index) = idx {
+            let index_string = index.to_help();
+
+            // add index string
+            if index_string.is_empty() {
+                names.join(", ")
+            } else {
+                format!("{}@{}", names.join(", "), index_string)
+            }
+        } else {
+            names.join(", ")
+        })
+    };
+
+    hint.cloned().unwrap_or_else(hint_generator)
+}
+
+impl TryFrom<OptConfig> for AOpt {
+    type Error = Error;
+
+    fn try_from(mut value: OptConfig) -> Result<Self, Self::Error> {
+        let r#type = value.take_type();
+        let name = value.take_name();
+        let force = value.take_force();
+        let index = value.take_index();
+        let alias = value.take_alias();
+        let hint = value.take_hint();
+        let help = value.take_help();
+        let action = value.take_action();
+        let storer = value.take_storer();
+        let styles = value.take_style();
+        let initializer = value.take_initializer();
+        let ignore_name = value.ignore_name();
+        let ignore_alias = value.ignore_alias();
+        let ignore_index = value.ignore_index();
+
+        let force = force.unwrap_or(false);
+        let action = action.unwrap_or(Action::App);
+        let storer = storer
+            .ok_or_else(|| raise_error!("Incomplete option configuration: missing ValStorer"))?;
+        let initializer = initializer.ok_or_else(|| {
+            raise_error!("Incomplete option configuration: missing ValInitializer")
+        })?;
+        let styles =
+            styles.ok_or_else(|| raise_error!("Incomplete option configuration: missing Style"))?;
+        let name = name
+            .ok_or_else(|| raise_error!("Incomplete option configuration: missing option name"))?;
+        let hint = gen_hint(hint.as_ref(), &name, index.as_ref(), alias.as_ref());
+        let help = help.unwrap_or_default();
+        let r#type = r#type.ok_or_else(|| {
+            raise_error!("Incomplete option configuration: missing option value type")
+        })?;
+        let help = Help::default().with_help(help).with_hint(hint);
+
+        if ignore_alias {
+            if let Some(alias) = &alias {
+                debug_assert!(
+                    !alias.is_empty(),
+                    "Option {} not support alias: {:?}",
+                    name,
+                    alias
+                );
+            }
+        }
+        if ignore_index {
+            if let Some(index) = &index {
+                debug_assert!(
+                    !index.is_null(),
+                    "Please remove the index, option `{}` not support positional parameters: {:?}",
+                    name,
+                    index
+                );
+            }
+        } else {
+            debug_assert!(
+                    index.is_some(),
+                    "Please provide an index, indicate the position you want to capture for option `{}`.",
+                    name
+                );
+        }
+        Ok(
+            AOpt::new(name, r#type, ValAccessor::new(storer, initializer))
+                .with_force(force)
+                .with_idx(index)
+                .with_action(action)
+                .with_alias(alias)
+                .with_style(styles)
+                .with_opt_help(help)
+                .with_ignore_name(ignore_name)
+                .with_ignore_alias(ignore_alias)
+                .with_ignore_index(ignore_index),
+        )
     }
 }
