@@ -175,8 +175,7 @@ impl<'a> ArgGenerator<'a> {
                     &cfg_ident,
                     quote! {{
                         let validator = cote::prelude::ValValidator::from_fn( |value| {
-                            use cote::valid::Validate;
-                            #cfg_value.check(value)
+                            cote::valid::Validate::check(& #cfg_value, value)
                         });
                         cote::prelude::ValStorer::new_validator::<InferedOptVal<#inner_ty>>(validator)
                     }},
@@ -242,7 +241,7 @@ impl<'a> ArgGenerator<'a> {
         if let Some(index) = self.pos_index() {
             if !self.config.has_cfg(ArgKind::Index) {
                 codes.push(quote! {
-                    #cfg_ident.set_index(cote::prelude::Index::forward(#index));
+                    cote::prelude::ConfigValue::set_index(&mut #cfg_ident, cote::prelude::Index::forward(#index));
                 });
             } else {
                 return Err(error(

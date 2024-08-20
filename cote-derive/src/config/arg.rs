@@ -86,41 +86,41 @@ impl ArgKind {
     pub fn simple(&self, ident: &Ident, val: TokenStream) -> syn::Result<TokenStream> {
         match self {
             ArgKind::Name => Ok(quote! {
-                #ident.set_name(#val);
+                cote::prelude::ConfigValue::set_name(&mut #ident, #val);
             }),
             ArgKind::Hint => Ok(quote! {
-                #ident.set_hint(#val);
+                cote::prelude::ConfigValue::set_hint(&mut #ident, #val);
             }),
 
             ArgKind::Help => Ok(quote! {
-                #ident.set_help(#val);
+                cote::prelude::ConfigValue::set_help(&mut #ident, #val);
             }),
             ArgKind::Value => Ok(quote! {
-                #ident.set_initializer(cote::prelude::ValInitializer::new_value(#val));
+                cote::prelude::ConfigValue::set_initializer(&mut #ident, cote::prelude::ValInitializer::new_value(#val));
             }),
             ArgKind::Values => Ok(quote! {
-                #ident.set_initializer(cote::prelude::ValInitializer::new_values(#val));
+                cote::prelude::ConfigValue::set_initializer(&mut #ident, cote::prelude::ValInitializer::new_values(#val));
             }),
             ArgKind::Alias => Ok(quote! {
-                #ident.add_alias(#val);
+                cote::prelude::ConfigValue::add_alias(&mut #ident, #val);
             }),
             ArgKind::Index => Ok(quote! {
-                #ident.set_index(<cote::prelude::Index as std::convert::TryFrom::<_>>::try_from(#val)?);
+                cote::prelude::ConfigValue::set_index(&mut #ident, <cote::prelude::Index as std::convert::TryFrom::<_>>::try_from(#val)?);
             }),
             ArgKind::Force => Ok(quote! {
-                #ident.set_force(#val);
+                cote::prelude::ConfigValue::set_force(&mut #ident, #val);
             }),
             ArgKind::Action => Ok(quote! {
-                #ident.set_action(#val);
+                cote::prelude::ConfigValue::set_action(&mut #ident, #val);
             }),
             ArgKind::Validator => Ok(quote! {
-                #ident.set_storer(#val);
+                cote::prelude::ConfigValue::set_storer(&mut #ident, #val);
             }),
             ArgKind::Append => Ok(quote! {
-                #ident.set_action(cote::prelude::Action::App);
+                cote::prelude::ConfigValue::set_action(&mut #ident, cote::prelude::Action::App);
             }),
             ArgKind::Count => Ok(quote! {
-                #ident.set_action(cote::prelude::Action::Cnt);
+                cote::prelude::ConfigValue::set_action(&mut #ident, cote::prelude::Action::Cnt);
             }),
             _ => Err(crate::error(ident.span(), "")),
         }

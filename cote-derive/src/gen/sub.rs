@@ -105,7 +105,7 @@ impl<'a> SubGenerator<'a> {
             let uid_literal = Utils::id2uid_literal(id);
 
             quote! {
-                if let Ok(value) = set.opt(#uid_literal)?.val::<bool>() {
+                if let Ok(value) = cote::prelude::OptValueExt::val::<bool>(cote::prelude::SetExt::opt(set, #uid_literal)?) {
                     if *value {
                         // if help set, pass original value to sub parser
                         args.push(ser.sve_take_val::<cote::prelude::RawVal>()?);
@@ -217,7 +217,7 @@ impl<'a> SubGenerator<'a> {
         {
             codes.push(SubKind::Help.simple(&cfg_ident, &help)?);
         }
-        codes.push(quote! { cote::prelude::Cmd::infer_fill_info(&mut #cfg_ident)?; });
+        codes.push(quote! { <cote::prelude::Cmd as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?; });
         Utils::gen_opt_create(self.ident(), Some(quote! { #(#codes)* }))
     }
 
@@ -236,7 +236,7 @@ impl<'a> SubGenerator<'a> {
             Ok((
                 true,
                 quote! {
-                    #ident: cote::prelude::SetExt::opt(#uid_literal).map(|v|v.val()).ok(),
+                    #ident: cote::prelude::SetExt::opt(#uid_literal).map(cote::prelude::OptValueExt::val).ok(),
                 },
             ))
         } else {

@@ -62,20 +62,20 @@ impl SubKind {
     pub fn simple(&self, ident: &Ident, val: &TokenStream) -> syn::Result<TokenStream> {
         match self {
             SubKind::Name => Ok(quote! {
-                #ident.set_name(#val);
+                cote::prelude::ConfigValue::set_name(&mut #ident, #val);
             }),
             SubKind::Hint => Ok(quote! {
-                #ident.set_hint(#val);
+                cote::prelude::ConfigValue::set_hint(&mut #ident, #val);
             }),
 
             SubKind::Help => Ok(quote! {
-                #ident.set_help(#val);
+                cote::prelude::ConfigValue::set_help(&mut #ident, #val);
             }),
             SubKind::Alias => Ok(quote! {
-                #ident.add_alias(#val);
+                cote::prelude::ConfigValue::add_alias(&mut #ident, #val);
             }),
             SubKind::Force => Ok(quote! {
-                #ident.set_force(#val);
+                cote::prelude::ConfigValue::set_force(&mut #ident, #val);
             }),
             _ => Err(crate::error(ident.span(), "")),
         }

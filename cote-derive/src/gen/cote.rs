@@ -303,8 +303,8 @@ impl<'a> CoteGenerator<'a> {
             let create = Utils::gen_opt_create(
                 &ident,
                 Some(quote! {
-                    cfg.set_name("main_option");
-                    <cote::prelude::Main>::infer_fill_info(&mut cfg)?;
+                    cote::prelude::ConfigValue::set_name(&mut cfg, "main_option");
+                    <cote::prelude::Main as cote::prelude::Infer>::infer_fill_info(&mut cfg)?;
                 }),
             )?;
             let insert = Utils::gen_opt_insert(&ident, &uid_ident, &literal)?;
@@ -345,10 +345,10 @@ impl<'a> CoteGenerator<'a> {
                     let cfg = {
                         let mut cfg = cote::prelude::ConfigBuild::build(#help_opt, set)?;
 
-                        <bool>::infer_fill_info(&mut cfg)?;
+                        <bool as cote::prelude::Infer>::infer_fill_info(&mut cfg)?;
                         cfg
                     };
-                    set.ctor_mut(&ctor_name)?.new_with(cfg).map_err(Into::into)?
+                    cote::prelude::Ctor::new_with(cote::prelude::SetExt::ctor_mut(set, &ctor_name)?, cfg).map_err(Into::into)?
                 };
             };
             let insert = Utils::gen_opt_insert(&ident, &uid_ident, &literal)?;

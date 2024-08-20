@@ -83,7 +83,7 @@ impl AttrKind {
                     let inner_ty = hint.inner_type();
 
                     Ok(quote! {
-                        #cfg_ident.set_type::<#inner_ty>();
+                        cote::prelude::ConfigValue::set_type::<#inner_ty>(&mut #cfg_ident);
                         <cote::prelude::Cmd as cote::prelude::Alter>::alter(cote::prelude::Hint::Null, &mut #cfg_ident);
                         <cote::prelude::Cmd as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
                     })
@@ -94,7 +94,7 @@ impl AttrKind {
                     WrapperTy::Opt(inner_ty) => {
                         quote! {
                             // using information of Pos<T>
-                            #cfg_ident.set_type::<#inner_ty>();
+                            cote::prelude::ConfigValue::set_type::<#inner_ty>(&mut #cfg_ident);
                             <cote::prelude::Pos<#inner_ty> as cote::prelude::Alter>::alter(cote::prelude::Hint::Opt, &mut #cfg_ident);
                             <cote::prelude::Pos<#inner_ty> as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
                         }
@@ -102,7 +102,7 @@ impl AttrKind {
                     WrapperTy::Vec(inner_ty) => {
                         quote! {
                             // using information of Pos<T>
-                            #cfg_ident.set_type::<#inner_ty>();
+                            cote::prelude::ConfigValue::set_type::<#inner_ty>(&mut #cfg_ident);
                             <cote::prelude::Pos<#inner_ty> as cote::prelude::Alter>::alter(cote::prelude::Hint::Vec, &mut #cfg_ident);
                             <cote::prelude::Pos<#inner_ty> as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
                         }
@@ -110,7 +110,7 @@ impl AttrKind {
                     WrapperTy::OptVec(inner_ty) => {
                         quote! {
                             // using information of Pos<T>
-                            #cfg_ident.set_type::<#inner_ty>();
+                            cote::prelude::ConfigValue::set_type::<#inner_ty>(&mut #cfg_ident);
                             <cote::prelude::Pos<#inner_ty> as cote::prelude::Alter>::alter(cote::prelude::Hint::OptVec, &mut #cfg_ident);
                             <cote::prelude::Pos<#inner_ty> as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
                         }
@@ -118,7 +118,7 @@ impl AttrKind {
                     WrapperTy::Null(inner_ty) => {
                         quote! {
                             // using information of Pos<T>
-                            #cfg_ident.set_type::<#inner_ty>();
+                            cote::prelude::ConfigValue::set_type::<#inner_ty>(&mut #cfg_ident);
                             <cote::prelude::Pos<#inner_ty> as cote::prelude::Alter>::alter(cote::prelude::Hint::Null, &mut #cfg_ident);
                             <cote::prelude::Pos<#inner_ty> as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
                         }
@@ -312,7 +312,7 @@ impl Utils {
                     #cfg_modifer
                     cfg
                 };
-                set.ctor_mut(&ctor_name)?.new_with(cfg).map_err(Into::into)?
+                cote::prelude::Ctor::new_with(cote::prelude::SetExt::ctor_mut(set, &ctor_name)?, cfg).map_err(Into::into)?
             };
         })
     }
@@ -439,7 +439,7 @@ impl Utils {
         let normal_help = enable_normal.then(|| {
             let uid_literal = Utils::id2uid_literal(help_uid.unwrap());
             Some(quote! {
-                if set.opt(#uid_literal)?.val::<bool>().ok() == Some(&true) {
+                if cote::prelude::OptValueExt::val::<bool>(cote::prelude::SetExt::opt(set, #uid_literal)?).ok() == Some(&true) {
                     rctx.set_display_help(true);
                     rctx.set_exit(true);
                     // if we have sub parsers and we not in sub parser
