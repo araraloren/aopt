@@ -78,26 +78,27 @@ pub struct CtxSaver {
 /// }
 /// ```
 pub trait Policy {
-    type Ret;
+    type Ret<'a>;
     type Set;
     type Inv<'a>;
     type Ser;
     type Error: Into<Error>;
 
-    fn parse(
+    fn parse<'a>(
         &mut self,
         set: &mut Self::Set,
         inv: &mut Self::Inv<'_>,
         ser: &mut Self::Ser,
-        args: ARef<Args>,
-    ) -> Result<Self::Ret, Self::Error>;
+        args: Args<'a>,
+    ) -> Result<Self::Ret<'a>, Self::Error>;
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Action {
-    StopPolicy,
-    QuitPolicy,
+    Stop,
+    Quit,
+    Null,
 }
 
 pub trait PolicySettings {

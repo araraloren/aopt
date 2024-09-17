@@ -1,18 +1,20 @@
+use std::borrow::Cow;
+use std::ffi::OsStr;
 use std::ops::{Deref, DerefMut};
 
+use crate::ctx::Ctx;
 use crate::Error;
-use crate::{ctx::Ctx, RawVal};
 
 /// Return value for [`Policy`](crate::parser::Policy).
 #[derive(Debug, Clone, Default)]
-pub struct ReturnVal {
-    failure: Option<Error>,
+pub struct ReturnVal<'a> {
+    ctx: Ctx<'a>,
 
-    ctx: Ctx,
+    failure: Option<Error>,
 }
 
-impl ReturnVal {
-    pub fn new(ctx: Ctx) -> Self {
+impl<'a> ReturnVal<'a> {
+    pub fn new(ctx: Ctx<'a>) -> Self {
         Self { ctx, failure: None }
     }
 
@@ -30,11 +32,11 @@ impl ReturnVal {
         self.failure.as_ref()
     }
 
-    pub fn ctx(&self) -> &Ctx {
+    pub fn ctx(&self) -> &Ctx<'a> {
         &self.ctx
     }
 
-    pub fn args(&self) -> &[RawVal] {
+    pub fn args(&self) -> &[Cow<'a, OsStr>] {
         self.ctx.args().as_slice()
     }
 
@@ -45,7 +47,7 @@ impl ReturnVal {
     }
 
     /// Unwrap the [`Ctx`] from [`ReturnVal`].
-    pub fn unwrap(self) -> Ctx {
+    pub fn unwrap(self) -> Ctx<'a> {
         Result::unwrap(if self.failure.is_none() {
             Ok(self.ctx)
         } else {
@@ -53,7 +55,7 @@ impl ReturnVal {
         })
     }
 
-    pub fn ok(self) -> Result<Ctx, Error> {
+    pub fn ok(self) -> Result<Ctx<'a>, Error> {
         if let Some(failure) = self.failure {
             Err(failure)
         } else {
@@ -61,7 +63,7 @@ impl ReturnVal {
         }
     }
 
-    pub fn take_ctx(&mut self) -> Ctx {
+    pub fn take_ctx(&mut self) -> Ctx<'a> {
         std::mem::take(&mut self.ctx)
     }
 
@@ -69,41 +71,39 @@ impl ReturnVal {
         self.failure.take()
     }
 
-    pub fn clone_args(&self) -> Vec<RawVal> {
-        let args = self.ctx.args().as_ref();
-
-        args.clone().into()
+    pub fn clone_args(&self) -> Vec<Cow<'a, OsStr>> {
+        self.ctx.args().clone().unwrap_or_clone()
     }
 }
 
-impl Deref for ReturnVal {
-    type Target = Ctx;
+impl<'a> Deref for ReturnVal<'a> {
+    type Target = Ctx<'a>;
 
     fn deref(&self) -> &Self::Target {
         &self.ctx
     }
 }
 
-impl DerefMut for ReturnVal {
+impl<'a> DerefMut for ReturnVal<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.ctx
     }
 }
 
-impl From<ReturnVal> for bool {
-    fn from(value: ReturnVal) -> Self {
+impl From<ReturnVal<'_>> for bool {
+    fn from(value: ReturnVal<'_>) -> Self {
         value.status()
     }
 }
 
-impl<'a> From<&'a ReturnVal> for bool {
-    fn from(value: &'a ReturnVal) -> Self {
+impl<'a> From<&'a ReturnVal<'_>> for bool {
+    fn from(value: &'a ReturnVal<'_>) -> Self {
         value.status()
     }
 }
 
-impl<'a> From<&'a mut ReturnVal> for bool {
-    fn from(value: &'a mut ReturnVal) -> Self {
+impl<'a> From<&'a mut ReturnVal<'_>> for bool {
+    fn from(value: &'a mut ReturnVal<'_>) -> Self {
         value.status()
     }
 }

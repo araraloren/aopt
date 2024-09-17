@@ -174,7 +174,7 @@ impl RawValParser for Stop {
         const STOP: &str = "--";
 
         if ctx.name()?.map(|v| v.as_str()) == Some(STOP) {
-            ctx.set_policy_act(crate::parser::Action::StopPolicy);
+            ctx.set_policy_act(crate::parser::Action::Stop);
             Ok(Stop)
         } else {
             Err(Error::sp_rawval(raw, "except `--` for Stop").with_uid(ctx.uid()?))

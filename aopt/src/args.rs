@@ -1,34 +1,64 @@
-#[cfg_attr(windows, path = "args/win.rs")]
-#[cfg_attr(not(windows), path = "args/unix.rs")]
-pub(crate) mod osstr_ext;
-
+use std::borrow::Cow;
+use std::ffi::OsStr;
+use std::ffi::OsString;
 use std::fmt::Display;
 use std::ops::Deref;
-use std::ops::DerefMut;
 
 use crate::parser::ReturnVal;
+use crate::ARef;
 use crate::Error;
-use crate::RawVal;
 
-pub use self::osstr_ext::split_once;
-pub use self::osstr_ext::strip_prefix;
-pub use self::osstr_ext::CLOpt;
+#[cfg(target_family = "windows")]
+pub fn split_once<'a>(str: &'a OsStr, ch: char) -> Option<(Cow<'a, OsStr>, Cow<'a, OsStr>)> {
+    use std::os::windows::ffi::{OsStrExt, OsStringExt};
 
-pub trait ArgParser {
-    type Output;
-    type Error: Into<Error>;
+    let enc = str.encode_wide();
+    let mut buf = [0; 1];
+    let sep = ch.encode_utf16(&mut buf);
+    let enc = enc.collect::<Vec<u16>>();
 
-    fn parse_arg(&self) -> Result<Self::Output, Self::Error>;
+    enc.iter()
+        .enumerate()
+        .find(|(_, ch)| ch == &&sep[0])
+        .map(|(i, _)| {
+            (
+                Cow::Owned(OsString::from_wide(&enc[0..i])),
+                Cow::Owned(OsString::from_wide(&enc[i + 1..])),
+            )
+        })
 }
+
+#[cfg(any(target_family = "wasm", target_family = "unix"))]
+pub fn split_once<'a>(str: &'a OsStr, ch: char) -> Option<(Cow<'a, OsStr>, Cow<'a, OsStr>)> {
+    #[cfg(target_family = "unix")]
+    use std::os::unix::ffi::OsStrExt;
+    #[cfg(target_family = "wasm")]
+    use std::os::wasi::ffi::OsStrExt;
+
+    let enc = str.as_bytes();
+    let mut buf = [0; 1];
+    let sep = ch.encode_utf8(&mut buf).as_bytes();
+
+    enc.iter()
+        .enumerate()
+        .find(|(_, ch)| ch == &&sep[0])
+        .map(|(i, _)| {
+            (
+                Cow::Borrowed(OsStr::from_bytes(&enc[0..i])),
+                Cow::Borrowed(OsStr::from_bytes(&enc[i + 1..])),
+            )
+        })
+}
+
 #[derive(Debug, Clone, Default)]
-pub struct Args {
-    inner: Vec<RawVal>,
+pub struct Args<'a> {
+    inner: ARef<Vec<Cow<'a, OsStr>>>,
 }
 
-impl Args {
-    pub fn new<S: Into<RawVal>>(inner: impl Iterator<Item = S>) -> Self {
+impl<'a> Args<'a> {
+    pub fn new<S: IntoArg<'a>>(inner: impl Iterator<Item = S>) -> Self {
         Self {
-            inner: inner.map(|v| v.into()).collect(),
+            inner: ARef::new(inner.map(|v| v.into_arg()).collect()),
         }
     }
 
@@ -37,56 +67,56 @@ impl Args {
         Self::new(std::env::args_os())
     }
 
-    pub fn guess_iter(&self) -> Iter<'_> {
-        Iter::new(&self.inner)
+    pub fn iter2(&self) -> impl Iterator<Item = (&Cow<'a, OsStr>, Option<&Cow<'a, OsStr>>)> {
+        self.inner
+            .iter()
+            .zip(self.inner.iter().skip(1).map(|v| Some(v)).chain(None))
+    }
+
+    pub fn unwrap_or_clone(self) -> Vec<Cow<'a, OsStr>> {
+        ARef::unwrap_or_clone(self.inner)
     }
 }
 
-impl<T: Into<RawVal>, I: IntoIterator<Item = T>> From<I> for Args {
+impl<'a, T: IntoArg<'a>, I: IntoIterator<Item = T>> From<I> for Args<'a> {
     fn from(value: I) -> Self {
         Self::new(value.into_iter())
     }
 }
 
-impl From<Args> for Vec<RawVal> {
-    fn from(value: Args) -> Self {
-        value.inner
+impl<'a> From<Args<'a>> for Vec<Cow<'a, OsStr>> {
+    fn from(value: Args<'a>) -> Self {
+        value.unwrap_or_clone()
     }
 }
 
-impl From<ReturnVal> for Args {
-    fn from(value: ReturnVal) -> Self {
-        Self::new(value.clone_args().into_iter())
+impl<'a> From<ReturnVal<'a>> for Args<'a> {
+    fn from(mut value: ReturnVal<'a>) -> Self {
+        value.take_ctx().take_args()
     }
 }
 
-impl<'a> From<&'a ReturnVal> for Args {
-    fn from(value: &'a ReturnVal) -> Self {
-        Self::new(value.args().iter().cloned())
+impl<'a> From<&ReturnVal<'a>> for Args<'a> {
+    fn from(value: &ReturnVal<'a>) -> Self {
+        value.ctx().args().clone()
     }
 }
 
-impl<'a> From<&'a mut ReturnVal> for Args {
-    fn from(value: &'a mut ReturnVal) -> Self {
-        Self::new(value.clone_args().into_iter())
+impl<'a> From<&mut ReturnVal<'a>> for Args<'a> {
+    fn from(value: &mut ReturnVal<'a>) -> Self {
+        value.take_ctx().take_args()
     }
 }
 
-impl Deref for Args {
-    type Target = Vec<RawVal>;
+impl<'a> Deref for Args<'a> {
+    type Target = Vec<Cow<'a, OsStr>>;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
     }
 }
 
-impl DerefMut for Args {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
-    }
-}
-
-impl Display for Args {
+impl Display for Args<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -100,86 +130,92 @@ impl Display for Args {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Iter<'a> {
-    inner: &'a [RawVal],
-    index: usize,
+pub trait IntoArg<'a> {
+    fn into_arg(self) -> Cow<'a, OsStr>;
 }
 
-impl<'a> Iter<'a> {
-    pub fn new(iter: &'a [RawVal]) -> Self {
-        Self {
-            inner: iter,
-            index: 0,
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        self.inner.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.inner.is_empty()
+impl<'a> IntoArg<'a> for &'a str {
+    fn into_arg(self) -> Cow<'a, OsStr> {
+        Cow::Borrowed(self.as_ref())
     }
 }
 
-impl<'a> Iterator for Iter<'a> {
-    type Item = (&'a RawVal, Option<&'a RawVal>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let index = self.index;
-
-        if index < self.len() {
-            let may_opt = &self.inner[index];
-            let may_arg = (index + 1 < self.len()).then(|| &self.inner[index + 1]);
-
-            self.index += 1;
-            Some((may_opt, may_arg))
-        } else {
-            None
-        }
+impl<'a> IntoArg<'a> for String {
+    fn into_arg(self) -> Cow<'a, OsStr> {
+        Cow::Owned(OsString::from(self))
     }
 }
 
-impl<'a> ExactSizeIterator for Iter<'a> {
-    fn len(&self) -> usize {
-        self.inner.len()
+impl<'a> IntoArg<'a> for &'a String {
+    fn into_arg(self) -> Cow<'a, OsStr> {
+        Cow::Borrowed(self.as_ref())
+    }
+}
+
+impl<'a> IntoArg<'a> for &'a mut String {
+    fn into_arg(self) -> Cow<'a, OsStr> {
+        Cow::Borrowed(AsRef::as_ref(self))
+    }
+}
+
+impl<'a> IntoArg<'a> for &'a OsStr {
+    fn into_arg(self) -> Cow<'a, OsStr> {
+        Cow::Borrowed(self)
+    }
+}
+
+impl<'a> IntoArg<'a> for OsString {
+    fn into_arg(self) -> Cow<'a, OsStr> {
+        Cow::Owned(self)
+    }
+}
+
+impl<'a> IntoArg<'a> for &'a OsString {
+    fn into_arg(self) -> Cow<'a, OsStr> {
+        Cow::Borrowed(self.as_ref())
+    }
+}
+
+impl<'a> IntoArg<'a> for &'a mut OsString {
+    fn into_arg(self) -> Cow<'a, OsStr> {
+        Cow::Borrowed(AsRef::as_ref(self))
     }
 }
 
 #[cfg(test)]
 mod test {
 
+    use std::ffi::OsStr;
+
     use super::Args;
-    use crate::RawVal;
 
     #[test]
     fn test_args() {
         let args = Args::from(["--opt", "value", "--bool", "pos"]);
-        let mut iter = args.guess_iter().enumerate();
+        let mut iter = args.iter2().enumerate();
 
         if let Some((idx, (opt, arg))) = iter.next() {
             assert_eq!(idx, 0);
-            assert_eq!(opt, &RawVal::from("--opt"));
-            assert_eq!(arg, Some(&RawVal::from("value")));
+            assert_eq!(opt, OsStr::new("--opt"));
+            assert_eq!(arg.map(|v| v.as_ref()), Some(OsStr::new("value")));
         }
 
         if let Some((idx, (opt, arg))) = iter.next() {
             assert_eq!(idx, 1);
-            assert_eq!(opt, &RawVal::from("value"));
-            assert_eq!(arg, Some(&RawVal::from("--bool")));
+            assert_eq!(opt, OsStr::new("value"));
+            assert_eq!(arg.map(|v| v.as_ref()), Some(OsStr::new("--bool")));
         }
 
         if let Some((idx, (opt, arg))) = iter.next() {
             assert_eq!(idx, 2);
-            assert_eq!(opt, &RawVal::from("--bool"));
-            assert_eq!(arg, Some(&RawVal::from("pos")));
+            assert_eq!(opt, OsStr::new("--bool"));
+            assert_eq!(arg.map(|v| v.as_ref()), Some(OsStr::new("pos")));
         }
 
         if let Some((idx, (opt, arg))) = iter.next() {
             assert_eq!(idx, 3);
-            assert_eq!(opt, &RawVal::from("pos"));
-            assert_eq!(arg, None);
+            assert_eq!(opt, OsStr::new("pos"));
+            assert_eq!(arg.map(|v| v.as_ref()), None);
         }
 
         assert_eq!(iter.next(), None);

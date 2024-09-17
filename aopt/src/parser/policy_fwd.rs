@@ -311,12 +311,12 @@ where
                         }
                         if let Some(act) = guess.ctx.policy_act() {
                             match act {
-                                Action::StopPolicy => {
+                                Action::Stop => {
                                     stopped = true;
                                     guess.ctx.reset_policy_act();
                                     break;
                                 }
-                                Action::QuitPolicy => return Ok(()),
+                                Action::Quit => return Ok(()),
                             }
                         }
                         if matched {
@@ -371,7 +371,7 @@ where
 
             trace!("Guess CMD = {:?}", guess.name);
             guess.guess_and_invoke(&UserStyle::Cmd, overload)?;
-            if let Some(Action::QuitPolicy) = ctx.policy_act() {
+            if let Some(Action::Quit) = ctx.policy_act() {
                 return Ok(());
             }
             cmd_fail.process_check(self.checker().cmd_check(set))?;
@@ -399,11 +399,11 @@ where
                 guess.guess_and_invoke(&UserStyle::Pos, overload)?;
                 if let Some(act) = guess.ctx.policy_act() {
                     match act {
-                        Action::StopPolicy => {
+                        Action::Stop => {
                             guess.ctx.reset_policy_act();
                             break;
                         }
-                        Action::QuitPolicy => return Ok(()),
+                        Action::Quit => return Ok(()),
                     }
                 }
             }

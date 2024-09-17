@@ -1,31 +1,30 @@
+use std::borrow::Cow;
+use std::ffi::OsStr;
 use std::fmt::Display;
 
 use crate::args::Args;
 use crate::opt::Style;
 use crate::parser::Action;
 use crate::parser::ReturnVal;
-use crate::ARef;
-use crate::AStr;
 use crate::Error;
-use crate::RawVal;
 use crate::Uid;
 
 #[derive(Debug, Clone, Default)]
-pub struct InnerCtx {
+pub struct InnerCtx<'a> {
     uid: Uid,
 
-    name: Option<AStr>,
+    name: Option<Cow<'a, str>>,
 
     style: Style,
 
-    arg: Option<RawVal>,
+    arg: Option<Cow<'a, OsStr>>,
 
     index: usize,
 
     total: usize,
 }
 
-impl InnerCtx {
+impl<'a> InnerCtx<'a> {
     pub fn with_uid(mut self, uid: Uid) -> Self {
         self.uid = uid;
         self
@@ -41,7 +40,7 @@ impl InnerCtx {
         self
     }
 
-    pub fn with_name(mut self, name: Option<AStr>) -> Self {
+    pub fn with_name(mut self, name: Option<Cow<'a, str>>) -> Self {
         self.name = name;
         self
     }
@@ -51,7 +50,7 @@ impl InnerCtx {
         self
     }
 
-    pub fn with_arg(mut self, argument: Option<RawVal>) -> Self {
+    pub fn with_arg(mut self, argument: Option<Cow<'a, OsStr>>) -> Self {
         self.arg = argument;
         self
     }
@@ -74,7 +73,7 @@ impl InnerCtx {
     /// The name of matched option.
     /// For option it is the option name, for NOA it is the argument,
     /// which set in [`invoke`](crate::guess::InvokeGuess#method.invoke).
-    pub fn name(&self) -> Option<&AStr> {
+    pub fn name(&self) -> Option<&Cow<'a, str>> {
         self.name.as_ref()
     }
 
@@ -84,8 +83,8 @@ impl InnerCtx {
     }
 
     /// The argument which set in [`invoke`](crate::guess::InvokeGuess#method.invoke).
-    pub fn arg(&self) -> Option<RawVal> {
-        self.arg.clone()
+    pub fn arg(&self) -> Option<&Cow<'a, OsStr>> {
+        self.arg.as_ref()
     }
 
     pub fn set_uid(&mut self, uid: Uid) -> &mut Self {
@@ -105,7 +104,7 @@ impl InnerCtx {
         self
     }
 
-    pub fn set_name(&mut self, name: Option<AStr>) -> &mut Self {
+    pub fn set_name(&mut self, name: Option<Cow<'a, str>>) -> &mut Self {
         self.name = name;
         self
     }
@@ -115,13 +114,13 @@ impl InnerCtx {
         self
     }
 
-    pub fn set_arg(&mut self, argument: Option<RawVal>) -> &mut Self {
-        self.arg = argument;
+    pub fn set_arg(&mut self, arg: Option<Cow<'a, OsStr>>) -> &mut Self {
+        self.arg = arg;
         self
     }
 }
 
-impl Display for InnerCtx {
+impl Display for InnerCtx<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -139,38 +138,38 @@ impl Display for InnerCtx {
 /// The invoke context of option handler.
 /// It saved the option information and matched arguments.
 #[derive(Debug, Clone, Default)]
-pub struct Ctx {
-    args: ARef<Args>,
+pub struct Ctx<'a> {
+    args: Args<'a>,
 
-    orig_args: ARef<Args>,
+    orig_args: Args<'a>,
 
-    inner_ctx: Option<InnerCtx>,
+    inner_ctx: Option<InnerCtx<'a>>,
 
     #[cfg(not(feature = "sync"))]
-    action: ARef<std::cell::RefCell<Option<Action>>>,
+    action: std::cell::RefCell<Option<Action>>,
 
     #[cfg(feature = "sync")]
-    action: ARef<std::sync::Mutex<Option<Action>>>,
+    action: std::sync::Mutex<Option<Action>>,
 }
 
-impl Ctx {
-    pub fn with_args(mut self, args: ARef<Args>) -> Self {
+impl<'a> Ctx<'a> {
+    pub fn with_args(mut self, args: Args<'a>) -> Self {
         self.args = args;
         self
     }
 
-    pub fn with_orig_args(mut self, orig_args: ARef<Args>) -> Self {
+    pub fn with_orig_args(mut self, orig_args: Args<'a>) -> Self {
         self.orig_args = orig_args;
         self
     }
 
-    pub fn with_inner_ctx(mut self, inner_ctx: InnerCtx) -> Self {
+    pub fn with_inner_ctx(mut self, inner_ctx: InnerCtx<'a>) -> Self {
         self.inner_ctx = Some(inner_ctx);
         self
     }
 }
 
-impl Ctx {
+impl<'a> Ctx<'a> {
     /// The uid of matched option.
     pub fn uid(&self) -> Result<Uid, Error> {
         Ok(self.inner_ctx()?.uid())
@@ -189,7 +188,7 @@ impl Ctx {
     /// The name of matched option.
     /// For option it is the option name, for NOA it is the argument,
     /// which set in [`invoke`](crate::guess::InvokeGuess#method.invoke).
-    pub fn name(&self) -> Result<Option<&AStr>, Error> {
+    pub fn name(&self) -> Result<Option<&Cow<'a, str>>, Error> {
         Ok(self.inner_ctx()?.name())
     }
 
@@ -200,48 +199,48 @@ impl Ctx {
 
     /// The copy of [`Args`] when the option matched.
     /// It may be changing during parsing process.
-    pub fn args(&self) -> &ARef<Args> {
+    pub fn args(&self) -> &Args<'a> {
         &self.args
     }
 
     /// The argument which set in [`invoke`](crate::guess::InvokeGuess#method.invoke).
-    pub fn arg(&self) -> Result<Option<RawVal>, Error> {
+    pub fn arg(&self) -> Result<Option<&Cow<'a, OsStr>>, Error> {
         Ok(self.inner_ctx()?.arg())
     }
 
-    pub fn inner_ctx(&self) -> Result<&InnerCtx, Error> {
+    pub fn inner_ctx(&self) -> Result<&InnerCtx<'a>, Error> {
         self.inner_ctx.as_ref().ok_or_else(|| {
             crate::raise_error!("InnerCtx(read only) not exist, try create a new one")
         })
     }
 
-    pub fn inner_ctx_mut(&mut self) -> Result<&mut InnerCtx, Error> {
+    pub fn inner_ctx_mut(&mut self) -> Result<&mut InnerCtx<'a>, Error> {
         self.inner_ctx
             .as_mut()
             .ok_or_else(|| crate::raise_error!("InnerCtx(mutable) not exist, try create a new one"))
     }
 
     /// The original arguments passed by user.
-    pub fn orig_args(&self) -> &ARef<Args> {
+    pub fn orig_args(&self) -> &Args<'a> {
         &self.orig_args
     }
 
     /// The current argument indexed by `self.idx()`.
-    pub fn curr_arg(&self) -> Result<Option<&RawVal>, Error> {
+    pub fn curr_arg(&self) -> Result<Option<&Cow<'a, OsStr>>, Error> {
         let idx = self.idx()?;
         Ok((idx > 0).then(|| self.orig_args().get(idx)).flatten())
     }
 
-    pub fn take_args(&mut self) -> ARef<Args> {
+    pub fn take_args(&mut self) -> Args<'a> {
         std::mem::take(&mut self.args)
     }
 
-    pub fn take_orig_args(&mut self) -> ARef<Args> {
+    pub fn take_orig_args(&mut self) -> Args<'a> {
         std::mem::take(&mut self.orig_args)
     }
 }
 
-impl Ctx {
+impl<'a> Ctx<'a> {
     pub fn set_uid(&mut self, uid: Uid) -> Result<&mut Self, Error> {
         self.inner_ctx_mut()?.set_uid(uid);
         Ok(self)
@@ -259,12 +258,12 @@ impl Ctx {
         Ok(self)
     }
 
-    pub fn set_args(&mut self, args: ARef<Args>) -> &mut Self {
+    pub fn set_args(&mut self, args: Args<'a>) -> &mut Self {
         self.args = args;
         self
     }
 
-    pub fn set_name(&mut self, name: Option<AStr>) -> Result<&mut Self, Error> {
+    pub fn set_name(&mut self, name: Option<Cow<'a, str>>) -> Result<&mut Self, Error> {
         self.inner_ctx_mut()?.set_name(name);
         Ok(self)
     }
@@ -274,24 +273,24 @@ impl Ctx {
         Ok(self)
     }
 
-    pub fn set_arg(&mut self, argument: Option<RawVal>) -> Result<&mut Self, Error> {
-        self.inner_ctx_mut()?.set_arg(argument);
+    pub fn set_arg(&mut self, arg: Option<Cow<'a, OsStr>>) -> Result<&mut Self, Error> {
+        self.inner_ctx_mut()?.set_arg(arg);
         Ok(self)
     }
 
-    pub fn set_orig_args(&mut self, orig_args: ARef<Args>) -> &mut Self {
+    pub fn set_orig_args(&mut self, orig_args: Args<'a>) -> &mut Self {
         self.orig_args = orig_args;
         self
     }
 
-    pub fn set_inner_ctx(&mut self, inner_ctx: Option<InnerCtx>) -> &mut Self {
+    pub fn set_inner_ctx(&mut self, inner_ctx: Option<InnerCtx<'a>>) -> &mut Self {
         crate::trace!("Switching InnerCtx to {:?}", inner_ctx);
         self.inner_ctx = inner_ctx;
         self
     }
 }
 
-impl Ctx {
+impl<'a> Ctx<'a> {
     #[cfg(not(feature = "sync"))]
     pub fn policy_act(&self) -> Option<Action> {
         *self.action.borrow()
@@ -323,20 +322,20 @@ impl Ctx {
     }
 }
 
-impl From<ReturnVal> for Ctx {
-    fn from(mut value: ReturnVal) -> Self {
+impl<'a> From<ReturnVal<'a>> for Ctx<'a> {
+    fn from(mut value: ReturnVal<'a>) -> Self {
         value.take_ctx()
     }
 }
 
-impl<'a> From<&'a ReturnVal> for Ctx {
-    fn from(value: &'a ReturnVal) -> Self {
+impl<'a> From<&ReturnVal<'a>> for Ctx<'a> {
+    fn from(value: &ReturnVal<'a>) -> Self {
         value.ctx().clone()
     }
 }
 
-impl<'a> From<&'a mut ReturnVal> for Ctx {
-    fn from(value: &'a mut ReturnVal) -> Self {
+impl<'a> From<&mut ReturnVal<'a>> for Ctx<'a> {
+    fn from(value: &mut ReturnVal<'a>) -> Self {
         value.take_ctx()
     }
 }
