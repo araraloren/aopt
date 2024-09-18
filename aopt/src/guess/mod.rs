@@ -4,13 +4,13 @@ mod noa;
 mod single;
 pub mod style;
 
+use std::borrow::Cow;
+use std::ffi::OsStr;
+
 use crate::args::Args;
 use crate::ctx::InnerCtx;
 use crate::opt::Style;
-use crate::ARef;
-use crate::AStr;
 use crate::Error;
-use crate::RawVal;
 use crate::Uid;
 
 pub use self::invoke::InvokeGuess;
@@ -82,22 +82,22 @@ pub trait GuessPolicy<Sty, Policy> {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct PolicyInnerCtx {
+pub struct PolicyInnerCtx<'a> {
     pub uids: Vec<Uid>,
 
-    pub inner_ctx: InnerCtx,
+    pub inner_ctx: InnerCtx<'a>,
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct InnerCtxSaver {
+pub struct InnerCtxSaver<'a> {
     pub any_match: bool,
 
     pub consume: bool,
 
-    pub policy_ctx: Vec<PolicyInnerCtx>,
+    pub policy_ctx: Vec<PolicyInnerCtx<'a>>,
 }
 
-impl InnerCtxSaver {
+impl<'a> InnerCtxSaver<'a> {
     pub fn with_any_match(mut self, any_match: bool) -> Self {
         self.any_match = any_match;
         self
@@ -108,7 +108,7 @@ impl InnerCtxSaver {
         self
     }
 
-    pub fn with_policy_ctx(mut self, policy_ctx: Vec<PolicyInnerCtx>) -> Self {
+    pub fn with_policy_ctx(mut self, policy_ctx: Vec<PolicyInnerCtx<'a>>) -> Self {
         self.policy_ctx = policy_ctx;
         self
     }
@@ -138,24 +138,24 @@ pub trait MatchPolicy {
     ) -> Result<Self::Ret, Self::Error>;
 }
 
-pub trait PolicyConfig {
+pub trait PolicyConfig<'a> {
     fn idx(&self) -> usize;
 
     fn tot(&self) -> usize;
 
-    fn name(&self) -> Option<&AStr>;
+    fn name(&self) -> Option<&Cow<'a, str>>;
 
     fn style(&self) -> Style;
 
-    fn arg(&self) -> Option<RawVal>;
+    fn arg(&self) -> Option<&Cow<'a, OsStr>>;
 
     fn uids(&self) -> &[Uid];
 
-    fn collect_ctx(&self) -> Option<PolicyInnerCtx>;
+    fn collect_ctx(&self) -> Option<PolicyInnerCtx<'a>>;
 }
 
-pub trait PolicyBuild {
-    fn with_name(self, name: Option<AStr>) -> Self;
+pub trait PolicyBuild<'a> {
+    fn with_name(self, name: Option<Cow<'a, str>>) -> Self;
 
     fn with_style(self, style: Style) -> Self;
 
@@ -163,9 +163,9 @@ pub trait PolicyBuild {
 
     fn with_tot(self, total: usize) -> Self;
 
-    fn with_arg(self, argument: Option<RawVal>) -> Self;
+    fn with_arg(self, argument: Option<Cow<'a, OsStr>>) -> Self;
 
-    fn with_args(self, args: ARef<Args>) -> Self;
+    fn with_args(self, args: Args<'a>) -> Self;
 }
 
 /// Process the return value of handler:

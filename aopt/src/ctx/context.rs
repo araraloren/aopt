@@ -50,8 +50,8 @@ impl<'a> InnerCtx<'a> {
         self
     }
 
-    pub fn with_arg(mut self, argument: Option<Cow<'a, OsStr>>) -> Self {
-        self.arg = argument;
+    pub fn with_arg(mut self, arg: Option<Cow<'a, OsStr>>) -> Self {
+        self.arg = arg;
         self
     }
 

@@ -6,49 +6,6 @@ use std::ops::Deref;
 
 use crate::parser::ReturnVal;
 use crate::ARef;
-use crate::Error;
-
-#[cfg(target_family = "windows")]
-pub fn split_once<'a>(str: &'a OsStr, ch: char) -> Option<(Cow<'a, OsStr>, Cow<'a, OsStr>)> {
-    use std::os::windows::ffi::{OsStrExt, OsStringExt};
-
-    let enc = str.encode_wide();
-    let mut buf = [0; 1];
-    let sep = ch.encode_utf16(&mut buf);
-    let enc = enc.collect::<Vec<u16>>();
-
-    enc.iter()
-        .enumerate()
-        .find(|(_, ch)| ch == &&sep[0])
-        .map(|(i, _)| {
-            (
-                Cow::Owned(OsString::from_wide(&enc[0..i])),
-                Cow::Owned(OsString::from_wide(&enc[i + 1..])),
-            )
-        })
-}
-
-#[cfg(any(target_family = "wasm", target_family = "unix"))]
-pub fn split_once<'a>(str: &'a OsStr, ch: char) -> Option<(Cow<'a, OsStr>, Cow<'a, OsStr>)> {
-    #[cfg(target_family = "unix")]
-    use std::os::unix::ffi::OsStrExt;
-    #[cfg(target_family = "wasm")]
-    use std::os::wasi::ffi::OsStrExt;
-
-    let enc = str.as_bytes();
-    let mut buf = [0; 1];
-    let sep = ch.encode_utf8(&mut buf).as_bytes();
-
-    enc.iter()
-        .enumerate()
-        .find(|(_, ch)| ch == &&sep[0])
-        .map(|(i, _)| {
-            (
-                Cow::Borrowed(OsStr::from_bytes(&enc[0..i])),
-                Cow::Borrowed(OsStr::from_bytes(&enc[i + 1..])),
-            )
-        })
-}
 
 #[derive(Debug, Clone, Default)]
 pub struct Args<'a> {
@@ -215,7 +172,7 @@ mod test {
         if let Some((idx, (opt, arg))) = iter.next() {
             assert_eq!(idx, 3);
             assert_eq!(opt, OsStr::new("pos"));
-            assert_eq!(arg.map(|v| v.as_ref()), None);
+            assert_eq!(arg, None);
         }
 
         assert_eq!(iter.next(), None);

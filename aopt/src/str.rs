@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::ffi::OsStr;
 use std::fmt::Display;
 use std::ops::Deref;
 use std::ops::DerefMut;
@@ -164,4 +165,56 @@ impl<'de> serde::Deserialize<'de> for AStr {
     {
         deserializer.deserialize_str(StrVisitor)
     }
+}
+
+mod split {
+    use std::borrow::Cow;
+    use std::ffi::OsStr;
+
+    #[cfg(target_family = "windows")]
+    pub fn split_once<'a>(str: &'a OsStr, ch: char) -> Option<(Cow<'a, OsStr>, Cow<'a, OsStr>)> {
+        use std::ffi::OsString;
+        use std::os::windows::ffi::{OsStrExt, OsStringExt};
+
+        let enc = str.encode_wide();
+        let mut buf = [0; 1];
+        let sep = ch.encode_utf16(&mut buf);
+        let enc = enc.collect::<Vec<u16>>();
+
+        enc.iter()
+            .enumerate()
+            .find(|(_, ch)| ch == &&sep[0])
+            .map(|(i, _)| {
+                (
+                    Cow::Owned(OsString::from_wide(&enc[0..i])),
+                    Cow::Owned(OsString::from_wide(&enc[i + 1..])),
+                )
+            })
+    }
+
+    #[cfg(any(target_family = "wasm", target_family = "unix"))]
+    pub fn split_once<'a>(str: &'a OsStr, ch: char) -> Option<(Cow<'a, OsStr>, Cow<'a, OsStr>)> {
+        #[cfg(target_family = "unix")]
+        use std::os::unix::ffi::OsStrExt;
+        #[cfg(target_family = "wasm")]
+        use std::os::wasi::ffi::OsStrExt;
+
+        let enc = str.as_bytes();
+        let mut buf = [0; 1];
+        let sep = ch.encode_utf8(&mut buf).as_bytes();
+
+        enc.iter()
+            .enumerate()
+            .find(|(_, ch)| ch == &&sep[0])
+            .map(|(i, _)| {
+                (
+                    Cow::Borrowed(OsStr::from_bytes(&enc[0..i])),
+                    Cow::Borrowed(OsStr::from_bytes(&enc[i + 1..])),
+                )
+            })
+    }
+}
+
+pub trait CowUtils<'a> {
+    fn split_once(&self) -> Option<(Cow<'a, OsStr>, Cow<'a, OsStr>)>;
 }

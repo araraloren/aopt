@@ -1,13 +1,15 @@
+use std::borrow::Cow;
+
 use crate::{raise_error, Error};
 
 pub trait OptValidator {
     type Error: Into<Error>;
 
     /// Check the option string.
-    fn check(&mut self, name: &str) -> Result<bool, Self::Error>;
+    fn check(&mut self, name: &Cow<'_, str>) -> Result<bool, Self::Error>;
 
     /// Split the option string into prefix and name.
-    fn split<'a>(&self, name: &'a str) -> Result<(&'a str, &'a str), Self::Error>;
+    fn split<'a>(&self, name: &Cow<'a, str>) -> Result<(Cow<'a, str>, Cow<'a, str>), Self::Error>;
 }
 
 /// A prefixed validator used in [`Policy`](crate::parser::Policy) and [`InvokeGuess`](crate::guess::InvokeGuess).
@@ -57,7 +59,7 @@ impl PrefixOptValidator {
 impl OptValidator for PrefixOptValidator {
     type Error = Error;
 
-    fn check(&mut self, name: &str) -> Result<bool, Self::Error> {
+    fn check(&mut self, name: &Cow<'_, str>) -> Result<bool, Self::Error> {
         for prefix in self.0.iter() {
             if name.starts_with(prefix) {
                 return Ok(true);
@@ -66,7 +68,7 @@ impl OptValidator for PrefixOptValidator {
         Ok(false)
     }
 
-    fn split<'a>(&self, name: &'a str) -> Result<(&'a str, &'a str), Self::Error> {
+    fn split<'a>(&self, name: &Cow<'a, str>) -> Result<(Cow<'a, str>, Cow<'a, str>), Self::Error> {
         for prefix in self.0.iter() {
             if name.starts_with(prefix) {
                 return Ok(name.split_at(prefix.len()));
