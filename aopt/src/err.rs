@@ -25,7 +25,7 @@ pub enum Kind {
 
     RawValParse,
 
-    ArgsName,
+    Arg,
 
     IndexParse,
 
@@ -165,10 +165,10 @@ impl Error {
         Self::raise_error(error.to_string())
     }
 
-    pub fn args_name(name: impl Into<String>, hint: impl Into<String>) -> Self {
-        let desp = format!("invalid argument name `{}`: {}", name.into(), hint.into());
+    pub fn arg(arg: impl Into<String>, hint: impl Into<String>) -> Self {
+        let desp = format!("invalid argument `{}`: {}", arg.into(), hint.into());
 
-        Self::new(Kind::ArgsName).with_desp(desp)
+        Self::new(Kind::Arg).with_desp(desp)
     }
 
     pub fn sp_rawval(val: Option<&RawVal>, hint: impl Into<String>) -> Self {

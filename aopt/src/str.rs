@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::ffi::OsStr;
+use std::ffi::OsString;
 use std::fmt::Display;
 use std::ops::Deref;
 use std::ops::DerefMut;
@@ -215,6 +216,55 @@ mod split {
     }
 }
 
-pub trait CowUtils<'a> {
-    fn split_once(&self) -> Option<(Cow<'a, OsStr>, Cow<'a, OsStr>)>;
+pub trait CowOsStrUtils<'a> {
+    fn split_once(&self, sep: char) -> Option<(Cow<'a, OsStr>, Cow<'a, OsStr>)>;
+
+    fn to_str(&self, func: impl Fn(&str) -> &str) -> Option<Cow<'a, str>>;
+}
+
+impl<'a> CowOsStrUtils<'a> for Cow<'a, OsStr> {
+    fn split_once(&self, sep: char) -> Option<(Cow<'a, OsStr>, Cow<'a, OsStr>)> {
+        match self {
+            Cow::Borrowed(v) => split::split_once(v, sep),
+            Cow::Owned(v) => split::split_once(&v, sep)
+                .map(|(a, b)| (Cow::Owned(a.into_owned()), Cow::Owned(b.into_owned()))),
+        }
+    }
+
+    fn to_str(&self, func: impl Fn(&str) -> &str) -> Option<Cow<'a, str>> {
+        match &self {
+            Cow::Borrowed(v) => v.to_str().map(func).map(Cow::Borrowed),
+            Cow::Owned(v) => v.to_str().map(func).map(String::from).map(Cow::Owned),
+        }
+    }
+}
+
+pub trait CowStrUtils<'a> {
+    fn split_at(&self, mid: usize) -> (Cow<'a, str>, Cow<'a, str>);
+
+    fn to_os_str(self) -> Cow<'a, OsStr>;
+}
+
+impl<'a> CowStrUtils<'a> for Cow<'a, str> {
+    fn split_at(&self, mid: usize) -> (Cow<'a, str>, Cow<'a, str>) {
+        match self {
+            Cow::Borrowed(v) => {
+                let (a, b) = v.split_at(mid);
+
+                (Cow::Borrowed(a), Cow::Borrowed(b))
+            }
+            Cow::Owned(v) => {
+                let (a, b) = v.split_at(mid);
+
+                (Cow::Owned(a.to_string()), Cow::Owned(b.to_string()))
+            }
+        }
+    }
+
+    fn to_os_str(self) -> Cow<'a, OsStr> {
+        match self {
+            Cow::Borrowed(v) => Cow::Borrowed(OsStr::new(v)),
+            Cow::Owned(v) => Cow::Owned(OsString::from(v)),
+        }
+    }
 }

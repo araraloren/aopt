@@ -5,7 +5,45 @@ use std::fmt::Display;
 use std::ops::Deref;
 
 use crate::parser::ReturnVal;
+use crate::str::CowOsStrUtils;
 use crate::ARef;
+use crate::Error;
+
+const EQUAL: char = '=';
+
+#[derive(Debug, Clone, Default)]
+pub struct ArgInfo<'a> {
+    pub name: Cow<'a, str>,
+
+    pub value: Option<Cow<'a, OsStr>>,
+}
+
+impl<'a> ArgInfo<'a> {
+    pub fn parse(val: &Cow<'a, OsStr>) -> Result<Self, Error> {
+        let arg_display = format!("{}", std::path::Path::new(val).display());
+
+        if let Some((name, value)) = val.split_once(EQUAL) {
+            // - convert the name to &str, the name must be valid utf8
+            let name = name
+                .to_str(|v| v.trim())
+                .ok_or_else(|| Error::arg(&arg_display, "failed convert RawVal to str"))?;
+
+            if name.is_empty() {
+                return Err(Error::arg(arg_display, "can not be empty"));
+            }
+            Ok(Self {
+                name,
+                value: Some(value),
+            })
+        } else {
+            let name = val
+                .to_str(|v| v.trim())
+                .ok_or_else(|| Error::arg(arg_display, "failed convert RawVal to str"))?;
+
+            Ok(Self { name, value: None })
+        }
+    }
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct Args<'a> {
@@ -19,11 +57,6 @@ impl<'a> Args<'a> {
         }
     }
 
-    /// Create from [`args_os`](std::env::args_os()).
-    pub fn from_env() -> Self {
-        Self::new(std::env::args_os())
-    }
-
     pub fn iter2(&self) -> impl Iterator<Item = (&Cow<'a, OsStr>, Option<&Cow<'a, OsStr>>)> {
         self.inner
             .iter()
@@ -32,6 +65,10 @@ impl<'a> Args<'a> {
 
     pub fn unwrap_or_clone(self) -> Vec<Cow<'a, OsStr>> {
         ARef::unwrap_or_clone(self.inner)
+    }
+
+    pub fn to_str_i(&self, index: usize) -> Option<Cow<'a, str>> {
+        self.inner.get(index).and_then(|v| v.to_str(|v| v))
     }
 }
 
@@ -89,6 +126,12 @@ impl Display for Args<'_> {
 
 pub trait IntoArg<'a> {
     fn into_arg(self) -> Cow<'a, OsStr>;
+}
+
+impl<'a> IntoArg<'a> for Cow<'a, OsStr> {
+    fn into_arg(self) -> Cow<'a, OsStr> {
+        self
+    }
 }
 
 impl<'a> IntoArg<'a> for &'a str {

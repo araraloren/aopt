@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::fmt::Debug;
 
 use ahash::HashMapExt;
@@ -440,11 +441,11 @@ where
 {
     type Error = Error;
 
-    fn check(&mut self, name: &str) -> Result<bool, Self::Error> {
+    fn check<'a>(&mut self, name: &Cow<'a, str>) -> Result<bool, Self::Error> {
         OptValidator::check(&mut self.validator, name).map_err(Into::into)
     }
 
-    fn split<'a>(&self, name: &'a str) -> Result<(&'a str, &'a str), Self::Error> {
+    fn split<'a>(&self, name: &Cow<'a, str>) -> Result<(Cow<'a, str>, Cow<'a, str>), Self::Error> {
         OptValidator::split(&self.validator, name).map_err(Into::into)
     }
 }

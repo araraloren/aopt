@@ -6,7 +6,7 @@ use super::Policy;
 use super::PolicySettings;
 use super::ReturnVal;
 use super::UserStyle;
-use crate::args::ArgParser;
+use crate::args::ArgInfo;
 use crate::args::Args;
 use crate::ctx::Ctx;
 use crate::ctx::HandlerCollection;
@@ -25,27 +25,26 @@ use crate::set::SetChecker;
 use crate::set::SetExt;
 use crate::set::SetOpt;
 use crate::trace;
-use crate::ARef;
 use crate::AStr;
 use crate::Error;
 use crate::Uid;
 
 #[derive(Debug, Clone, Default)]
-pub struct DelayCtx {
+pub struct DelayCtx<'a> {
     pub uids: Vec<Uid>,
 
     pub matched: Vec<Option<bool>>,
 
-    pub inner_ctx: InnerCtx,
+    pub inner_ctx: InnerCtx<'a>,
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct DelayCtxSaver {
+pub struct DelayCtxSaver<'a> {
     pub any_match: bool,
 
     pub consume: bool,
 
-    pub delay_ctx: Vec<DelayCtx>,
+    pub delay_ctx: Vec<DelayCtx<'a>>,
 }
 
 /// [`DelayPolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
@@ -125,8 +124,6 @@ pub struct DelayPolicy<Set, Ser, Chk> {
 
     overload: bool,
 
-    contexts: Vec<DelayCtxSaver>,
-
     checker: Chk,
 
     style_manager: OptStyleManager,
@@ -144,7 +141,6 @@ where
         Self {
             strict: self.strict,
             overload: self.overload,
-            contexts: self.contexts.clone(),
             checker: self.checker.clone(),
             style_manager: self.style_manager.clone(),
             no_delay_opt: self.no_delay_opt.clone(),
@@ -161,7 +157,6 @@ where
         f.debug_struct("DelayPolicy")
             .field("strict", &self.strict)
             .field("overload", &self.overload)
-            .field("contexts", &self.contexts)
             .field("checker", &self.checker)
             .field("style_manager", &self.style_manager)
             .field("no_delay_opt", &self.no_delay_opt)
@@ -177,7 +172,6 @@ where
         Self {
             strict: true,
             overload: false,
-            contexts: vec![],
             checker: Chk::default(),
             style_manager: OptStyleManager::default(),
             no_delay_opt: vec![],
@@ -307,18 +301,18 @@ where
     // ignore failure
     #[allow(clippy::too_many_arguments)]
     #[inline(always)]
-    pub fn invoke_opt_callback<'a, Inv>(
+    pub fn invoke_opt_callback<'a, 'b, Inv>(
         &mut self,
         uid: Uid,
-        ctx: &mut Ctx,
+        ctx: &mut Ctx<'a>,
         set: &mut Set,
         inv: &mut Inv,
         ser: &mut Ser,
         fail: &mut FailManager,
-        inner_ctx: InnerCtx,
+        inner_ctx: InnerCtx<'a>,
     ) -> Result<bool, Error>
     where
-        Inv: HandlerCollection<'a, Set, Ser>,
+        Inv: HandlerCollection<'b, Set, Ser>,
     {
         let fail = |e: Error| {
             fail.push(e);
@@ -332,17 +326,17 @@ where
         Ok(ret)
     }
 
-    pub fn process_delay_ctx<'a, Inv>(
+    pub fn process_delay_ctx<'a, 'b, Inv>(
         &mut self,
-        ctx: &mut Ctx,
+        ctx: &mut Ctx<'a>,
         set: &mut Set,
         inv: &mut Inv,
         ser: &mut Ser,
         fail: &mut FailManager,
-        saver: DelayCtxSaver,
+        saver: DelayCtxSaver<'a>,
     ) -> Result<SimpleMatRet, Error>
     where
-        Inv: HandlerCollection<'a, Set, Ser>,
+        Inv: HandlerCollection<'b, Set, Ser>,
     {
         let any_match = saver.any_match;
         let consume = saver.consume;
@@ -383,13 +377,14 @@ where
         Ok(SimpleMatRet::new(true, consume))
     }
 
-    pub fn save_or_call<'a, 'b, Inv>(
+    pub fn save_or_call<'a, 'b, 'c, Inv>(
         &mut self,
-        guess: &mut InvokeGuess<'b, Set, Inv, Ser>,
-        saver: InnerCtxSaver,
+        guess: &mut InvokeGuess<'a, 'b, Set, Inv, Ser>,
+        saver: InnerCtxSaver<'b>,
+        contexts: &mut Vec<DelayCtxSaver<'b>>,
     ) -> Result<Option<SimpleMatRet>, Error>
     where
-        Inv: HandlerCollection<'a, Set, Ser>,
+        Inv: HandlerCollection<'c, Set, Ser>,
     {
         let any_match = saver.any_match;
         let consume = saver.consume;
@@ -438,7 +433,7 @@ where
             }
         }
         if !delay_ctx.is_empty() {
-            self.contexts.push(DelayCtxSaver {
+            contexts.push(DelayCtxSaver {
                 any_match,
                 consume,
                 delay_ctx,
@@ -454,9 +449,9 @@ where
     Chk: SetChecker<Set>,
     Set: crate::set::Set + OptParser + OptValidator,
 {
-    pub(crate) fn parse_impl(
+    pub(crate) fn parse_impl<'a>(
         &mut self,
-        ctx: &mut Ctx,
+        ctx: &mut Ctx<'a>,
         set: &mut <Self as Policy>::Set,
         inv: &mut <Self as Policy>::Inv<'_>,
         ser: &mut <Self as Policy>::Ser,
@@ -465,13 +460,14 @@ where
 
         let overload = self.overload();
         let opt_styles = self.style_manager.clone();
-        let args = ctx.orig_args().clone();
+        let args = ctx.args().clone();
         let tot = args.len();
-        let mut noa_args = Args::default();
-        let mut iter = args.guess_iter().enumerate();
+        let mut contexts: Vec<DelayCtxSaver> = vec![];
+        let mut noa_args = vec![];
+        let mut iter = args.iter2().enumerate();
         let mut opt_fail = FailManager::default();
 
-        trace!("Parsing {ctx:?} using delay policy");
+        trace!("parsing {ctx:?} using delay policy");
         // set option args, and args length
         ctx.set_args(args.clone());
         while let Some((idx, (opt, next))) = iter.next() {
@@ -480,12 +476,11 @@ where
             let mut stopped = false;
 
             // parsing current argument
-            if let Ok(clopt) = opt.parse_arg() {
+            if let Ok(ArgInfo { name, value }) = ArgInfo::parse(opt) {
                 trace!("Guess command line clopt = {:?} & next = {:?}", clopt, next);
-                let name = clopt.name;
-
-                if set.check(name.as_str()).map_err(Into::into)? {
-                    let arg = clopt.value;
+                if set.check(&name).map_err(Into::into)? {
+                    let next = next.cloned();
+                    let arg = value.clone();
                     let mut guess = InvokeGuess {
                         idx,
                         arg,
@@ -494,7 +489,7 @@ where
                         ser,
                         tot,
                         ctx,
-                        next: next.cloned(),
+                        next,
                         fail: &mut opt_fail,
                         name: Some(name.clone()),
                     };
@@ -504,7 +499,7 @@ where
                             // pretend we are matched, cause it is delay
                             matched = true;
                             consume = ret.consume;
-                            if let Some(ret) = self.save_or_call(&mut guess, ret)? {
+                            if let Some(ret) = self.save_or_call(&mut guess, ret, &mut contexts)? {
                                 // if the call returned, set the real return value
                                 (matched, consume) = (ret.matched, ret.consume);
                             }
@@ -512,15 +507,14 @@ where
                                 break;
                             }
                         }
-                        if let Some(act) = guess.ctx.policy_act() {
-                            match act {
-                                Action::Stop => {
-                                    stopped = true;
-                                    guess.ctx.reset_policy_act();
-                                    break;
-                                }
-                                Action::Quit => return Ok(()),
+                        match guess.ctx.policy_act() {
+                            Action::Stop => {
+                                stopped = true;
+                                guess.ctx.reset_policy_act();
+                                break;
                             }
+                            Action::Quit => return Ok(()),
+                            Action::Null => {}
                         }
                     }
                     if !stopped && !matched && self.strict() {
@@ -542,7 +536,7 @@ where
             }
         }
 
-        let noa_args = ARef::new(noa_args);
+        let noa_args = Args::from(noa_args);
         let tot = noa_args.len();
         let mut pos_fail = FailManager::default();
         let mut cmd_fail = FailManager::default();
@@ -551,10 +545,7 @@ where
         ctx.set_args(noa_args.clone());
         // when style is pos, noa index is [1..=len]
         if tot > 0 {
-            let name = noa_args
-                .get(Self::noa_cmd())
-                .and_then(|v| v.get_str())
-                .map(AStr::from);
+            let name = noa_args.to_str_i(Self::noa_cmd());
             let mut guess = InvokeGuess {
                 set,
                 inv,
@@ -570,7 +561,7 @@ where
 
             trace!("Guess CMD = {:?}", guess.name);
             guess.guess_and_invoke(&UserStyle::Cmd, overload)?;
-            if let Some(Action::Quit) = ctx.policy_act() {
+            if let Action::Quit = ctx.policy_act() {
                 return Ok(());
             }
             cmd_fail.process_check(self.checker().cmd_check(set))?;
@@ -590,20 +581,16 @@ where
 
             for idx in 1..tot {
                 guess.idx = Self::noa_pos(idx);
-                guess.name = noa_args
-                    .get(Self::noa_pos(idx))
-                    .and_then(|v| v.get_str())
-                    .map(AStr::from);
+                guess.name = noa_args.to_str_i(Self::noa_pos(idx));
                 trace!("Guess POS argument = {:?} @ {}", guess.name, guess.idx);
                 guess.guess_and_invoke(&UserStyle::Pos, overload)?;
-                if let Some(act) = guess.ctx.policy_act() {
-                    match act {
-                        Action::Stop => {
-                            guess.ctx.reset_policy_act();
-                            break;
-                        }
-                        Action::Quit => return Ok(()),
+                match guess.ctx.policy_act() {
+                    Action::Stop => {
+                        guess.ctx.reset_policy_act();
+                        break;
                     }
+                    Action::Quit => return Ok(()),
+                    Action::Null => {}
                 }
             }
         } else {
@@ -612,17 +599,16 @@ where
 
         trace!("Invoke the handler of option");
         // after cmd and pos callback invoked, invoke the callback of option
-        for saver in std::mem::take(&mut self.contexts) {
+        for saver in contexts {
             let ret = self.process_delay_ctx(&mut prev_ctx, set, inv, ser, &mut opt_fail, saver)?;
 
-            if let Some(act) = prev_ctx.policy_act() {
-                match act {
-                    Action::Stop => {
-                        prev_ctx.reset_policy_act();
-                        break;
-                    }
-                    Action::Quit => return Ok(()),
+            match prev_ctx.policy_act() {
+                Action::Stop => {
+                    prev_ctx.reset_policy_act();
+                    break;
                 }
+                Action::Quit => return Ok(()),
+                Action::Null => {}
             }
             if !ret.matched && self.strict() {
                 return Err(opt_fail.cause(crate::raise_error!(
@@ -640,10 +626,7 @@ where
         let mut main_fail = FailManager::default();
 
         ctx.set_args(main_args.clone());
-        let name = main_args
-            .get(Self::noa_main())
-            .and_then(|v| v.get_str())
-            .map(AStr::from);
+        let name = main_args.to_str_i(Self::noa_main());
         let mut guess = InvokeGuess {
             set,
             inv,
@@ -669,7 +652,7 @@ where
     Chk: SetChecker<Set>,
     Set: crate::set::Set + OptParser + OptValidator,
 {
-    type Ret = ReturnVal;
+    type Ret<'a> = ReturnVal<'a>;
 
     type Set = Set;
 
@@ -679,14 +662,16 @@ where
 
     type Error = Error;
 
-    fn parse(
+    fn parse<'a>(
         &mut self,
         set: &mut Self::Set,
         inv: &mut Self::Inv<'_>,
         ser: &mut Self::Ser,
-        args: ARef<Args>,
-    ) -> Result<Self::Ret, Self::Error> {
-        let mut ctx = Ctx::default().with_orig_args(args.clone()).with_args(args);
+        args: &Args<'a>,
+    ) -> Result<Self::Ret<'a>, Self::Error> {
+        let mut ctx = Ctx::default()
+            .with_orig(args.clone())
+            .with_args(args.clone());
 
         match self.parse_impl(&mut ctx, set, inv, ser) {
             Ok(_) => Ok(ReturnVal::new(ctx)),
@@ -707,7 +692,6 @@ mod test {
     use crate::opt::ConfigBuildInfer;
     use crate::opt::Pos;
     use crate::prelude::*;
-    use crate::ARef;
     use crate::Error;
     use std::any::TypeId;
     use std::ops::Deref;
@@ -876,19 +860,15 @@ mod test {
             },
         );
 
-        let args = ARef::new(args);
-
         for opt in set.iter_mut() {
             opt.init()?;
         }
-        assert!(!policy
-            .parse(&mut set, &mut inv, &mut ser, args.clone())?
-            .status());
+        assert!(!policy.parse(&mut set, &mut inv, &mut ser, &args)?.status());
         policy.set_strict(false);
         for opt in set.iter_mut() {
             opt.init()?;
         }
-        assert!(policy.parse(&mut set, &mut inv, &mut ser, args)?.status());
+        assert!(policy.parse(&mut set, &mut inv, &mut ser, &args)?.status());
         Ok(())
     }
 }

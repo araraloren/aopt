@@ -9,6 +9,7 @@ use crate::opt::BOOL_TRUE;
 use crate::parser::FailManager;
 use crate::parser::UserStyle;
 use crate::set::OptValidator;
+use crate::str::CowStrUtils;
 use crate::trace;
 use crate::Error;
 
@@ -294,7 +295,7 @@ where
         &mut self,
         style: &UserStyle,
         overload: bool,
-    ) -> Result<Option<InnerCtxSaver>, Error> {
+    ) -> Result<Option<InnerCtxSaver<'b>>, Error> {
         let mut ret = None;
 
         match style {
@@ -487,7 +488,7 @@ where
             if let Some(name) = &self.name {
                 // strip the prefix before generate
                 let validator = &self.set;
-                let splited = validator.split(name.as_str()).map_err(Into::into)?;
+                let splited = validator.split(name).map_err(Into::into)?;
                 let prefix_len = splited.0.len();
 
                 // make sure we using `chars.count`, not len()
@@ -495,8 +496,8 @@ where
                 // only check first letter `--v42` ==> `--v 42`
                 if let Some((char_idx, _)) = splited.1.char_indices().nth(1) {
                     let (name, arg) = name.split_at(prefix_len + char_idx);
-                    let arg = Some(RawVal::from(arg));
-                    let name = Some(name.into());
+                    let arg = Some(arg.to_os_str());
+                    let name = Some(name);
 
                     return Ok(Some(
                         T::default()
@@ -530,7 +531,7 @@ where
             if let Some(name) = &self.name {
                 // strip the prefix before generate
                 let validator = &self.set;
-                let splited = validator.split(name.as_str()).map_err(Into::into)?;
+                let splited = validator.split(name).map_err(Into::into)?;
                 let char_indices = splited.1.char_indices().skip(2);
                 let prefix_len = splited.0.len();
                 let mut policy = MultiOpt::default().with_any_match(true);
@@ -540,8 +541,8 @@ where
                 // for `--opt42` check the option like `--op t42`, `--opt 42`, `--opt4 2`
                 for (char_idx, _) in char_indices {
                     let (name, arg) = name.split_at(prefix_len + char_idx);
-                    let arg = Some(RawVal::from(arg));
-                    let name = Some(name.into());
+                    let arg = Some(arg.to_os_str());
+                    let name = Some(name);
 
                     policy.add_sub_policy(
                         T::default()
@@ -571,14 +572,13 @@ where
         let idx = self.idx;
         let tot = self.tot;
         let style = Style::Boolean;
-        let arg = Some(RawVal::from(BOOL_TRUE));
+        let arg = Some(Cow::Borrowed(OsStr::new(BOOL_TRUE)));
 
         if self.arg.is_none() {
             if let Some(name) = &self.name {
                 // strip the prefix before generate
-                let option = name.as_str();
                 let validator = &self.set;
-                let splited = validator.split(option).map_err(Into::into)?;
+                let splited = validator.split(name).map_err(Into::into)?;
 
                 if splited.1.chars().count() > 1 {
                     let mut policy = MultiOpt::default().with_any_match(false);
@@ -608,6 +608,8 @@ where
     type Error = Error;
 
     fn guess_policy(&mut self) -> Result<Option<T>, Self::Error> {
+        let arg = Some(Cow::Borrowed(OsStr::new(BOOL_TRUE)));
+
         if self.arg.is_none() {
             if let Some(name) = &self.name {
                 return Ok(Some(
@@ -615,7 +617,7 @@ where
                         .with_idx(self.idx)
                         .with_tot(self.tot)
                         .with_name(Some(name.clone()))
-                        .with_arg(Some(RawVal::from(BOOL_TRUE)))
+                        .with_arg(arg)
                         .with_style(Style::Boolean),
                 ));
             }
@@ -711,7 +713,7 @@ where
         let style = Style::Cmd;
         let name = self.name.clone();
         let args = self.ctx.args().clone();
-        let arg = Some(RawVal::from(BOOL_TRUE));
+        let arg = Some(Cow::Borrowed(OsStr::new(BOOL_TRUE)));
 
         Ok(Some(
             T::default()
@@ -798,7 +800,7 @@ where
             .with_idx(policy.idx())
             .with_total(policy.tot())
             .with_name(policy.name().cloned())
-            .with_arg(policy.arg().clone())
+            .with_arg(policy.arg().cloned())
             .with_style(policy.style());
         let uids = policy.uids().to_vec();
         let mut result = false;
@@ -832,7 +834,7 @@ where
         &mut self,
         policy: &mut MultiOpt<T, Set>,
         consume: bool,
-    ) -> Result<InnerCtxSaver, Error>
+    ) -> Result<InnerCtxSaver<'b>, Error>
     where
         T: PolicyConfig<'b> + MatchPolicy<Set = Set>,
     {

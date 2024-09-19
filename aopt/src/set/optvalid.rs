@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use crate::str::CowStrUtils;
 use crate::{raise_error, Error};
 
 pub trait OptValidator {

@@ -146,10 +146,10 @@ pub struct Ctx<'a> {
     inner_ctx: Option<InnerCtx<'a>>,
 
     #[cfg(not(feature = "sync"))]
-    action: std::cell::RefCell<Option<Action>>,
+    action: std::cell::RefCell<Action>,
 
     #[cfg(feature = "sync")]
-    action: std::sync::Mutex<Option<Action>>,
+    action: std::sync::Mutex<Action>,
 }
 
 impl<'a> Ctx<'a> {
@@ -158,7 +158,7 @@ impl<'a> Ctx<'a> {
         self
     }
 
-    pub fn with_orig_args(mut self, orig_args: Args<'a>) -> Self {
+    pub fn with_orig(mut self, orig_args: Args<'a>) -> Self {
         self.orig_args = orig_args;
         self
     }
@@ -292,33 +292,33 @@ impl<'a> Ctx<'a> {
 
 impl<'a> Ctx<'a> {
     #[cfg(not(feature = "sync"))]
-    pub fn policy_act(&self) -> Option<Action> {
+    pub fn policy_act(&self) -> Action {
         *self.action.borrow()
     }
 
     #[cfg(feature = "sync")]
-    pub fn policy_act(&self) -> Option<Action> {
+    pub fn policy_act(&self) -> Action {
         *self.action.lock().unwrap()
     }
 
     #[cfg(not(feature = "sync"))]
     pub fn set_policy_act(&self, act: Action) {
-        *self.action.borrow_mut() = Some(act);
+        *self.action.borrow_mut() = act;
     }
 
     #[cfg(feature = "sync")]
     pub fn set_policy_act(&self, act: Action) {
-        *self.action.lock().unwrap() = Some(act);
+        *self.action.lock().unwrap() = act;
     }
 
     #[cfg(not(feature = "sync"))]
     pub fn reset_policy_act(&self) {
-        *self.action.borrow_mut() = None;
+        *self.action.borrow_mut() = Action::Null;
     }
 
     #[cfg(feature = "sync")]
     pub fn reset_policy_act(&self) {
-        *self.action.lock().unwrap() = None;
+        *self.action.lock().unwrap() = Action::Null;
     }
 }
 

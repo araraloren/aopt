@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
@@ -23,7 +24,6 @@ use crate::set::SetValueFindExt;
 use crate::value::Infer;
 use crate::value::Placeholder;
 use crate::value::RawValParser;
-use crate::ARef;
 use crate::Error;
 use crate::Uid;
 
@@ -472,11 +472,11 @@ where
 {
     type Error = Set::Error;
 
-    fn check(&mut self, name: &str) -> Result<bool, Self::Error> {
+    fn check<'a>(&mut self, name: &Cow<'a, str>) -> Result<bool, Self::Error> {
         OptValidator::check(&mut self.set, name)
     }
 
-    fn split<'a>(&self, name: &'a str) -> Result<(&'a str, &'a str), Self::Error> {
+    fn split<'a>(&self, name: &Cow<'a, str>) -> Result<(Cow<'a, str>, Cow<'a, str>), Self::Error> {
         OptValidator::split(&self.set, name)
     }
 }
@@ -487,11 +487,11 @@ where
 {
     type Error = Error;
 
-    fn parse_policy(
+    fn parse_policy<'b>(
         &mut self,
-        args: ARef<Args>,
+        args: &Args<'b>,
         policy: &mut P,
-    ) -> Result<<P as Policy>::Ret, Self::Error> {
+    ) -> Result<<P as Policy>::Ret<'b>, Self::Error> {
         self.init()?;
 
         let set = &mut self.set;
@@ -560,7 +560,7 @@ mod test {
 
         PolicyParser::<AFwdPolicy>::parse(
             &mut set,
-            ARef::new(Args::from(["app", "ls", "--aopt", "--bopt=42"])),
+            &Args::from(["app", "ls", "--aopt", "--bopt=42"]),
         )?;
 
         assert_eq!(set.find_val::<bool>("ls")?, &true);

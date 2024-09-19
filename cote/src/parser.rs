@@ -396,7 +396,7 @@ where
 
     fn parse_policy(
         &mut self,
-        args: ARef<Args>,
+        args: &ARef<Args>,
         policy: &mut P,
     ) -> Result<<P as Policy>::Ret, Self::Error> {
         assert!(self.inv.is_some());
