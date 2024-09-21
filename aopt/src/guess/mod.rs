@@ -7,7 +7,6 @@ pub mod style;
 use std::borrow::Cow;
 use std::ffi::OsStr;
 
-use crate::args::Args;
 use crate::ctx::InnerCtx;
 use crate::opt::Style;
 use crate::Error;
@@ -164,8 +163,6 @@ pub trait PolicyBuild<'a> {
     fn with_tot(self, total: usize) -> Self;
 
     fn with_arg(self, argument: Option<Cow<'a, OsStr>>) -> Self;
-
-    fn with_args(self, args: Args<'a>) -> Self;
 }
 
 /// Process the return value of handler:

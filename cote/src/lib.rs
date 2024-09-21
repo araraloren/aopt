@@ -63,7 +63,7 @@ pub mod prelude {
     pub use aopt::prelude::PolicySettings;
     pub use aopt::prelude::PrefixOptValidator;
     pub use aopt::prelude::RawValParser;
-    pub use aopt::prelude::ReturnVal;
+    pub use aopt::prelude::Return;
     pub use aopt::prelude::ServicesValExt;
     pub use aopt::prelude::Set;
     pub use aopt::prelude::SetCfg;
@@ -116,7 +116,7 @@ use aopt::ext::APolicyExt;
 use aopt::parser::DefaultSetChecker;
 use aopt::parser::Policy;
 use aopt::parser::PolicySettings;
-use aopt::parser::ReturnVal;
+use aopt::parser::Return;
 use aopt::parser::UserStyle;
 use aopt::prelude::ConfigValue;
 use aopt::prelude::OptParser;
@@ -167,9 +167,9 @@ pub trait Status {
     fn status(&self) -> bool;
 }
 
-impl Status for ReturnVal {
+impl Status for Return {
     fn status(&self) -> bool {
-        ReturnVal::status(self)
+        Return::status(self)
     }
 }
 
@@ -208,7 +208,7 @@ impl<'inv, Set, Ser> Default for NullPolicy<'inv, Set, Ser> {
 }
 
 impl<'inv, Set, Ser> Policy for NullPolicy<'inv, Set, Ser> {
-    type Ret = ReturnVal;
+    type Ret = Return;
 
     type Set = Parser<'inv, Set, Ser>;
 
@@ -225,7 +225,7 @@ impl<'inv, Set, Ser> Policy for NullPolicy<'inv, Set, Ser> {
         _: &mut Self::Ser,
         _: ARef<Args>,
     ) -> Result<Self::Ret> {
-        Ok(ReturnVal::default())
+        Ok(Return::default())
     }
 }
 

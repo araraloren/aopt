@@ -667,7 +667,6 @@ where
             T::default()
                 .with_idx(idx)
                 .with_arg(arg)
-                .with_args(args)
                 .with_name(name)
                 .with_tot(tot)
                 .with_style(style),
@@ -693,7 +692,6 @@ where
             T::default()
                 .with_idx(idx)
                 .with_arg(arg)
-                .with_args(args)
                 .with_name(name)
                 .with_tot(tot)
                 .with_style(style),
@@ -719,7 +717,6 @@ where
             T::default()
                 .with_idx(idx)
                 .with_arg(arg)
-                .with_args(args)
                 .with_name(name)
                 .with_tot(tot)
                 .with_style(style),

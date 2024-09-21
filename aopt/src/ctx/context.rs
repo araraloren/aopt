@@ -5,7 +5,7 @@ use std::fmt::Display;
 use crate::args::Args;
 use crate::opt::Style;
 use crate::parser::Action;
-use crate::parser::ReturnVal;
+use crate::parser::Return;
 use crate::Error;
 use crate::Uid;
 
@@ -139,11 +139,11 @@ impl Display for InnerCtx<'_> {
 /// It saved the option information and matched arguments.
 #[derive(Debug, Clone, Default)]
 pub struct Ctx<'a> {
-    args: Args<'a>,
+    pub(crate) orig: Args,
 
-    orig_args: Args<'a>,
+    pub(crate) args: Vec<&'a OsStr>,
 
-    inner_ctx: Option<InnerCtx<'a>>,
+    pub(crate) inner_ctx: Option<InnerCtx<'a>>,
 
     #[cfg(not(feature = "sync"))]
     action: std::cell::RefCell<Action>,
@@ -153,13 +153,13 @@ pub struct Ctx<'a> {
 }
 
 impl<'a> Ctx<'a> {
-    pub fn with_args(mut self, args: Args<'a>) -> Self {
+    pub fn with_args(mut self, args: Vec<&'a OsStr>) -> Self {
         self.args = args;
         self
     }
 
-    pub fn with_orig(mut self, orig_args: Args<'a>) -> Self {
-        self.orig_args = orig_args;
+    pub fn with_orig(mut self, orig_args: Args) -> Self {
+        self.orig = orig_args;
         self
     }
 
@@ -199,7 +199,7 @@ impl<'a> Ctx<'a> {
 
     /// The copy of [`Args`] when the option matched.
     /// It may be changing during parsing process.
-    pub fn args(&self) -> &Args<'a> {
+    pub fn args(&self) -> &[&'a OsStr] {
         &self.args
     }
 
@@ -221,14 +221,14 @@ impl<'a> Ctx<'a> {
     }
 
     /// The original arguments passed by user.
-    pub fn orig_args(&self) -> &Args<'a> {
-        &self.orig_args
+    pub fn orig(&self) -> &Args {
+        &self.orig
     }
 
     /// The current argument indexed by `self.idx()`.
     pub fn curr_arg(&self) -> Result<Option<&Cow<'a, OsStr>>, Error> {
         let idx = self.idx()?;
-        Ok((idx > 0).then(|| self.orig_args().get(idx)).flatten())
+        Ok((idx > 0).then(|| self.orig().get(idx)).flatten())
     }
 
     pub fn take_args(&mut self) -> Args<'a> {
@@ -236,7 +236,7 @@ impl<'a> Ctx<'a> {
     }
 
     pub fn take_orig_args(&mut self) -> Args<'a> {
-        std::mem::take(&mut self.orig_args)
+        std::mem::take(&mut self.orig)
     }
 }
 
@@ -258,7 +258,7 @@ impl<'a> Ctx<'a> {
         Ok(self)
     }
 
-    pub fn set_args(&mut self, args: Args<'a>) -> &mut Self {
+    pub fn set_args(&mut self, args: Vec<&'a OsStr>) -> &mut Self {
         self.args = args;
         self
     }
@@ -278,8 +278,8 @@ impl<'a> Ctx<'a> {
         Ok(self)
     }
 
-    pub fn set_orig_args(&mut self, orig_args: Args<'a>) -> &mut Self {
-        self.orig_args = orig_args;
+    pub fn set_orig_args(&mut self, orig_args: Args) -> &mut Self {
+        self.orig = orig_args;
         self
     }
 
@@ -322,20 +322,20 @@ impl<'a> Ctx<'a> {
     }
 }
 
-impl<'a> From<ReturnVal<'a>> for Ctx<'a> {
-    fn from(mut value: ReturnVal<'a>) -> Self {
+impl<'a> From<Return<'a>> for Ctx<'a> {
+    fn from(mut value: Return<'a>) -> Self {
         value.take_ctx()
     }
 }
 
-impl<'a> From<&ReturnVal<'a>> for Ctx<'a> {
-    fn from(value: &ReturnVal<'a>) -> Self {
+impl<'a> From<&Return<'a>> for Ctx<'a> {
+    fn from(value: &Return<'a>) -> Self {
         value.ctx().clone()
     }
 }
 
-impl<'a> From<&mut ReturnVal<'a>> for Ctx<'a> {
-    fn from(value: &mut ReturnVal<'a>) -> Self {
+impl<'a> From<&mut Return<'a>> for Ctx<'a> {
+    fn from(value: &mut Return<'a>) -> Self {
         value.take_ctx()
     }
 }

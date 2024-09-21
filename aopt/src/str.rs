@@ -5,6 +5,7 @@ use std::fmt::Display;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
+use crate::opt::Opt;
 use crate::ARef;
 
 pub fn astr<T: Into<AStr>>(value: T) -> AStr {
@@ -168,52 +169,52 @@ impl<'de> serde::Deserialize<'de> for AStr {
     }
 }
 
-mod split {
-    use std::borrow::Cow;
-    use std::ffi::OsStr;
+#[cfg(target_family = "windows")]
+pub fn split_once<'a>(str: &'a OsStr, ch: char) -> Option<(Cow<'a, OsStr>, Cow<'a, OsStr>)> {
+    use std::ffi::OsString;
+    use std::os::windows::ffi::{OsStrExt, OsStringExt};
 
-    #[cfg(target_family = "windows")]
-    pub fn split_once<'a>(str: &'a OsStr, ch: char) -> Option<(Cow<'a, OsStr>, Cow<'a, OsStr>)> {
-        use std::ffi::OsString;
-        use std::os::windows::ffi::{OsStrExt, OsStringExt};
+    let enc = str.encode_wide();
+    let mut buf = [0; 1];
+    let sep = ch.encode_utf16(&mut buf);
+    let enc = enc.collect::<Vec<u16>>();
 
-        let enc = str.encode_wide();
-        let mut buf = [0; 1];
-        let sep = ch.encode_utf16(&mut buf);
-        let enc = enc.collect::<Vec<u16>>();
+    enc.iter()
+        .enumerate()
+        .find(|(_, ch)| ch == &&sep[0])
+        .map(|(i, _)| {
+            (
+                Cow::Owned(OsString::from_wide(&enc[0..i])),
+                Cow::Owned(OsString::from_wide(&enc[i + 1..])),
+            )
+        })
+}
 
-        enc.iter()
-            .enumerate()
-            .find(|(_, ch)| ch == &&sep[0])
-            .map(|(i, _)| {
-                (
-                    Cow::Owned(OsString::from_wide(&enc[0..i])),
-                    Cow::Owned(OsString::from_wide(&enc[i + 1..])),
-                )
-            })
-    }
+#[cfg(any(target_family = "wasm", target_family = "unix"))]
+pub fn split_once<'a>(str: &'a OsStr, ch: char) -> Option<(Cow<'a, OsStr>, Cow<'a, OsStr>)> {
+    #[cfg(target_family = "unix")]
+    use std::os::unix::ffi::OsStrExt;
+    #[cfg(target_family = "wasm")]
+    use std::os::wasi::ffi::OsStrExt;
 
-    #[cfg(any(target_family = "wasm", target_family = "unix"))]
-    pub fn split_once<'a>(str: &'a OsStr, ch: char) -> Option<(Cow<'a, OsStr>, Cow<'a, OsStr>)> {
-        #[cfg(target_family = "unix")]
-        use std::os::unix::ffi::OsStrExt;
-        #[cfg(target_family = "wasm")]
-        use std::os::wasi::ffi::OsStrExt;
+    let enc = str.as_bytes();
+    let mut buf = [0; 1];
+    let sep = ch.encode_utf8(&mut buf).as_bytes();
 
-        let enc = str.as_bytes();
-        let mut buf = [0; 1];
-        let sep = ch.encode_utf8(&mut buf).as_bytes();
+    enc.iter()
+        .enumerate()
+        .find(|(_, ch)| ch == &&sep[0])
+        .map(|(i, _)| {
+            (
+                Cow::Borrowed(OsStr::from_bytes(&enc[0..i])),
+                Cow::Borrowed(OsStr::from_bytes(&enc[i + 1..])),
+            )
+        })
+}
 
-        enc.iter()
-            .enumerate()
-            .find(|(_, ch)| ch == &&sep[0])
-            .map(|(i, _)| {
-                (
-                    Cow::Borrowed(OsStr::from_bytes(&enc[0..i])),
-                    Cow::Borrowed(OsStr::from_bytes(&enc[i + 1..])),
-                )
-            })
-    }
+pub fn osstr_to_str_i<'a>(val: &[&'a OsStr], i: usize) -> Option<Cow<'a, str>> {
+    val.get(i)
+        .and_then(|v| v.to_str().map(|v| Cow::Borrowed(v)))
 }
 
 pub trait CowOsStrUtils<'a> {
@@ -225,8 +226,8 @@ pub trait CowOsStrUtils<'a> {
 impl<'a> CowOsStrUtils<'a> for Cow<'a, OsStr> {
     fn split_once(&self, sep: char) -> Option<(Cow<'a, OsStr>, Cow<'a, OsStr>)> {
         match self {
-            Cow::Borrowed(v) => split::split_once(v, sep),
-            Cow::Owned(v) => split::split_once(&v, sep)
+            Cow::Borrowed(v) => split_once(v, sep),
+            Cow::Owned(v) => split_once(&v, sep)
                 .map(|(a, b)| (Cow::Owned(a.into_owned()), Cow::Owned(b.into_owned()))),
         }
     }

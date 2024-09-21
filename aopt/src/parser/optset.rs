@@ -487,11 +487,11 @@ where
 {
     type Error = Error;
 
-    fn parse_policy<'b>(
+    fn parse_policy(
         &mut self,
-        args: &Args<'b>,
+        args: Args,
         policy: &mut P,
-    ) -> Result<<P as Policy>::Ret<'b>, Self::Error> {
+    ) -> Result<<P as Policy>::Ret, Self::Error> {
         self.init()?;
 
         let set = &mut self.set;
@@ -560,7 +560,7 @@ mod test {
 
         PolicyParser::<AFwdPolicy>::parse(
             &mut set,
-            &Args::from(["app", "ls", "--aopt", "--bopt=42"]),
+            Args::from(["app", "ls", "--aopt", "--bopt=42"]),
         )?;
 
         assert_eq!(set.find_val::<bool>("ls")?, &true);

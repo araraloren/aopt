@@ -285,7 +285,7 @@ pub mod prelude {
     pub use crate::parser::PolicyParser;
     pub use crate::parser::PolicySettings;
     pub use crate::parser::PrePolicy;
-    pub use crate::parser::ReturnVal;
+    pub use crate::parser::Return;
     pub use crate::parser::UserStyle;
     pub use crate::ser::AppServices;
     pub use crate::ser::ServicesValExt;

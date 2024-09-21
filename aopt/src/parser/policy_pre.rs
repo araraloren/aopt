@@ -5,7 +5,7 @@ use super::FailManager;
 use super::OptStyleManager;
 use super::Policy;
 use super::PolicySettings;
-use super::ReturnVal;
+use super::Return;
 use super::UserStyle;
 use crate::args::ArgInfo;
 use crate::args::Args;
@@ -465,7 +465,7 @@ where
     Chk: SetChecker<Set>,
     Set: crate::set::Set + OptParser + OptValidator,
 {
-    type Ret<'a> = ReturnVal<'a>;
+    type Ret<'a> = Return<'a>;
 
     type Set = Set;
 
@@ -487,10 +487,10 @@ where
             .with_args(args.clone());
 
         match self.parse_impl(&mut ctx, set, inv, ser) {
-            Ok(_) => Ok(ReturnVal::new(ctx)),
+            Ok(_) => Ok(Return::new(ctx)),
             Err(e) => {
                 if e.is_failure() {
-                    Ok(ReturnVal::new(ctx).with_failure(e))
+                    Ok(Return::new(ctx).with_failure(e))
                 } else {
                     Err(e)
                 }

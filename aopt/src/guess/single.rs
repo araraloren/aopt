@@ -3,7 +3,6 @@ use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-use crate::args::Args;
 use crate::ctx::InnerCtx;
 use crate::opt::Opt;
 use crate::opt::Style;
@@ -24,8 +23,6 @@ pub struct SingleOpt<'a, S> {
 
     arg: Option<Cow<'a, OsStr>>,
 
-    args: Args<'a>,
-
     uids: Vec<Uid>,
 
     index: usize,
@@ -41,7 +38,6 @@ impl<S> Clone for SingleOpt<'_, S> {
             name: self.name.clone(),
             style: self.style,
             arg: self.arg.clone(),
-            args: self.args.clone(),
             uids: self.uids.clone(),
             index: self.index,
             total: self.total,
@@ -56,7 +52,6 @@ impl<S> Debug for SingleOpt<'_, S> {
             .field("name", &self.name)
             .field("style", &self.style)
             .field("arg", &self.arg)
-            .field("args", &self.args)
             .field("uids", &self.uids)
             .field("index", &self.index)
             .field("total", &self.total)
@@ -70,7 +65,6 @@ impl<S> Default for SingleOpt<'_, S> {
             name: Default::default(),
             style: Default::default(),
             arg: Default::default(),
-            args: Default::default(),
             uids: Default::default(),
             index: Default::default(),
             total: Default::default(),
@@ -102,11 +96,6 @@ impl<'a, S> PolicyBuild<'a> for SingleOpt<'a, S> {
 
     fn with_arg(mut self, arg: Option<Cow<'a, OsStr>>) -> Self {
         self.arg = arg;
-        self
-    }
-
-    fn with_args(mut self, args: Args<'a>) -> Self {
-        self.args = args;
         self
     }
 }

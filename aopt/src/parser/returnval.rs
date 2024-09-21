@@ -1,21 +1,61 @@
-use std::borrow::Cow;
-use std::ffi::OsStr;
-use std::ops::{Deref, DerefMut};
+use std::ffi::OsString;
 
+use crate::args::Args;
 use crate::ctx::Ctx;
-use crate::Error;
+use crate::opt::Style;
+use crate::{Error, Uid};
+
+#[derive(Debug, Clone, Default)]
+pub struct Guess {
+    pub uid: Uid,
+
+    pub name: Option<String>,
+
+    pub style: Style,
+
+    pub arg: Option<OsString>,
+
+    pub index: usize,
+
+    pub total: usize,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Context {
+    pub orig: Args,
+
+    pub args: Vec<OsString>,
+
+    pub guess: Option<Guess>,
+}
 
 /// Return value for [`Policy`](crate::parser::Policy).
 #[derive(Debug, Clone, Default)]
-pub struct ReturnVal<'a> {
-    ctx: Ctx<'a>,
+pub struct Return {
+    ctx: Context,
 
     failure: Option<Error>,
 }
 
-impl<'a> ReturnVal<'a> {
-    pub fn new(ctx: Ctx<'a>) -> Self {
-        Self { ctx, failure: None }
+impl Return {
+    pub fn new(ctx: Ctx<'_>) -> Self {
+        let args = ctx.args.into_iter().map(|v| v.to_os_string()).collect();
+
+        Self {
+            ctx: Context {
+                orig: ctx.orig,
+                args,
+                guess: ctx.inner_ctx.map(|v| Guess {
+                    uid: v.uid(),
+                    name: v.name().map(|v| v.to_string()),
+                    style: v.style(),
+                    arg: v.arg().map(|v| v.to_os_string()),
+                    index: v.idx(),
+                    total: v.total(),
+                }),
+            },
+            failure: None,
+        }
     }
 
     pub fn with_failure(mut self, failure: Error) -> Self {
@@ -32,12 +72,12 @@ impl<'a> ReturnVal<'a> {
         self.failure.as_ref()
     }
 
-    pub fn ctx(&self) -> &Ctx<'a> {
+    pub fn ctx(&self) -> &Context {
         &self.ctx
     }
 
-    pub fn args(&self) -> &[Cow<'a, OsStr>] {
-        self.ctx.args().as_slice()
+    pub fn args(&self) -> &[OsString] {
+        &self.ctx.args
     }
 
     /// The [`status`](ReturnVal::status) is true if parsing successes
@@ -47,7 +87,7 @@ impl<'a> ReturnVal<'a> {
     }
 
     /// Unwrap the [`Ctx`] from [`ReturnVal`].
-    pub fn unwrap(self) -> Ctx<'a> {
+    pub fn unwrap(self) -> Context {
         Result::unwrap(if self.failure.is_none() {
             Ok(self.ctx)
         } else {
@@ -55,7 +95,7 @@ impl<'a> ReturnVal<'a> {
         })
     }
 
-    pub fn ok(self) -> Result<Ctx<'a>, Error> {
+    pub fn ok(self) -> Result<Context, Error> {
         if let Some(failure) = self.failure {
             Err(failure)
         } else {
@@ -63,7 +103,7 @@ impl<'a> ReturnVal<'a> {
         }
     }
 
-    pub fn take_ctx(&mut self) -> Ctx<'a> {
+    pub fn take_ctx(&mut self) -> Context {
         std::mem::take(&mut self.ctx)
     }
 
@@ -71,39 +111,29 @@ impl<'a> ReturnVal<'a> {
         self.failure.take()
     }
 
-    pub fn clone_args(&self) -> Vec<Cow<'a, OsStr>> {
-        self.ctx.args().clone().unwrap_or_clone()
+    pub fn take_args(&mut self) -> Vec<OsString> {
+        std::mem::take(&mut self.ctx.args)
+    }
+
+    pub fn clone_args(&self) -> Vec<OsString> {
+        self.ctx.args.clone()
     }
 }
 
-impl<'a> Deref for ReturnVal<'a> {
-    type Target = Ctx<'a>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.ctx
-    }
-}
-
-impl<'a> DerefMut for ReturnVal<'a> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.ctx
-    }
-}
-
-impl From<ReturnVal<'_>> for bool {
-    fn from(value: ReturnVal<'_>) -> Self {
+impl From<Return> for bool {
+    fn from(value: Return) -> Self {
         value.status()
     }
 }
 
-impl<'a> From<&'a ReturnVal<'_>> for bool {
-    fn from(value: &'a ReturnVal<'_>) -> Self {
+impl From<&Return> for bool {
+    fn from(value: &Return) -> Self {
         value.status()
     }
 }
 
-impl<'a> From<&'a mut ReturnVal<'_>> for bool {
-    fn from(value: &'a mut ReturnVal<'_>) -> Self {
+impl From<&mut Return> for bool {
+    fn from(value: &mut Return) -> Self {
         value.status()
     }
 }

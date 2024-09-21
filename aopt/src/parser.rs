@@ -16,7 +16,7 @@ pub use self::optset::HCOptSet;
 pub use self::policy_delay::DelayPolicy;
 pub use self::policy_fwd::FwdPolicy;
 pub use self::policy_pre::PrePolicy;
-pub use self::returnval::ReturnVal;
+pub use self::returnval::Return;
 pub use self::style::OptStyleManager;
 pub use self::style::UserStyle;
 
@@ -77,19 +77,19 @@ pub struct CtxSaver<'a> {
 /// }
 /// ```
 pub trait Policy {
-    type Ret<'a>;
+    type Ret;
     type Set;
     type Inv<'a>;
     type Ser;
     type Error: Into<Error>;
 
-    fn parse<'a>(
+    fn parse(
         &mut self,
         set: &mut Self::Set,
         inv: &mut Self::Inv<'_>,
         ser: &mut Self::Ser,
-        args: &Args<'a>,
-    ) -> Result<Self::Ret<'a>, Self::Error>;
+        args: Args,
+    ) -> Result<Self::Ret, Self::Error>;
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -129,7 +129,14 @@ where
 {
     type Error: Into<Error>;
 
-    fn parse<'a>(&mut self, args: &Args<'a>) -> Result<P::Ret<'a>, Self::Error>
+    fn parse_env(&mut self) -> Result<P::Ret, Self::Error>
+    where
+        P: Default,
+    {
+        self.parse(Args::from_env())
+    }
+
+    fn parse(&mut self, args: Args) -> Result<P::Ret, Self::Error>
     where
         P: Default,
     {
@@ -137,11 +144,12 @@ where
         self.parse_policy(args, &mut policy)
     }
 
-    fn parse_policy<'a>(
-        &mut self,
-        args: &Args<'a>,
-        policy: &mut P,
-    ) -> Result<P::Ret<'a>, Self::Error>;
+    fn parse_env_policy(&mut self, policy: &mut P) -> Result<P::Ret, Self::Error> {
+        let args = Args::from_env();
+        self.parse_policy(args, policy)
+    }
+
+    fn parse_policy(&mut self, args: Args, policy: &mut P) -> Result<P::Ret, Self::Error>;
 }
 
 /// Parser manage the components are using in [`parse`](Policy::parse) of [`Policy`].
@@ -290,7 +298,7 @@ where
         self.optset.init()
     }
 
-    pub fn parse<'b>(&mut self, args: &Args<'b>) -> Result<<P as Policy>::Ret<'b>, Error> {
+    pub fn parse(&mut self, args: Args) -> Result<<P as Policy>::Ret, Error> {
         PolicyParser::<P>::parse_policy(&mut self.optset, args, &mut self.policy)
     }
 }
@@ -378,18 +386,18 @@ where
 {
     type Error = Error;
 
-    fn parse<'b>(&mut self, args: &Args<'b>) -> Result<<P as Policy>::Ret<'b>, Self::Error>
+    fn parse(&mut self, args: Args) -> Result<<P as Policy>::Ret, Self::Error>
     where
         P: Default,
     {
         PolicyParser::<P>::parse_policy(&mut self.optset, args, &mut self.policy)
     }
 
-    fn parse_policy<'b>(
+    fn parse_policy(
         &mut self,
-        args: &Args<'b>,
+        args: Args,
         policy: &mut P,
-    ) -> Result<<P as Policy>::Ret<'b>, Self::Error> {
+    ) -> Result<<P as Policy>::Ret, Self::Error> {
         PolicyParser::<P>::parse_policy(&mut self.optset, args, policy)
     }
 }
