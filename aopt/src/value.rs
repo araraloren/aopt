@@ -6,6 +6,8 @@ pub(crate) mod storer;
 pub(crate) mod validator;
 
 use std::any::type_name;
+use std::ffi::OsStr;
+use std::ffi::OsString;
 use std::fmt::Debug;
 
 pub use self::accessor::ValAccessor;
@@ -28,7 +30,6 @@ use crate::map::ErasedTy;
 use crate::opt::Action;
 use crate::raise_error;
 use crate::Error;
-use crate::RawVal;
 
 /// A special option value, can stop the policy, using for implement `--`.
 ///
@@ -79,7 +80,7 @@ pub struct Stop;
 pub trait ErasedValue {
     fn initialize(&mut self) -> Result<(), Error>;
 
-    fn store(&mut self, raw: Option<&RawVal>, ctx: &Ctx, act: &Action) -> Result<(), Error>;
+    fn store(&mut self, raw: Option<&OsStr>, ctx: &Ctx, act: &Action) -> Result<(), Error>;
 
     fn store_act<U: ErasedTy>(&mut self, val: U, ctx: &Ctx, act: &Action) -> Result<(), Error>;
 
@@ -91,13 +92,13 @@ pub trait ErasedValue {
 
     fn vals_mut<U: ErasedTy>(&mut self) -> Result<&mut Vec<U>, Error>;
 
-    fn rawval(&self) -> Result<&RawVal, Error>;
+    fn rawval(&self) -> Result<&OsString, Error>;
 
-    fn rawval_mut(&mut self) -> Result<&mut RawVal, Error>;
+    fn rawval_mut(&mut self) -> Result<&mut OsString, Error>;
 
-    fn rawvals(&self) -> Result<&Vec<RawVal>, Error>;
+    fn rawvals(&self) -> Result<&Vec<OsString>, Error>;
 
-    fn rawvals_mut(&mut self) -> Result<&mut Vec<RawVal>, Error>;
+    fn rawvals_mut(&mut self) -> Result<&mut Vec<OsString>, Error>;
 }
 
 /// [`AnyValue`] can save values of any type. In internal it save the value into a vector of type T.

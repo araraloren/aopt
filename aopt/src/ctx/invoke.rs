@@ -187,12 +187,11 @@ where
     pub fn fallback(set: &mut Set, _: &mut Ser, ctx: &mut Ctx) -> Result<bool, Error> {
         let uid = ctx.uid()?;
         let opt = set.get_mut(uid).unwrap();
-        let arg = ctx.arg()?;
-        let raw = arg.as_ref();
+        let arg = ctx.arg()?.map(|v| v.as_ref());
         let act = *opt.action();
 
         trace!("Invoke fallback for {}({act}) {{{ctx:?}}}", opt.name());
-        opt.accessor_mut().store_all(raw, ctx, &act)
+        opt.accessor_mut().store_all(arg, ctx, &act)
     }
 }
 

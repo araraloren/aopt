@@ -29,7 +29,7 @@ use super::SingleOpt;
 pub struct InvokeGuess<'a, 'b, Set, Inv, Ser> {
     pub idx: usize,
 
-    pub tot: usize,
+    pub total: usize,
 
     pub arg: Option<Cow<'b, OsStr>>,
 
@@ -58,7 +58,7 @@ impl<'a, 'b, Set, Inv, Ser> InvokeGuess<'a, 'b, Set, Inv, Ser> {
     ) -> Self {
         Self {
             idx: 0,
-            tot: 0,
+            total: 0,
             arg: None,
             name: None,
             next: None,
@@ -101,7 +101,7 @@ impl<'a, 'b, Set, Inv, Ser> InvokeGuess<'a, 'b, Set, Inv, Ser> {
     }
 
     pub fn set_tot(&mut self, tot: usize) -> &mut Self {
-        self.tot = tot;
+        self.total = tot;
         self
     }
 
@@ -151,7 +151,7 @@ impl<'a, 'b, Set, Inv, Ser> InvokeGuess<'a, 'b, Set, Inv, Ser> {
     }
 
     pub fn with_tot(mut self, tot: usize) -> Self {
-        self.tot = tot;
+        self.total = tot;
         self
     }
 
@@ -437,7 +437,7 @@ where
                 return Ok(Some(
                     T::default()
                         .with_idx(self.idx)
-                        .with_tot(self.tot)
+                        .with_tot(self.total)
                         .with_name(Some(name.clone()))
                         .with_arg(self.arg.clone())
                         .with_style(Style::Argument),
@@ -460,7 +460,7 @@ where
                 return Ok(Some(
                     T::default()
                         .with_idx(self.idx)
-                        .with_tot(self.tot)
+                        .with_tot(self.total)
                         .with_name(Some(name.clone()))
                         .with_arg(self.next.clone())
                         .with_style(Style::Argument),
@@ -481,7 +481,7 @@ where
 
     fn guess_policy(&mut self) -> Result<Option<T>, Self::Error> {
         let idx = self.idx;
-        let tot = self.tot;
+        let tot = self.total;
         let style = Style::Argument;
 
         if self.arg.is_none() {
@@ -524,7 +524,7 @@ where
 
     fn guess_policy(&mut self) -> Result<Option<MultiOpt<T, Set>>, Self::Error> {
         let idx = self.idx;
-        let tot = self.tot;
+        let tot = self.total;
         let style = Style::Argument;
 
         if self.arg.is_none() {
@@ -570,7 +570,7 @@ where
 
     fn guess_policy(&mut self) -> Result<Option<MultiOpt<T, Set>>, Self::Error> {
         let idx = self.idx;
-        let tot = self.tot;
+        let tot = self.total;
         let style = Style::Boolean;
         let arg = Some(Cow::Borrowed(OsStr::new(BOOL_TRUE)));
 
@@ -615,7 +615,7 @@ where
                 return Ok(Some(
                     T::default()
                         .with_idx(self.idx)
-                        .with_tot(self.tot)
+                        .with_tot(self.total)
                         .with_name(Some(name.clone()))
                         .with_arg(arg)
                         .with_style(Style::Boolean),
@@ -638,7 +638,7 @@ where
                 return Ok(Some(
                     T::default()
                         .with_idx(self.idx)
-                        .with_tot(self.tot)
+                        .with_tot(self.total)
                         .with_name(Some(name.clone()))
                         .with_arg(None)
                         .with_style(Style::Flag),
@@ -657,11 +657,11 @@ where
 
     fn guess_policy(&mut self) -> Result<Option<T>, Self::Error> {
         let idx = self.idx;
-        let tot = self.tot;
+        let tot = self.total;
         let style = Style::Main;
         let name = self.name.clone();
-        let args = self.ctx.args().clone();
-        let arg = args.get(idx).cloned();
+        let args = self.ctx.args();
+        let arg = args.get(idx).map(|v| Cow::Borrowed(*v));
 
         Ok(Some(
             T::default()
@@ -682,11 +682,11 @@ where
 
     fn guess_policy(&mut self) -> Result<Option<T>, Self::Error> {
         let idx = self.idx;
-        let tot = self.tot;
+        let tot = self.total;
         let style = Style::Pos;
         let name = self.name.clone();
-        let args = self.ctx.args().clone();
-        let arg = args.get(idx).cloned();
+        let args = self.ctx.args();
+        let arg = args.get(idx).map(|v| Cow::Borrowed(*v));
 
         Ok(Some(
             T::default()
@@ -707,10 +707,9 @@ where
 
     fn guess_policy(&mut self) -> Result<Option<T>, Self::Error> {
         let idx = self.idx;
-        let tot = self.tot;
+        let tot = self.total;
         let style = Style::Cmd;
         let name = self.name.clone();
-        let args = self.ctx.args().clone();
         let arg = Some(Cow::Borrowed(OsStr::new(BOOL_TRUE)));
 
         Ok(Some(

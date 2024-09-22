@@ -285,7 +285,6 @@ where
 
         trace!("parsing {ctx:?} using fwd policy");
         ctx.set_args(args.clone());
-
         while let Some((idx, (opt, next))) = iter2.next() {
             let mut matched = false;
             let mut consume = false;
@@ -302,7 +301,7 @@ where
                         set,
                         inv,
                         ser,
-                        tot: total,
+                        total,
                         ctx,
                         next,
                         fail: &mut opt_fail,
@@ -348,19 +347,19 @@ where
         opt_fail.process_check(self.checker().opt_check(set))?;
 
         let args = lefts;
-        let tot = args.len();
+        let total = args.len();
         let mut pos_fail = FailManager::default();
         let mut cmd_fail = FailManager::default();
 
         ctx.set_args(args.clone());
         // when style is pos, noa index is [1..=len]
-        if tot > 0 {
+        if total > 0 {
             let name = crate::str::osstr_to_str_i(&args, Self::noa_cmd());
             let mut guess = InvokeGuess {
                 set,
                 inv,
                 ser,
-                tot,
+                total,
                 name,
                 ctx,
                 arg: None,
@@ -380,7 +379,7 @@ where
                 set,
                 inv,
                 ser,
-                tot,
+                total,
                 ctx,
                 name: None,
                 arg: None,
@@ -389,7 +388,7 @@ where
                 idx: Self::noa_cmd(),
             };
 
-            for idx in 1..tot {
+            for idx in 1..total {
                 guess.idx = Self::noa_pos(idx);
                 guess.name = crate::str::osstr_to_str_i(&args, Self::noa_pos(idx));
                 trace!("Guess POS argument = {:?} @ {}", guess.name, guess.idx);
@@ -409,14 +408,13 @@ where
 
         pos_fail.process_check(self.checker().pos_check(set))?;
 
-        let mut main_fail = FailManager::default();
-
         let name = crate::str::osstr_to_str_i(&ctx.args, Self::noa_main());
+        let mut main_fail = FailManager::default();
         let mut guess = InvokeGuess {
             set,
             inv,
             ser,
-            tot,
+            total,
             name,
             ctx,
             arg: None,
@@ -452,11 +450,11 @@ where
         set: &mut Self::Set,
         inv: &mut Self::Inv<'_>,
         ser: &mut Self::Ser,
-        args: Args,
+        orig: Args,
     ) -> Result<Self::Ret, Self::Error> {
-        let mut ctx = Ctx::default().with_orig(args.clone());
+        let mut ctx = Ctx::default().with_orig(orig.clone());
 
-        match self.parse_impl(set, inv, ser, &args, &mut ctx) {
+        match self.parse_impl(set, inv, ser, &orig, &mut ctx) {
             Ok(_) => Ok(Return::new(ctx)),
             Err(e) => {
                 if e.is_failure() {
@@ -473,6 +471,7 @@ where
 mod test {
 
     use std::any::TypeId;
+    use std::ffi::OsStr;
     use std::ops::Deref;
 
     use crate::opt::Cmd;
@@ -480,7 +479,6 @@ mod test {
     use crate::opt::Pos;
     use crate::prelude::*;
     use crate::Error;
-    use crate::RawVal;
 
     #[test]
     fn testing_1() {
@@ -648,13 +646,13 @@ mod test {
                 |uid: Uid,
                  set: &mut ASet,
                  _: &mut ASer,
-                 raw: Option<&RawVal>,
+                 raw: Option<&OsStr>,
                  val: Option<String>| {
                     if let Some(val) = val {
                         // let's put the value to `popt`
                         set["--popt"].accessor_mut().push(val);
                         if let Some(raw) = raw {
-                            set[uid].rawvals_mut()?.push(raw.clone());
+                            set[uid].rawvals_mut()?.push(raw.to_os_string());
                         }
                         Ok(true)
                     } else {
@@ -1046,7 +1044,7 @@ mod test {
         for opt in set.iter_mut() {
             opt.init()?;
         }
-        policy.parse(&mut set, &mut inv, &mut ser, &args)?;
+        policy.parse(&mut set, &mut inv, &mut ser, args)?;
         Ok(())
     }
 }

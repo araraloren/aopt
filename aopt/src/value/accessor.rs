@@ -1,3 +1,4 @@
+use std::ffi::{OsStr, OsString};
 use std::ops::{Deref, DerefMut};
 
 use super::AnyValue;
@@ -12,7 +13,6 @@ use crate::map::ErasedTy;
 use crate::opt::Action;
 use crate::raise_error;
 use crate::Error;
-use crate::RawVal;
 
 /// [`ValAccessor`] manage the option value and raw value.
 ///
@@ -91,7 +91,7 @@ use crate::RawVal;
 pub struct ValAccessor {
     any_value: AnyValue,
 
-    rawval: Vec<RawVal>,
+    rawval: Vec<OsString>,
 
     storer: ValStorer,
 
@@ -171,7 +171,7 @@ impl ValAccessor {
         &mut self.initializer
     }
 
-    pub fn handlers(&mut self) -> (&mut Vec<RawVal>, &mut AnyValue) {
+    pub fn handlers(&mut self) -> (&mut Vec<OsString>, &mut AnyValue) {
         (&mut self.rawval, &mut self.any_value)
     }
 
@@ -179,14 +179,14 @@ impl ValAccessor {
     /// The function will map the failure error to `Ok(false)`.
     pub fn store_all(
         &mut self,
-        raw: Option<&RawVal>,
+        arg: Option<&OsStr>,
         ctx: &Ctx,
         act: &Action,
     ) -> Result<bool, Error> {
-        match self.store(raw, ctx, act) {
+        match self.store(arg, ctx, act) {
             Ok(_) => {
-                if let Some(raw) = raw {
-                    self.rawval.push(raw.clone());
+                if let Some(raw) = arg {
+                    self.rawval.push(raw.to_os_string());
                 }
                 Ok(true)
             }
@@ -202,10 +202,10 @@ impl ErasedValue for ValAccessor {
         self.initializer.invoke(handler)
     }
 
-    fn store(&mut self, raw: Option<&RawVal>, ctx: &Ctx, act: &Action) -> Result<(), Error> {
+    fn store(&mut self, arg: Option<&OsStr>, ctx: &Ctx, act: &Action) -> Result<(), Error> {
         let handler = &mut self.any_value;
 
-        self.storer.invoke(raw, ctx, act, handler)
+        self.storer.invoke(arg, ctx, act, handler)
     }
 
     fn store_act<U: ErasedTy>(&mut self, val: U, _: &Ctx, act: &Action) -> Result<(), Error> {
@@ -251,23 +251,23 @@ impl ErasedValue for ValAccessor {
         self.any_value.vals_mut()
     }
 
-    fn rawval(&self) -> Result<&RawVal, Error> {
+    fn rawval(&self) -> Result<&OsString, Error> {
         self.rawval
             .last()
             .ok_or_else(|| raise_error!("No more raw value in current accessor"))
     }
 
-    fn rawval_mut(&mut self) -> Result<&mut RawVal, Error> {
+    fn rawval_mut(&mut self) -> Result<&mut OsString, Error> {
         self.rawval
             .last_mut()
             .ok_or_else(|| raise_error!("No more raw value in current accessor"))
     }
 
-    fn rawvals(&self) -> Result<&Vec<RawVal>, Error> {
+    fn rawvals(&self) -> Result<&Vec<OsString>, Error> {
         Ok(&self.rawval)
     }
 
-    fn rawvals_mut(&mut self) -> Result<&mut Vec<RawVal>, Error> {
+    fn rawvals_mut(&mut self) -> Result<&mut Vec<OsString>, Error> {
         Ok(&mut self.rawval)
     }
 }

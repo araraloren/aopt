@@ -5,7 +5,6 @@ use std::fmt::Display;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
-use crate::opt::Opt;
 use crate::ARef;
 
 pub fn astr<T: Into<AStr>>(value: T) -> AStr {
@@ -215,6 +214,22 @@ pub fn split_once<'a>(str: &'a OsStr, ch: char) -> Option<(Cow<'a, OsStr>, Cow<'
 pub fn osstr_to_str_i<'a>(val: &[&'a OsStr], i: usize) -> Option<Cow<'a, str>> {
     val.get(i)
         .and_then(|v| v.to_str().map(|v| Cow::Borrowed(v)))
+}
+
+pub fn display_of_str(val: Option<&str>) -> String {
+    if let Some(val) = val {
+        format!("Some({})", val)
+    } else {
+        "None".to_string()
+    }
+}
+
+pub fn display_of_osstr(val: Option<&OsStr>) -> String {
+    if let Some(val) = val {
+        format!("Some({})", std::path::Path::new(val).display())
+    } else {
+        "None".to_string()
+    }
 }
 
 pub trait CowOsStrUtils<'a> {

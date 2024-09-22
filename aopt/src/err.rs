@@ -1,10 +1,11 @@
+use std::ffi::OsStr;
 use std::fmt::Display;
 use std::num::ParseFloatError;
 use std::num::ParseIntError;
 use std::ops::Deref;
 use std::thread::AccessError;
 
-use crate::RawVal;
+use crate::str::display_of_osstr;
 use crate::Uid;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -171,13 +172,8 @@ impl Error {
         Self::new(Kind::Arg).with_desp(desp)
     }
 
-    pub fn sp_rawval(val: Option<&RawVal>, hint: impl Into<String>) -> Self {
-        let desp = format!(
-            "invalid value `{}`: {}",
-            val.map(|v| format!("Some({v})"))
-                .unwrap_or(String::from("None")),
-            hint.into()
-        );
+    pub fn sp_rawval(val: Option<&OsStr>, hint: impl Into<String>) -> Self {
+        let desp = format!("invalid value `{}`: {}", display_of_osstr(val), hint.into());
 
         Self::new(Kind::RawValParse).with_desp(desp)
     }

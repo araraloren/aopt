@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
@@ -295,24 +296,28 @@ where
 {
     pub(crate) fn parse_impl<'a>(
         &mut self,
-        ctx: &mut Ctx<'a>,
         set: &mut <Self as Policy>::Set,
         inv: &mut <Self as Policy>::Inv<'_>,
         ser: &mut <Self as Policy>::Ser,
+        orig: &'a Args,
+        ctx: &mut Ctx<'a>,
     ) -> Result<(), <Self as Policy>::Error> {
         self.checker().pre_check(set).map_err(|e| e.into())?;
 
         let overload = self.overload();
         let opt_styles = &self.style_manager;
-        let args = ctx.args().clone();
-        let tot = args.len();
-        let mut noa_args = vec![];
-        let mut iter = args.iter2().enumerate();
+        let args: Vec<_> = orig.iter().map(|v| v.as_os_str()).collect();
+        let total = args.len();
+        let mut lefts = vec![];
         let mut opt_fail = FailManager::default();
+        let mut iter2 = args
+            .iter()
+            .zip(args.iter().skip(1).map(|v| Some(v)).chain(None))
+            .enumerate();
 
-        trace!("Parsing {ctx:?} using pre policy");
+        trace!("parsing {ctx:?} using pre policy");
         ctx.set_args(args.clone());
-        while let Some((idx, (opt, next))) = iter.next() {
+        while let Some((idx, (opt, next))) = iter2.next() {
             let mut matched = false;
             let mut consume = false;
             let mut stopped = false;
@@ -324,14 +329,14 @@ where
                     if valid {
                         like_opt = true;
                         let arg = value.clone();
-                        let next = next.cloned();
+                        let next = next.map(|v| Cow::Borrowed(*v));
                         let mut guess = InvokeGuess {
                             idx,
                             arg,
                             set,
                             inv,
                             ser,
-                            tot,
+                            total,
                             ctx,
                             next,
                             fail: &mut opt_fail,
@@ -362,33 +367,33 @@ where
             }
             if stopped {
                 // skip current, put left argument to noa args
-                noa_args.extend_from_slice(&args[(idx + 1)..]);
+                lefts.extend(iter2.map(|(_, (a, _))| *a));
                 break;
             }
             // if consume the argument, skip it
             if matched && consume {
-                iter.next();
+                iter2.next();
             } else if !matched && !self.strict() || !like_opt {
                 // add it to NOA if current argument not matched
                 // and not in strict mode or the argument not like an option
-                noa_args.push(args[idx].clone());
+                lefts.push(*opt);
             }
         }
         opt_fail.process_check(self.checker().opt_check(set))?;
 
-        let noa_args = Args::from(noa_args);
-        let tot = noa_args.len();
+        let args = lefts;
+        let total = args.len();
         let mut pos_fail = FailManager::default();
         let mut cmd_fail = FailManager::default();
 
-        ctx.set_args(noa_args.clone());
-        if tot > 0 {
-            let name = noa_args.to_str_i(Self::noa_cmd());
+        ctx.set_args(args.clone());
+        if total > 0 {
+            let name = crate::str::osstr_to_str_i(&args, Self::noa_cmd());
             let mut guess = InvokeGuess {
                 set,
                 inv,
                 ser,
-                tot,
+                total,
                 name,
                 ctx,
                 arg: None,
@@ -408,7 +413,7 @@ where
                 set,
                 inv,
                 ser,
-                tot,
+                total,
                 ctx,
                 name: None,
                 arg: None,
@@ -417,9 +422,9 @@ where
                 idx: Self::noa_cmd(),
             };
 
-            for idx in 1..tot {
+            for idx in 1..total {
                 guess.idx = Self::noa_pos(idx);
-                guess.name = noa_args.to_str_i(Self::noa_pos(idx));
+                guess.name = crate::str::osstr_to_str_i(&args, Self::noa_pos(idx));
                 trace!("Guess POS argument = {:?} @ {}", guess.name, guess.idx);
                 Self::ig_failure(guess.guess_and_invoke(&UserStyle::Pos, overload))?;
                 match guess.ctx.policy_act() {
@@ -436,17 +441,15 @@ where
         }
         pos_fail.process_check(self.checker().pos_check(set))?;
 
-        let main_args = noa_args;
-        let tot = main_args.len();
-        let name = main_args.to_str_i(Self::noa_main());
+        let name = crate::str::osstr_to_str_i(&ctx.args, Self::noa_main());
         let mut main_fail = FailManager::default();
         let mut guess = InvokeGuess {
             set,
             inv,
             ser,
-            tot,
+            total,
             name,
-            ctx: ctx.set_args(main_args),
+            ctx,
             arg: None,
             next: None,
             fail: &mut main_fail,
@@ -465,7 +468,7 @@ where
     Chk: SetChecker<Set>,
     Set: crate::set::Set + OptParser + OptValidator,
 {
-    type Ret<'a> = Return<'a>;
+    type Ret = Return;
 
     type Set = Set;
 
@@ -475,18 +478,16 @@ where
 
     type Error = Error;
 
-    fn parse<'a>(
+    fn parse(
         &mut self,
         set: &mut Self::Set,
         inv: &mut Self::Inv<'_>,
         ser: &mut Self::Ser,
-        args: &Args<'a>,
-    ) -> Result<Self::Ret<'a>, Self::Error> {
-        let mut ctx = Ctx::default()
-            .with_orig(args.clone())
-            .with_args(args.clone());
+        orig: Args,
+    ) -> Result<Self::Ret, Self::Error> {
+        let mut ctx = Ctx::default().with_orig(orig.clone());
 
-        match self.parse_impl(&mut ctx, set, inv, ser) {
+        match self.parse_impl(set, inv, ser, &orig, &mut ctx) {
             Ok(_) => Ok(Return::new(ctx)),
             Err(e) => {
                 if e.is_failure() {
@@ -511,7 +512,6 @@ mod test {
     use crate::opt::Pos;
     use crate::prelude::*;
     use crate::Error;
-    use crate::RawVal;
 
     #[test]
     fn testing_1() {
@@ -684,13 +684,13 @@ mod test {
                 |uid: Uid,
                  set: &mut ASet,
                  _: &mut ASer,
-                 raw: Option<&RawVal>,
+                 raw: Option<&OsStr>,
                  val: Option<String>| {
                     if let Some(val) = val {
                         // let's put the value to `popt`
                         set["--popt"].accessor_mut().push(val);
                         if let Some(raw) = raw {
-                            set[uid].rawvals_mut()?.push(raw.clone());
+                            set[uid].rawvals_mut()?.push(raw.to_os_string());
                         }
                         Ok(true)
                     } else {
@@ -1082,7 +1082,7 @@ mod test {
         for opt in set.iter_mut() {
             opt.init()?;
         }
-        let ret = policy.parse(&mut set, &mut inv, &mut ser, &args);
+        let ret = policy.parse(&mut set, &mut inv, &mut ser, args.clone());
 
         assert!(ret.is_ok());
         let ret = ret.unwrap();

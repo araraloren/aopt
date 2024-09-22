@@ -1,10 +1,12 @@
+use std::ffi::OsStr;
+use std::ffi::OsString;
+
 use crate::ctx::Store;
 use crate::map::ErasedTy;
 use crate::set::SetExt;
 use crate::set::SetOpt;
 use crate::value::AnyValue;
 use crate::Error;
-use crate::RawVal;
 use crate::Uid;
 
 use super::Opt;
@@ -99,16 +101,16 @@ impl Action {
     /// Save the value in [`handler`](AnyValue) and raw value in `raw_handler`.
     pub fn store2<U: ErasedTy>(
         &self,
-        raw: Option<&RawVal>,
+        raw: Option<&OsStr>,
         val: Option<U>,
-        raw_handler: &mut Vec<RawVal>,
+        raw_handler: &mut Vec<OsString>,
         handler: &mut AnyValue,
     ) -> bool {
         let ret = self.store1(val, handler);
 
         if ret {
             if let Some(raw) = raw {
-                raw_handler.push(raw.clone());
+                raw_handler.push(raw.to_os_string());
             }
         }
         ret
@@ -146,7 +148,7 @@ where
         uid: Uid,
         set: &mut Set,
         _: &mut Ser,
-        raw: Option<&RawVal>,
+        raw: Option<&OsStr>,
         val: Option<Val>,
     ) -> Result<Self::Ret, Self::Error> {
         let opt = set.opt_mut(uid)?;

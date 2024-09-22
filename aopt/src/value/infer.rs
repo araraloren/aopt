@@ -23,7 +23,6 @@ use crate::value::ValInitializer;
 use crate::value::ValValidator;
 use crate::AStr;
 use crate::Error;
-use crate::RawVal;
 
 use super::AnyValue;
 use super::RawValParser;
@@ -237,7 +236,7 @@ where
             // add default storer when value type is bool.
             if type_id == bool_type {
                 cfg.set_storer(ValStorer::new(Box::new(
-                    |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
+                    |raw: Option<&OsStr>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
                         let val = raw.is_some();
 
                         trace!("Pos value storer, parsing {:?} -> {:?}", raw, val);
