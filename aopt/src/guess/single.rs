@@ -206,12 +206,11 @@ where
 
                 if matched {
                     if !opt.ignore_name() {
-                        // FIXME
-                        //matched = opt.mat_name(self.name());
+                        matched = opt.mat_name(self.name().map(|v| v.as_ref()));
                     }
                     if !opt.ignore_alias() && opt.alias().is_some() {
-                        // FIXME
-                        // matched = matched || opt.mat_alias(self.name.as_ref().unwrap())
+                        // FIXME remove unwrap
+                        matched = matched || opt.mat_alias(self.name.as_ref().unwrap())
                     }
                     if !opt.ignore_index() {
                         matched = matched && {

@@ -403,9 +403,9 @@ pub trait Opt: Debug {
 
     fn mat_force(&self, force: bool) -> bool;
 
-    fn mat_name(&self, name: Option<&AStr>) -> bool;
+    fn mat_name(&self, name: Option<&str>) -> bool;
 
-    fn mat_alias(&self, name: &AStr) -> bool;
+    fn mat_alias(&self, name: &str) -> bool;
 
     fn mat_index(&self, index: Option<(usize, usize)>) -> bool;
 

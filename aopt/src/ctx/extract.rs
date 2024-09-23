@@ -1,10 +1,8 @@
-use super::Ctx;
-
 use crate::Error;
 
 /// Implement the trait if your want use your type in the [`Invoker`](crate::ctx::Invoker).
 /// Return an [`Error::sp_extract`] if any error occured.
-pub trait Extract<Set, Ser>
+pub trait Extract<Set, Ser, Ctx>
 where
     Self: Sized,
 {
@@ -13,7 +11,7 @@ where
     fn extract(set: &Set, ser: &Ser, ctx: &Ctx) -> Result<Self, Self::Error>;
 }
 
-impl<Set, Ser> Extract<Set, Ser> for () {
+impl<Set, Ser, Ctx> Extract<Set, Ser, Ctx> for () {
     type Error = Error;
 
     fn extract(_set: &Set, _ser: &Ser, _ctx: &Ctx) -> Result<Self, Self::Error> {
@@ -23,10 +21,10 @@ impl<Set, Ser> Extract<Set, Ser> for () {
 
 /// Supress the error result.
 /// Return the `Ok(Some(T))` if successful, otherwise return `Ok(None)`.
-impl<T, Err, Set, Ser> Extract<Set, Ser> for Option<T>
+impl<T, Err, Set, Ser, Ctx> Extract<Set, Ser, Ctx> for Option<T>
 where
     Err: Into<Error>,
-    T: Extract<Set, Ser, Error = Err>,
+    T: Extract<Set, Ser, Ctx, Error = Err>,
 {
     type Error = Err;
 
@@ -40,10 +38,10 @@ where
 
 macro_rules! impl_extracter_for {
     ($($arg:ident)*) => {
-        impl<Set, Ser, $($arg,)*> Extract<Set, Ser> for ($($arg,)*)
+        impl<Set, Ser, Ctx, $($arg,)*> Extract<Set, Ser, Ctx> for ($($arg,)*)
         where
             $(
-                $arg: Extract<Set, Ser, Error = Error>,
+                $arg: Extract<Set, Ser, Ctx, Error = Error>,
             )*
         {
             type Error = Error;

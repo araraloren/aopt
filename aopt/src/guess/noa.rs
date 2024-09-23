@@ -202,13 +202,11 @@ where
 
             if matched {
                 if !opt.ignore_name() {
-                    // FIXME
-                    //matched = matched && opt.mat_name(self.name());
+                    matched = matched && opt.mat_name(self.name().map(|v| v.as_ref()));
                 }
                 if !opt.ignore_alias() && opt.alias().is_some() {
                     if let Some(name) = &self.name {
-                        // FIXME
-                        //matched = matched || opt.mat_alias(name);
+                        matched = matched || opt.mat_alias(name);
                     }
                 }
                 if !opt.ignore_index() {

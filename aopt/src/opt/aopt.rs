@@ -341,11 +341,11 @@ impl Opt for AOpt {
         self.force() == force
     }
 
-    fn mat_name(&self, name: Option<&AStr>) -> bool {
-        name.iter().all(|&v| v == self.name())
+    fn mat_name(&self, name: Option<&str>) -> bool {
+        name.iter().all(|&v| v == self.name().as_str())
     }
 
-    fn mat_alias(&self, name: &AStr) -> bool {
+    fn mat_alias(&self, name: &str) -> bool {
         if let Some(alias) = &self.alias {
             alias.iter().any(|v| v == name)
         } else {
