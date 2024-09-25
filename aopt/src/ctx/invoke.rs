@@ -6,8 +6,6 @@ use crate::ctx::wrap_handler_action;
 use crate::ctx::wrap_handler_fallback;
 use crate::ctx::wrap_handler_fallback_action;
 use crate::ctx::Ctx;
-use crate::ctx::Extract;
-use crate::ctx::Handler;
 use crate::ctx::Store;
 use crate::map::ErasedTy;
 use crate::opt::Opt;
@@ -149,12 +147,11 @@ where
     /// |       -> call Store::process(&Set, Option<&RawVal>, Option<Value>)
     /// |           -> Result<bool, Error>
     /// ```
-    pub fn set_handler<A, O, H, T>(&mut self, uid: Uid, handler: H, store: T) -> &mut Self
+    pub fn set_handler<H, O, S>(&mut self, uid: Uid, handler: H, store: S) -> &mut Self
     where
         O: ErasedTy,
-        A: Extract<Set, Ser, Error = Error> + 'a,
-        T: Store<Set, Ser, O, Ret = bool, Error = Error> + 'a,
-        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
+        S: Store<Set, Ser, O, Ret = bool, Error = Error> + 'a,
+        H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
     {
         self.set_raw(uid, wrap_handler(handler, store));
         self
@@ -173,8 +170,7 @@ where
     pub fn entry<A, O, H>(&mut self, uid: Uid) -> HandlerEntry<'a, '_, Self, Set, Ser, H, A, O>
     where
         O: ErasedTy,
-        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
-        A: Extract<Set, Ser, Error = Error> + 'a,
+        H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
     {
         HandlerEntry::new(self, uid)
     }
@@ -270,8 +266,7 @@ where
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
     I: HandlerCollection<'a, Set, Ser>,
-    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
-    A: Extract<Set, Ser, Error = Error> + 'a,
+    H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
 {
     ser: &'b mut I,
 
@@ -286,8 +281,7 @@ where
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
     I: HandlerCollection<'a, Set, Ser>,
-    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
-    A: Extract<Set, Ser, Error = Error> + 'a,
+    H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
 {
     pub fn new(inv_ser: &'b mut I, uid: Uid) -> Self {
         Self {
@@ -316,8 +310,7 @@ where
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
     I: HandlerCollection<'a, Set, Ser>,
-    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
-    A: Extract<Set, Ser, Error = Error> + 'a,
+    H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
 {
     ser: &'b mut I,
 
@@ -338,8 +331,7 @@ where
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
     I: HandlerCollection<'a, Set, Ser>,
-    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
-    A: Extract<Set, Ser, Error = Error> + 'a,
+    H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
 {
     pub fn new(ser: &'b mut I, uid: Uid, handler: H, fallback: bool) -> Self {
         Self {
@@ -391,8 +383,7 @@ where
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
     I: HandlerCollection<'a, Set, Ser>,
-    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
-    A: Extract<Set, Ser, Error = Error> + 'a,
+    H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
 {
     fn drop(&mut self) {
         if !self.register {
