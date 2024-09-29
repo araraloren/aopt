@@ -38,10 +38,10 @@ impl RawValParser for () {
 
 macro_rules! impl_raw_val_parser {
     ($int:ty) => {
-        impl RawValParser for $int {
+        impl $crate::value::parser::RawValParser for $int {
             type Error = Error;
 
-            fn parse<'a>(raw: Option<&OsStr>, ctx: &Ctx) -> Result<$int, Self::Error> {
+            fn parse(raw: Option<&OsStr>, ctx: &Ctx) -> Result<$int, Self::Error> {
                 let val = $crate::value::parser::raw2str(raw)?;
                 let uid = ctx.uid()?;
 

@@ -169,7 +169,7 @@ impl<'de> serde::Deserialize<'de> for AStr {
 }
 
 #[cfg(target_family = "windows")]
-pub fn split_once<'a>(str: &'a OsStr, ch: char) -> Option<(Cow<'a, OsStr>, Cow<'a, OsStr>)> {
+pub fn split_once(str: &OsStr, ch: char) -> Option<(Cow<'_, OsStr>, Cow<'_, OsStr>)> {
     use std::ffi::OsString;
     use std::os::windows::ffi::{OsStrExt, OsStringExt};
 
@@ -212,8 +212,7 @@ pub fn split_once<'a>(str: &'a OsStr, ch: char) -> Option<(Cow<'a, OsStr>, Cow<'
 }
 
 pub fn osstr_to_str_i<'a>(val: &[&'a OsStr], i: usize) -> Option<Cow<'a, str>> {
-    val.get(i)
-        .and_then(|v| v.to_str().map(|v| Cow::Borrowed(v)))
+    val.get(i).and_then(|v| v.to_str().map(Cow::Borrowed))
 }
 
 pub fn display_of_str(val: Option<&str>) -> String {
@@ -242,7 +241,7 @@ impl<'a> CowOsStrUtils<'a> for Cow<'a, OsStr> {
     fn split_once(&self, sep: char) -> Option<(Cow<'a, OsStr>, Cow<'a, OsStr>)> {
         match self {
             Cow::Borrowed(v) => split_once(v, sep),
-            Cow::Owned(v) => split_once(&v, sep)
+            Cow::Owned(v) => split_once(v, sep)
                 .map(|(a, b)| (Cow::Owned(a.into_owned()), Cow::Owned(b.into_owned()))),
         }
     }

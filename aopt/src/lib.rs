@@ -7,7 +7,6 @@ pub mod guess;
 pub mod map;
 pub mod opt;
 pub mod parser;
-pub mod raw;
 pub mod ser;
 pub mod set;
 #[cfg(feature = "shell")]
@@ -17,7 +16,6 @@ pub mod value;
 
 pub type Uid = u64;
 pub type HashMap<K, V> = ahash::HashMap<K, V>;
-pub type RawVal = raw::RawVal;
 
 #[cfg(feature = "sync")]
 pub type ARef<T> = std::sync::Arc<T>;
@@ -153,7 +151,7 @@ macro_rules! getopt {
             fn __check_a(a: $crate::prelude::Args) -> $crate::prelude::Args { a }
 
             let mut ret = $crate::Error::no_parser_matched();
-            let args = $crate::ARef::new(__check_a($args));
+            let args = __check_a($args);
 
             loop {
                 $(
@@ -226,8 +224,6 @@ pub mod prelude {
     pub use crate::ctx::wrap_handler_action;
     pub use crate::ctx::wrap_handler_fallback_action;
     pub use crate::ctx::Ctx;
-    // pub use crate::ctx::Extract;
-    // pub use crate::ctx::Handler;
     pub use crate::ctx::HandlerCollection;
     pub use crate::ctx::InnerCtx;
     pub use crate::ctx::Invoker;
@@ -309,6 +305,5 @@ pub mod prelude {
     pub use crate::value::ValValidator;
     pub use crate::ARef;
     pub use crate::GetoptRes;
-    pub use crate::RawVal;
     pub use crate::Uid;
 }

@@ -7,9 +7,7 @@ pub fn main() -> Result<(), aopt::Error> {
     parser.add_opt("-f=b")?;
     parser.add_opt("--flag".infer::<bool>())?;
 
-    parser
-        .parse(ARef::new(Args::from(["app", "-f"].into_iter())))?
-        .ok()?;
+    parser.parse(Args::from(["app", "-f"].into_iter()))?.ok()?;
 
     // option with bool type has default value `false`
     assert_eq!(parser.find_val::<bool>("-f")?, &true);
@@ -19,9 +17,7 @@ pub fn main() -> Result<(), aopt::Error> {
     parser.add_opt("--/flag=b")?;
 
     parser
-        .parse(ARef::new(Args::from(
-            ["app", "-flag", "--/flag"].into_iter(),
-        )))?
+        .parse(Args::from(["app", "-flag", "--/flag"].into_iter()))?
         .ok()?;
 
     // option with bool type has default value `false`

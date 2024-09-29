@@ -10,9 +10,9 @@ pub fn main() -> Result<(), aopt::Error> {
     // enable combination style
     parser.set_overload(true);
     parser
-        .parse(ARef::new(Args::from(
+        .parse(Args::from(
             ["app", "-flag=foo", "-flag=42", "-flag"].into_iter(),
-        )))?
+        ))?
         .ok()?;
 
     assert_eq!(parser.find("-flag".infer::<i32>())?.val::<i32>()?, &42);

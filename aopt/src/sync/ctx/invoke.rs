@@ -6,8 +6,6 @@ use crate::ctx::wrap_handler_action;
 use crate::ctx::wrap_handler_fallback;
 use crate::ctx::wrap_handler_fallback_action;
 use crate::ctx::Ctx;
-use crate::ctx::Extract;
-use crate::ctx::Handler;
 use crate::ctx::Store;
 use crate::map::ErasedTy;
 use crate::opt::Opt;
@@ -151,12 +149,11 @@ where
     /// |       -> call Store::process(&Set, Option<&RawVal>, Option<Value>)
     /// |           -> Result<bool, Error>
     /// ```
-    pub fn set_handler<A, O, H, T>(&mut self, uid: Uid, handler: H, store: T) -> &mut Self
+    pub fn set_handler<O, H, T>(&mut self, uid: Uid, handler: H, store: T) -> &mut Self
     where
         O: ErasedTy,
-        A: Extract<Set, Ser, Error = Error> + Send + Sync + 'a,
         T: Store<Set, Ser, O, Ret = bool, Error = Error> + Send + Sync + 'a,
-        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
+        H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + Send + Sync + 'a,
     {
         self.set_raw(uid, wrap_handler(handler, store));
         self
@@ -172,11 +169,10 @@ where
     SetOpt<Set>: Opt,
     Set: crate::set::Set,
 {
-    pub fn entry<A, O, H>(&mut self, uid: Uid) -> HandlerEntry<'a, '_, Self, Set, Ser, H, A, O>
+    pub fn entry<O, H>(&mut self, uid: Uid) -> HandlerEntry<'a, '_, Self, Set, Ser, H, O>
     where
         O: ErasedTy,
-        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
-        A: Extract<Set, Ser, Error = Error> + Send + Sync + 'a,
+        H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + Send + Sync + 'a,
     {
         HandlerEntry::new(self, uid)
     }
@@ -190,12 +186,11 @@ where
     pub fn fallback(set: &mut Set, _: &mut Ser, ctx: &mut Ctx) -> Result<bool, Error> {
         let uid = ctx.uid()?;
         let opt = set.get_mut(uid).unwrap();
-        let arg = ctx.arg()?;
-        let raw = arg.as_ref();
+        let arg = ctx.arg()?.map(|v| v.as_ref());
         let act = *opt.action();
 
         trace!("Invoke fallback for {}({act}) {{{ctx:?}}}", opt.name());
-        opt.accessor_mut().store_all(raw, ctx, &act)
+        opt.accessor_mut().store_all(arg, ctx, &act)
     }
 }
 
@@ -226,7 +221,7 @@ where
         ctx: &mut Ctx,
     ) -> Result<bool, Error> {
         trace!("Invoking callback of {} {:?}", uid, ctx);
-        if let Some(callback) = self.get_handler(&uid) {
+        if let Some(callback) = self.get_handler(uid) {
             return (callback)(set, ser, ctx);
         }
         unreachable!(
@@ -243,9 +238,9 @@ where
         ser: &mut Ser,
         ctx: &mut Ctx,
     ) -> Result<bool, Error> {
-        if let Some(callback) = self.get_handler(&uid) {
+        if let Some(callback) = self.get_handler(uid) {
             trace!("Invoking(fb) callback of {} {:?}", uid, ctx);
-            return (callback)(set, ser, ctx);
+            (callback)(set, ser, ctx)
         } else {
             trace!("Invoking(fb) handler_fallback of {} {:?}", uid, ctx);
             Invoker::fallback(set, ser, ctx)
@@ -272,30 +267,28 @@ where
     }
 }
 
-pub struct HandlerEntry<'a, 'b, I, Set, Ser, H, A, O>
+pub struct HandlerEntry<'a, 'b, I, Set, Ser, H, O>
 where
     O: ErasedTy,
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
     I: HandlerCollection<'a, Set, Ser>,
-    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
-    A: Extract<Set, Ser, Error = Error> + Send + Sync + 'a,
+    H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + Send + Sync + 'a,
 {
     ser: &'b mut I,
 
     uid: Uid,
 
-    marker: PhantomData<(&'a (), A, O, Set, Ser, H)>,
+    marker: PhantomData<(&'a (), O, Set, Ser, H)>,
 }
 
-impl<'a, 'b, I, Set, Ser, H, A, O> HandlerEntry<'a, 'b, I, Set, Ser, H, A, O>
+impl<'a, 'b, I, Set, Ser, H, O> HandlerEntry<'a, 'b, I, Set, Ser, H, O>
 where
     O: ErasedTy,
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
     I: HandlerCollection<'a, Set, Ser>,
-    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
-    A: Extract<Set, Ser, Error = Error> + Send + Sync + 'a,
+    H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + Send + Sync + 'a,
 {
     pub fn new(inv_ser: &'b mut I, uid: Uid) -> Self {
         Self {
@@ -306,26 +299,25 @@ where
     }
 
     /// Register the handler which will be called when option is set.
-    pub fn on(self, handler: H) -> HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O> {
+    pub fn on(self, handler: H) -> HandlerEntryThen<'a, 'b, I, Set, Ser, H, O> {
         HandlerEntryThen::new(self.ser, self.uid, handler, false)
     }
 
     /// Register the handler which will be called when option is set.
     /// And the [`fallback`](crate::ctx::Invoker::fallback) will be called if
     /// the handler return None.
-    pub fn fallback(self, handler: H) -> HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O> {
+    pub fn fallback(self, handler: H) -> HandlerEntryThen<'a, 'b, I, Set, Ser, H, O> {
         HandlerEntryThen::new(self.ser, self.uid, handler, true)
     }
 }
 
-pub struct HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O>
+pub struct HandlerEntryThen<'a, 'b, I, Set, Ser, H, O>
 where
     O: ErasedTy,
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
     I: HandlerCollection<'a, Set, Ser>,
-    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
-    A: Extract<Set, Ser, Error = Error> + Send + Sync + 'a,
+    H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + Send + Sync + 'a,
 {
     ser: &'b mut I,
 
@@ -337,17 +329,16 @@ where
 
     fallback: bool,
 
-    marker: PhantomData<(&'a (), A, O, Set, Ser)>,
+    marker: PhantomData<(&'a (), O, Set, Ser)>,
 }
 
-impl<'a, 'b, I, Set, Ser, H, A, O> HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O>
+impl<'a, 'b, I, Set, Ser, H, O> HandlerEntryThen<'a, 'b, I, Set, Ser, H, O>
 where
     O: ErasedTy,
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
     I: HandlerCollection<'a, Set, Ser>,
-    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
-    A: Extract<Set, Ser, Error = Error> + Send + Sync + 'a,
+    H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + Send + Sync + 'a,
 {
     pub fn new(ser: &'b mut I, uid: Uid, handler: H, fallback: bool) -> Self {
         Self {
@@ -398,14 +389,13 @@ where
     }
 }
 
-impl<'a, 'b, I, Set, Ser, H, A, O> Drop for HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O>
+impl<'a, 'b, I, Set, Ser, H, O> Drop for HandlerEntryThen<'a, 'b, I, Set, Ser, H, O>
 where
     O: ErasedTy,
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
     I: HandlerCollection<'a, Set, Ser>,
-    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
-    A: Extract<Set, Ser, Error = Error> + Send + Sync + 'a,
+    H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + Send + Sync + 'a,
 {
     fn drop(&mut self) {
         if !self.register {

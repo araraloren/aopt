@@ -22,6 +22,7 @@ impl<'a> ArgInfo<'a> {
     pub fn parse(val: &'a OsStr) -> Result<Self, Error> {
         let arg_display = format!("{}", std::path::Path::new(val).display());
 
+        crate::trace!("parsing command line argument {val:?}");
         if let Some((name, value)) = crate::str::split_once(val, EQUAL) {
             // - convert the name to &str, the name must be valid utf8
             let name = name
@@ -70,7 +71,7 @@ impl Args {
     }
 }
 
-impl<'a, T: Into<OsString>, I: IntoIterator<Item = T>> From<I> for Args {
+impl<T: Into<OsString>, I: IntoIterator<Item = T>> From<I> for Args {
     fn from(value: I) -> Self {
         Self::new(value.into_iter())
     }
@@ -108,10 +109,10 @@ impl Deref for Args {
     }
 }
 
-// pub fn iter2<'a>(args: &'a [&'a OsStr]) -> impl Iterator<Item = (&'a OsStr, Option<&'a OsStr>)> {
-//     args.iter()
-//         .zip(args.iter().skip(1).map(|v| Some(v)).chain(None))
-// }
+pub fn iter2<'a, 'b>(args: &'a [&'b OsStr]) -> impl Iterator<Item = (&'a &'b OsStr, Option<&'a &'b OsStr>)> {
+    args.iter()
+        .scan(args.iter().skip(1), |i, e| Some((e, i.next())))
+}
 
 impl Display for Args {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -139,7 +140,7 @@ mod test {
         let args = Args::from(["--opt", "value", "--bool", "pos"]);
         let mut iter = args
             .iter()
-            .zip(args.iter().skip(1).map(|v| Some(v)).chain(None))
+            .zip(args.iter().skip(1).map(Some).chain(None))
             .enumerate();
 
         if let Some((idx, (opt, arg))) = iter.next() {

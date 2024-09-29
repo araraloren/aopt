@@ -167,7 +167,7 @@ where
     SetOpt<Set>: Opt,
     Set: crate::set::Set,
 {
-    pub fn entry<A, O, H>(&mut self, uid: Uid) -> HandlerEntry<'a, '_, Self, Set, Ser, H, A, O>
+    pub fn entry<O, H>(&mut self, uid: Uid) -> HandlerEntry<'a, '_, Self, Set, Ser, H, O>
     where
         O: ErasedTy,
         H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
@@ -260,7 +260,7 @@ where
     }
 }
 
-pub struct HandlerEntry<'a, 'b, I, Set, Ser, H, A, O>
+pub struct HandlerEntry<'a, 'b, I, Set, Ser, H, O>
 where
     O: ErasedTy,
     Set: crate::set::Set,
@@ -272,10 +272,10 @@ where
 
     uid: Uid,
 
-    marker: PhantomData<(&'a (), A, O, Set, Ser, H)>,
+    marker: PhantomData<(&'a (), O, Set, Ser, H)>,
 }
 
-impl<'a, 'b, I, Set, Ser, H, A, O> HandlerEntry<'a, 'b, I, Set, Ser, H, A, O>
+impl<'a, 'b, I, Set, Ser, H, O> HandlerEntry<'a, 'b, I, Set, Ser, H, O>
 where
     O: ErasedTy,
     Set: crate::set::Set,
@@ -292,19 +292,19 @@ where
     }
 
     /// Register the handler which will be called when option is set.
-    pub fn on(self, handler: H) -> HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O> {
+    pub fn on(self, handler: H) -> HandlerEntryThen<'a, 'b, I, Set, Ser, H, O> {
         HandlerEntryThen::new(self.ser, self.uid, handler, false)
     }
 
     /// Register the handler which will be called when option is set.
     /// And the [`fallback`](crate::ctx::Invoker::fallback) will be called if
     /// the handler return None.
-    pub fn fallback(self, handler: H) -> HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O> {
+    pub fn fallback(self, handler: H) -> HandlerEntryThen<'a, 'b, I, Set, Ser, H, O> {
         HandlerEntryThen::new(self.ser, self.uid, handler, true)
     }
 }
 
-pub struct HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O>
+pub struct HandlerEntryThen<'a, 'b, I, Set, Ser, H, O>
 where
     O: ErasedTy,
     Set: crate::set::Set,
@@ -322,10 +322,10 @@ where
 
     fallback: bool,
 
-    marker: PhantomData<(&'a (), A, O, Set, Ser)>,
+    marker: PhantomData<(&'a (), O, Set, Ser)>,
 }
 
-impl<'a, 'b, I, Set, Ser, H, A, O> HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O>
+impl<'a, 'b, I, Set, Ser, H, O> HandlerEntryThen<'a, 'b, I, Set, Ser, H, O>
 where
     O: ErasedTy,
     Set: crate::set::Set,
@@ -377,7 +377,7 @@ where
     }
 }
 
-impl<'a, 'b, I, Set, Ser, H, A, O> Drop for HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O>
+impl<'a, 'b, I, Set, Ser, H, O> Drop for HandlerEntryThen<'a, 'b, I, Set, Ser, H, O>
 where
     O: ErasedTy,
     Set: crate::set::Set,

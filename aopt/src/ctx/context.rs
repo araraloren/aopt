@@ -7,6 +7,7 @@ use crate::opt::Style;
 use crate::parser::Action;
 use crate::str::display_of_osstr;
 use crate::str::display_of_str;
+use crate::value::RawValParser;
 use crate::Error;
 use crate::Uid;
 
@@ -138,7 +139,7 @@ impl Display for InnerCtx<'_> {
 
 /// The invoke context of option handler.
 /// It saved the option information and matched arguments.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct Ctx<'a> {
     pub(crate) orig: Args,
 
@@ -151,6 +152,20 @@ pub struct Ctx<'a> {
 
     #[cfg(feature = "sync")]
     action: std::sync::Mutex<Action>,
+}
+
+impl<'a> Clone for Ctx<'a> {
+    fn clone(&self) -> Self {
+        Self {
+            orig: self.orig.clone(),
+            args: self.args.clone(),
+            inner_ctx: self.inner_ctx.clone(),
+            #[cfg(not(feature = "sync"))]
+            action: self.action.clone(),
+            #[cfg(feature = "sync")]
+            action: std::sync::Mutex::new(*self.action.lock().unwrap()),
+        }
+    }
 }
 
 impl<'a> Ctx<'a> {
@@ -228,7 +243,7 @@ impl<'a> Ctx<'a> {
 
     /// The current argument indexed by `self.idx()`.
     pub fn arg_at(&self, idx: usize) -> Result<Option<&'a OsStr>, Error> {
-        Ok(self.args.get(idx).map(|v| *v))
+        Ok(self.args.get(idx).copied())
     }
 
     pub fn take_args(&mut self) -> Vec<&OsStr> {
@@ -322,20 +337,29 @@ impl<'a> Ctx<'a> {
     }
 }
 
+impl<'a> Ctx<'a> {
+    pub fn value<T: RawValParser>(&self) -> Result<T, Error> {
+        let arg = self.arg()?.map(|v| v.as_ref());
+        let uid = self.uid()?;
+
+        T::parse(arg, self).map_err(|e| e.into().with_uid(uid))
+    }
+}
+
 // impl<'a> From<Return> for Ctx<'a> {
-//     fn from(mut value: Return<'a>) -> Self {
+//     fn from(mut value: Return) -> Self {
 //         value.take_ctx()
 //     }
 // }
 
-// impl<'a> From<&Return<'a>> for Ctx<'a> {
-//     fn from(value: &Return<'a>) -> Self {
+// impl<'a> From<&Return> for Ctx<'a> {
+//     fn from(value: &Return) -> Self {
 //         value.ctx().clone()
 //     }
 // }
 
-// impl<'a> From<&mut Return<'a>> for Ctx<'a> {
-//     fn from(value: &mut Return<'a>) -> Self {
+// impl<'a> From<&mut Return> for Ctx<'a> {
+//     fn from(value: &mut Return) -> Self {
 //         value.take_ctx()
 //     }
 // }

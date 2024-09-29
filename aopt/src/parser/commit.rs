@@ -2,8 +2,7 @@ use std::any::TypeId;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-use crate::ctx::Extract;
-use crate::ctx::Handler;
+use crate::ctx::Ctx;
 use crate::ctx::HandlerCollection;
 use crate::ctx::HandlerEntry;
 use crate::ctx::HandlerEntryThen;
@@ -165,14 +164,13 @@ where
     /// Register the handler which will be called when option is set.
     /// The function will register the option to [`Set`](Set) first,
     /// then pass the unqiue id to [`HandlerEntry`].
-    pub fn on<H, O, A>(
+    pub fn on<H, O>(
         mut self,
         handler: H,
-    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, O>, Error>
     where
         O: ErasedTy,
-        H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + 'a,
-        A: Extract<S, Ser, Error = Error> + 'a,
+        H: FnMut(&mut S, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
     {
         let uid = self.commit_inner_change()?;
         // we don't need &'a mut Invoker, so just take it.
@@ -185,14 +183,13 @@ where
     /// Register the handler which will be called when option is set.
     /// The function will register the option to [`Set`](Set) first,
     /// then pass the unqiue id to [`HandlerEntry`].
-    pub fn on<H, O, A>(
+    pub fn on<H, O>(
         mut self,
         handler: H,
-    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, O>, Error>
     where
         O: ErasedTy,
-        H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
-        A: Extract<S, Ser, Error = Error> + Send + Sync + 'a,
+        H: FnMut(&mut S, &mut Ser, &Ctx) -> Result<Option<O>, Error> + Send + Sync + 'a,
     {
         let uid = self.commit_inner_change()?;
         // we don't need &'a mut InvokeServices, so just take it.
@@ -207,14 +204,13 @@ where
     /// the handler return None.
     /// The function will register the option to [`Set`](Set) first,
     /// then pass the unqiue id to [`HandlerEntry`].
-    pub fn fallback<H, O, A>(
+    pub fn fallback<H, O>(
         mut self,
         handler: H,
-    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, O>, Error>
     where
         O: ErasedTy,
-        H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + 'a,
-        A: Extract<S, Ser, Error = Error> + 'a,
+        H: FnMut(&mut S, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
     {
         let uid = self.commit_inner_change()?;
         // we don't need &'a mut Invoker, so just take it.
@@ -229,14 +225,13 @@ where
     /// the handler return None.
     /// The function will register the option to [`Set`](Set) first,
     /// then pass the unqiue id to [`HandlerEntry`].
-    pub fn fallback<H, O, A>(
+    pub fn fallback<H, O>(
         mut self,
         handler: H,
-    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, O>, Error>
     where
         O: ErasedTy,
-        H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
-        A: Extract<S, Ser, Error = Error> + Send + Sync + 'a,
+        H: FnMut(&mut S, &mut Ser, &Ctx) -> Result<Option<O>, Error> + Send + Sync + 'a,
     {
         let uid = self.commit_inner_change()?;
         // we don't need &'a mut InvokeServices, so just take it.
@@ -453,14 +448,13 @@ where
     /// Register the handler which will be called when option is set.
     /// The function will register the option to [`Set`](Set) first,
     /// then pass the unqiue id to [`HandlerEntry`].
-    pub fn on<H, O, A>(
+    pub fn on<H, O>(
         mut self,
         handler: H,
-    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, O>, Error>
     where
         O: ErasedTy,
-        H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + 'a,
-        A: Extract<S, Ser, Error = Error> + 'a,
+        H: FnMut(&mut S, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
     {
         let uid = self.commit_inner_change()?;
         // we don't need &'a mut Invoker, so just take it.
@@ -476,11 +470,10 @@ where
     pub fn on<H, O, A>(
         mut self,
         handler: H,
-    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, O>, Error>
     where
         O: ErasedTy,
-        H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
-        A: Extract<S, Ser, Error = Error> + Send + Sync + 'a,
+        H: FnMut(&mut S, &mut Ser, &Ctx) -> Result<Option<O>, Error> + Send + Sync + 'a,
     {
         let uid = self.commit_inner_change()?;
         // we don't need &'a mut InvokeServices, so just take it.
@@ -495,14 +488,13 @@ where
     /// the handler return None.
     /// The function will register the option to [`Set`](Set) first,
     /// then pass the unqiue id to [`HandlerEntry`].
-    pub fn fallback<H, O, A>(
+    pub fn fallback<H, O>(
         mut self,
         handler: H,
-    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, O>, Error>
     where
         O: ErasedTy,
-        H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + 'a,
-        A: Extract<S, Ser, Error = Error> + 'a,
+        H: FnMut(&mut S, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
     {
         let uid = self.commit_inner_change()?;
         // we don't need &'a mut Invoker, so just take it.
@@ -520,11 +512,10 @@ where
     pub fn fallback<H, O, A>(
         mut self,
         handler: H,
-    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, O>, Error>
     where
         O: ErasedTy,
-        H: Handler<S, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
-        A: Extract<S, Ser, Error = Error> + Send + Sync + 'a,
+        H: FnMut(&mut S, &mut Ser, &Ctx) -> Result<Option<O>, Error> + Send + Sync + 'a,
     {
         let uid = self.commit_inner_change()?;
         // we don't need &'a mut InvokeServices, so just take it.

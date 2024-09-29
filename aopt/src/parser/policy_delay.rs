@@ -29,6 +29,7 @@ use crate::trace;
 use crate::AStr;
 use crate::Error;
 use crate::Uid;
+use crate::args;
 
 #[derive(Debug, Clone, Default)]
 pub struct DelayCtx<'a> {
@@ -468,10 +469,7 @@ where
         let mut contexts: Vec<DelayCtxSaver> = vec![];
         let mut lefts = vec![];
         let mut opt_fail = FailManager::default();
-        let mut iter2 = args
-            .iter()
-            .zip(args.iter().skip(1).map(|v| Some(v)).chain(None))
-            .enumerate();
+        let mut iter2 = args::iter2(&args).enumerate();
 
         trace!("parsing {ctx:?} using delay policy");
         // set option args, and args length
@@ -483,7 +481,12 @@ where
 
             // parsing current argument
             if let Ok(ArgInfo { name, value }) = ArgInfo::parse(opt) {
-                trace!("Guess command line clopt = {:?} & next = {:?}", clopt, next);
+                trace!(
+                    "guess name: {:?} value: {:?} & next: {:?}",
+                    name,
+                    value,
+                    next
+                );
                 if set.check(&name).map_err(Into::into)? {
                     let arg = value.clone();
                     let next = next.map(|v| Cow::Borrowed(*v));
@@ -526,6 +529,8 @@ where
                     if !stopped && !matched && self.strict() {
                         return Err(opt_fail.cause(Error::sp_not_found(name)));
                     }
+                } else {
+                    trace!("`{:?}` not like option", opt);
                 }
             }
             if stopped {
@@ -695,7 +700,6 @@ mod test {
     use crate::prelude::*;
     use crate::Error;
     use std::any::TypeId;
-    use std::ops::Deref;
 
     #[test]
     fn testing_1() {
@@ -812,29 +816,31 @@ mod test {
             .run()?;
 
         inv.entry(set.add_opt("--no-delay".infer::<bool>())?.run()?)
-            .on(|set: &mut ASet, _: &mut ASer| {
+            .on(|set: &mut ASet, _: &mut ASer, _ctx: &Ctx| {
                 assert_eq!(set["filter"].val::<bool>()?, &false);
                 Ok(Some(true))
             });
         policy.set_no_delay("--no-delay");
 
         inv.entry(set.add_opt("--positive=b")?.add_alias("+>").run()?)
-            .on(|set: &mut ASet, _: &mut ASer| {
+            .on(|set: &mut ASet, _: &mut ASer, _ctx: &Ctx| {
                 set["args"].filter::<f64>(|v: &f64| v <= &0.0)?;
                 Ok(Some(true))
             });
         inv.entry(set.add_opt("--bigger-than=f")?.add_alias("+>").run()?)
-            .on(|set: &mut ASet, _: &mut ASer, val: ctx::Value<f64>| {
+            .on(|set: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+                let val = ctx.value::<f64>()?;
                 assert_eq!(set["filter"].val::<bool>()?, &true);
                 // this is a vec![vec![], ..]
-                Ok(Some(set["args"].filter::<f64>(|v: &f64| v <= val.deref())?))
+                Ok(Some(set["args"].filter::<f64>(|v: &f64| v <= &val)?))
             });
         inv.entry(set.add_opt("main=m")?.run()?).on(
-            move |set: &mut ASet, _: &mut ASer, app: ctx::Value<String>| {
+            move |set: &mut ASet, _: &mut ASer, ctx: &Ctx| {
                 let args = &set["args"];
                 let bopt = &set["--bigger-than"];
+                let app = ctx.value::<String>()?;
 
-                assert_eq!(app.deref(), "app");
+                assert_eq!(app, "app");
                 check_opt_val::<f64>(
                     args,
                     args_uid,

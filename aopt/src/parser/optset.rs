@@ -3,8 +3,7 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 
 use crate::args::Args;
-use crate::ctx::Extract;
-use crate::ctx::Handler;
+use crate::ctx::Ctx;
 use crate::ctx::HandlerCollection;
 use crate::ctx::HandlerEntry;
 use crate::map::ErasedTy;
@@ -400,28 +399,26 @@ where
 {
     #[cfg(feature = "sync")]
     #[allow(clippy::type_complexity)]
-    pub fn entry<A, O, H>(
+    pub fn entry<O, H>(
         &mut self,
         uid: Uid,
-    ) -> Result<HandlerEntry<'a, '_, Inv, Set, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntry<'a, '_, Inv, Set, Ser, H, O>, Error>
     where
         O: ErasedTy,
-        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
-        A: Extract<Set, Ser, Error = Error> + Send + Sync + 'a,
+        H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + Send + Sync + 'a,
     {
         Ok(HandlerEntry::new(&mut self.inv, uid))
     }
 
     #[cfg(not(feature = "sync"))]
     #[allow(clippy::type_complexity)]
-    pub fn entry<A, O, H>(
+    pub fn entry<O, H>(
         &mut self,
         uid: Uid,
-    ) -> Result<HandlerEntry<'a, '_, Inv, Set, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntry<'a, '_, Inv, Set, Ser, H, O>, Error>
     where
         O: ErasedTy,
-        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
-        A: Extract<Set, Ser, Error = Error> + 'a,
+        H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
     {
         Ok(HandlerEntry::new(&mut self.inv, uid))
     }
@@ -472,7 +469,7 @@ where
 {
     type Error = Set::Error;
 
-    fn check<'a>(&mut self, name: &Cow<'a, str>) -> Result<bool, Self::Error> {
+    fn check(&mut self, name: &str) -> Result<bool, Self::Error> {
         OptValidator::check(&mut self.set, name)
     }
 
@@ -539,7 +536,6 @@ where
 #[cfg(test)]
 mod test {
     use crate::{opt::config::ConfigBuildInfer, prelude::*};
-    use std::ops::Deref;
 
     #[test]
     fn test() {
@@ -551,11 +547,12 @@ mod test {
 
         set.add_opt("--aopt=b")?;
         set.add_opt("--bopt=i")?;
-        set.entry(0)?
-            .on(|_: &mut ASet, _: &mut ASer, mut val: ctx::Value<bool>| {
-                assert_eq!(val.deref(), &true);
-                Ok(Some(val.take()))
-            });
+        set.entry(0)?.on(|_: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+            let val = ctx.value::<bool>()?;
+
+            assert!(val);
+            Ok(Some(val))
+        });
         set.add_opt("ls".infer::<Cmd>())?;
 
         PolicyParser::<AFwdPolicy>::parse(

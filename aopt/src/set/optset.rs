@@ -441,7 +441,7 @@ where
 {
     type Error = Error;
 
-    fn check<'a>(&mut self, name: &Cow<'a, str>) -> Result<bool, Self::Error> {
+    fn check(&mut self, name: &str) -> Result<bool, Self::Error> {
         OptValidator::check(&mut self.validator, name).map_err(Into::into)
     }
 

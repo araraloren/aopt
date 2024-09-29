@@ -7,7 +7,7 @@ pub trait OptValidator {
     type Error: Into<Error>;
 
     /// Check the option string.
-    fn check(&mut self, name: &Cow<'_, str>) -> Result<bool, Self::Error>;
+    fn check(&mut self, name: &str) -> Result<bool, Self::Error>;
 
     /// Split the option string into prefix and name.
     fn split<'a>(&self, name: &Cow<'a, str>) -> Result<(Cow<'a, str>, Cow<'a, str>), Self::Error>;
@@ -60,7 +60,7 @@ impl PrefixOptValidator {
 impl OptValidator for PrefixOptValidator {
     type Error = Error;
 
-    fn check(&mut self, name: &Cow<'_, str>) -> Result<bool, Self::Error> {
+    fn check(&mut self, name: &str) -> Result<bool, Self::Error> {
         for prefix in self.0.iter() {
             if name.starts_with(prefix) {
                 return Ok(true);
