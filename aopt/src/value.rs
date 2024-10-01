@@ -52,9 +52,7 @@ use crate::Error;
 ///     // fo will processed, it is not an option
 ///     parser.add_opt("foo=p@1")?;
 ///
-///     parser.parse(ARef::new(Args::from(
-///         ["app", "-w=42", "--", "-o", "val", "foo"].into_iter(),
-///     )))?;
+///     parser.parse(Args::from(["app", "-w=42", "--", "-o", "val", "foo"]))?;
 ///
 ///     assert_eq!(parser.find_val::<i64>("-w")?, &42);
 ///     assert!(parser.find_val::<String>("-o").is_err());

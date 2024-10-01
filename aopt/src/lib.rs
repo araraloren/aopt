@@ -66,7 +66,7 @@ pub struct GetoptRes<R, T> {
 ///
 /// ```rust
 /// # use aopt::err::Result;
-/// # use aopt::{prelude::*, RawVal};
+/// # use aopt::prelude::*;
 /// #
 /// # fn main() -> Result<()> {
 /// let mut parser = AFwdParser::default();
@@ -76,9 +76,11 @@ pub struct GetoptRes<R, T> {
 ///     parser.add_opt("-a=b!")?;
 ///     parser.add_opt("--bopt=i")?;
 ///     parser.add_opt("c=p@-0")?.on(
-///         |_: &mut ASet, _: &mut ASer, args: ctx::Args, mut val: ctx::Value<String>| {
-///             assert_eq!(args[0], RawVal::from("foo"));
-///             Ok(Some(val.take()))
+///         |_: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+///             let val = ctx.value::<String>()?;
+///             let args = ctx.args();
+///             assert_eq!(args[0], OsStr::new("foo"));
+///             Ok(Some(val))
 ///         },
 ///     )?;
 ///
@@ -102,7 +104,7 @@ pub struct GetoptRes<R, T> {
 ///         &vec!["bar".to_owned(), "foo".to_owned()],
 ///     );
 ///     assert_eq!(parser.find_val::<String>("--eopt")?, &String::from("pre"));
-///     assert_eq!(args, vec![RawVal::from("foo")] );
+///     assert_eq!(args, vec![OsStr::new("foo")] );
 /// }
 ///
 /// parser.reset()?;
@@ -133,7 +135,7 @@ pub struct GetoptRes<R, T> {
 ///         &vec!["bar".to_owned(), "foo".to_owned()],
 ///     );
 ///     assert_eq!(pre_parser.find_val::<String>("--eopt")?, &String::from("pre"));
-///     assert_eq!(args, vec![RawVal::from("foo")]);
+///     assert_eq!(args, vec![OsStr::new("foo")]);
 /// }
 /// # Ok(())
 /// # }
@@ -306,4 +308,5 @@ pub mod prelude {
     pub use crate::ARef;
     pub use crate::GetoptRes;
     pub use crate::Uid;
+    pub use std::ffi::OsStr;
 }

@@ -19,14 +19,15 @@ use crate::Error;
 /// # Example
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::RawVal;
 /// # use aopt::Error;
+/// #
+/// # use std::ffi::OsStr;
 /// #
 /// # fn main() -> Result<(), Error> {
 /// let ctx = Ctx::default().with_inner_ctx(InnerCtx::default());
 /// {
 ///     let mut value = ValAccessor::fallback::<i32>();
-///     let raw_value = RawVal::from("123");
+///     let raw_value = OsStr::new("123");
 ///
 ///     value.initialize()?;
 ///     value.set(vec![1, 4]);
@@ -37,7 +38,7 @@ use crate::Error;
 /// {
 ///     let mut value =
 ///         ValAccessor::new(ValStorer::fallback::<i32>(), ValInitializer::new_values(vec![7]));
-///     let raw_value = RawVal::from("42");
+///     let raw_value = OsStr::new("42");
 ///
 ///     value.initialize()?;
 ///     value.store_all(Some(&raw_value), &ctx, &Action::Set)?;
@@ -47,7 +48,7 @@ use crate::Error;
 /// {
 ///     let validator = ValValidator::range_from(-32i32);
 ///     let mut value = ValAccessor::new_validator(validator, ValInitializer::fallback());
-///     let raw_value1 = RawVal::from("8");
+///     let raw_value1 = OsStr::new("8");
 ///
 ///     value.initialize()?;
 ///     value.set(vec![1, 4]);
@@ -58,7 +59,7 @@ use crate::Error;
 ///     assert_eq!(value.pop::<i32>(), Some(8));
 ///     assert_eq!(value.rawval()?, &raw_value1);
 ///
-///     let raw_value2 = RawVal::from("-66");
+///     let raw_value2 = OsStr::new("-66");
 ///
 ///     assert!(value.store_all(Some(&raw_value2), &ctx, &Action::App).is_err());
 ///     assert_eq!(value.pop::<i32>(), Some(4));
@@ -68,7 +69,7 @@ use crate::Error;
 ///     let validator = ValValidator::range_to(-42);
 ///     let mut value =
 ///         ValAccessor::new_validator(validator, ValInitializer::new_values(vec![-88, 1]));
-///     let raw_value1 = RawVal::from("-68");
+///     let raw_value1 = OsStr::new("-68");
 ///
 ///     value.initialize()?;
 ///     assert_eq!(
@@ -78,7 +79,7 @@ use crate::Error;
 ///     assert_eq!(value.pop::<i32>(), Some(-68));
 ///     assert_eq!(value.rawval()?, &raw_value1);
 ///
-///     let raw_value2 = RawVal::from("-20");
+///     let raw_value2 = OsStr::new("-20");
 ///
 ///     assert!(value.store_all(Some(&raw_value2), &ctx, &Action::App).is_err());
 ///     assert_eq!(value.pop::<i32>(), None);

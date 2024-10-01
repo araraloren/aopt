@@ -69,7 +69,7 @@ pub struct CtxSaver<'a> {
 ///         _: &mut Self::Set,
 ///         _: &mut Self::Inv<'a>,
 ///         _: &mut Self::Ser,
-///         _: ARef<Args>,
+///         _: Args,
 ///    ) -> Result<bool, Error> {
 ///         // ... parsing logical code
 ///        Ok(true)
@@ -178,7 +178,7 @@ where
 ///     println!(
 ///         "The question is: {}",
 ///         args.iter().skip(1)
-///             .map(|v| v.get_str().unwrap().to_owned())
+///             .map(|v| v.to_str().unwrap().to_owned())
 ///             .collect::<Vec<String>>()
 ///             .join(" ")
 ///     );

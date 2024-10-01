@@ -15,7 +15,6 @@ use crate::parser::UserStyle;
 use crate::set::OptValidator;
 use crate::set::SetOpt;
 use crate::shell::CompleteGuess;
-use crate::ARef;
 use crate::AStr;
 use crate::Error;
 
@@ -209,7 +208,6 @@ where
             }
         }
 
-        let noa_args = ARef::new(noa_args);
         let tot = noa_args.len();
 
         ctx.set_args(noa_args.clone());
@@ -302,7 +300,7 @@ where
         set: &mut Self::Set,
         inv: &mut Self::Inv<'_>,
         ser: &mut Self::Ser,
-        args: ARef<Args>,
+        args: Args,
     ) -> Result<Self::Ret, Self::Error> {
         let mut ctx = Ctx::default().with_orig_args(args.clone()).with_args(args);
 

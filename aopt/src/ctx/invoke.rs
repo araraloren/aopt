@@ -21,31 +21,21 @@ use crate::Uid;
 /// # Example
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::ARef;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<(), Error> {
-///  pub struct Count(usize);
-///
-///  // implement Extract for your type
-///  impl Extract<ASet, ASer> for Count {
-///      type Error = Error;
-///
-///      fn extract(_set: &ASet, _ser: &ASer, ctx: &Ctx) -> Result<Self, Self::Error> {
-///          Ok(Self(ctx.args().len()))
-///      }
-///  }
 ///  let mut ser = ASer::default();
 ///  let mut is = Invoker::new();
 ///  let mut set = ASet::default();
-///  let args = ARef::new(Args::from(["--foo", "bar", "doo"]));
-///  let mut ctx = Ctx::default().with_args(args);
+///  let orig = Args::from(["--foo", "bar", "doo"]);
+///  let args = orig.iter().map(|v|v.as_os_str()).collect();
+///  let mut ctx = Ctx::default().with_orig(orig.clone()).with_args(args);
 ///
-///  ser.sve_insert(ser::Value::new(42i64));
+///  ser.sve_insert(42i64);
 ///  // you can register callback into Invoker
 ///  is.entry(0)
 ///      .on(
-///          |_set: &mut ASet, _: &mut ASer| -> Result<Option<()>, Error> {
+///          |_set: &mut ASet, _: &mut ASer, _: &Ctx| -> Result<Option<()>, Error> {
 ///              println!("Calling the handler of {{0}}");
 ///              Ok(None)
 ///          },
@@ -53,18 +43,20 @@ use crate::Uid;
 ///      .then(NullStore);
 ///  is.entry(1)
 ///      .on(
-///          |_set: &mut ASet, _: &mut ASer, cnt: Count| -> Result<Option<()>, Error> {
+///          |_set: &mut ASet, _: &mut ASer, ctx: &Ctx| -> Result<Option<()>, Error> {
+///              let cnt = ctx.args().len();
 ///              println!("Calling the handler of {{1}}");
-///              assert_eq!(cnt.0, 3);
+///              assert_eq!(cnt, 3);
 ///              Ok(None)
 ///          },
 ///      )
 ///      .then(NullStore);
 ///  is.entry(2)
 ///      .on(
-///          |_set: &mut ASet, _: &mut ASer, data: ser::Value<i64>| -> Result<Option<()>, Error> {
+///          |_set: &mut ASet, ser: &mut ASer, ctx: &Ctx| -> Result<Option<()>, Error> {
+///              let data = ser.sve_val::<i64>()?;
 ///              println!("Calling the handler of {{2}}");
-///              assert_eq!(data.as_ref(), &42);
+///              assert_eq!(data, &42);
 ///              Ok(None)
 ///          },
 ///      )

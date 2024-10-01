@@ -494,7 +494,7 @@ where
     ///
     ///     parser
     ///         .run_async_mut_with(
-    ///             ["-a", "-b", "42"].into_iter(),
+    ///             ["-a", "-b", "42"],
     ///             &mut policy,
     ///             |ret, parser| async move {
     ///                 if ret.status() {
@@ -509,15 +509,16 @@ where
     /// # Ok(())
     /// # }
     ///```
-    pub async fn run_async_mut_with<R, FUT, F, P>(
-        &mut self,
+    pub async fn run_async_mut_with<'b, 'c, R, FUT, F, P>(
+        &'c mut self,
         args: impl Into<Args>,
         policy: &mut P,
         mut r: F,
     ) -> Result<R, Error>
     where
+        'c: 'b,
         FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &mut Self) -> FUT,
+        F: FnMut(P::Ret, &'b mut Self) -> FUT,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
     {
         match self.parse_policy(args.into(), policy) {
@@ -624,15 +625,16 @@ where
     /// # Ok(())
     /// # }
     ///```
-    pub async fn run_async_with<R, FUT, F, P>(
-        &mut self,
+    pub async fn run_async_with<'b, 'c, R, FUT, F, P>(
+        &'c mut self,
         args: impl Into<Args>,
         policy: &mut P,
         mut r: F,
     ) -> Result<R, Error>
     where
+        'c: 'b,
         FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &Self) -> FUT,
+        F: FnMut(P::Ret, &'b Self) -> FUT,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
     {
         match self.parse_policy(args.into(), policy) {

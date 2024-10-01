@@ -7,6 +7,7 @@ use super::Policy;
 use super::PolicySettings;
 use super::Return;
 use super::UserStyle;
+use crate::args;
 use crate::args::ArgInfo;
 use crate::args::Args;
 use crate::ctx::Ctx;
@@ -29,7 +30,6 @@ use crate::trace;
 use crate::AStr;
 use crate::Error;
 use crate::Uid;
-use crate::args;
 
 #[derive(Debug, Clone, Default)]
 pub struct DelayCtx<'a> {
@@ -66,7 +66,7 @@ pub struct DelayCtxSaver<'a> {
 /// #
 /// # fn main() -> Result<(), Error> {
 /// let filter = |f: fn(&PathBuf) -> bool| {
-///     move |set: &mut ASet, _: &mut ASer| {
+///     move |set: &mut ASet, _: &mut ASer, _: &Ctx| {
 ///         set["directory"].filter::<PathBuf>(f)?;
 ///         Ok(Some(true))
 ///     }
@@ -78,7 +78,9 @@ pub struct DelayCtxSaver<'a> {
 /// parser
 ///     .add_opt("directory=p@1")?
 ///     .set_pos_type::<PathBuf>()
-///     .on(|_: &mut ASet, _: &mut ASer, path: ctx::Value<PathBuf>| {
+///     .on(|_: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+///         let path = ctx.value::<PathBuf>()?;
+///
 ///         Ok(Some(
 ///             path.read_dir()
 ///                 .map_err(|e| {
@@ -107,7 +109,7 @@ pub struct DelayCtxSaver<'a> {
 /// // Main will be process latest, display the items
 /// parser
 ///     .add_opt("main=m")?
-///     .on(move |set: &mut ASet, _: &mut ASer| {
+///     .on(move |set: &mut ASet, _: &mut ASer, _: &Ctx| {
 ///         if let Ok(vals) = set["directory"].vals::<PathBuf>() {
 ///             for val in vals {
 ///                 println!("{:?}", val);

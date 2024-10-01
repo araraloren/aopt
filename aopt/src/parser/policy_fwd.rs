@@ -34,7 +34,6 @@ use crate::Error;
 /// # Examples
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::ARef;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<(), Error> {
@@ -49,10 +48,9 @@ use crate::Error;
 ///                 .run()?;
 ///
 /// inv.entry(pos_id).on(
-///     move |set: &mut ASet,
-///             _: &mut ASer,
-///             filter: ser::Value<Vec<&str>>,
-///             mut value: ctx::Value<String>| {
+///     move |set: &mut ASet, ser: &mut ASer, ctx: &Ctx,| {
+///         let filter = ser.sve_val::<Vec<&str>>()?;
+///         let value = ctx.value::<String>()?;
 ///         let not_filter = set[filter_id].val::<bool>()?;
 ///         let valid = if !*not_filter {
 ///             !filter.iter().any(|&v| v == value.as_str())
@@ -60,7 +58,7 @@ use crate::Error;
 ///             true
 ///         };
 ///
-///         Ok(valid.then(|| value.take()))
+///         Ok(valid.then(|| value))
 ///     },
 /// );
 ///
@@ -69,8 +67,8 @@ use crate::Error;
 /// for opt in set.iter_mut() {
 ///     opt.init()?;
 /// }
-/// ser.sve_insert(ser::Value::new(vec!["foo", "bar"]));
-/// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?;
+/// ser.sve_insert(vec!["foo", "bar"]);
+/// policy.parse(&mut set, &mut inv, &mut ser, args)?;
 ///
 /// let values = set[pos_id].vals::<String>()?;
 ///
@@ -83,7 +81,7 @@ use crate::Error;
 ///     opt.init()?;
 /// }
 ///
-/// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, args)?;
 /// let values = set[pos_id].vals::<String>()?;
 ///
 /// assert_eq!(values[0], "set");

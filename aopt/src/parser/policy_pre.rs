@@ -33,9 +33,7 @@ use crate::Error;
 /// ```rust
 /// # use aopt::getopt;
 /// # use aopt::prelude::*;
-/// # use aopt::ARef;
 /// # use aopt::Error;
-/// # use std::ops::Deref;
 /// #
 /// # fn main() -> Result<(), Error> {
 /// let mut parser = AFwdParser::default();
@@ -43,13 +41,14 @@ use crate::Error;
 ///
 /// parser
 ///     .add_opt("-check=s")?
-///     .on(|set: &mut ASet, _: &mut ASer, ext: ctx::Value<String>| {
+///     .on(|set: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+///         let ext = ctx.value::<String>()?;
 ///         let mut found = false;
 ///
 ///         for name in ["-c", "-cxx"] {
 ///             if let Ok(opt) = set.find(name) {
 ///                 if let Ok(file) = opt.vals::<String>() {
-///                     if file.contains(ext.deref()) {
+///                     if file.contains(&ext) {
 ///                         found = true;
 ///                     }
 ///                 }
@@ -59,7 +58,8 @@ use crate::Error;
 ///     })?;
 /// cfg_loader.set_app_data(parser)?;
 /// cfg_loader.add_opt("--load=s")?.on(
-///     |_: &mut ASet, ser: &mut ASer, mut cfg: ctx::Value<String>| {
+///     |_: &mut ASet, ser: &mut ASer, ctx: &Ctx| {
+///         let cfg = ctx.value::<String>()?;
 ///         let parser = ser.sve_val_mut::<AFwdParser>()?;
 ///
 ///         match cfg.as_str() {
@@ -80,7 +80,7 @@ use crate::Error;
 ///             }
 ///         }
 ///
-///         Ok(Some(cfg.take()))
+///         Ok(Some(cfg))
 ///     },
 /// )?;
 ///
