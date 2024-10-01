@@ -17,7 +17,6 @@ pub use cote_derive;
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub mod prelude {
-    pub use aopt::ext::ctx;
     pub use aopt::opt::Any;
     pub use aopt::opt::Cmd;
     pub use aopt::opt::Main;
@@ -45,9 +44,7 @@ pub mod prelude {
     pub use aopt::prelude::DefaultSetChecker;
     pub use aopt::prelude::ErasedTy;
     pub use aopt::prelude::ErasedValue;
-    pub use aopt::prelude::Extract;
     pub use aopt::prelude::FilterMatcher;
-    pub use aopt::prelude::Handler;
     pub use aopt::prelude::HandlerCollection;
     pub use aopt::prelude::Index;
     pub use aopt::prelude::Infer;
@@ -81,7 +78,6 @@ pub mod prelude {
     pub use aopt::value::raw2str;
     pub use aopt::value::Placeholder;
     pub use aopt::GetoptRes;
-    pub use aopt::RawVal;
     pub use aopt::Uid;
     pub use cote_derive::Cote;
     pub use cote_derive::CoteOpt;
@@ -125,7 +121,6 @@ use aopt::prelude::OptValidator;
 use aopt::prelude::ServicesValExt;
 use aopt::prelude::SetCfg;
 use aopt::prelude::SetValueFindExt;
-use aopt::ARef;
 use std::marker::PhantomData;
 
 pub trait IntoParserDerive<'inv, Set, Ser>
@@ -223,7 +218,7 @@ impl<'inv, Set, Ser> Policy for NullPolicy<'inv, Set, Ser> {
         _: &mut Self::Set,
         _: &mut Self::Inv<'_>,
         _: &mut Self::Ser,
-        _: ARef<Args>,
+        _: Args,
     ) -> Result<Self::Ret> {
         Ok(Return::default())
     }
@@ -403,7 +398,11 @@ mod test {
         }
 
         #[allow(dead_code)]
-        fn search<Set, Ser>(_: &mut Set, _: &mut Ser) -> Result<Option<Vec<String>>, aopt::Error> {
+        fn search<Set, Ser>(
+            _: &mut Set,
+            _: &mut Ser,
+            _: &Ctx,
+        ) -> Result<Option<Vec<String>>, aopt::Error> {
             Ok(Some(
                 ["file1", "file2", "dir1", "dir2"]
                     .into_iter()
@@ -412,7 +411,11 @@ mod test {
             ))
         }
 
-        fn find_main<Set, Ser>(set: &mut Set, _: &mut Ser) -> Result<Option<()>, aopt::Error>
+        fn find_main<Set, Ser>(
+            set: &mut Set,
+            _: &mut Ser,
+            _: &Ctx,
+        ) -> Result<Option<()>, aopt::Error>
         where
             Set: SetValueFindExt,
             SetCfg<Set>: ConfigValue + Default,

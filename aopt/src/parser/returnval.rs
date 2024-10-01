@@ -80,6 +80,11 @@ impl Return {
         &self.ctx.args
     }
 
+    /// The original arguments passed by user.
+    pub fn orig_args(&self) -> &Args {
+        &self.ctx.orig
+    }
+
     /// The [`status`](ReturnVal::status) is true if parsing successes
     /// otherwise it will be false if any [`failure`](Error::is_failure) raised.
     pub fn status(&self) -> bool {

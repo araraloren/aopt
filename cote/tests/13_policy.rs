@@ -6,10 +6,11 @@ static GLOBAL_CNT: Mutex<i32> = Mutex::new(0);
 
 macro_rules! order {
     ($n:literal, $t:ident) => {
-        |_: &mut Parser<'_, Set, Ser>, _: &mut Ser, mut val: ctx::Value<$t>| {
+        |_: &mut Parser<'_, Set, Ser>, _: &mut Ser, ctx: &Ctx| {
+            let val = ctx.value::<$t>()?;
             *GLOBAL_CNT.lock().unwrap() += 1;
             assert_eq!($n, *GLOBAL_CNT.lock().unwrap());
-            Ok(Some(val.take()))
+            Ok(Some(val))
         }
     };
 }

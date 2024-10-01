@@ -108,7 +108,7 @@ impl<'a> SubGenerator<'a> {
                 if let Ok(value) = cote::prelude::OptValueExt::val::<bool>(cote::prelude::SetExt::opt(set, #uid_literal)?) {
                     if *value {
                         // if help set, pass original value to sub parser
-                        args.push(ser.sve_take_val::<cote::prelude::RawVal>()?);
+                        args.push(ser.sve_take_val::<std::ffi::OsString>()?);
                     }
                 }
             }
@@ -116,20 +116,18 @@ impl<'a> SubGenerator<'a> {
 
         Ok(Some(quote! {
             parser.entry(#uid_ident)?.on(
-                move |set: &mut cote::prelude::Parser<'inv, Set, Ser>, ser: &mut Ser, args: cote::prelude::ctx::Args,
-                                index: cote::prelude::ctx::Index| {
-                    use std::ops::Deref;
-
-                    let mut args: Vec<cote::prelude::RawVal> = args.deref().clone().into();
-                    let cmd = args.remove(*index.deref());
-                    let cmd = cmd.get_str();
+                move |set: &mut cote::prelude::Parser<'inv, Set, Ser>, ser: &mut Ser, ctx: &cote::prelude::Ctx| {
+                    let index = ctx.idx()?;
+                    let mut args: Vec<_> = ctx.args().iter().map(|v|v.to_os_string()).collect();
+                    let cmd = args.remove(index);
+                    let cmd = cmd.to_str();
                     let cmd = cmd.ok_or_else(|| cote::prelude::raise_error!("Can not convert `{:?}` to &str", cmd))?;
 
                     // process help pass
                     // if we are jump into current handler, then we need pass original help option
                     #pass_help_to
 
-                    let args = cote::prelude::ARef::new(cote::prelude::Args::from(args));
+                    let args = cote::prelude::Args::from(args);
                     let parser = set.parser_mut(#sub_index)?;
                     let mut policy = <#policy_ty>::default();
                     let name = parser.name().clone();

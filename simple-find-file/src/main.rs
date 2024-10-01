@@ -18,7 +18,9 @@ fn main() -> color_eyre::Result<()> {
     parser
         .add_opt("directory=p!@1")?
         .set_help("The target directory will be search")
-        .on(|_: &mut ASet, _: &mut ASer, dir: ctx::Value<String>| {
+        .on(|_: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+            let dir = ctx.value::<String>()?;
+
             if !dir.is_empty() {
                 if let Ok(files) = find_file_in_directory(dir.deref()) {
                     Ok(Some(files))
@@ -77,25 +79,24 @@ fn main() -> color_eyre::Result<()> {
             .add_opt(opt)?
             .set_help(help)
             .add_alias(format!("{}{}", alias_prefix, alias_name))
-            .fallback(
-                move |set: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>| {
-                    let mut filter_type = filter_type.clone();
+            .fallback(move |set: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+                let val = ctx.value::<String>()?;
+                let mut filter_type = filter_type.clone();
 
-                    set["directory"].filter(move |path: &String| {
-                        let filter_type = filter_type.copy_value_from(val.take());
+                set["directory"].filter(move |path: &String| {
+                    let filter_type = filter_type.copy_value_from(val.clone());
 
-                        !filter_type.filter(path)
-                    })?;
-                    Ok(None::<String>)
-                },
-            )?;
+                    !filter_type.filter(path)
+                })?;
+                Ok(None::<String>)
+            })?;
     }
     parser
         .add_opt("--help=b")?
         .add_alias("-h")
         .set_help("Show the help message")
         .on(
-            |set: &mut ASet, _: &mut ASer| -> Result<Option<()>, Error> {
+            |set: &mut ASet, _: &mut ASer, _: &Ctx| -> Result<Option<()>, Error> {
                 display_help(set).map_err(|e| {
                     Error::raise_error(format!("can not write help to stdout: {:?}", e))
                 })?;
@@ -106,7 +107,7 @@ fn main() -> color_eyre::Result<()> {
     parser
         .add_opt("main=m")?
         .set_help("Main function")
-        .fallback(|set: &mut ASet, _: &mut ASer| {
+        .fallback(|set: &mut ASet, _: &mut ASer, _: &Ctx| {
             for file in set["directory"].vals::<String>()? {
                 println!("{}", file);
             }

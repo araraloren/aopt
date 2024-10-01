@@ -27,7 +27,7 @@ impl<'a> ArgInfo<'a> {
             // - convert the name to &str, the name must be valid utf8
             let name = name
                 .to_str(|v| v.trim())
-                .ok_or_else(|| Error::arg(&arg_display, "failed convert RawVal to str"))?;
+                .ok_or_else(|| Error::arg(&arg_display, "failed convert OsStr to str"))?;
 
             if name.is_empty() {
                 return Err(Error::arg(arg_display, "can not be empty"));
@@ -39,7 +39,7 @@ impl<'a> ArgInfo<'a> {
         } else {
             let name = val
                 .to_str()
-                .ok_or_else(|| Error::arg(arg_display, "failed convert RawVal to str"))?;
+                .ok_or_else(|| Error::arg(arg_display, "failed convert OsStr to str"))?;
 
             Ok(Self {
                 name: Cow::Borrowed(name),
@@ -109,7 +109,9 @@ impl Deref for Args {
     }
 }
 
-pub fn iter2<'a, 'b>(args: &'a [&'b OsStr]) -> impl Iterator<Item = (&'a &'b OsStr, Option<&'a &'b OsStr>)> {
+pub fn iter2<'a, 'b>(
+    args: &'a [&'b OsStr],
+) -> impl Iterator<Item = (&'a &'b OsStr, Option<&'a &'b OsStr>)> {
     args.iter()
         .scan(args.iter().skip(1), |i, e| Some((e, i.next())))
 }

@@ -16,7 +16,7 @@ fn fetch_impl() -> color_eyre::Result<()> {
     let mut parser = AFwdParser::default();
 
     parser.add_opt("--speed".infer::<i32>())?;
-    parser.parse(ARef::new(Args::from(["app", "--speed=42"].into_iter())))?;
+    parser.parse(Args::from(["app", "--speed=42"]))?;
 
     assert_eq!(Speed::fetch("--speed", parser.optset_mut())?, Speed(42));
 

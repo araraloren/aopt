@@ -135,9 +135,9 @@ impl RawValParser for PathBuf {
 ///     // fo will processed, it is not an option
 ///     parser.add_opt("foo=p@1")?;
 ///
-///     parser.parse(ARef::new(Args::from(
+///     parser.parse(Args::from(
 ///         ["app", "-w=42", "-", "foo"].into_iter(),
-///     )))?;
+///     ))?;
 ///
 ///     assert_eq!(parser.find_val::<i64>("-w")?, &42);
 ///     assert!(parser.find_val::<std::io::Stdin>("-").is_ok());

@@ -121,7 +121,7 @@ impl<'a> ValueGenerator<'a> {
             impl cote::prelude::RawValParser for #ident {
                 type Error = cote::Error;
 
-                fn parse(raw: Option<&cote::prelude::RawVal>, ctx: &cote::prelude::Ctx) -> Result<Self, Self::Error> {
+                fn parse(raw: Option<&std::ffi::OsStr>, ctx: &cote::prelude::Ctx) -> Result<Self, Self::Error> {
                     #impl_code
                 }
             }

@@ -118,7 +118,7 @@ impl Action {
 }
 
 /// Default store using for store value to [`ValStorer`](crate::value::ValStorer).
-/// It will store `RawVal` and `Val` if `val` is `Some(Val)`, otherwise do nothing.
+/// It will store `OsString` and `Val` if `val` is `Some(Val)`, otherwise do nothing.
 ///
 /// Note: The [`ValStorer`](crate::value::ValStorer) internal using an [`vec`] saving the option value.
 ///

@@ -1,3 +1,5 @@
+use std::ffi::OsStr;
+
 use cote::prelude::*;
 
 #[derive(Debug, Cote)]
@@ -24,7 +26,7 @@ cote::impl_fetch!(Flag);
 impl RawValParser for Flag {
     type Error = cote::Error;
 
-    fn parse(raw: Option<&RawVal>, _: &Ctx) -> Result<Self, Self::Error> {
+    fn parse(raw: Option<&OsStr>, _: &Ctx) -> Result<Self, Self::Error> {
         assert!(raw.is_none());
         Ok(Flag {})
     }

@@ -159,7 +159,6 @@ where
 /// ```rust
 /// # use aopt::getopt;
 /// # use aopt::prelude::*;
-/// # use aopt::ARef;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<(), Error> {
@@ -173,7 +172,8 @@ where
 /// parser2.add_opt("Who=c")?;
 /// parser2.add_opt("question=m")?.on(question)?;
 ///
-/// fn question(_: &mut ASet, _: &mut ASer, args: ctx::Args) -> Result<Option<()>, Error> {
+/// fn question(_: &mut ASet, _: &mut ASer, ctx: &Ctx) -> Result<Option<()>, Error> {
+///     let args = ctx.args();
 ///     // Output: The question is: Where are you from ?
 ///     println!(
 ///         "The question is: {}",

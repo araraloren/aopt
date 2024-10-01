@@ -1,5 +1,5 @@
 use cote::prelude::*;
-use std::{fmt::Debug, ops::Deref};
+use std::{ffi::OsStr, fmt::Debug};
 
 // The handler must be a generic function.
 #[derive(Debug, Cote, PartialEq, Eq)]
@@ -43,7 +43,7 @@ fn main() -> color_eyre::Result<()> {
     Ok(())
 }
 
-fn display_cli<Set, Ser>(set: &mut Set, _: &mut Ser) -> Result<Option<()>, aopt::Error>
+fn display_cli<Set, Ser>(set: &mut Set, _: &mut Ser, _: &Ctx) -> Result<Option<()>, aopt::Error>
 where
     Set: SetValueFindExt + cote::prelude::Set,
     SetCfg<Set>: ConfigValue + Default,
@@ -55,16 +55,16 @@ where
 fn empty_handler<Set, Ser>(
     _: &mut Set,
     _: &mut Ser,
-    value: Option<ctx::Value<u64>>,
+    ctx: &Ctx,
 ) -> Result<Option<u64>, aopt::Error> {
-    Ok(value.map(|mut v| v.take()))
+    Ok(ctx.value::<u64>().ok())
 }
 
 fn foo_storer<Set, Ser>(
     uid: Uid,
     set: &mut Set,
     _: &mut Ser,
-    raw: Option<&RawVal>,
+    raw: Option<&OsStr>,
     val: Option<u64>,
 ) -> Result<bool, aopt::Error>
 where
@@ -79,7 +79,7 @@ where
             let (raw_handler, handler) = opt.accessor_mut().handlers();
 
             if let Some(raw_value) = raw {
-                raw_handler.push(raw_value.clone());
+                raw_handler.push(raw_value.to_os_string());
             }
             println!("Saving the value of `--foo` to {}", val + 1);
             // modify the value, plus one
@@ -90,22 +90,16 @@ where
     Ok(has_value)
 }
 
-fn debug_of_bar<Set, Ser>(
-    _: &mut Set,
-    _: &mut Ser,
-    raw: ctx::RawVal,
-    value: ctx::Value<bool>,
-) -> Result<Option<()>, aopt::Error> {
-    println!(
-        "Got value of `--debug`: {:?} --> {}",
-        raw.deref(),
-        value.deref()
-    );
+fn debug_of_bar<Set, Ser>(_: &mut Set, _: &mut Ser, ctx: &Ctx) -> Result<Option<()>, aopt::Error> {
+    let raw = ctx.arg()?.unwrap();
+    let value = ctx.value::<bool>()?;
+
+    println!("Got value of `--debug`: {:?} --> {}", raw, value);
     // if return None, the parser will call default handler of current option
     Ok(None)
 }
 
-fn process_qux<Set, Ser>(_: &mut Set, _: &mut Ser) -> Result<Option<()>, aopt::Error>
+fn process_qux<Set, Ser>(_: &mut Set, _: &mut Ser, _: &Ctx) -> Result<Option<()>, aopt::Error>
 where
     Set: SetValueFindExt + cote::prelude::Set,
     SetCfg<Set>: ConfigValue + Default,
@@ -118,7 +112,7 @@ fn unreachable_storer<Set, Ser>(
     _: Uid,
     _: &mut Set,
     _: &mut Ser,
-    _: Option<&RawVal>,
+    _: Option<&OsStr>,
     _: Option<()>,
 ) -> Result<bool, aopt::Error>
 where

@@ -189,7 +189,7 @@ macro_rules! getopt {
             fn __check_a(a: $crate::prelude::Args) -> $crate::prelude::Args { a }
 
             let mut ret = $crate::Error::no_parser_matched();
-            let args = $crate::ARef::new(__check_a($args));
+            let args = __check_a($args);
 
             loop {
                 $(

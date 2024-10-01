@@ -1,14 +1,14 @@
+use std::borrow::Cow;
 use std::future::Future;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
+use aopt::ctx::Ctx;
 use aopt::ctx::HandlerEntry;
 use aopt::prelude::Args;
 use aopt::prelude::ConfigBuild;
 use aopt::prelude::ConfigValue;
 use aopt::prelude::ErasedTy;
-use aopt::prelude::Extract;
-use aopt::prelude::Handler;
 use aopt::prelude::Information;
 use aopt::prelude::Invoker;
 use aopt::prelude::Opt;
@@ -21,10 +21,8 @@ use aopt::prelude::SetOpt;
 use aopt::raise_error;
 use aopt::ser::ServicesValExt;
 use aopt::set::SetValueFindExt;
-use aopt::ARef;
 use aopt::AStr;
 use aopt::Error;
-use aopt::RawVal;
 use aopt::Uid;
 
 use crate::prelude::HelpContext;
@@ -238,28 +236,26 @@ where
 {
     #[cfg(feature = "sync")]
     #[allow(clippy::type_complexity)]
-    pub fn entry<A, O, H>(
+    pub fn entry<O, H>(
         &mut self,
         uid: Uid,
-    ) -> Result<HandlerEntry<'a, '_, Invoker<'a, Self, Ser>, Self, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntry<'a, '_, Invoker<'a, Self, Ser>, Self, Ser, H, O>, Error>
     where
         O: ErasedTy,
-        H: Handler<Self, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
-        A: Extract<Self, Ser, Error = Error> + Send + Sync + 'a,
+        H: FnMut(&mut Self, &mut Ser, &Ctx) -> Result<Option<O>, Error> + Send + Sync + 'a,
     {
         Ok(HandlerEntry::new(self.inv.as_mut().unwrap(), uid))
     }
 
     #[cfg(not(feature = "sync"))]
     #[allow(clippy::type_complexity)]
-    pub fn entry<A, O, H>(
+    pub fn entry<O, H>(
         &mut self,
         uid: Uid,
-    ) -> Result<HandlerEntry<'a, '_, Invoker<'a, Self, Ser>, Self, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntry<'a, '_, Invoker<'a, Self, Ser>, Self, Ser, H, O>, Error>
     where
         O: ErasedTy,
-        H: Handler<Self, Ser, A, Output = Option<O>, Error = Error> + 'a,
-        A: Extract<Self, Ser, Error = Error> + 'a,
+        H: FnMut(&mut Self, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
     {
         Ok(HandlerEntry::new(self.inv.as_mut().unwrap(), uid))
     }
@@ -361,7 +357,7 @@ where
         OptValidator::check(&mut self.set, name)
     }
 
-    fn split<'b>(&self, name: &'b str) -> Result<(&'b str, &'b str), Self::Error> {
+    fn split<'b>(&self, name: &Cow<'b, str>) -> Result<(Cow<'b, str>, Cow<'b, str>), Self::Error> {
         OptValidator::split(&self.set, name)
     }
 }
@@ -396,7 +392,7 @@ where
 
     fn parse_policy(
         &mut self,
-        args: &ARef<Args>,
+        args: Args,
         policy: &mut P,
     ) -> Result<<P as Policy>::Ret, Self::Error> {
         assert!(self.inv.is_some());
@@ -456,33 +452,28 @@ where
     /// # Ok(())
     /// # }
     ///```
-    pub fn run_mut_with<'c, 'b, I, R, F, P>(
-        &'c mut self,
-        iter: impl Iterator<Item = I>,
+    pub fn run_mut_with<R, F, P>(
+        &mut self,
+        args: impl Into<Args>,
         policy: &mut P,
         mut r: F,
     ) -> Result<R, Error>
     where
-        'c: 'b,
-        I: Into<RawVal>,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
-        F: FnMut(P::Ret, &'b mut Self) -> Result<R, Error>,
+        F: FnMut(P::Ret, &mut Self) -> Result<R, Error>,
     {
-        let args = iter.map(|v| v.into());
-        let ret = self.parse_policy(aopt::ARef::new(Args::from(args)), policy)?;
+        let ret = self.parse_policy(args.into(), policy)?;
 
         r(ret, self)
     }
 
     /// Call [`run_mut_with`](Parser::run_mut_with) with default arguments [`args()`](std::env::args).
-    pub fn run_mut<'c, 'b, R, F, P>(&'c mut self, policy: &mut P, r: F) -> Result<R, Error>
+    pub fn run_mut<R, F, P>(&mut self, policy: &mut P, r: F) -> Result<R, Error>
     where
-        'c: 'b,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
-        F: FnMut(P::Ret, &'b mut Self) -> Result<R, Error>,
+        F: FnMut(P::Ret, &mut Self) -> Result<R, Error>,
     {
-        let args: Vec<aopt::raw::RawVal> = Args::from_env().into();
-        self.run_mut_with(args.into_iter(), policy, r)
+        self.run_mut_with(Args::from_env(), policy, r)
     }
 
     /// Running async function after parsing.
@@ -518,49 +509,31 @@ where
     /// # Ok(())
     /// # }
     ///```
-    pub async fn run_async_mut_with<'c, 'b, I, R, FUT, F, P>(
-        &'c mut self,
-        iter: impl Iterator<Item = I>,
+    pub async fn run_async_mut_with<R, FUT, F, P>(
+        &mut self,
+        args: impl Into<Args>,
         policy: &mut P,
         mut r: F,
     ) -> Result<R, Error>
     where
-        'c: 'b,
-        I: Into<RawVal>,
         FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b mut Self) -> FUT,
+        F: FnMut(P::Ret, &mut Self) -> FUT,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
     {
-        let args = iter.map(|v| v.into());
-        let async_ret;
-
-        match self.parse_policy(aopt::ARef::new(Args::from(args)), policy) {
-            Ok(ret) => {
-                let ret = r(ret, self).await;
-
-                async_ret = ret;
-            }
-            Err(e) => {
-                async_ret = Err(e);
-            }
+        match self.parse_policy(args.into(), policy) {
+            Ok(ret) => r(ret, self).await,
+            Err(e) => Err(e),
         }
-        async_ret
     }
 
     /// Call [`run_async_mut_with`](Self::run_async_mut_with) with default arguments [`args()`](std::env::args).
-    pub async fn run_async_mut<'c, 'b, R, FUT, F, P>(
-        &'c mut self,
-        policy: &mut P,
-        r: F,
-    ) -> Result<R, Error>
+    pub async fn run_async_mut<R, FUT, F, P>(&mut self, policy: &mut P, r: F) -> Result<R, Error>
     where
-        'c: 'b,
         FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b mut Self) -> FUT,
+        F: FnMut(P::Ret, &mut Self) -> FUT,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
     {
-        let args: Vec<aopt::raw::RawVal> = Args::from_env().into();
-        self.run_async_mut_with(args.into_iter(), policy, r).await
+        self.run_async_mut_with(Args::from_env(), policy, r).await
     }
 
     /// Running function after parsing.
@@ -594,33 +567,28 @@ where
     /// # Ok(())
     /// # }
     ///```
-    pub fn run_with<'c, 'b, I, R, F, P>(
-        &'c mut self,
-        iter: impl Iterator<Item = I>,
+    pub fn run_with<R, F, P>(
+        &mut self,
+        args: impl Into<Args>,
         policy: &mut P,
         mut r: F,
     ) -> Result<R, Error>
     where
-        'c: 'b,
-        I: Into<RawVal>,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
-        F: FnMut(P::Ret, &'b Self) -> Result<R, Error>,
+        F: FnMut(P::Ret, &Self) -> Result<R, Error>,
     {
-        let args = iter.map(|v| v.into());
-        let ret = self.parse_policy(aopt::ARef::new(Args::from(args)), policy)?;
+        let ret = self.parse_policy(args.into(), policy)?;
 
         r(ret, self)
     }
 
     /// Call [`run_with`](Self::run_with) with default arguments [`args()`](std::env::args).
-    pub fn run<'c, 'b, R, F, P>(&'c mut self, policy: &mut P, r: F) -> Result<R, Error>
+    pub fn run<R, F, P>(&mut self, policy: &mut P, r: F) -> Result<R, Error>
     where
-        'c: 'b,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
-        F: FnMut(P::Ret, &'b Self) -> Result<R, Error>,
+        F: FnMut(P::Ret, &Self) -> Result<R, Error>,
     {
-        let args: Vec<aopt::raw::RawVal> = Args::from_env().into();
-        self.run_with(args.into_iter(), policy, r)
+        self.run_with(Args::from_env(), policy, r)
     }
 
     /// Running async function after parsing.
@@ -656,49 +624,31 @@ where
     /// # Ok(())
     /// # }
     ///```
-    pub async fn run_async_with<'c, 'b, I, R, FUT, F, P>(
-        &'c mut self,
-        iter: impl Iterator<Item = I>,
+    pub async fn run_async_with<R, FUT, F, P>(
+        &mut self,
+        args: impl Into<Args>,
         policy: &mut P,
         mut r: F,
     ) -> Result<R, Error>
     where
-        'c: 'b,
-        I: Into<RawVal>,
         FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b Self) -> FUT,
+        F: FnMut(P::Ret, &Self) -> FUT,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
     {
-        let args = iter.map(|v| v.into());
-        let async_ret;
-
-        match self.parse_policy(aopt::ARef::new(Args::from(args)), policy) {
-            Ok(ret) => {
-                let ret = r(ret, self).await;
-
-                async_ret = ret;
-            }
-            Err(e) => {
-                async_ret = Err(e);
-            }
+        match self.parse_policy(args.into(), policy) {
+            Ok(ret) => r(ret, self).await,
+            Err(e) => Err(e),
         }
-        async_ret
     }
 
     /// Call [`run_async_with`](Self::run_async_with) with default arguments [`args()`](std::env::args).
-    pub async fn run_async<'c, 'b, R, FUT, F, P>(
-        &'c mut self,
-        policy: &mut P,
-        r: F,
-    ) -> Result<R, Error>
+    pub async fn run_async<R, FUT, F, P>(&mut self, policy: &mut P, r: F) -> Result<R, Error>
     where
-        'c: 'b,
         FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b Self) -> FUT,
+        F: FnMut(P::Ret, &Self) -> FUT,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
     {
-        let args: Vec<aopt::raw::RawVal> = Args::from_env().into();
-        self.run_async_with(args.into_iter(), policy, r).await
+        self.run_async_with(Args::from_env(), policy, r).await
     }
 }
 
