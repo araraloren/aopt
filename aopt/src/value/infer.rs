@@ -209,7 +209,7 @@ where
     /// # Storer
     /// ```ignore
     /// Box::new(
-    ///     |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
+    ///     |raw: Option<&OsStr>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
     ///         let val = raw.is_some();
     ///
     ///         trace!("Pos value storer, parsing {:?} -> {:?}", raw, val);

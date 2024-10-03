@@ -19,6 +19,51 @@ pub struct ArgInfo<'a> {
 }
 
 impl<'a> ArgInfo<'a> {
+    /// Parse the input command line item with given regexs, return an [`ArgInfo`].
+    ///
+    /// The struct of the input option string are:
+    ///
+    /// ```plaintext
+    /// [--/option][=][value]
+    ///        |    |    |
+    ///        |    |    |
+    ///        |    |    The value part, it is optional.
+    ///        |    |
+    ///        |    The delimiter of option name and value.
+    ///        |    
+    ///        The option name part, it must be provide by user.
+    /// ```
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use aopt::prelude::*;
+    /// # use aopt::Error;
+    /// # use aopt::args::ArgInfo;
+    /// # use std::ffi::OsStr;
+    /// #
+    /// # fn main() -> Result<(), Error> {
+    ///     {// parse option with value
+    ///         let output = ArgInfo::parse(OsStr::new("--foo=32"))?;
+    ///
+    ///         assert_eq!(output.name, "--foo");
+    ///         assert_eq!(output.value.as_deref(), Some(OsStr::new("32")));
+    ///     }
+    ///     {// parse boolean option
+    ///         let output = ArgInfo::parse(OsStr::new("--/bar"))?;
+    ///
+    ///         assert_eq!(output.name, "--/bar");
+    ///         assert_eq!(output.value, None);
+    ///     }
+    ///     {// parse other string
+    ///         let output = ArgInfo::parse(OsStr::new("-=bar"))?;
+    ///
+    ///         assert_eq!(output.name, "-");
+    ///         assert_eq!(output.value.as_deref(), Some(OsStr::new("bar")));
+    ///     }
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn parse(val: &'a OsStr) -> Result<Self, Error> {
         let arg_display = format!("{}", std::path::Path::new(val).display());
 

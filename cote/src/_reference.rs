@@ -415,7 +415,7 @@
 //!
 //! ```plaintext
 //! Saving the value of `--foo` to 9
-//! Got value of `--debug`: RawVal("true") --> true
+//! Got value of `--debug`: OsStr("true") --> true
 //! Got client: Cli { foo: 9, bar: Some(Bar { debug: false, quux: "a2i" }), qux: None }
 //! ```
 //!

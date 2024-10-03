@@ -25,7 +25,7 @@ fn ok_or_else(raw: Option<&OsStr>) -> Result<&OsStr, Error> {
 pub fn raw2str(raw: Option<&OsStr>) -> Result<&str, Error> {
     ok_or_else(raw)?
         .to_str()
-        .ok_or_else(|| Error::sp_rawval(raw, "can not convert RawVal to str"))
+        .ok_or_else(|| Error::sp_rawval(raw, "can not convert OsStr to str"))
 }
 
 impl RawValParser for () {
