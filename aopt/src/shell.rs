@@ -1,6 +1,7 @@
 mod guess;
 mod policy;
 
+use std::ffi::OsStr;
 use std::io::Write;
 
 pub use self::guess::CompleteGuess;
@@ -8,6 +9,7 @@ pub use self::guess::CompleteRet;
 pub use self::policy::CompletePolicy;
 
 use crate::args::Args;
+use crate::ctx::Ctx;
 use crate::ctx::Invoker;
 use crate::ext::AFwdParser;
 use crate::ext::APolicyExt;
@@ -27,9 +29,7 @@ use crate::set::OptValidator;
 use crate::set::SetOpt;
 use crate::value::raw2str;
 use crate::value::RawValParser;
-use crate::ARef;
 use crate::Error;
-use crate::RawVal;
 use crate::Uid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -44,7 +44,7 @@ pub enum Shell {
 impl RawValParser for Shell {
     type Error = Error;
 
-    fn parse(raw: Option<&crate::RawVal>, ctx: &crate::prelude::Ctx) -> Result<Self, Self::Error> {
+    fn parse(raw: Option<&OsStr>, ctx: &Ctx) -> Result<Self, Self::Error> {
         let name = raw2str(raw)?;
         let name = name.to_lowercase();
 
@@ -130,7 +130,7 @@ where
 {
     pub fn parse_with<P>(
         &mut self,
-        args: ARef<Args>,
+        args: Args,
         parser: &mut P,
     ) -> Result<<Self as Policy>::Ret, P::Error>
     where
@@ -241,14 +241,14 @@ where
     fn process_last_arg(
         &mut self,
         set: &mut <Self as Policy>::Set,
-        last: &RawVal,
+        last: &OsStr,
     ) -> Result<(), Error> {
         #[allow(unused)]
         let mut win_os_string = None;
-        let mut arg: &std::ffi::OsStr = last.as_ref();
+        let mut arg: &std::ffi::OsStr = last;
 
         #[allow(clippy::needless_option_as_deref)]
-        if let Some((opt, _)) = crate::args::split_once(arg, '=') {
+        if let Some((opt, _)) = crate::str::split_once(arg, '=') {
             win_os_string = Some(opt);
             arg = win_os_string.as_deref().unwrap();
         }
@@ -265,9 +265,11 @@ where
         set: &mut <Self as Policy>::Set,
         arg: &str,
     ) -> Result<(), Error> {
-        if set.split(arg).is_ok() {
+        let arg = std::borrow::Cow::Borrowed(arg);
+
+        if set.split(&arg).is_ok() {
             for opt in set.iter() {
-                if opt.mat_style(Style::Argument) && opt.name() == arg {
+                if opt.mat_style(Style::Argument) && opt.name().as_str() == arg {
                     self.incomplete_opt = Some(opt.uid());
                     break;
                 }
@@ -297,7 +299,7 @@ where
         set: &mut Self::Set,
         inv: &mut Self::Inv<'_>,
         ser: &mut Self::Ser,
-        args: ARef<Args>,
+        args: Args,
     ) -> Result<Self::Ret, Self::Error> {
         let tot = args.len();
         let last = args.last().cloned();

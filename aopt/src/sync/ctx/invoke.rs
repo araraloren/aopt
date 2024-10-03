@@ -27,14 +27,15 @@ use crate::Uid;
 ///  let mut ser = ASer::default();
 ///  let mut is = Invoker::new();
 ///  let mut set = ASet::default();
-///  let args = Args::from(["--foo", "bar", "doo"]);
-///  let mut ctx = Ctx::default().with_args(args);
+///  let orig = Args::from(["--foo", "bar", "doo"]);
+///  let args = orig.iter().map(|v|v.as_os_str()).collect();
+///  let mut ctx = Ctx::default().with_orig(orig.clone()).with_args(args);
 ///
 ///  ser.sve_insert(42i64);
 ///  // you can register callback into Invoker
 ///  is.entry(0)
 ///      .on(
-///          |_set: &mut ASet, _: &mut ASer, ctx: &Ctx| -> Result<Option<()>, Error> {
+///          |_set: &mut ASet, _: &mut ASer, _: &Ctx| -> Result<Option<()>, Error> {
 ///              println!("Calling the handler of {{0}}");
 ///              Ok(None)
 ///          },
@@ -52,10 +53,10 @@ use crate::Uid;
 ///      .then(NullStore);
 ///  is.entry(2)
 ///      .on(
-///          |_set: &mut ASet, _: &mut ASer, _: &Ctx| -> Result<Option<()>, Error> {
+///          |_set: &mut ASet, ser: &mut ASer, _: &Ctx| -> Result<Option<()>, Error> {
 ///              let data = ser.sve_val::<i64>()?;
 ///              println!("Calling the handler of {{2}}");
-///              assert_eq!(data, 42);
+///              assert_eq!(data, &42);
 ///              Ok(None)
 ///          },
 ///      )

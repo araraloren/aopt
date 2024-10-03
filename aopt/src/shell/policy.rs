@@ -1,7 +1,9 @@
+use std::borrow::Cow;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-use crate::args::ArgParser;
+use crate::args;
+use crate::args::ArgInfo;
 use crate::args::Args;
 use crate::ctx::Ctx;
 use crate::ctx::Invoker;
@@ -10,11 +12,12 @@ use crate::opt::OptParser;
 use crate::parser::OptStyleManager;
 use crate::parser::Policy;
 use crate::parser::PolicySettings;
-use crate::parser::ReturnVal;
+use crate::parser::Return;
 use crate::parser::UserStyle;
 use crate::set::OptValidator;
 use crate::set::SetOpt;
 use crate::shell::CompleteGuess;
+use crate::trace;
 use crate::AStr;
 use crate::Error;
 
@@ -154,38 +157,45 @@ where
     SetOpt<Set>: Opt,
     Set: crate::set::Set + OptParser + OptValidator,
 {
-    pub(crate) fn parse_impl(
+    pub(crate) fn parse_impl<'a>(
         &mut self,
-        ctx: &mut Ctx,
         set: &mut <Self as Policy>::Set,
         inv: &mut <Self as Policy>::Inv<'_>,
         ser: &mut <Self as Policy>::Ser,
+        orig: &'a Args,
+        ctx: &mut Ctx<'a>,
     ) -> Result<(), <Self as Policy>::Error> {
         let opt_styles = &self.style_manager;
-        let args = ctx.orig_args().clone();
-        let tot = args.len();
-        let mut noa_args = Args::default();
-        let mut iter = args.guess_iter().enumerate();
+        let args: Vec<_> = orig.iter().map(|v| v.as_os_str()).collect();
+        let total = args.len();
+        let mut left = vec![];
+        let mut iter = args::iter2(&args).enumerate();
 
+        trace!("parsing {ctx:?} using fwd policy");
         ctx.set_args(args.clone());
         while let Some((idx, (opt, next))) = iter.next() {
             let mut matched = false;
             let mut consume = false;
 
-            if let Ok(clopt) = opt.parse_arg() {
-                let name = clopt.name;
-
-                if set.check(name.as_str()).map_err(Into::into)? {
-                    let arg = clopt.value;
+            if let Ok(ArgInfo { name, value }) = ArgInfo::parse(opt) {
+                trace!(
+                    "guess name: {:?} value: {:?} & next: {:?}",
+                    name,
+                    value,
+                    next
+                );
+                if set.check(&name).map_err(Into::into)? {
+                    let arg = value.clone();
+                    let next = next.map(|v| Cow::Borrowed(*v));
                     let mut guess = CompleteGuess {
                         idx,
                         arg,
                         set,
                         inv,
                         ser,
-                        tot,
+                        total,
                         ctx,
-                        next: next.cloned(),
+                        next,
                         name: Some(name.clone()),
                     };
 
@@ -204,24 +214,22 @@ where
                 iter.next();
             } else if !matched {
                 // add it to NOA if current argument not matched
-                noa_args.push(args[idx].clone());
+                left.push(*opt);
             }
         }
 
-        let tot = noa_args.len();
+        let args = left;
+        let total = args.len();
 
-        ctx.set_args(noa_args.clone());
+        ctx.set_args(args.clone());
         // when style is pos, noa index is [1..=len]
-        if tot > 0 {
-            let name = noa_args
-                .get(Self::noa_cmd())
-                .and_then(|v| v.get_str())
-                .map(AStr::from);
+        if total > 0 {
+            let name = crate::str::osstr_to_str_i(&args, Self::noa_cmd());
             let mut guess = CompleteGuess {
                 set,
                 inv,
                 ser,
-                tot,
+                total,
                 name,
                 ctx,
                 arg: None,
@@ -236,7 +244,7 @@ where
                     set,
                     inv,
                     ser,
-                    tot,
+                    total,
                     ctx,
                     name: None,
                     arg: None,
@@ -244,30 +252,20 @@ where
                     idx: Self::noa_cmd(),
                 };
 
-                for idx in 1..tot {
+                for idx in 1..total {
                     guess.idx = Self::noa_pos(idx);
-                    guess.name = noa_args
-                        .get(Self::noa_pos(idx))
-                        .and_then(|v| v.get_str())
-                        .map(AStr::from);
+                    guess.name = crate::str::osstr_to_str_i(&args, Self::noa_pos(idx));
                     guess.guess_complete(&UserStyle::Pos)?;
                 }
             }
         }
 
-        let main_args = noa_args;
-        let tot = main_args.len();
-
-        ctx.set_args(main_args.clone());
-        let name = main_args
-            .get(Self::noa_main())
-            .and_then(|v| v.get_str())
-            .map(AStr::from);
+        let name = crate::str::osstr_to_str_i(&args, Self::noa_main());
         let mut guess = CompleteGuess {
             set,
             inv,
             ser,
-            tot,
+            total,
             name,
             ctx,
             arg: None,
@@ -285,7 +283,7 @@ where
     SetOpt<Set>: Opt,
     Set: crate::set::Set + OptParser + OptValidator,
 {
-    type Ret = ReturnVal;
+    type Ret = Return;
 
     type Set = Set;
 
@@ -300,15 +298,15 @@ where
         set: &mut Self::Set,
         inv: &mut Self::Inv<'_>,
         ser: &mut Self::Ser,
-        args: Args,
+        orig: Args,
     ) -> Result<Self::Ret, Self::Error> {
-        let mut ctx = Ctx::default().with_orig_args(args.clone()).with_args(args);
+        let mut ctx = Ctx::default().with_orig(orig.clone());
 
-        match self.parse_impl(&mut ctx, set, inv, ser) {
-            Ok(_) => Ok(ReturnVal::new(ctx)),
+        match self.parse_impl(set, inv, ser, &orig, &mut ctx) {
+            Ok(_) => Ok(Return::new(ctx)),
             Err(e) => {
                 if e.is_failure() {
-                    Ok(ReturnVal::new(ctx).with_failure(e))
+                    Ok(Return::new(ctx).with_failure(e))
                 } else {
                     Err(e)
                 }

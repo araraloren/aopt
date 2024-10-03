@@ -1,12 +1,14 @@
+use std::borrow::Cow;
+use std::ffi::OsStr;
+
 use crate::ctx::Ctx;
 use crate::ctx::HandlerCollection;
 use crate::opt::Style;
 use crate::opt::BOOL_TRUE;
 use crate::parser::UserStyle;
 use crate::set::OptValidator;
-use crate::AStr;
+use crate::str::CowStrUtils;
 use crate::Error;
-use crate::RawVal;
 use crate::Uid;
 
 use crate::guess::style::*;
@@ -29,18 +31,18 @@ pub struct CompleteRet {
 }
 
 #[derive(Debug)]
-pub struct CompleteGuess<'a, Set, Inv, Ser> {
+pub struct CompleteGuess<'a, 'b, Set, Inv, Ser> {
     pub idx: usize,
 
-    pub tot: usize,
+    pub total: usize,
 
-    pub arg: Option<RawVal>,
+    pub arg: Option<Cow<'b, OsStr>>,
 
-    pub name: Option<AStr>,
+    pub name: Option<Cow<'b, str>>,
 
-    pub next: Option<RawVal>,
+    pub next: Option<Cow<'b, OsStr>>,
 
-    pub ctx: &'a mut Ctx,
+    pub ctx: &'a mut Ctx<'b>,
 
     pub set: &'a mut Set,
 
@@ -49,11 +51,11 @@ pub struct CompleteGuess<'a, Set, Inv, Ser> {
     pub ser: &'a mut Ser,
 }
 
-impl<'a, Set, Inv, Ser> CompleteGuess<'a, Set, Inv, Ser> {
-    pub fn new(ctx: &'a mut Ctx, set: &'a mut Set, inv: &'a mut Inv, ser: &'a mut Ser) -> Self {
+impl<'a, 'b, Set, Inv, Ser> CompleteGuess<'a, 'b, Set, Inv, Ser> {
+    pub fn new(ctx: &'a mut Ctx<'b>, set: &'a mut Set, inv: &'a mut Inv, ser: &'a mut Ser) -> Self {
         Self {
             idx: 0,
-            tot: 0,
+            total: 0,
             arg: None,
             name: None,
             next: None,
@@ -64,7 +66,7 @@ impl<'a, Set, Inv, Ser> CompleteGuess<'a, Set, Inv, Ser> {
         }
     }
 
-    pub fn set_ctx(&mut self, ctx: &'a mut Ctx) -> &mut Self {
+    pub fn set_ctx(&mut self, ctx: &'a mut Ctx<'b>) -> &mut Self {
         self.ctx = ctx;
         self
     }
@@ -90,26 +92,26 @@ impl<'a, Set, Inv, Ser> CompleteGuess<'a, Set, Inv, Ser> {
     }
 
     pub fn set_tot(&mut self, tot: usize) -> &mut Self {
-        self.tot = tot;
+        self.total = tot;
         self
     }
 
-    pub fn set_arg(&mut self, arg: Option<RawVal>) -> &mut Self {
+    pub fn set_arg(&mut self, arg: Option<Cow<'b, OsStr>>) -> &mut Self {
         self.arg = arg;
         self
     }
 
-    pub fn set_name(&mut self, name: Option<AStr>) -> &mut Self {
+    pub fn set_name(&mut self, name: Option<Cow<'b, str>>) -> &mut Self {
         self.name = name;
         self
     }
 
-    pub fn set_next(&mut self, next: Option<RawVal>) -> &mut Self {
+    pub fn set_next(&mut self, next: Option<Cow<'b, OsStr>>) -> &mut Self {
         self.next = next;
         self
     }
 
-    pub fn with_ctx(mut self, ctx: &'a mut Ctx) -> Self {
+    pub fn with_ctx(mut self, ctx: &'a mut Ctx<'b>) -> Self {
         self.ctx = ctx;
         self
     }
@@ -135,30 +137,30 @@ impl<'a, Set, Inv, Ser> CompleteGuess<'a, Set, Inv, Ser> {
     }
 
     pub fn with_tot(mut self, tot: usize) -> Self {
-        self.tot = tot;
+        self.total = tot;
         self
     }
 
-    pub fn with_arg(mut self, arg: Option<RawVal>) -> Self {
+    pub fn with_arg(mut self, arg: Option<Cow<'b, OsStr>>) -> Self {
         self.arg = arg;
         self
     }
 
-    pub fn with_name(mut self, name: Option<AStr>) -> Self {
+    pub fn with_name(mut self, name: Option<Cow<'b, str>>) -> Self {
         self.name = name;
         self
     }
 
-    pub fn with_next(mut self, next: Option<RawVal>) -> Self {
+    pub fn with_next(mut self, next: Option<Cow<'b, OsStr>>) -> Self {
         self.next = next;
         self
     }
 }
 
-impl<'a, 'b, Set, Inv, Ser> CompleteGuess<'a, Set, Inv, Ser>
+impl<'a, 'c, 'b, Set, Inv, Ser> CompleteGuess<'a, 'b, Set, Inv, Ser>
 where
     Set: crate::set::Set + OptValidator,
-    Inv: HandlerCollection<'b, Set, Ser>,
+    Inv: HandlerCollection<'c, Set, Ser>,
 {
     pub fn guess_complete(&mut self, style: &UserStyle) -> Result<Option<SimpleMatRet>, Error> {
         let mut matched = false;
@@ -265,9 +267,10 @@ where
     }
 }
 
-impl<'a, Set, Inv, Ser, T> GuessPolicy<EqualWithValuStyle, T> for CompleteGuess<'a, Set, Inv, Ser>
+impl<'a, 'b, Set, Inv, Ser, T> GuessPolicy<EqualWithValuStyle, T>
+    for CompleteGuess<'a, 'b, Set, Inv, Ser>
 where
-    T: Default + PolicyBuild,
+    T: Default + PolicyBuild<'b>,
 {
     type Error = Error;
 
@@ -277,7 +280,7 @@ where
                 return Ok(Some(
                     T::default()
                         .with_idx(self.idx)
-                        .with_tot(self.tot)
+                        .with_tot(self.total)
                         .with_name(Some(name.clone()))
                         .with_arg(self.arg.clone())
                         .with_style(Style::Argument),
@@ -288,9 +291,10 @@ where
     }
 }
 
-impl<'a, Set, Inv, Ser, T> GuessPolicy<ArgumentStyle, T> for CompleteGuess<'a, Set, Inv, Ser>
+impl<'a, 'b, Set, Inv, Ser, T> GuessPolicy<ArgumentStyle, T>
+    for CompleteGuess<'a, 'b, Set, Inv, Ser>
 where
-    T: Default + PolicyBuild,
+    T: Default + PolicyBuild<'b>,
 {
     type Error = Error;
 
@@ -300,7 +304,7 @@ where
                 return Ok(Some(
                     T::default()
                         .with_idx(self.idx)
-                        .with_tot(self.tot)
+                        .with_tot(self.total)
                         .with_name(Some(name.clone()))
                         .with_arg(self.next.clone())
                         .with_style(Style::Argument),
@@ -311,23 +315,24 @@ where
     }
 }
 
-impl<'a, Set, Inv, Ser, T> GuessPolicy<EmbeddedValueStyle, T> for CompleteGuess<'a, Set, Inv, Ser>
+impl<'a, 'b, Set, Inv, Ser, T> GuessPolicy<EmbeddedValueStyle, T>
+    for CompleteGuess<'a, 'b, Set, Inv, Ser>
 where
     Set: OptValidator,
-    T: Default + PolicyBuild,
+    T: Default + PolicyBuild<'b>,
 {
     type Error = Error;
 
     fn guess_policy(&mut self) -> Result<Option<T>, Self::Error> {
         let idx = self.idx;
-        let tot = self.tot;
+        let tot = self.total;
         let style = Style::Argument;
 
         if self.arg.is_none() {
             if let Some(name) = &self.name {
                 // strip the prefix before generate
                 let validator = &self.set;
-                let splited = validator.split(name.as_str()).map_err(Into::into)?;
+                let splited = validator.split(name).map_err(Into::into)?;
                 let prefix_len = splited.0.len();
 
                 // make sure we using `chars.count`, not len()
@@ -335,8 +340,8 @@ where
                 // only check first letter `--v42` ==> `--v 42`
                 if let Some((char_idx, _)) = splited.1.char_indices().nth(1) {
                     let (name, arg) = name.split_at(prefix_len + char_idx);
-                    let arg = Some(RawVal::from(arg));
-                    let name = Some(name.into());
+                    let arg = Some(arg.to_os_str());
+                    let name = Some(name);
 
                     return Ok(Some(
                         T::default()
@@ -353,24 +358,24 @@ where
     }
 }
 
-impl<'a, Set, Inv, Ser, T> GuessPolicy<EmbeddedValuePlusStyle, MultiOpt<T, Set>>
-    for CompleteGuess<'a, Set, Inv, Ser>
+impl<'a, 'b, Set, Inv, Ser, T> GuessPolicy<EmbeddedValuePlusStyle, MultiOpt<T, Set>>
+    for CompleteGuess<'a, 'b, Set, Inv, Ser>
 where
     Set: OptValidator,
-    T: Default + PolicyBuild,
+    T: Default + PolicyBuild<'b>,
 {
     type Error = Error;
 
     fn guess_policy(&mut self) -> Result<Option<MultiOpt<T, Set>>, Self::Error> {
         let idx = self.idx;
-        let tot = self.tot;
+        let tot = self.total;
         let style = Style::Argument;
 
         if self.arg.is_none() {
             if let Some(name) = &self.name {
                 // strip the prefix before generate
                 let validator = &self.set;
-                let splited = validator.split(name.as_str()).map_err(Into::into)?;
+                let splited = validator.split(name).map_err(Into::into)?;
                 let char_indices = splited.1.char_indices().skip(2);
                 let prefix_len = splited.0.len();
                 let mut policy = MultiOpt::default().with_any_match(true);
@@ -380,8 +385,8 @@ where
                 // for `--opt42` check the option like `--op t42`, `--opt 42`, `--opt4 2`
                 for (char_idx, _) in char_indices {
                     let (name, arg) = name.split_at(prefix_len + char_idx);
-                    let arg = Some(RawVal::from(arg));
-                    let name = Some(name.into());
+                    let arg = Some(arg.to_os_str());
+                    let name = Some(name);
 
                     policy.add_sub_policy(
                         T::default()
@@ -399,26 +404,25 @@ where
     }
 }
 
-impl<'a, Set, Inv, Ser, T> GuessPolicy<CombinedOptionStyle, MultiOpt<T, Set>>
-    for CompleteGuess<'a, Set, Inv, Ser>
+impl<'a, 'b, Set, Inv, Ser, T> GuessPolicy<CombinedOptionStyle, MultiOpt<T, Set>>
+    for CompleteGuess<'a, 'b, Set, Inv, Ser>
 where
     Set: OptValidator,
-    T: Default + PolicyBuild,
+    T: Default + PolicyBuild<'b>,
 {
     type Error = Error;
 
     fn guess_policy(&mut self) -> Result<Option<MultiOpt<T, Set>>, Self::Error> {
         let idx = self.idx;
-        let tot = self.tot;
+        let tot = self.total;
         let style = Style::Boolean;
-        let arg = Some(RawVal::from(BOOL_TRUE));
+        let arg = Some(Cow::Borrowed(OsStr::new(BOOL_TRUE)));
 
         if self.arg.is_none() {
             if let Some(name) = &self.name {
                 // strip the prefix before generate
-                let option = name.as_str();
                 let validator = &self.set;
-                let splited = validator.split(option).map_err(Into::into)?;
+                let splited = validator.split(name).map_err(Into::into)?;
 
                 if splited.1.chars().count() > 1 {
                     let mut policy = MultiOpt::default().with_any_match(false);
@@ -441,21 +445,23 @@ where
     }
 }
 
-impl<'a, Set, Inv, Ser, T> GuessPolicy<BooleanStyle, T> for CompleteGuess<'a, Set, Inv, Ser>
+impl<'a, 'b, Set, Inv, Ser, T> GuessPolicy<BooleanStyle, T> for CompleteGuess<'a, 'b, Set, Inv, Ser>
 where
-    T: Default + PolicyBuild,
+    T: Default + PolicyBuild<'b>,
 {
     type Error = Error;
 
     fn guess_policy(&mut self) -> Result<Option<T>, Self::Error> {
+        let arg = Some(Cow::Borrowed(OsStr::new(BOOL_TRUE)));
+
         if self.arg.is_none() {
             if let Some(name) = &self.name {
                 return Ok(Some(
                     T::default()
                         .with_idx(self.idx)
-                        .with_tot(self.tot)
+                        .with_tot(self.total)
                         .with_name(Some(name.clone()))
-                        .with_arg(Some(RawVal::from(BOOL_TRUE)))
+                        .with_arg(arg)
                         .with_style(Style::Boolean),
                 ));
             }
@@ -464,9 +470,9 @@ where
     }
 }
 
-impl<'a, Set, Inv, Ser, T> GuessPolicy<FlagStyle, T> for CompleteGuess<'a, Set, Inv, Ser>
+impl<'a, 'b, Set, Inv, Ser, T> GuessPolicy<FlagStyle, T> for CompleteGuess<'a, 'b, Set, Inv, Ser>
 where
-    T: Default + PolicyBuild,
+    T: Default + PolicyBuild<'b>,
 {
     type Error = Error;
 
@@ -476,7 +482,7 @@ where
                 return Ok(Some(
                     T::default()
                         .with_idx(self.idx)
-                        .with_tot(self.tot)
+                        .with_tot(self.total)
                         .with_name(Some(name.clone()))
                         .with_arg(None)
                         .with_style(Style::Flag),
@@ -487,25 +493,24 @@ where
     }
 }
 
-impl<'a, Set, Inv, Ser, T> GuessPolicy<MainStyle, T> for CompleteGuess<'a, Set, Inv, Ser>
+impl<'a, 'b, Set, Inv, Ser, T> GuessPolicy<MainStyle, T> for CompleteGuess<'a, 'b, Set, Inv, Ser>
 where
-    T: Default + PolicyBuild,
+    T: Default + PolicyBuild<'b>,
 {
     type Error = Error;
 
     fn guess_policy(&mut self) -> Result<Option<T>, Self::Error> {
         let idx = self.idx;
-        let tot = self.tot;
+        let tot = self.total;
         let style = Style::Main;
         let name = self.name.clone();
-        let args = self.ctx.args().clone();
-        let arg = args.get(idx).cloned();
+        let args = self.ctx.args();
+        let arg = args.get(idx).map(|v| Cow::Borrowed(*v));
 
         Ok(Some(
             T::default()
                 .with_idx(idx)
                 .with_arg(arg)
-                .with_args(args)
                 .with_name(name)
                 .with_tot(tot)
                 .with_style(style),
@@ -513,25 +518,24 @@ where
     }
 }
 
-impl<'a, Set, Inv, Ser, T> GuessPolicy<PosStyle, T> for CompleteGuess<'a, Set, Inv, Ser>
+impl<'a, 'b, Set, Inv, Ser, T> GuessPolicy<PosStyle, T> for CompleteGuess<'a, 'b, Set, Inv, Ser>
 where
-    T: Default + PolicyBuild,
+    T: Default + PolicyBuild<'b>,
 {
     type Error = Error;
 
     fn guess_policy(&mut self) -> Result<Option<T>, Self::Error> {
         let idx = self.idx;
-        let tot = self.tot;
+        let tot = self.total;
         let style = Style::Pos;
         let name = self.name.clone();
-        let args = self.ctx.args().clone();
-        let arg = args.get(idx).cloned();
+        let args = self.ctx.args();
+        let arg = args.get(idx).map(|v| Cow::Borrowed(*v));
 
         Ok(Some(
             T::default()
                 .with_idx(idx)
                 .with_arg(arg)
-                .with_args(args)
                 .with_name(name)
                 .with_tot(tot)
                 .with_style(style),
@@ -539,25 +543,23 @@ where
     }
 }
 
-impl<'a, Set, Inv, Ser, T> GuessPolicy<CmdStyle, T> for CompleteGuess<'a, Set, Inv, Ser>
+impl<'a, 'b, Set, Inv, Ser, T> GuessPolicy<CmdStyle, T> for CompleteGuess<'a, 'b, Set, Inv, Ser>
 where
-    T: Default + PolicyBuild,
+    T: Default + PolicyBuild<'b>,
 {
     type Error = Error;
 
     fn guess_policy(&mut self) -> Result<Option<T>, Self::Error> {
         let idx = self.idx;
-        let tot = self.tot;
+        let tot = self.total;
         let style = Style::Cmd;
         let name = self.name.clone();
-        let args = self.ctx.args().clone();
-        let arg = Some(RawVal::from(BOOL_TRUE));
+        let arg = Some(Cow::Borrowed(OsStr::new(BOOL_TRUE)));
 
         Ok(Some(
             T::default()
                 .with_idx(idx)
                 .with_arg(arg)
-                .with_args(args)
                 .with_name(name)
                 .with_tot(tot)
                 .with_style(style),
@@ -565,14 +567,14 @@ where
     }
 }
 
-impl<'a, 'b, Set, Inv, Ser> CompleteGuess<'a, Set, Inv, Ser>
+impl<'a, 'b, 'c, Set, Inv, Ser> CompleteGuess<'a, 'b, Set, Inv, Ser>
 where
     Set: crate::set::Set,
-    Inv: HandlerCollection<'b, Set, Ser>,
+    Inv: HandlerCollection<'c, Set, Ser>,
 {
     pub fn r#match<T>(&mut self, policy: &mut T, consume: bool) -> Result<bool, Error>
     where
-        T: PolicyConfig + MatchPolicy<Set = Set>,
+        T: PolicyConfig<'b> + MatchPolicy<Set = Set>,
     {
         let uids = self.set.keys();
 
@@ -619,7 +621,7 @@ where
 
     pub fn apply<T>(&mut self, policy: &mut T, all: bool) -> Result<bool, Error>
     where
-        T: PolicyConfig + MatchPolicy<Set = Set>,
+        T: PolicyConfig<'b> + MatchPolicy<Set = Set>,
     {
         let mut result = false;
 
@@ -649,7 +651,7 @@ where
         all: bool,
     ) -> Result<bool, Error>
     where
-        T: PolicyConfig + MatchPolicy<Set = Set>,
+        T: PolicyConfig<'b> + MatchPolicy<Set = Set>,
     {
         let mut matched = false;
         let any_match = policy.any_match();
