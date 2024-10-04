@@ -18,7 +18,6 @@ use crate::set::OptValidator;
 use crate::set::SetOpt;
 use crate::shell::CompleteGuess;
 use crate::trace;
-use crate::AStr;
 use crate::Error;
 
 pub struct CompletePolicy<Set, Ser> {
@@ -125,7 +124,7 @@ impl<Set, Ser> PolicySettings for CompletePolicy<Set, Ser> {
         &self.style_manager
     }
 
-    fn no_delay(&self) -> Option<&[AStr]> {
+    fn no_delay(&self) -> Option<&[String]> {
         None
     }
 
@@ -143,7 +142,7 @@ impl<Set, Ser> PolicySettings for CompletePolicy<Set, Ser> {
         self
     }
 
-    fn set_no_delay(&mut self, _: impl Into<AStr>) -> &mut Self {
+    fn set_no_delay(&mut self, _: impl Into<String>) -> &mut Self {
         self
     }
 

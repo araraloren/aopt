@@ -153,10 +153,8 @@ where
     ) -> Result<Self::Ret, Self::Error> {
         let opt = set.opt_mut(uid)?;
 
-        crate::trace!("Store the value of {} ==> {:?}", opt.name().clone(), raw);
-
+        crate::trace!("storing value of {} = `{:?}`", opt.name(), raw);
         let (raw_handler, handler) = opt.accessor_mut().handlers();
-
         // Set the value if return Some(Value)
         Ok(self.store2(raw, val, raw_handler, handler))
     }

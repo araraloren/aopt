@@ -253,7 +253,7 @@ impl<T: Opt + TryFrom<C, Error: Into<Error>>, C: ConfigValue + Debug> From<Cid>
 /// * [`Int`](Cid::Int)
 /// * [`Bool`](Cid::Bool)
 /// * [`Flt`](Cid::Flt)
-/// * [`AStr`](Cid::AStr)
+/// * [`Str`](Cid::Str)
 /// * [`Uint`](Cid::Uint)
 /// * [`Cmd`](Cid::Cmd)
 /// * [`Pos`](Cid::Pos)

@@ -232,7 +232,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 * `app.exe in software -/o -s crates.io` output
 
-    invoke install command: debug=false, override=true, source=AStr("crates.io")
+    invoke install command: debug=false, override=true, source="crates.io"
 
 * `app.exe in aopt` output
 

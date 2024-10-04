@@ -44,22 +44,21 @@ use crate::Error;
 ///
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::astr;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<(), Error> {
 ///     let parser = StrParser::default();
 ///     let ret = parser.parse_opt("--aopt=t!".into())?;
 ///
-///     assert_eq!(ret.name() , Some(&a"--aopt")));
-///     assert_eq!(ret.ctor(), Some(&a"t")));
+///     assert_eq!(ret.name() , Some("--aopt"));
+///     assert_eq!(ret.ctor(), Some("t"));
 ///     assert_eq!(ret.force(), Some(true));
 ///     assert_eq!(ret.index(), None);
 ///
 ///     let ret = parser.parse_opt("bopt=t@[1,2,3]".into())?;
 ///
-///     assert_eq!(ret.name(), Some(&a"bopt")));
-///     assert_eq!(ret.ctor(), Some(&a"t")));
+///     assert_eq!(ret.name(), Some("bopt"));
+///     assert_eq!(ret.ctor(), Some("t"));
 ///     assert_eq!(ret.force(), None);
 ///     assert_eq!(ret.index(), Some(&Index::list(vec![1, 2, 3])));
 ///

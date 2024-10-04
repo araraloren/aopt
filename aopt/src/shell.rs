@@ -269,7 +269,7 @@ where
 
         if set.split(&arg).is_ok() {
             for opt in set.iter() {
-                if opt.mat_style(Style::Argument) && opt.name().as_str() == arg {
+                if opt.mat_style(Style::Argument) && opt.name() == arg {
                     self.incomplete_opt = Some(opt.uid());
                     break;
                 }
