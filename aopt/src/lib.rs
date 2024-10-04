@@ -35,8 +35,6 @@ pub(crate) mod log {
 
 pub use crate::err::Error;
 pub use crate::err::Result;
-pub use crate::str::astr;
-pub use crate::str::AStr;
 
 use std::any::TypeId;
 

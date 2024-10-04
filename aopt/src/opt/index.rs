@@ -525,14 +525,6 @@ impl<'a> TryFrom<&'a str> for Index {
     }
 }
 
-impl TryFrom<crate::AStr> for Index {
-    type Error = Error;
-
-    fn try_from(value: crate::AStr) -> Result<Self, Self::Error> {
-        Self::parse(value.as_str())
-    }
-}
-
 macro_rules! impl_range_for {
     ($range:ty) => {
         impl TryFrom<$range> for Index {

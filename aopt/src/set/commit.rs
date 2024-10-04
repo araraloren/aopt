@@ -157,14 +157,13 @@ where
             <U as Infer>::infer_fill_info(&mut info)?;
 
             let set = self.set.as_mut().unwrap();
-            let ctor = info
-                .ctor()
-                .ok_or_else(|| crate::raise_error!("Invalid configuration: missing creator name!"))?
-                .clone();
+            let ctor = info.ctor().ok_or_else(|| {
+                crate::raise_error!("Invalid configuration: missing creator name!")
+            })?;
 
             trace!("Register a opt {:?} with creator({})", info.name(), ctor);
 
-            let opt = set.ctor_mut(&ctor)?.new_with(info).map_err(|e| e.into())?;
+            let opt = set.ctor_mut(ctor)?.new_with(info).map_err(|e| e.into())?;
             let uid = set.insert(opt);
 
             trace!("--> register okay: {uid}");

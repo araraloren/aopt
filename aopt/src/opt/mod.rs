@@ -43,7 +43,6 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 
 use crate::value::ValAccessor;
-use crate::AStr;
 use crate::Error;
 use crate::Uid;
 
@@ -356,16 +355,16 @@ pub trait Opt: Debug {
     fn uid(&self) -> Uid;
 
     /// The name of option.
-    fn name(&self) -> &AStr;
+    fn name(&self) -> &str;
 
     /// The type of option.
     fn r#type(&self) -> &TypeId;
 
     /// The help hint of option such as `--flag`.
-    fn hint(&self) -> &AStr;
+    fn hint(&self) -> &str;
 
     /// The help message of option.
-    fn help(&self) -> &AStr;
+    fn help(&self) -> &str;
 
     fn valid(&self) -> bool;
 
@@ -382,7 +381,7 @@ pub trait Opt: Debug {
     fn index(&self) -> Option<&Index>;
 
     /// The alias the option.
-    fn alias(&self) -> Option<&Vec<AStr>>;
+    fn alias(&self) -> Option<&Vec<String>>;
 
     fn accessor(&self) -> &ValAccessor;
 

@@ -318,9 +318,9 @@ fn display_help<S: Set>(set: &S) -> Result<(), aopt_help::Error> {
             global.add_store(
                 "args",
                 Store::new(
-                    Cow::from(opt.name().as_str()),
-                    Cow::from(opt.hint().as_str()),
-                    Cow::from(opt.help().as_str()),
+                    Cow::from(opt.name()),
+                    Cow::from(opt.hint()),
+                    Cow::from(opt.help()),
                     Cow::default(),
                     opt.force(),
                     true,
@@ -333,9 +333,9 @@ fn display_help<S: Set>(set: &S) -> Result<(), aopt_help::Error> {
             global.add_store(
                 "option",
                 Store::new(
-                    Cow::from(opt.name().as_str()),
-                    Cow::from(opt.hint().as_str()),
-                    Cow::from(opt.help().as_str()),
+                    Cow::from(opt.name()),
+                    Cow::from(opt.hint()),
+                    Cow::from(opt.help()),
                     Cow::default(),
                     opt.force(),
                     false,

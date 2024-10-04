@@ -9,7 +9,6 @@ use neure::SpanStorer;
 
 use super::{ConstrctInfo, OptParser};
 use crate::opt::Index;
-use crate::AStr;
 use crate::Error;
 
 /// Parse the option string with given prefixes, return an [`ConstrctInfo`].
@@ -52,15 +51,15 @@ use crate::Error;
 ///     let parser = StrParser::default();
 ///     let ret = parser.parse_opt("--aopt=t!".into())?;
 ///
-///     assert_eq!(ret.name() , Some(&astr("--aopt")));
-///     assert_eq!(ret.ctor(), Some(&astr("t")));
+///     assert_eq!(ret.name() , Some(&a"--aopt")));
+///     assert_eq!(ret.ctor(), Some(&a"t")));
 ///     assert_eq!(ret.force(), Some(true));
 ///     assert_eq!(ret.index(), None);
 ///
 ///     let ret = parser.parse_opt("bopt=t@[1,2,3]".into())?;
 ///
-///     assert_eq!(ret.name(), Some(&astr("bopt")));
-///     assert_eq!(ret.ctor(), Some(&astr("t")));
+///     assert_eq!(ret.name(), Some(&a"bopt")));
+///     assert_eq!(ret.ctor(), Some(&a"t")));
 ///     assert_eq!(ret.force(), None);
 ///     assert_eq!(ret.index(), Some(&Index::list(vec![1, 2, 3])));
 ///
@@ -156,7 +155,7 @@ impl StrParser {
                     if let Ok(vals) = storer.substrs(pattern, KEY_ALIAS) {
                         alias = Some(
                             vals.filter(|v| !v.trim().is_empty())
-                                .map(|v| AStr::from(v.trim()))
+                                .map(|v| String::from(v.trim()))
                                 .collect(),
                         );
                     }
@@ -166,9 +165,9 @@ impl StrParser {
                     Ok(ConstrctInfo::default()
                         .with_force(force)
                         .with_index(idx)
-                        .with_name(name.map(|v| AStr::from(v.trim())))
-                        .with_help(help.map(|v| AStr::from(v.trim())))
-                        .with_ctor(ctor.map(|v| AStr::from(v.trim())))
+                        .with_name(name.map(|v| String::from(v.trim())))
+                        .with_help(help.map(|v| String::from(v.trim())))
+                        .with_ctor(ctor.map(|v| String::from(v.trim())))
                         .with_alias(alias))
                 } else {
                     Err(Error::create_str(pattern, "can not parsing string"))
@@ -203,7 +202,6 @@ impl OptParser for StrParser {
 #[cfg(test)]
 mod test {
 
-    use crate::astr;
     use crate::prelude::*;
 
     #[test]
@@ -232,50 +230,30 @@ mod test {
             "",
         ];
         let options_test = [
-            (Some(astr("-b")), None, None),
-            (Some(astr("--bool")), None, None),
-            (Some(astr("bool")), None, None),
-            (Some(astr("-b")), Some(vec![astr("--bool")]), None),
-            (
-                Some(astr("-?")),
-                Some(vec![astr("-h"), astr("--help")]),
-                None,
-            ),
-            (Some(astr("--bool")), Some(vec![astr("-b")]), None),
-            (Some(astr("b")), Some(vec![astr("bool")]), None),
-            (Some(astr("-b")), Some(vec![astr("bool")]), None),
-            (Some(astr("-/b")), Some(vec![astr("--/bool")]), None),
-            (Some(astr("-/b")), Some(vec![astr("bool")]), None),
-            (Some(astr("-b")), None, Some(astr("i"))),
-            (Some(astr("--bool")), None, Some(astr("u"))),
-            (Some(astr("bool")), None, Some(astr("s"))),
-            (
-                Some(astr("-b")),
-                Some(vec![astr("--bool")]),
-                Some(astr("b")),
-            ),
-            (
-                Some(astr("-?")),
-                Some(vec![astr("-h"), astr("--help")]),
-                Some(astr("p")),
-            ),
-            (
-                Some(astr("--bool")),
-                Some(vec![astr("-b")]),
-                Some(astr("c")),
-            ),
-            (Some(astr("b")), Some(vec![astr("bool")]), Some(astr("m"))),
-            (Some(astr("-b")), Some(vec![astr("bool")]), Some(astr("f"))),
-            (
-                Some(astr("-/b")),
-                Some(vec![astr("--/bool")]),
-                Some(astr("i")),
-            ),
-            (Some(astr("-/b")), Some(vec![astr("bool")]), Some(astr("a"))),
+            (Some("-b"), None, None),
+            (Some("--bool"), None, None),
+            (Some("bool"), None, None),
+            (Some("-b"), Some(vec!["--bool"]), None),
+            (Some("-?"), Some(vec!["-h", "--help"]), None),
+            (Some("--bool"), Some(vec!["-b"]), None),
+            (Some("b"), Some(vec!["bool"]), None),
+            (Some("-b"), Some(vec!["bool"]), None),
+            (Some("-/b"), Some(vec!["--/bool"]), None),
+            (Some("-/b"), Some(vec!["bool"]), None),
+            (Some("-b"), None, Some("i")),
+            (Some("--bool"), None, Some("u")),
+            (Some("bool"), None, Some("s")),
+            (Some("-b"), Some(vec!["--bool"]), Some("b")),
+            (Some("-?"), Some(vec!["-h", "--help"]), Some("p")),
+            (Some("--bool"), Some(vec!["-b"]), Some("c")),
+            (Some("b"), Some(vec!["bool"]), Some("m")),
+            (Some("-b"), Some(vec!["bool"]), Some("f")),
+            (Some("-/b"), Some(vec!["--/bool"]), Some("i")),
+            (Some("-/b"), Some(vec!["bool"]), Some("a")),
             (None, None, None),
         ];
         let helps = [": This is an option help message", ""];
-        let helps_test = [Some(astr("This is an option help message")), None];
+        let helps_test = [Some("This is an option help message"), None];
         let forces = ["!", "*", ""];
         let forces_test = [Some(true), Some(false), None];
         let positions = [
@@ -316,12 +294,15 @@ mod test {
 
                         println!("\"{}\",", creator);
                         if let Ok(cap) = parser.parse_opt(&creator) {
-                            assert_eq!(option_test.0.as_ref(), cap.name());
-                            assert_eq!(option_test.1.as_ref(), cap.alias());
-                            assert_eq!(help_test.as_ref(), cap.help());
+                            assert_eq!(option_test.0, cap.name());
+                            assert_eq!(
+                                option_test.1,
+                                cap.alias().map(|v| v.iter().map(|v| v.as_ref()).collect())
+                            );
+                            assert_eq!(help_test, &cap.help());
                             assert_eq!(force_test, &cap.force());
                             assert_eq!(position_test.as_ref(), cap.index());
-                            assert_eq!(option_test.2.as_ref(), cap.ctor());
+                            assert_eq!(option_test.2, cap.ctor());
                         } else {
                             assert!(
                                 option_test.0.is_none(),

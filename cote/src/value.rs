@@ -22,16 +22,13 @@ where
     SetCfg<S>: ConfigValue + Default,
 {
     let opt = crate::prelude::SetExt::opt_mut(set, uid)?;
-    let (name, uid) = (opt.name().clone(), opt.uid());
+    let (name, uid) = (opt.name(), opt.uid());
+    let err = raise_error!(
+        "not enough value({}) can take from option `{name}`",
+        std::any::type_name::<T>(),
+    );
 
-    opt.vals_mut::<T>()?.pop().ok_or_else(|| {
-        raise_error!(
-            "Not enough value({}) can take from option `{}`",
-            std::any::type_name::<T>(),
-            name
-        )
-        .with_uid(uid)
-    })
+    opt.vals_mut::<T>()?.pop().ok_or_else(|| err.with_uid(uid))
 }
 
 pub fn fetch_vec_uid_impl<T, S: Set>(uid: Uid, set: &mut S) -> Result<Vec<T>, aopt::Error>
@@ -40,17 +37,16 @@ where
     SetCfg<S>: ConfigValue + Default,
 {
     let opt = crate::prelude::SetExt::opt_mut(set, uid)?;
-    let (name, uid) = (opt.name().clone(), opt.uid());
+    let (name, uid) = (opt.name(), opt.uid());
+    let err = raise_error!(
+        "Can not take values({}) of option `{name}`",
+        std::any::type_name::<T>(),
+    );
 
-    Ok(std::mem::take(opt.vals_mut::<T>().map_err(|e| {
-        raise_error!(
-            "Can not take values({}) of option `{}`",
-            std::any::type_name::<T>(),
-            name
-        )
-        .with_uid(uid)
-        .cause_by(e)
-    })?))
+    Ok(std::mem::take(
+        opt.vals_mut::<T>()
+            .map_err(|e| err.with_uid(uid).cause_by(e))?,
+    ))
 }
 
 /// Using for generate code for procedural macro.

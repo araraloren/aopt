@@ -117,9 +117,9 @@ pub fn display_set_help<'a, T: Set>(
             global.add_store(
                 "args",
                 Store::new(
-                    Cow::from(opt.name().as_str()),
-                    Cow::from(opt.hint().as_str()),
-                    Cow::from(opt.help().as_str()),
+                    Cow::from(opt.name()),
+                    Cow::from(opt.hint()),
+                    Cow::from(opt.help()),
                     Cow::default(),
                     !opt.force(),
                     true,
@@ -129,9 +129,9 @@ pub fn display_set_help<'a, T: Set>(
             global.add_store(
                 "command",
                 Store::new(
-                    Cow::from(opt.name().as_str()),
-                    Cow::from(opt.hint().as_str()),
-                    Cow::from(opt.help().as_str()),
+                    Cow::from(opt.name()),
+                    Cow::from(opt.hint()),
+                    Cow::from(opt.help()),
                     Cow::default(),
                     !opt.force(),
                     true,
@@ -145,9 +145,9 @@ pub fn display_set_help<'a, T: Set>(
             global.add_store(
                 "option",
                 Store::new(
-                    Cow::from(opt.name().as_str()),
-                    Cow::from(opt.hint().as_str()),
-                    Cow::from(opt.help().as_str()),
+                    Cow::from(opt.name()),
+                    Cow::from(opt.hint()),
+                    Cow::from(opt.help()),
                     Cow::default(),
                     !opt.force(),
                     false,

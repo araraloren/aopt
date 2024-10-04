@@ -21,7 +21,6 @@ use aopt::prelude::SetOpt;
 use aopt::raise_error;
 use aopt::ser::ServicesValExt;
 use aopt::set::SetValueFindExt;
-use aopt::AStr;
 use aopt::Error;
 use aopt::Uid;
 
@@ -305,11 +304,11 @@ where
         Set::register(&mut self.set, ctor)
     }
 
-    fn get_ctor(&self, name: &AStr) -> Option<&Self::Ctor> {
+    fn get_ctor(&self, name: &str) -> Option<&Self::Ctor> {
         Set::get_ctor(&self.set, name)
     }
 
-    fn get_ctor_mut(&mut self, name: &AStr) -> Option<&mut Self::Ctor> {
+    fn get_ctor_mut(&mut self, name: &str) -> Option<&mut Self::Ctor> {
         Set::get_ctor_mut(&mut self.set, name)
     }
 

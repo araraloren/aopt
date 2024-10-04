@@ -21,7 +21,6 @@ use crate::set::OptValidator;
 use crate::set::SetChecker;
 use crate::set::SetOpt;
 use crate::trace;
-use crate::AStr;
 use crate::Error;
 
 /// [`PrePolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
@@ -261,7 +260,7 @@ impl<Set, Ser, Chk> PolicySettings for PrePolicy<Set, Ser, Chk> {
         &self.style_manager
     }
 
-    fn no_delay(&self) -> Option<&[AStr]> {
+    fn no_delay(&self) -> Option<&[String]> {
         None
     }
 
@@ -279,7 +278,7 @@ impl<Set, Ser, Chk> PolicySettings for PrePolicy<Set, Ser, Chk> {
         self
     }
 
-    fn set_no_delay(&mut self, _: impl Into<AStr>) -> &mut Self {
+    fn set_no_delay(&mut self, _: impl Into<String>) -> &mut Self {
         self
     }
 

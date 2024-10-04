@@ -27,7 +27,6 @@ use crate::set::SetChecker;
 use crate::set::SetExt;
 use crate::set::SetOpt;
 use crate::trace;
-use crate::AStr;
 use crate::Error;
 use crate::Uid;
 
@@ -132,7 +131,7 @@ pub struct DelayPolicy<Set, Ser, Chk> {
 
     style_manager: OptStyleManager,
 
-    no_delay_opt: Vec<AStr>,
+    no_delay_opt: Vec<String>,
 
     marker_s: PhantomData<(Set, Ser)>,
 }
@@ -209,7 +208,7 @@ impl<Set, Ser, Chk> DelayPolicy<Set, Ser, Chk> {
         self
     }
 
-    pub fn with_no_delay(mut self, name: impl Into<AStr>) -> Self {
+    pub fn with_no_delay(mut self, name: impl Into<String>) -> Self {
         self.no_delay_opt.push(name.into());
         self
     }
@@ -267,7 +266,7 @@ impl<Set, Ser, Chk> PolicySettings for DelayPolicy<Set, Ser, Chk> {
         &self.style_manager
     }
 
-    fn no_delay(&self) -> Option<&[AStr]> {
+    fn no_delay(&self) -> Option<&[String]> {
         Some(&self.no_delay_opt)
     }
 
@@ -285,7 +284,7 @@ impl<Set, Ser, Chk> PolicySettings for DelayPolicy<Set, Ser, Chk> {
         self
     }
 
-    fn set_no_delay(&mut self, name: impl Into<AStr>) -> &mut Self {
+    fn set_no_delay(&mut self, name: impl Into<String>) -> &mut Self {
         self.no_delay_opt.push(name.into());
         self
     }
@@ -402,7 +401,7 @@ where
             for uid in policy.uids.iter() {
                 let name = guess.set.opt(*uid)?.name();
 
-                if self.no_delay_opt.contains(name) {
+                if self.no_delay_opt.iter().any(|v| v == name) {
                     let ret = self.invoke_opt_callback(
                         *uid,
                         guess.ctx,

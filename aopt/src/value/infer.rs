@@ -21,7 +21,6 @@ use crate::trace;
 use crate::typeid;
 use crate::value::ValInitializer;
 use crate::value::ValValidator;
-use crate::AStr;
 use crate::Error;
 
 use super::AnyValue;
@@ -41,8 +40,8 @@ pub trait Infer {
         false
     }
 
-    fn infer_ctor() -> AStr {
-        AStr::from(crate::set::CTOR_DEFAULT)
+    fn infer_ctor() -> String {
+        crate::set::ctor_default_name()
     }
 
     fn infer_index() -> Option<Index> {
@@ -338,15 +337,15 @@ impl Infer for Stdin {
         true
     }
 
-    /// For type Stop, swap the name and default alias(`-`) when build configuration.
+    /// For type Stdin, swap the name and default alias(`-`) when build configuration.
     fn infer_tweak_info<C>(cfg: &mut C) -> Result<(), Error>
     where
         Self: Sized + 'static,
         Self::Val: RawValParser,
         C: ConfigValue + Default,
     {
-        if let Some(name) = cfg.name().cloned() {
-            cfg.add_alias(name);
+        if let Some(name) = cfg.name() {
+            cfg.add_alias(name.to_string());
         }
         cfg.set_name("-");
         Ok(())
@@ -375,8 +374,8 @@ impl Infer for Stop {
         Self::Val: RawValParser,
         C: ConfigValue + Default,
     {
-        if let Some(name) = cfg.name().cloned() {
-            cfg.add_alias(name);
+        if let Some(name) = cfg.name() {
+            cfg.add_alias(name.to_string());
         }
         cfg.set_name("--");
         Ok(())
@@ -482,7 +481,7 @@ impl Infer for Placeholder {
         trace!("In default, fill info in Placeholder");
         match cid {
             Cid::Int => <i64>::infer_fill_info(cfg),
-            Cid::AStr => <String>::infer_fill_info(cfg),
+            Cid::Str => <String>::infer_fill_info(cfg),
             Cid::Flt => <f64>::infer_fill_info(cfg),
             Cid::Uint => <u64>::infer_fill_info(cfg),
             Cid::Bool => bool::infer_fill_info(cfg),

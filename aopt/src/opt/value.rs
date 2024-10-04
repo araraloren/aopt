@@ -45,18 +45,12 @@ impl<O: Opt> OptValueExt for O {
     }
 
     fn val_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
-        let hint = self.hint().clone();
-        let action = *self.action();
+        let hint = self.hint();
+        let act = self.action();
         let uid = self.uid();
+        let err = raise_error!("can not find value(mut) of `{}`({})", hint, act).with_uid(uid);
 
-        self.accessor_mut().val_mut().map_err(|e| {
-            e.cause(raise_error!(
-                "Can not find value(mut) of `{}`({})",
-                hint,
-                action
-            ))
-            .with_uid(uid)
-        })
+        self.accessor_mut().val_mut().map_err(|e| e.cause(err))
     }
 
     fn vals<T: ErasedTy>(&self) -> Result<&Vec<T>, Error> {
@@ -64,7 +58,7 @@ impl<O: Opt> OptValueExt for O {
 
         self.accessor().vals().map_err(|e| {
             e.cause(raise_error!(
-                "Can not find values(ref) of `{}`({})",
+                "can not find values(ref) of `{}`({})",
                 self.hint(),
                 self.action(),
             ))
@@ -73,18 +67,12 @@ impl<O: Opt> OptValueExt for O {
     }
 
     fn vals_mut<T: ErasedTy>(&mut self) -> Result<&mut Vec<T>, Error> {
-        let hint = self.hint().clone();
-        let action = *self.action();
+        let hint = self.hint();
+        let act = self.action();
         let uid = self.uid();
+        let err = raise_error!("can not find values(mut) of `{}`({})", hint, act).with_uid(uid);
 
-        self.accessor_mut().vals_mut().map_err(|e| {
-            e.cause(raise_error!(
-                "Can not find value(mut) of `{}`({})",
-                hint,
-                action
-            ))
-            .with_uid(uid)
-        })
+        self.accessor_mut().vals_mut().map_err(|e| e.cause(err))
     }
 
     fn entry<T: ErasedTy>(&mut self) -> Entry<'_, Vec<T>> {
@@ -104,13 +92,11 @@ impl<O: Opt> OptValueExt for O {
     }
 
     fn rawval_mut(&mut self) -> Result<&mut OsString, Error> {
-        let hint = self.hint().clone();
+        let hint = self.hint();
         let uid = self.uid();
+        let err = raise_error!("can not find raw value(mut) of `{}`", hint).with_uid(uid);
 
-        self.accessor_mut().rawval_mut().map_err(|e| {
-            e.cause(raise_error!("Can not find raw value(mut) of `{}`", hint))
-                .with_uid(uid)
-        })
+        self.accessor_mut().rawval_mut().map_err(|e| e.cause(err))
     }
 
     fn rawvals(&self) -> Result<&Vec<OsString>, Error> {
@@ -123,13 +109,11 @@ impl<O: Opt> OptValueExt for O {
     }
 
     fn rawvals_mut(&mut self) -> Result<&mut Vec<OsString>, Error> {
-        let hint = self.hint().clone();
+        let hint = self.hint();
         let uid = self.uid();
+        let err = raise_error!("can not find raw values(mut) of `{}`", hint).with_uid(uid);
 
-        self.accessor_mut().rawvals_mut().map_err(|e| {
-            e.cause(raise_error!("Can not find raw values(mut) of `{}`", hint,))
-                .with_uid(uid)
-        })
+        self.accessor_mut().rawvals_mut().map_err(|e| e.cause(err))
     }
 
     /// Filter the value from option values if `f` return true.

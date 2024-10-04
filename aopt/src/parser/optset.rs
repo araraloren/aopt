@@ -430,11 +430,11 @@ where
         Set::register(&mut self.set, ctor)
     }
 
-    fn get_ctor(&self, name: &crate::AStr) -> Option<&Self::Ctor> {
+    fn get_ctor(&self, name: &str) -> Option<&Self::Ctor> {
         Set::get_ctor(&self.set, name)
     }
 
-    fn get_ctor_mut(&mut self, name: &crate::AStr) -> Option<&mut Self::Ctor> {
+    fn get_ctor_mut(&mut self, name: &str) -> Option<&mut Self::Ctor> {
         Set::get_ctor_mut(&mut self.set, name)
     }
 

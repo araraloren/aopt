@@ -20,7 +20,6 @@ use crate::set::SetCommit;
 use crate::set::SetIndex;
 use crate::value::Infer;
 use crate::value::RawValParser;
-use crate::AStr;
 use crate::Error;
 use crate::HashMap;
 use crate::Uid;
@@ -368,11 +367,11 @@ where
         None
     }
 
-    fn get_ctor(&self, name: &AStr) -> Option<&Self::Ctor> {
+    fn get_ctor(&self, name: &str) -> Option<&Self::Ctor> {
         self.creators.get(&Cid::from(name))
     }
 
-    fn get_ctor_mut(&mut self, name: &AStr) -> Option<&mut Self::Ctor> {
+    fn get_ctor_mut(&mut self, name: &str) -> Option<&mut Self::Ctor> {
         self.creators.get_mut(&Cid::from(name))
     }
 

@@ -166,7 +166,7 @@ where
                 .iter()
                 .filter(|&uid| !Self::opt(set, uid).valid())
                 .for_each(|uid| {
-                    names.push(Self::opt(set, uid).hint().clone());
+                    names.push(Self::opt(set, uid).hint().to_string());
                 });
             if !names.is_empty() {
                 return Err(Error::sp_pos_require(names).with_uid(float_vec[0]));

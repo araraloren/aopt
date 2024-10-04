@@ -241,7 +241,7 @@ impl<'inv, Set, Ser> PolicySettings for NullPolicy<'inv, Set, Ser> {
         &self.style_manager
     }
 
-    fn no_delay(&self) -> Option<&[aopt::AStr]> {
+    fn no_delay(&self) -> Option<&[String]> {
         None
     }
 
@@ -257,7 +257,7 @@ impl<'inv, Set, Ser> PolicySettings for NullPolicy<'inv, Set, Ser> {
         self
     }
 
-    fn set_no_delay(&mut self, _: impl Into<aopt::AStr>) -> &mut Self {
+    fn set_no_delay(&mut self, _: impl Into<String>) -> &mut Self {
         self
     }
 
@@ -314,8 +314,8 @@ mod test {
 
         let parser = Example::into_parser().unwrap();
 
-        assert_eq!(parser["--foo"].help(), &aopt::astr("a flag argument"));
-        assert_eq!(parser["bar"].help(), &aopt::astr("a position argument"));
+        assert_eq!(parser["--foo"].help(), "a flag argument");
+        assert_eq!(parser["bar"].help(), "a position argument");
     }
 
     #[test]

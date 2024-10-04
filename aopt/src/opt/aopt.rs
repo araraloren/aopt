@@ -16,7 +16,6 @@ use crate::opt::Style;
 use crate::raise_error;
 use crate::value::ErasedValue;
 use crate::value::ValAccessor;
-use crate::AStr;
 use crate::Error;
 use crate::Uid;
 
@@ -55,7 +54,7 @@ use super::OptConfig;
 pub struct AOpt {
     uid: Uid,
 
-    name: AStr,
+    name: String,
 
     r#type: TypeId,
 
@@ -67,7 +66,7 @@ pub struct AOpt {
 
     accessor: ValAccessor,
 
-    alias: Option<Vec<AStr>>,
+    alias: Option<Vec<String>>,
 
     action: Action,
 
@@ -83,7 +82,7 @@ pub struct AOpt {
 }
 
 impl AOpt {
-    pub fn new(name: AStr, type_id: TypeId, accessor: ValAccessor) -> Self {
+    pub fn new(name: String, type_id: TypeId, accessor: ValAccessor) -> Self {
         Self {
             uid: 0,
             name,
@@ -109,8 +108,8 @@ impl AOpt {
     }
 
     /// Set the name of option.
-    pub fn with_name(mut self, name: AStr) -> Self {
-        self.name = name;
+    pub fn with_name(mut self, name: impl Into<String>) -> Self {
+        self.name = name.into();
         self
     }
 
@@ -139,13 +138,13 @@ impl AOpt {
     }
 
     /// Set the hint of option, such as `--option`.
-    pub fn with_hint(mut self, hint: AStr) -> Self {
+    pub fn with_hint(mut self, hint: impl Into<String>) -> Self {
         self.help.set_hint(hint);
         self
     }
 
     /// Set the help message of option.
-    pub fn with_help(mut self, help: AStr) -> Self {
+    pub fn with_help(mut self, help: impl Into<String>) -> Self {
         self.help.set_help(help);
         self
     }
@@ -181,7 +180,7 @@ impl AOpt {
     }
 
     /// Set the alias of option.
-    pub fn with_alias(mut self, alias: Option<Vec<AStr>>) -> Self {
+    pub fn with_alias(mut self, alias: Option<Vec<String>>) -> Self {
         self.alias = alias;
         self
     }
@@ -194,8 +193,8 @@ impl AOpt {
 }
 
 impl AOpt {
-    pub fn set_name(&mut self, name: AStr) -> &mut Self {
-        self.name = name;
+    pub fn set_name(&mut self, name: impl Into<String>) -> &mut Self {
+        self.name = name.into();
         self
     }
 
@@ -209,12 +208,12 @@ impl AOpt {
         self
     }
 
-    pub fn set_hint(&mut self, hint: AStr) -> &mut Self {
+    pub fn set_hint(&mut self, hint: impl Into<String>) -> &mut Self {
         self.help.set_hint(hint);
         self
     }
 
-    pub fn set_help(&mut self, help: AStr) -> &mut Self {
+    pub fn set_help(&mut self, help: impl Into<String>) -> &mut Self {
         self.help.set_help(help);
         self
     }
@@ -239,14 +238,14 @@ impl AOpt {
         self
     }
 
-    pub fn add_alias(&mut self, name: AStr) -> &mut Self {
+    pub fn add_alias(&mut self, name: impl Into<String>) -> &mut Self {
         if let Some(alias) = &mut self.alias {
-            alias.push(name);
+            alias.push(name.into());
         }
         self
     }
 
-    pub fn rem_alias(&mut self, name: &AStr) -> &mut Self {
+    pub fn rem_alias(&mut self, name: &str) -> &mut Self {
         if let Some(alias) = &mut self.alias {
             if let Some((i, _)) = alias.iter().enumerate().find(|(_, v)| v == &name) {
                 alias.remove(i);
@@ -265,7 +264,7 @@ impl Opt for AOpt {
         self.uid
     }
 
-    fn name(&self) -> &AStr {
+    fn name(&self) -> &str {
         &self.name
     }
 
@@ -273,11 +272,11 @@ impl Opt for AOpt {
         &self.r#type
     }
 
-    fn hint(&self) -> &AStr {
+    fn hint(&self) -> &str {
         self.help.hint()
     }
 
-    fn help(&self) -> &AStr {
+    fn help(&self) -> &str {
         self.help.help()
     }
 
@@ -301,7 +300,7 @@ impl Opt for AOpt {
         self.index.as_ref()
     }
 
-    fn alias(&self) -> Option<&Vec<AStr>> {
+    fn alias(&self) -> Option<&Vec<String>> {
         self.alias.as_ref()
     }
 
@@ -342,7 +341,7 @@ impl Opt for AOpt {
     }
 
     fn mat_name(&self, name: Option<&str>) -> bool {
-        name.iter().all(|&v| v == self.name().as_str())
+        name == Some(self.name())
     }
 
     fn mat_alias(&self, name: &str) -> bool {
@@ -369,12 +368,17 @@ impl Opt for AOpt {
     }
 }
 
-fn gen_hint(hint: Option<&AStr>, n: &AStr, idx: Option<&Index>, alias: Option<&Vec<AStr>>) -> AStr {
+fn gen_hint(
+    hint: Option<impl Into<String>>,
+    n: &str,
+    idx: Option<&Index>,
+    alias: Option<&Vec<String>>,
+) -> String {
     let hint_generator = || {
         let mut names = Vec::with_capacity(1 + alias.map(|v| v.len()).unwrap_or_default());
 
         // add name
-        names.push(n.as_str());
+        names.push(n);
         // add alias
         if let Some(alias_vec) = alias {
             for alias in alias_vec {
@@ -383,7 +387,7 @@ fn gen_hint(hint: Option<&AStr>, n: &AStr, idx: Option<&Index>, alias: Option<&V
         }
         // sort name by len
         names.sort_by_key(|v| v.len());
-        crate::astr(if let Some(index) = idx {
+        if let Some(index) = idx {
             let index_string = index.to_help();
 
             // add index string
@@ -394,10 +398,10 @@ fn gen_hint(hint: Option<&AStr>, n: &AStr, idx: Option<&Index>, alias: Option<&V
             }
         } else {
             names.join(", ")
-        })
+        }
     };
 
-    hint.cloned().unwrap_or_else(hint_generator)
+    hint.map(|v| v.into()).unwrap_or_else(hint_generator)
 }
 
 impl TryFrom<OptConfig> for AOpt {
