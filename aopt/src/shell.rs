@@ -52,7 +52,7 @@ impl RawValParser for Shell {
             "zsh" => Ok(Shell::Zsh),
             "bash" => Ok(Shell::Bash),
             "fish" => Ok(Shell::Fish),
-            _ => Err(crate::raise_failure!("Unknow shell type: {}", name).with_uid(ctx.uid()?)),
+            _ => Err(crate::raise_failure!("unknow shell type: {}", name).with_uid(ctx.uid()?)),
         }
     }
 }
@@ -152,7 +152,7 @@ where
 
         if matches!(shell, Shell::Zsh) {
             writeln!(writer, "local -a subcmds\nsubcmds=(\n")
-                .map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
+                .map_err(|e| crate::raise_error!("can not write data: {:?}", e))?;
         }
         if self.display_cmd {
             for uid in self.avail_cmd.iter() {
@@ -200,7 +200,7 @@ where
         }
         if matches!(shell, Shell::Zsh) {
             writeln!(writer, ")\n_describe 'available values' subcmds\n")
-                .map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
+                .map_err(|e| crate::raise_error!("can not write data: {:?}", e))?;
         }
         Ok(())
     }
@@ -215,23 +215,23 @@ where
             Shell::Zsh => {
                 if help.is_empty() {
                     writeln!(writer, " '{}' ", hint)
-                        .map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
+                        .map_err(|e| crate::raise_error!("can not write data: {:?}", e))?;
                 } else {
                     writeln!(writer, " '{}:{}' ", hint, help)
-                        .map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
+                        .map_err(|e| crate::raise_error!("can not write data: {:?}", e))?;
                 }
             }
             Shell::Bash => {
                 writeln!(writer, "{}", hint)
-                    .map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
+                    .map_err(|e| crate::raise_error!("can not write data: {:?}", e))?;
             }
             Shell::Fish => {
                 if help.is_empty() {
                     writeln!(writer, "{}", hint)
-                        .map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
+                        .map_err(|e| crate::raise_error!("can not write data: {:?}", e))?;
                 } else {
                     writeln!(writer, "{}\t\"{}\"", hint, help)
-                        .map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
+                        .map_err(|e| crate::raise_error!("can not write data: {:?}", e))?;
                 }
             }
         }
@@ -256,7 +256,7 @@ where
         self.set_incomplete_opt(
             set,
             arg.to_str()
-                .ok_or_else(|| crate::raise_failure!("Can't convert value `{:?}` to str", arg))?,
+                .ok_or_else(|| crate::raise_failure!("can't convert value `{:?}` to str", arg))?,
         )
     }
 

@@ -32,15 +32,13 @@ pub trait OptValueExt {
 
 impl<O: Opt> OptValueExt for O {
     fn val<T: ErasedTy>(&self) -> Result<&T, Error> {
+        let hint = self.hint();
+        let act = self.action();
         let uid = self.uid();
 
         self.accessor().val().map_err(|e| {
-            e.cause(raise_error!(
-                "Can not find value(ref) of `{}`({})",
-                self.hint(),
-                self.action(),
-            ))
-            .with_uid(uid)
+            e.cause(raise_error!("can not find value(ref) of `{hint}`({act})"))
+                .with_uid(uid)
         })
     }
 
@@ -54,15 +52,13 @@ impl<O: Opt> OptValueExt for O {
     }
 
     fn vals<T: ErasedTy>(&self) -> Result<&Vec<T>, Error> {
+        let hint = self.hint();
+        let act = self.action();
         let uid = self.uid();
 
         self.accessor().vals().map_err(|e| {
-            e.cause(raise_error!(
-                "can not find values(ref) of `{}`({})",
-                self.hint(),
-                self.action(),
-            ))
-            .with_uid(uid)
+            e.cause(raise_error!("can not find values(ref) of `{hint}`({act})"))
+                .with_uid(uid)
         })
     }
 
@@ -80,14 +76,12 @@ impl<O: Opt> OptValueExt for O {
     }
 
     fn rawval(&self) -> Result<&OsString, Error> {
+        let hint = self.hint();
         let uid = self.uid();
 
         self.accessor().rawval().map_err(|e| {
-            e.cause(raise_error!(
-                "Can not find raw value(ref) of `{}`",
-                self.hint(),
-            ))
-            .with_uid(uid)
+            e.cause(raise_error!("can not find raw value(ref) of `{hint}`",))
+                .with_uid(uid)
         })
     }
 
@@ -100,12 +94,11 @@ impl<O: Opt> OptValueExt for O {
     }
 
     fn rawvals(&self) -> Result<&Vec<OsString>, Error> {
-        self.accessor().rawvals().map_err(|e| {
-            e.cause(raise_error!(
-                "Can not find raw values(ref) of `{}`",
-                self.hint(),
-            ))
-        })
+        let hint = self.hint();
+
+        self.accessor()
+            .rawvals()
+            .map_err(|e| e.cause(raise_error!("can not find raw values(ref) of `{hint}`",)))
     }
 
     fn rawvals_mut(&mut self) -> Result<&mut Vec<OsString>, Error> {

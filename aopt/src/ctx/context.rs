@@ -225,9 +225,9 @@ impl<'a> Ctx<'a> {
     }
 
     pub fn inner_ctx(&self) -> Result<&InnerCtx<'a>, Error> {
-        self.inner_ctx.as_ref().ok_or_else(|| {
-            crate::raise_error!("InnerCtx(read only) not exist, try create a new one")
-        })
+        self.inner_ctx
+            .as_ref()
+            .ok_or_else(|| crate::raise_error!("InnerCtx not exist, try create a new one"))
     }
 
     pub fn inner_ctx_mut(&mut self) -> Result<&mut InnerCtx<'a>, Error> {
@@ -299,7 +299,7 @@ impl<'a> Ctx<'a> {
     }
 
     pub fn set_inner_ctx(&mut self, inner_ctx: Option<InnerCtx<'a>>) -> &mut Self {
-        crate::trace!("Switching InnerCtx to {:?}", inner_ctx);
+        crate::trace!("switching InnerCtx to {:?}", inner_ctx);
         self.inner_ctx = inner_ctx;
         self
     }
@@ -345,21 +345,3 @@ impl<'a> Ctx<'a> {
         T::parse(arg, self).map_err(|e| e.into().with_uid(uid))
     }
 }
-
-// impl<'a> From<Return> for Ctx<'a> {
-//     fn from(mut value: Return) -> Self {
-//         value.take_ctx()
-//     }
-// }
-
-// impl<'a> From<&Return> for Ctx<'a> {
-//     fn from(value: &Return) -> Self {
-//         value.ctx().clone()
-//     }
-// }
-
-// impl<'a> From<&mut Return> for Ctx<'a> {
-//     fn from(value: &mut Return) -> Self {
-//         value.take_ctx()
-//     }
-// }

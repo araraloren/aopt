@@ -52,7 +52,7 @@ impl ValStorer {
         act: &Action,
         arg: &mut AnyValue,
     ) -> Result<(), Error> {
-        crate::trace!("Saving raw value({:?}) for {}", raw, ctx.uid()?);
+        crate::trace!("saving raw value({:?}) for {}", raw, ctx.uid()?);
         (self.0)(raw, ctx, act, arg)
     }
 
@@ -67,18 +67,17 @@ impl ValStorer {
                     let uid = ctx.uid()?;
 
                     trace!(
-                        "Validator value storer failed, parsing {:?} -> {:?}",
+                        "validator value storer failed, parsing {:?} -> {:?}",
                         raw,
                         val
                     );
-                    Err(crate::raise_failure!(
-                        "Option value check failed: `{:?}`",
-                        ctx.inner_ctx().ok(),
+                    Err(
+                        crate::raise_failure!("value check failed: `{:?}`", ctx.inner_ctx().ok(),)
+                            .with_uid(uid),
                     )
-                    .with_uid(uid))
                 } else {
                     trace!(
-                        "Validator value storer okay, parsing {:?} -> {:?}",
+                        "validator value storer okay, parsing {:?} -> {:?}",
                         raw,
                         val
                     );
@@ -94,7 +93,7 @@ impl ValStorer {
             |raw: Option<&OsStr>, ctx: &Ctx, act: &Action, handler: &mut AnyValue| {
                 let val = U::parse(raw, ctx).map_err(Into::into);
 
-                trace!("Fallback value storer, parsing {:?} -> {:?}", raw, val);
+                trace!("in fallback value storer, parsing {:?} -> {:?}", raw, val);
                 act.store1(Some(val?), handler);
                 Ok(())
             },

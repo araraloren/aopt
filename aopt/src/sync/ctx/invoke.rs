@@ -178,7 +178,7 @@ where
         let arg = ctx.arg()?.map(|v| v.as_ref());
         let act = *opt.action();
 
-        trace!("Invoke fallback for {}({act}) {{{ctx:?}}}", opt.name());
+        trace!("in fallback, call for {}({act}) {{{ctx:?}}}", opt.name());
         opt.accessor_mut().store_all(arg, ctx, &act)
     }
 }
@@ -209,12 +209,12 @@ where
         ser: &mut Ser,
         ctx: &mut Ctx,
     ) -> Result<bool, Error> {
-        trace!("Invoking callback of {} {:?}", uid, ctx);
+        trace!("invoking callback of {} {:?}", uid, ctx);
         if let Some(callback) = self.get_handler(uid) {
             return (callback)(set, ser, ctx);
         }
         unreachable!(
-            "There is no callback of {}, call `invoke_fb` or `fallback` instead",
+            "no callback of {}, call `invoke_fb` or `fallback` instead",
             set.opt(*uid)?.name()
         )
     }
@@ -228,10 +228,10 @@ where
         ctx: &mut Ctx,
     ) -> Result<bool, Error> {
         if let Some(callback) = self.get_handler(uid) {
-            trace!("Invoking(fb) callback of {} {:?}", uid, ctx);
+            trace!("invoking(fb) callback of {} {:?}", uid, ctx);
             (callback)(set, ser, ctx)
         } else {
-            trace!("Invoking(fb) handler_fallback of {} {:?}", uid, ctx);
+            trace!("invoking(fb) fallback callback of {} {:?}", uid, ctx);
             Invoker::fallback(set, ser, ctx)
         }
     }

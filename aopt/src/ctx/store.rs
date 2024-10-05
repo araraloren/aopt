@@ -122,7 +122,7 @@ where
                         handler.push(value);
                     }
                 } else {
-                    panic!("Option action is not App, but set a vector vector")
+                    panic!("the action is not Action::App, but set a vector value")
                 }
             }
         }

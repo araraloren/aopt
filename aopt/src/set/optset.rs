@@ -218,7 +218,7 @@ where
         info.infer_builtin_ty();
         self.iter().find(|opt| info.mat_opt(*opt)).ok_or_else(|| {
             raise_error!(
-                "Can not find option with: {:?}={:?}",
+                "can not find option with: {:?}={:?}",
                 info.name(),
                 info.ctor()
             )
@@ -259,7 +259,7 @@ where
             .find(|opt| info.mat_opt(*opt))
             .ok_or_else(|| {
                 raise_error!(
-                    "Can not find option with: {:?}={:?}",
+                    "can not find option with: {:?}={:?}",
                     info.name(),
                     info.ctor()
                 )
@@ -344,12 +344,12 @@ where
 {
     fn ref_from<'a>(&self, set: &'a OptSet<P, C, V>) -> Result<&'a C::Opt, Error> {
         set.find(*self)
-            .map_err(|e| raise_error!("Can not find option {}: {e:?}", *self))
+            .map_err(|e| raise_error!("can not find option {}: {e:?}", *self))
     }
 
     fn mut_from<'a>(&self, set: &'a mut OptSet<P, C, V>) -> Result<&'a mut C::Opt, Error> {
         set.find_mut(*self)
-            .map_err(|e| raise_error!("Can not find option {}: {e:?}", *self))
+            .map_err(|e| raise_error!("can not find option {}: {e:?}", *self))
     }
 }
 

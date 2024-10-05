@@ -255,13 +255,13 @@ impl ErasedValue for ValAccessor {
     fn rawval(&self) -> Result<&OsString, Error> {
         self.rawval
             .last()
-            .ok_or_else(|| raise_error!("No more raw value in current accessor"))
+            .ok_or_else(|| raise_error!("no more raw value in accessor"))
     }
 
     fn rawval_mut(&mut self) -> Result<&mut OsString, Error> {
         self.rawval
             .last_mut()
-            .ok_or_else(|| raise_error!("No more raw value in current accessor"))
+            .ok_or_else(|| raise_error!("no more raw value in accessor"))
     }
 
     fn rawvals(&self) -> Result<&Vec<OsString>, Error> {

@@ -140,13 +140,13 @@ where
     pub fn inner(&self) -> Result<&SetCommit<'b, S, U>, Error> {
         self.inner
             .as_ref()
-            .ok_or_else(|| raise_error!("Must set inner data of ParserCommit(ref)"))
+            .ok_or_else(|| raise_error!("must set inner data of ParserCommit(ref)"))
     }
 
     pub fn inner_mut(&mut self) -> Result<&mut SetCommit<'b, S, U>, Error> {
         self.inner
             .as_mut()
-            .ok_or_else(|| raise_error!("Must set inner data of ParserCommit(mut)"))
+            .ok_or_else(|| raise_error!("must set inner data of ParserCommit(mut)"))
     }
 
     /// Set the infer type of option.
@@ -318,7 +318,7 @@ where
 
         debug_assert!(
             TypeId::of::<U>() != TypeId::of::<Cmd>() || TypeId::of::<T>() == TypeId::of::<bool>(),
-            "For Cmd, you can't have other value type!"
+            "for Cmd, you can't have other value type!"
         );
         ParserCommitWithValue::new(inner.set_value_type_only::<T>(), inv_ser)
     }
@@ -424,13 +424,13 @@ where
     pub fn inner(&self) -> Result<&SetCommitWithValue<'b, S, U, T>, Error> {
         self.inner
             .as_ref()
-            .ok_or_else(|| raise_error!("Must set inner data of ParserCommitWithValue(ref)"))
+            .ok_or_else(|| raise_error!("must set inner data of ParserCommitWithValue(ref)"))
     }
 
     pub fn inner_mut(&mut self) -> Result<&mut SetCommitWithValue<'b, S, U, T>, Error> {
         self.inner
             .as_mut()
-            .ok_or_else(|| raise_error!("Must set inner data of ParserCommitWithValue(mut)"))
+            .ok_or_else(|| raise_error!("must set inner data of ParserCommitWithValue(mut)"))
     }
 
     /// Set the infer type of option.

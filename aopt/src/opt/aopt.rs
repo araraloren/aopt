@@ -425,27 +425,25 @@ impl TryFrom<OptConfig> for AOpt {
 
         let force = force.unwrap_or(false);
         let action = action.unwrap_or(Action::App);
-        let storer = storer
-            .ok_or_else(|| raise_error!("Incomplete option configuration: missing ValStorer"))?;
-        let initializer = initializer.ok_or_else(|| {
-            raise_error!("Incomplete option configuration: missing ValInitializer")
-        })?;
+        let storer =
+            storer.ok_or_else(|| raise_error!("incomplete configuration: missing ValStorer"))?;
+        let initializer = initializer
+            .ok_or_else(|| raise_error!("incomplete configuration: missing ValInitializer"))?;
         let styles =
-            styles.ok_or_else(|| raise_error!("Incomplete option configuration: missing Style"))?;
-        let name = name
-            .ok_or_else(|| raise_error!("Incomplete option configuration: missing option name"))?;
+            styles.ok_or_else(|| raise_error!("incomplete configuration: missing Style"))?;
+        let name =
+            name.ok_or_else(|| raise_error!("incomplete configuration: missing option name"))?;
         let hint = gen_hint(hint.as_ref(), &name, index.as_ref(), alias.as_ref());
         let help = help.unwrap_or_default();
-        let r#type = r#type.ok_or_else(|| {
-            raise_error!("Incomplete option configuration: missing option value type")
-        })?;
+        let r#type = r#type
+            .ok_or_else(|| raise_error!("incomplete configuration: missing option value type"))?;
         let help = Help::default().with_help(help).with_hint(hint);
 
         if ignore_alias {
             if let Some(alias) = &alias {
                 debug_assert!(
                     !alias.is_empty(),
-                    "Option {} not support alias: {:?}",
+                    "option {} not support alias: {:?}",
                     name,
                     alias
                 );
@@ -455,7 +453,7 @@ impl TryFrom<OptConfig> for AOpt {
             if let Some(index) = &index {
                 debug_assert!(
                     !index.is_null(),
-                    "Please remove the index, option `{}` not support positional parameters: {:?}",
+                    "please remove the index, option `{}` not support positional parameters: {:?}",
                     name,
                     index
                 );
@@ -463,7 +461,7 @@ impl TryFrom<OptConfig> for AOpt {
         } else {
             debug_assert!(
                     index.is_some(),
-                    "Please provide an index, indicate the position you want to capture for option `{}`.",
+                    "please provide an index, indicate the position you want to capture for option `{}`.",
                     name
                 );
         }

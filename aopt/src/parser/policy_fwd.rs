@@ -370,7 +370,7 @@ where
                 idx: Self::noa_cmd(),
             };
 
-            trace!("Guess CMD = {:?}", guess.name);
+            trace!("guess Cmd = {:?}", guess.name);
             guess.guess_and_invoke(&UserStyle::Cmd, overload)?;
             if let Action::Quit = ctx.policy_act() {
                 return Ok(());
@@ -393,7 +393,7 @@ where
             for idx in 1..total {
                 guess.idx = Self::noa_pos(idx);
                 guess.name = crate::str::osstr_to_str_i(&args, Self::noa_pos(idx));
-                trace!("Guess POS argument = {:?} @ {}", guess.name, guess.idx);
+                trace!("guess Pos argument = {:?} @ {}", guess.name, guess.idx);
                 guess.guess_and_invoke(&UserStyle::Pos, overload)?;
                 match guess.ctx.policy_act() {
                     Action::Stop => {
@@ -425,6 +425,7 @@ where
             idx: Self::noa_main(),
         };
 
+        trace!("guess Main {:?}", name);
         guess.guess_and_invoke(&UserStyle::Main, overload)?;
         main_fail.process_check(self.checker().post_check(set))?;
         Ok(())

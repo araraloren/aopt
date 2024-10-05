@@ -64,7 +64,7 @@ impl Action {
     /// Save the value in [`handler`](AnyValue).
     pub fn store1<U: ErasedTy>(&self, val: Option<U>, handler: &mut AnyValue) -> bool {
         crate::trace!(
-            "Saving value {:?}({:?}) [ty = {}] = {:?} in store1",
+            "saving value {:?}({:?}) [ty = {}] = {:?} in store1",
             val,
             self,
             std::any::type_name::<U>(),
@@ -91,7 +91,7 @@ impl Action {
                     // NOTHING
                 }
             }
-            crate::trace!("After saving handler: {:?}", handler);
+            crate::trace!("after saving handler: {:?}", handler);
             true
         } else {
             false

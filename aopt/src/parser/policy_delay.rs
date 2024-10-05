@@ -348,7 +348,7 @@ where
             let inner_ctx = delay_ctx.inner_ctx;
             let mut matched = false;
 
-            trace!("Invoke the handler: Inner = {:?}", &inner_ctx);
+            trace!("invoke the handler: Inner = {:?}", &inner_ctx);
             for (uid, cache_matched) in delay_ctx.uids.iter().zip(delay_ctx.matched.iter()) {
                 let ret = if let Some(cache_matched) = cache_matched {
                     *cache_matched
@@ -571,7 +571,7 @@ where
                 idx: Self::noa_cmd(),
             };
 
-            trace!("Guess CMD = {:?}", guess.name);
+            trace!("guess Cmd = {:?}", guess.name);
             guess.guess_and_invoke(&UserStyle::Cmd, overload)?;
             if let Action::Quit = ctx.policy_act() {
                 return Ok(());
@@ -594,7 +594,7 @@ where
             for idx in 1..total {
                 guess.idx = Self::noa_pos(idx);
                 guess.name = crate::str::osstr_to_str_i(&args, Self::noa_pos(idx));
-                trace!("Guess POS argument = {:?} @ {}", guess.name, guess.idx);
+                trace!("guess Pos argument = {:?} @ {}", guess.name, guess.idx);
                 guess.guess_and_invoke(&UserStyle::Pos, overload)?;
                 match guess.ctx.policy_act() {
                     Action::Stop => {
@@ -609,7 +609,7 @@ where
             cmd_fail.process_check(self.checker().cmd_check(set))?;
         }
 
-        trace!("Invoke the handler of option");
+        trace!("in delay policy, invoke the handler of option");
         // after cmd and pos callback invoked, invoke the callback of option
         for saver in contexts {
             let ret = self.process_delay_ctx(&mut prev_ctx, set, inv, ser, &mut opt_fail, saver)?;
@@ -624,7 +624,7 @@ where
             }
             if !ret.matched && self.strict() {
                 return Err(opt_fail.cause(crate::raise_error!(
-                    "Option match failed, Ctx = {:?}",
+                    "option match failed, Ctx = {:?}",
                     prev_ctx
                 )));
             }
@@ -649,6 +649,7 @@ where
             idx: Self::noa_main(),
         };
 
+        trace!("guess Main {:?}", name);
         guess.guess_and_invoke(&UserStyle::Main, overload)?;
         main_fail.process_check(self.checker().post_check(set))?;
         Ok(())

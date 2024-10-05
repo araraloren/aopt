@@ -282,7 +282,7 @@ where
             }
         }
         trace!(
-            "Guess style = {:?}, overload = {} ---> matched = {}, consume = {}",
+            "guess style = {:?}, overload = {} ---> matched = {}, consume = {}",
             style,
             overload,
             matched,
@@ -414,7 +414,7 @@ where
         }
         if ret.is_some() {
             trace!(
-                "Guess style = {:?}, overload = {}, ret == {:?}",
+                "guess style = {:?}, overload = {}, ret == {:?}",
                 style,
                 overload,
                 ret
@@ -753,7 +753,7 @@ where
                 }
             }
         }
-        trace!("Matching Policy [ idx: {}, tot: {}, name: {:?}, style: {:?}, arg: {:?}, comsume: {} ] ==> {:?}", 
+        trace!("matching Policy [ idx: {}, tot: {}, name: {:?}, style: {:?}, arg: {:?}, comsume: {} ] ==> {:?}", 
             policy.idx(), policy.tot(), policy.name(), policy.style(), policy.arg(), consume, policy.uids());
         Ok(policy.matched())
     }
@@ -767,7 +767,7 @@ where
         let uids = self.set.keys();
         let any_match = policy.any_match();
 
-        trace!("Any match = {}", any_match);
+        trace!("any match = {}", any_match);
         for sub_policy in policy.sub_policys_mut() {
             // process all uids with each policy first
             for uid in uids.iter() {

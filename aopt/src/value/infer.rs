@@ -228,7 +228,7 @@ where
             let bool_type = std::any::TypeId::of::<bool>();
 
             trace!(
-                "Tweak the storer for Pos<bool> for {:?}?: type = {:?}",
+                "tweak the storer for Pos<bool> for {:?}?: type = {:?}",
                 cfg.name(),
                 std::any::type_name::<T>()
             );
@@ -238,7 +238,7 @@ where
                     |raw: Option<&OsStr>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
                         let val = raw.is_some();
 
-                        trace!("Pos value storer, parsing {:?} -> {:?}", raw, val);
+                        trace!("in pos<bool> value storer, parsing {:?} -> {:?}", raw, val);
                         act.store1(Some(val), handler);
                         Ok(())
                     },
@@ -475,10 +475,10 @@ impl Infer for Placeholder {
         // it must have ctor here
         let ctor = cfg
             .ctor()
-            .ok_or_else(|| crate::raise_error!("Incomplete configuration, `ctor` must be set"))?;
+            .ok_or_else(|| crate::raise_error!("incomplete configuration: missing `ctor`"))?;
         let cid = Cid::from(ctor);
 
-        trace!("In default, fill info in Placeholder");
+        trace!("in default, fill info in Placeholder");
         match cid {
             Cid::Int => <i64>::infer_fill_info(cfg),
             Cid::Str => <String>::infer_fill_info(cfg),
