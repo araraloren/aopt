@@ -177,7 +177,7 @@ macro_rules! display_help {
             $width,
             $usage_width,
         )
-        .map_err(|e| aopt::Error::raise_error(format!("Can not show help message: {:?}", e)))
+        .map_err(|e| aopt::Error::raise_error(format!("can not show help message: {:?}", e)))
     }};
     ($set:ident, $name:expr, $author:expr, $version:expr, $description:expr, $width:expr, $usage_width:expr) => {{
         let foot = format!("Create by {} v{}", $author, $version,);
@@ -188,6 +188,6 @@ macro_rules! display_help {
         }
 
         $crate::help::display_set_help(__check_set($set), $name, head, foot, $width, $usage_width)
-            .map_err(|e| aopt::Error::raise_error(format!("Can not show help message: {:?}", e)))
+            .map_err(|e| aopt::Error::raise_error(format!("can not show help message: {:?}", e)))
     }};
 }

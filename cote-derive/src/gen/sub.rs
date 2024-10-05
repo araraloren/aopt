@@ -121,7 +121,7 @@ impl<'a> SubGenerator<'a> {
                     let mut args: Vec<_> = ctx.args().iter().map(|v|v.to_os_string()).collect();
                     let cmd = args.remove(index);
                     let cmd = cmd.to_str();
-                    let cmd = cmd.ok_or_else(|| cote::prelude::raise_error!("Can not convert `{:?}` to &str", cmd))?;
+                    let cmd = cmd.ok_or_else(|| cote::prelude::raise_error!("can not convert `{:?}` to &str", cmd))?;
 
                     // process help pass
                     // if we are jump into current handler, then we need pass original help option

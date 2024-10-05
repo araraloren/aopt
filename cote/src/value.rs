@@ -24,7 +24,7 @@ where
     let opt = crate::prelude::SetExt::opt_mut(set, uid)?;
     let (name, uid) = (opt.name(), opt.uid());
     let err = raise_error!(
-        "not enough value({}) can take from option `{name}`",
+        "can not take value({}) of option `{name}`",
         std::any::type_name::<T>(),
     );
 
@@ -39,7 +39,7 @@ where
     let opt = crate::prelude::SetExt::opt_mut(set, uid)?;
     let (name, uid) = (opt.name(), opt.uid());
     let err = raise_error!(
-        "Can not take values({}) of option `{name}`",
+        "can not take values({}) of option `{name}`",
         std::any::type_name::<T>(),
     );
 

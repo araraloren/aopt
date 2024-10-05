@@ -137,27 +137,27 @@ impl<'a, Set, Ser> Parser<'a, Set, Ser> {
     pub fn parser(&self, id: usize) -> Result<&Self, Error> {
         self.sub_parsers
             .get(id)
-            .ok_or_else(|| aopt::raise_error!("Can not find parser at index {}", id))
+            .ok_or_else(|| aopt::raise_error!("can not find parser at index {}", id))
     }
 
     pub fn parser_mut(&mut self, id: usize) -> Result<&mut Self, Error> {
         self.sub_parsers
             .get_mut(id)
-            .ok_or_else(|| aopt::raise_error!("Can not find parser at index {}", id))
+            .ok_or_else(|| aopt::raise_error!("can not find parser at index {}", id))
     }
 
     pub fn find_parser(&self, name: &str) -> Result<&Self, Error> {
         self.sub_parsers
             .iter()
             .find(|v| v.name() == name)
-            .ok_or_else(|| aopt::raise_error!("Can not find parser named {}", name))
+            .ok_or_else(|| aopt::raise_error!("can not find parser named {}", name))
     }
 
     pub fn find_parser_mut(&mut self, name: &str) -> Result<&mut Self, Error> {
         self.sub_parsers
             .iter_mut()
             .find(|v| v.name() == name)
-            .ok_or_else(|| aopt::raise_error!("Can not find parser named {}", name))
+            .ok_or_else(|| aopt::raise_error!("can not find parser named {}", name))
     }
 
     pub fn add_parser(&mut self, parser: Self) -> &mut Self {
@@ -739,7 +739,7 @@ where
             }
         }
         Err(raise_error!(
-            "Can not display help message for names `{names:?}` with context: {ctx:?}"
+            "can not display help message for names `{names:?}` with context: {ctx:?}"
         ))
     }
 }
@@ -785,7 +785,7 @@ where
                     ctx.width(),
                     ctx.usagew(),
                 )
-                .map_err(|e| aopt::raise_error!("Can not show help message: {:?}", e))?;
+                .map_err(|e| aopt::raise_error!("can not show help message: {:?}", e))?;
                 return Ok(true);
             }
         }

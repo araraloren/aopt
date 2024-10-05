@@ -26,13 +26,13 @@ fn main() -> color_eyre::Result<()> {
                     Ok(Some(files))
                 } else {
                     Err(Error::raise_error(format!(
-                        "Directory access error: {:?}",
+                        "directory access error: {:?}",
                         dir
                     )))
                 }
             } else {
                 Err(Error::raise_error(
-                    "Directory can not be empty!".to_string(),
+                    "directory can not be empty!".to_string(),
                 ))
             }
         })?
