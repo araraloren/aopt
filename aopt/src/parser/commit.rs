@@ -467,7 +467,7 @@ where
     /// Register the handler which will be called when option is set.
     /// The function will register the option to [`Set`](Set) first,
     /// then pass the unqiue id to [`HandlerEntry`].
-    pub fn on<H, O, A>(
+    pub fn on<H, O>(
         mut self,
         handler: H,
     ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, O>, Error>
@@ -509,7 +509,7 @@ where
     /// the handler return None.
     /// The function will register the option to [`Set`](Set) first,
     /// then pass the unqiue id to [`HandlerEntry`].
-    pub fn fallback<H, O, A>(
+    pub fn fallback<H, O>(
         mut self,
         handler: H,
     ) -> Result<HandlerEntryThen<'a, 'b, I, S, Ser, H, O>, Error>

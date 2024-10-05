@@ -508,14 +508,13 @@ where
     /// # Ok(())
     /// # }
     ///```
-    pub async fn run_async_mut_with<'b, 'c, R, FUT, F, P>(
+    pub async fn run_async_mut_with<'b, 'c: 'b, R, FUT, F, P>(
         &'c mut self,
         args: impl Into<Args>,
         policy: &mut P,
         mut r: F,
     ) -> Result<R, Error>
     where
-        'c: 'b,
         FUT: Future<Output = Result<R, Error>>,
         F: FnMut(P::Ret, &'b mut Self) -> FUT,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
@@ -527,10 +526,14 @@ where
     }
 
     /// Call [`run_async_mut_with`](Self::run_async_mut_with) with default arguments [`args()`](std::env::args).
-    pub async fn run_async_mut<R, FUT, F, P>(&mut self, policy: &mut P, r: F) -> Result<R, Error>
+    pub async fn run_async_mut<'b, 'c: 'b, R, FUT, F, P>(
+        &'c mut self,
+        policy: &mut P,
+        r: F,
+    ) -> Result<R, Error>
     where
         FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &mut Self) -> FUT,
+        F: FnMut(P::Ret, &'b mut Self) -> FUT,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
     {
         self.run_async_mut_with(Args::from_env(), policy, r).await
@@ -624,14 +627,13 @@ where
     /// # Ok(())
     /// # }
     ///```
-    pub async fn run_async_with<'b, 'c, R, FUT, F, P>(
+    pub async fn run_async_with<'b, 'c: 'b, R, FUT, F, P>(
         &'c mut self,
         args: impl Into<Args>,
         policy: &mut P,
         mut r: F,
     ) -> Result<R, Error>
     where
-        'c: 'b,
         FUT: Future<Output = Result<R, Error>>,
         F: FnMut(P::Ret, &'b Self) -> FUT,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
@@ -643,10 +645,14 @@ where
     }
 
     /// Call [`run_async_with`](Self::run_async_with) with default arguments [`args()`](std::env::args).
-    pub async fn run_async<R, FUT, F, P>(&mut self, policy: &mut P, r: F) -> Result<R, Error>
+    pub async fn run_async<'b, 'c: 'b, R, FUT, F, P>(
+        &'c mut self,
+        policy: &mut P,
+        r: F,
+    ) -> Result<R, Error>
     where
         FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &Self) -> FUT,
+        F: FnMut(P::Ret, &'b Self) -> FUT,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
     {
         self.run_async_with(Args::from_env(), policy, r).await
