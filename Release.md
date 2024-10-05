@@ -1,6 +1,14 @@
 
 # Relase note
 
+## 0.14.0
+
+- Remove RawVal, AStr
+
+- Remove extractor pattern
+
+- Update neure version
+
 ## 0.12.1
 
 - Error improvement
