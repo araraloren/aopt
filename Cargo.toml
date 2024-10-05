@@ -21,7 +21,7 @@ ahash = "0.8"
 async-trait = "0.1"
 chrono = "0.4"
 color-eyre = "0.6"
-neure = "0.3"
+neure = "0.6"
 json = "0.12"
 regex = "1.10"
 reqwest = { version = "0.12", features = [

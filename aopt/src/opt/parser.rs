@@ -1,12 +1,3 @@
-use std::cell::RefCell;
-
-use neure::neure;
-use neure::regex;
-use neure::CharsCtx;
-use neure::MatchPolicy;
-use neure::SpanStore;
-use neure::SpanStorer;
-
 use super::{ConstrctInfo, OptParser};
 use crate::opt::Index;
 use crate::Error;
@@ -71,118 +62,55 @@ use crate::Error;
 #[derive(Debug, Default)]
 pub struct StrParser;
 
-thread_local! {
-    static STR_PARSER: RefCell<SpanStorer> = RefCell::new(SpanStorer::new(KEY_TOTAL));
-}
-
 impl StrParser {
     pub fn new() -> Self {
         Self {}
     }
 
-    pub fn parse_ctx(storer: &mut SpanStorer, str: &str) -> Result<(), neure::err::Error> {
-        let start = neure::start();
-        let end = neure::end();
-        let name = neure!([^'=' '!' '*' '@' ';' ':']+);
-        let semi = neure!(';');
-        let equal = neure!('=');
-        let ty = neure!([a-z A-Z]+);
-        let optional = neure!(['!' '*']);
-        let at = neure!('@');
-        let index = neure!([^ '@' ':']+);
-        let colon = neure!(':');
-        let usage = neure!(.+);
-        let space = neure!(*);
-        let parser = |storer: &mut SpanStorer, str| -> Result<(), neure::err::Error> {
-            let mut ctx = CharsCtx::new(str);
+    pub fn parse_creator_string(&self, dat: &str) -> Result<ConstrctInfo, Error> {
+        use neure::prelude::*;
 
-            ctx.try_mat(&start)?;
-            if ctx.cap(KEY_NAME, storer, &name) {
-                // name
-                while ctx.mat(&semi) {
-                    ctx.cap(KEY_ALIAS, storer, &name);
-                }
-            }
-            if ctx.mat(&equal) {
-                // = type
-                ctx.try_cap(KEY_CTOR, storer, &ty)?;
-            }
-            ctx.cap(KEY_OPTIONAL, storer, &optional); // ! or *
-            if ctx.mat(&at) {
-                // @index
-                ctx.try_cap(KEY_INDEX, storer, &index)?;
-            }
-            if ctx.mat(&colon) {
-                ctx.mat(&space);
-                ctx.try_cap(KEY_HELP, storer, &usage)?;
-            }
-            ctx.try_mat(&end)?;
-            Ok(())
-        };
+        let start = re::start();
+        let end = re::end();
+        let name = ['=', '!', '*', '@', ';', ':'].not().repeat_one_more();
+        let aliases = name.sep(";");
+        let parser = name.opt().if_then(";", aliases);
 
-        parser(storer, str)
-    }
+        let ctor = neu::alphabetic().repeat_one_more();
+        let parser = parser.if_then("=", ctor);
 
-    pub fn parse_creator_string(&self, pattern: &str) -> Result<ConstrctInfo, Error> {
-        STR_PARSER
-            .try_with(|storer| {
-                if Self::parse_ctx(storer.borrow_mut().reset(), pattern).is_ok() {
-                    let mut force = None;
-                    let mut idx = None;
-                    let mut alias = None;
-                    let storer = storer.borrow();
-                    let name = storer.substr(pattern, KEY_NAME, 0).ok();
-                    let help = storer.substr(pattern, KEY_HELP, 0).ok();
-                    let ctor = storer.substr(pattern, KEY_CTOR, 0).ok();
+        let opt = "!".or("*").opt();
+        let parser = parser.then(opt);
 
-                    if let Ok(opt) = storer.substr(pattern, KEY_OPTIONAL, 0) {
-                        match opt {
-                            "!" => {
-                                force = Some(true);
-                            }
-                            "*" => {
-                                force = Some(false);
-                            }
-                            _ => {
-                                unreachable!(
-                                    "Oops ?!! Regex make sure option string correctly: {}",
-                                    &pattern
-                                )
-                            }
-                        }
-                    }
-                    if let Ok(vals) = storer.substrs(pattern, KEY_ALIAS) {
-                        alias = Some(
-                            vals.filter(|v| !v.trim().is_empty())
-                                .map(|v| String::from(v.trim()))
-                                .collect(),
-                        );
-                    }
-                    if let Ok(index) = storer.substr(pattern, KEY_INDEX, 0) {
-                        idx = Some(Index::parse(index)?);
-                    }
-                    Ok(ConstrctInfo::default()
-                        .with_force(force)
-                        .with_index(idx)
-                        .with_name(name.map(|v| String::from(v.trim())))
-                        .with_help(help.map(|v| String::from(v.trim())))
-                        .with_ctor(ctor.map(|v| String::from(v.trim())))
-                        .with_alias(alias))
-                } else {
-                    Err(Error::create_str(pattern, "can not parsing string"))
-                }
-            })
-            .map_err(|e| Error::thread_local_access().cause_by(e.into()))?
+        let index = '@'.or(':').not().repeat_one_more();
+        let parser = parser.if_then("@", index);
+
+        let help = re::consume_all();
+        let parser = parser.if_then(":", help);
+
+        let parser = start.then(parser).then(end);
+
+        let to_string = |v: &str| v.trim().to_string();
+
+        let ((_, (((((name, aliases), ctor), opt), index), help)), _) = CharsCtx::new(dat)
+            .ctor(&parser)
+            .map_err(|_| Error::create_str(dat, "can not parsing string"))?;
+
+        let mut ci = ConstrctInfo::default();
+
+        ci = ci.with_name(name.map(to_string));
+        ci = ci.with_alias(aliases.map(|v| v.iter().copied().map(to_string).collect()));
+        ci = ci.with_ctor(ctor.map(to_string));
+        ci = ci.with_force(opt.map(|v| v == "!"));
+        ci = ci.with_index(if let Some(index) = index {
+            Some(Index::parse(index)?)
+        } else {
+            None
+        });
+        ci = ci.with_help(help.map(to_string));
+        Ok(ci)
     }
 }
-
-const KEY_NAME: usize = 0;
-const KEY_ALIAS: usize = 1;
-const KEY_CTOR: usize = 2;
-const KEY_OPTIONAL: usize = 3;
-const KEY_INDEX: usize = 4;
-const KEY_HELP: usize = 5;
-const KEY_TOTAL: usize = KEY_HELP + 1;
 
 impl OptParser for StrParser {
     type Output = ConstrctInfo;
