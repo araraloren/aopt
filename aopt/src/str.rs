@@ -45,6 +45,7 @@ pub fn split_once<'a>(str: &'a OsStr, ch: char) -> Option<(Cow<'a, OsStr>, Cow<'
         })
 }
 
+/// Convert a [`OsStr`] to [`Cow<'_, str>`].
 pub fn osstr_to_str_i<'a>(val: &[&'a OsStr], i: usize) -> Option<Cow<'a, str>> {
     val.get(i).and_then(|v| v.to_str().map(Cow::Borrowed))
 }

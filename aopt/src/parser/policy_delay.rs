@@ -50,7 +50,7 @@ pub struct DelayCtxSaver<'a> {
 
 /// [`DelayPolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
 /// The option would match failed if any special [`Error`] raised during option processing.
-/// [`DelayPolicy`] will return Some([`ReturnVal`]) if match successful.
+/// [`DelayPolicy`] will return Some([`Return`]) if match successful.
 /// [`DelayPolicy`] processes the option first but does not invoke the handler of option.
 /// The handler will be called after [`Cmd`](crate::opt::Style::Cmd) NOA and [`Pos`](crate::opt::Style::Pos) NOA processed.
 /// In last, [`DelayPolicy`] will process [`Main`](crate::opt::Style::Main) NOA.
@@ -649,7 +649,7 @@ where
             idx: Self::noa_main(),
         };
 
-        trace!("guess Main {:?}", name);
+        trace!("guess Main {:?}", guess.name);
         guess.guess_and_invoke(&UserStyle::Main, overload)?;
         main_fail.process_check(self.checker().post_check(set))?;
         Ok(())

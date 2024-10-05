@@ -25,7 +25,7 @@ use crate::Error;
 
 /// [`FwdPolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
 /// The option would match failed if any special [`Error`] raised during option processing.
-/// [`FwdPolicy`] will return Some([`ReturnVal`]) if match successful.
+/// [`FwdPolicy`] will return Some([`Return`]) if match successful.
 /// [`FwdPolicy`] process the option before any
 /// NOA([`Cmd`](crate::opt::Style::Cmd), [`Pos`](crate::opt::Style::Pos) and [`Main`](crate::opt::Style::Main)).
 /// During parsing, you can get the value of any option in the handler of NOA.
@@ -425,7 +425,7 @@ where
             idx: Self::noa_main(),
         };
 
-        trace!("guess Main {:?}", name);
+        trace!("guess Main {:?}", guess.name);
         guess.guess_and_invoke(&UserStyle::Main, overload)?;
         main_fail.process_check(self.checker().post_check(set))?;
         Ok(())

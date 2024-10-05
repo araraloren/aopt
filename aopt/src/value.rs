@@ -174,17 +174,20 @@ impl AnyValue {
         self.0.entry::<Vec<T>>()
     }
 
+    /// Push a value to the values of type T.
     pub fn push<T: ErasedTy>(&mut self, val: T) -> &mut Self {
         self.entry::<T>().or_default().push(val);
         self
     }
 
+    /// Set the values of type T.
     pub fn set<T: ErasedTy>(&mut self, vals: Vec<T>) -> Option<Vec<T>> {
         let ret = self.remove();
         self.entry().or_insert(vals);
         ret
     }
 
+    /// Remove the values of type T.
     pub fn remove<T: ErasedTy>(&mut self) -> Option<Vec<T>> {
         self.0.remove::<Vec<T>>()
     }

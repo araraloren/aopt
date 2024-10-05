@@ -117,7 +117,7 @@ where
 
     /// Register a callback that will called by [`Policy`](crate::parser::Policy) when option set.
     ///
-    /// The [`Invoker`] first call the [`invoke`](crate::ctx::Handler::invoke), then
+    /// The [`Invoker`] first call the handler, then
     /// call the [`process`](crate::ctx::Store::process) with the return value.
     /// # Note
     /// ```txt
@@ -167,7 +167,7 @@ where
     /// The default handler for all option.
     ///
     /// If there no handler for a option, then default handler will be called.
-    /// It will parsing [`OsStr`](using [`RawValParser`](crate::value::RawValParser)) into associated type,
+    /// It will parsing [`OsStr`](std::ffi::OsStr)(using [`RawValParser`](crate::value::RawValParser)) into associated type,
     /// then save the value to [`ValStorer`](crate::value::ValStorer).
     pub fn fallback(set: &mut Set, _: &mut Ser, ctx: &mut Ctx) -> Result<bool, Error> {
         let uid = ctx.uid()?;

@@ -25,7 +25,7 @@ use crate::Error;
 
 /// [`PrePolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
 /// [`PrePolicy`] will skip any special [`Error`] during [`parse`](Policy::parse) process.
-/// [`PrePolicy`] will return Some([`ReturnVal`]) if match successful.
+/// [`PrePolicy`] will return Some([`Return`]) if match successful.
 /// [`PrePolicy`] doesn’t consume the `NOA` when process [`guess_and_invoke`](crate::guess::InvokeGuess#method.guess_and_invoke).
 ///
 /// # Example
@@ -460,7 +460,7 @@ where
             idx: Self::noa_main(),
         };
 
-        trace!("guess Main {:?}", name);
+        trace!("guess Main {:?}", guess.name);
         Self::ig_failure(guess.guess_and_invoke(&UserStyle::Main, overload))?;
         main_fail.process_check(self.checker().post_check(set))?;
         Ok(())

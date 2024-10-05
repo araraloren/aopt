@@ -85,13 +85,13 @@ impl Return {
         &self.ctx.orig
     }
 
-    /// The [`status`](ReturnVal::status) is true if parsing successes
+    /// The [`status`](Return::status) is true if parsing successes
     /// otherwise it will be false if any [`failure`](Error::is_failure) raised.
     pub fn status(&self) -> bool {
         self.failure.is_none()
     }
 
-    /// Unwrap the [`Ctx`] from [`ReturnVal`].
+    /// Unwrap the [`Ctx`] from [`Return`].
     pub fn unwrap(self) -> Context {
         Result::unwrap(if self.failure.is_none() {
             Ok(self.ctx)
