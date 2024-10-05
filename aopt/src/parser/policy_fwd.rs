@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
@@ -5,9 +6,10 @@ use super::FailManager;
 use super::OptStyleManager;
 use super::Policy;
 use super::PolicySettings;
-use super::ReturnVal;
+use super::Return;
 use super::UserStyle;
-use crate::args::ArgParser;
+use crate::args;
+use crate::args::ArgInfo;
 use crate::args::Args;
 use crate::ctx::Ctx;
 use crate::ctx::Invoker;
@@ -19,13 +21,11 @@ use crate::set::OptValidator;
 use crate::set::SetChecker;
 use crate::set::SetOpt;
 use crate::trace;
-use crate::ARef;
-use crate::AStr;
 use crate::Error;
 
 /// [`FwdPolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
 /// The option would match failed if any special [`Error`] raised during option processing.
-/// [`FwdPolicy`] will return Some([`ReturnVal`]) if match successful.
+/// [`FwdPolicy`] will return Some([`Return`]) if match successful.
 /// [`FwdPolicy`] process the option before any
 /// NOA([`Cmd`](crate::opt::Style::Cmd), [`Pos`](crate::opt::Style::Pos) and [`Main`](crate::opt::Style::Main)).
 /// During parsing, you can get the value of any option in the handler of NOA.
@@ -33,7 +33,6 @@ use crate::Error;
 /// # Examples
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::ARef;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<(), Error> {
@@ -48,10 +47,9 @@ use crate::Error;
 ///                 .run()?;
 ///
 /// inv.entry(pos_id).on(
-///     move |set: &mut ASet,
-///             _: &mut ASer,
-///             filter: ser::Value<Vec<&str>>,
-///             mut value: ctx::Value<String>| {
+///     move |set: &mut ASet, ser: &mut ASer, ctx: &Ctx,| {
+///         let filter = ser.sve_val::<Vec<&str>>()?;
+///         let value = ctx.value::<String>()?;
 ///         let not_filter = set[filter_id].val::<bool>()?;
 ///         let valid = if !*not_filter {
 ///             !filter.iter().any(|&v| v == value.as_str())
@@ -59,7 +57,7 @@ use crate::Error;
 ///             true
 ///         };
 ///
-///         Ok(valid.then(|| value.take()))
+///         Ok(valid.then(|| value))
 ///     },
 /// );
 ///
@@ -68,8 +66,8 @@ use crate::Error;
 /// for opt in set.iter_mut() {
 ///     opt.init()?;
 /// }
-/// ser.sve_insert(ser::Value::new(vec!["foo", "bar"]));
-/// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?;
+/// ser.sve_insert(vec!["foo", "bar"]);
+/// policy.parse(&mut set, &mut inv, &mut ser, args)?;
 ///
 /// let values = set[pos_id].vals::<String>()?;
 ///
@@ -82,7 +80,7 @@ use crate::Error;
 ///     opt.init()?;
 /// }
 ///
-/// policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?;
+/// policy.parse(&mut set, &mut inv, &mut ser, args)?;
 /// let values = set[pos_id].vals::<String>()?;
 ///
 /// assert_eq!(values[0], "set");
@@ -228,7 +226,7 @@ impl<Set, Ser, Chk> PolicySettings for FwdPolicy<Set, Ser, Chk> {
         &self.style_manager
     }
 
-    fn no_delay(&self) -> Option<&[AStr]> {
+    fn no_delay(&self) -> Option<&[String]> {
         None
     }
 
@@ -246,7 +244,7 @@ impl<Set, Ser, Chk> PolicySettings for FwdPolicy<Set, Ser, Chk> {
         self
     }
 
-    fn set_no_delay(&mut self, _: impl Into<AStr>) -> &mut Self {
+    fn set_no_delay(&mut self, _: impl Into<String>) -> &mut Self {
         self
     }
 
@@ -262,45 +260,50 @@ where
     Chk: SetChecker<Set>,
     Set: crate::set::Set + OptParser + OptValidator,
 {
-    pub(crate) fn parse_impl(
+    pub(crate) fn parse_impl<'a>(
         &mut self,
-        ctx: &mut Ctx,
         set: &mut <Self as Policy>::Set,
         inv: &mut <Self as Policy>::Inv<'_>,
         ser: &mut <Self as Policy>::Ser,
+        orig: &'a Args,
+        ctx: &mut Ctx<'a>,
     ) -> Result<(), <Self as Policy>::Error> {
         self.checker().pre_check(set).map_err(|e| e.into())?;
 
         let overload = self.overload();
         let opt_styles = &self.style_manager;
-        let args = ctx.orig_args().clone();
-        let tot = args.len();
-        let mut noa_args = Args::default();
-        let mut iter = args.guess_iter().enumerate();
+        let args: Vec<_> = orig.iter().map(|v| v.as_os_str()).collect();
+        let total = args.len();
+        let mut lefts = vec![];
         let mut opt_fail = FailManager::default();
+        let mut iter2 = args::iter2(&args).enumerate();
 
-        trace!("Parsing {ctx:?} using fwd policy");
+        trace!("parsing {ctx:?} using fwd policy");
         ctx.set_args(args.clone());
-        while let Some((idx, (opt, next))) = iter.next() {
+        while let Some((idx, (opt, next))) = iter2.next() {
             let mut matched = false;
             let mut consume = false;
             let mut stopped = false;
 
-            if let Ok(clopt) = opt.parse_arg() {
-                trace!("Guess command line clopt = {:?} & next = {:?}", clopt, next);
-                let name = clopt.name;
-
-                if set.check(name.as_str()).map_err(Into::into)? {
-                    let arg = clopt.value;
+            if let Ok(ArgInfo { name, value }) = ArgInfo::parse(opt) {
+                trace!(
+                    "guess name: {:?} value: {:?} & next: {:?}",
+                    name,
+                    value,
+                    next
+                );
+                if set.check(&name).map_err(Into::into)? {
+                    let arg = value.clone();
+                    let next = next.map(|v| Cow::Borrowed(*v));
                     let mut guess = InvokeGuess {
                         idx,
                         arg,
                         set,
                         inv,
                         ser,
-                        tot,
+                        total,
                         ctx,
-                        next: next.cloned(),
+                        next,
                         fail: &mut opt_fail,
                         name: Some(name.clone()),
                     };
@@ -309,15 +312,14 @@ where
                         if let Some(ret) = guess.guess_and_invoke(style, overload)? {
                             (matched, consume) = (ret.matched, ret.consume);
                         }
-                        if let Some(act) = guess.ctx.policy_act() {
-                            match act {
-                                Action::StopPolicy => {
-                                    stopped = true;
-                                    guess.ctx.reset_policy_act();
-                                    break;
-                                }
-                                Action::QuitPolicy => return Ok(()),
+                        match guess.ctx.policy_act() {
+                            Action::Stop => {
+                                stopped = true;
+                                guess.ctx.reset_policy_act();
+                                break;
                             }
+                            Action::Quit => return Ok(()),
+                            Action::Null => {}
                         }
                         if matched {
                             break;
@@ -326,41 +328,40 @@ where
                     if !stopped && !matched && self.strict() {
                         return Err(opt_fail.cause(Error::sp_not_found(name)));
                     }
+                } else {
+                    trace!("`{:?}` not like option", opt);
                 }
             }
             if stopped {
                 // skip current, put left argument to noa args
-                noa_args.extend_from_slice(&args[(idx + 1)..]);
+                lefts.extend(iter2.map(|(_, (a, _))| *a));
                 break;
             }
             // if consume the argument, skip it
             if matched && consume {
-                iter.next();
+                iter2.next();
             } else if !matched {
                 // add it to NOA if current argument not matched
-                noa_args.push(args[idx].clone());
+                lefts.push(*opt);
             }
         }
 
         opt_fail.process_check(self.checker().opt_check(set))?;
 
-        let noa_args = ARef::new(noa_args);
-        let tot = noa_args.len();
+        let args = lefts;
+        let total = args.len();
         let mut pos_fail = FailManager::default();
         let mut cmd_fail = FailManager::default();
 
-        ctx.set_args(noa_args.clone());
+        ctx.set_args(args.clone());
         // when style is pos, noa index is [1..=len]
-        if tot > 0 {
-            let name = noa_args
-                .get(Self::noa_cmd())
-                .and_then(|v| v.get_str())
-                .map(AStr::from);
+        if total > 0 {
+            let name = crate::str::osstr_to_str_i(&args, Self::noa_cmd());
             let mut guess = InvokeGuess {
                 set,
                 inv,
                 ser,
-                tot,
+                total,
                 name,
                 ctx,
                 arg: None,
@@ -369,9 +370,9 @@ where
                 idx: Self::noa_cmd(),
             };
 
-            trace!("Guess CMD = {:?}", guess.name);
+            trace!("guess Cmd = {:?}", guess.name);
             guess.guess_and_invoke(&UserStyle::Cmd, overload)?;
-            if let Some(Action::QuitPolicy) = ctx.policy_act() {
+            if let Action::Quit = ctx.policy_act() {
                 return Ok(());
             }
             cmd_fail.process_check(self.checker().cmd_check(set))?;
@@ -380,7 +381,7 @@ where
                 set,
                 inv,
                 ser,
-                tot,
+                total,
                 ctx,
                 name: None,
                 arg: None,
@@ -389,22 +390,18 @@ where
                 idx: Self::noa_cmd(),
             };
 
-            for idx in 1..tot {
+            for idx in 1..total {
                 guess.idx = Self::noa_pos(idx);
-                guess.name = noa_args
-                    .get(Self::noa_pos(idx))
-                    .and_then(|v| v.get_str())
-                    .map(AStr::from);
-                trace!("Guess POS argument = {:?} @ {}", guess.name, guess.idx);
+                guess.name = crate::str::osstr_to_str_i(&args, Self::noa_pos(idx));
+                trace!("guess Pos argument = {:?} @ {}", guess.name, guess.idx);
                 guess.guess_and_invoke(&UserStyle::Pos, overload)?;
-                if let Some(act) = guess.ctx.policy_act() {
-                    match act {
-                        Action::StopPolicy => {
-                            guess.ctx.reset_policy_act();
-                            break;
-                        }
-                        Action::QuitPolicy => return Ok(()),
+                match guess.ctx.policy_act() {
+                    Action::Stop => {
+                        guess.ctx.reset_policy_act();
+                        break;
                     }
+                    Action::Quit => return Ok(()),
+                    Action::Null => {}
                 }
             }
         } else {
@@ -413,20 +410,13 @@ where
 
         pos_fail.process_check(self.checker().pos_check(set))?;
 
-        let main_args = noa_args;
-        let tot = main_args.len();
+        let name = crate::str::osstr_to_str_i(&ctx.args, Self::noa_main());
         let mut main_fail = FailManager::default();
-
-        ctx.set_args(main_args.clone());
-        let name = main_args
-            .get(Self::noa_main())
-            .and_then(|v| v.get_str())
-            .map(AStr::from);
         let mut guess = InvokeGuess {
             set,
             inv,
             ser,
-            tot,
+            total,
             name,
             ctx,
             arg: None,
@@ -435,6 +425,7 @@ where
             idx: Self::noa_main(),
         };
 
+        trace!("guess Main {:?}", guess.name);
         guess.guess_and_invoke(&UserStyle::Main, overload)?;
         main_fail.process_check(self.checker().post_check(set))?;
         Ok(())
@@ -447,7 +438,7 @@ where
     Chk: SetChecker<Set>,
     Set: crate::set::Set + OptParser + OptValidator,
 {
-    type Ret = ReturnVal;
+    type Ret = Return;
 
     type Set = Set;
 
@@ -462,15 +453,15 @@ where
         set: &mut Self::Set,
         inv: &mut Self::Inv<'_>,
         ser: &mut Self::Ser,
-        args: ARef<Args>,
+        orig: Args,
     ) -> Result<Self::Ret, Self::Error> {
-        let mut ctx = Ctx::default().with_orig_args(args.clone()).with_args(args);
+        let mut ctx = Ctx::default().with_orig(orig.clone());
 
-        match self.parse_impl(&mut ctx, set, inv, ser) {
-            Ok(_) => Ok(ReturnVal::new(ctx)),
+        match self.parse_impl(set, inv, ser, &orig, &mut ctx) {
+            Ok(_) => Ok(Return::new(ctx)),
             Err(e) => {
                 if e.is_failure() {
-                    Ok(ReturnVal::new(ctx).with_failure(e))
+                    Ok(Return::new(ctx).with_failure(e))
                 } else {
                     Err(e)
                 }
@@ -483,15 +474,13 @@ where
 mod test {
 
     use std::any::TypeId;
-    use std::ops::Deref;
+    use std::ffi::OsStr;
 
     use crate::opt::Cmd;
     use crate::opt::ConfigBuildInfer;
     use crate::opt::Pos;
     use crate::prelude::*;
-    use crate::ARef;
     use crate::Error;
-    use crate::RawVal;
 
     #[test]
     fn testing_1() {
@@ -629,13 +618,13 @@ mod test {
         set.add_opt("--gopt=i")?.run()?;
         set.add_opt("--hopt=i!")?.run()?;
         inv.entry(set.add_opt("--iopt=i")?.add_alias("--iopt-alias1").run()?)
-            .on(|set: &mut ASet, _: &mut ASer, val: ctx::Value<i64>| {
+            .on(|set: &mut ASet, _: &mut ASer, ctx: &Ctx| {
                 assert_eq!(
                     set["--hopt"].val::<i64>().ok(),
                     None,
                     "Option can set in any order, not access it in option"
                 );
-                Ok(Some(val.deref() + 21))
+                Ok(Some(ctx.value::<i64>()? + 21))
             });
 
         // 10
@@ -654,18 +643,18 @@ mod test {
         set.add_opt("--oopt=s!")?.add_alias("-o");
         set.add_opt("--popt=s")?.run()?;
         inv.entry(set.add_opt("--qopt=s")?.run()?)
-            .on(|_: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>| Ok(Some(val.take())))
+            .on(|_: &mut ASet, _: &mut ASer, ctx: &Ctx| Ok(Some(ctx.value::<String>()?)))
             .then(
                 |uid: Uid,
                  set: &mut ASet,
                  _: &mut ASer,
-                 raw: Option<&RawVal>,
+                 raw: Option<&OsStr>,
                  val: Option<String>| {
                     if let Some(val) = val {
                         // let's put the value to `popt`
                         set["--popt"].accessor_mut().push(val);
                         if let Some(raw) = raw {
-                            set[uid].rawvals_mut()?.push(raw.clone());
+                            set[uid].rawvals_mut()?.push(raw.to_os_string());
                         }
                         Ok(true)
                     } else {
@@ -693,16 +682,18 @@ mod test {
         let epos_uid = set.add_opt("epos=p@7..")?.run()?;
 
         inv.entry(set.add_opt("main=m")?.run()?).on(
-            move |set: &mut ASet, _: &mut ASer, idx: ctx::Index, name: ctx::Name| {
+            move |set: &mut ASet, _: &mut ASer, ctx: &Ctx| {
                 let copt = &set["--copt"];
                 let dopt = &set["--/dopt"];
                 let bpos = &set["bpos"];
                 let cpos = &set[cpos_uid];
                 let dpos = &set[dpos_uid];
                 let epos = &set["epos"];
+                let idx = ctx.idx()?;
+                let name = ctx.name()?;
 
-                assert_eq!(idx.deref(), &0);
-                assert_eq!(name.deref(), "app");
+                assert_eq!(idx, 0);
+                assert_eq!(name.map(|v| v.as_ref()), Some("app"));
                 check_opt_val::<String>(
                     epos,
                     epos_uid,
@@ -772,11 +763,13 @@ mod test {
                 Ok(Some(true))
             },
         );
-        inv.entry(epos_uid).on(
-            |set: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>, idx: ctx::Index| {
+        inv.entry(epos_uid)
+            .on(|set: &mut ASet, _: &mut ASer, ctx: &Ctx| {
                 let ropt = &set["--开关"];
                 let sopt = &set["--值"];
                 let topt = &set["--りょう"];
+                let idx = ctx.idx()?;
+                let val = ctx.value::<String>()?;
 
                 check_opt_val::<i64>(
                     topt,
@@ -811,15 +804,16 @@ mod test {
                     None,
                     None,
                 )?;
-                assert!(idx.deref() == &7 || idx.deref() == &8);
-                Ok(Some(val.take()))
-            },
-        );
-        inv.entry(dpos_uid).on(
-            |set: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>, idx: ctx::Index| {
+                assert!(idx == 7 || idx == 8);
+                Ok(Some(val))
+            });
+        inv.entry(dpos_uid)
+            .on(|set: &mut ASet, _: &mut ASer, ctx: &Ctx| {
                 let oopt = &set["--oopt"];
                 let popt = &set["--popt"];
                 let qopt = &set["--qopt"];
+                let idx = ctx.idx()?;
+                let val = ctx.value::<String>()?;
 
                 check_opt_val::<String>(
                     qopt,
@@ -854,18 +848,19 @@ mod test {
                     None,
                     Some(vec![("-o")]),
                 )?;
-                assert!(idx.deref() == &5 || idx.deref() == &6);
+                assert!(idx == 5 || idx == 6);
                 match set["dpos"].val::<String>() {
-                    Ok(last_val) => Ok(Some(format!("{} -- {}", last_val, val.take()))),
-                    Err(_) => Ok(Some(val.take())),
+                    Ok(last_val) => Ok(Some(format!("{} -- {}", last_val, val))),
+                    Err(_) => Ok(Some(val)),
                 }
-            },
-        );
-        inv.entry(cpos_uid).on(
-            |set: &mut ASet, _: &mut ASer, val: ctx::Value<String>, idx: ctx::Index| {
+            });
+        inv.entry(cpos_uid)
+            .on(|set: &mut ASet, _: &mut ASer, ctx: &Ctx| {
                 let lopt = &set["--lopt"];
                 let mopt = &set["--mopt"];
                 let nopt = &set["--nopt"];
+                let idx = ctx.idx()?;
+                let val = ctx.value::<String>()?;
 
                 check_opt_val(
                     nopt,
@@ -900,7 +895,7 @@ mod test {
                     None,
                     Some(vec![("-l")]),
                 )?;
-                assert!(idx.deref() == &4);
+                assert!(idx == 4);
 
                 let mut sum = 0.0;
 
@@ -908,17 +903,18 @@ mod test {
                     sum += set[uid].val::<f64>()?;
                 }
 
-                match val.deref().as_str() {
+                match val.as_str() {
                     "average" => Ok(Some(sum / 3.0)),
                     "plus" => Ok(Some(sum)),
                     _ => Ok(None),
                 }
-            },
-        );
-        inv.entry(bpos_uid).on(
-            |set: &mut ASet, _: &mut ASer, val: ctx::Value<u64>, idx: ctx::Index| {
+            });
+        inv.entry(bpos_uid)
+            .on(|set: &mut ASet, _: &mut ASer, ctx: &Ctx| {
                 let jopt = &set["--jopt"];
                 let kopt = &set["--kopt"];
+                let idx = ctx.idx()?;
+                let val = ctx.value::<u64>()?;
 
                 check_opt_val::<u64>(
                     jopt,
@@ -942,26 +938,24 @@ mod test {
                     None,
                     None,
                 )?;
-                assert!(idx.deref() == &2 || idx.deref() == &3);
-                Ok(Some(val.deref() * set["--alias-k"].val::<u64>()?))
-            },
-        );
-        inv.entry(set_uid).on(
-            move |set: &mut ASet,
-                  _: &mut ASer,
-                  uid: ctx::Uid,
-                  name: ctx::Name,
-                  mut value: ctx::Value<String>| {
+                assert!(idx == 2 || idx == 3);
+                Ok(Some(val * set["--alias-k"].val::<u64>()?))
+            });
+        inv.entry(set_uid)
+            .on(move |set: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+                let uid = ctx.uid()?;
                 let aopt = &set[0];
                 let bopt = &set["--/bopt"];
-                let apos = &set[*uid.deref()];
+                let apos = &set[uid];
                 let eopt = &set["+eopt"];
                 let fopt = &set["--/fopt=b"];
                 let gopt = &set["--gopt"];
                 let hopt = &set["--hopt"];
                 let iopt = &set["--iopt"];
+                let name = ctx.name()?;
+                let value = ctx.value::<String>()?;
 
-                assert_eq!(name.deref(), "set");
+                assert_eq!(name.map(|v| v.as_ref()), Some("set"));
                 check_opt_val::<i64>(
                     iopt,
                     8,
@@ -1051,13 +1045,12 @@ mod test {
                     Some(&Index::forward(1)),
                     None,
                 )?;
-                Ok(Some(value.take()))
-            },
-        );
+                Ok(Some(value))
+            });
         for opt in set.iter_mut() {
             opt.init()?;
         }
-        policy.parse(&mut set, &mut inv, &mut ser, ARef::new(args))?;
+        policy.parse(&mut set, &mut inv, &mut ser, args)?;
         Ok(())
     }
 }

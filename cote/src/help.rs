@@ -117,9 +117,9 @@ pub fn display_set_help<'a, T: Set>(
             global.add_store(
                 "args",
                 Store::new(
-                    Cow::from(opt.name().as_str()),
-                    Cow::from(opt.hint().as_str()),
-                    Cow::from(opt.help().as_str()),
+                    Cow::from(opt.name()),
+                    Cow::from(opt.hint()),
+                    Cow::from(opt.help()),
                     Cow::default(),
                     !opt.force(),
                     true,
@@ -129,9 +129,9 @@ pub fn display_set_help<'a, T: Set>(
             global.add_store(
                 "command",
                 Store::new(
-                    Cow::from(opt.name().as_str()),
-                    Cow::from(opt.hint().as_str()),
-                    Cow::from(opt.help().as_str()),
+                    Cow::from(opt.name()),
+                    Cow::from(opt.hint()),
+                    Cow::from(opt.help()),
                     Cow::default(),
                     !opt.force(),
                     true,
@@ -145,9 +145,9 @@ pub fn display_set_help<'a, T: Set>(
             global.add_store(
                 "option",
                 Store::new(
-                    Cow::from(opt.name().as_str()),
-                    Cow::from(opt.hint().as_str()),
-                    Cow::from(opt.help().as_str()),
+                    Cow::from(opt.name()),
+                    Cow::from(opt.hint()),
+                    Cow::from(opt.help()),
                     Cow::default(),
                     !opt.force(),
                     false,
@@ -177,7 +177,7 @@ macro_rules! display_help {
             $width,
             $usage_width,
         )
-        .map_err(|e| aopt::Error::raise_error(format!("Can not show help message: {:?}", e)))
+        .map_err(|e| aopt::Error::raise_error(format!("can not show help message: {:?}", e)))
     }};
     ($set:ident, $name:expr, $author:expr, $version:expr, $description:expr, $width:expr, $usage_width:expr) => {{
         let foot = format!("Create by {} v{}", $author, $version,);
@@ -188,6 +188,6 @@ macro_rules! display_help {
         }
 
         $crate::help::display_set_help(__check_set($set), $name, head, foot, $width, $usage_width)
-            .map_err(|e| aopt::Error::raise_error(format!("Can not show help message: {:?}", e)))
+            .map_err(|e| aopt::Error::raise_error(format!("can not show help message: {:?}", e)))
     }};
 }

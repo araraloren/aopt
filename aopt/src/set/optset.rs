@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::fmt::Debug;
 
 use ahash::HashMapExt;
@@ -19,7 +20,6 @@ use crate::set::SetCommit;
 use crate::set::SetIndex;
 use crate::value::Infer;
 use crate::value::RawValParser;
-use crate::AStr;
 use crate::Error;
 use crate::HashMap;
 use crate::Uid;
@@ -218,7 +218,7 @@ where
         info.infer_builtin_ty();
         self.iter().find(|opt| info.mat_opt(*opt)).ok_or_else(|| {
             raise_error!(
-                "Can not find option with: {:?}={:?}",
+                "can not find option with: {:?}={:?}",
                 info.name(),
                 info.ctor()
             )
@@ -259,7 +259,7 @@ where
             .find(|opt| info.mat_opt(*opt))
             .ok_or_else(|| {
                 raise_error!(
-                    "Can not find option with: {:?}={:?}",
+                    "can not find option with: {:?}={:?}",
                     info.name(),
                     info.ctor()
                 )
@@ -344,12 +344,12 @@ where
 {
     fn ref_from<'a>(&self, set: &'a OptSet<P, C, V>) -> Result<&'a C::Opt, Error> {
         set.find(*self)
-            .map_err(|e| raise_error!("Can not find option {}: {e:?}", *self))
+            .map_err(|e| raise_error!("can not find option {}: {e:?}", *self))
     }
 
     fn mut_from<'a>(&self, set: &'a mut OptSet<P, C, V>) -> Result<&'a mut C::Opt, Error> {
         set.find_mut(*self)
-            .map_err(|e| raise_error!("Can not find option {}: {e:?}", *self))
+            .map_err(|e| raise_error!("can not find option {}: {e:?}", *self))
     }
 }
 
@@ -367,11 +367,11 @@ where
         None
     }
 
-    fn get_ctor(&self, name: &AStr) -> Option<&Self::Ctor> {
+    fn get_ctor(&self, name: &str) -> Option<&Self::Ctor> {
         self.creators.get(&Cid::from(name))
     }
 
-    fn get_ctor_mut(&mut self, name: &AStr) -> Option<&mut Self::Ctor> {
+    fn get_ctor_mut(&mut self, name: &str) -> Option<&mut Self::Ctor> {
         self.creators.get_mut(&Cid::from(name))
     }
 
@@ -444,7 +444,7 @@ where
         OptValidator::check(&mut self.validator, name).map_err(Into::into)
     }
 
-    fn split<'a>(&self, name: &'a str) -> Result<(&'a str, &'a str), Self::Error> {
+    fn split<'a>(&self, name: &Cow<'a, str>) -> Result<(Cow<'a, str>, Cow<'a, str>), Self::Error> {
         OptValidator::split(&self.validator, name).map_err(Into::into)
     }
 }

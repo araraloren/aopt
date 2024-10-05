@@ -9,9 +9,9 @@ pub fn main() -> Result<(), aopt::Error> {
     parser.add_opt("-flag".infer::<f32>())?;
 
     parser
-        .parse(ARef::new(Args::from(
+        .parse(Args::from(
             ["app", "-f42", "--flag", "foo", "-flag=2.1"].into_iter(),
-        )))?
+        ))?
         .ok()?;
 
     assert_eq!(parser.find_val::<i64>("-f")?, &42);

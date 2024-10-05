@@ -7,7 +7,7 @@ pub struct Cli;
 
 static FLAG: OnceLock<bool> = OnceLock::new();
 
-fn cli_main<Set, Ser>(set: &mut Set, _: &mut Ser) -> cote::Result<Option<()>>
+fn cli_main<Set, Ser>(set: &mut Set, _: &mut Ser, _: &Ctx) -> cote::Result<Option<()>>
 where
     Set: cote::prelude::Set,
 {

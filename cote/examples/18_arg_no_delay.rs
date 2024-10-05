@@ -1,5 +1,4 @@
 use cote::prelude::*;
-use std::ops::Deref;
 
 #[derive(Debug, Cote, PartialEq, Eq)]
 #[cote(policy = delay, help)]
@@ -17,7 +16,7 @@ pub struct Cli {
     qux: usize,
 }
 
-fn cmd_order<Set, Ser>(_: &mut Set, ser: &mut Ser) -> Result<Option<bool>, aopt::Error>
+fn cmd_order<Set, Ser>(_: &mut Set, ser: &mut Ser, _: &Ctx) -> Result<Option<bool>, aopt::Error>
 where
     Ser: ServicesValExt,
 {
@@ -32,7 +31,7 @@ where
 fn assert_order<Set, Ser>(
     _: &mut Set,
     ser: &mut Ser,
-    mut val: ctx::Value<usize>,
+    ctx: &Ctx,
 ) -> Result<Option<usize>, aopt::Error>
 where
     Ser: ServicesValExt,
@@ -41,8 +40,10 @@ where
     *order += 1;
     let order = *order;
     println!("Order {}", order);
-    assert_eq!(order, *val.deref());
-    Ok(Some(val.take()))
+    let val = ctx.value::<usize>()?;
+
+    assert_eq!(order, val);
+    Ok(Some(val))
 }
 
 fn main() -> color_eyre::Result<()> {

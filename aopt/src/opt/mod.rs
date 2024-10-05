@@ -43,7 +43,6 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 
 use crate::value::ValAccessor;
-use crate::AStr;
 use crate::Error;
 use crate::Uid;
 
@@ -68,7 +67,7 @@ pub const BOOL_FALSE: &str = "false";
 ///
 /// // `Cmd` has a default position `@1`.
 /// parser.add_opt("list: Set the list sub command".infer::<Cmd>())?;
-/// parser.parse(ARef::new(Args::from(["app", "list"])))?;
+/// parser.parse(Args::from(["app", "list"]))?;
 ///
 /// // Get the value by `Infer::Val` type of `bool`.
 /// assert_eq!(parser.find_val::<bool>("list")?, &true);
@@ -118,7 +117,7 @@ impl DerefMut for Cmd {
 /// // Name is not important.
 /// parser.add_opt("pos_accept_string@1: Set the string value".infer::<Pos<String>>())?;
 ///
-/// parser.parse(ARef::new(Args::from(["app", "value"])))?;
+/// parser.parse(Args::from(["app", "value"]))?;
 ///
 /// // Get the value by `Infer::Val` type of `String`.
 /// assert_eq!(parser.find_val::<String>("pos_accept_string")?, &String::from("value"));
@@ -159,7 +158,7 @@ impl<T> DerefMut for Pos<T> {
 /// ```rust
 /// # use aopt::prelude::*;
 /// # use aopt::opt::Main;
-/// # use std::ops::Deref;
+/// # use std::ffi::OsStr;
 /// #
 /// # fn main() -> Result<(), aopt::Error> {
 ///     
@@ -169,12 +168,13 @@ impl<T> DerefMut for Pos<T> {
 /// parser.add_opt("main_function: Call the main function".infer::<Main>())?
 ///       // Main do nothing in default, you must change the `Action` if you want save value
 ///       .set_action(Action::Set)
-///       .on(|_: &mut ASet, _: &mut ASer, val: ctx::RawVal|{
-///             assert_eq!(val.deref(), &RawVal::from("app"));
+///       .on(|_: &mut ASet, _: &mut ASer, ctx: &Ctx|{
+///             let val = ctx.arg()?;
+///             assert_eq!(val.map(|v|v.as_ref()), Some(OsStr::new("app")));
 ///             Ok(Some(String::from("main_function called")))
 ///       })?;
 ///
-/// parser.parse(ARef::new(Args::from(["app", "list"])))?;
+/// parser.parse(Args::from(["app", "list"]))?;
 ///
 /// // Get the value of main function returned.
 /// assert_eq!(parser.find_val::<String>("main_function")?, &String::from("main_function called"));
@@ -215,7 +215,6 @@ impl<T> DerefMut for Main<T> {
 /// # use aopt::Error;
 /// # use aopt::value::raw2str;
 /// # use aopt::prelude::*;
-/// # use std::ops::Deref;
 ///
 /// #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 /// pub struct Name(String);
@@ -223,7 +222,7 @@ impl<T> DerefMut for Main<T> {
 /// impl RawValParser for Name {
 ///     type Error = Error;
 ///
-///     fn parse(arg: Option<&RawVal>, _: &Ctx) -> Result<Self, Self::Error> {
+///     fn parse(arg: Option<&OsStr>, _: &Ctx) -> Result<Self, Self::Error> {
 ///         Ok(Name(raw2str(arg)?.to_owned()))
 ///     }
 /// }
@@ -234,7 +233,7 @@ impl<T> DerefMut for Main<T> {
 /// // add the option wrap with `MutOpt`
 /// parser.add_opt("-e: Set the name".infer::<MutOpt<Name>>())?;
 ///
-/// parser.parse(ARef::new(Args::from(["app", "-e=foo"])))?;
+/// parser.parse(Args::from(["app", "-e=foo"]))?;
 ///
 /// // Get the value through value type `Name`
 /// assert_eq!(parser.find_val::<Name>("-e")?, &Name("foo".to_owned()));
@@ -275,7 +274,6 @@ impl<T> DerefMut for MutOpt<T> {
 /// # use aopt::Error;
 /// # use aopt::value::raw2str;
 /// # use aopt::prelude::*;
-/// # use std::ops::Deref;
 ///
 /// #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 /// pub struct Name(String);
@@ -283,7 +281,7 @@ impl<T> DerefMut for MutOpt<T> {
 /// impl RawValParser for Name {
 ///     type Error = Error;
 ///
-///     fn parse(arg: Option<&RawVal>, _: &Ctx) -> Result<Self, Self::Error> {
+///     fn parse(arg: Option<&OsStr>, _: &Ctx) -> Result<Self, Self::Error> {
 ///         Ok(Name(raw2str(arg)?.to_owned()))
 ///     }
 /// }
@@ -294,7 +292,7 @@ impl<T> DerefMut for MutOpt<T> {
 /// // add the option wrap with `RefOpt`
 /// parser.add_opt("-e: Set the name".infer::<RefOpt<'_, Name>>())?;
 ///
-/// parser.parse(ARef::new(Args::from(["app", "-e=foo"])))?;
+/// parser.parse(Args::from(["app", "-e=foo"]))?;
 ///
 /// // Get the value through value type `Name`
 /// assert_eq!(parser.find_val::<Name>("-e")?, &Name("foo".to_owned()));
@@ -357,16 +355,16 @@ pub trait Opt: Debug {
     fn uid(&self) -> Uid;
 
     /// The name of option.
-    fn name(&self) -> &AStr;
+    fn name(&self) -> &str;
 
     /// The type of option.
     fn r#type(&self) -> &TypeId;
 
     /// The help hint of option such as `--flag`.
-    fn hint(&self) -> &AStr;
+    fn hint(&self) -> &str;
 
     /// The help message of option.
-    fn help(&self) -> &AStr;
+    fn help(&self) -> &str;
 
     fn valid(&self) -> bool;
 
@@ -383,7 +381,7 @@ pub trait Opt: Debug {
     fn index(&self) -> Option<&Index>;
 
     /// The alias the option.
-    fn alias(&self) -> Option<&Vec<AStr>>;
+    fn alias(&self) -> Option<&Vec<String>>;
 
     fn accessor(&self) -> &ValAccessor;
 
@@ -403,9 +401,9 @@ pub trait Opt: Debug {
 
     fn mat_force(&self, force: bool) -> bool;
 
-    fn mat_name(&self, name: Option<&AStr>) -> bool;
+    fn mat_name(&self, name: Option<&str>) -> bool;
 
-    fn mat_alias(&self, name: &AStr) -> bool;
+    fn mat_alias(&self, name: &str) -> bool;
 
     fn mat_index(&self, index: Option<(usize, usize)>) -> bool;
 

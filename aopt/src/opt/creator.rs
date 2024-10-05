@@ -4,7 +4,6 @@ use crate::opt::ConfigValue;
 use crate::opt::Opt;
 use crate::set::Ctor;
 use crate::trace;
-use crate::AStr;
 use crate::Error;
 
 #[cfg(feature = "sync")]
@@ -120,7 +119,7 @@ pub enum Cid {
     Int,
 
     /// Create names: `s`, `str`, `string`
-    AStr,
+    Str,
 
     /// Create names: `f`, `flt`, `f64`
     Flt,
@@ -149,7 +148,7 @@ pub enum Cid {
     /// Create names: `fallback`
     Fallback,
 
-    Name(AStr),
+    Name(String),
 }
 
 impl Cid {
@@ -158,7 +157,7 @@ impl Cid {
 
         match self {
             Cid::Int => matches!(s, CID_INT_SHORT | CID_INT_LONG | CID_INT_TYPE),
-            Cid::AStr => matches!(s, CID_STR_SHORT | CID_STR_LONG | CID_STR_TYPE),
+            Cid::Str => matches!(s, CID_STR_SHORT | CID_STR_LONG | CID_STR_TYPE),
             Cid::Flt => matches!(s, CID_FLT_SHORT | CID_FLT_LONG | CID_FLT_TYPE),
             Cid::Uint => matches!(s, CID_UINT_SHORT | CID_UINT_LONG | CID_UINT_TYPE),
             Cid::Bool => matches!(s, CID_BOOL_SHORT | CID_BOOL_LONG | CID_BOOL_TYPE),
@@ -173,13 +172,13 @@ impl Cid {
     }
 }
 
-impl From<AStr> for Cid {
-    fn from(value: AStr) -> Self {
+impl From<String> for Cid {
+    fn from(value: String) -> Self {
         let s = value.as_str();
 
         match s {
             CID_INT_SHORT | CID_INT_LONG | CID_INT_TYPE => Cid::Int,
-            CID_STR_SHORT | CID_STR_LONG | CID_STR_TYPE => Cid::AStr,
+            CID_STR_SHORT | CID_STR_LONG | CID_STR_TYPE => Cid::Str,
             CID_FLT_SHORT | CID_FLT_LONG | CID_FLT_TYPE => Cid::Flt,
             CID_UINT_SHORT | CID_UINT_LONG | CID_UINT_TYPE => Cid::Uint,
             CID_BOOL_SHORT | CID_BOOL_LONG | CID_BOOL_TYPE => Cid::Bool,
@@ -194,8 +193,8 @@ impl From<AStr> for Cid {
     }
 }
 
-impl From<&AStr> for Cid {
-    fn from(value: &AStr) -> Self {
+impl From<&String> for Cid {
+    fn from(value: &String) -> Self {
         Cid::from(value.clone())
     }
 }
@@ -204,7 +203,7 @@ impl From<&str> for Cid {
     fn from(s: &str) -> Self {
         match s {
             CID_INT_SHORT | CID_INT_LONG | CID_INT_TYPE => Cid::Int,
-            CID_STR_SHORT | CID_STR_LONG | CID_STR_TYPE => Cid::AStr,
+            CID_STR_SHORT | CID_STR_LONG | CID_STR_TYPE => Cid::Str,
             CID_FLT_SHORT | CID_FLT_LONG | CID_FLT_TYPE => Cid::Flt,
             CID_UINT_SHORT | CID_UINT_LONG | CID_UINT_TYPE => Cid::Uint,
             CID_BOOL_SHORT | CID_BOOL_LONG | CID_BOOL_TYPE => Cid::Bool,
@@ -214,7 +213,7 @@ impl From<&str> for Cid {
             CID_ANY_SHORT | CID_ANY_LONG => Cid::Any,
             CID_RAW_SHORT | CID_RAW_LONG => Cid::Raw,
             CID_FALLBACK => Cid::Fallback,
-            s => Cid::Name(AStr::from(s)),
+            s => Cid::Name(String::from(s)),
         }
     }
 }
@@ -254,7 +253,7 @@ impl<T: Opt + TryFrom<C, Error: Into<Error>>, C: ConfigValue + Debug> From<Cid>
 /// * [`Int`](Cid::Int)
 /// * [`Bool`](Cid::Bool)
 /// * [`Flt`](Cid::Flt)
-/// * [`AStr`](Cid::AStr)
+/// * [`Str`](Cid::Str)
 /// * [`Uint`](Cid::Uint)
 /// * [`Cmd`](Cid::Cmd)
 /// * [`Pos`](Cid::Pos)

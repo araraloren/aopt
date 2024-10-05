@@ -14,7 +14,7 @@ pub fn main() -> Result<(), aopt::Error> {
     // enable combination style
     parser.enable_combined();
     parser
-        .parse(ARef::new(Args::from(["app", "-abc", "def"].into_iter())))?
+        .parse(Args::from(["app", "-abc", "def"].into_iter()))?
         .ok()?;
 
     assert_eq!(parser.find_val::<bool>("-a")?, &true);
@@ -29,7 +29,7 @@ pub fn main() -> Result<(), aopt::Error> {
     parser.validator_mut().add_prefix("");
     parser.set_strict(false);
     parser
-        .parse(ARef::new(Args::from(["app", "-abc", "def"].into_iter())))?
+        .parse(Args::from(["app", "-abc", "def"].into_iter()))?
         .ok()?;
 
     assert_eq!(parser.find_val::<bool>("-a")?, &true);

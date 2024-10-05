@@ -1,9 +1,9 @@
+use std::borrow::Cow;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
 use crate::args::Args;
-use crate::ctx::Extract;
-use crate::ctx::Handler;
+use crate::ctx::Ctx;
 use crate::ctx::HandlerCollection;
 use crate::ctx::HandlerEntry;
 use crate::map::ErasedTy;
@@ -23,7 +23,6 @@ use crate::set::SetValueFindExt;
 use crate::value::Infer;
 use crate::value::Placeholder;
 use crate::value::RawValParser;
-use crate::ARef;
 use crate::Error;
 use crate::Uid;
 
@@ -143,9 +142,7 @@ where
     /// ```rust
     /// # use aopt::getopt;
     /// # use aopt::prelude::*;
-    /// # use aopt::ARef;
     /// # use aopt::Error;
-    /// # use std::ops::Deref;
     /// #
     /// # fn main() -> Result<(), Error> {
     ///
@@ -155,10 +152,12 @@ where
     /// let mut parser = Parser::new_policy(AFwdPolicy::default());
     ///
     /// // Register a value can access in handler parameter.
-    /// parser.set_app_data(ser::Value::new(Int(42)))?;
+    /// parser.set_app_data(Int(42))?;
     /// parser.add_opt("--guess=i!")?.on(
-    ///   |_: &mut ASet, _: &mut ASer, ctx::Value(val), answer: ser::Value<Int>| {
-    ///       match answer.deref().0.cmp(&val) {
+    ///   |_: &mut ASet, ser: &mut ASer, ctx: &Ctx| {
+    ///       let val = ctx.value::<i64>()?;
+    ///       let answer = ser.sve_val::<Int>()?;
+    ///       match answer.0.cmp(&val) {
     ///         std::cmp::Ordering::Equal => println!("Congratulation, you win!"),
     ///         std::cmp::Ordering::Greater => println!("Oops, too bigger!"),
     ///         std::cmp::Ordering::Less => println!("Oops, too little!"),
@@ -177,9 +176,7 @@ where
     /// ```rust
     /// # use aopt::getopt;
     /// # use aopt::prelude::*;
-    /// # use aopt::ARef;
     /// # use aopt::Error;
-    /// # use std::ops::Deref;
     /// #
     /// # fn main() -> Result<(), Error> {
     /// #[derive(Debug)]
@@ -189,18 +186,18 @@ where
     ///
     /// // Register a value can access in handler parameter.
     /// parser.set_app_data(Int(42))?;
-    /// parser.add_opt("--guess=i!")?.on(
-    ///   |_: &mut ASet, ser: &mut ASer, mut val: ctx::Value<i64>| {
+    /// parser.add_opt("--guess=i!")?.on(|_: &mut ASet, ser: &mut ASer, ctx: &Ctx| {
+    ///       let val = ctx.value::<i64>()?;
     ///       let answer = ser.sve_val::<Int>()?;
     ///
-    ///       if &answer.0 == val.deref() {
+    ///       if answer.0 == val {
     ///           println!("Congratulation, you win!");
-    ///       } else if &answer.0 > val.deref() {
+    ///       } else if answer.0 > val {
     ///           println!("Oops, too bigger!")
     ///       } else {
     ///           println!("Oops, too little!")
     ///       }
-    ///       Ok(Some(val.take()))
+    ///       Ok(Some(val))
     ///   },
     /// )?;
     ///
@@ -232,10 +229,8 @@ where
     ///```rust
     /// # use aopt::getopt;
     /// # use aopt::prelude::*;
-    /// # use aopt::ARef;
     /// # use aopt::Error;
-    /// # use aopt::RawVal;
-    /// # use std::ops::Deref;
+    /// # use std::ffi::OsStr;
     /// #
     /// # fn main() -> Result<(), Error> {
     /// let mut parser1 = Parser::new_policy(AFwdPolicy::default());
@@ -255,13 +250,13 @@ where
     /// parser1
     ///     .add_opt("--path=s")?
     ///     .set_action(Action::Set)
-    ///     .on(|_: &mut ASet, _: &mut ASer, mut val: ctx::Value<String>| Ok(Some(val.take())))?;
+    ///     .on(|_: &mut ASet, _: &mut ASer, ctx: &Ctx| Ok(Some(ctx.value::<String>()?)));
     ///
     /// fn file_count_storer(
     ///     uid: Uid,
     ///     set: &mut ASet,
     ///     _: &mut ASer,
-    ///     _: Option<&RawVal>,
+    ///     _: Option<&OsStr>,
     ///     val: Option<bool>,
     /// ) -> Result<bool, Error> {
     ///     let values = set[uid].entry::<u64>().or_insert(vec![0]);
@@ -280,10 +275,10 @@ where
     /// // The `store` will called by `Invoker` when storing option value.
     /// parser1
     ///     .add_opt("file=p@1..")?
-    ///     .on(|_: &mut ASet, _: &mut ASer, val: ctx::Value<String>| {
-    ///         let path = val.deref();
+    ///     .on(|_: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+    ///         let path = ctx.value::<String>()?;
     ///
-    ///         if let Ok(meta) = std::fs::metadata(path) {
+    ///         if let Ok(meta) = std::fs::metadata(&path) {
     ///             if meta.is_file() {
     ///                 println!("Got a file {:?}", path);
     ///                 return Ok(Some(true));
@@ -360,7 +355,7 @@ where
     ///     parser.add_opt_cfg(Bool)?.set_name("--round");
     ///     parser.add_opt_cfg(Int64)?.set_name("--poll");
     ///
-    ///     parser.parse(aopt::ARef::new(Args::from(["--poll", "42"].into_iter())))?;
+    ///     parser.parse(Args::from(["--poll", "42"]))?;
     ///
     ///     assert_eq!(parser.find_val::<bool>("--round")?, &false);
     ///     assert_eq!(parser.find_val::<i64>("--poll")?, &42);
@@ -400,28 +395,26 @@ where
 {
     #[cfg(feature = "sync")]
     #[allow(clippy::type_complexity)]
-    pub fn entry<A, O, H>(
+    pub fn entry<O, H>(
         &mut self,
         uid: Uid,
-    ) -> Result<HandlerEntry<'a, '_, Inv, Set, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntry<'a, '_, Inv, Set, Ser, H, O>, Error>
     where
         O: ErasedTy,
-        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + Send + Sync + 'a,
-        A: Extract<Set, Ser, Error = Error> + Send + Sync + 'a,
+        H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + Send + Sync + 'a,
     {
         Ok(HandlerEntry::new(&mut self.inv, uid))
     }
 
     #[cfg(not(feature = "sync"))]
     #[allow(clippy::type_complexity)]
-    pub fn entry<A, O, H>(
+    pub fn entry<O, H>(
         &mut self,
         uid: Uid,
-    ) -> Result<HandlerEntry<'a, '_, Inv, Set, Ser, H, A, O>, Error>
+    ) -> Result<HandlerEntry<'a, '_, Inv, Set, Ser, H, O>, Error>
     where
         O: ErasedTy,
-        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
-        A: Extract<Set, Ser, Error = Error> + 'a,
+        H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
     {
         Ok(HandlerEntry::new(&mut self.inv, uid))
     }
@@ -437,11 +430,11 @@ where
         Set::register(&mut self.set, ctor)
     }
 
-    fn get_ctor(&self, name: &crate::AStr) -> Option<&Self::Ctor> {
+    fn get_ctor(&self, name: &str) -> Option<&Self::Ctor> {
         Set::get_ctor(&self.set, name)
     }
 
-    fn get_ctor_mut(&mut self, name: &crate::AStr) -> Option<&mut Self::Ctor> {
+    fn get_ctor_mut(&mut self, name: &str) -> Option<&mut Self::Ctor> {
         Set::get_ctor_mut(&mut self.set, name)
     }
 
@@ -476,7 +469,7 @@ where
         OptValidator::check(&mut self.set, name)
     }
 
-    fn split<'a>(&self, name: &'a str) -> Result<(&'a str, &'a str), Self::Error> {
+    fn split<'a>(&self, name: &Cow<'a, str>) -> Result<(Cow<'a, str>, Cow<'a, str>), Self::Error> {
         OptValidator::split(&self.set, name)
     }
 }
@@ -489,7 +482,7 @@ where
 
     fn parse_policy(
         &mut self,
-        args: ARef<Args>,
+        args: Args,
         policy: &mut P,
     ) -> Result<<P as Policy>::Ret, Self::Error> {
         self.init()?;
@@ -539,7 +532,6 @@ where
 #[cfg(test)]
 mod test {
     use crate::{opt::config::ConfigBuildInfer, prelude::*};
-    use std::ops::Deref;
 
     #[test]
     fn test() {
@@ -551,16 +543,17 @@ mod test {
 
         set.add_opt("--aopt=b")?;
         set.add_opt("--bopt=i")?;
-        set.entry(0)?
-            .on(|_: &mut ASet, _: &mut ASer, mut val: ctx::Value<bool>| {
-                assert_eq!(val.deref(), &true);
-                Ok(Some(val.take()))
-            });
+        set.entry(0)?.on(|_: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+            let val = ctx.value::<bool>()?;
+
+            assert!(val);
+            Ok(Some(val))
+        });
         set.add_opt("ls".infer::<Cmd>())?;
 
         PolicyParser::<AFwdPolicy>::parse(
             &mut set,
-            ARef::new(Args::from(["app", "ls", "--aopt", "--bopt=42"])),
+            Args::from(["app", "ls", "--aopt", "--bopt=42"]),
         )?;
 
         assert_eq!(set.find_val::<bool>("ls")?, &true);

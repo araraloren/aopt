@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::fmt::Display;
 use std::ops::Range;
 use std::ops::RangeBounds;
@@ -7,13 +6,6 @@ use std::ops::RangeFull;
 use std::ops::RangeInclusive;
 use std::ops::RangeTo;
 use std::ops::RangeToInclusive;
-
-use neure::neure;
-use neure::regex;
-use neure::CharsCtx;
-use neure::MatchPolicy;
-use neure::SpanStore;
-use neure::SpanStorer;
 
 use crate::raise_error;
 use crate::Error;
@@ -128,142 +120,42 @@ pub enum Index {
     Null,
 }
 
-thread_local! {
-    static IDX_PARSER: RefCell<SpanStorer> = RefCell::new(SpanStorer::new(KEY_TOTAL));
-}
-
-const KEY_ANYWHERE: usize = 0;
-const KEY_PLUS: usize = 1;
-const KEY_MINUS: usize = 2;
-const KEY_SEQ: usize = 3;
-const KEY_START: usize = 4;
-const KEY_END: usize = 5;
-const KEY_RANGE: usize = 6;
-const KEY_TOTAL: usize = 7;
-
 impl Index {
-    // the index number is small in generally
-    pub(crate) fn parse_as_usize(pat: &str, data: &str) -> Result<usize, Error> {
-        data.parse::<usize>()
-            .map_err(|e| Error::index_parse(pat, "invalid index value").cause_by(e.into()))
-    }
+    pub fn parse(dat: &str) -> Result<Self, Error> {
+        use neure::prelude::*;
 
-    #[inline(always)]
-    pub fn parse_ctx(storer: &mut SpanStorer, str: &str) -> Result<(), neure::err::Error> {
-        let start = neure::start();
-        let end = neure::end();
-        let anywhere = neure!('*');
-        let plus = neure!('+');
-        let minus = neure!('-');
-        let left = neure!('[');
-        let right = neure!(']');
-        let digit = neure!(['0' - '9']+);
-        let comma = neure!(',');
-        let range_op = neure!('.'{2});
-        let space = neure!(*);
-        let whole_parser = move |storer: &mut SpanStorer, str| -> Result<(), neure::err::Error> {
-            let mut ctx = CharsCtx::new(str);
+        let start = re::start();
+        let end = re::end();
+        let sign = "+".or("-").opt().map(|v| Ok(v != Some("-")));
+        let num = char::is_ascii_digit.repeat_one_more();
+        let num = num.map(map::from_str::<usize>());
 
-            ctx.try_mat(&start)?;
-            if !ctx.cap(KEY_ANYWHERE, storer, &anywhere) {
-                let _ = ctx.cap(KEY_PLUS, storer, &plus) || ctx.cap(KEY_MINUS, storer, &minus);
-
-                if ctx.mat(&left) {
-                    let ret = !ctx.try_cap(KEY_SEQ, storer, &digit)?.is_zero() && ctx.mat(&comma);
-
-                    ctx.mat(&space);
-                    if ret {
-                        while ctx.cap(KEY_SEQ, storer, &digit) && ctx.mat(&comma) {}
-                    }
-                    ctx.try_mat(&right)?;
-                } else {
-                    ctx.cap(KEY_START, storer, &digit); // start may not exist
-                    ctx.mat(&space);
-                    if ctx.cap(KEY_RANGE, storer, &range_op) {
-                        ctx.mat(&space);
-                        if storer.contain(KEY_START) {
-                            ctx.cap(KEY_END, storer, &digit);
-                        } else {
-                            ctx.try_cap(KEY_END, storer, &digit)?;
-                        }
-                    }
-                }
-            }
-            ctx.try_mat(&end)?;
-            Ok(())
-        };
-
-        whole_parser(storer, str)
-    }
-
-    pub fn parse(pat: &str) -> Result<Self, Error> {
-        IDX_PARSER
-            .try_with(|storer| {
-                if Self::parse_ctx(storer.borrow_mut().reset(), pat).is_ok() {
-                    let storer = storer.borrow();
-
-                    if storer.contain(KEY_ANYWHERE) {
-                        Ok(Self::anywhere())
-                    } else if storer.contain(KEY_RANGE) {
-                        let range_beg = storer.substr(pat, KEY_START, 0).ok();
-                        let range_end = storer.substr(pat, KEY_END, 0).ok();
-
-                        match (range_beg, range_end) {
-                            (None, None) => {
-                                return Err(Error::index_parse(pat, "index can not be empty"))
-                            }
-                            (None, Some(end)) => {
-                                Ok(Self::range(None, Some(Self::parse_as_usize(pat, end)?)))
-                            }
-                            (Some(beg), None) => {
-                                Ok(Self::range(Some(Self::parse_as_usize(pat, beg)?), None))
-                            }
-                            (Some(beg), Some(end)) => {
-                                let beg = Self::parse_as_usize(pat, beg)?;
-                                let end = Self::parse_as_usize(pat, end)?;
-
-                                if beg <= end {
-                                    Ok(Self::range(Some(beg), Some(end)))
-                                } else {
-                                    return Err(Error::index_parse(
-                                        pat,
-                                        "end index must bigger than begin",
-                                    ));
-                                }
-                            }
-                        }
-                    } else if let Ok(iter) = storer.substrs(pat, KEY_SEQ) {
-                        let mut list = vec![];
-
-                        for value in iter {
-                            list.push(Self::parse_as_usize(pat, value)?);
-                        }
-                        if storer.contain(KEY_MINUS) {
-                            Ok(Self::except(list))
-                        } else {
-                            Ok(Self::list(list))
-                        }
-                    } else if storer.contain(KEY_START) {
-                        let index = Self::parse_as_usize(
-                            pat,
-                            storer.substr(pat, KEY_START, 0).map_err(|e| {
-                                raise_error!("Can not get substr from `{:?}`: {:?}", storer, e)
-                            })?,
-                        )?;
-
-                        if storer.contain(KEY_MINUS) {
-                            Ok(Self::backward(index))
-                        } else {
-                            Ok(Self::forward(index))
-                        }
-                    } else {
-                        Err(Error::index_parse(pat, "invalid index create string"))
-                    }
-                } else {
-                    Err(Error::index_parse(pat, "failed parsing index"))
-                }
+        let any_parser = "*".map(|_| Ok(Index::anywhere()));
+        let seq_parser = sign
+            .then(num.sep(",").quote("[", "]"))
+            .map(|(s, v)| Ok(if s { Index::list(v) } else { Index::except(v) }));
+        let range_parser = num
+            .opt()
+            .sep_once("..", num.opt())
+            .map(|(beg, end)| Ok(Index::range(beg, end)));
+        let pos_parser = sign.then(num).map(|(s, v)| {
+            Ok(if s {
+                Index::forward(v)
+            } else {
+                Index::backward(v)
             })
-            .map_err(|e| Error::thread_local_access().cause_by(e.into()))?
+        });
+
+        let parser = start
+            .then(any_parser.or(seq_parser).or(range_parser).or(pos_parser))
+            ._1()
+            .then(end)
+            ._0();
+
+        CharsCtx::new(dat)
+            .ignore(char::is_ascii_whitespace.repeat_full())
+            .ctor(&parser)
+            .map_err(|_| Error::index_parse(dat, "failed parsing index"))
     }
 
     pub fn is_null(&self) -> bool {
@@ -522,14 +414,6 @@ impl<'a> TryFrom<&'a str> for Index {
 
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
         Self::parse(value)
-    }
-}
-
-impl TryFrom<crate::AStr> for Index {
-    type Error = Error;
-
-    fn try_from(value: crate::AStr) -> Result<Self, Self::Error> {
-        Self::parse(value.as_str())
     }
 }
 

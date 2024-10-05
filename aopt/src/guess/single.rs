@@ -1,16 +1,14 @@
+use std::borrow::Cow;
+use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-use crate::args::Args;
 use crate::ctx::InnerCtx;
 use crate::opt::Opt;
 use crate::opt::Style;
 use crate::set::Set;
 use crate::set::SetOpt;
-use crate::ARef;
-use crate::AStr;
 use crate::Error;
-use crate::RawVal;
 use crate::Uid;
 
 use super::MatchPolicy;
@@ -18,14 +16,12 @@ use super::PolicyBuild;
 use super::PolicyConfig;
 use super::PolicyInnerCtx;
 
-pub struct SingleOpt<S> {
-    name: Option<AStr>,
+pub struct SingleOpt<'a, S> {
+    name: Option<Cow<'a, str>>,
 
     style: Style,
 
-    arg: Option<RawVal>,
-
-    args: ARef<Args>,
+    arg: Option<Cow<'a, OsStr>>,
 
     uids: Vec<Uid>,
 
@@ -36,13 +32,12 @@ pub struct SingleOpt<S> {
     marker: PhantomData<S>,
 }
 
-impl<S> Clone for SingleOpt<S> {
+impl<S> Clone for SingleOpt<'_, S> {
     fn clone(&self) -> Self {
         Self {
             name: self.name.clone(),
             style: self.style,
             arg: self.arg.clone(),
-            args: self.args.clone(),
             uids: self.uids.clone(),
             index: self.index,
             total: self.total,
@@ -51,13 +46,12 @@ impl<S> Clone for SingleOpt<S> {
     }
 }
 
-impl<S> Debug for SingleOpt<S> {
+impl<S> Debug for SingleOpt<'_, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SingleOpt")
             .field("name", &self.name)
             .field("style", &self.style)
             .field("arg", &self.arg)
-            .field("args", &self.args)
             .field("uids", &self.uids)
             .field("index", &self.index)
             .field("total", &self.total)
@@ -65,13 +59,12 @@ impl<S> Debug for SingleOpt<S> {
     }
 }
 
-impl<S> Default for SingleOpt<S> {
+impl<S> Default for SingleOpt<'_, S> {
     fn default() -> Self {
         Self {
             name: Default::default(),
             style: Default::default(),
             arg: Default::default(),
-            args: Default::default(),
             uids: Default::default(),
             index: Default::default(),
             total: Default::default(),
@@ -80,8 +73,8 @@ impl<S> Default for SingleOpt<S> {
     }
 }
 
-impl<S> PolicyBuild for SingleOpt<S> {
-    fn with_name(mut self, name: Option<AStr>) -> Self {
+impl<'a, S> PolicyBuild<'a> for SingleOpt<'a, S> {
+    fn with_name(mut self, name: Option<Cow<'a, str>>) -> Self {
         self.name = name;
         self
     }
@@ -101,18 +94,13 @@ impl<S> PolicyBuild for SingleOpt<S> {
         self
     }
 
-    fn with_arg(mut self, arg: Option<RawVal>) -> Self {
+    fn with_arg(mut self, arg: Option<Cow<'a, OsStr>>) -> Self {
         self.arg = arg;
-        self
-    }
-
-    fn with_args(mut self, args: ARef<Args>) -> Self {
-        self.args = args;
         self
     }
 }
 
-impl<S> PolicyConfig for SingleOpt<S> {
+impl<'a, S> PolicyConfig<'a> for SingleOpt<'a, S> {
     fn idx(&self) -> usize {
         self.index
     }
@@ -121,7 +109,7 @@ impl<S> PolicyConfig for SingleOpt<S> {
         self.total
     }
 
-    fn name(&self) -> Option<&AStr> {
+    fn name(&self) -> Option<&Cow<'a, str>> {
         self.name.as_ref()
     }
 
@@ -129,29 +117,29 @@ impl<S> PolicyConfig for SingleOpt<S> {
         self.style
     }
 
-    fn arg(&self) -> Option<RawVal> {
-        self.arg.clone()
+    fn arg(&self) -> Option<&Cow<'a, OsStr>> {
+        self.arg.as_ref()
     }
 
     fn uids(&self) -> &[Uid] {
         &self.uids
     }
 
-    fn collect_ctx(&self) -> Option<PolicyInnerCtx> {
+    fn collect_ctx(&self) -> Option<PolicyInnerCtx<'a>> {
         (!self.uids.is_empty()).then(|| PolicyInnerCtx {
             uids: self.uids().to_vec(),
             inner_ctx: InnerCtx::default()
                 .with_idx(self.idx())
                 .with_total(self.tot())
                 .with_name(self.name().cloned())
-                .with_arg(self.arg())
+                .with_arg(self.arg().cloned())
                 .with_style(self.style()),
         })
     }
 }
 
-impl<S> SingleOpt<S> {
-    pub fn clone_arg(&self) -> Option<RawVal> {
+impl<'a, S> SingleOpt<'a, S> {
+    pub fn clone_arg(&self) -> Option<Cow<'a, OsStr>> {
         self.arg.clone()
     }
 
@@ -160,7 +148,7 @@ impl<S> SingleOpt<S> {
     }
 }
 
-impl<S> MatchPolicy for SingleOpt<S>
+impl<'a, S> MatchPolicy for SingleOpt<'a, S>
 where
     S: Set,
     SetOpt<S>: Opt,
@@ -218,10 +206,13 @@ where
 
                 if matched {
                     if !opt.ignore_name() {
-                        matched = opt.mat_name(self.name());
+                        matched = opt.mat_name(self.name().map(|v| v.as_ref()));
                     }
                     if !opt.ignore_alias() && opt.alias().is_some() {
-                        matched = matched || opt.mat_alias(self.name.as_ref().unwrap())
+                        if let Some(name) = self.name.as_ref() {
+                            // FIXME remove unwrap
+                            matched = matched || opt.mat_alias(name)
+                        }
                     }
                     if !opt.ignore_index() {
                         matched = matched && {

@@ -1,34 +1,108 @@
-#[cfg_attr(windows, path = "args/win.rs")]
-#[cfg_attr(not(windows), path = "args/unix.rs")]
-pub(crate) mod osstr_ext;
-
+use std::borrow::Cow;
+use std::ffi::OsStr;
+use std::ffi::OsString;
 use std::fmt::Display;
 use std::ops::Deref;
-use std::ops::DerefMut;
 
-use crate::parser::ReturnVal;
+use crate::parser::Return;
+use crate::str::CowOsStrUtils;
+use crate::ARef;
 use crate::Error;
-use crate::RawVal;
 
-pub use self::osstr_ext::split_once;
-pub use self::osstr_ext::strip_prefix;
-pub use self::osstr_ext::CLOpt;
+const EQUAL: char = '=';
 
-pub trait ArgParser {
-    type Output;
-    type Error: Into<Error>;
+#[derive(Debug, Clone, Default)]
+pub struct ArgInfo<'a> {
+    pub name: Cow<'a, str>,
 
-    fn parse_arg(&self) -> Result<Self::Output, Self::Error>;
+    pub value: Option<Cow<'a, OsStr>>,
 }
+
+impl<'a> ArgInfo<'a> {
+    /// Parse the input command line item with given regexs, return an [`ArgInfo`].
+    ///
+    /// The struct of the input option string are:
+    ///
+    /// ```plaintext
+    /// [--/option][=][value]
+    ///        |    |    |
+    ///        |    |    |
+    ///        |    |    The value part, it is optional.
+    ///        |    |
+    ///        |    The delimiter of option name and value.
+    ///        |    
+    ///        The option name part, it must be provide by user.
+    /// ```
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use aopt::prelude::*;
+    /// # use aopt::Error;
+    /// # use aopt::args::ArgInfo;
+    /// # use std::ffi::OsStr;
+    /// #
+    /// # fn main() -> Result<(), Error> {
+    ///     {// parse option with value
+    ///         let output = ArgInfo::parse(OsStr::new("--foo=32"))?;
+    ///
+    ///         assert_eq!(output.name, "--foo");
+    ///         assert_eq!(output.value.as_deref(), Some(OsStr::new("32")));
+    ///     }
+    ///     {// parse boolean option
+    ///         let output = ArgInfo::parse(OsStr::new("--/bar"))?;
+    ///
+    ///         assert_eq!(output.name, "--/bar");
+    ///         assert_eq!(output.value, None);
+    ///     }
+    ///     {// parse other string
+    ///         let output = ArgInfo::parse(OsStr::new("-=bar"))?;
+    ///
+    ///         assert_eq!(output.name, "-");
+    ///         assert_eq!(output.value.as_deref(), Some(OsStr::new("bar")));
+    ///     }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn parse(val: &'a OsStr) -> Result<Self, Error> {
+        let arg_display = format!("{}", std::path::Path::new(val).display());
+
+        crate::trace!("parsing command line argument {val:?}");
+        if let Some((name, value)) = crate::str::split_once(val, EQUAL) {
+            // - convert the name to &str, the name must be valid utf8
+            let name = name
+                .to_str(|v| v.trim())
+                .ok_or_else(|| Error::arg(&arg_display, "failed convert OsStr to str"))?;
+
+            if name.is_empty() {
+                return Err(Error::arg(arg_display, "can not be empty"));
+            }
+            Ok(Self {
+                name,
+                value: Some(value),
+            })
+        } else {
+            let name = val
+                .to_str()
+                .ok_or_else(|| Error::arg(arg_display, "failed convert OsStr to str"))?;
+
+            Ok(Self {
+                name: Cow::Borrowed(name),
+                value: None,
+            })
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct Args {
-    inner: Vec<RawVal>,
+    inner: ARef<Vec<OsString>>,
 }
 
 impl Args {
-    pub fn new<S: Into<RawVal>>(inner: impl Iterator<Item = S>) -> Self {
+    pub fn new<S: Into<OsString>>(inner: impl Iterator<Item = S>) -> Self {
         Self {
-            inner: inner.map(|v| v.into()).collect(),
+            inner: ARef::new(inner.map(|v| v.into()).collect()),
         }
     }
 
@@ -37,53 +111,54 @@ impl Args {
         Self::new(std::env::args_os())
     }
 
-    pub fn guess_iter(&self) -> Iter<'_> {
-        Iter::new(&self.inner)
+    pub fn unwrap_or_clone(self) -> Vec<OsString> {
+        ARef::unwrap_or_clone(self.inner)
     }
 }
 
-impl<T: Into<RawVal>, I: IntoIterator<Item = T>> From<I> for Args {
+impl<T: Into<OsString>, I: IntoIterator<Item = T>> From<I> for Args {
     fn from(value: I) -> Self {
         Self::new(value.into_iter())
     }
 }
 
-impl From<Args> for Vec<RawVal> {
+impl From<Args> for Vec<OsString> {
     fn from(value: Args) -> Self {
-        value.inner
+        value.unwrap_or_clone()
     }
 }
 
-impl From<ReturnVal> for Args {
-    fn from(value: ReturnVal) -> Self {
+impl From<Return> for Args {
+    fn from(mut value: Return) -> Self {
+        Self::new(value.take_args().into_iter())
+    }
+}
+
+impl From<&Return> for Args {
+    fn from(value: &Return) -> Self {
         Self::new(value.clone_args().into_iter())
     }
 }
 
-impl<'a> From<&'a ReturnVal> for Args {
-    fn from(value: &'a ReturnVal) -> Self {
-        Self::new(value.args().iter().cloned())
-    }
-}
-
-impl<'a> From<&'a mut ReturnVal> for Args {
-    fn from(value: &'a mut ReturnVal) -> Self {
-        Self::new(value.clone_args().into_iter())
+impl From<&mut Return> for Args {
+    fn from(value: &mut Return) -> Self {
+        Self::new(value.take_args().into_iter())
     }
 }
 
 impl Deref for Args {
-    type Target = Vec<RawVal>;
+    type Target = Vec<OsString>;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
     }
 }
 
-impl DerefMut for Args {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
-    }
+pub fn iter2<'a, 'b>(
+    args: &'a [&'b OsStr],
+) -> impl Iterator<Item = (&'a &'b OsStr, Option<&'a &'b OsStr>)> {
+    args.iter()
+        .scan(args.iter().skip(1), |i, e| Some((e, i.next())))
 }
 
 impl Display for Args {
@@ -100,85 +175,42 @@ impl Display for Args {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Iter<'a> {
-    inner: &'a [RawVal],
-    index: usize,
-}
-
-impl<'a> Iter<'a> {
-    pub fn new(iter: &'a [RawVal]) -> Self {
-        Self {
-            inner: iter,
-            index: 0,
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        self.inner.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.inner.is_empty()
-    }
-}
-
-impl<'a> Iterator for Iter<'a> {
-    type Item = (&'a RawVal, Option<&'a RawVal>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let index = self.index;
-
-        if index < self.len() {
-            let may_opt = &self.inner[index];
-            let may_arg = (index + 1 < self.len()).then(|| &self.inner[index + 1]);
-
-            self.index += 1;
-            Some((may_opt, may_arg))
-        } else {
-            None
-        }
-    }
-}
-
-impl<'a> ExactSizeIterator for Iter<'a> {
-    fn len(&self) -> usize {
-        self.inner.len()
-    }
-}
-
 #[cfg(test)]
 mod test {
 
+    use std::ffi::OsStr;
+
     use super::Args;
-    use crate::RawVal;
 
     #[test]
     fn test_args() {
         let args = Args::from(["--opt", "value", "--bool", "pos"]);
-        let mut iter = args.guess_iter().enumerate();
+        let mut iter = args
+            .iter()
+            .zip(args.iter().skip(1).map(Some).chain(None))
+            .enumerate();
 
         if let Some((idx, (opt, arg))) = iter.next() {
             assert_eq!(idx, 0);
-            assert_eq!(opt, &RawVal::from("--opt"));
-            assert_eq!(arg, Some(&RawVal::from("value")));
+            assert_eq!(opt, OsStr::new("--opt"));
+            assert_eq!(arg.map(|v| v.as_ref()), Some(OsStr::new("value")));
         }
 
         if let Some((idx, (opt, arg))) = iter.next() {
             assert_eq!(idx, 1);
-            assert_eq!(opt, &RawVal::from("value"));
-            assert_eq!(arg, Some(&RawVal::from("--bool")));
+            assert_eq!(opt, OsStr::new("value"));
+            assert_eq!(arg.map(|v| v.as_ref()), Some(OsStr::new("--bool")));
         }
 
         if let Some((idx, (opt, arg))) = iter.next() {
             assert_eq!(idx, 2);
-            assert_eq!(opt, &RawVal::from("--bool"));
-            assert_eq!(arg, Some(&RawVal::from("pos")));
+            assert_eq!(opt, OsStr::new("--bool"));
+            assert_eq!(arg.map(|v| v.as_ref()), Some(OsStr::new("pos")));
         }
 
         if let Some((idx, (opt, arg))) = iter.next() {
             assert_eq!(idx, 3);
-            assert_eq!(opt, &RawVal::from("pos"));
+            assert_eq!(opt, OsStr::new("pos"));
             assert_eq!(arg, None);
         }
 

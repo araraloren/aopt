@@ -8,7 +8,6 @@ use crate::set::Ctor;
 use crate::set::Set;
 use crate::set::SetCfg;
 use crate::set::SetOpt;
-use crate::AStr;
 
 /// Matching implementation for option and [`ConfigValue`].
 pub trait FilterMatcher<T>
@@ -98,7 +97,7 @@ where
     }
 
     /// Set the option name of filter configuration.
-    pub fn set_name(&mut self, name: impl Into<AStr>) -> &mut Self {
+    pub fn set_name(&mut self, name: impl Into<String>) -> &mut Self {
         self.info.set_name(name);
         self
     }
@@ -175,7 +174,7 @@ where
     }
 
     /// Set the option name of filter configuration.
-    pub fn set_name(&mut self, name: impl Into<AStr>) -> &mut Self {
+    pub fn set_name(&mut self, name: impl Into<String>) -> &mut Self {
         self.info.set_name(name);
         self
     }

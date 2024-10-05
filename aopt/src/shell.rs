@@ -1,6 +1,7 @@
 mod guess;
 mod policy;
 
+use std::ffi::OsStr;
 use std::io::Write;
 
 pub use self::guess::CompleteGuess;
@@ -8,6 +9,7 @@ pub use self::guess::CompleteRet;
 pub use self::policy::CompletePolicy;
 
 use crate::args::Args;
+use crate::ctx::Ctx;
 use crate::ctx::Invoker;
 use crate::ext::AFwdParser;
 use crate::ext::APolicyExt;
@@ -27,9 +29,7 @@ use crate::set::OptValidator;
 use crate::set::SetOpt;
 use crate::value::raw2str;
 use crate::value::RawValParser;
-use crate::ARef;
 use crate::Error;
-use crate::RawVal;
 use crate::Uid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -44,7 +44,7 @@ pub enum Shell {
 impl RawValParser for Shell {
     type Error = Error;
 
-    fn parse(raw: Option<&crate::RawVal>, ctx: &crate::prelude::Ctx) -> Result<Self, Self::Error> {
+    fn parse(raw: Option<&OsStr>, ctx: &Ctx) -> Result<Self, Self::Error> {
         let name = raw2str(raw)?;
         let name = name.to_lowercase();
 
@@ -52,7 +52,7 @@ impl RawValParser for Shell {
             "zsh" => Ok(Shell::Zsh),
             "bash" => Ok(Shell::Bash),
             "fish" => Ok(Shell::Fish),
-            _ => Err(crate::raise_failure!("Unknow shell type: {}", name).with_uid(ctx.uid()?)),
+            _ => Err(crate::raise_failure!("unknow shell type: {}", name).with_uid(ctx.uid()?)),
         }
     }
 }
@@ -130,7 +130,7 @@ where
 {
     pub fn parse_with<P>(
         &mut self,
-        args: ARef<Args>,
+        args: Args,
         parser: &mut P,
     ) -> Result<<Self as Policy>::Ret, P::Error>
     where
@@ -152,7 +152,7 @@ where
 
         if matches!(shell, Shell::Zsh) {
             writeln!(writer, "local -a subcmds\nsubcmds=(\n")
-                .map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
+                .map_err(|e| crate::raise_error!("can not write data: {:?}", e))?;
         }
         if self.display_cmd {
             for uid in self.avail_cmd.iter() {
@@ -200,7 +200,7 @@ where
         }
         if matches!(shell, Shell::Zsh) {
             writeln!(writer, ")\n_describe 'available values' subcmds\n")
-                .map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
+                .map_err(|e| crate::raise_error!("can not write data: {:?}", e))?;
         }
         Ok(())
     }
@@ -215,23 +215,23 @@ where
             Shell::Zsh => {
                 if help.is_empty() {
                     writeln!(writer, " '{}' ", hint)
-                        .map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
+                        .map_err(|e| crate::raise_error!("can not write data: {:?}", e))?;
                 } else {
                     writeln!(writer, " '{}:{}' ", hint, help)
-                        .map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
+                        .map_err(|e| crate::raise_error!("can not write data: {:?}", e))?;
                 }
             }
             Shell::Bash => {
                 writeln!(writer, "{}", hint)
-                    .map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
+                    .map_err(|e| crate::raise_error!("can not write data: {:?}", e))?;
             }
             Shell::Fish => {
                 if help.is_empty() {
                     writeln!(writer, "{}", hint)
-                        .map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
+                        .map_err(|e| crate::raise_error!("can not write data: {:?}", e))?;
                 } else {
                     writeln!(writer, "{}\t\"{}\"", hint, help)
-                        .map_err(|e| crate::raise_error!("Can not write data: {:?}", e))?;
+                        .map_err(|e| crate::raise_error!("can not write data: {:?}", e))?;
                 }
             }
         }
@@ -241,14 +241,14 @@ where
     fn process_last_arg(
         &mut self,
         set: &mut <Self as Policy>::Set,
-        last: &RawVal,
+        last: &OsStr,
     ) -> Result<(), Error> {
         #[allow(unused)]
         let mut win_os_string = None;
-        let mut arg: &std::ffi::OsStr = last.as_ref();
+        let mut arg: &std::ffi::OsStr = last;
 
         #[allow(clippy::needless_option_as_deref)]
-        if let Some((opt, _)) = crate::args::split_once(arg, '=') {
+        if let Some((opt, _)) = crate::str::split_once(arg, '=') {
             win_os_string = Some(opt);
             arg = win_os_string.as_deref().unwrap();
         }
@@ -256,7 +256,7 @@ where
         self.set_incomplete_opt(
             set,
             arg.to_str()
-                .ok_or_else(|| crate::raise_failure!("Can't convert value `{:?}` to str", arg))?,
+                .ok_or_else(|| crate::raise_failure!("can't convert value `{:?}` to str", arg))?,
         )
     }
 
@@ -265,7 +265,9 @@ where
         set: &mut <Self as Policy>::Set,
         arg: &str,
     ) -> Result<(), Error> {
-        if set.split(arg).is_ok() {
+        let arg = std::borrow::Cow::Borrowed(arg);
+
+        if set.split(&arg).is_ok() {
             for opt in set.iter() {
                 if opt.mat_style(Style::Argument) && opt.name() == arg {
                     self.incomplete_opt = Some(opt.uid());
@@ -297,7 +299,7 @@ where
         set: &mut Self::Set,
         inv: &mut Self::Inv<'_>,
         ser: &mut Self::Ser,
-        args: ARef<Args>,
+        args: Args,
     ) -> Result<Self::Ret, Self::Error> {
         let tot = args.len();
         let last = args.last().cloned();

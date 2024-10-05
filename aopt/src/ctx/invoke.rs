@@ -6,8 +6,6 @@ use crate::ctx::wrap_handler_action;
 use crate::ctx::wrap_handler_fallback;
 use crate::ctx::wrap_handler_fallback_action;
 use crate::ctx::Ctx;
-use crate::ctx::Extract;
-use crate::ctx::Handler;
 use crate::ctx::Store;
 use crate::map::ErasedTy;
 use crate::opt::Opt;
@@ -23,31 +21,21 @@ use crate::Uid;
 /// # Example
 /// ```rust
 /// # use aopt::prelude::*;
-/// # use aopt::ARef;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<(), Error> {
-///  pub struct Count(usize);
-///
-///  // implement Extract for your type
-///  impl Extract<ASet, ASer> for Count {
-///      type Error = Error;
-///
-///      fn extract(_set: &ASet, _ser: &ASer, ctx: &Ctx) -> Result<Self, Self::Error> {
-///          Ok(Self(ctx.args().len()))
-///      }
-///  }
 ///  let mut ser = ASer::default();
 ///  let mut is = Invoker::new();
 ///  let mut set = ASet::default();
-///  let args = ARef::new(Args::from(["--foo", "bar", "doo"]));
-///  let mut ctx = Ctx::default().with_args(args);
+///  let orig = Args::from(["--foo", "bar", "doo"]);
+///  let args = orig.iter().map(|v|v.as_os_str()).collect();
+///  let mut ctx = Ctx::default().with_orig(orig.clone()).with_args(args);
 ///
-///  ser.sve_insert(ser::Value::new(42i64));
+///  ser.sve_insert(42i64);
 ///  // you can register callback into Invoker
 ///  is.entry(0)
 ///      .on(
-///          |_set: &mut ASet, _: &mut ASer| -> Result<Option<()>, Error> {
+///          |_set: &mut ASet, _: &mut ASer, _: &Ctx| -> Result<Option<()>, Error> {
 ///              println!("Calling the handler of {{0}}");
 ///              Ok(None)
 ///          },
@@ -55,18 +43,20 @@ use crate::Uid;
 ///      .then(NullStore);
 ///  is.entry(1)
 ///      .on(
-///          |_set: &mut ASet, _: &mut ASer, cnt: Count| -> Result<Option<()>, Error> {
+///          |_set: &mut ASet, _: &mut ASer, ctx: &Ctx| -> Result<Option<()>, Error> {
+///              let cnt = ctx.args().len();
 ///              println!("Calling the handler of {{1}}");
-///              assert_eq!(cnt.0, 3);
+///              assert_eq!(cnt, 3);
 ///              Ok(None)
 ///          },
 ///      )
 ///      .then(NullStore);
 ///  is.entry(2)
 ///      .on(
-///          |_set: &mut ASet, _: &mut ASer, data: ser::Value<i64>| -> Result<Option<()>, Error> {
+///          |_set: &mut ASet, ser: &mut ASer, ctx: &Ctx| -> Result<Option<()>, Error> {
+///              let data = ser.sve_val::<i64>()?;
 ///              println!("Calling the handler of {{2}}");
-///              assert_eq!(data.as_ref(), &42);
+///              assert_eq!(data, &42);
 ///              Ok(None)
 ///          },
 ///      )
@@ -127,12 +117,12 @@ where
 
     /// Register a callback that will called by [`Policy`](crate::parser::Policy) when option set.
     ///
-    /// The [`Invoker`] first call the [`invoke`](crate::ctx::Handler::invoke), then
+    /// The [`Invoker`] first call the handler, then
     /// call the [`process`](crate::ctx::Store::process) with the return value.
     /// # Note
     /// ```txt
-    /// |   handler: |&mut Set, &mut Ser, { Other Args }| -> Result<Option<Value>, Error>
-    /// |   storer: |&mut Set, &mut Ser, Option<&RawVal>, Option<Value>| -> Result<bool, Error>
+    /// |   handler: |&mut Set, &mut Ser, ctx: &Ctx| -> Result<Option<Value>, Error>
+    /// |   storer: |&mut Set, &mut Ser, Option<&OsStr>, Option<Value>| -> Result<bool, Error>
     ///         |
     ///      wrapped
     ///         |
@@ -143,18 +133,14 @@ where
     ///         |
     ///         v
     /// |   call Callbacks::invoke(&mut self, &mut Set, &mut Ser, &mut Ctx)
-    /// |       call Handler::invoke(&mut self, &mut Set, &mut Ser, Args)
-    /// |           call Args::extract(&Set, &Ser, &Ctx) -> Args
-    /// |           -> Result<Option<Value>, Error>
-    /// |       -> call Store::process(&Set, Option<&RawVal>, Option<Value>)
+    /// |       -> call Store::process(&Set, Option<&OsStr>, Option<Value>)
     /// |           -> Result<bool, Error>
     /// ```
-    pub fn set_handler<A, O, H, T>(&mut self, uid: Uid, handler: H, store: T) -> &mut Self
+    pub fn set_handler<H, O, S>(&mut self, uid: Uid, handler: H, store: S) -> &mut Self
     where
         O: ErasedTy,
-        A: Extract<Set, Ser, Error = Error> + 'a,
-        T: Store<Set, Ser, O, Ret = bool, Error = Error> + 'a,
-        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
+        S: Store<Set, Ser, O, Ret = bool, Error = Error> + 'a,
+        H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
     {
         self.set_raw(uid, wrap_handler(handler, store));
         self
@@ -170,11 +156,10 @@ where
     SetOpt<Set>: Opt,
     Set: crate::set::Set,
 {
-    pub fn entry<A, O, H>(&mut self, uid: Uid) -> HandlerEntry<'a, '_, Self, Set, Ser, H, A, O>
+    pub fn entry<O, H>(&mut self, uid: Uid) -> HandlerEntry<'a, '_, Self, Set, Ser, H, O>
     where
         O: ErasedTy,
-        H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
-        A: Extract<Set, Ser, Error = Error> + 'a,
+        H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
     {
         HandlerEntry::new(self, uid)
     }
@@ -182,17 +167,16 @@ where
     /// The default handler for all option.
     ///
     /// If there no handler for a option, then default handler will be called.
-    /// It will parsing [`RawVal`](crate::RawVal)(using [`RawValParser`](crate::value::RawValParser)) into associated type,
+    /// It will parsing [`OsStr`](std::ffi::OsStr)(using [`RawValParser`](crate::value::RawValParser)) into associated type,
     /// then save the value to [`ValStorer`](crate::value::ValStorer).
     pub fn fallback(set: &mut Set, _: &mut Ser, ctx: &mut Ctx) -> Result<bool, Error> {
         let uid = ctx.uid()?;
         let opt = set.get_mut(uid).unwrap();
-        let arg = ctx.arg()?;
-        let raw = arg.as_ref();
+        let arg = ctx.arg()?.map(|v| v.as_ref());
         let act = *opt.action();
 
-        trace!("Invoke fallback for {}({act}) {{{ctx:?}}}", opt.name());
-        opt.accessor_mut().store_all(raw, ctx, &act)
+        trace!("invoke fallback for {}({act}) {{{ctx:?}}}", opt.name());
+        opt.accessor_mut().store_all(arg, ctx, &act)
     }
 }
 
@@ -220,12 +204,12 @@ where
         ser: &mut Ser,
         ctx: &mut Ctx,
     ) -> Result<bool, Error> {
-        trace!("Invoking callback of {} {:?}", uid, ctx);
+        trace!("invoking callback of {} {:?}", uid, ctx);
         if let Some(callback) = self.get_handler(uid) {
             return (callback)(set, ser, ctx);
         }
         unreachable!(
-            "There is no callback of {}, call `invoke_fb` or `fallback` instead",
+            "no callback of {}, call `invoke_fb` or `fallback` instead",
             set.opt(*uid)?.name()
         )
     }
@@ -239,10 +223,10 @@ where
         ctx: &mut Ctx,
     ) -> Result<bool, Error> {
         if let Some(callback) = self.get_handler(uid) {
-            trace!("Invoking(fb) callback of {} {:?}", uid, ctx);
+            trace!("invoking(fb) callback of {} {:?}", uid, ctx);
             (callback)(set, ser, ctx)
         } else {
-            trace!("Invoking(fb) handler_fallback of {} {:?}", uid, ctx);
+            trace!("invoking(fb) fallback callback of {} {:?}", uid, ctx);
             Invoker::fallback(set, ser, ctx)
         }
     }
@@ -265,30 +249,28 @@ where
     }
 }
 
-pub struct HandlerEntry<'a, 'b, I, Set, Ser, H, A, O>
+pub struct HandlerEntry<'a, 'b, I, Set, Ser, H, O>
 where
     O: ErasedTy,
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
     I: HandlerCollection<'a, Set, Ser>,
-    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
-    A: Extract<Set, Ser, Error = Error> + 'a,
+    H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
 {
     ser: &'b mut I,
 
     uid: Uid,
 
-    marker: PhantomData<(&'a (), A, O, Set, Ser, H)>,
+    marker: PhantomData<(&'a (), O, Set, Ser, H)>,
 }
 
-impl<'a, 'b, I, Set, Ser, H, A, O> HandlerEntry<'a, 'b, I, Set, Ser, H, A, O>
+impl<'a, 'b, I, Set, Ser, H, O> HandlerEntry<'a, 'b, I, Set, Ser, H, O>
 where
     O: ErasedTy,
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
     I: HandlerCollection<'a, Set, Ser>,
-    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
-    A: Extract<Set, Ser, Error = Error> + 'a,
+    H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
 {
     pub fn new(inv_ser: &'b mut I, uid: Uid) -> Self {
         Self {
@@ -299,26 +281,25 @@ where
     }
 
     /// Register the handler which will be called when option is set.
-    pub fn on(self, handler: H) -> HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O> {
+    pub fn on(self, handler: H) -> HandlerEntryThen<'a, 'b, I, Set, Ser, H, O> {
         HandlerEntryThen::new(self.ser, self.uid, handler, false)
     }
 
     /// Register the handler which will be called when option is set.
     /// And the [`fallback`](crate::ctx::Invoker::fallback) will be called if
     /// the handler return None.
-    pub fn fallback(self, handler: H) -> HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O> {
+    pub fn fallback(self, handler: H) -> HandlerEntryThen<'a, 'b, I, Set, Ser, H, O> {
         HandlerEntryThen::new(self.ser, self.uid, handler, true)
     }
 }
 
-pub struct HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O>
+pub struct HandlerEntryThen<'a, 'b, I, Set, Ser, H, O>
 where
     O: ErasedTy,
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
     I: HandlerCollection<'a, Set, Ser>,
-    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
-    A: Extract<Set, Ser, Error = Error> + 'a,
+    H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
 {
     ser: &'b mut I,
 
@@ -330,17 +311,16 @@ where
 
     fallback: bool,
 
-    marker: PhantomData<(&'a (), A, O, Set, Ser)>,
+    marker: PhantomData<(&'a (), O, Set, Ser)>,
 }
 
-impl<'a, 'b, I, Set, Ser, H, A, O> HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O>
+impl<'a, 'b, I, Set, Ser, H, O> HandlerEntryThen<'a, 'b, I, Set, Ser, H, O>
 where
     O: ErasedTy,
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
     I: HandlerCollection<'a, Set, Ser>,
-    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
-    A: Extract<Set, Ser, Error = Error> + 'a,
+    H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
 {
     pub fn new(ser: &'b mut I, uid: Uid, handler: H, fallback: bool) -> Self {
         Self {
@@ -386,14 +366,13 @@ where
     }
 }
 
-impl<'a, 'b, I, Set, Ser, H, A, O> Drop for HandlerEntryThen<'a, 'b, I, Set, Ser, H, A, O>
+impl<'a, 'b, I, Set, Ser, H, O> Drop for HandlerEntryThen<'a, 'b, I, Set, Ser, H, O>
 where
     O: ErasedTy,
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
     I: HandlerCollection<'a, Set, Ser>,
-    H: Handler<Set, Ser, A, Output = Option<O>, Error = Error> + 'a,
-    A: Extract<Set, Ser, Error = Error> + 'a,
+    H: FnMut(&mut Set, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
 {
     fn drop(&mut self) {
         if !self.register {

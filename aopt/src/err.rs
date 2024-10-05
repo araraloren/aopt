@@ -1,10 +1,11 @@
+use std::ffi::OsStr;
 use std::fmt::Display;
 use std::num::ParseFloatError;
 use std::num::ParseIntError;
 use std::ops::Deref;
 use std::thread::AccessError;
 
-use crate::RawVal;
+use crate::str::display_of_osstr;
 use crate::Uid;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -25,7 +26,7 @@ pub enum Kind {
 
     RawValParse,
 
-    ArgsName,
+    Arg,
 
     IndexParse,
 
@@ -165,19 +166,14 @@ impl Error {
         Self::raise_error(error.to_string())
     }
 
-    pub fn args_name(name: impl Into<String>, hint: impl Into<String>) -> Self {
-        let desp = format!("invalid argument name `{}`: {}", name.into(), hint.into());
+    pub fn arg(arg: impl Into<String>, hint: impl Into<String>) -> Self {
+        let desp = format!("invalid argument `{}`: {}", arg.into(), hint.into());
 
-        Self::new(Kind::ArgsName).with_desp(desp)
+        Self::new(Kind::Arg).with_desp(desp)
     }
 
-    pub fn sp_rawval(val: Option<&RawVal>, hint: impl Into<String>) -> Self {
-        let desp = format!(
-            "invalid value `{}`: {}",
-            val.map(|v| format!("Some({v})"))
-                .unwrap_or(String::from("None")),
-            hint.into()
-        );
+    pub fn sp_rawval(val: Option<&OsStr>, hint: impl Into<String>) -> Self {
+        let desp = format!("invalid value `{}`: {}", display_of_osstr(val), hint.into());
 
         Self::new(Kind::RawValParse).with_desp(desp)
     }

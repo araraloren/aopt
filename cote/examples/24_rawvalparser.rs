@@ -1,3 +1,5 @@
+use std::ffi::OsStr;
+
 use cote::prelude::*;
 
 #[derive(Debug, Cote, PartialEq, Eq)]
@@ -43,7 +45,7 @@ impl Alter for Direction {}
 impl RawValParser for Direction {
     type Error = cote::Error;
 
-    fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> cote::Result<Self> {
+    fn parse(raw: Option<&OsStr>, ctx: &Ctx) -> cote::Result<Self> {
         let name = raw2str(raw)?.to_lowercase();
         let uid = ctx.uid()?;
 

@@ -7,7 +7,6 @@ pub mod guess;
 pub mod map;
 pub mod opt;
 pub mod parser;
-pub mod raw;
 pub mod ser;
 pub mod set;
 #[cfg(feature = "shell")]
@@ -17,7 +16,6 @@ pub mod value;
 
 pub type Uid = u64;
 pub type HashMap<K, V> = ahash::HashMap<K, V>;
-pub type RawVal = raw::RawVal;
 
 #[cfg(feature = "sync")]
 pub type ARef<T> = std::sync::Arc<T>;
@@ -35,21 +33,10 @@ pub(crate) mod log {
     }
 }
 
-pub(crate) fn display_option<T: Display>(option_value: &Option<T>) -> String {
-    if let Some(value) = option_value {
-        format!("Some({value})")
-    } else {
-        "None".to_owned()
-    }
-}
-
 pub use crate::err::Error;
 pub use crate::err::Result;
-pub use crate::str::astr;
-pub use crate::str::AStr;
 
 use std::any::TypeId;
-use std::fmt::Display;
 
 /// Get the [`TypeId`](std::any::TypeId) of type `T`.
 pub(crate) fn typeid<T: ?Sized + 'static>() -> TypeId {
@@ -77,7 +64,7 @@ pub struct GetoptRes<R, T> {
 ///
 /// ```rust
 /// # use aopt::err::Result;
-/// # use aopt::{prelude::*, RawVal};
+/// # use aopt::prelude::*;
 /// #
 /// # fn main() -> Result<()> {
 /// let mut parser = AFwdParser::default();
@@ -87,9 +74,11 @@ pub struct GetoptRes<R, T> {
 ///     parser.add_opt("-a=b!")?;
 ///     parser.add_opt("--bopt=i")?;
 ///     parser.add_opt("c=p@-0")?.on(
-///         |_: &mut ASet, _: &mut ASer, args: ctx::Args, mut val: ctx::Value<String>| {
-///             assert_eq!(args[0], RawVal::from("foo"));
-///             Ok(Some(val.take()))
+///         |_: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+///             let val = ctx.value::<String>()?;
+///             let args = ctx.args();
+///             assert_eq!(args[0], OsStr::new("foo"));
+///             Ok(Some(val))
 ///         },
 ///     )?;
 ///
@@ -113,7 +102,7 @@ pub struct GetoptRes<R, T> {
 ///         &vec!["bar".to_owned(), "foo".to_owned()],
 ///     );
 ///     assert_eq!(parser.find_val::<String>("--eopt")?, &String::from("pre"));
-///     assert_eq!(args, vec![RawVal::from("foo")] );
+///     assert_eq!(args, vec![OsStr::new("foo")] );
 /// }
 ///
 /// parser.reset()?;
@@ -144,7 +133,7 @@ pub struct GetoptRes<R, T> {
 ///         &vec!["bar".to_owned(), "foo".to_owned()],
 ///     );
 ///     assert_eq!(pre_parser.find_val::<String>("--eopt")?, &String::from("pre"));
-///     assert_eq!(args, vec![RawVal::from("foo")]);
+///     assert_eq!(args, vec![OsStr::new("foo")]);
 /// }
 /// # Ok(())
 /// # }
@@ -162,7 +151,7 @@ macro_rules! getopt {
             fn __check_a(a: $crate::prelude::Args) -> $crate::prelude::Args { a }
 
             let mut ret = $crate::Error::no_parser_matched();
-            let args = $crate::ARef::new(__check_a($args));
+            let args = __check_a($args);
 
             loop {
                 $(
@@ -200,7 +189,7 @@ macro_rules! getopt {
             fn __check_a(a: $crate::prelude::Args) -> $crate::prelude::Args { a }
 
             let mut ret = $crate::Error::no_parser_matched();
-            let args = $crate::ARef::new(__check_a($args));
+            let args = __check_a($args);
 
             loop {
                 $(
@@ -235,8 +224,6 @@ pub mod prelude {
     pub use crate::ctx::wrap_handler_action;
     pub use crate::ctx::wrap_handler_fallback_action;
     pub use crate::ctx::Ctx;
-    pub use crate::ctx::Extract;
-    pub use crate::ctx::Handler;
     pub use crate::ctx::HandlerCollection;
     pub use crate::ctx::InnerCtx;
     pub use crate::ctx::Invoker;
@@ -285,7 +272,7 @@ pub mod prelude {
     pub use crate::parser::PolicyParser;
     pub use crate::parser::PolicySettings;
     pub use crate::parser::PrePolicy;
-    pub use crate::parser::ReturnVal;
+    pub use crate::parser::Return;
     pub use crate::parser::UserStyle;
     pub use crate::ser::AppServices;
     pub use crate::ser::ServicesValExt;
@@ -318,6 +305,6 @@ pub mod prelude {
     pub use crate::value::ValValidator;
     pub use crate::ARef;
     pub use crate::GetoptRes;
-    pub use crate::RawVal;
     pub use crate::Uid;
+    pub use std::ffi::OsStr;
 }

@@ -1,16 +1,16 @@
 use crate::prelude::HelpContext;
-use crate::ReturnVal;
+use crate::Return;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
 #[derive(Debug, Clone)]
 pub struct FailedInfo {
     pub name: String,
-    pub retval: ReturnVal,
+    pub retval: Return,
 }
 
 impl FailedInfo {
-    pub fn new(name: String, retval: ReturnVal) -> Self {
+    pub fn new(name: String, retval: Return) -> Self {
         Self { name, retval }
     }
 
@@ -18,13 +18,13 @@ impl FailedInfo {
         &self.name
     }
 
-    pub fn retval(&self) -> &ReturnVal {
+    pub fn retval(&self) -> &Return {
         &self.retval
     }
 }
 
 impl Deref for FailedInfo {
-    type Target = aopt::prelude::ReturnVal;
+    type Target = aopt::prelude::Return;
 
     fn deref(&self) -> &Self::Target {
         &self.retval

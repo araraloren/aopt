@@ -2,7 +2,6 @@ use std::borrow::Cow;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
-use std::ops::Deref;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -175,8 +174,9 @@ fn parser_command_line<'a>() -> Result<AFwdParser<'a>, Error> {
         .set_help("Get follow from single stock id")
         .set_pos_type::<String>()
         .set_values(vec![])
-        .on(|set: &mut ASet, _: &mut ASer, val: ctx::Value<String>| {
-            let id = convert_line_to_stock_number(val.deref());
+        .on(|set: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+            let val = ctx.value::<String>()?;
+            let id = convert_line_to_stock_number(&val);
             let debug = *set["--debug"].val::<bool>()?;
 
             if debug {
@@ -195,7 +195,8 @@ fn parser_command_line<'a>() -> Result<AFwdParser<'a>, Error> {
         .set_help("Get follow from stock list in file")
         .set_pos_type::<String>()
         .set_values(vec![])
-        .on(|set: &mut ASet, _: &mut ASer, file: ctx::Value<PathBuf>| {
+        .on(|set: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+            let file = ctx.value::<PathBuf>()?;
             let mut ret = Ok(None);
             let debug = *set["--debug"].val::<bool>()?;
 
@@ -317,9 +318,9 @@ fn display_help<S: Set>(set: &S) -> Result<(), aopt_help::Error> {
             global.add_store(
                 "args",
                 Store::new(
-                    Cow::from(opt.name().as_str()),
-                    Cow::from(opt.hint().as_str()),
-                    Cow::from(opt.help().as_str()),
+                    Cow::from(opt.name()),
+                    Cow::from(opt.hint()),
+                    Cow::from(opt.help()),
                     Cow::default(),
                     opt.force(),
                     true,
@@ -332,9 +333,9 @@ fn display_help<S: Set>(set: &S) -> Result<(), aopt_help::Error> {
             global.add_store(
                 "option",
                 Store::new(
-                    Cow::from(opt.name().as_str()),
-                    Cow::from(opt.hint().as_str()),
-                    Cow::from(opt.help().as_str()),
+                    Cow::from(opt.name()),
+                    Cow::from(opt.hint()),
+                    Cow::from(opt.help()),
                     Cow::default(),
                     opt.force(),
                     false,

@@ -1,5 +1,5 @@
 use cote::prelude::*;
-use std::sync::OnceLock;
+use std::{ffi::OsStr, sync::OnceLock};
 
 #[derive(Debug, Cote)]
 #[cote(fallback = cli_main, then = storer)]
@@ -7,7 +7,7 @@ pub struct Cli;
 
 static FLAG: OnceLock<bool> = OnceLock::new();
 
-fn cli_main<Set, Ser>(_: &mut Set, _: &mut Ser) -> cote::Result<Option<()>> {
+fn cli_main<Set, Ser>(_: &mut Set, _: &mut Ser, _: &Ctx) -> cote::Result<Option<()>> {
     FLAG.get_or_init(|| true);
     Ok(None)
 }
@@ -16,7 +16,7 @@ fn storer<Set, Ser>(
     _: Uid,
     _: &mut Set,
     _: &mut Ser,
-    _: Option<&RawVal>,
+    _: Option<&OsStr>,
     _: Option<()>,
 ) -> cote::Result<bool> {
     unreachable!("not call here if cli_main returns None")
@@ -33,7 +33,7 @@ fn fallback_impl() -> color_eyre::Result<()> {
     assert_eq!(FLAG.get(), Some(&true), "Set flag in cli_main");
     assert_eq!(
         parser.find_opt("".infer::<Main>())?.rawval()?,
-        &RawVal::from("app")
+        OsStr::new("app")
     );
     Ok(())
 }

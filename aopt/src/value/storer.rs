@@ -1,3 +1,4 @@
+use std::ffi::OsStr;
 use std::fmt::Debug;
 
 use crate::ctx::Ctx;
@@ -5,7 +6,6 @@ use crate::map::ErasedTy;
 use crate::opt::Action;
 use crate::trace;
 use crate::Error;
-use crate::RawVal;
 
 use super::AnyValue;
 use super::RawValParser;
@@ -13,11 +13,11 @@ use super::ValValidator;
 
 #[cfg(feature = "sync")]
 pub type StoreHandler<T> =
-    Box<dyn FnMut(Option<&RawVal>, &Ctx, &Action, &mut T) -> Result<(), Error> + Send + Sync>;
+    Box<dyn FnMut(Option<&OsStr>, &Ctx, &Action, &mut T) -> Result<(), Error> + Send + Sync>;
 
 #[cfg(not(feature = "sync"))]
 pub type StoreHandler<T> =
-    Box<dyn FnMut(Option<&RawVal>, &Ctx, &Action, &mut T) -> Result<(), Error>>;
+    Box<dyn FnMut(Option<&OsStr>, &Ctx, &Action, &mut T) -> Result<(), Error>>;
 
 /// [`ValStorer`] perform the value storing action.
 pub struct ValStorer(StoreHandler<AnyValue>);
@@ -47,12 +47,12 @@ impl ValStorer {
     /// Invoke the inner value store handler on [`AnyValue`].
     pub fn invoke(
         &mut self,
-        raw: Option<&RawVal>,
+        raw: Option<&OsStr>,
         ctx: &Ctx,
         act: &Action,
         arg: &mut AnyValue,
     ) -> Result<(), Error> {
-        crate::trace!("Saving raw value({:?}) for {}", raw, ctx.uid()?);
+        crate::trace!("saving raw value({:?}) for {}", raw, ctx.uid()?);
         (self.0)(raw, ctx, act, arg)
     }
 
@@ -60,25 +60,24 @@ impl ValStorer {
         validator: ValValidator<U>,
     ) -> StoreHandler<AnyValue> {
         Box::new(
-            move |raw: Option<&RawVal>, ctx: &Ctx, act: &Action, handler: &mut AnyValue| {
+            move |raw: Option<&OsStr>, ctx: &Ctx, act: &Action, handler: &mut AnyValue| {
                 let val = U::parse(raw, ctx).map_err(Into::into)?;
 
                 if !validator.invoke(&val) {
                     let uid = ctx.uid()?;
 
                     trace!(
-                        "Validator value storer failed, parsing {:?} -> {:?}",
+                        "validator value storer failed, parsing {:?} -> {:?}",
                         raw,
                         val
                     );
-                    Err(crate::raise_failure!(
-                        "Option value check failed: `{:?}`",
-                        ctx.inner_ctx().ok(),
+                    Err(
+                        crate::raise_failure!("value check failed: `{:?}`", ctx.inner_ctx().ok(),)
+                            .with_uid(uid),
                     )
-                    .with_uid(uid))
                 } else {
                     trace!(
-                        "Validator value storer okay, parsing {:?} -> {:?}",
+                        "validator value storer okay, parsing {:?} -> {:?}",
                         raw,
                         val
                     );
@@ -91,10 +90,10 @@ impl ValStorer {
 
     pub fn fallback_handler<U: ErasedTy + RawValParser>() -> StoreHandler<AnyValue> {
         Box::new(
-            |raw: Option<&RawVal>, ctx: &Ctx, act: &Action, handler: &mut AnyValue| {
+            |raw: Option<&OsStr>, ctx: &Ctx, act: &Action, handler: &mut AnyValue| {
                 let val = U::parse(raw, ctx).map_err(Into::into);
 
-                trace!("Fallback value storer, parsing {:?} -> {:?}", raw, val);
+                trace!("in fallback value storer, parsing {:?} -> {:?}", raw, val);
                 act.store1(Some(val?), handler);
                 Ok(())
             },

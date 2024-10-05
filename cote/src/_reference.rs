@@ -415,7 +415,7 @@
 //!
 //! ```plaintext
 //! Saving the value of `--foo` to 9
-//! Got value of `--debug`: RawVal("true") --> true
+//! Got value of `--debug`: OsStr("true") --> true
 //! Got client: Cli { foo: 9, bar: Some(Bar { debug: false, quux: "a2i" }), qux: None }
 //! ```
 //!
@@ -871,7 +871,7 @@
 //!| `val`     |  true      | value type |
 //!| `action`  |  true      | [`Action`](crate::prelude::Action) |
 //!| `force`   |  true      | boolean |
-//!| `ctor`    |  true      | [`AStr`](crate::aopt::AStr) |
+//!| `ctor`    |  true      | [`String`] |
 //!| `index`   |  true      | Option<[`Index`](crate::prelude::Index)> |
 //!| `style`   |  true      | Vec<[`Style`](crate::prelude::Style)> |
 //!| `igname`  |  true      | boolean |

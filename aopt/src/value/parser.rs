@@ -1,3 +1,4 @@
+use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::io::Stdin;
 use std::path::PathBuf;
@@ -5,7 +6,6 @@ use std::path::PathBuf;
 use crate::ctx::Ctx;
 use crate::value::Stop;
 use crate::Error;
-use crate::RawVal;
 
 /// Implement this if you want parsing the raw value into your type.
 pub trait RawValParser
@@ -14,48 +14,40 @@ where
 {
     type Error: Into<Error>;
 
-    fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error>;
+    fn parse(raw: Option<&OsStr>, ctx: &Ctx) -> Result<Self, Self::Error>;
 }
 
-fn ok_or_else(raw: Option<&RawVal>) -> Result<&RawVal, Error> {
+fn ok_or_else(raw: Option<&OsStr>) -> Result<&OsStr, Error> {
     raw.ok_or_else(|| Error::sp_rawval(None, "unexcepted empty value"))
 }
 
 /// Convert raw value to &[`str`].
-pub fn raw2str(raw: Option<&RawVal>) -> Result<&str, Error> {
+pub fn raw2str(raw: Option<&OsStr>) -> Result<&str, Error> {
     ok_or_else(raw)?
-        .get_str()
-        .ok_or_else(|| Error::sp_rawval(raw, "can not convert RawVal to str"))
+        .to_str()
+        .ok_or_else(|| Error::sp_rawval(raw, "can not convert OsStr to str"))
 }
 
 impl RawValParser for () {
     type Error = Error;
 
-    fn parse(_: Option<&RawVal>, _: &Ctx) -> Result<Self, Self::Error> {
+    fn parse(_: Option<&OsStr>, _: &Ctx) -> Result<Self, Self::Error> {
         Ok(())
-    }
-}
-
-impl RawValParser for RawVal {
-    type Error = Error;
-
-    fn parse(raw: Option<&RawVal>, _: &Ctx) -> Result<Self, Self::Error> {
-        ok_or_else(raw).cloned()
     }
 }
 
 macro_rules! impl_raw_val_parser {
     ($int:ty) => {
-        impl RawValParser for $int {
+        impl $crate::value::parser::RawValParser for $int {
             type Error = Error;
 
-            fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<$int, Self::Error> {
+            fn parse(raw: Option<&OsStr>, ctx: &Ctx) -> Result<$int, Self::Error> {
                 let val = $crate::value::parser::raw2str(raw)?;
                 let uid = ctx.uid()?;
 
                 val.parse::<$int>().map_err(|e| {
                     $crate::err::Error::sp_rawval(
-                        raw.clone(),
+                        raw,
                         format!("not a valid value of type {}", stringify!($int)),
                     )
                     .with_uid(uid)
@@ -84,7 +76,7 @@ impl_raw_val_parser!(usize);
 impl RawValParser for String {
     type Error = Error;
 
-    fn parse(raw: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn parse(raw: Option<&OsStr>, _ctx: &Ctx) -> Result<Self, Self::Error> {
         Ok(raw2str(raw)?.to_string())
     }
 }
@@ -92,7 +84,7 @@ impl RawValParser for String {
 impl RawValParser for OsString {
     type Error = Error;
 
-    fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn parse(raw: Option<&OsStr>, ctx: &Ctx) -> Result<Self, Self::Error> {
         let uid = ctx.uid()?;
 
         Ok(ok_or_else(raw).map_err(|e| e.with_uid(uid))?.to_os_string())
@@ -102,7 +94,7 @@ impl RawValParser for OsString {
 impl RawValParser for bool {
     type Error = Error;
 
-    fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn parse(raw: Option<&OsStr>, ctx: &Ctx) -> Result<Self, Self::Error> {
         let val = raw2str(raw)?;
 
         match val {
@@ -116,8 +108,8 @@ impl RawValParser for bool {
 impl RawValParser for PathBuf {
     type Error = Error;
 
-    fn parse(raw: Option<&RawVal>, _ctx: &Ctx) -> Result<Self, Self::Error> {
-        Ok(PathBuf::from(ok_or_else(raw)?.clone().into_os_string()))
+    fn parse(raw: Option<&OsStr>, _ctx: &Ctx) -> Result<Self, Self::Error> {
+        Ok(PathBuf::from(ok_or_else(raw)?))
     }
 }
 
@@ -143,9 +135,9 @@ impl RawValParser for PathBuf {
 ///     // fo will processed, it is not an option
 ///     parser.add_opt("foo=p@1")?;
 ///
-///     parser.parse(ARef::new(Args::from(
+///     parser.parse(Args::from(
 ///         ["app", "-w=42", "-", "foo"].into_iter(),
-///     )))?;
+///     ))?;
 ///
 ///     assert_eq!(parser.find_val::<i64>("-w")?, &42);
 ///     assert!(parser.find_val::<std::io::Stdin>("-").is_ok());
@@ -156,10 +148,10 @@ impl RawValParser for PathBuf {
 impl RawValParser for Stdin {
     type Error = Error;
 
-    fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn parse(raw: Option<&OsStr>, ctx: &Ctx) -> Result<Self, Self::Error> {
         const STDIN: &str = "-";
 
-        if ctx.name()?.map(|v| v.as_str()) == Some(STDIN) {
+        if ctx.name()?.map(|v| v.as_ref()) == Some(STDIN) {
             Ok(std::io::stdin())
         } else {
             Err(Error::sp_rawval(raw, "except `-` for Stdin").with_uid(ctx.uid()?))
@@ -170,11 +162,11 @@ impl RawValParser for Stdin {
 impl RawValParser for Stop {
     type Error = Error;
 
-    fn parse(raw: Option<&RawVal>, ctx: &Ctx) -> Result<Self, Self::Error> {
+    fn parse(raw: Option<&OsStr>, ctx: &Ctx) -> Result<Self, Self::Error> {
         const STOP: &str = "--";
 
-        if ctx.name()?.map(|v| v.as_str()) == Some(STOP) {
-            ctx.set_policy_act(crate::parser::Action::StopPolicy);
+        if ctx.name()?.map(|v| v.as_ref()) == Some(STOP) {
+            ctx.set_policy_act(crate::parser::Action::Stop);
             Ok(Stop)
         } else {
             Err(Error::sp_rawval(raw, "except `--` for Stop").with_uid(ctx.uid()?))

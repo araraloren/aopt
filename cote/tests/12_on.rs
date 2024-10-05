@@ -1,4 +1,4 @@
-use std::ops::Add;
+use std::ffi::OsStr;
 
 use cote::prelude::*;
 
@@ -21,19 +21,15 @@ fn on_impl() -> color_eyre::Result<()> {
     Ok(())
 }
 
-fn plus_one<Set, Ser>(
-    _: &mut Set,
-    _: &mut Ser,
-    val: ctx::Value<i64>, // extract value from argument
-) -> cote::Result<Option<i64>> {
-    Ok(Some(val.add(1)))
+fn plus_one<Set, Ser>(_: &mut Set, _: &mut Ser, ctx: &Ctx) -> cote::Result<Option<i64>> {
+    Ok(Some(ctx.value::<i64>()? + 1))
 }
 
 fn plus_two<Set, Ser>(
     uid: Uid,
     set: &mut Set,
     ser: &mut Ser,
-    raw: Option<&RawVal>,
+    raw: Option<&OsStr>,
     val: Option<i64>,
 ) -> cote::Result<bool>
 where

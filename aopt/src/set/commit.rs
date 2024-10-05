@@ -66,7 +66,7 @@ macro_rules! add_interface {
 
             debug_assert!(
                 type_id.is_none() || type_id == Some(&TypeId::of::<$ty>()),
-                "Can not set value type of {} if it already has one", stringify!($ty),
+                "can not set value type of {} if it already has one", stringify!($ty),
             );
             self.set_infer::<$ty>()
         }
@@ -82,7 +82,7 @@ macro_rules! add_interface {
 
             debug_assert!(
                 type_id.is_none() || type_id == Some(&TypeId::of::<$ty>()),
-                "Can not set value type of {} if it already has one", stringify!($ty),
+                "can not set value type of {} if it already has one", stringify!($ty),
             );
             self.set_infer::<$ty>()
                 .add_default_initializer()
@@ -157,17 +157,16 @@ where
             <U as Infer>::infer_fill_info(&mut info)?;
 
             let set = self.set.as_mut().unwrap();
-            let ctor = info
-                .ctor()
-                .ok_or_else(|| crate::raise_error!("Invalid configuration: missing creator name!"))?
-                .clone();
+            let ctor = info.ctor().ok_or_else(|| {
+                crate::raise_error!("invalid configuration: missing creator name!")
+            })?;
 
-            trace!("Register a opt {:?} with creator({})", info.name(), ctor);
+            trace!("register a opt {:?} with creator({})", info.name(), ctor);
 
-            let opt = set.ctor_mut(&ctor)?.new_with(info).map_err(|e| e.into())?;
+            let opt = set.ctor_mut(ctor)?.new_with(info).map_err(|e| e.into())?;
             let uid = set.insert(opt);
 
-            trace!("--> register okay: {uid}");
+            trace!("--> register option okay: {uid}");
             self.uid = Some(uid);
             Ok(uid)
         }
@@ -193,7 +192,7 @@ where
     pub fn set_value_type_only<T: ErasedTy>(self) -> SetCommitWithValue<'a, S, U, T> {
         debug_assert!(
             TypeId::of::<U>() != TypeId::of::<Cmd>() || TypeId::of::<T>() == TypeId::of::<bool>(),
-            "For Cmd, you can't have other value type!"
+            "for Cmd, you can't have other value type!"
         );
         SetCommitWithValue::new(self)
     }
@@ -352,13 +351,13 @@ where
     pub fn inner(&self) -> Result<&SetCommit<'a, S, U>, Error> {
         self.inner
             .as_ref()
-            .ok_or_else(|| crate::raise_error!("Must set inner data of SetCommitWithValue(ref)"))
+            .ok_or_else(|| crate::raise_error!("must set inner data of SetCommitWithValue(ref)"))
     }
 
     pub fn inner_mut(&mut self) -> Result<&mut SetCommit<'a, S, U>, Error> {
         self.inner
             .as_mut()
-            .ok_or_else(|| crate::raise_error!("Must set inner data of SetCommitWithValue(mut)"))
+            .ok_or_else(|| crate::raise_error!("must set inner data of SetCommitWithValue(mut)"))
     }
 
     /// Set the infer type of option.

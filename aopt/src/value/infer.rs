@@ -21,9 +21,7 @@ use crate::trace;
 use crate::typeid;
 use crate::value::ValInitializer;
 use crate::value::ValValidator;
-use crate::AStr;
 use crate::Error;
-use crate::RawVal;
 
 use super::AnyValue;
 use super::RawValParser;
@@ -42,8 +40,8 @@ pub trait Infer {
         false
     }
 
-    fn infer_ctor() -> AStr {
-        AStr::from(crate::set::CTOR_DEFAULT)
+    fn infer_ctor() -> String {
+        crate::set::ctor_default_name()
     }
 
     fn infer_index() -> Option<Index> {
@@ -210,7 +208,7 @@ where
     /// # Storer
     /// ```ignore
     /// Box::new(
-    ///     |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
+    ///     |raw: Option<&OsStr>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
     ///         let val = raw.is_some();
     ///
     ///         trace!("Pos value storer, parsing {:?} -> {:?}", raw, val);
@@ -230,17 +228,17 @@ where
             let bool_type = std::any::TypeId::of::<bool>();
 
             trace!(
-                "Tweak the storer for Pos<bool> for {:?}?: type = {:?}",
+                "tweak the storer for Pos<bool> for {:?}?: type = {:?}",
                 cfg.name(),
                 std::any::type_name::<T>()
             );
             // add default storer when value type is bool.
             if type_id == bool_type {
                 cfg.set_storer(ValStorer::new(Box::new(
-                    |raw: Option<&RawVal>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
+                    |raw: Option<&OsStr>, _: &Ctx, act: &Action, handler: &mut AnyValue| {
                         let val = raw.is_some();
 
-                        trace!("Pos value storer, parsing {:?} -> {:?}", raw, val);
+                        trace!("in pos<bool> value storer, parsing {:?} -> {:?}", raw, val);
                         act.store1(Some(val), handler);
                         Ok(())
                     },
@@ -339,15 +337,15 @@ impl Infer for Stdin {
         true
     }
 
-    /// For type Stop, swap the name and default alias(`-`) when build configuration.
+    /// For type Stdin, swap the name and default alias(`-`) when build configuration.
     fn infer_tweak_info<C>(cfg: &mut C) -> Result<(), Error>
     where
         Self: Sized + 'static,
         Self::Val: RawValParser,
         C: ConfigValue + Default,
     {
-        if let Some(name) = cfg.name().cloned() {
-            cfg.add_alias(name);
+        if let Some(name) = cfg.name() {
+            cfg.add_alias(name.to_string());
         }
         cfg.set_name("-");
         Ok(())
@@ -376,8 +374,8 @@ impl Infer for Stop {
         Self::Val: RawValParser,
         C: ConfigValue + Default,
     {
-        if let Some(name) = cfg.name().cloned() {
-            cfg.add_alias(name);
+        if let Some(name) = cfg.name() {
+            cfg.add_alias(name.to_string());
         }
         cfg.set_name("--");
         Ok(())
@@ -477,13 +475,13 @@ impl Infer for Placeholder {
         // it must have ctor here
         let ctor = cfg
             .ctor()
-            .ok_or_else(|| crate::raise_error!("Incomplete configuration, `ctor` must be set"))?;
+            .ok_or_else(|| crate::raise_error!("incomplete configuration: missing `ctor`"))?;
         let cid = Cid::from(ctor);
 
-        trace!("In default, fill info in Placeholder");
+        trace!("in default, fill info in Placeholder");
         match cid {
             Cid::Int => <i64>::infer_fill_info(cfg),
-            Cid::AStr => <String>::infer_fill_info(cfg),
+            Cid::Str => <String>::infer_fill_info(cfg),
             Cid::Flt => <f64>::infer_fill_info(cfg),
             Cid::Uint => <u64>::infer_fill_info(cfg),
             Cid::Bool => bool::infer_fill_info(cfg),

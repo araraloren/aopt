@@ -1,3 +1,5 @@
+use std::ffi::OsStr;
+
 use aopt::prelude::AFwdParser;
 use cote::prelude::*;
 use regex::Regex;
@@ -33,7 +35,7 @@ pub struct Point {
 }
 
 impl Point {
-    pub fn new(raw: Option<&RawVal>, _: &Ctx) -> cote::Result<Self> {
+    pub fn new(raw: Option<&OsStr>, _: &Ctx) -> cote::Result<Self> {
         let regex = Regex::new(r"[\{\[\(]\s*(\d+)\s*\,\s*(\d+)\s*[\}\]\)]").unwrap();
         if let Some(captures) = regex.captures(raw2str(raw)?) {
             let mut x = 0;
@@ -66,9 +68,7 @@ fn map_impl() -> color_eyre::Result<()> {
 
     parser.add_opt("-p;--point".infer::<Point>())?;
     parser.add_opt("--meal".infer::<Meal>())?;
-    parser.parse(ARef::new(Args::from(
-        ["app", "-p={42,2}", "--meal=lunch"].into_iter(),
-    )))?;
+    parser.parse(Args::from(["app", "-p={42,2}", "--meal=lunch"]))?;
 
     assert_eq!(
         Point::fetch("--point", parser.optset_mut())?,

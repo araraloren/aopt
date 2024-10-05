@@ -16,7 +16,7 @@ pub use self::optset::HCOptSet;
 pub use self::policy_delay::DelayPolicy;
 pub use self::policy_fwd::FwdPolicy;
 pub use self::policy_pre::PrePolicy;
-pub use self::returnval::ReturnVal;
+pub use self::returnval::Return;
 pub use self::style::OptStyleManager;
 pub use self::style::UserStyle;
 
@@ -28,13 +28,11 @@ use crate::args::Args;
 use crate::ctx::InnerCtx;
 use crate::ext::APolicyExt;
 use crate::set::Set;
-use crate::ARef;
-use crate::AStr;
 use crate::Error;
 use crate::Uid;
 
 #[derive(Debug, Clone)]
-pub struct CtxSaver {
+pub struct CtxSaver<'a> {
     /// option uid
     pub uid: Uid,
 
@@ -42,7 +40,7 @@ pub struct CtxSaver {
     pub idx: usize,
 
     /// invoke context
-    pub ctx: InnerCtx,
+    pub ctx: InnerCtx<'a>,
 }
 
 /// [`Policy`] doing real parsing work.
@@ -70,7 +68,7 @@ pub struct CtxSaver {
 ///         _: &mut Self::Set,
 ///         _: &mut Self::Inv<'a>,
 ///         _: &mut Self::Ser,
-///         _: ARef<Args>,
+///         _: Args,
 ///    ) -> Result<bool, Error> {
 ///         // ... parsing logical code
 ///        Ok(true)
@@ -89,15 +87,17 @@ pub trait Policy {
         set: &mut Self::Set,
         inv: &mut Self::Inv<'_>,
         ser: &mut Self::Ser,
-        args: ARef<Args>,
+        args: Args,
     ) -> Result<Self::Ret, Self::Error>;
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Default, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Action {
-    StopPolicy,
-    QuitPolicy,
+    Stop,
+    Quit,
+    #[default]
+    Null,
 }
 
 pub trait PolicySettings {
@@ -109,7 +109,7 @@ pub trait PolicySettings {
 
     fn styles(&self) -> &[UserStyle];
 
-    fn no_delay(&self) -> Option<&[AStr]>;
+    fn no_delay(&self) -> Option<&[String]>;
 
     fn overload(&self) -> bool;
 
@@ -117,7 +117,7 @@ pub trait PolicySettings {
 
     fn set_styles(&mut self, styles: Vec<UserStyle>) -> &mut Self;
 
-    fn set_no_delay(&mut self, name: impl Into<AStr>) -> &mut Self;
+    fn set_no_delay(&mut self, name: impl Into<String>) -> &mut Self;
 
     fn set_overload(&mut self, overload: bool) -> &mut Self;
 }
@@ -132,10 +132,10 @@ where
     where
         P: Default,
     {
-        self.parse(ARef::new(Args::from_env()))
+        self.parse(Args::from_env())
     }
 
-    fn parse(&mut self, args: ARef<Args>) -> Result<P::Ret, Self::Error>
+    fn parse(&mut self, args: Args) -> Result<P::Ret, Self::Error>
     where
         P: Default,
     {
@@ -144,11 +144,11 @@ where
     }
 
     fn parse_env_policy(&mut self, policy: &mut P) -> Result<P::Ret, Self::Error> {
-        let args = ARef::new(Args::from_env());
+        let args = Args::from_env();
         self.parse_policy(args, policy)
     }
 
-    fn parse_policy(&mut self, args: ARef<Args>, policy: &mut P) -> Result<P::Ret, Self::Error>;
+    fn parse_policy(&mut self, args: Args, policy: &mut P) -> Result<P::Ret, Self::Error>;
 }
 
 /// Parser manage the components are using in [`parse`](Policy::parse) of [`Policy`].
@@ -158,7 +158,6 @@ where
 /// ```rust
 /// # use aopt::getopt;
 /// # use aopt::prelude::*;
-/// # use aopt::ARef;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<(), Error> {
@@ -172,12 +171,13 @@ where
 /// parser2.add_opt("Who=c")?;
 /// parser2.add_opt("question=m")?.on(question)?;
 ///
-/// fn question(_: &mut ASet, _: &mut ASer, args: ctx::Args) -> Result<Option<()>, Error> {
+/// fn question(_: &mut ASet, _: &mut ASer, ctx: &Ctx) -> Result<Option<()>, Error> {
+///     let args = ctx.args();
 ///     // Output: The question is: Where are you from ?
 ///     println!(
 ///         "The question is: {}",
 ///         args.iter().skip(1)
-///             .map(|v| v.get_str().unwrap().to_owned())
+///             .map(|v| v.to_str().unwrap().to_owned())
 ///             .collect::<Vec<String>>()
 ///             .join(" ")
 ///     );
@@ -297,7 +297,7 @@ where
         self.optset.init()
     }
 
-    pub fn parse(&mut self, args: ARef<Args>) -> Result<<P as Policy>::Ret, Error> {
+    pub fn parse(&mut self, args: Args) -> Result<<P as Policy>::Ret, Error> {
         PolicyParser::<P>::parse_policy(&mut self.optset, args, &mut self.policy)
     }
 }
@@ -322,7 +322,7 @@ where
         self.policy().styles()
     }
 
-    fn no_delay(&self) -> Option<&[AStr]> {
+    fn no_delay(&self) -> Option<&[String]> {
         self.policy().no_delay()
     }
 
@@ -340,7 +340,7 @@ where
         self
     }
 
-    fn set_no_delay(&mut self, name: impl Into<AStr>) -> &mut Self {
+    fn set_no_delay(&mut self, name: impl Into<String>) -> &mut Self {
         self.policy_mut().set_no_delay(name);
         self
     }
@@ -385,7 +385,7 @@ where
 {
     type Error = Error;
 
-    fn parse(&mut self, args: ARef<Args>) -> Result<<P as Policy>::Ret, Self::Error>
+    fn parse(&mut self, args: Args) -> Result<<P as Policy>::Ret, Self::Error>
     where
         P: Default,
     {
@@ -394,7 +394,7 @@ where
 
     fn parse_policy(
         &mut self,
-        args: ARef<Args>,
+        args: Args,
         policy: &mut P,
     ) -> Result<<P as Policy>::Ret, Self::Error> {
         PolicyParser::<P>::parse_policy(&mut self.optset, args, policy)

@@ -1,10 +1,12 @@
+use std::ffi::OsStr;
+use std::ffi::OsString;
+
 use crate::ctx::Store;
 use crate::map::ErasedTy;
 use crate::set::SetExt;
 use crate::set::SetOpt;
 use crate::value::AnyValue;
 use crate::Error;
-use crate::RawVal;
 use crate::Uid;
 
 use super::Opt;
@@ -62,7 +64,7 @@ impl Action {
     /// Save the value in [`handler`](AnyValue).
     pub fn store1<U: ErasedTy>(&self, val: Option<U>, handler: &mut AnyValue) -> bool {
         crate::trace!(
-            "Saving value {:?}({:?}) [ty = {}] = {:?} in store1",
+            "saving value {:?}({:?}) [ty = {}] = {:?} in store1",
             val,
             self,
             std::any::type_name::<U>(),
@@ -89,7 +91,7 @@ impl Action {
                     // NOTHING
                 }
             }
-            crate::trace!("After saving handler: {:?}", handler);
+            crate::trace!("after saving handler: {:?}", handler);
             true
         } else {
             false
@@ -99,16 +101,16 @@ impl Action {
     /// Save the value in [`handler`](AnyValue) and raw value in `raw_handler`.
     pub fn store2<U: ErasedTy>(
         &self,
-        raw: Option<&RawVal>,
+        raw: Option<&OsStr>,
         val: Option<U>,
-        raw_handler: &mut Vec<RawVal>,
+        raw_handler: &mut Vec<OsString>,
         handler: &mut AnyValue,
     ) -> bool {
         let ret = self.store1(val, handler);
 
         if ret {
             if let Some(raw) = raw {
-                raw_handler.push(raw.clone());
+                raw_handler.push(raw.to_os_string());
             }
         }
         ret
@@ -116,7 +118,7 @@ impl Action {
 }
 
 /// Default store using for store value to [`ValStorer`](crate::value::ValStorer).
-/// It will store `RawVal` and `Val` if `val` is `Some(Val)`, otherwise do nothing.
+/// It will store `OsString` and `Val` if `val` is `Some(Val)`, otherwise do nothing.
 ///
 /// Note: The [`ValStorer`](crate::value::ValStorer) internal using an [`vec`] saving the option value.
 ///
@@ -146,15 +148,13 @@ where
         uid: Uid,
         set: &mut Set,
         _: &mut Ser,
-        raw: Option<&RawVal>,
+        raw: Option<&OsStr>,
         val: Option<Val>,
     ) -> Result<Self::Ret, Self::Error> {
         let opt = set.opt_mut(uid)?;
 
-        crate::trace!("Store the value of {} ==> {:?}", opt.name().clone(), raw);
-
+        crate::trace!("storing value of {} = `{:?}`", opt.name(), raw);
         let (raw_handler, handler) = opt.accessor_mut().handlers();
-
         // Set the value if return Some(Value)
         Ok(self.store2(raw, val, raw_handler, handler))
     }

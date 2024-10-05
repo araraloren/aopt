@@ -15,9 +15,9 @@ pub fn main() -> Result<(), aopt::Error> {
     // enable combination style
     parser.enable_combined();
     parser
-        .parse(ARef::new(Args::from(
+        .parse(Args::from(
             ["app", "list", "--foo", "value", "bar"].into_iter(),
-        )))?
+        ))?
         .ok()?;
 
     assert_eq!(parser.find_val::<bool>("list")?, &true);

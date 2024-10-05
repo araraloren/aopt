@@ -11,7 +11,6 @@ use crate::typeid;
 use crate::value::Placeholder;
 use crate::value::ValInitializer;
 use crate::value::ValStorer;
-use crate::AStr;
 
 use super::Cid;
 use super::Style;
@@ -55,18 +54,6 @@ impl<C: ConfigValue + Default> ConfigBuild<C> for &'_ str {
             ret.set_alias(v);
         }
         Ok(ret)
-    }
-}
-
-impl<C: ConfigValue + Default> ConfigBuild<C> for AStr {
-    type Val = Placeholder;
-
-    fn build<P>(self, parser: &P) -> Result<C, Error>
-    where
-        P: OptParser,
-        P::Output: Information,
-    {
-        <&str as ConfigBuild<C>>::build(self.as_str(), parser)
     }
 }
 
@@ -152,13 +139,13 @@ where
 
 pub trait ConfigValue {
     /// The creator name of option.
-    fn ctor(&self) -> Option<&AStr>;
+    fn ctor(&self) -> Option<&str>;
 
     /// The [`TypeId`] of option.
     fn r#type(&self) -> Option<&TypeId>;
 
     /// The name of option.
-    fn name(&self) -> Option<&AStr>;
+    fn name(&self) -> Option<&str>;
 
     /// If the option is force required.
     fn force(&self) -> Option<bool>;
@@ -167,13 +154,13 @@ pub trait ConfigValue {
     fn index(&self) -> Option<&Index>;
 
     /// The alias name and prefix of option.
-    fn alias(&self) -> Option<&Vec<AStr>>;
+    fn alias(&self) -> Option<&Vec<String>>;
 
     /// The hint message used in usage of option.
-    fn hint(&self) -> Option<&AStr>;
+    fn hint(&self) -> Option<&str>;
 
     /// The help message of option.
-    fn help(&self) -> Option<&AStr>;
+    fn help(&self) -> Option<&str>;
 
     /// Value action of option.
     fn action(&self) -> Option<&Action>;
@@ -188,13 +175,13 @@ pub trait ConfigValue {
     fn initializer(&self) -> Option<&ValInitializer>;
 
     /// The creator name of option.
-    fn ctor_mut(&mut self) -> Option<&mut AStr>;
+    fn ctor_mut(&mut self) -> Option<&mut String>;
 
     /// The [`TypeId`] of option.
     fn type_mut(&mut self) -> Option<&mut TypeId>;
 
     /// The name of option.
-    fn name_mut(&mut self) -> Option<&mut AStr>;
+    fn name_mut(&mut self) -> Option<&mut String>;
 
     /// If the option is force required.
     fn force_mut(&mut self) -> Option<&mut bool>;
@@ -203,13 +190,13 @@ pub trait ConfigValue {
     fn index_mut(&mut self) -> Option<&mut Index>;
 
     /// The alias name and prefix of option.
-    fn alias_mut(&mut self) -> Option<&mut Vec<AStr>>;
+    fn alias_mut(&mut self) -> Option<&mut Vec<String>>;
 
     /// The hint message used in usage of option.
-    fn hint_mut(&mut self) -> Option<&mut AStr>;
+    fn hint_mut(&mut self) -> Option<&mut String>;
 
     /// The help message of option.
-    fn help_mut(&mut self) -> Option<&mut AStr>;
+    fn help_mut(&mut self) -> Option<&mut String>;
 
     /// Value action of option.
     fn action_mut(&mut self) -> Option<&mut Action>;
@@ -253,29 +240,29 @@ pub trait ConfigValue {
 
     fn has_initializer(&self) -> bool;
 
-    fn set_ctor(&mut self, ctor: impl Into<AStr>) -> &mut Self;
+    fn set_ctor(&mut self, ctor: impl Into<String>) -> &mut Self;
 
     fn set_type<T: 'static>(&mut self) -> &mut Self;
 
     fn set_type_id(&mut self, type_id: TypeId) -> &mut Self;
 
-    fn set_name(&mut self, name: impl Into<AStr>) -> &mut Self;
+    fn set_name(&mut self, name: impl Into<String>) -> &mut Self;
 
     fn set_force(&mut self, force: bool) -> &mut Self;
 
     fn set_index(&mut self, index: Index) -> &mut Self;
 
-    fn set_alias(&mut self, alias: Vec<impl Into<AStr>>) -> &mut Self;
+    fn set_alias(&mut self, alias: Vec<impl Into<String>>) -> &mut Self;
 
     fn clr_alias(&mut self) -> &mut Self;
 
-    fn add_alias(&mut self, alias: impl Into<AStr>) -> &mut Self;
+    fn add_alias(&mut self, alias: impl Into<String>) -> &mut Self;
 
-    fn rem_alias(&mut self, alias: impl Into<AStr>) -> &mut Self;
+    fn rem_alias(&mut self, alias: impl AsRef<str>) -> &mut Self;
 
-    fn set_hint(&mut self, hint: impl Into<AStr>) -> &mut Self;
+    fn set_hint(&mut self, hint: impl Into<String>) -> &mut Self;
 
-    fn set_help(&mut self, help: impl Into<AStr>) -> &mut Self;
+    fn set_help(&mut self, help: impl Into<String>) -> &mut Self;
 
     fn set_action(&mut self, action: Action) -> &mut Self;
 
@@ -291,21 +278,21 @@ pub trait ConfigValue {
 
     fn set_ignore_index(&mut self, ignore_index: bool) -> &mut Self;
 
-    fn take_ctor(&mut self) -> Option<AStr>;
+    fn take_ctor(&mut self) -> Option<String>;
 
     fn take_type(&mut self) -> Option<TypeId>;
 
-    fn take_name(&mut self) -> Option<AStr>;
+    fn take_name(&mut self) -> Option<String>;
 
     fn take_force(&mut self) -> Option<bool>;
 
     fn take_index(&mut self) -> Option<Index>;
 
-    fn take_alias(&mut self) -> Option<Vec<AStr>>;
+    fn take_alias(&mut self) -> Option<Vec<String>>;
 
-    fn take_hint(&mut self) -> Option<AStr>;
+    fn take_hint(&mut self) -> Option<String>;
 
-    fn take_help(&mut self) -> Option<AStr>;
+    fn take_help(&mut self) -> Option<String>;
 
     fn take_action(&mut self) -> Option<Action>;
 
@@ -321,17 +308,17 @@ pub trait ConfigValue {
 
     fn with_force(self, force: bool) -> Self;
 
-    fn with_ctor(self, ctor: impl Into<AStr>) -> Self;
+    fn with_ctor(self, ctor: impl Into<String>) -> Self;
 
-    fn with_name(self, name: impl Into<AStr>) -> Self;
+    fn with_name(self, name: impl Into<String>) -> Self;
 
     fn with_type<T: 'static>(self) -> Self;
 
-    fn with_hint(self, hint: impl Into<AStr>) -> Self;
+    fn with_hint(self, hint: impl Into<String>) -> Self;
 
-    fn with_help(self, help: impl Into<AStr>) -> Self;
+    fn with_help(self, help: impl Into<String>) -> Self;
 
-    fn with_alias(self, alias: Vec<impl Into<AStr>>) -> Self;
+    fn with_alias(self, alias: Vec<impl Into<String>>) -> Self;
 
     fn with_style(self, styles: Vec<Style>) -> Self;
 
@@ -351,21 +338,21 @@ pub trait ConfigValue {
 /// Contain the information used for create option instance.
 #[derive(Debug, Default)]
 pub struct OptConfig {
-    ctor: Option<AStr>,
+    ctor: Option<String>,
 
     r#type: Option<TypeId>,
 
-    name: Option<AStr>,
+    name: Option<String>,
 
     force: Option<bool>,
 
     index: Option<Index>,
 
-    alias: Option<Vec<AStr>>,
+    alias: Option<Vec<String>>,
 
-    hint: Option<AStr>,
+    hint: Option<String>,
 
-    help: Option<AStr>,
+    help: Option<String>,
 
     action: Option<Action>,
 
@@ -383,16 +370,16 @@ pub struct OptConfig {
 }
 
 impl ConfigValue for OptConfig {
-    fn ctor(&self) -> Option<&AStr> {
-        self.ctor.as_ref()
+    fn ctor(&self) -> Option<&str> {
+        self.ctor.as_deref()
     }
 
     fn r#type(&self) -> Option<&TypeId> {
         self.r#type.as_ref()
     }
 
-    fn name(&self) -> Option<&AStr> {
-        self.name.as_ref()
+    fn name(&self) -> Option<&str> {
+        self.name.as_deref()
     }
 
     fn force(&self) -> Option<bool> {
@@ -403,16 +390,16 @@ impl ConfigValue for OptConfig {
         self.index.as_ref()
     }
 
-    fn alias(&self) -> Option<&Vec<AStr>> {
+    fn alias(&self) -> Option<&Vec<String>> {
         self.alias.as_ref()
     }
 
-    fn hint(&self) -> Option<&AStr> {
-        self.help.as_ref()
+    fn hint(&self) -> Option<&str> {
+        self.help.as_deref()
     }
 
-    fn help(&self) -> Option<&AStr> {
-        self.help.as_ref()
+    fn help(&self) -> Option<&str> {
+        self.help.as_deref()
     }
 
     fn action(&self) -> Option<&Action> {
@@ -431,7 +418,7 @@ impl ConfigValue for OptConfig {
         self.initializer.as_ref()
     }
 
-    fn ctor_mut(&mut self) -> Option<&mut AStr> {
+    fn ctor_mut(&mut self) -> Option<&mut String> {
         self.ctor.as_mut()
     }
 
@@ -439,7 +426,7 @@ impl ConfigValue for OptConfig {
         self.r#type.as_mut()
     }
 
-    fn name_mut(&mut self) -> Option<&mut AStr> {
+    fn name_mut(&mut self) -> Option<&mut String> {
         self.name.as_mut()
     }
 
@@ -451,15 +438,15 @@ impl ConfigValue for OptConfig {
         self.index.as_mut()
     }
 
-    fn alias_mut(&mut self) -> Option<&mut Vec<AStr>> {
+    fn alias_mut(&mut self) -> Option<&mut Vec<String>> {
         self.alias.as_mut()
     }
 
-    fn hint_mut(&mut self) -> Option<&mut AStr> {
+    fn hint_mut(&mut self) -> Option<&mut String> {
         self.hint.as_mut()
     }
 
-    fn help_mut(&mut self) -> Option<&mut AStr> {
+    fn help_mut(&mut self) -> Option<&mut String> {
         self.help.as_mut()
     }
 
@@ -539,7 +526,7 @@ impl ConfigValue for OptConfig {
         self.initializer.is_some()
     }
 
-    fn set_ctor(&mut self, ctor: impl Into<AStr>) -> &mut Self {
+    fn set_ctor(&mut self, ctor: impl Into<String>) -> &mut Self {
         self.ctor = Some(ctor.into());
         self
     }
@@ -554,7 +541,7 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn set_name(&mut self, name: impl Into<AStr>) -> &mut Self {
+    fn set_name(&mut self, name: impl Into<String>) -> &mut Self {
         self.name = Some(name.into());
         self
     }
@@ -569,7 +556,7 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn set_alias(&mut self, alias: Vec<impl Into<AStr>>) -> &mut Self {
+    fn set_alias(&mut self, alias: Vec<impl Into<String>>) -> &mut Self {
         self.alias = Some(alias.into_iter().map(Into::into).collect::<Vec<_>>());
         self
     }
@@ -581,17 +568,17 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn add_alias(&mut self, alias: impl Into<AStr>) -> &mut Self {
+    fn add_alias(&mut self, alias: impl Into<String>) -> &mut Self {
         self.alias.get_or_insert(vec![]).push(alias.into());
         self
     }
 
-    fn rem_alias(&mut self, alias: impl Into<AStr>) -> &mut Self {
-        let alias = alias.into();
+    fn rem_alias(&mut self, alias: impl AsRef<str>) -> &mut Self {
+        let alias = alias.as_ref();
 
         if let Some(v) = self.alias.as_mut() {
             for (index, value) in v.iter().enumerate() {
-                if value == &alias {
+                if value == alias {
                     v.remove(index);
                     break;
                 }
@@ -600,12 +587,12 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn set_hint(&mut self, hint: impl Into<AStr>) -> &mut Self {
+    fn set_hint(&mut self, hint: impl Into<String>) -> &mut Self {
         self.hint = Some(hint.into());
         self
     }
 
-    fn set_help(&mut self, help: impl Into<AStr>) -> &mut Self {
+    fn set_help(&mut self, help: impl Into<String>) -> &mut Self {
         self.help = Some(help.into());
         self
     }
@@ -645,7 +632,7 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn take_ctor(&mut self) -> Option<AStr> {
+    fn take_ctor(&mut self) -> Option<String> {
         self.ctor.take()
     }
 
@@ -653,7 +640,7 @@ impl ConfigValue for OptConfig {
         self.r#type.take()
     }
 
-    fn take_name(&mut self) -> Option<AStr> {
+    fn take_name(&mut self) -> Option<String> {
         self.name.take()
     }
 
@@ -665,15 +652,15 @@ impl ConfigValue for OptConfig {
         self.index.take()
     }
 
-    fn take_alias(&mut self) -> Option<Vec<AStr>> {
+    fn take_alias(&mut self) -> Option<Vec<String>> {
         self.alias.take()
     }
 
-    fn take_hint(&mut self) -> Option<AStr> {
+    fn take_hint(&mut self) -> Option<String> {
         self.hint.take()
     }
 
-    fn take_help(&mut self) -> Option<AStr> {
+    fn take_help(&mut self) -> Option<String> {
         self.help.take()
     }
 
@@ -699,7 +686,7 @@ impl ConfigValue for OptConfig {
 
             self.set_type_id(match cid {
                 Cid::Int => typeid::<i64>(),
-                Cid::AStr => typeid::<String>(),
+                Cid::Str => typeid::<String>(),
                 Cid::Flt => typeid::<f64>(),
                 Cid::Uint => typeid::<u64>(),
                 Cid::Bool => typeid::<bool>(),
@@ -725,12 +712,12 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn with_ctor(mut self, ctor: impl Into<AStr>) -> Self {
+    fn with_ctor(mut self, ctor: impl Into<String>) -> Self {
         self.ctor = Some(ctor.into());
         self
     }
 
-    fn with_name(mut self, name: impl Into<AStr>) -> Self {
+    fn with_name(mut self, name: impl Into<String>) -> Self {
         self.name = Some(name.into());
         self
     }
@@ -740,17 +727,17 @@ impl ConfigValue for OptConfig {
         self
     }
 
-    fn with_hint(mut self, hint: impl Into<AStr>) -> Self {
+    fn with_hint(mut self, hint: impl Into<String>) -> Self {
         self.help = Some(hint.into());
         self
     }
 
-    fn with_help(mut self, help: impl Into<AStr>) -> Self {
+    fn with_help(mut self, help: impl Into<String>) -> Self {
         self.help = Some(help.into());
         self
     }
 
-    fn with_alias(mut self, alias: Vec<impl Into<AStr>>) -> Self {
+    fn with_alias(mut self, alias: Vec<impl Into<String>>) -> Self {
         self.alias = Some(alias.into_iter().map(|v| v.into()).collect());
         self
     }
@@ -833,17 +820,6 @@ where
     }
 }
 
-impl<C> ConfigBuildInfer<C> for AStr
-where
-    C: ConfigValue + Default,
-{
-    type Output<T> = ConfigBuilderWith<C, Self, T>;
-
-    fn infer<T: 'static>(self) -> Self::Output<T> {
-        ConfigBuilderWith::new(self, ConfigBuilder::new(C::default().with_type::<T>()))
-    }
-}
-
 impl<C> ConfigBuildInfer<C> for String
 where
     C: ConfigValue + Default,
@@ -880,19 +856,19 @@ impl<C, I> ConfigBuildInfer<C> for ConfigBuilder<C, I> {
 pub trait ConfigBuildWith {
     type Output;
 
-    fn with_ctor(self, ctor: impl Into<AStr>) -> Self::Output;
+    fn with_ctor(self, ctor: impl Into<String>) -> Self::Output;
 
-    fn with_name(self, name: impl Into<AStr>) -> Self::Output;
+    fn with_name(self, name: impl Into<String>) -> Self::Output;
 
     fn with_force(self, force: bool) -> Self::Output;
 
     fn with_index(self, index: Index) -> Self::Output;
 
-    fn with_alias(self, alias: Vec<impl Into<AStr>>) -> Self::Output;
+    fn with_alias(self, alias: Vec<impl Into<String>>) -> Self::Output;
 
-    fn with_hint(self, hint: impl Into<AStr>) -> Self::Output;
+    fn with_hint(self, hint: impl Into<String>) -> Self::Output;
 
-    fn with_help(self, help: impl Into<AStr>) -> Self::Output;
+    fn with_help(self, help: impl Into<String>) -> Self::Output;
 
     fn with_action(self, action: Action) -> Self::Output;
 
@@ -916,12 +892,12 @@ where
 {
     type Output = Self;
 
-    fn with_ctor(mut self, ctor: impl Into<AStr>) -> Self::Output {
+    fn with_ctor(mut self, ctor: impl Into<String>) -> Self::Output {
         self.config_mut().set_ctor(ctor);
         self
     }
 
-    fn with_name(mut self, name: impl Into<AStr>) -> Self::Output {
+    fn with_name(mut self, name: impl Into<String>) -> Self::Output {
         self.config_mut().set_name(name);
         self
     }
@@ -936,17 +912,17 @@ where
         self
     }
 
-    fn with_alias(mut self, alias: Vec<impl Into<AStr>>) -> Self::Output {
+    fn with_alias(mut self, alias: Vec<impl Into<String>>) -> Self::Output {
         self.config_mut().set_alias(alias);
         self
     }
 
-    fn with_hint(mut self, hint: impl Into<AStr>) -> Self::Output {
+    fn with_hint(mut self, hint: impl Into<String>) -> Self::Output {
         self.config_mut().set_hint(hint);
         self
     }
 
-    fn with_help(mut self, help: impl Into<AStr>) -> Self::Output {
+    fn with_help(mut self, help: impl Into<String>) -> Self::Output {
         self.config_mut().set_help(help);
         self
     }
@@ -1100,14 +1076,14 @@ macro_rules! def_help_for {
         impl ConfigBuildWith for $type {
             type Output = ConfigBuilderWith<OptConfig, Self, Placeholder>;
 
-            fn with_ctor(self, ctor: impl Into<AStr>) -> Self::Output {
+            fn with_ctor(self, ctor: impl Into<String>) -> Self::Output {
                 ConfigBuilderWith::new(
                     self,
                     ConfigBuilder::new(OptConfig::default().with_ctor(ctor)),
                 )
             }
 
-            fn with_name(self, name: impl Into<AStr>) -> Self::Output {
+            fn with_name(self, name: impl Into<String>) -> Self::Output {
                 ConfigBuilderWith::new(
                     self,
                     ConfigBuilder::new(OptConfig::default().with_name(name)),
@@ -1128,21 +1104,21 @@ macro_rules! def_help_for {
                 )
             }
 
-            fn with_alias(self, alias: Vec<impl Into<AStr>>) -> Self::Output {
+            fn with_alias(self, alias: Vec<impl Into<String>>) -> Self::Output {
                 ConfigBuilderWith::new(
                     self,
                     ConfigBuilder::new(OptConfig::default().with_alias(alias)),
                 )
             }
 
-            fn with_hint(self, hint: impl Into<AStr>) -> Self::Output {
+            fn with_hint(self, hint: impl Into<String>) -> Self::Output {
                 ConfigBuilderWith::new(
                     self,
                     ConfigBuilder::new(OptConfig::default().with_hint(hint)),
                 )
             }
 
-            fn with_help(self, help: impl Into<AStr>) -> Self::Output {
+            fn with_help(self, help: impl Into<String>) -> Self::Output {
                 ConfigBuilderWith::new(
                     self,
                     ConfigBuilder::new(OptConfig::default().with_help(help)),
@@ -1201,7 +1177,6 @@ macro_rules! def_help_for {
     };
 }
 
-def_help_for!(AStr);
 def_help_for!(&'_ str);
 def_help_for!(&'_ String);
 def_help_for!(String);

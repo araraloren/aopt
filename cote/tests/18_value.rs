@@ -31,9 +31,7 @@ fn value_impl() -> color_eyre::Result<()> {
 
     parser.add_opt("--speed".infer::<Speed>())?;
     parser.add_opt("-im;--instant-message".infer::<IM>())?;
-    parser.parse(ARef::new(Args::from(
-        ["app", "--speed=42", "-im=qq"].into_iter(),
-    )))?;
+    parser.parse(Args::from(["app", "--speed=42", "-im=qq"]))?;
 
     assert_eq!(Speed::fetch("--speed", parser.optset_mut())?, Speed(42));
     assert_eq!(

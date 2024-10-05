@@ -355,9 +355,11 @@ impl<'a> CoteGenerator<'a> {
             let handler = quote! {
                 // we save the original option text to `Ser`, it will use in handler of `sub`
                 parser.entry(#uid_ident)?.on(
-                    move |_: &mut cote::prelude::Parser<'inv, Set, Ser>, ser: &mut Ser, args: cote::prelude::ctx::Args,
-                                index: cote::prelude::ctx::Index| {
-                        ser.sve_insert::<cote::prelude::RawVal>(args.get(*index).cloned().unwrap());
+                    move |_: &mut cote::prelude::Parser<'inv, Set, Ser>, ser: &mut Ser, ctx: &cote::prelude::Ctx| {
+                        let args = ctx.args();
+                        let index = ctx.idx()?;
+
+                        ser.sve_insert::<std::ffi::OsString>(args[index].to_os_string());
                         Ok(Some(true))
                     }
                 );
@@ -517,7 +519,6 @@ impl<'a> CoteGenerator<'a> {
                 rctx.add_name(#parser_name);
                 parser.set_rctx(rctx);
 
-                let args = cote::prelude::ARef::new(args);
                 let ret = cote::prelude::PolicyParser::parse_policy(&mut parser, args, policy);
                 let mut rctx = parser.take_rctx()?;
 
@@ -573,26 +574,26 @@ impl<'a> CoteGenerator<'a> {
                         .unwrap_or((None, &mut ret));
                     let e = {
                         let ctx = ret.take_ctx();
-                        let args = ctx.orig_args()[1..]
-                                    .iter()
-                                    .map(ToString::to_string)
+                        let args = ctx.orig[1..].iter()
+                                    .map(|v|std::path::Path::new(v).display())
+                                    .map(|v|v.to_string())
                                     .collect::<Vec<_>>()
                                     .join(", ");
-                        let inner_ctx = ctx.inner_ctx().ok();
+                        let guess = ctx.guess;
                         let failed_msg = if let Some(command) = command {
                             format!("Parsing command `{}`", command)
                         }
                         else {
                             format!("Parsing arguments `{}`", args)
                         };
-                        let inner_ctx = if let Some(inner_ctx) = inner_ctx {
-                            format!("{}", inner_ctx)
+                        let guess = if let Some(guess) = guess {
+                            format!("{:?}", guess)
                         } else {
                             "None".to_owned()
                         };
 
                         // return failure with more detail error message
-                        cote::prelude::raise_failure!("{} failed: {}", failed_msg, inner_ctx).cause_by(error)
+                        cote::prelude::raise_failure!("{} failed: {}", failed_msg, guess).cause_by(error)
                     };
 
                     Err(e)

@@ -63,7 +63,7 @@ where
 
         const MAX_INDEX: usize = usize::MAX;
 
-        trace!("Pre Check {{has_cmd: {}}}", has_cmd);
+        trace!("in pre check {{has_cmd: {}}}", has_cmd);
         if has_cmd {
             for opt in set.iter() {
                 if opt.mat_style(Style::Pos) {
@@ -86,7 +86,7 @@ where
     /// [`Boolean`](crate::opt::Style::Boolean), [`Combined`](crate::opt::Style::Combined)),
     /// [`Flag`](crate::opt::Style::Flag)
     fn opt_check(&self, set: &mut S) -> Result<bool, Error> {
-        trace!("Opt Check, call valid on all Opt ...");
+        trace!("in opt check, call valid on all Opt ...");
         for opt in set.iter().filter(|opt| {
             opt.mat_style(Style::Argument)
                 || opt.mat_style(Style::Boolean)
@@ -142,7 +142,7 @@ where
         }
         let mut names = vec![];
 
-        trace!("Pos Check, index: {{{index_map:?}}}, float: {{{float_vec:?}}}");
+        trace!("in pos check, index: {{{index_map:?}}}, float: {{{float_vec:?}}}");
         for (_, uids) in index_map {
             // if any of POS is force required, then it must set by user
             let mut pos_valid = true;
@@ -166,7 +166,7 @@ where
                 .iter()
                 .filter(|&uid| !Self::opt(set, uid).valid())
                 .for_each(|uid| {
-                    names.push(Self::opt(set, uid).hint().clone());
+                    names.push(Self::opt(set, uid).hint().to_string());
                 });
             if !names.is_empty() {
                 return Err(Error::sp_pos_require(names).with_uid(float_vec[0]));
@@ -193,7 +193,7 @@ where
                 }
             }
         }
-        trace!("Cmd Check, any one of the cmd matched: {}", valid);
+        trace!("in cmd check, any one of the cmd matched: {}", valid);
         if !valid && !names.is_empty() {
             return Err(Error::sp_cmd_require(names).with_uid(uids[0]));
         }
@@ -202,7 +202,7 @@ where
 
     /// Call [`valid`](crate::opt::Opt::valid) on options those style are [`Main`](Style::Main).
     fn post_check(&self, set: &mut S) -> Result<bool, Error> {
-        trace!("Post Check, call valid on Main ...");
+        trace!("in post check, call valid on Main ...");
         Ok(set
             .iter()
             .filter(|opt| opt.mat_style(Style::Main))

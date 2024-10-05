@@ -17,9 +17,6 @@ use crate::set::OptSet;
 use crate::set::PrefixOptValidator;
 use crate::Error;
 
-pub mod ctx;
-pub mod ser;
-
 pub trait APolicyExt<P: Policy> {
     fn default_ser(&self) -> P::Ser;
 

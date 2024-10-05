@@ -6,6 +6,8 @@ pub(crate) mod storer;
 pub(crate) mod validator;
 
 use std::any::type_name;
+use std::ffi::OsStr;
+use std::ffi::OsString;
 use std::fmt::Debug;
 
 pub use self::accessor::ValAccessor;
@@ -28,7 +30,6 @@ use crate::map::ErasedTy;
 use crate::opt::Action;
 use crate::raise_error;
 use crate::Error;
-use crate::RawVal;
 
 /// A special option value, can stop the policy, using for implement `--`.
 ///
@@ -51,9 +52,7 @@ use crate::RawVal;
 ///     // fo will processed, it is not an option
 ///     parser.add_opt("foo=p@1")?;
 ///
-///     parser.parse(ARef::new(Args::from(
-///         ["app", "-w=42", "--", "-o", "val", "foo"].into_iter(),
-///     )))?;
+///     parser.parse(Args::from(["app", "-w=42", "--", "-o", "val", "foo"]))?;
 ///
 ///     assert_eq!(parser.find_val::<i64>("-w")?, &42);
 ///     assert!(parser.find_val::<String>("-o").is_err());
@@ -79,7 +78,7 @@ pub struct Stop;
 pub trait ErasedValue {
     fn initialize(&mut self) -> Result<(), Error>;
 
-    fn store(&mut self, raw: Option<&RawVal>, ctx: &Ctx, act: &Action) -> Result<(), Error>;
+    fn store(&mut self, raw: Option<&OsStr>, ctx: &Ctx, act: &Action) -> Result<(), Error>;
 
     fn store_act<U: ErasedTy>(&mut self, val: U, ctx: &Ctx, act: &Action) -> Result<(), Error>;
 
@@ -91,13 +90,13 @@ pub trait ErasedValue {
 
     fn vals_mut<U: ErasedTy>(&mut self) -> Result<&mut Vec<U>, Error>;
 
-    fn rawval(&self) -> Result<&RawVal, Error>;
+    fn rawval(&self) -> Result<&OsString, Error>;
 
-    fn rawval_mut(&mut self) -> Result<&mut RawVal, Error>;
+    fn rawval_mut(&mut self) -> Result<&mut OsString, Error>;
 
-    fn rawvals(&self) -> Result<&Vec<RawVal>, Error>;
+    fn rawvals(&self) -> Result<&Vec<OsString>, Error>;
 
-    fn rawvals_mut(&mut self) -> Result<&mut Vec<RawVal>, Error>;
+    fn rawvals_mut(&mut self) -> Result<&mut Vec<OsString>, Error>;
 }
 
 /// [`AnyValue`] can save values of any type. In internal it save the value into a vector of type T.
@@ -175,17 +174,20 @@ impl AnyValue {
         self.0.entry::<Vec<T>>()
     }
 
+    /// Push a value to the values of type T.
     pub fn push<T: ErasedTy>(&mut self, val: T) -> &mut Self {
         self.entry::<T>().or_default().push(val);
         self
     }
 
+    /// Set the values of type T.
     pub fn set<T: ErasedTy>(&mut self, vals: Vec<T>) -> Option<Vec<T>> {
         let ret = self.remove();
         self.entry().or_insert(vals);
         ret
     }
 
+    /// Remove the values of type T.
     pub fn remove<T: ErasedTy>(&mut self) -> Option<Vec<T>> {
         self.0.remove::<Vec<T>>()
     }
@@ -194,7 +196,7 @@ impl AnyValue {
     pub fn val<T: ErasedTy>(&self) -> Result<&T, Error> {
         self.inner().and_then(|v| v.last()).ok_or_else(|| {
             raise_error!(
-                "Can not find value for type `{:?}` in ErasedVal(val)",
+                "can not find value for type `{:?}` in ErasedVal(val)",
                 type_name::<T>()
             )
         })
@@ -204,7 +206,7 @@ impl AnyValue {
     pub fn val_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
         self.inner_mut().and_then(|v| v.last_mut()).ok_or_else(|| {
             raise_error!(
-                "Can not find value for type `{:?}` in ErasedVal(val_mut)",
+                "can not find value for type `{:?}` in ErasedVal(val_mut)",
                 type_name::<T>()
             )
         })
@@ -214,7 +216,7 @@ impl AnyValue {
     pub fn vals<T: ErasedTy>(&self) -> Result<&Vec<T>, Error> {
         self.inner().ok_or_else(|| {
             raise_error!(
-                "Can not find value for type `{:?}` in ErasedVal(vals)",
+                "can not find value for type `{:?}` in ErasedVal(vals)",
                 type_name::<T>()
             )
         })
@@ -224,7 +226,7 @@ impl AnyValue {
     pub fn vals_mut<T: ErasedTy>(&mut self) -> Result<&mut Vec<T>, Error> {
         self.inner_mut().ok_or_else(|| {
             raise_error!(
-                "Can not find value for type `{:?}` in ErasedVal(vals_mut)",
+                "can not find value for type `{:?}` in ErasedVal(vals_mut)",
                 type_name::<T>()
             )
         })
