@@ -719,9 +719,14 @@ impl<'a> CoteGenerator<'a> {
                 let caller_str = caller.to_token_stream().to_string();
 
                 match caller_str.as_str() {
-                    "parser" | "policy" => {
+                    "policy" => {
                         ret.push(quote! {
-                            #caller.#method(#args);
+                            #method::<P>(&mut policy, #args);
+                        });
+                    }
+                    "parser" => {
+                        ret.push(quote! {
+                            #method::<Set, Ser>(&mut parser, #args);
                         });
                     }
                     _ => {

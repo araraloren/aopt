@@ -200,7 +200,7 @@ impl<'a> SubGenerator<'a> {
 
                     codes.push(match caller.as_str() {
                         "config" | "cfg" => quote! {
-                            $cfg_ident.#method(#args);
+                            #method::<Set>(&mut #cfg_ident, #args);
                         },
                         _ => quote! { #method(#cfg_value); },
                     });

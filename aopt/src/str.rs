@@ -24,7 +24,7 @@ pub fn split_once(str: &OsStr, ch: char) -> Option<(Cow<'_, OsStr>, Cow<'_, OsSt
 }
 
 #[cfg(any(target_family = "wasm", target_family = "unix"))]
-pub fn split_once<'a>(str: &'a OsStr, ch: char) -> Option<(Cow<'a, OsStr>, Cow<'a, OsStr>)> {
+pub fn split_once(str: &'_ OsStr, ch: char) -> Option<(Cow<'_, OsStr>, Cow<'_, OsStr>)> {
     #[cfg(target_family = "unix")]
     use std::os::unix::ffi::OsStrExt;
     #[cfg(target_family = "wasm")]

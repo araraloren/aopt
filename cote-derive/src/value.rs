@@ -27,8 +27,10 @@ pub enum Value {
 impl Value {
     pub fn split_call_args(self, span: Span) -> syn::Result<(Expr, Self)> {
         if let Value::Call(mut args) = self {
-            if let Some(variable) = args.pop() {
-                return Ok((variable, Self::Call(args)));
+            if !args.is_empty() {
+                let method_args = args.split_off(1);
+
+                return Ok((args.pop().unwrap(), Self::Call(method_args)));
             }
         }
         Err(error(
