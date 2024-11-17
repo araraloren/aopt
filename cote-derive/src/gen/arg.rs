@@ -283,6 +283,12 @@ impl<'a> ArgGenerator<'a> {
                         #ident: #func::<#inner_ty, Set>(#uid_literal, set).ok()
                     },
                 )),
+                WrapperTy::Res(_) | WrapperTy::ResVec(_) => Ok((
+                    false,
+                    quote! {
+                        #ident: #func::<#inner_ty, Set>(#uid_literal, set).map_err(Into::into)
+                    },
+                )),
                 WrapperTy::Vec(_) | WrapperTy::Null(_) => Ok((
                     false,
                     quote! {
@@ -298,6 +304,12 @@ impl<'a> ArgGenerator<'a> {
                         #ident: cote::prelude::Fetch::<'_, Set>::fetch_uid(#uid_literal, set).ok()
                     },
                 )),
+                WrapperTy::Res(_) => Ok((
+                    false,
+                    quote! {
+                        #ident: cote::prelude::Fetch::<'_, Set>::fetch_uid(#uid_literal, set).map_err(Into::into)
+                    },
+                )),
                 WrapperTy::Vec(_) => Ok((
                     false,
                     quote! {
@@ -308,6 +320,12 @@ impl<'a> ArgGenerator<'a> {
                     false,
                     quote! {
                         #ident: cote::prelude::Fetch::<'_, Set>::fetch_vec_uid(#uid_literal, set).ok()
+                    },
+                )),
+                WrapperTy::ResVec(_) => Ok((
+                    false,
+                    quote! {
+                        #ident: cote::prelude::Fetch::<'_, Set>::fetch_vec_uid(#uid_literal, set).map_err(Into::into)
                     },
                 )),
                 WrapperTy::Null(_) => Ok((

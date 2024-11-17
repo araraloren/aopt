@@ -344,7 +344,7 @@
 //! ### Force required Positionals and Options
 //!
 //! In default, options, positionals and command flags is force required.
-//! Wrap the type with `Option` can make the item optional.
+//! Wrap the type with `Option` or `Result` can make the item optional.
 //! Using `force` you can configure the positionals and options force required.
 //!
 //! ```rust
@@ -598,8 +598,10 @@
 //!|------|--------|----------|----------|
 //!| `T` | [`Action::Set`](crate::prelude::Action::Set) | `true` | `false` |
 //!| `Option<T>` | [`Action::Set`](crate::prelude::Action::Set) | `false` | `false` |
+//!| `Result<T, _>` | [`Action::Set`](crate::prelude::Action::Set) | `false` | `false` |
 //!| `Vec<T>` | [`Action::App`](crate::prelude::Action::App) | `true` | `false` |
 //!| `Option<Vec<T>>` | [`Action::App`](crate::prelude::Action::App) | `false` | `false` |
+//!| `Result<Vec<T>, _>` | [`Action::App`](crate::prelude::Action::App) | `false` | `false` |
 //!| [`Pos<T>`](crate::prelude::Pos) | [`Action::Set`](crate::prelude::Action::Set) | `true` | `false` |
 //!| `bool` | [`Action::Set`](crate::prelude::Action::Set) | `false` | `false` |
 //!| [`Cmd`](crate::prelude::Cmd) | [`Action::Set`](crate::prelude::Action::Set) | `true` | `true` |

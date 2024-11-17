@@ -99,6 +99,14 @@ impl AttrKind {
                             <cote::prelude::Pos<#inner_ty> as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
                         }
                     }
+                    WrapperTy::Res(inner_ty) => {
+                        quote! {
+                            // using information of Pos<T>
+                            cote::prelude::ConfigValue::set_type::<#inner_ty>(&mut #cfg_ident);
+                            <cote::prelude::Pos<#inner_ty> as cote::prelude::Alter>::alter(cote::prelude::Hint::Res, &mut #cfg_ident);
+                            <cote::prelude::Pos<#inner_ty> as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
+                        }
+                    }
                     WrapperTy::Vec(inner_ty) => {
                         quote! {
                             // using information of Pos<T>
@@ -112,6 +120,14 @@ impl AttrKind {
                             // using information of Pos<T>
                             cote::prelude::ConfigValue::set_type::<#inner_ty>(&mut #cfg_ident);
                             <cote::prelude::Pos<#inner_ty> as cote::prelude::Alter>::alter(cote::prelude::Hint::OptVec, &mut #cfg_ident);
+                            <cote::prelude::Pos<#inner_ty> as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
+                        }
+                    }
+                    WrapperTy::ResVec(inner_ty) => {
+                        quote! {
+                            // using information of Pos<T>
+                            cote::prelude::ConfigValue::set_type::<#inner_ty>(&mut #cfg_ident);
+                            <cote::prelude::Pos<#inner_ty> as cote::prelude::Alter>::alter(cote::prelude::Hint::ResVec, &mut #cfg_ident);
                             <cote::prelude::Pos<#inner_ty> as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
                         }
                     }
@@ -132,6 +148,12 @@ impl AttrKind {
                         <#inner_ty as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
                     }
                 }
+                WrapperTy::Res(inner_ty) => {
+                    quote! {
+                        <#inner_ty as cote::prelude::Alter>::alter(cote::prelude::Hint::Res, &mut #cfg_ident);
+                        <#inner_ty as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
+                    }
+                }
                 WrapperTy::Vec(inner_ty) => {
                     quote! {
                         <#inner_ty as cote::prelude::Alter>::alter(cote::prelude::Hint::Vec, &mut #cfg_ident);
@@ -141,6 +163,12 @@ impl AttrKind {
                 WrapperTy::OptVec(inner_ty) => {
                     quote! {
                         <#inner_ty as cote::prelude::Alter>::alter(cote::prelude::Hint::OptVec, &mut #cfg_ident);
+                        <#inner_ty as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
+                    }
+                }
+                WrapperTy::ResVec(inner_ty) => {
+                    quote! {
+                        <#inner_ty as cote::prelude::Alter>::alter(cote::prelude::Hint::ResVec, &mut #cfg_ident);
                         <#inner_ty as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
                     }
                 }
@@ -648,24 +676,40 @@ impl OptUpdate {
 pub enum WrapperTy<'a> {
     Opt(&'a Type),
 
+    Res(&'a Type),
+
     Vec(&'a Type),
 
     OptVec(&'a Type),
+
+    ResVec(&'a Type),
 
     Null(&'a Type),
 }
 
 impl<'a> WrapperTy<'a> {
     pub fn new(ty: &'a Type) -> Self {
-        match Self::check_wrapper_ty(ty, "Option") {
-            (true, inner_ty) => match Self::check_wrapper_ty(inner_ty, "Vec") {
+        let (ret, inner_ty) = Self::check_wrapper_ty(ty, "Option");
+
+        if ret {
+            match Self::check_wrapper_ty(inner_ty, "Vec") {
                 (true, inner_ty) => Self::OptVec(inner_ty),
                 (false, inner_ty) => Self::Opt(inner_ty),
-            },
-            (false, inner_ty) => match Self::check_wrapper_ty(inner_ty, "Vec") {
-                (true, inner_ty) => Self::Vec(inner_ty),
-                (false, _) => Self::Null(ty),
-            },
+            }
+        } else {
+            let (ret, inner_ty) = Self::check_wrapper_ty(ty, "Result");
+
+            if ret {
+                match Self::check_wrapper_ty(inner_ty, "Vec") {
+                    (true, inner_ty) => Self::ResVec(inner_ty),
+                    (false, inner_ty) => Self::Res(inner_ty),
+                }
+            } else {
+                match Self::check_wrapper_ty(inner_ty, "Vec") {
+                    (true, inner_ty) => Self::Vec(inner_ty),
+                    (false, _) => Self::Null(ty),
+                }
+            }
         }
     }
 
@@ -675,9 +719,11 @@ impl<'a> WrapperTy<'a> {
 
     pub fn inner_type(&self) -> &Type {
         match self {
+            Self::Res(ty) => ty,
             Self::Opt(ty) => ty,
             Self::Vec(ty) => ty,
             Self::OptVec(ty) => ty,
+            Self::ResVec(ty) => ty,
             Self::Null(ty) => ty,
         }
     }

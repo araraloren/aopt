@@ -12,7 +12,11 @@ use crate::prelude::Pos;
 pub enum Hint {
     Opt,
 
+    Res,
+
     Vec,
+
+    ResVec,
 
     OptVec,
 
@@ -27,8 +31,10 @@ pub trait Alter {
     fn alter(hint: Hint, cfg: &mut impl ConfigValue) {
         let (action, force) = match hint {
             Hint::Opt => (crate::prelude::Action::Set, false),
+            Hint::Res => (crate::prelude::Action::Set, false),
             Hint::Vec => (crate::prelude::Action::App, true),
             Hint::OptVec => (crate::prelude::Action::App, false),
+            Hint::ResVec => (crate::prelude::Action::App, false),
             Hint::Null => (crate::prelude::Action::Set, true),
         };
 
@@ -47,8 +53,8 @@ impl Alter for Cmd {
 impl Alter for bool {
     fn alter(hint: Hint, cfg: &mut impl ConfigValue) {
         let action = match hint {
-            Hint::Opt | Hint::Null => crate::prelude::Action::Set,
-            Hint::Vec | Hint::OptVec => crate::prelude::Action::App,
+            Hint::Opt | Hint::Res | Hint::Null => crate::prelude::Action::Set,
+            Hint::Vec | Hint::ResVec | Hint::OptVec => crate::prelude::Action::App,
         };
 
         (!cfg.has_force()).then(|| cfg.set_force(false));
@@ -146,8 +152,10 @@ impl<'a, T> Alter for RefOpt<'a, T> {
     fn alter(hint: Hint, cfg: &mut impl ConfigValue) {
         let (action, force) = match hint {
             Hint::Opt => (crate::prelude::Action::Set, false),
+            Hint::Res => (crate::prelude::Action::Set, false),
             Hint::Vec => (crate::prelude::Action::App, true),
             Hint::OptVec => (crate::prelude::Action::App, false),
+            Hint::ResVec => (crate::prelude::Action::App, false),
             Hint::Null => (crate::prelude::Action::Set, true),
         };
 
