@@ -421,15 +421,9 @@ impl<'a> CoteGenerator<'a> {
         let parser_name = &self.name;
         let abort = self.configs.find_cfg(CoteKind::AbortHelp);
         let help = self.configs.find_cfg(CoteKind::Help);
-        let fetch_generics =
-            GenericsModifier::gen_fetch_for_ty(used, quote!('set), quote!(Set), true);
+        let fetch_generics = GenericsModifier::gen_fetch_for_ty(used, quote!(Set));
         let fetch_code = {
-            let fetch = GenericsModifier::gen_fetch_for_ty(
-                used,
-                quote!('set),
-                quote!(cote::prelude::ASet),
-                true,
-            );
+            let fetch = GenericsModifier::gen_fetch_for_ty(used, quote!(cote::prelude::ASet));
 
             quote! { #fetch }
         };

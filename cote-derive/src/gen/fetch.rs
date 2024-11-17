@@ -42,7 +42,7 @@ impl<'a> FetchGenerator<'a> {
         let mut fetch_generics = GenericsModifier::new(generics.clone());
         let (impl_fetch, where_fetch);
 
-        let (scalar, vector) = if self.only_have_cfgs(&[FetchKind::Inner, FetchKind::Map]) {
+        let handle = if self.only_have_cfgs(&[FetchKind::Inner, FetchKind::Map]) {
             let inner = self.configs.find_value(FetchKind::Inner);
             let map = self.configs.find_value(FetchKind::Map);
 
@@ -53,23 +53,13 @@ impl<'a> FetchGenerator<'a> {
                 ));
             }
             let inner = inner.unwrap();
-            let scalar = if let Some(map) = &map {
+            let handle = if let Some(map) = &map {
                 quote! {
                     cote::prelude::fetch_uid_impl::<#inner, Set>(uid, set).map(#map)
                 }
             } else {
                 quote! {
                     cote::prelude::fetch_uid_impl::<#inner, Set>(uid, set)
-                }
-            };
-            let vector = if let Some(map) = &map {
-                quote! {
-                    cote::prelude::fetch_vec_uid_impl::<#inner, Set>(uid, set)
-                        .map(|v|v.into_iter().map(#map).collect())
-                }
-            } else {
-                quote! {
-                    cote::prelude::fetch_vec_uid_impl::<#inner, Set>(uid, set)
                 }
             };
             let inner_ident = Ident::new(&inner.to_token_stream().to_string(), span);
@@ -80,24 +70,15 @@ impl<'a> FetchGenerator<'a> {
 
                 (ret.0, ret.2)
             };
-            (scalar, vector)
+            handle
         } else {
-            let scalar = if let Some(scalar) = self.configs.find_value(FetchKind::Scalar) {
+            let handle = if let Some(handle) = self.configs.find_value(FetchKind::Handle) {
                 quote! {
-                    #scalar(uid, set)
+                    #handle(uid, set)
                 }
             } else {
                 quote! {
                     cote::prelude::fetch_uid_impl(uid, set)
-                }
-            };
-            let vector = if let Some(vector) = self.configs.find_value(FetchKind::Vector) {
-                quote! {
-                    #vector(uid, set)
-                }
-            } else {
-                quote! {
-                    cote::prelude::fetch_vec_uid_impl(uid, set)
                 }
             };
 
@@ -106,17 +87,13 @@ impl<'a> FetchGenerator<'a> {
 
                 (ret.0, ret.2)
             };
-            (scalar, vector)
+            handle
         };
 
         Ok(quote! {
-            impl #impl_fetch cote::prelude::Fetch<'set, Set> for #ident #type_generics #where_fetch {
-                fn fetch_uid(uid: cote::prelude::Uid, set: &'set mut Set) -> cote::Result<Self> {
-                    #scalar
-                }
-
-                fn fetch_vec_uid(uid: cote::prelude::Uid, set: &'set mut Set) -> cote::Result<Vec<Self>> {
-                    #vector
+            impl #impl_fetch cote::prelude::Fetch<Set> for #ident #type_generics #where_fetch {
+                fn fetch_uid(uid: cote::prelude::Uid, set: &mut Set) -> cote::Result<Self> {
+                    #handle
                 }
             }
         })

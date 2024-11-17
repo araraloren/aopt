@@ -265,69 +265,17 @@ impl<T> DerefMut for MutOpt<T> {
     }
 }
 
-/// Simple option type wrapper, implemented [`Infer`](crate::value::Infer).
-/// It works with the types are implemented [`RawValParser`](crate::value::RawValParser).
-///
-/// # Example
-///
-/// ```rust
-/// # use aopt::Error;
-/// # use aopt::value::raw2str;
-/// # use aopt::prelude::*;
-///
-/// #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-/// pub struct Name(String);
-///
-/// impl RawValParser for Name {
-///     type Error = Error;
-///
-///     fn parse(arg: Option<&OsStr>, _: &Ctx) -> Result<Self, Self::Error> {
-///         Ok(Name(raw2str(arg)?.to_owned()))
-///     }
-/// }
-///
-/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// let mut parser = AFwdParser::default();
-///
-/// // add the option wrap with `RefOpt`
-/// parser.add_opt("-e: Set the name".infer::<RefOpt<'_, Name>>())?;
-///
-/// parser.parse(Args::from(["app", "-e=foo"]))?;
-///
-/// // Get the value through value type `Name`
-/// assert_eq!(parser.find_val::<Name>("-e")?, &Name("foo".to_owned()));
-///
-/// #    Ok(())
-/// # }
-/// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct RefOpt<'a, T>(pub &'a T);
-
-impl<'a, T> RefOpt<'a, T> {
-    pub fn new(value: &'a T) -> Self {
-        Self(value)
-    }
-}
-
-impl<'a, T> Deref for RefOpt<'a, T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        self.0
-    }
-}
-
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Any<T = ()>(pub T);
+pub struct AnyOpt<T = ()>(pub T);
 
-impl<T> Any<T> {
+impl<T> AnyOpt<T> {
     pub fn new(value: T) -> Self {
         Self(value)
     }
 }
 
-impl<T> Deref for Any<T> {
+impl<T> Deref for AnyOpt<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -335,7 +283,7 @@ impl<T> Deref for Any<T> {
     }
 }
 
-impl<T> DerefMut for Any<T> {
+impl<T> DerefMut for AnyOpt<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }

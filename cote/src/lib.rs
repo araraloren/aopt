@@ -16,12 +16,11 @@ pub use cote_derive;
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub mod prelude {
-    pub use aopt::opt::Any;
+    pub use aopt::opt::AnyOpt;
     pub use aopt::opt::Cmd;
     pub use aopt::opt::Main;
     pub use aopt::opt::MutOpt;
     pub use aopt::opt::Pos;
-    pub use aopt::opt::RefOpt;
     pub use aopt::parser::UserStyle;
     pub use aopt::prelude::ctor_default_name;
     pub use aopt::prelude::AOpt;

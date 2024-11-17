@@ -9,9 +9,7 @@ pub enum FetchKind {
 
     Map,
 
-    Scalar,
-
-    Vector,
+    Handle,
 }
 
 impl Kind for FetchKind {
@@ -22,8 +20,7 @@ impl Kind for FetchKind {
         match option.as_str() {
             "inner" => Ok((Self::Inner, true)),
             "map" => Ok((Self::Map, true)),
-            "scalar" => Ok((Self::Scalar, true)),
-            "vector" => Ok((Self::Vector, true)),
+            "handle" => Ok((Self::Handle, true)),
             _ => Err(error(
                 input.span(),
                 format!(

@@ -32,7 +32,7 @@ impl Infer for Direction {
     type Val = Direction;
 }
 
-impl<S> Fetch<'_, S> for Direction
+impl<S> Fetch<S> for Direction
 where
     S: SetValueFindExt,
     SetCfg<S>: ConfigValue + Default,

@@ -7,7 +7,7 @@ use crate::ctx::HandlerCollection;
 use crate::ctx::HandlerEntry;
 use crate::ctx::HandlerEntryThen;
 use crate::map::ErasedTy;
-use crate::opt::Any;
+use crate::opt::AnyOpt;
 use crate::opt::Cmd;
 use crate::opt::ConfigValue;
 use crate::opt::Main;
@@ -117,7 +117,7 @@ where
 
     add_interface!(Main<T>, set_main_type_only, set_main_type);
 
-    add_interface!(Any<T>, set_any_type_only, set_any_type);
+    add_interface!(AnyOpt<T>, set_any_type_only, set_any_type);
 }
 
 impl<'a, 'b, I, S, Ser, U> ParserCommit<'a, 'b, I, S, Ser, U>

@@ -14,13 +14,13 @@ impl Infer for Speed {
     type Val = i32;
 }
 
-impl<'a, S> Fetch<'a, S> for Speed
+impl<S> Fetch<S> for Speed
 where
     S: SetValueFindExt,
     SetCfg<S>: ConfigValue + Default,
     Self: ErasedTy + Sized,
 {
-    fn fetch_uid(uid: Uid, set: &'a mut S) -> cote::Result<Self> {
+    fn fetch_uid(uid: Uid, set: &mut S) -> cote::Result<Self> {
         Ok(Speed(fetch_uid_impl(uid, set)?))
     }
 }

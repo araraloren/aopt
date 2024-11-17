@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use crate::ctx::Ctx;
 use crate::map::ErasedTy;
 use crate::opt::Action;
-use crate::opt::Any;
+use crate::opt::AnyOpt;
 use crate::opt::Cid;
 use crate::opt::Cmd;
 use crate::opt::ConfigValue;
@@ -15,7 +15,6 @@ use crate::opt::Index;
 use crate::opt::Main;
 use crate::opt::MutOpt;
 use crate::opt::Pos;
-use crate::opt::RefOpt;
 use crate::opt::Style;
 use crate::trace;
 use crate::typeid;
@@ -288,11 +287,7 @@ impl<T: ErasedTy + RawValParser> Infer for MutOpt<T> {
     type Val = T;
 }
 
-impl<'a, T: ErasedTy + RawValParser> Infer for RefOpt<'a, T> {
-    type Val = T;
-}
-
-impl<T> Infer for Any<T>
+impl<T> Infer for AnyOpt<T>
 where
     T: Infer + ErasedTy,
 {
@@ -431,31 +426,6 @@ impl_infer_for!(String);
 impl_infer_for!(PathBuf);
 impl_infer_for!(OsString);
 
-impl_infer_for!(&'a f64);
-impl_infer_for!(&'a f32);
-
-impl_infer_for!(&'a i8);
-impl_infer_for!(&'a i16);
-impl_infer_for!(&'a i32);
-impl_infer_for!(&'a i64);
-
-impl_infer_for!(&'a u8);
-impl_infer_for!(&'a u16);
-impl_infer_for!(&'a u32);
-impl_infer_for!(&'a u64);
-
-impl_infer_for!(&'a i128);
-impl_infer_for!(&'a u128);
-
-impl_infer_for!(&'a isize);
-impl_infer_for!(&'a usize);
-impl_infer_for!(&'a String);
-impl_infer_for!(&'a PathBuf);
-impl_infer_for!(&'a OsString);
-impl_infer_for!(&'a std::path::Path, PathBuf);
-impl_infer_for!(&'a str, String);
-impl_infer_for!(&'a OsStr, OsString);
-
 #[derive(Debug, Clone, Copy)]
 pub struct Placeholder;
 
@@ -488,7 +458,7 @@ impl Infer for Placeholder {
             Cid::Cmd => Cmd::infer_fill_info(cfg),
             Cid::Pos => <Pos<bool>>::infer_fill_info(cfg),
             Cid::Main => Main::<()>::infer_fill_info(cfg),
-            Cid::Any => Any::<()>::infer_fill_info(cfg),
+            Cid::Any => AnyOpt::<()>::infer_fill_info(cfg),
             Cid::Raw => <OsString>::infer_fill_info(cfg),
             _ => Ok(()),
         }

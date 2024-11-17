@@ -693,7 +693,7 @@ impl ConfigValue for OptConfig {
                 Cid::Cmd => typeid::<crate::opt::Cmd>(),
                 Cid::Pos => typeid::<crate::opt::Pos<bool>>(),
                 Cid::Main => typeid::<crate::opt::Main>(),
-                Cid::Any => typeid::<crate::opt::Any>(),
+                Cid::Any => typeid::<crate::opt::AnyOpt>(),
                 Cid::Raw => typeid::<std::ffi::OsString>(),
                 _ => {
                     unreachable!("creator `{ctor}` can't infer any type")

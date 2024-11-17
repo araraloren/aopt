@@ -1,16 +1,17 @@
+use std::collections::VecDeque;
+
 use aopt::opt::ConfigBuild;
 use aopt::opt::ConfigValue;
 use aopt::opt::OptValueExt;
 use aopt::set::SetCfg;
 
 use crate::prelude::raise_error;
-use crate::prelude::Any;
+use crate::prelude::AnyOpt;
 use crate::prelude::ErasedTy;
 use crate::prelude::Main;
 use crate::prelude::MutOpt;
 use crate::prelude::Opt;
 use crate::prelude::Placeholder;
-use crate::prelude::RefOpt;
 use crate::prelude::Set;
 use crate::prelude::SetValueFindExt;
 use crate::prelude::Uid;
@@ -50,106 +51,41 @@ where
 }
 
 /// Using for generate code for procedural macro.
-pub trait Fetch<'a, S>
+pub trait Fetch<S>
 where
     S: SetValueFindExt,
     SetCfg<S>: ConfigValue + Default,
     Self: ErasedTy + Sized,
 {
-    fn fetch(name: impl ConfigBuild<SetCfg<S>>, set: &'a mut S) -> Result<Self, aopt::Error> {
+    fn fetch(name: impl ConfigBuild<SetCfg<S>>, set: &mut S) -> Result<Self, aopt::Error> {
         Self::fetch_uid(set.find_uid(name)?, set)
     }
 
-    fn fetch_vec(
-        name: impl ConfigBuild<SetCfg<S>>,
-        set: &'a mut S,
-    ) -> Result<Vec<Self>, aopt::Error> {
-        Self::fetch_vec_uid(set.find_uid(name)?, set)
-    }
-
-    fn fetch_uid(uid: Uid, set: &'a mut S) -> Result<Self, aopt::Error> {
+    fn fetch_uid(uid: Uid, set: &mut S) -> Result<Self, aopt::Error> {
         fetch_uid_impl(uid, set)
-    }
-
-    fn fetch_vec_uid(uid: Uid, set: &'a mut S) -> Result<Vec<Self>, aopt::Error> {
-        fetch_vec_uid_impl(uid, set)
     }
 }
 
 #[macro_export]
 macro_rules! impl_fetch {
     ($name:path) => {
-        impl<'a, S> $crate::prelude::Fetch<'a, S> for $name
+        impl<S> $crate::prelude::Fetch<S> for $name
         where
             S: $crate::prelude::SetValueFindExt,
             $crate::prelude::SetCfg<S>: $crate::prelude::ConfigValue + Default,
             Self: $crate::prelude::ErasedTy + Sized,
-        {   }
+        {
+        }
     };
     ($name:path, $inner_type:path, $map:expr) => {
-        impl<'a, S> $crate::prelude::Fetch<'a, S> for $name
-        where
-            S: $crate::prelude::SetValueFindExt,
-            $crate::prelude::SetCfg<S>: $crate::prelude::ConfigValue + Default,
-            Self: $crate::prelude::ErasedTy + Sized, {
-            fn fetch_uid(
-                uid: $crate::prelude::Uid,
-                set: &'a mut S,
-            ) -> Result<Self, aopt::Error> {
-                $crate::prelude::fetch_uid_impl::<$inner_type, S>(uid, set).map($map)
-            }
-
-            fn fetch_vec_uid(
-                uid: $crate::prelude::Uid,
-                set: &'a mut S,
-            ) -> Result<Vec<Self>, aopt::Error> {
-                $crate::prelude::fetch_vec_uid_impl::<$inner_type, S>(uid, set)
-                    .map(|v| v.into_iter().map($map).collect())
-            }
-        }
-    };
-    (&$a:lifetime $name:path) => {
-        impl<$a, S> $crate::prelude::Fetch<$a, S> for &$a $name
+        impl<S> $crate::prelude::Fetch<S> for $name
         where
             S: $crate::prelude::SetValueFindExt,
             $crate::prelude::SetCfg<S>: $crate::prelude::ConfigValue + Default,
             Self: $crate::prelude::ErasedTy + Sized,
-         {
-            fn fetch_uid(
-                uid: $crate::prelude::Uid,
-                set: &'a mut S,
-            ) -> Result<Self, aopt::Error> {
-                $crate::prelude::SetExt::opt(set, uid)?.val::<$name>()
-            }
-
-            fn fetch_vec_uid(
-                uid: $crate::prelude::Uid,
-                set: &'a mut S,
-            ) -> Result<Vec<Self>, aopt::Error> {
-                $crate::prelude::SetExt::opt(set, uid)
-                    .and_then(|v|v.vals::<$name>()).map(|v|v.iter().collect())
-            }
-        }
-    };
-    (&$a:lifetime $name:path, $inner:path, $map:expr) => {
-        impl<$a, S> $crate::prelude::Fetch<$a, S> for &$a $name
-        where
-            S: $crate::prelude::SetValueFindExt,
-            $crate::prelude::SetCfg<S>: $crate::prelude::ConfigValue + Default,
-            Self: $crate::prelude::ErasedTy + Sized, {
-            fn fetch_uid(
-                uid: $crate::prelude::Uid,
-                set: &'a mut S,
-            ) -> Result<Self, aopt::Error>{
-                $crate::prelude::SetExt::opt(set, uid)?.val::<$inner>().map($map)
-            }
-
-            fn fetch_vec_uid(
-                uid: $crate::prelude::Uid,
-                set: &'a mut S,
-            ) -> Result<Vec<Self>, aopt::Error> {
-                $crate::prelude::SetExt::opt(set, uid).and_then(|opt| opt.vals::<$inner>())
-                    .map(|vals| vals.iter().map($map).collect::<Vec<_>>())
+        {
+            fn fetch_uid(uid: $crate::prelude::Uid, set: &mut S) -> Result<Self, aopt::Error> {
+                $crate::prelude::fetch_uid_impl::<$inner_type, S>(uid, set).map($map)
             }
         }
     };
@@ -157,35 +93,30 @@ macro_rules! impl_fetch {
 
 macro_rules! value_fetch_forward {
     ($name:path, $map:expr) => {
-        impl<'a, S, T> $crate::prelude::Fetch<'a, S> for $name
+        impl<S, T> $crate::prelude::Fetch<S> for $name
         where
-            T: $crate::prelude::ErasedTy + $crate::prelude::Fetch<'a, S>,
+            T: $crate::prelude::ErasedTy + $crate::prelude::Fetch<S>,
             S: $crate::prelude::SetValueFindExt,
             $crate::prelude::SetCfg<S>: $crate::prelude::ConfigValue + Default,
             Self: $crate::prelude::ErasedTy + Sized,
         {
-            fn fetch_uid(uid: Uid, set: &'a mut S) -> Result<Self, aopt::Error> {
-                <T as $crate::prelude::Fetch<'a, S>>::fetch_uid(uid, set).map($map)
-            }
-
-            fn fetch_vec_uid(uid: Uid, set: &'a mut S) -> Result<Vec<Self>, aopt::Error> {
-                <T as $crate::prelude::Fetch<'a, S>>::fetch_vec_uid(uid, set)
-                    .map(|v| v.into_iter().map(|v| $map(v)).collect())
+            fn fetch_uid(uid: Uid, set: &mut S) -> Result<Self, aopt::Error> {
+                <T as $crate::prelude::Fetch<S>>::fetch_uid(uid, set).map($map)
             }
         }
     };
     ($name:path, $inner_type:path, $map:expr) => {
-        impl<'a, S> $crate::prelude::Fetch<'a, S> for $name
+        impl<S> $crate::prelude::Fetch<S> for $name
         where
             S: $crate::prelude::SetValueFindExt,
             $crate::prelude::SetCfg<S>: $crate::prelude::ConfigValue + Default,
             Self: $crate::prelude::ErasedTy + Sized,
         {
-            fn fetch_uid(uid: Uid, set: &'a mut S) -> Result<Self, aopt::Error> {
+            fn fetch_uid(uid: Uid, set: &mut S) -> Result<Self, aopt::Error> {
                 <$inner_type as $crate::prelude::Fetch>::fetch_uid(uid, set).map($map)
             }
 
-            fn fetch_vec_uid(uid: Uid, set: &'a mut S) -> Result<Vec<Self>, aopt::Error> {
+            fn fetch_vec_uid(uid: Uid, set: &mut S) -> Result<Vec<Self>, aopt::Error> {
                 <$inner_type as $crate::prelude::Fetch>::fetch_vec_uid(uid, set)
                     .map(|v| v.into_iter().map(|v| $map(v)).collect())
             }
@@ -237,74 +168,78 @@ impl_fetch!(aopt::value::Stop);
 
 impl_fetch!(Cmd, bool, Cmd::new);
 
-impl_fetch!(&'a f64);
-impl_fetch!(&'a f32);
-
-impl_fetch!(&'a i8);
-impl_fetch!(&'a i16);
-impl_fetch!(&'a i32);
-impl_fetch!(&'a i64);
-
-impl_fetch!(&'a u8);
-impl_fetch!(&'a u16);
-impl_fetch!(&'a u32);
-impl_fetch!(&'a u64);
-
-impl_fetch!(&'a i128);
-impl_fetch!(&'a u128);
-
-impl_fetch!(&'a isize);
-impl_fetch!(&'a usize);
-impl_fetch!(&'a String);
-impl_fetch!(&'a std::path::PathBuf);
-impl_fetch!(&'a std::ffi::OsString);
-impl_fetch!(&'a std::path::Path, std::path::PathBuf, AsRef::as_ref);
-impl_fetch!(&'a str, String, AsRef::as_ref);
-impl_fetch!(&'a std::ffi::OsStr, std::ffi::OsString, AsRef::as_ref);
-
 value_fetch_forward!(Pos<T>, Pos::new);
 
-value_fetch_forward!(Any<T>, Any::new);
+value_fetch_forward!(AnyOpt<T>, AnyOpt::new);
 
 value_fetch_forward!(Main<T>, Main::new);
 
-impl<'a, S, T: ErasedTy> Fetch<'a, S> for MutOpt<T>
+impl<S, T: ErasedTy> Fetch<S> for MutOpt<T>
 where
     S: SetValueFindExt,
     SetCfg<S>: ConfigValue + Default,
     Self: ErasedTy + Sized,
 {
-    fn fetch_uid(uid: Uid, set: &'a mut S) -> Result<Self, aopt::Error> {
+    fn fetch_uid(uid: Uid, set: &mut S) -> Result<Self, aopt::Error> {
         fetch_uid_impl(uid, set).map(MutOpt::new)
     }
-
-    fn fetch_vec_uid(uid: Uid, set: &'a mut S) -> Result<Vec<Self>, aopt::Error> {
-        fetch_vec_uid_impl(uid, set).map(|v| v.into_iter().map(MutOpt::new).collect::<Vec<_>>())
-    }
 }
 
-impl<'a, 'b, T: ErasedTy, S> Fetch<'a, S> for RefOpt<'b, T>
-where
-    'a: 'b,
-    S: SetValueFindExt,
-    SetCfg<S>: ConfigValue + Default,
-    Self: ErasedTy + Sized,
-{
-    fn fetch_uid(uid: Uid, set: &'a mut S) -> Result<Self, aopt::Error> {
-        Ok(RefOpt::new(crate::prelude::SetExt::opt(set, uid)?.val()?))
-    }
-
-    fn fetch_vec_uid(uid: Uid, set: &'a mut S) -> Result<Vec<Self>, aopt::Error> {
-        crate::prelude::SetExt::opt(set, uid)
-            .and_then(|opt| opt.vals())
-            .map(|vals| vals.iter().map(RefOpt::new).collect::<Vec<_>>())
-    }
-}
-
-impl<'a, S> Fetch<'a, S> for ()
+impl<S> Fetch<S> for ()
 where
     S: SetValueFindExt,
     SetCfg<S>: ConfigValue + Default,
     Self: ErasedTy + Sized,
 {
+}
+
+impl<S, T> Fetch<S> for Option<T>
+where
+    T: Fetch<S>,
+    S: SetValueFindExt,
+    SetCfg<S>: ConfigValue + Default,
+{
+    fn fetch(name: impl ConfigBuild<SetCfg<S>>, set: &mut S) -> Result<Self, aopt::Error> {
+        Ok(<T as Fetch<S>>::fetch(name, set).ok())
+    }
+
+    fn fetch_uid(uid: Uid, set: &mut S) -> Result<Self, aopt::Error> {
+        Ok(<T as Fetch<S>>::fetch_uid(uid, set).ok())
+    }
+}
+
+impl<S, T> Fetch<S> for Result<T, aopt::Error>
+where
+    T: Fetch<S>,
+    S: SetValueFindExt,
+    SetCfg<S>: ConfigValue + Default,
+{
+    fn fetch(name: impl ConfigBuild<SetCfg<S>>, set: &mut S) -> Result<Self, aopt::Error> {
+        Ok(<T as Fetch<S>>::fetch(name, set))
+    }
+
+    fn fetch_uid(uid: Uid, set: &mut S) -> Result<Self, aopt::Error> {
+        Ok(<T as Fetch<S>>::fetch_uid(uid, set))
+    }
+}
+
+impl<S, T> Fetch<S> for Vec<T>
+where
+    T: Fetch<S>,
+    S: SetValueFindExt,
+    SetCfg<S>: ConfigValue + Default,
+{
+    fn fetch(name: impl ConfigBuild<SetCfg<S>>, set: &mut S) -> Result<Self, aopt::Error> {
+        Self::fetch_uid(set.find_uid(name)?, set)
+    }
+
+    fn fetch_uid(uid: Uid, set: &mut S) -> Result<Self, aopt::Error> {
+        let mut ret = VecDeque::new();
+
+        ret.push_front(<T as Fetch<S>>::fetch_uid(uid, set)?);
+        while let Ok(val) = <T as Fetch<S>>::fetch_uid(uid, set) {
+            ret.push_front(val);
+        }
+        Ok(ret.into_iter().collect())
+    }
 }

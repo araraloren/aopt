@@ -416,7 +416,7 @@ impl GenericsModifier {
 
     pub fn mod_for_ipd(&mut self, used: &[&Ident]) -> &mut Self {
         let orig_where = self.0.where_clause.as_ref().map(|v| &v.predicates);
-        let fetch = Self::gen_fetch_for_ty(used, quote!('set), quote!(Set), true);
+        let fetch = Self::gen_fetch_for_ty(used, quote!(Set));
         let new_where: WhereClause = parse_quote! {
             where
             Set: cote::prelude::Set + cote::prelude::OptParser + cote::prelude::OptValidator + cote::prelude::SetValueFindExt + Default + 'inv,
@@ -446,7 +446,7 @@ impl GenericsModifier {
 
     pub fn mod_for_esd(&mut self, used: &[&Ident]) -> &mut Self {
         let orig_where = self.0.where_clause.as_ref().map(|v| &v.predicates);
-        let fetch = Self::gen_fetch_for_ty(used, quote!('t), quote!(Set), true);
+        let fetch = Self::gen_fetch_for_ty(used, quote!(Set));
         let new_where: WhereClause = parse_quote! {
             where
             Set: cote::prelude::SetValueFindExt,
@@ -492,7 +492,7 @@ impl GenericsModifier {
 
     pub fn mod_for_fetch(&mut self, used: &[&Ident]) -> &mut Self {
         let orig_where = self.0.where_clause.as_ref().map(|v| &v.predicates);
-        let fetch = Self::gen_fetch_for_ty(used, quote!('set), quote!(Set), false);
+        let fetch = Self::gen_fetch_for_ty(used, quote!(Set));
         let new_where: WhereClause = parse_quote! {
             where
                 Set: cote::prelude::SetValueFindExt,
@@ -503,7 +503,6 @@ impl GenericsModifier {
         };
 
         self.0.where_clause = Some(new_where);
-        self.insert_lifetime("'set");
         self.append_type("Set");
         self
     }
@@ -516,20 +515,9 @@ impl GenericsModifier {
         self.0.split_for_impl()
     }
 
-    pub fn gen_fetch_for_ty(
-        used: &[&Ident],
-        lifetime: TokenStream,
-        set: TokenStream,
-        for_: bool,
-    ) -> TokenStream {
-        if for_ {
-            quote! {
-                #(#used: for <#lifetime> cote::prelude::Fetch<#lifetime, #set>,)*
-            }
-        } else {
-            quote! {
-                #(#used: cote::prelude::Fetch<#lifetime, #set>,)*
-            }
+    pub fn gen_fetch_for_ty(used: &[&Ident], set: TokenStream) -> TokenStream {
+        quote! {
+            #(#used: cote::prelude::Fetch<#set>,)*
         }
     }
 }
@@ -566,72 +554,72 @@ impl OptUpdate {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum WrapperTy<'a> {
-    Opt(&'a Type),
+// #[derive(Debug, Clone, Copy)]
+// pub enum WrapperTy<'a> {
+//     Opt(&'a Type),
 
-    Res(&'a Type),
+//     Res(&'a Type),
 
-    Vec(&'a Type),
+//     Vec(&'a Type),
 
-    OptVec(&'a Type),
+//     OptVec(&'a Type),
 
-    ResVec(&'a Type),
+//     ResVec(&'a Type),
 
-    Null(&'a Type),
-}
+//     Null(&'a Type),
+// }
 
-impl<'a> WrapperTy<'a> {
-    pub fn new(ty: &'a Type) -> Self {
-        let (ret, inner_ty) = Self::check_wrapper_ty(ty, "Option");
+// impl<'a> WrapperTy<'a> {
+//     pub fn new(ty: &'a Type) -> Self {
+//         let (ret, inner_ty) = Self::check_wrapper_ty(ty, "Option");
 
-        if ret {
-            match Self::check_wrapper_ty(inner_ty, "Vec") {
-                (true, inner_ty) => Self::OptVec(inner_ty),
-                (false, inner_ty) => Self::Opt(inner_ty),
-            }
-        } else {
-            let (ret, inner_ty) = Self::check_wrapper_ty(ty, "Result");
+//         if ret {
+//             match Self::check_wrapper_ty(inner_ty, "Vec") {
+//                 (true, inner_ty) => Self::OptVec(inner_ty),
+//                 (false, inner_ty) => Self::Opt(inner_ty),
+//             }
+//         } else {
+//             let (ret, inner_ty) = Self::check_wrapper_ty(ty, "Result");
 
-            if ret {
-                match Self::check_wrapper_ty(inner_ty, "Vec") {
-                    (true, inner_ty) => Self::ResVec(inner_ty),
-                    (false, inner_ty) => Self::Res(inner_ty),
-                }
-            } else {
-                match Self::check_wrapper_ty(inner_ty, "Vec") {
-                    (true, inner_ty) => Self::Vec(inner_ty),
-                    (false, _) => Self::Null(ty),
-                }
-            }
-        }
-    }
+//             if ret {
+//                 match Self::check_wrapper_ty(inner_ty, "Vec") {
+//                     (true, inner_ty) => Self::ResVec(inner_ty),
+//                     (false, inner_ty) => Self::Res(inner_ty),
+//                 }
+//             } else {
+//                 match Self::check_wrapper_ty(inner_ty, "Vec") {
+//                     (true, inner_ty) => Self::Vec(inner_ty),
+//                     (false, _) => Self::Null(ty),
+//                 }
+//             }
+//         }
+//     }
 
-    pub fn inner_type(&self) -> &Type {
-        match self {
-            Self::Res(ty) => ty,
-            Self::Opt(ty) => ty,
-            Self::Vec(ty) => ty,
-            Self::OptVec(ty) => ty,
-            Self::ResVec(ty) => ty,
-            Self::Null(ty) => ty,
-        }
-    }
+//     pub fn inner_type(&self) -> &Type {
+//         match self {
+//             Self::Res(ty) => ty,
+//             Self::Opt(ty) => ty,
+//             Self::Vec(ty) => ty,
+//             Self::OptVec(ty) => ty,
+//             Self::ResVec(ty) => ty,
+//             Self::Null(ty) => ty,
+//         }
+//     }
 
-    pub fn check_wrapper_ty(ty: &'a Type, name: &str) -> (bool, &'a Type) {
-        if let Type::Path(path) = ty {
-            if let Some(segment) = path.path.segments.last() {
-                let ident_str = segment.ident.to_string();
+//     pub fn check_wrapper_ty(ty: &'a Type, name: &str) -> (bool, &'a Type) {
+//         if let Type::Path(path) = ty {
+//             if let Some(segment) = path.path.segments.last() {
+//                 let ident_str = segment.ident.to_string();
 
-                if ident_str == name {
-                    if let PathArguments::AngleBracketed(ab) = &segment.arguments {
-                        if let Some(GenericArgument::Type(next_ty)) = ab.args.first().as_ref() {
-                            return (true, next_ty);
-                        }
-                    }
-                }
-            }
-        }
-        (false, ty)
-    }
-}
+//                 if ident_str == name {
+//                     if let PathArguments::AngleBracketed(ab) = &segment.arguments {
+//                         if let Some(GenericArgument::Type(next_ty)) = ab.args.first().as_ref() {
+//                             return (true, next_ty);
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//         (false, ty)
+//     }
+// }

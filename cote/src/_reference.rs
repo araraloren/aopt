@@ -584,7 +584,7 @@
 //!
 //! - [`Fetch`](crate::prelude::Fetch)
 //!
-//! `Cote` using [`fetch`](crate::prelude::Fetch::fetch) fetch the value from [`Set`](aopt::set::Set).
+//! `Cote` using [`fetch_uid`](crate::prelude::Fetch::fetch_uid) fetch the value from [`Set`](aopt::set::Set).
 //!
 //! - [`RawValParser`](crate::prelude::RawValParser)
 //!
@@ -895,13 +895,12 @@
 //!|-----------|------------|-----------|
 //!| `inner`   |  true      |  type     |
 //!| `map`     |  true      |  function |
-//!| `scalar`  |  true      |  function |
-//!| `vector`  |  true      |  function |
+//!| `handle`  |  true      |  function |
 //!
 //! `fetch` can configure the behavior of [`Fetch`](crate::prelude::Fetch).
 //!
 //! You can use `inner` and `map` configure the type and map function.
-//! Or use `scalar` or `vector` configure the [`fetch_uid`](crate::prelude::Fetch#method.fetch_uid) and [`fetch_vec_uid`](crate::prelude::Fetch#method.fetch_vec_uid) separately.
+//! Or use `handle` configure the [`fetch_uid`](crate::prelude::Fetch#method.fetch_uid).
 //!
 //! ##### Example
 //!

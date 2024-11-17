@@ -255,7 +255,6 @@ pub mod prelude {
     pub use crate::opt::OptParser;
     pub use crate::opt::OptValueExt;
     pub use crate::opt::Pos;
-    pub use crate::opt::RefOpt;
     #[cfg(feature = "serde")]
     pub use crate::opt::Serde;
     pub use crate::opt::StrParser;

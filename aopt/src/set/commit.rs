@@ -2,7 +2,7 @@ use std::any::TypeId;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-use crate::opt::Any;
+use crate::opt::AnyOpt;
 use crate::opt::Cmd;
 use crate::opt::ConfigValue;
 use crate::opt::Main;
@@ -110,7 +110,7 @@ where
 
     add_interface!(Main<T>, set_main_type_only, set_main_type);
 
-    add_interface!(Any<T>, set_any_type_only, set_any_type);
+    add_interface!(AnyOpt<T>, set_any_type_only, set_any_type);
 }
 
 impl<'a, S, U> SetCommit<'a, S, U>
