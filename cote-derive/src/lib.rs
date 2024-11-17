@@ -2,7 +2,6 @@ mod config;
 mod gen;
 mod value;
 
-use gen::AlterGenerator;
 use gen::CoteGenerator;
 use gen::FetchGenerator;
 use gen::InferGenerator;
@@ -34,18 +33,16 @@ pub fn parser(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     .into()
 }
 
-#[proc_macro_derive(CoteOpt, attributes(infer, alter, fetch))]
+#[proc_macro_derive(CoteOpt, attributes(infer, fetch))]
 pub fn parser_opt(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input: DeriveInput = parse_macro_input!(input);
     let generator = |input| -> syn::Result<proc_macro2::TokenStream> {
         let fg = FetchGenerator::new(input)?;
         let ig = InferGenerator::new(input)?;
-        let ag = AlterGenerator::new(input)?;
         let fg = fg.gen_impl_for_struct()?;
         let ig = ig.gen_impl_for_struct()?;
-        let ag = ag.gen_impl_for_struct()?;
 
-        Ok(quote::quote! { #fg #ig #ag })
+        Ok(quote::quote! { #fg #ig })
     };
 
     generator(&input)

@@ -498,3 +498,201 @@ impl Infer for Placeholder {
 impl Infer for () {
     type Val = ();
 }
+
+impl<T: Infer> Infer for Option<T> {
+    type Val = <T as Infer>::Val;
+
+    fn infer_act() -> Action {
+        <T as Infer>::infer_act()
+    }
+
+    fn infer_force() -> bool {
+        false
+    }
+
+    fn infer_ctor() -> String {
+        <T as Infer>::infer_ctor()
+    }
+
+    fn infer_index() -> Option<Index> {
+        <T as Infer>::infer_index()
+    }
+
+    fn infer_style() -> Vec<Style> {
+        <T as Infer>::infer_style()
+    }
+
+    fn infer_ignore_name() -> bool {
+        <T as Infer>::infer_ignore_name()
+    }
+
+    fn infer_ignore_alias() -> bool {
+        <T as Infer>::infer_ignore_alias()
+    }
+
+    fn infer_ignore_index() -> bool {
+        <T as Infer>::infer_ignore_index()
+    }
+
+    fn infer_validator() -> Option<ValValidator<Self::Val>> {
+        <T as Infer>::infer_validator()
+    }
+
+    fn infer_initializer() -> Option<ValInitializer> {
+        <T as Infer>::infer_initializer()
+    }
+
+    fn infer_type_id() -> TypeId {
+        <T as Infer>::infer_type_id()
+    }
+
+    fn infer_tweak_info<C>(cfg: &mut C) -> Result<(), Error>
+    where
+        Self: Sized + 'static,
+        Self::Val: RawValParser,
+        C: ConfigValue + Default,
+    {
+        <T as Infer>::infer_tweak_info(cfg)
+    }
+
+    fn infer_fill_info<C>(cfg: &mut C) -> Result<(), Error>
+    where
+        Self: Sized + 'static,
+        Self::Val: RawValParser,
+        C: ConfigValue + Default,
+    {
+        <T as Infer>::infer_fill_info(cfg)
+    }
+}
+
+impl<Err, T: Infer> Infer for Result<T, Err> {
+    type Val = <T as Infer>::Val;
+
+    fn infer_act() -> Action {
+        <T as Infer>::infer_act()
+    }
+
+    fn infer_force() -> bool {
+        false
+    }
+
+    fn infer_ctor() -> String {
+        <T as Infer>::infer_ctor()
+    }
+
+    fn infer_index() -> Option<Index> {
+        <T as Infer>::infer_index()
+    }
+
+    fn infer_style() -> Vec<Style> {
+        <T as Infer>::infer_style()
+    }
+
+    fn infer_ignore_name() -> bool {
+        <T as Infer>::infer_ignore_name()
+    }
+
+    fn infer_ignore_alias() -> bool {
+        <T as Infer>::infer_ignore_alias()
+    }
+
+    fn infer_ignore_index() -> bool {
+        <T as Infer>::infer_ignore_index()
+    }
+
+    fn infer_validator() -> Option<ValValidator<Self::Val>> {
+        <T as Infer>::infer_validator()
+    }
+
+    fn infer_initializer() -> Option<ValInitializer> {
+        <T as Infer>::infer_initializer()
+    }
+
+    fn infer_type_id() -> TypeId {
+        <T as Infer>::infer_type_id()
+    }
+
+    fn infer_tweak_info<C>(cfg: &mut C) -> Result<(), Error>
+    where
+        Self: Sized + 'static,
+        Self::Val: RawValParser,
+        C: ConfigValue + Default,
+    {
+        <T as Infer>::infer_tweak_info(cfg)
+    }
+
+    fn infer_fill_info<C>(cfg: &mut C) -> Result<(), Error>
+    where
+        Self: Sized + 'static,
+        Self::Val: RawValParser,
+        C: ConfigValue + Default,
+    {
+        <T as Infer>::infer_fill_info(cfg)
+    }
+}
+
+impl<T: Infer> Infer for Vec<T> {
+    type Val = <T as Infer>::Val;
+
+    fn infer_act() -> Action {
+        Action::App
+    }
+
+    fn infer_force() -> bool {
+        true
+    }
+
+    fn infer_ctor() -> String {
+        <T as Infer>::infer_ctor()
+    }
+
+    fn infer_index() -> Option<Index> {
+        <T as Infer>::infer_index()
+    }
+
+    fn infer_style() -> Vec<Style> {
+        <T as Infer>::infer_style()
+    }
+
+    fn infer_ignore_name() -> bool {
+        <T as Infer>::infer_ignore_name()
+    }
+
+    fn infer_ignore_alias() -> bool {
+        <T as Infer>::infer_ignore_alias()
+    }
+
+    fn infer_ignore_index() -> bool {
+        <T as Infer>::infer_ignore_index()
+    }
+
+    fn infer_validator() -> Option<ValValidator<Self::Val>> {
+        <T as Infer>::infer_validator()
+    }
+
+    fn infer_initializer() -> Option<ValInitializer> {
+        <T as Infer>::infer_initializer()
+    }
+
+    fn infer_type_id() -> TypeId {
+        <T as Infer>::infer_type_id()
+    }
+
+    fn infer_tweak_info<C>(cfg: &mut C) -> Result<(), Error>
+    where
+        Self: Sized + 'static,
+        Self::Val: RawValParser,
+        C: ConfigValue + Default,
+    {
+        <T as Infer>::infer_tweak_info(cfg)
+    }
+
+    fn infer_fill_info<C>(cfg: &mut C) -> Result<(), Error>
+    where
+        Self: Sized + 'static,
+        Self::Val: RawValParser,
+        C: ConfigValue + Default,
+    {
+        <T as Infer>::infer_fill_info(cfg)
+    }
+}

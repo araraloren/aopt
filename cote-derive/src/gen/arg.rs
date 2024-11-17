@@ -141,6 +141,7 @@ impl<'a> ArgGenerator<'a> {
         let field_span = self.ident().span();
         let wrap_ty = self.wrapper_ty;
         let inner_ty = wrap_ty.inner_type();
+        let field_ty = self.ty();
         let field_cfg = &self.config;
         let cfg_ident = Ident::new("cfg", field_span);
         let mut codes = vec![];
@@ -255,11 +256,10 @@ impl<'a> ArgGenerator<'a> {
         }
         codes.push(if let Some(ty) = self.config.find_value(ArgKind::Type) {
             quote! {
-                <#ty as cote::prelude::Alter>::alter(cote::prelude::Hint::Null, &mut #cfg_ident);
                 <#ty as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
             }
         } else {
-            self.kind().gen_infer(self.ident(), &cfg_ident, &wrap_ty)?
+            self.kind().gen_infer(&cfg_ident, field_ty)?
         });
         Utils::gen_opt_create(self.ident(), Some(quote! { #(#codes)* }))
     }

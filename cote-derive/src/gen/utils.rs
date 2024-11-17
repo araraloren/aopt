@@ -66,118 +66,20 @@ impl AttrKind {
         }
     }
 
-    pub fn gen_infer(
-        &self,
-        ident: &Ident,
-        cfg_ident: &Ident,
-        hint: &WrapperTy,
-    ) -> syn::Result<TokenStream> {
+    pub fn gen_infer(&self, cfg_ident: &Ident, field_ty: &Type) -> syn::Result<TokenStream> {
         match self {
-            AttrKind::Cmd => {
-                if !hint.is_null() {
-                    Err(error(
-                        cfg_ident.span(),
-                        format!("Remove `Option` or `Vec` on `cmd` field `{}`", ident,),
-                    ))
-                } else {
-                    let inner_ty = hint.inner_type();
-
-                    Ok(quote! {
-                        cote::prelude::ConfigValue::set_type::<#inner_ty>(&mut #cfg_ident);
-                        <cote::prelude::Cmd as cote::prelude::Alter>::alter(cote::prelude::Hint::Null, &mut #cfg_ident);
-                        <cote::prelude::Cmd as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
-                    })
-                }
-            }
+            AttrKind::Cmd => Ok(quote! {
+                cote::prelude::ConfigValue::set_type::<#field_ty>(&mut #cfg_ident);
+                <cote::prelude::Cmd as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
+            }),
             AttrKind::Pos => {
-                Ok(match hint {
-                    WrapperTy::Opt(inner_ty) => {
-                        quote! {
-                            // using information of Pos<T>
-                            cote::prelude::ConfigValue::set_type::<#inner_ty>(&mut #cfg_ident);
-                            <cote::prelude::Pos<#inner_ty> as cote::prelude::Alter>::alter(cote::prelude::Hint::Opt, &mut #cfg_ident);
-                            <cote::prelude::Pos<#inner_ty> as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
-                        }
-                    }
-                    WrapperTy::Res(inner_ty) => {
-                        quote! {
-                            // using information of Pos<T>
-                            cote::prelude::ConfigValue::set_type::<#inner_ty>(&mut #cfg_ident);
-                            <cote::prelude::Pos<#inner_ty> as cote::prelude::Alter>::alter(cote::prelude::Hint::Res, &mut #cfg_ident);
-                            <cote::prelude::Pos<#inner_ty> as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
-                        }
-                    }
-                    WrapperTy::Vec(inner_ty) => {
-                        quote! {
-                            // using information of Pos<T>
-                            cote::prelude::ConfigValue::set_type::<#inner_ty>(&mut #cfg_ident);
-                            <cote::prelude::Pos<#inner_ty> as cote::prelude::Alter>::alter(cote::prelude::Hint::Vec, &mut #cfg_ident);
-                            <cote::prelude::Pos<#inner_ty> as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
-                        }
-                    }
-                    WrapperTy::OptVec(inner_ty) => {
-                        quote! {
-                            // using information of Pos<T>
-                            cote::prelude::ConfigValue::set_type::<#inner_ty>(&mut #cfg_ident);
-                            <cote::prelude::Pos<#inner_ty> as cote::prelude::Alter>::alter(cote::prelude::Hint::OptVec, &mut #cfg_ident);
-                            <cote::prelude::Pos<#inner_ty> as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
-                        }
-                    }
-                    WrapperTy::ResVec(inner_ty) => {
-                        quote! {
-                            // using information of Pos<T>
-                            cote::prelude::ConfigValue::set_type::<#inner_ty>(&mut #cfg_ident);
-                            <cote::prelude::Pos<#inner_ty> as cote::prelude::Alter>::alter(cote::prelude::Hint::ResVec, &mut #cfg_ident);
-                            <cote::prelude::Pos<#inner_ty> as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
-                        }
-                    }
-                    WrapperTy::Null(inner_ty) => {
-                        quote! {
-                            // using information of Pos<T>
-                            cote::prelude::ConfigValue::set_type::<#inner_ty>(&mut #cfg_ident);
-                            <cote::prelude::Pos<#inner_ty> as cote::prelude::Alter>::alter(cote::prelude::Hint::Null, &mut #cfg_ident);
-                            <cote::prelude::Pos<#inner_ty> as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
-                        }
-                    }
+                Ok(quote! {
+                    // using information of Pos<T>
+                    <cote::prelude::Pos<#field_ty> as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
                 })
             }
-            AttrKind::Arg => Ok(match hint {
-                WrapperTy::Opt(inner_ty) => {
-                    quote! {
-                        <#inner_ty as cote::prelude::Alter>::alter(cote::prelude::Hint::Opt, &mut #cfg_ident);
-                        <#inner_ty as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
-                    }
-                }
-                WrapperTy::Res(inner_ty) => {
-                    quote! {
-                        <#inner_ty as cote::prelude::Alter>::alter(cote::prelude::Hint::Res, &mut #cfg_ident);
-                        <#inner_ty as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
-                    }
-                }
-                WrapperTy::Vec(inner_ty) => {
-                    quote! {
-                        <#inner_ty as cote::prelude::Alter>::alter(cote::prelude::Hint::Vec, &mut #cfg_ident);
-                        <#inner_ty as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
-                    }
-                }
-                WrapperTy::OptVec(inner_ty) => {
-                    quote! {
-                        <#inner_ty as cote::prelude::Alter>::alter(cote::prelude::Hint::OptVec, &mut #cfg_ident);
-                        <#inner_ty as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
-                    }
-                }
-                WrapperTy::ResVec(inner_ty) => {
-                    quote! {
-                        <#inner_ty as cote::prelude::Alter>::alter(cote::prelude::Hint::ResVec, &mut #cfg_ident);
-                        <#inner_ty as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
-                    }
-                }
-                WrapperTy::Null(inner_ty) => {
-                    quote! {
-                        <#inner_ty as cote::prelude::Alter>::alter(cote::prelude::Hint::Null, &mut #cfg_ident);
-                        <#inner_ty as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
-                    }
-                }
+            AttrKind::Arg => Ok(quote! {
+                <#field_ty as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
             }),
             _ => {
                 unreachable!("In AttrKind, can not get here ...")
@@ -514,7 +416,6 @@ impl GenericsModifier {
 
     pub fn mod_for_ipd(&mut self, used: &[&Ident]) -> &mut Self {
         let orig_where = self.0.where_clause.as_ref().map(|v| &v.predicates);
-        let alter = Self::gen_alter_for_ty(used);
         let fetch = Self::gen_fetch_for_ty(used, quote!('set), quote!(Set), true);
         let new_where: WhereClause = parse_quote! {
             where
@@ -524,7 +425,6 @@ impl GenericsModifier {
             <Set as cote::prelude::OptParser>::Output: cote::prelude::Information,
             #(#used: cote::prelude::Infer + cote::prelude::ErasedTy,)*
             #(<#used as cote::prelude::Infer>::Val: cote::prelude::RawValParser,)*
-            #alter
             #fetch
             #orig_where
         };
@@ -616,12 +516,6 @@ impl GenericsModifier {
         self.0.split_for_impl()
     }
 
-    pub fn gen_alter_for_ty(used: &[&Ident]) -> TokenStream {
-        quote! {
-            #(#used: cote::prelude::Alter,)*
-        }
-    }
-
     pub fn gen_fetch_for_ty(
         used: &[&Ident],
         lifetime: TokenStream,
@@ -711,10 +605,6 @@ impl<'a> WrapperTy<'a> {
                 }
             }
         }
-    }
-
-    pub fn is_null(&self) -> bool {
-        matches!(self, Self::Null(_))
     }
 
     pub fn inner_type(&self) -> &Type {

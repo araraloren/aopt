@@ -1,6 +1,5 @@
 #![doc = include_str!("../README.md")]
 pub mod _reference;
-pub(crate) mod alter;
 pub(crate) mod help;
 pub(crate) mod meta;
 pub(crate) mod parser;
@@ -83,8 +82,6 @@ pub mod prelude {
     pub use cote_derive::CoteOpt;
     pub use cote_derive::CoteVal;
 
-    pub use crate::alter::Alter;
-    pub use crate::alter::Hint;
     pub use crate::help::display_set_help;
     pub use crate::help::HelpContext;
     pub use crate::meta::OptionMeta;

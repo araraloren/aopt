@@ -588,10 +588,6 @@
 //!
 //! - [`RawValParser`](crate::prelude::RawValParser)
 //!
-//! `Cote` using [`parse`](crate::prelude::RawValParser::parse) parsing the value from command line arguments.
-//!
-//! - [`Alter`](crate::prelude::Alter)
-//!
 //! `Cote` using the trait override the action or optional behavior of [`Infer`](crate::prelude::Infer).
 //!
 //!| type | action | force required | force required if has default value |
@@ -864,7 +860,7 @@
 //!
 //! ### `CoteOpt` Configurations list
 //!
-//! `CoteOpt` derive the default behavior of [`Infer`](crate::prelude::Infer), [`Fetch`](crate::prelude::Fetch`) and [`Alter`](crate::prelude::Alter).
+//! `CoteOpt` derive the default behavior of [`Infer`](crate::prelude::Infer), [`Fetch`](crate::prelude::Fetch`);
 //!
 //! #### `infer`
 //!
@@ -892,10 +888,6 @@
 //! ```rust
 #![doc = include_str!("../tests/16_infer.rs")]
 //! ```
-//!
-//! #### `alter`
-//!
-//! `alter` is reserve for future using.
 //!
 //! #### `fetch`
 //!

@@ -19,8 +19,6 @@ impl Infer for Flag {
     }
 }
 
-cote::impl_alter!(Flag);
-
 cote::impl_fetch!(Flag);
 
 impl RawValParser for Flag {

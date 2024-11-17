@@ -25,10 +25,6 @@ where
     }
 }
 
-impl Alter for Speed {
-    // using default behavior
-}
-
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 

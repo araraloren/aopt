@@ -40,8 +40,6 @@ where
 {
 }
 
-impl Alter for Direction {}
-
 impl RawValParser for Direction {
     type Error = cote::Error;
 

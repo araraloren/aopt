@@ -421,10 +421,9 @@ impl<'a> CoteGenerator<'a> {
         let parser_name = &self.name;
         let abort = self.configs.find_cfg(CoteKind::AbortHelp);
         let help = self.configs.find_cfg(CoteKind::Help);
-        let alter = GenericsModifier::gen_alter_for_ty(used);
         let fetch_generics =
             GenericsModifier::gen_fetch_for_ty(used, quote!('set), quote!(Set), true);
-        let fetch_alter = {
+        let fetch_code = {
             let fetch = GenericsModifier::gen_fetch_for_ty(
                 used,
                 quote!('set),
@@ -432,7 +431,7 @@ impl<'a> CoteGenerator<'a> {
                 true,
             );
 
-            quote! { #alter #fetch }
+            quote! { #fetch }
         };
         let sync_rctx_from_ret = Utils::gen_sync_ret(
             self.has_sub_command(),
@@ -452,7 +451,6 @@ impl<'a> CoteGenerator<'a> {
                 Ser = Ser,
                 Inv<'inv> = cote::prelude::Invoker<'inv, cote::prelude::Parser<'inv, Set, Ser>, Ser>
             > + cote::prelude::APolicyExt<P> + cote::prelude::PolicySettings + Default,
-            #alter
             #fetch_generics
         };
 
@@ -472,7 +470,7 @@ impl<'a> CoteGenerator<'a> {
             }
 
             pub fn into_parser<'inv>() -> cote::Result<cote::prelude::Parser<'inv, cote::prelude::ASet, cote::prelude::ASer>>
-            where #fetch_alter {
+            where #fetch_code {
                 Self::into_parser_with::<cote::prelude::ASet, cote::prelude::ASer>()
             }
 
@@ -482,7 +480,6 @@ impl<'a> CoteGenerator<'a> {
                 cote::prelude::SetCfg<Set>: cote::prelude::ConfigValue + Default,
                 <Set as cote::prelude::OptParser>::Output: cote::prelude::Information,
                 Set: cote::prelude::Set + cote::prelude::OptParser + cote::prelude::OptValidator + cote::prelude::SetValueFindExt + Default + 'inv,
-                #alter
                 #fetch_generics {
                 let mut parser = <Self as cote::IntoParserDerive<'inv, Set, Ser>>::into_parser()?;
 
@@ -551,7 +548,7 @@ impl<'a> CoteGenerator<'a> {
             }
 
             pub fn parse_args<'inv>(args: cote::prelude::Args) -> cote::Result<cote::prelude::CoteRes<#policy_def_ty, #policy_def_ty>>
-                where #fetch_alter {
+                where #fetch_code {
                 let mut policy = Self::into_policy();
                 let cote::prelude::CoteRes { ret, parser, .. } = Self::parse_args_with(args, &mut policy)?;
 
@@ -559,7 +556,7 @@ impl<'a> CoteGenerator<'a> {
             }
 
             pub fn parse(args: cote::prelude::Args) -> cote::Result<Self>
-            where #fetch_alter {
+            where #fetch_code {
                 let cote::prelude::CoteRes { mut ret, mut parser, .. } = Self::parse_args(args)?;
 
                 if let Some(mut error) = ret.take_failure() {
@@ -609,12 +606,12 @@ impl<'a> CoteGenerator<'a> {
             }
 
             pub fn parse_env_args<'inv>() -> cote::Result<cote::prelude::CoteRes<#policy_def_ty, #policy_def_ty>>
-                where #fetch_alter {
+                where #fetch_code {
                 Self::parse_args(cote::prelude::Args::from_env())
             }
 
             pub fn parse_env() -> cote::Result<Self>
-            where #fetch_alter {
+            where #fetch_code {
                 Self::parse(cote::prelude::Args::from_env())
             }
         })
