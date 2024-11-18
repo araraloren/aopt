@@ -12,10 +12,10 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-aopt = { path = "aopt", version = "0.15" }
+aopt = { path = "aopt", version = "0.16" }
 aopt-help = { path = "aopt-help", version = "0.3" }
-cote = { path = "cote", version = "0.7" }
-cote-derive = { path = "cote-derive", version = "0.5" }
+cote = { path = "cote", version = "0.8" }
+cote-derive = { path = "cote-derive", version = "0.6" }
 
 ahash = "0.8"
 async-trait = "0.1"

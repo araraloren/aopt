@@ -2,7 +2,7 @@ use aopt::prelude::AFwdParser;
 use cote::prelude::*;
 
 #[derive(Debug, PartialEq, Eq, CoteOpt)]
-#[infer(val = i32)]
+#[infer(val = i32, map = Speed)]
 #[fetch(inner = i32, map = Speed)]
 pub struct Speed(i32);
 

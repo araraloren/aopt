@@ -104,6 +104,19 @@ impl<'a> InferGenerator<'a> {
                         #value
                     }
                 },
+                InferKind::Map => quote! {
+                    fn infer_map(val: Self::Val) -> Self {
+                        (#value)(val)
+                    }
+                },
+                InferKind::Mutable => quote! {
+                    fn infer_mutable(&mut self, val: Self::Val)
+                    where
+                        Self: Sized,
+                    {
+                        (#value)(val)
+                    }
+                },
                 InferKind::Tweak => quote! {
                     fn infer_tweak_info<C>(cfg: &mut C) -> cote::Result<()>
                     where
@@ -132,6 +145,13 @@ impl<'a> InferGenerator<'a> {
             codes.push(quote! {
                 type Val = Self;
             })
+        }
+        if !self.configs.has_cfg(InferKind::Map) {
+            codes.push(quote! {
+                fn infer_map(val: Self::Val) -> Self {
+                    val
+                }
+            });
         }
         Ok(quote! {
             impl #impl_inf cote::prelude::Infer for #ident #type_inf #where_inf {

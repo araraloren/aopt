@@ -12,6 +12,10 @@ pub struct Speed(i32);
 
 impl Infer for Speed {
     type Val = i32;
+
+    fn infer_map(val: Self::Val) -> Self {
+        Speed(val)
+    }
 }
 
 impl<S> Fetch<S> for Speed

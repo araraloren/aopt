@@ -75,6 +75,15 @@ pub trait Infer {
         typeid::<Self::Val>()
     }
 
+    fn infer_map(val: Self::Val) -> Self;
+
+    fn infer_mutable(&mut self, val: Self::Val)
+    where
+        Self: Sized,
+    {
+        *self = Self::infer_map(val);
+    }
+
     fn infer_tweak_info<C>(_cfg: &mut C) -> Result<(), Error>
     where
         Self: Sized + 'static,
@@ -142,6 +151,10 @@ impl Infer for bool {
     fn infer_initializer() -> Option<ValInitializer> {
         Some(ValInitializer::new_value(false))
     }
+
+    fn infer_map(val: Self::Val) -> Self {
+        val
+    }
 }
 
 impl Infer for Cmd {
@@ -174,6 +187,14 @@ impl Infer for Cmd {
     fn infer_type_id() -> TypeId {
         typeid::<Self>()
     }
+
+    fn infer_map(val: Self::Val) -> Self {
+        Cmd::new(val)
+    }
+
+    fn infer_mutable(&mut self, val: Self::Val) {
+        self.0 = val;
+    }
 }
 
 impl<T> Infer for Pos<T>
@@ -200,6 +221,14 @@ where
 
     fn infer_ignore_index() -> bool {
         false
+    }
+
+    fn infer_map(val: Self::Val) -> Self {
+        Pos::new(<T as Infer>::infer_map(val))
+    }
+
+    fn infer_mutable(&mut self, val: Self::Val) {
+        self.0.infer_mutable(val);
     }
 
     /// Will add default type storer when value type is bool.
@@ -281,10 +310,26 @@ where
     fn infer_type_id() -> TypeId {
         typeid::<Self>()
     }
+
+    fn infer_map(val: Self::Val) -> Self {
+        Main::new(<T as Infer>::infer_map(val))
+    }
+
+    fn infer_mutable(&mut self, val: Self::Val) {
+        self.0.infer_mutable(val);
+    }
 }
 
 impl<T: ErasedTy + RawValParser> Infer for MutOpt<T> {
     type Val = T;
+
+    fn infer_map(val: Self::Val) -> Self {
+        MutOpt::new(val)
+    }
+
+    fn infer_mutable(&mut self, val: Self::Val) {
+        self.0 = val;
+    }
 }
 
 impl<T> Infer for AnyOpt<T>
@@ -315,6 +360,14 @@ where
     fn infer_type_id() -> TypeId {
         typeid::<Self>()
     }
+
+    fn infer_map(val: Self::Val) -> Self {
+        AnyOpt::new(<T as Infer>::infer_map(val))
+    }
+
+    fn infer_mutable(&mut self, val: Self::Val) {
+        self.0.infer_mutable(val);
+    }
 }
 
 impl Infer for Stdin {
@@ -330,6 +383,10 @@ impl Infer for Stdin {
 
     fn infer_ignore_alias() -> bool {
         true
+    }
+
+    fn infer_map(val: Self::Val) -> Self {
+        val
     }
 
     /// For type Stdin, swap the name and default alias(`-`) when build configuration.
@@ -362,6 +419,10 @@ impl Infer for Stop {
         true
     }
 
+    fn infer_map(val: Self::Val) -> Self {
+        val
+    }
+
     /// For type Stop, swap the name and default alias(`--`) when build configuration.
     fn infer_tweak_info<C>(cfg: &mut C) -> Result<(), Error>
     where
@@ -381,6 +442,10 @@ macro_rules! impl_infer_for {
     ($name:path) => {
         impl Infer for $name {
             type Val = $name;
+
+            fn infer_map(val: Self::Val) -> Self {
+                val
+            }
         }
     };
     (&$a:lifetime $name:path) => {
@@ -436,6 +501,12 @@ impl Infer for Placeholder {
         typeid::<Self>()
     }
 
+    fn infer_map(_: Self::Val) -> Self {
+        Placeholder
+    }
+
+    fn infer_mutable(&mut self, _: Self::Val) {}
+
     fn infer_fill_info<C>(cfg: &mut C) -> Result<(), Error>
     where
         Self: Sized + 'static,
@@ -467,6 +538,10 @@ impl Infer for Placeholder {
 
 impl Infer for () {
     type Val = ();
+
+    fn infer_map(val: Self::Val) -> Self {
+        val
+    }
 }
 
 impl<T: Infer> Infer for Option<T> {
@@ -514,6 +589,18 @@ impl<T: Infer> Infer for Option<T> {
 
     fn infer_type_id() -> TypeId {
         <T as Infer>::infer_type_id()
+    }
+
+    fn infer_map(val: Self::Val) -> Self {
+        Some(<T as Infer>::infer_map(val))
+    }
+
+    fn infer_mutable(&mut self, val: Self::Val) {
+        if let Some(value) = self {
+            value.infer_mutable(val);
+        } else {
+            *self = Self::infer_map(val);
+        }
     }
 
     fn infer_tweak_info<C>(cfg: &mut C) -> Result<(), Error>
@@ -582,6 +669,18 @@ impl<Err, T: Infer> Infer for Result<T, Err> {
         <T as Infer>::infer_type_id()
     }
 
+    fn infer_map(val: Self::Val) -> Self {
+        Ok(<T as Infer>::infer_map(val))
+    }
+
+    fn infer_mutable(&mut self, val: Self::Val) {
+        if let Ok(value) = self {
+            value.infer_mutable(val);
+        } else {
+            *self = Self::infer_map(val);
+        }
+    }
+
     fn infer_tweak_info<C>(cfg: &mut C) -> Result<(), Error>
     where
         Self: Sized + 'static,
@@ -646,6 +745,14 @@ impl<T: Infer> Infer for Vec<T> {
 
     fn infer_type_id() -> TypeId {
         <T as Infer>::infer_type_id()
+    }
+
+    fn infer_map(val: Self::Val) -> Self {
+        vec![<T as Infer>::infer_map(val)]
+    }
+
+    fn infer_mutable(&mut self, val: Self::Val) {
+        self.push(<T as Infer>::infer_map(val));
     }
 
     fn infer_tweak_info<C>(cfg: &mut C) -> Result<(), Error>

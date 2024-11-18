@@ -17,7 +17,7 @@ pub struct Cli {
 
 #[derive(Debug, PartialEq, Eq, CoteOpt)]
 #[fetch(inner = i32, map = Speed)]
-#[infer(val = i32)]
+#[infer(val = i32, map = Speed)]
 pub struct Speed(i32);
 
 #[derive(Debug, PartialEq, Eq)]
@@ -30,6 +30,10 @@ pub enum Direction {
 
 impl Infer for Direction {
     type Val = Direction;
+
+    fn infer_map(val: Self::Val) -> Self {
+        val
+    }
 }
 
 impl<S> Fetch<S> for Direction

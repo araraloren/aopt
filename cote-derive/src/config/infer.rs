@@ -29,6 +29,10 @@ pub enum InferKind {
 
     Type,
 
+    Map,
+
+    Mutable,
+
     Tweak,
 
     Fill,
@@ -52,6 +56,8 @@ impl Kind for InferKind {
             "valid" => Ok((Self::Valid, true)),
             "init" => Ok((Self::Init, true)),
             "ty" => Ok((Self::Type, true)),
+            "map" => Ok((Self::Map, true)),
+            "mutable" => Ok((Self::Mutable, true)),
             "tweak" => Ok((Self::Tweak, true)),
             "fill" => Ok((Self::Fill, true)),
             _ => Err(error(

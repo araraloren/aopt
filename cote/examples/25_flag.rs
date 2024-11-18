@@ -17,6 +17,10 @@ impl Infer for Flag {
     fn infer_style() -> Vec<aopt::prelude::Style> {
         vec![Style::Flag]
     }
+
+    fn infer_map(val: Self::Val) -> Self {
+        val
+    }
 }
 
 cote::impl_fetch!(Flag);

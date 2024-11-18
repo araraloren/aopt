@@ -5,6 +5,7 @@ use std::{any::TypeId, fmt::Debug};
 #[derive(Debug, PartialEq, Eq, CoteOpt)]
 #[infer(val = i32, action = Action::App)]
 #[infer(init = Some(ValInitializer::new_value(42i32)))]
+#[infer(map = Speed)]
 pub struct Speed(i32);
 
 #[test]
