@@ -16,7 +16,6 @@ pub struct Cli {
 }
 
 #[derive(Debug, PartialEq, Eq, CoteOpt)]
-#[fetch(inner = i32, map = Speed)]
 #[infer(val = i32, map = Speed)]
 pub struct Speed(i32);
 

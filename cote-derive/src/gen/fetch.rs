@@ -78,7 +78,7 @@ impl<'a> FetchGenerator<'a> {
                 }
             } else {
                 quote! {
-                    cote::prelude::fetch_uid_impl(uid, set)
+                    cote::prelude::fetch_uid_impl(uid, set).map(<#ident as cote::prelude::Infer>::infer_map)
                 }
             };
 

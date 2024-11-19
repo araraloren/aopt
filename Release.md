@@ -1,6 +1,18 @@
 
 # Relase note
 
+## 0.16.0
+
+- Remove some unused struct
+
+- Remove implementations of Infer for reference type
+
+- Remove Alter
+
+- Add *_map and *_mutable to Infer
+
+- Improve the implementation of Infer and Fetch
+
 ## 0.14.0
 
 - Remove RawVal, AStr
