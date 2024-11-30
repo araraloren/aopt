@@ -154,7 +154,7 @@ pub struct Ctx<'a> {
     action: std::sync::Mutex<Action>,
 }
 
-impl<'a> Clone for Ctx<'a> {
+impl Clone for Ctx<'_> {
     fn clone(&self) -> Self {
         Self {
             orig: self.orig.clone(),
@@ -305,7 +305,7 @@ impl<'a> Ctx<'a> {
     }
 }
 
-impl<'a> Ctx<'a> {
+impl Ctx<'_> {
     #[cfg(not(feature = "sync"))]
     pub fn policy_act(&self) -> Action {
         *self.action.borrow()
@@ -337,7 +337,7 @@ impl<'a> Ctx<'a> {
     }
 }
 
-impl<'a> Ctx<'a> {
+impl Ctx<'_> {
     pub fn value<T: RawValParser>(&self) -> Result<T, Error> {
         let arg = self.arg()?.map(|v| v.as_ref());
         let uid = self.uid()?;

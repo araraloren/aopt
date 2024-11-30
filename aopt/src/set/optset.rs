@@ -333,7 +333,7 @@ where
     }
 }
 
-impl<'b, P, C, V> SetIndex<OptSet<P, C, V>> for &'b str
+impl<P, C, V> SetIndex<OptSet<P, C, V>> for &'_ str
 where
     C::Opt: Opt,
     C: Ctor,

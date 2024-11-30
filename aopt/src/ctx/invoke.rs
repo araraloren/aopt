@@ -78,7 +78,7 @@ pub struct Invoker<'a, Set, Ser> {
     callbacks: HashMap<Uid, InvokeHandler<'a, Set, Ser, Error>>,
 }
 
-impl<'a, Set, Ser> Debug for Invoker<'a, Set, Ser> {
+impl<Set, Ser> Debug for Invoker<'_, Set, Ser> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Invoker")
             .field("callbacks", &"{ ... }")
@@ -86,7 +86,7 @@ impl<'a, Set, Ser> Debug for Invoker<'a, Set, Ser> {
     }
 }
 
-impl<'a, Set, Ser> Default for Invoker<'a, Set, Ser> {
+impl<Set, Ser> Default for Invoker<'_, Set, Ser> {
     fn default() -> Self {
         Self {
             callbacks: HashMap::default(),
@@ -94,7 +94,7 @@ impl<'a, Set, Ser> Default for Invoker<'a, Set, Ser> {
     }
 }
 
-impl<'a, Set, Ser> Invoker<'a, Set, Ser> {
+impl<Set, Ser> Invoker<'_, Set, Ser> {
     pub fn new() -> Self {
         Self {
             callbacks: HashMap::default(),
@@ -366,7 +366,7 @@ where
     }
 }
 
-impl<'a, 'b, I, Set, Ser, H, O> Drop for HandlerEntryThen<'a, 'b, I, Set, Ser, H, O>
+impl<'a, I, Set, Ser, H, O> Drop for HandlerEntryThen<'a, '_, I, Set, Ser, H, O>
 where
     O: ErasedTy,
     Set: crate::set::Set,

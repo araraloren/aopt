@@ -39,7 +39,7 @@ where
     marker: PhantomData<U>,
 }
 
-impl<'a, S, U> Debug for SetCommit<'a, S, U>
+impl<S, U> Debug for SetCommit<'_, S, U>
 where
     S: Set + Debug,
     U: Infer + 'static,
@@ -231,7 +231,7 @@ where
     }
 }
 
-impl<'a, S, U> SetCommit<'a, S, U>
+impl<S, U> SetCommit<'_, S, U>
 where
     S: Set,
     U: Infer + 'static,
@@ -249,7 +249,7 @@ where
     }
 }
 
-impl<'a, S, U> SetCommit<'a, S, U>
+impl<S, U> SetCommit<'_, S, U>
 where
     S: Set,
     U: Infer + 'static,
@@ -272,7 +272,7 @@ where
     }
 }
 
-impl<'a, S, U> Commit<S> for SetCommit<'a, S, U>
+impl<S, U> Commit<S> for SetCommit<'_, S, U>
 where
     S: Set,
     U: Infer + 'static,
@@ -288,7 +288,7 @@ where
     }
 }
 
-impl<'a, S, U> Drop for SetCommit<'a, S, U>
+impl<S, U> Drop for SetCommit<'_, S, U>
 where
     S: Set,
     U: Infer + 'static,
@@ -317,7 +317,7 @@ where
     marker: PhantomData<T>,
 }
 
-impl<'a, S, U, T> Debug for SetCommitWithValue<'a, S, U, T>
+impl<S, U, T> Debug for SetCommitWithValue<'_, S, U, T>
 where
     U: Infer + 'static,
     T: ErasedTy,
@@ -381,7 +381,7 @@ where
     }
 }
 
-impl<'a, S, U, T> SetCommitWithValue<'a, S, U, T>
+impl<S, U, T> SetCommitWithValue<'_, S, U, T>
 where
     S: Set,
     U: Infer + 'static,
@@ -400,7 +400,7 @@ where
     }
 }
 
-impl<'a, S, U, T> SetCommitWithValue<'a, S, U, T>
+impl<S, U, T> SetCommitWithValue<'_, S, U, T>
 where
     S: Set,
     T: ErasedTy + Clone,
@@ -424,7 +424,7 @@ where
     }
 }
 
-impl<'a, S, U, T> SetCommitWithValue<'a, S, U, T>
+impl<S, U, T> SetCommitWithValue<'_, S, U, T>
 where
     S: Set,
     T: ErasedTy,
@@ -438,7 +438,7 @@ where
     }
 }
 
-impl<'a, S, U, T> SetCommitWithValue<'a, S, U, T>
+impl<S, U, T> SetCommitWithValue<'_, S, U, T>
 where
     S: Set,
     T: ErasedTy,
@@ -457,7 +457,7 @@ where
     }
 }
 
-impl<'a, S, U, T> Commit<S> for SetCommitWithValue<'a, S, U, T>
+impl<S, U, T> Commit<S> for SetCommitWithValue<'_, S, U, T>
 where
     S: Set,
     T: ErasedTy,

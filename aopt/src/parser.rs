@@ -217,13 +217,13 @@ impl<'a, P: Policy> Deref for Parser<'a, P> {
     }
 }
 
-impl<'a, P: Policy> DerefMut for Parser<'a, P> {
+impl<P: Policy> DerefMut for Parser<'_, P> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.optset
     }
 }
 
-impl<'a, P> Parser<'a, P>
+impl<P> Parser<'_, P>
 where
     P: Policy + APolicyExt<P>,
 {
@@ -281,7 +281,7 @@ impl<'a, P: Policy> Parser<'a, P> {
     }
 }
 
-impl<'a, P> Parser<'a, P>
+impl<P> Parser<'_, P>
 where
     P::Set: Set,
     P: Policy,
@@ -302,7 +302,7 @@ where
     }
 }
 
-impl<'a, P> PolicySettings for Parser<'a, P>
+impl<P> PolicySettings for Parser<'_, P>
 where
     P: Policy + PolicySettings,
 {
@@ -351,7 +351,7 @@ where
     }
 }
 
-impl<'a, P> Parser<'a, P>
+impl<P> Parser<'_, P>
 where
     P: Policy + PolicySettings,
 {
@@ -379,7 +379,7 @@ where
     }
 }
 
-impl<'a, P: Policy> PolicyParser<P> for Parser<'a, P>
+impl<P: Policy> PolicyParser<P> for Parser<'_, P>
 where
     P::Set: crate::set::Set,
 {

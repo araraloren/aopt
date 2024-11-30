@@ -148,7 +148,7 @@ impl<'a, S> SingleOpt<'a, S> {
     }
 }
 
-impl<'a, S> MatchPolicy for SingleOpt<'a, S>
+impl<S> MatchPolicy for SingleOpt<'_, S>
 where
     S: Set,
     SetOpt<S>: Opt,

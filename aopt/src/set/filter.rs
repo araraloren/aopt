@@ -71,7 +71,7 @@ where
     info: SetCfg<S>,
 }
 
-impl<'a, S> Debug for Filter<'a, S>
+impl<S> Debug for Filter<'_, S>
 where
     S: Set + Debug,
     S::Ctor: Ctor,
@@ -148,7 +148,7 @@ where
     info: SetCfg<S>,
 }
 
-impl<'a, S> Debug for FilterMut<'a, S>
+impl<S> Debug for FilterMut<'_, S>
 where
     S: Set + Debug,
     S::Ctor: Ctor,

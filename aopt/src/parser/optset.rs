@@ -474,7 +474,7 @@ where
     }
 }
 
-impl<'a, P: Policy> PolicyParser<P> for HCOptSet<P::Set, P::Inv<'a>, P::Ser>
+impl<P: Policy> PolicyParser<P> for HCOptSet<P::Set, P::Inv<'_>, P::Ser>
 where
     P::Set: crate::set::Set,
 {

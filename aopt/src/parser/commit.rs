@@ -47,7 +47,7 @@ where
     marker: PhantomData<(&'a (), Ser)>,
 }
 
-impl<'a, 'b, I, S, Ser, U> Debug for ParserCommit<'a, 'b, I, S, Ser, U>
+impl<'a, I, S, Ser, U> Debug for ParserCommit<'a, '_, I, S, Ser, U>
 where
     U: Infer + 'static,
     U::Val: RawValParser,
@@ -64,7 +64,7 @@ where
     }
 }
 
-impl<'a, 'b, I, S, Ser, U> Commit<S> for ParserCommit<'a, 'b, I, S, Ser, U>
+impl<'a, I, S, Ser, U> Commit<S> for ParserCommit<'a, '_, I, S, Ser, U>
 where
     S: Set,
     U: Infer + 'static,
@@ -254,7 +254,7 @@ where
     }
 }
 
-impl<'a, 'b, I, S, Ser, U> ParserCommit<'a, 'b, I, S, Ser, U>
+impl<'a, I, S, Ser, U> ParserCommit<'a, '_, I, S, Ser, U>
 where
     S: Set,
     U: Infer + 'static,
@@ -274,7 +274,7 @@ where
     }
 }
 
-impl<'a, 'b, I, S, Ser, U> ParserCommit<'a, 'b, I, S, Ser, U>
+impl<'a, I, S, Ser, U> ParserCommit<'a, '_, I, S, Ser, U>
 where
     S: Set,
     U: Infer + 'static,
@@ -385,7 +385,7 @@ where
     marker: PhantomData<(&'a (), Ser)>,
 }
 
-impl<'a, 'b, I, S, Ser, U, T> Debug for ParserCommitWithValue<'a, 'b, I, S, Ser, U, T>
+impl<'a, I, S, Ser, U, T> Debug for ParserCommitWithValue<'a, '_, I, S, Ser, U, T>
 where
     U: Infer + 'static,
     T: ErasedTy,
@@ -538,7 +538,7 @@ where
     }
 }
 
-impl<'a, 'b, I, S, Ser, U, T> Commit<S> for ParserCommitWithValue<'a, 'b, I, S, Ser, U, T>
+impl<'a, I, S, Ser, U, T> Commit<S> for ParserCommitWithValue<'a, '_, I, S, Ser, U, T>
 where
     S: Set,
     U: Infer + 'static,
@@ -557,7 +557,7 @@ where
     }
 }
 
-impl<'a, 'b, I, S, Ser, U, T> ParserCommitWithValue<'a, 'b, I, S, Ser, U, T>
+impl<'a, I, S, Ser, U, T> ParserCommitWithValue<'a, '_, I, S, Ser, U, T>
 where
     S: Set,
     U: Infer + 'static,
@@ -573,7 +573,7 @@ where
     }
 }
 
-impl<'a, 'b, I, S, Ser, U, T> ParserCommitWithValue<'a, 'b, I, S, Ser, U, T>
+impl<'a, I, S, Ser, U, T> ParserCommitWithValue<'a, '_, I, S, Ser, U, T>
 where
     S: Set,
     U: Infer + 'static,
@@ -594,7 +594,7 @@ where
     }
 }
 
-impl<'a, 'b, I, S, Ser, U, T> ParserCommitWithValue<'a, 'b, I, S, Ser, U, T>
+impl<'a, I, S, Ser, U, T> ParserCommitWithValue<'a, '_, I, S, Ser, U, T>
 where
     S: Set,
     U: Infer + 'static,
@@ -617,7 +617,7 @@ where
     }
 }
 
-impl<'a, 'b, I, S, Ser, U, T> ParserCommitWithValue<'a, 'b, I, S, Ser, U, T>
+impl<'a, I, S, Ser, U, T> ParserCommitWithValue<'a, '_, I, S, Ser, U, T>
 where
     S: Set,
     U: Infer + 'static,

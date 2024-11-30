@@ -152,6 +152,7 @@ where
                 let opt_valid = opt.valid();
 
                 pos_valid = pos_valid && opt_valid;
+                trace!("checking {}: {} {opt:?}", opt.hint(), opt_valid);
                 if !opt_valid {
                     names.push(opt.hint().to_owned());
                 }

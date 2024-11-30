@@ -171,7 +171,7 @@ impl<'a, 'b, Set, Inv, Ser> InvokeGuess<'a, 'b, Set, Inv, Ser> {
     }
 }
 
-impl<'a, 'b, 'c, Set, Inv, Ser> InvokeGuess<'a, 'b, Set, Inv, Ser>
+impl<'b, 'c, Set, Inv, Ser> InvokeGuess<'_, 'b, Set, Inv, Ser>
 where
     Set: crate::set::Set + OptValidator,
     Inv: HandlerCollection<'c, Set, Ser>,
@@ -424,8 +424,7 @@ where
     }
 }
 
-impl<'a, 'b, Set, Inv, Ser, T> GuessPolicy<EqualWithValuStyle, T>
-    for InvokeGuess<'a, 'b, Set, Inv, Ser>
+impl<'b, Set, Inv, Ser, T> GuessPolicy<EqualWithValuStyle, T> for InvokeGuess<'_, 'b, Set, Inv, Ser>
 where
     T: Default + PolicyBuild<'b>,
 {
@@ -448,7 +447,7 @@ where
     }
 }
 
-impl<'a, 'b, Set, Inv, Ser, T> GuessPolicy<ArgumentStyle, T> for InvokeGuess<'a, 'b, Set, Inv, Ser>
+impl<'b, Set, Inv, Ser, T> GuessPolicy<ArgumentStyle, T> for InvokeGuess<'_, 'b, Set, Inv, Ser>
 where
     T: Default + PolicyBuild<'b>,
 {
@@ -471,8 +470,7 @@ where
     }
 }
 
-impl<'a, 'b, Set, Inv, Ser, T> GuessPolicy<EmbeddedValueStyle, T>
-    for InvokeGuess<'a, 'b, Set, Inv, Ser>
+impl<'b, Set, Inv, Ser, T> GuessPolicy<EmbeddedValueStyle, T> for InvokeGuess<'_, 'b, Set, Inv, Ser>
 where
     Set: OptValidator,
     T: Default + PolicyBuild<'b>,
@@ -514,8 +512,8 @@ where
     }
 }
 
-impl<'a, 'b, Set, Inv, Ser, T> GuessPolicy<EmbeddedValuePlusStyle, MultiOpt<T, Set>>
-    for InvokeGuess<'a, 'b, Set, Inv, Ser>
+impl<'b, Set, Inv, Ser, T> GuessPolicy<EmbeddedValuePlusStyle, MultiOpt<T, Set>>
+    for InvokeGuess<'_, 'b, Set, Inv, Ser>
 where
     Set: OptValidator,
     T: Default + PolicyBuild<'b>,
@@ -560,8 +558,8 @@ where
     }
 }
 
-impl<'a, 'b, Set, Inv, Ser, T> GuessPolicy<CombinedOptionStyle, MultiOpt<T, Set>>
-    for InvokeGuess<'a, 'b, Set, Inv, Ser>
+impl<'b, Set, Inv, Ser, T> GuessPolicy<CombinedOptionStyle, MultiOpt<T, Set>>
+    for InvokeGuess<'_, 'b, Set, Inv, Ser>
 where
     Set: OptValidator,
     T: Default + PolicyBuild<'b>,
@@ -601,7 +599,7 @@ where
     }
 }
 
-impl<'a, 'b, Set, Inv, Ser, T> GuessPolicy<BooleanStyle, T> for InvokeGuess<'a, 'b, Set, Inv, Ser>
+impl<'b, Set, Inv, Ser, T> GuessPolicy<BooleanStyle, T> for InvokeGuess<'_, 'b, Set, Inv, Ser>
 where
     T: Default + PolicyBuild<'b>,
 {
@@ -626,7 +624,7 @@ where
     }
 }
 
-impl<'a, 'b, Set, Inv, Ser, T> GuessPolicy<FlagStyle, T> for InvokeGuess<'a, 'b, Set, Inv, Ser>
+impl<'b, Set, Inv, Ser, T> GuessPolicy<FlagStyle, T> for InvokeGuess<'_, 'b, Set, Inv, Ser>
 where
     T: Default + PolicyBuild<'b>,
 {
@@ -649,7 +647,7 @@ where
     }
 }
 
-impl<'a, 'b, Set, Inv, Ser, T> GuessPolicy<MainStyle, T> for InvokeGuess<'a, 'b, Set, Inv, Ser>
+impl<'b, Set, Inv, Ser, T> GuessPolicy<MainStyle, T> for InvokeGuess<'_, 'b, Set, Inv, Ser>
 where
     T: Default + PolicyBuild<'b>,
 {
@@ -674,7 +672,7 @@ where
     }
 }
 
-impl<'a, 'b, Set, Inv, Ser, T> GuessPolicy<PosStyle, T> for InvokeGuess<'a, 'b, Set, Inv, Ser>
+impl<'b, Set, Inv, Ser, T> GuessPolicy<PosStyle, T> for InvokeGuess<'_, 'b, Set, Inv, Ser>
 where
     T: Default + PolicyBuild<'b>,
 {
@@ -699,7 +697,7 @@ where
     }
 }
 
-impl<'a, 'b, Set, Inv, Ser, T> GuessPolicy<CmdStyle, T> for InvokeGuess<'a, 'b, Set, Inv, Ser>
+impl<'b, Set, Inv, Ser, T> GuessPolicy<CmdStyle, T> for InvokeGuess<'_, 'b, Set, Inv, Ser>
 where
     T: Default + PolicyBuild<'b>,
 {
@@ -723,7 +721,7 @@ where
     }
 }
 
-impl<'a, 'b, 'c, Set, Inv, Ser> InvokeGuess<'a, 'b, Set, Inv, Ser>
+impl<'b, 'c, Set, Inv, Ser> InvokeGuess<'_, 'b, Set, Inv, Ser>
 where
     Set: crate::set::Set,
     Inv: HandlerCollection<'c, Set, Ser>,
