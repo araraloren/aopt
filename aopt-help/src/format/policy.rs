@@ -32,7 +32,7 @@ pub struct DefaultPolicy<'a, I> {
     marker: PhantomData<&'a I>,
 }
 
-impl<'a, I> Default for DefaultPolicy<'a, I> {
+impl<I> Default for DefaultPolicy<'_, I> {
     fn default() -> Self {
         Self {
             name: Default::default(),
@@ -279,7 +279,7 @@ pub struct DefaultAppPolicy<'a, I> {
     marker: PhantomData<&'a I>,
 }
 
-impl<'a, I> Default for DefaultAppPolicy<'a, I> {
+impl<I> Default for DefaultAppPolicy<'_, I> {
     fn default() -> Self {
         Self {
             styles: Default::default(),
@@ -292,7 +292,7 @@ impl<'a, I> Default for DefaultAppPolicy<'a, I> {
     }
 }
 
-impl<'a, I> DefaultAppPolicy<'a, I> {
+impl<I> DefaultAppPolicy<'_, I> {
     pub fn new(
         styles: Vec<Style>,
         max_width: usize,

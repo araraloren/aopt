@@ -190,13 +190,13 @@ impl<'a> Deref for Command<'a> {
     }
 }
 
-impl<'a> DerefMut for Command<'a> {
+impl DerefMut for Command<'_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.stores
     }
 }
 
-impl<'b> HelpDisplay for Command<'b> {
+impl HelpDisplay for Command<'_> {
     fn gen_help<'a, P>(&self, policy: &P) -> Option<Cow<'a, str>>
     where
         Self: 'a,
@@ -275,7 +275,7 @@ impl<'a, 'b> AddStore2Block<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Drop for AddStore2Block<'a, 'b> {
+impl Drop for AddStore2Block<'_, '_> {
     fn drop(&mut self) {
         if !self.added {
             let store = std::mem::take(&mut self.store);
@@ -362,7 +362,7 @@ impl<'a, 'b> BlockMut<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Drop for BlockMut<'a, 'b> {
+impl Drop for BlockMut<'_, '_> {
     fn drop(&mut self) {
         if !self.added {
             let block = std::mem::take(&mut self.block);

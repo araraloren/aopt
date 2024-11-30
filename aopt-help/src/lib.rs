@@ -52,7 +52,7 @@ pub struct AppHelp<'a, W> {
     usage_new_line: usize,
 }
 
-impl<'a> Default for AppHelp<'a, Stdout> {
+impl Default for AppHelp<'_, Stdout> {
     fn default() -> Self {
         Self {
             style: Default::default(),
@@ -416,7 +416,7 @@ impl<'a, 'b> AddStore2App<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Drop for AddStore2App<'a, 'b> {
+impl Drop for AddStore2App<'_, '_> {
     fn drop(&mut self) {
         if !self.added {
             let store = std::mem::take(&mut self.store);
@@ -490,7 +490,7 @@ impl<'a, 'b> AddBlock2App<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Drop for AddBlock2App<'a, 'b> {
+impl Drop for AddBlock2App<'_, '_> {
     fn drop(&mut self) {
         if !self.added {
             let block = std::mem::take(&mut self.block);
@@ -563,7 +563,7 @@ impl<'a, 'b, W: Write> AddCmd2App<'a, 'b, W> {
     }
 }
 
-impl<'a, 'b, W: Write> Drop for AddCmd2App<'a, 'b, W> {
+impl<W: Write> Drop for AddCmd2App<'_, '_, W> {
     fn drop(&mut self) {
         if !self.added {
             let store = std::mem::take(&mut self.cmd);

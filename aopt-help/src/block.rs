@@ -83,7 +83,7 @@ impl<'a, T> Block<'a, T> {
     }
 }
 
-impl<'a, T> Deref for Block<'a, T> {
+impl<T> Deref for Block<'_, T> {
     type Target = Vec<T>;
 
     fn deref(&self) -> &Self::Target {
@@ -91,13 +91,13 @@ impl<'a, T> Deref for Block<'a, T> {
     }
 }
 
-impl<'a, T> DerefMut for Block<'a, T> {
+impl<T> DerefMut for Block<'_, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.stores
     }
 }
 
-impl<'b, T> HelpDisplay for Block<'b, T> {
+impl<T> HelpDisplay for Block<'_, T> {
     fn gen_help<'a, P>(&self, policy: &P) -> Option<Cow<'a, str>>
     where
         Self: 'a,

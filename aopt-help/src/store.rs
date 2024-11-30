@@ -91,7 +91,7 @@ impl<'a> Store<'a> {
     }
 }
 
-impl<'b> HelpDisplay for Store<'b> {
+impl HelpDisplay for Store<'_> {
     fn gen_help<'a, P>(&self, policy: &P) -> Option<Cow<'a, str>>
     where
         Self: 'a,
