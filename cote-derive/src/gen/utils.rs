@@ -70,15 +70,18 @@ impl AttrKind {
         match self {
             AttrKind::Cmd => Ok(quote! {
                 cote::prelude::ConfigValue::set_type::<#field_ty>(&mut #cfg_ident);
+                <cote::prelude::Cmd as cote::prelude::InferOverride>::infer_fill_info(&mut #cfg_ident)?;
                 <cote::prelude::Cmd as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
             }),
             AttrKind::Pos => {
                 Ok(quote! {
                     // using information of Pos<T>
+                    <cote::prelude::Pos<#field_ty> as cote::prelude::InferOverride>::infer_fill_info(&mut #cfg_ident)?;
                     <cote::prelude::Pos<#field_ty> as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
                 })
             }
             AttrKind::Arg => Ok(quote! {
+                <#field_ty as cote::prelude::InferOverride>::infer_fill_info(&mut #cfg_ident)?;
                 <#field_ty as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
             }),
             _ => {
@@ -416,6 +419,7 @@ impl GenericsModifier {
 
     pub fn mod_for_ipd(&mut self, used: &[&Ident]) -> &mut Self {
         let orig_where = self.0.where_clause.as_ref().map(|v| &v.predicates);
+        let infer_override = Self::gen_inferoverride_for_ty(used);
         let fetch = Self::gen_fetch_for_ty(used, quote!(Set));
         let new_where: WhereClause = parse_quote! {
             where
@@ -425,6 +429,7 @@ impl GenericsModifier {
             <Set as cote::prelude::OptParser>::Output: cote::prelude::Information,
             #(#used: cote::prelude::Infer + cote::prelude::ErasedTy,)*
             #(<#used as cote::prelude::Infer>::Val: cote::prelude::RawValParser,)*
+            #infer_override
             #fetch
             #orig_where
         };
@@ -518,6 +523,12 @@ impl GenericsModifier {
     pub fn gen_fetch_for_ty(used: &[&Ident], set: TokenStream) -> TokenStream {
         quote! {
             #(#used: cote::prelude::Fetch<#set>,)*
+        }
+    }
+
+    pub fn gen_inferoverride_for_ty(used: &[&Ident]) -> TokenStream {
+        quote! {
+            #(#used: cote::prelude::InferOverride)*
         }
     }
 }

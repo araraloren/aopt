@@ -36,6 +36,8 @@ pub enum InferKind {
     Tweak,
 
     Fill,
+
+    Override,
 }
 
 impl Kind for InferKind {
@@ -60,6 +62,7 @@ impl Kind for InferKind {
             "mutable" => Ok((Self::Mutable, true)),
             "tweak" => Ok((Self::Tweak, true)),
             "fill" => Ok((Self::Fill, true)),
+            "override" => Ok((Self::Override, false)),
             _ => Err(error(
                 input.span(),
                 format!(

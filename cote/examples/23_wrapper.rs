@@ -18,6 +18,8 @@ impl Infer for Speed {
     }
 }
 
+impl InferOverride for Speed {}
+
 impl<S> Fetch<S> for Speed
 where
     S: SetValueFindExt,

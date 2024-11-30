@@ -588,7 +588,11 @@
 //!
 //! - [`RawValParser`](crate::prelude::RawValParser)
 //!
-//! `Cote` using the trait override the action or optional behavior of [`Infer`](crate::prelude::Infer).
+//! `Cote` using [`parse`](crate::prelude::RawValParser::parse) parsing the value from command line arguments.
+//!
+//! - [`InferOverride`](crate::prelude::InferOverride)
+//!
+//! `Cote` using this trait override some behaviors of [`Infer`](crate::prelude::Infer).
 //!
 //!| type | action | force required | force required if has default value |
 //!|------|--------|----------|----------|
@@ -880,8 +884,14 @@
 //!| `ty`      |  true      | [`TypeId`](std::any::TypeId) |
 //!| `tweak`   |  true      | function |
 //!| `fill`    |  true      | function |
+//!| `override`|  false
 //!
 //! `infer` can configure the behavior of [`Infer`](crate::prelude::Infer), the configures are mostly using to providing default value.
+//!
+//! ##### override
+//!
+//! In default, `CoteOpt` will generate a default implementation of [`InferOverride`](crate::prelude::InferOverride),
+//! set this configure prevent this.
 //!
 //! ##### Example
 //!

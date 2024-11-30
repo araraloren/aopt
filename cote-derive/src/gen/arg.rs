@@ -250,6 +250,7 @@ impl<'a> ArgGenerator<'a> {
         }
         codes.push(if let Some(ty) = self.config.find_value(ArgKind::Type) {
             quote! {
+                <#ty as cote::prelude::InferOverride>::infer_fill_info(&mut #cfg_ident)?;
                 <#ty as cote::prelude::Infer>::infer_fill_info(&mut #cfg_ident)?;
             }
         } else {

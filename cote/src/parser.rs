@@ -37,7 +37,7 @@ pub struct Parser<'a, Set, Ser> {
     sub_parsers: Vec<Self>,
 }
 
-impl<'a, Set, Ser> Default for Parser<'a, Set, Ser>
+impl<Set, Ser> Default for Parser<'_, Set, Ser>
 where
     Set: Default,
     Ser: Default,
@@ -166,7 +166,7 @@ impl<'a, Set, Ser> Parser<'a, Set, Ser> {
     }
 }
 
-impl<'a, Set, Ser> Parser<'a, Set, Ser>
+impl<Set, Ser> Parser<'_, Set, Ser>
 where
     Ser: ServicesValExt,
 {
@@ -188,7 +188,7 @@ where
     }
 }
 
-impl<'a, Set, Ser> Deref for Parser<'a, Set, Ser>
+impl<Set, Ser> Deref for Parser<'_, Set, Ser>
 where
     Set: aopt::set::Set,
 {
@@ -199,7 +199,7 @@ where
     }
 }
 
-impl<'a, Set, Ser> DerefMut for Parser<'a, Set, Ser>
+impl<Set, Ser> DerefMut for Parser<'_, Set, Ser>
 where
     Set: aopt::set::Set,
 {
@@ -208,7 +208,7 @@ where
     }
 }
 
-impl<'a, Set, Ser> Parser<'a, Set, Ser>
+impl<Set, Ser> Parser<'_, Set, Ser>
 where
     Set: aopt::set::Set,
 {
@@ -260,7 +260,7 @@ where
     }
 }
 
-impl<'a, Set, Ser> Parser<'a, Set, Ser>
+impl<Set, Ser> Parser<'_, Set, Ser>
 where
     Set: crate::prelude::Set,
     Ser: ServicesValExt,
@@ -294,7 +294,7 @@ where
     }
 }
 
-impl<'a, Set, Ser> aopt::set::Set for Parser<'a, Set, Ser>
+impl<Set, Ser> aopt::set::Set for Parser<'_, Set, Ser>
 where
     Set: aopt::set::Set,
 {
@@ -333,7 +333,7 @@ where
     }
 }
 
-impl<'a, Set, Ser> OptParser for Parser<'a, Set, Ser>
+impl<Set, Ser> OptParser for Parser<'_, Set, Ser>
 where
     Set: OptParser,
 {
@@ -346,7 +346,7 @@ where
     }
 }
 
-impl<'a, Set, Ser> OptValidator for Parser<'a, Set, Ser>
+impl<Set, Ser> OptValidator for Parser<'_, Set, Ser>
 where
     Set: OptValidator,
 {
@@ -361,7 +361,7 @@ where
     }
 }
 
-impl<'a, Set, Ser> SetValueFindExt for Parser<'a, Set, Ser>
+impl<Set, Ser> SetValueFindExt for Parser<'_, Set, Ser>
 where
     Set: SetValueFindExt,
     SetCfg<Set>: ConfigValue + Default,
@@ -659,7 +659,7 @@ where
     }
 }
 
-impl<'a, Set, Ser> Parser<'a, Set, Ser>
+impl<Set, Ser> Parser<'_, Set, Ser>
 where
     Set: aopt::set::Set,
 {
@@ -744,7 +744,7 @@ where
     }
 }
 
-impl<'a, Set, Ser> Parser<'a, Set, Ser>
+impl<Set, Ser> Parser<'_, Set, Ser>
 where
     Set: SetValueFindExt,
     SetCfg<Set>: ConfigValue + Default,

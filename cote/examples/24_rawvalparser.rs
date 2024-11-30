@@ -35,6 +35,8 @@ impl Infer for Direction {
     }
 }
 
+impl InferOverride for Direction {}
+
 impl<S> Fetch<S> for Direction
 where
     S: SetValueFindExt,

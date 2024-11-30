@@ -1,6 +1,7 @@
 #![doc = include_str!("../README.md")]
 pub mod _reference;
 pub(crate) mod help;
+pub(crate) mod infer;
 pub(crate) mod meta;
 pub(crate) mod parser;
 pub(crate) mod rctx;
@@ -16,6 +17,7 @@ pub use cote_derive;
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub mod prelude {
+
     pub use aopt::opt::AnyOpt;
     pub use aopt::opt::Cmd;
     pub use aopt::opt::Main;
@@ -83,6 +85,7 @@ pub mod prelude {
 
     pub use crate::help::display_set_help;
     pub use crate::help::HelpContext;
+    pub use crate::infer::InferOverride;
     pub use crate::meta::OptionMeta;
     pub use crate::parser::Parser;
     pub use crate::rctx::FailedInfo;
@@ -189,7 +192,7 @@ pub struct NullPolicy<'inv, Set, Ser> {
     marker: PhantomData<(Set, Ser, &'inv ())>,
 }
 
-impl<'inv, Set, Ser> Default for NullPolicy<'inv, Set, Ser> {
+impl<Set, Ser> Default for NullPolicy<'_, Set, Ser> {
     fn default() -> Self {
         Self {
             style_manager: OptStyleManager::default(),
@@ -220,7 +223,7 @@ impl<'inv, Set, Ser> Policy for NullPolicy<'inv, Set, Ser> {
     }
 }
 
-impl<'inv, Set, Ser> PolicySettings for NullPolicy<'inv, Set, Ser> {
+impl<Set, Ser> PolicySettings for NullPolicy<'_, Set, Ser> {
     fn style_manager(&self) -> &OptStyleManager {
         &self.style_manager
     }

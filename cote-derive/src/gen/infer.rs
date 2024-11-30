@@ -38,6 +38,9 @@ impl<'a> InferGenerator<'a> {
             let value = config.value();
 
             codes.push(match config.kind() {
+                InferKind::Override => {
+                    quote! {}
+                }
                 InferKind::Val => {
                     quote! {
                         type Val = #value;
@@ -153,10 +156,21 @@ impl<'a> InferGenerator<'a> {
                 }
             });
         }
+
+        let mut infer_override_impl = None;
+
+        if !self.configs.has_cfg(InferKind::Override) {
+            infer_override_impl = Some(quote! {
+                impl #impl_inf cote::prelude::InferOverride for #ident #type_inf #where_inf { }
+            });
+        }
+
         Ok(quote! {
             impl #impl_inf cote::prelude::Infer for #ident #type_inf #where_inf {
                 #(#codes)*
             }
+
+            #infer_override_impl
         })
     }
 }
