@@ -713,7 +713,7 @@ impl<'a> CoteGenerator<'a> {
                 match caller_str.as_str() {
                     "policy" => {
                         ret.push(quote! {
-                            #method::<P>(&mut policy, #args);
+                            #method::<P>(policy, #args);
                         });
                     }
                     "parser" => {
