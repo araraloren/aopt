@@ -167,7 +167,7 @@ impl<'a> SubGenerator<'a> {
                     }
                     else {
                         ser.sve_val_mut::<cote::prelude::RunningCtx>()?
-                            .add_failed_info(cote::prelude::FailedInfo{ name: cmd.to_owned(), retval: ret });
+                            .add_failed_info(cote::prelude::FailedInfo::new(cmd.to_owned(), ret));
                         None
                     })
                 }

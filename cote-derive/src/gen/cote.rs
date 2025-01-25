@@ -562,7 +562,7 @@ impl<'a> CoteGenerator<'a> {
                     }
                     let mut failed_info = rctx.take_failed_info();
                     let (command, ret) = failed_info.last_mut()
-                        .map(|v|(Some(v.name.as_str()), &mut v.retval))
+                        .map(|v|(Some(v.cmd.as_str()), &mut v.retval))
                         .unwrap_or((None, &mut ret));
                     let e = {
                         let ctx = ret.take_ctx();

@@ -5,17 +5,17 @@ use std::ops::DerefMut;
 
 #[derive(Debug, Clone)]
 pub struct FailedInfo {
-    pub name: String,
+    pub cmd: String,
     pub retval: Return,
 }
 
 impl FailedInfo {
-    pub fn new(name: String, retval: Return) -> Self {
-        Self { name, retval }
+    pub fn new(cmd: String, retval: Return) -> Self {
+        Self { cmd, retval }
     }
 
-    pub fn name(&self) -> &str {
-        &self.name
+    pub fn cmd(&self) -> &str {
+        &self.cmd
     }
 
     pub fn retval(&self) -> &Return {
