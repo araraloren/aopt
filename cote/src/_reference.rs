@@ -28,7 +28,7 @@
 //!     3. [Configurating help message](#configurating-help-message)
 //!     4. [Optional Sub commands](#optional-sub-commands)
 //! 6. [How to](#how-to)
-//!     1. [How to capture arguments after \-\-](#capture-arguments)
+//!     1. [How to capture trailing arguments](#capture-arguments)
 //! 7. [Implementation details](#how-it-works)
 //!     1. [Traits](#traits)
 //!     2. [`Cote` Configurations list](#cote-configurations-list)
