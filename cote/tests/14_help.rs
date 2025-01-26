@@ -1,7 +1,7 @@
 use cote::prelude::*;
 
 #[derive(Debug, Cote)]
-#[cote(help, aborthelp)]
+#[cote(help)]
 pub struct Cli {
     #[allow(unused)]
     debug: bool,
@@ -28,7 +28,7 @@ pub struct Query {
 
 #[test]
 fn help() {
-    assert!(help_impl().is_ok());
+    assert!(help_impl().is_err());
 }
 
 fn help_impl() -> color_eyre::Result<()> {

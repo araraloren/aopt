@@ -505,11 +505,8 @@ impl<'a> CoteGenerator<'a> {
                 // call on parser or policy set by user
                 #(#method_calls)* // todo! do we need apply this in sub handler ?
 
-                let mut rctx = cote::prelude::RunningCtx::default();
-
-                // setup a new running ctx, add name of current parser
-                rctx.add_name(#parser_name);
-                parser.set_rctx(rctx);
+                // setup a new running ctx, set name of parser
+                parser.set_rctx(cote::prelude::RunningCtx::default().with_name(#parser_name));
 
                 let ret = cote::prelude::PolicyParser::parse_policy(&mut parser, args, policy);
                 let mut rctx = parser.take_rctx()?;
@@ -522,12 +519,11 @@ impl<'a> CoteGenerator<'a> {
                     }
                 }
 
-                // insert back
-                parser.set_rctx(rctx);
-                let mut rctx = parser.rctx()?;
-
+                // display help
                 if rctx.display_help() {
-                    let names = rctx.names().iter().map(|v|v.as_str()).collect::<Vec<&str>>();
+                    let names: Vec<_> = std::iter::once(rctx.name())
+                           .chain(rctx.frames().iter().map(|v|v.name.as_str())).collect();
+                    // we set the help context if we need display help, so just unwrap it
                     let help_context = rctx.help_context().unwrap();
                     let exit = rctx.exit();
 
@@ -538,6 +534,9 @@ impl<'a> CoteGenerator<'a> {
                         std::process::exit(0);
                     }
                 }
+
+                // insert back running ctx
+                parser.set_rctx(rctx);
 
                 Ok(cote::prelude::CoteRes{ ret: ret?, parser, policy })
             }
@@ -556,24 +555,30 @@ impl<'a> CoteGenerator<'a> {
 
                 if let Some(mut error) = ret.take_failure() {
                     let mut rctx = parser.take_rctx()?;
+                    let mut failures = rctx.frames_mut().iter_mut().map(|v|v.failure.as_mut().unwrap());
+                    let ctx = ret.take_ctx();
+                    let mut cmd = None;
+                    let mut ret = Some(&mut ret);
 
-                    if let Some(chain_error) = rctx.chain_error() {
-                        error = error.cause_by(chain_error);
+                    // chain the error in the frames
+                    for failure in failures {
+                        if let Some(sub_error) = failure.retval.take_failure() {
+                            error = error.cause_by(sub_error);
+                        }
+                        cmd = Some(failure.cmd.as_str());
+                        ret = Some(&mut failure.retval);
                     }
-                    let mut failed_info = rctx.take_failed_info();
-                    let (command, ret) = failed_info.last_mut()
-                        .map(|v|(Some(v.cmd.as_str()), &mut v.retval))
-                        .unwrap_or((None, &mut ret));
+
+                    // construct error message
                     let e = {
-                        let ctx = ret.take_ctx();
                         let args = ctx.orig[1..].iter()
                                     .map(|v|std::path::Path::new(v).display())
                                     .map(|v|v.to_string())
                                     .collect::<Vec<_>>()
                                     .join(", ");
                         let guess = ctx.guess;
-                        let failed_msg = if let Some(command) = command {
-                            format!("Parsing command `{}`", command)
+                        let failed_msg = if let Some(cmd) = cmd {
+                            format!("Parsing command `{}`", cmd)
                         }
                         else {
                             format!("Parsing arguments `{}`", args)

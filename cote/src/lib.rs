@@ -88,7 +88,8 @@ pub mod prelude {
     pub use crate::infer::InferOverride;
     pub use crate::meta::OptionMeta;
     pub use crate::parser::Parser;
-    pub use crate::rctx::FailedInfo;
+    pub use crate::rctx::Failure;
+    pub use crate::rctx::Frame;
     pub use crate::rctx::RunningCtx;
     pub use crate::valid;
     pub use crate::value::fetch_uid_impl;

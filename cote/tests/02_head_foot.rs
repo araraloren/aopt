@@ -14,7 +14,7 @@ fn head_foot() {
 }
 
 fn head_foot_impl() -> Result<(), Box<dyn std::error::Error>> {
-    Cli::parse(Args::from(["app", "-h"].into_iter()))?;
+    assert!(Cli::parse(Args::from(["app", "-h"].into_iter())).is_err());
     // Output:
     //
     // Usage: cli [-h,--help]

@@ -362,8 +362,7 @@ impl Utils {
     ) -> syn::Result<TokenStream> {
         let abort_help = enable_abort.then(|| {
             Some(quote! {
-                if !ret.is_ok()
-                    || !ret.as_ref().map(cote::prelude::Status::status).unwrap_or(true) {
+                if error_or_failure {
                     rctx.set_display_help(true);
                     rctx.set_exit(false);
                 }
@@ -374,18 +373,22 @@ impl Utils {
             Some(quote! {
                 if cote::prelude::OptValueExt::val::<bool>(cote::prelude::SetExt::opt(set, #uid_literal)?).ok() == Some(&true) {
                     rctx.set_display_help(true);
-                    rctx.set_exit(true);
+                    rctx.set_exit(!error_or_failure);
                     // if we have sub parsers and we not in sub parser
                     // running ctx not have sub parser flag
                     // then we should not exit to show the error of sub command
                     if #has_sub && !sub_parser && !rctx.sub_parser() {
-                        rctx.set_exit(false);
+                        //rctx.set_exit(false);
                     }
                 }
             })
         });
 
         Ok(quote! {
+            let error_or_failure = ret.is_err() ||
+            // or the return value has failure
+            !ret.as_ref().map(cote::prelude::Status::status).unwrap_or(true);
+
             #abort_help
             #normal_help
         })

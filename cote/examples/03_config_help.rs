@@ -35,6 +35,6 @@ fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     // pass `--help` to program display help message
-    Cli::parse(Args::from(["app", "--help"]))?;
+    assert!(Cli::parse(Args::from(["app", "--help"])).is_err());
     Ok(())
 }

@@ -4,7 +4,7 @@ use syn::{spanned::Spanned, Field, GenericArgument, Ident, PathArguments, Type};
 
 use crate::{config::SubKind, error};
 
-use super::{FieldCfg, OptUpdate, Utils, POLICY_FWD};
+use super::{FieldCfg, OptUpdate, Utils};
 
 #[derive(Debug)]
 pub struct SubGenerator<'a> {
@@ -97,7 +97,7 @@ impl<'a> SubGenerator<'a> {
 
     pub fn gen_opt_handler(&self, help_uid: Option<u64>) -> syn::Result<Option<TokenStream>> {
         let inner_ty = self.inner_ty();
-        let policy_ty = self.gen_sub_policy_ty()?;
+        let policy_new = self.gen_sub_policy_new()?;
         let uid_ident = self.uid_ident();
         // using for access sub parser
         let sub_index = syn::Index::from(self.sub_index());
@@ -108,7 +108,7 @@ impl<'a> SubGenerator<'a> {
                 if let Ok(value) = cote::prelude::OptValueExt::val::<bool>(cote::prelude::SetExt::opt(set, #uid_literal)?) {
                     if *value {
                         // if help set, pass original value to sub parser
-                        args.push(ser.sve_take_val::<std::ffi::OsString>()?);
+                        args.push(ser.sve_val::<std::ffi::OsString>()?.clone());
                     }
                 }
             }
@@ -129,47 +129,67 @@ impl<'a> SubGenerator<'a> {
 
                     let args = cote::prelude::Args::from(args);
                     let parser = set.parser_mut(#sub_index)?;
-                    let mut policy = <#policy_ty>::default();
                     let name = parser.name().clone();
+                    let mut policy = #policy_new;
 
-                    // setup running ctx
-                    parser.set_rctx(ser.sve_take_val::<cote::prelude::RunningCtx>()?);
-                    parser.rctx_mut()?.add_name(name);
+                    // checking running ctx
+                    let mut rctx = ser.sve_val_mut::<cote::prelude::RunningCtx>()?;
+                    let sub_level = rctx.sub_level() as usize;
 
-                    // apply policy settings
-                    <#inner_ty>::apply_policy_settings(&mut policy);
-
-                    // parsing
-                    let ret = cote::prelude::PolicyParser::parse_policy(parser, args, &mut policy);
-                    let mut rctx = parser.take_rctx()?;
-
-                    // check if we need display help for sub parser
-                    if !rctx.display_help() {
-                        <#inner_ty>::sync_rctx(&mut rctx, &ret, parser.optset(), true)?;
-                        if rctx.display_help() {
-                            rctx.set_help_context(<#inner_ty>::new_help_context());
-                        }
-                        else {
-                            rctx.pop_name(); // pop current name if not need display help
-                        }
-                    }
-                    // indicate we have accessed sub parser
-                    rctx.set_sub_parser(true);
-                    // insert back to owned parser
-                    ser.sve_insert(rctx);
-
-                    let ret = ret?;
-                    let okay = ret.status();
-
-                    Ok(if okay {
-                        ser.sve_val_mut::<cote::prelude::RunningCtx>()?.clear_failed_info();
-                        <#inner_ty as cote::ExtractFromSetDerive::<Set>>::try_extract(parser.optset_mut()).ok()
+                    // if other sub command successed, skip the sub command
+                    let ret = if rctx.frame_mut(sub_level)
+                        .map(|v|v.failure.is_none()) == Some(true) {
+                        None
                     }
                     else {
-                        ser.sve_val_mut::<cote::prelude::RunningCtx>()?
-                            .add_failed_info(cote::prelude::FailedInfo::new(cmd.to_owned(), ret));
-                        None
-                    })
+                        // clone a running ctx, make a new frame
+                        let frame_len = rctx.frames().len();
+                        let mut rctx = rctx.reset_at(sub_level as u8);
+                        let mut frame = cote::prelude::Frame::new(name);
+
+                        // incrment sub level and push frame to running ctx
+                        rctx.inc_sub_level().push_frame(frame);
+                        // set running ctx
+                        parser.set_rctx(rctx);
+
+                        // apply policy settings
+                        <#inner_ty>::apply_policy_settings(&mut policy);
+
+                        // parsing
+                        let ret = cote::prelude::PolicyParser::parse_policy(parser, args, &mut policy);
+                        let mut rctx = parser.take_rctx()?;
+
+                        // decrement sub level
+                        rctx.dec_sub_level();
+                        // skip if the sub parser has already set the help flag
+                        if !rctx.display_help() {
+                            <#inner_ty>::sync_rctx(&mut rctx, &ret, parser.optset(), true)?;
+                            if rctx.display_help() {
+                                rctx.set_help_context(<#inner_ty>::new_help_context());
+                            }
+                        }
+
+                        let ret = ret?;
+                        let okay = ret.status();
+
+                        if okay {
+                            // pass running ctx to other sub command
+                            ser.sve_insert(rctx);
+                            <#inner_ty as cote::ExtractFromSetDerive::<Set>>::try_extract(parser.optset_mut()).ok()
+                        }
+                        else {
+                            if rctx.frames().len() > frame_len {
+                                if let Some(frame) = rctx.frame_mut(sub_level) {
+                                    frame.failure = Some(cote::prelude::Failure::new(cmd.to_owned(), ret));
+                                }
+                                // replace the running ctx with current one
+                                ser.sve_insert(rctx);
+                            }
+                            None
+                        }
+                    };
+
+                    Ok(ret)
                 }
             );
         }))
@@ -267,18 +287,23 @@ impl<'a> SubGenerator<'a> {
         ))
     }
 
-    pub fn gen_sub_policy_ty(&self) -> syn::Result<TokenStream> {
+    pub fn gen_sub_policy_new(&self) -> syn::Result<TokenStream> {
         let policy_cfg = self.config.find_cfg(SubKind::Policy);
+        let inner_ty = self.inner_ty();
 
         Ok(policy_cfg
             .map(|policy_cfg| {
                 let policy_name = policy_cfg.value().to_token_stream().to_string();
                 let policy_ty = policy_cfg.value();
 
-                Utils::gen_policy_ty(&policy_name).unwrap_or_else(|| {
-                    quote! { <#policy_ty>::<'inv, Set, Ser> }
-                })
+                Utils::gen_policy_ty(&policy_name)
+                    .map(|ty| {
+                        quote! { <#ty>::default() }
+                    })
+                    .unwrap_or_else(|| {
+                        quote! { <<#policy_ty>::<'inv, Set, Ser>>::default() }
+                    })
             })
-            .unwrap_or_else(|| Utils::gen_policy_ty(POLICY_FWD).unwrap()))
+            .unwrap_or_else(|| quote! { <#inner_ty>::into_policy_with::<'inv, Set, Ser>() }))
     }
 }

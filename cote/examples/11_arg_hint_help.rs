@@ -45,7 +45,7 @@ fn main() -> color_eyre::Result<()> {
     );
 
     // Currently only display default values are set in the attribute
-    Cli::parse(Args::from(["app", "--help"]))?;
+    assert!(Cli::parse(Args::from(["app", "--help"])).is_err());
 
     Ok(())
 }
