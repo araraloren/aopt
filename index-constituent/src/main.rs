@@ -219,7 +219,7 @@ impl<'a, 'b> SearchCtx<'a, 'b> {
     }
 }
 
-async fn run_command<'a, 'b>(ctx: &SearchCtx<'a, 'b>) -> Result<SpyderIndexData, Error> {
+async fn run_command(ctx: &SearchCtx<'_, '_>) -> Result<SpyderIndexData, Error> {
     if ctx.is_search()? {
         let ret = search_keyword(ctx).await?;
 
@@ -240,7 +240,7 @@ async fn run_command<'a, 'b>(ctx: &SearchCtx<'a, 'b>) -> Result<SpyderIndexData,
     }
 }
 
-async fn search_keyword<'a, 'b>(ctx: &SearchCtx<'a, 'b>) -> Result<SpyderIndexData, Error> {
+async fn search_keyword(ctx: &SearchCtx<'_, '_>) -> Result<SpyderIndexData, Error> {
     match ctx.get_type_() {
         SearchType::CS => {
             let csspyder = CSIndex::new(ctx.get_debug(), ctx.get_page_size())
@@ -271,7 +271,7 @@ async fn search_keyword<'a, 'b>(ctx: &SearchCtx<'a, 'b>) -> Result<SpyderIndexDa
     }
 }
 
-async fn display_cons_of<'a, 'b>(ctx: &SearchCtx<'a, 'b>) -> Result<SpyderIndexData, Error> {
+async fn display_cons_of(ctx: &SearchCtx<'_, '_>) -> Result<SpyderIndexData, Error> {
     match ctx.get_type_() {
         SearchType::CS => {
             let csspyder = CSIndex::new(ctx.get_debug(), ctx.get_page_size())
