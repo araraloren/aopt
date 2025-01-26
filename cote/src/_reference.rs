@@ -27,7 +27,9 @@
 //!     2. [Configurating name and alias](#configurating-name-and-alias)
 //!     3. [Configurating help message](#configurating-help-message)
 //!     4. [Optional Sub commands](#optional-sub-commands)
-//! 6. [How it works](#how-it-works)
+//! 6. [How to](#how-to)
+//!     1. [How to capture arguments after \-\-](#capture-arguments)
+//! 7. [Implementation details](#how-it-works)
 //!     1. [Traits](#traits)
 //!     2. [`Cote` Configurations list](#cote-configurations-list)
 //!     2. [`CoteOpt` Configurations list](#coteopt-configurations-list)
@@ -569,6 +571,16 @@
 //!
 //! ```plaintext
 //! You age is set to 8
+//! ```
+//!
+//! ## How to
+//!
+//! ### Capture arguments
+//!
+//! Using [`Stop`](crate::prelude::Stop) and multiple value Positional type capture the arguments after `--`.
+//!
+//! ```no_run
+#![doc = include_str!("../examples/30_capture_args.rs")]
 //! ```
 //!
 //! ## How it works

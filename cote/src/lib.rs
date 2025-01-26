@@ -77,6 +77,7 @@ pub mod prelude {
     pub use aopt::raise_failure;
     pub use aopt::value::raw2str;
     pub use aopt::value::Placeholder;
+    pub use aopt::value::Stop;
     pub use aopt::GetoptRes;
     pub use aopt::Uid;
     pub use cote_derive::Cote;
