@@ -285,6 +285,7 @@ pub mod prelude {
     pub use crate::set::OptSet;
     pub use crate::set::OptValidator;
     pub use crate::set::PrefixOptValidator;
+    pub use crate::set::PrefixedValidator;
     pub use crate::set::Set;
     pub use crate::set::SetCfg;
     pub use crate::set::SetChecker;

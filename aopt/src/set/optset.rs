@@ -25,6 +25,7 @@ use crate::HashMap;
 use crate::Uid;
 
 use super::OptValidator;
+use super::PrefixedValidator;
 use super::SetOpt;
 use super::SetValueFindExt;
 
@@ -446,6 +447,23 @@ where
 
     fn split<'a>(&self, name: &Cow<'a, str>) -> Result<(Cow<'a, str>, Cow<'a, str>), Self::Error> {
         OptValidator::split(&self.validator, name).map_err(Into::into)
+    }
+}
+
+impl<P, C, V> PrefixedValidator for OptSet<P, C, V>
+where
+    C: Ctor,
+    P: OptParser,
+    V: OptValidator + PrefixedValidator,
+{
+    type Error = Error;
+
+    fn reg_prefix(&mut self, val: &str) -> Result<(), Self::Error> {
+        PrefixedValidator::reg_prefix(&mut self.validator, val).map_err(Into::into)
+    }
+
+    fn unreg_prefix(&mut self, val: &str) -> Result<(), Self::Error> {
+        PrefixedValidator::unreg_prefix(&mut self.validator, val).map_err(Into::into)
     }
 }
 

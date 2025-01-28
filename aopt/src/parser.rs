@@ -27,6 +27,8 @@ use std::ops::DerefMut;
 use crate::args::Args;
 use crate::ctx::InnerCtx;
 use crate::ext::APolicyExt;
+use crate::set::OptValidator;
+use crate::set::PrefixedValidator;
 use crate::set::Set;
 use crate::Error;
 use crate::Uid;
@@ -348,6 +350,41 @@ where
     fn set_overload(&mut self, overload: bool) -> &mut Self {
         self.policy_mut().set_overload(overload);
         self
+    }
+}
+
+impl<P> OptValidator for Parser<'_, P>
+where
+    P: Policy,
+    P::Set: OptValidator,
+{
+    type Error = Error;
+
+    fn check(&mut self, name: &str) -> Result<bool, Self::Error> {
+        OptValidator::check(&mut self.optset, name).map_err(Into::into)
+    }
+
+    fn split<'a>(
+        &self,
+        name: &std::borrow::Cow<'a, str>,
+    ) -> Result<(std::borrow::Cow<'a, str>, std::borrow::Cow<'a, str>), Self::Error> {
+        OptValidator::split(&self.optset, name).map_err(Into::into)
+    }
+}
+
+impl<P> PrefixedValidator for Parser<'_, P>
+where
+    P: Policy,
+    P::Set: PrefixedValidator,
+{
+    type Error = Error;
+
+    fn reg_prefix(&mut self, val: &str) -> Result<(), Self::Error> {
+        PrefixedValidator::reg_prefix(&mut self.optset, val).map_err(Into::into)
+    }
+
+    fn unreg_prefix(&mut self, val: &str) -> Result<(), Self::Error> {
+        PrefixedValidator::unreg_prefix(&mut self.optset, val).map_err(Into::into)
     }
 }
 

@@ -16,6 +16,7 @@ use crate::parser::ParserCommit;
 use crate::parser::Policy;
 use crate::ser::ServicesValExt;
 use crate::set::OptValidator;
+use crate::set::PrefixedValidator;
 use crate::set::SetCfg;
 use crate::set::SetCommit;
 use crate::set::SetOpt;
@@ -471,6 +472,21 @@ where
 
     fn split<'a>(&self, name: &Cow<'a, str>) -> Result<(Cow<'a, str>, Cow<'a, str>), Self::Error> {
         OptValidator::split(&self.set, name)
+    }
+}
+
+impl<Set, Inv, Ser> PrefixedValidator for HCOptSet<Set, Inv, Ser>
+where
+    Set: PrefixedValidator,
+{
+    type Error = Set::Error;
+
+    fn reg_prefix(&mut self, val: &str) -> Result<(), Self::Error> {
+        PrefixedValidator::reg_prefix(&mut self.set, val)
+    }
+
+    fn unreg_prefix(&mut self, val: &str) -> Result<(), Self::Error> {
+        PrefixedValidator::unreg_prefix(&mut self.set, val)
     }
 }
 

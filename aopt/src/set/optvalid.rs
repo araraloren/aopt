@@ -13,6 +13,16 @@ pub trait OptValidator {
     fn split<'a>(&self, name: &Cow<'a, str>) -> Result<(Cow<'a, str>, Cow<'a, str>), Self::Error>;
 }
 
+pub trait PrefixedValidator {
+    type Error: Into<Error>;
+
+    /// Register the prefix to current validator.
+    fn reg_prefix(&mut self, val: &str) -> Result<(), Self::Error>;
+
+    /// Unregister the prefix to current validator.
+    fn unreg_prefix(&mut self, val: &str) -> Result<(), Self::Error>;
+}
+
 /// A prefixed validator used in [`Policy`](crate::parser::Policy) and [`InvokeGuess`](crate::guess::InvokeGuess).
 ///
 /// The default prefixes are `--/`, `--`, `-/`, `-` and `/`(only for windows).
@@ -79,5 +89,27 @@ impl OptValidator for PrefixOptValidator {
             "can not split the {}: invalid option name string",
             name
         ))
+    }
+}
+
+impl PrefixedValidator for PrefixOptValidator {
+    type Error = Error;
+
+    fn reg_prefix(&mut self, val: &str) -> Result<(), Self::Error> {
+        if self.0.iter().any(|v| v == val) {
+            Err(raise_error!("the prefix already exist"))
+        } else {
+            self.add_prefix(val);
+            Ok(())
+        }
+    }
+
+    fn unreg_prefix(&mut self, val: &str) -> Result<(), Self::Error> {
+        if let Some(index) = self.0.iter().position(|v| v == val) {
+            self.0.remove(index);
+            Ok(())
+        } else {
+            Err(raise_error!("the prefix not exist"))
+        }
     }
 }

@@ -13,6 +13,7 @@ pub use self::index::SetIndex;
 pub use self::optset::OptSet;
 pub use self::optvalid::OptValidator;
 pub use self::optvalid::PrefixOptValidator;
+pub use self::optvalid::PrefixedValidator;
 
 use std::any::type_name;
 use std::fmt::Debug;
