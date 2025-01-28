@@ -1,6 +1,12 @@
 
 # Relase note
 
+## 1.0.0
+
+- Add prefixed option validator
+
+- Ready for release 1.0.0
+
 ## 0.16.0
 
 - Remove some unused struct
