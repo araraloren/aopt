@@ -20,6 +20,7 @@ use aopt::prelude::SetCfg;
 use aopt::prelude::SetOpt;
 use aopt::raise_error;
 use aopt::ser::ServicesValExt;
+use aopt::set::PrefixedValidator;
 use aopt::set::SetValueFindExt;
 use aopt::Error;
 use aopt::Uid;
@@ -358,6 +359,21 @@ where
 
     fn split<'b>(&self, name: &Cow<'b, str>) -> Result<(Cow<'b, str>, Cow<'b, str>), Self::Error> {
         OptValidator::split(&self.set, name)
+    }
+}
+
+impl<Set, Ser> PrefixedValidator for Parser<'_, Set, Ser>
+where
+    Set: PrefixedValidator,
+{
+    type Error = Set::Error;
+
+    fn reg_prefix(&mut self, val: &str) -> Result<(), Self::Error> {
+        PrefixedValidator::reg_prefix(&mut self.set, val)
+    }
+
+    fn unreg_prefix(&mut self, val: &str) -> Result<(), Self::Error> {
+        PrefixedValidator::unreg_prefix(&mut self.set, val)
     }
 }
 

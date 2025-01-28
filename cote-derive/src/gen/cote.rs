@@ -440,7 +440,8 @@ impl<'a> CoteGenerator<'a> {
             Ser: cote::prelude::ServicesValExt + Default + 'inv,
             cote::prelude::SetCfg<Set>: cote::prelude::ConfigValue + Default,
             <Set as cote::prelude::OptParser>::Output: cote::prelude::Information,
-            Set: cote::prelude::Set + cote::prelude::OptParser + cote::prelude::OptValidator + cote::prelude::SetValueFindExt + Default + 'inv,
+            Set: cote::prelude::Set + cote::prelude::OptParser + cote::prelude::OptValidator
+            + cote::prelude::PrefixedValidator + cote::prelude::SetValueFindExt + Default + 'inv,
             P: cote::prelude::Policy<
                 Set = cote::prelude::Parser<'inv, Set, Ser>,
                 Ser = Ser,
@@ -474,7 +475,8 @@ impl<'a> CoteGenerator<'a> {
                 Ser: cote::prelude::ServicesValExt + Default + 'inv,
                 cote::prelude::SetCfg<Set>: cote::prelude::ConfigValue + Default,
                 <Set as cote::prelude::OptParser>::Output: cote::prelude::Information,
-                Set: cote::prelude::Set + cote::prelude::OptParser + cote::prelude::OptValidator + cote::prelude::SetValueFindExt + Default + 'inv,
+                Set: cote::prelude::Set + cote::prelude::OptParser + cote::prelude::OptValidator
+                + cote::prelude::PrefixedValidator + cote::prelude::SetValueFindExt + Default + 'inv,
                 #fetch_generics {
                 let mut parser = <Self as cote::IntoParserDerive<'inv, Set, Ser>>::into_parser()?;
 
@@ -718,19 +720,19 @@ impl<'a> CoteGenerator<'a> {
                 match caller_str.as_str() {
                     "policy" => {
                         ret.push(quote! {
-                            #method::<P>(policy, #args);
+                            #method::<P>(policy, #args)?;
                         });
                     }
                     "parser" => {
                         ret.push(quote! {
-                            #method::<Set, Ser>(&mut parser, #args);
+                            #method::<Set, Ser>(&mut parser, #args)?;
                         });
                     }
                     _ => {
                         let args = config.value();
 
                         ret.push(quote! {
-                            #method(#args);
+                            #method(#args)?;
                         });
                     }
                 }

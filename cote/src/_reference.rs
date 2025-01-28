@@ -27,8 +27,9 @@
 //!     2. [Configurating name and alias](#configurating-name-and-alias)
 //!     3. [Configurating help message](#configurating-help-message)
 //!     4. [Optional Sub commands](#optional-sub-commands)
-//! 6. [How to](#how-to)
+//! 6. [How to do in cote](#how-to-do)
 //!     1. [How to capture trailing arguments](#capture-arguments)
+//!     2. [How to remove/add option prefix](#manage-prefix)
 //! 7. [Implementation details](#how-it-works)
 //!     1. [Traits](#traits)
 //!     2. [`Cote` Configurations list](#cote-configurations-list)
@@ -573,14 +574,23 @@
 //! You age is set to 8
 //! ```
 //!
-//! ## How to
+//! ## How to do
 //!
 //! ### Capture arguments
 //!
 //! Using [`Stop`](crate::prelude::Stop) and multiple value Positional type capture the arguments after `--`.
 //!
-//! ```no_run
+//! ```
 #![doc = include_str!("../examples/30_capture_args.rs")]
+//! ```
+//!
+//! ### Manage prefix
+//!
+//! To remove/add option prefix, you need access the method of [`PrefixedValidator`](crate::prelude::PrefixedValidator).
+//! Using `cote` attribute setup a method call on `parser` context variable.
+//!
+//! ```
+#![doc = include_str!("../examples/31_modify_prefix.rs")]
 //! ```
 //!
 //! ## How it works

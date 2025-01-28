@@ -16,7 +16,9 @@ where
     cfg.set_storer(ValStorer::new_validator(ValValidator::new(Box::new(func))));
 }
 
-fn parser_mod<Set, Ser>(_parser: &mut Parser<'_, Set, Ser>) {}
+fn parser_mod<Set, Ser>(_parser: &mut Parser<'_, Set, Ser>) -> Result<(), cote::Error> {
+    Ok(())
+}
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;

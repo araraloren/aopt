@@ -59,6 +59,7 @@ pub mod prelude {
     pub use aopt::prelude::PolicyParser;
     pub use aopt::prelude::PolicySettings;
     pub use aopt::prelude::PrefixOptValidator;
+    pub use aopt::prelude::PrefixedValidator;
     pub use aopt::prelude::RawValParser;
     pub use aopt::prelude::Return;
     pub use aopt::prelude::ServicesValExt;
