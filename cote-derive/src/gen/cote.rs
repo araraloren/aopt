@@ -16,7 +16,7 @@ use syn::{Data, Generics};
 use crate::config::Configs;
 use crate::config::CoteKind;
 use crate::error;
-use crate::gen::GenericsModifier;
+use crate::r#gen::GenericsModifier;
 
 use super::arg::ArgGenerator;
 use super::sub::SubGenerator;

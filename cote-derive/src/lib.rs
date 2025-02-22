@@ -1,12 +1,12 @@
 mod config;
-mod gen;
+mod r#gen;
 mod value;
 
-use gen::CoteGenerator;
-use gen::FetchGenerator;
-use gen::InferGenerator;
-use gen::ValueGenerator;
 use quote::quote;
+use r#gen::CoteGenerator;
+use r#gen::FetchGenerator;
+use r#gen::InferGenerator;
+use r#gen::ValueGenerator;
 use syn::parse_macro_input;
 use syn::spanned::Spanned;
 use syn::DataEnum;
