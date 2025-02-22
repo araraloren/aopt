@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::future::Future;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
@@ -511,7 +510,7 @@ where
     ///         .run_async_mut_with(
     ///             ["-a", "-b", "42"],
     ///             &mut policy,
-    ///             |ret, parser| async move {
+    ///             async |ret, parser| {
     ///                 if ret.status() {
     ///                     assert_eq!(parser.find_val::<bool>("-a")?, &true);
     ///                     assert_eq!(parser.find_val::<i64>("-b")?, &42);
@@ -524,15 +523,14 @@ where
     /// # Ok(())
     /// # }
     ///```
-    pub async fn run_async_mut_with<'b, 'c: 'b, R, FUT, F, P>(
-        &'c mut self,
+    pub async fn run_async_mut_with<R, F, P>(
+        &mut self,
         args: impl Into<Args>,
         policy: &mut P,
         mut r: F,
     ) -> Result<R, Error>
     where
-        FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b mut Self) -> FUT,
+        F: AsyncFnMut(P::Ret, &mut Self) -> Result<R, Error>,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
     {
         match self.parse_policy(args.into(), policy) {
@@ -542,14 +540,9 @@ where
     }
 
     /// Call [`run_async_mut_with`](Self::run_async_mut_with) with default arguments [`args()`](std::env::args).
-    pub async fn run_async_mut<'b, 'c: 'b, R, FUT, F, P>(
-        &'c mut self,
-        policy: &mut P,
-        r: F,
-    ) -> Result<R, Error>
+    pub async fn run_async_mut<R, F, P>(&mut self, policy: &mut P, r: F) -> Result<R, Error>
     where
-        FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b mut Self) -> FUT,
+        F: AsyncFnMut(P::Ret, &mut Self) -> Result<R, Error>,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
     {
         self.run_async_mut_with(Args::from_env(), policy, r).await
@@ -630,7 +623,7 @@ where
     ///         .run_async_with(
     ///             ["-a", "-b", "42"].into_iter(),
     ///             &mut policy,
-    ///             |ret, parser| async move {
+    ///             async |ret, parser| {
     ///                 if ret.status() {
     ///                     assert_eq!(parser.find_val::<bool>("-a")?, &true);
     ///                     assert_eq!(parser.find_val::<i64>("-b")?, &42);
@@ -643,15 +636,14 @@ where
     /// # Ok(())
     /// # }
     ///```
-    pub async fn run_async_with<'b, 'c: 'b, R, FUT, F, P>(
-        &'c mut self,
+    pub async fn run_async_with<R, F, P>(
+        &mut self,
         args: impl Into<Args>,
         policy: &mut P,
         mut r: F,
     ) -> Result<R, Error>
     where
-        FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b Self) -> FUT,
+        F: AsyncFnMut(P::Ret, &Self) -> Result<R, Error>,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
     {
         match self.parse_policy(args.into(), policy) {
@@ -661,14 +653,9 @@ where
     }
 
     /// Call [`run_async_with`](Self::run_async_with) with default arguments [`args()`](std::env::args).
-    pub async fn run_async<'b, 'c: 'b, R, FUT, F, P>(
-        &'c mut self,
-        policy: &mut P,
-        r: F,
-    ) -> Result<R, Error>
+    pub async fn run_async<R, F, P>(&mut self, policy: &mut P, r: F) -> Result<R, Error>
     where
-        FUT: Future<Output = Result<R, Error>>,
-        F: FnMut(P::Ret, &'b Self) -> FUT,
+        F: AsyncFnMut(P::Ret, &Self) -> Result<R, Error>,
         P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
     {
         self.run_async_with(Args::from_env(), policy, r).await
