@@ -209,7 +209,7 @@ where
     }
 
     /// Find the option by configuration, return an iterator of `&mut T`.
-    pub fn find_all(&mut self) -> impl Iterator<Item = &mut SetOpt<S>> + use<'_, S> {
+    pub fn find_all(&mut self) -> impl Iterator<Item = &mut SetOpt<S>> {
         self.set.iter_mut().filter(|v| self.info.mat_opt(*v))
     }
 }
