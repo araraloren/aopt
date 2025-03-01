@@ -341,13 +341,13 @@ impl Utils {
     pub fn gen_policy_default_ty(policy_name: &str) -> Option<TokenStream> {
         match policy_name {
             POLICY_PRE => Some(quote! {
-                cote::prelude::PrePolicy<'inv, cote::prelude::ASet, cote::prelude::ASer>
+                cote::prelude::PrePolicy<'inv, cote::prelude::CoteSet, cote::prelude::CoteSer>
             }),
             POLICY_FWD => Some(quote! {
-                cote::prelude::FwdPolicy<'inv, cote::prelude::ASet, cote::prelude::ASer>
+                cote::prelude::FwdPolicy<'inv, cote::prelude::CoteSet, cote::prelude::CoteSer>
             }),
             POLICY_DELAY => Some(quote! {
-                cote::prelude::DelayPolicy<'inv, cote::prelude::ASet, cote::prelude::ASer>
+                cote::prelude::DelayPolicy<'inv, cote::prelude::CoteSet, cote::prelude::CoteSer>
             }),
             _ => None,
         }
@@ -427,7 +427,7 @@ impl GenericsModifier {
         let new_where: WhereClause = parse_quote! {
             where
             Set: cote::prelude::Set + cote::prelude::OptParser + cote::prelude::OptValidator + cote::prelude::SetValueFindExt + Default + 'inv,
-            Ser: cote::prelude::ServicesValExt + Default + 'inv,
+            Ser: cote::prelude::ServicesValExt + cote::prelude::AppStorage + cote::prelude::ASerTransfer + Default + 'inv,
             cote::prelude::SetCfg<Set>: cote::prelude::ConfigValue + Default,
             <Set as cote::prelude::OptParser>::Output: cote::prelude::Information,
             #(#used: cote::prelude::Infer + cote::prelude::ErasedTy,)*

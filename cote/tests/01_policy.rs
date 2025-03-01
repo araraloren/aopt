@@ -35,19 +35,19 @@ fn policy() {
 fn policy_impl() -> Result<(), Box<dyn std::error::Error>> {
     let widget = Widget::into_policy();
 
-    assert!(check_t::<FwdPolicy<'_, ASet, ASer>>(&widget));
+    assert!(check_t::<FwdPolicy<'_, CoteSet, CoteSer>>(&widget));
 
     let windows = Windows::into_policy();
 
-    assert!(check_t::<DelayPolicy<'_, ASet, ASer>>(&windows));
+    assert!(check_t::<DelayPolicy<'_, CoteSet, CoteSer>>(&windows));
 
     let button = Button::into_policy();
 
-    assert!(check_t::<PrePolicy<'_, ASet, ASer>>(&button));
+    assert!(check_t::<PrePolicy<'_, CoteSet, CoteSer>>(&button));
 
     let line_editor = LineEditor::into_policy();
 
-    assert!(check_t::<NullPolicy<'_, ASet, ASer>>(&line_editor));
+    assert!(check_t::<NullPolicy<'_, CoteSet, CoteSer>>(&line_editor));
 
     Ok(())
 }

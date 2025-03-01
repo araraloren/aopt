@@ -18,9 +18,9 @@ pub struct Cli {
 
 fn cmd_order<Set, Ser>(_: &mut Set, ser: &mut Ser, _: &Ctx) -> Result<Option<bool>, aopt::Error>
 where
-    Ser: ServicesValExt,
+    Ser: AppStorage,
 {
-    let order = ser.sve_val_mut::<usize>()?;
+    let order = ser.app_data_mut::<usize>()?;
     *order += 1;
     let order = *order;
     assert_eq!(order, 2);
@@ -34,9 +34,9 @@ fn assert_order<Set, Ser>(
     ctx: &Ctx,
 ) -> Result<Option<usize>, aopt::Error>
 where
-    Ser: ServicesValExt,
+    Ser: AppStorage,
 {
-    let order = ser.sve_val_mut::<usize>()?;
+    let order = ser.app_data_mut::<usize>()?;
     *order += 1;
     let order = *order;
     println!("Order {}", order);
@@ -51,7 +51,7 @@ fn main() -> color_eyre::Result<()> {
     let mut app = Cli::into_parser()?;
     let mut policy = Cli::into_policy();
 
-    app.set_app_data(0usize)?;
+    app.service_mut().set_app_data(0usize);
     app.run_mut_with(
         ["app", "foo", "--bar=4", "--qux=1", "3"].into_iter(),
         &mut policy,

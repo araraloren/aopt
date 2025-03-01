@@ -150,14 +150,21 @@ impl<'a> SubGenerator<'a> {
                         // incrment sub level and push frame to running ctx
                         rctx.inc_sub_level().push_frame(frame);
                         // set running ctx
-                        parser.set_rctx(rctx);
+                        ser.sve_insert(rctx);
 
                         // apply policy settings
                         <#inner_ty>::apply_policy_settings(&mut policy);
 
+                        // transfer app data ser
+                        ser.transfer_app_ser_to(parser.service_mut())?;
+
                         // parsing
                         let ret = cote::prelude::PolicyParser::parse_policy(parser, args, &mut policy);
-                        let mut rctx = parser.take_rctx()?;
+
+                        // transfer app data ser back
+                        parser.service_mut().transfer_app_ser_to(ser)?;
+
+                        let mut rctx = ser.sve_take_val::<cote::prelude::RunningCtx>()?;
 
                         // decrement sub level
                         rctx.dec_sub_level();

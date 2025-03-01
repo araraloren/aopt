@@ -18,14 +18,12 @@ use aopt::prelude::PolicyParser;
 use aopt::prelude::SetCfg;
 use aopt::prelude::SetOpt;
 use aopt::raise_error;
-use aopt::ser::ServicesValExt;
 use aopt::set::PrefixedValidator;
 use aopt::set::SetValueFindExt;
 use aopt::Error;
 use aopt::Uid;
 
 use crate::prelude::HelpContext;
-use crate::prelude::RunningCtx;
 use crate::ExtractFromSetDerive;
 
 #[derive(Debug)]
@@ -166,28 +164,6 @@ impl<'a, Set, Ser> Parser<'a, Set, Ser> {
     }
 }
 
-impl<Set, Ser> Parser<'_, Set, Ser>
-where
-    Ser: ServicesValExt,
-{
-    pub fn rctx(&self) -> Result<&RunningCtx, aopt::Error> {
-        self.service().sve_val()
-    }
-
-    pub fn rctx_mut(&mut self) -> Result<&mut RunningCtx, aopt::Error> {
-        self.service_mut().sve_val_mut()
-    }
-
-    pub fn set_rctx(&mut self, ctx: RunningCtx) -> &mut Self {
-        self.service_mut().sve_insert(ctx);
-        self
-    }
-
-    pub fn take_rctx(&mut self) -> Result<RunningCtx, aopt::Error> {
-        Ok(std::mem::take(self.rctx_mut()?))
-    }
-}
-
 impl<Set, Ser> Deref for Parser<'_, Set, Ser>
 where
     Set: aopt::set::Set,
@@ -257,24 +233,6 @@ where
         H: FnMut(&mut Self, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
     {
         Ok(HandlerEntry::new(self.inv.as_mut().unwrap(), uid))
-    }
-}
-
-impl<Set, Ser> Parser<'_, Set, Ser>
-where
-    Set: crate::prelude::Set,
-    Ser: ServicesValExt,
-{
-    pub fn app_data<T: ErasedTy>(&self) -> Result<&T, Error> {
-        self.service().sve_val()
-    }
-
-    pub fn app_data_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
-        self.service_mut().sve_val_mut()
-    }
-
-    pub fn set_app_data<T: ErasedTy>(&mut self, val: T) -> Result<Option<T>, Error> {
-        Ok(self.service_mut().sve_insert(val))
     }
 }
 
@@ -445,7 +403,7 @@ where
     /// #
     /// # fn main() -> Result<(), Error> {
     ///     let mut policy = FwdPolicy::default();
-    ///     let mut parser = Parser::<ASet, ASer>::default().with_name("example");
+    ///     let mut parser = Parser::<CoteSet, CoteSer>::default().with_name("example");
     ///
     ///     parser.add_opt("-a!".infer::<bool>())?;
     ///     parser.add_opt("-b".infer::<i64>())?;
@@ -501,7 +459,7 @@ where
     /// #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
     ///     let mut policy = FwdPolicy::default();
-    ///     let mut parser = Parser::<ASet, ASer>::default().with_name("example");
+    ///     let mut parser = Parser::<CoteSet, CoteSer>::default().with_name("example");
     ///
     ///     parser.add_opt("-a!".infer::<bool>())?;
     ///     parser.add_opt("-b".infer::<i64>())?;
@@ -558,7 +516,7 @@ where
     /// #
     /// # fn main() -> Result<(), Error> {
     ///     let mut policy = FwdPolicy::default();
-    ///     let mut parser = Parser::<ASet, ASer>::default().with_name("example");
+    ///     let mut parser = Parser::<CoteSet, CoteSer>::default().with_name("example");
     ///
     ///     parser.add_opt("-a!".infer::<bool>())?;
     ///     parser.add_opt("-b".infer::<i64>())?;
@@ -614,7 +572,7 @@ where
     /// #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
     ///     let mut policy = FwdPolicy::default();
-    ///     let mut parser = Parser::<ASet, ASer>::default().with_name("example");
+    ///     let mut parser = Parser::<CoteSet, CoteSer>::default().with_name("example");
     ///
     ///     parser.add_opt("-a!".infer::<bool>())?;
     ///     parser.add_opt("-b".infer::<i64>())?;

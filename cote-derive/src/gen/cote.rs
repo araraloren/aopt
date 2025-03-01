@@ -424,7 +424,7 @@ impl<'a> CoteGenerator<'a> {
         let infer_override = GenericsModifier::gen_inferoverride_for_ty(used);
         let fetch_generics = GenericsModifier::gen_fetch_for_ty(used, quote!(Set));
         let fetch_code = {
-            let fetch = GenericsModifier::gen_fetch_for_ty(used, quote!(cote::prelude::ASet));
+            let fetch = GenericsModifier::gen_fetch_for_ty(used, quote!(cote::prelude::CoteSet));
 
             quote! { #infer_override  #fetch }
         };
@@ -437,7 +437,7 @@ impl<'a> CoteGenerator<'a> {
         let where_clause = quote! {
             P::Error: Into<cote::Error>,
             P::Ret: cote::prelude::Status,
-            Ser: cote::prelude::ServicesValExt + Default + 'inv,
+            Ser: cote::prelude::ServicesValExt + cote::prelude::AppStorage + cote::prelude::ASerTransfer + Default + 'inv,
             cote::prelude::SetCfg<Set>: cote::prelude::ConfigValue + Default,
             <Set as cote::prelude::OptParser>::Output: cote::prelude::Information,
             Set: cote::prelude::Set + cote::prelude::OptParser + cote::prelude::OptValidator
@@ -451,7 +451,7 @@ impl<'a> CoteGenerator<'a> {
         };
 
         Ok(quote! {
-            #[doc(hidden)]
+            /// Return a new help context using for display help message.
             pub fn new_help_context() -> cote::prelude::HelpContext {
                 #help_context
             }
@@ -465,14 +465,14 @@ impl<'a> CoteGenerator<'a> {
                 Ok(rctx)
             }
 
-            pub fn into_parser<'inv>() -> cote::Result<cote::prelude::Parser<'inv, cote::prelude::ASet, cote::prelude::ASer>>
+            pub fn into_parser<'inv>() -> cote::Result<cote::prelude::Parser<'inv, cote::prelude::CoteSet, cote::prelude::CoteSer>>
             where #fetch_code {
-                Self::into_parser_with::<cote::prelude::ASet, cote::prelude::ASer>()
+                Self::into_parser_with::<cote::prelude::CoteSet, cote::prelude::CoteSer>()
             }
 
             pub fn into_parser_with<'inv, Set, Ser>() -> cote::Result<cote::prelude::Parser<'inv, Set, Ser>>
             where
-                Ser: cote::prelude::ServicesValExt + Default + 'inv,
+                Ser: cote::prelude::ServicesValExt + cote::prelude::AppStorage + cote::prelude::ASerTransfer + Default + 'inv,
                 cote::prelude::SetCfg<Set>: cote::prelude::ConfigValue + Default,
                 <Set as cote::prelude::OptParser>::Output: cote::prelude::Information,
                 Set: cote::prelude::Set + cote::prelude::OptParser + cote::prelude::OptValidator
@@ -508,10 +508,11 @@ impl<'a> CoteGenerator<'a> {
                 #(#method_calls)* // todo! do we need apply this in sub handler ?
 
                 // setup a new running ctx, set name of parser
-                parser.set_rctx(cote::prelude::RunningCtx::default().with_name(#parser_name));
+                parser.service_mut()
+                    .sve_insert(cote::prelude::RunningCtx::default().with_name(#parser_name));
 
                 let ret = cote::prelude::PolicyParser::parse_policy(&mut parser, args, policy);
-                let mut rctx = parser.take_rctx()?;
+                let mut rctx = parser.service_mut().sve_take_val::<cote::prelude::RunningCtx>()?;
 
                 // process help
                 if !rctx.display_help() {
@@ -538,7 +539,7 @@ impl<'a> CoteGenerator<'a> {
                 }
 
                 // insert back running ctx
-                parser.set_rctx(rctx);
+                parser.service_mut().sve_insert(rctx);
 
                 Ok(cote::prelude::CoteRes{ ret: ret?, parser, policy })
             }
@@ -556,7 +557,7 @@ impl<'a> CoteGenerator<'a> {
                 let cote::prelude::CoteRes { mut ret, mut parser, .. } = Self::parse_args(args)?;
 
                 if let Some(mut error) = ret.take_failure() {
-                    let mut rctx = parser.take_rctx()?;
+                    let mut rctx = parser.service_mut().sve_take_val::<cote::prelude::RunningCtx>()?;
                     let mut failures = rctx.frames_mut().iter_mut().map(|v|v.failure.as_mut().unwrap());
                     let ctx = ret.take_ctx();
                     let mut cmd = None;
@@ -598,7 +599,7 @@ impl<'a> CoteGenerator<'a> {
                     Err(e)
                 }
                 else {
-                    <Self as cote::ExtractFromSetDerive::<cote::prelude::ASet>>::try_extract(parser.optset_mut())
+                    <Self as cote::ExtractFromSetDerive::<cote::prelude::CoteSet>>::try_extract(parser.optset_mut())
                 }
             }
 
@@ -654,7 +655,7 @@ impl<'a> CoteGenerator<'a> {
 
             ty_generator(&policy_name).unwrap_or_else(|| {
                 if default {
-                    quote! { #policy_ty<'inv, cote::prelude::ASet, cote::prelude::ASer> }
+                    quote! { #policy_ty<'inv, cote::prelude::CoteSet, cote::prelude::CoteSer> }
                 } else {
                     quote! { #policy_ty<'inv, Set, Ser> }
                 }

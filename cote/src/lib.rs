@@ -5,6 +5,7 @@ pub(crate) mod infer;
 pub(crate) mod meta;
 pub(crate) mod parser;
 pub(crate) mod rctx;
+pub(crate) mod ser;
 pub(crate) mod value;
 
 pub mod valid;
@@ -28,8 +29,6 @@ pub mod prelude {
     pub use aopt::prelude::AOpt;
     pub use aopt::prelude::APolicyExt;
     pub use aopt::prelude::ARef;
-    pub use aopt::prelude::ASer;
-    pub use aopt::prelude::ASet;
     pub use aopt::prelude::Action;
     pub use aopt::prelude::Args;
     pub use aopt::prelude::Commit;
@@ -93,6 +92,9 @@ pub mod prelude {
     pub use crate::rctx::Failure;
     pub use crate::rctx::Frame;
     pub use crate::rctx::RunningCtx;
+    pub use crate::ser::ASerTransfer;
+    pub use crate::ser::AppStorage;
+    pub use crate::ser::CoteSer;
     pub use crate::valid;
     pub use crate::value::fetch_uid_impl;
     pub use crate::value::fetch_vec_uid_impl;
@@ -105,6 +107,7 @@ pub mod prelude {
     pub use crate::NullPolicy;
     pub use crate::PrePolicy;
     pub use crate::Status;
+    pub use aopt::prelude::ASet as CoteSet;
 }
 
 use crate::prelude::Parser;
