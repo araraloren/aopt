@@ -71,8 +71,6 @@ use crate::ExtractFromSetDerive;
 ///
 ///    Ok(())
 /// }
-///
-///
 /// ```
 #[derive(Debug)]
 pub struct Parser<'a, Set, Ser> {
