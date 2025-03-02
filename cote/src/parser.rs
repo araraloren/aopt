@@ -25,7 +25,55 @@ use aopt::Uid;
 
 use crate::prelude::HelpContext;
 use crate::ExtractFromSetDerive;
-
+///
+/// # Note
+///
+/// When the [`Parser`] has sub [`Parser`],
+/// if you wish to directly use the current [`Parser`] type through the interface of [`PolicyParser`],
+/// you must set up the required [`RunningCtx`](crate::prelude::RunningCtx) before invoking the interface of [`PolicyParser`].
+///
+/// ```
+/// # use cote::prelude::*;
+///
+/// #[derive(Debug, Clone, Cote)]
+/// struct Cli {
+///     #[sub()]
+///     list: Option<List>,
+/// }
+///
+/// #[derive(Debug, Clone, Cote)]
+/// struct List {}
+///
+/// #[tokio::main]
+/// async fn main() -> color_eyre::Result<()> {
+///     color_eyre::install()?;
+///
+///     {
+///         let mut parser = Cli::into_parser()?;
+///         let mut policy = Cli::into_policy();
+///
+///         // in sub command, the code generate by cote will access RunningCtx
+///         let ret = parser.parse_policy(Args::from(["app", "list"]), &mut policy);
+///
+///         assert!(ret.is_err());
+///     }
+///     {
+///         let mut parser = Cli::into_parser()?;
+///         let mut policy = Cli::into_policy();
+///         let rctx = RunningCtx::default().with_name(parser.name().clone());
+///
+///         // insert a RunningCtx before parse
+///         parser.service_mut().sve_insert(rctx);
+///         let ret = parser.parse_policy(Args::from(["app", "list"]), &mut policy);
+///
+///         assert!(ret.is_ok());
+///     }
+///
+///    Ok(())
+/// }
+///
+///
+/// ```
 #[derive(Debug)]
 pub struct Parser<'a, Set, Ser> {
     name: String,
