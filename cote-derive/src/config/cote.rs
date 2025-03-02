@@ -23,6 +23,8 @@ pub enum CoteKind {
 
     AbortHelp,
 
+    NotExit,
+
     On,
 
     Fallback,
@@ -59,6 +61,7 @@ impl Kind for CoteKind {
                 "width" => (Self::HelpWidth, true),
                 "usagew" => (Self::UsageWidth, true),
                 "aborthelp" => (Self::AbortHelp, false),
+                "notexit" => (Self::NotExit, false),
                 "on" => (Self::On, true),
                 "fallback" => (Self::Fallback, true),
                 "then" => (Self::Then, true),

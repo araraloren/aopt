@@ -421,6 +421,8 @@ impl<'a> CoteGenerator<'a> {
         let parser_name = &self.name;
         let abort = self.configs.find_cfg(CoteKind::AbortHelp);
         let help = self.configs.find_cfg(CoteKind::Help);
+        let not_exit = self.configs.find_cfg(CoteKind::NotExit);
+        let exit_after_display_help = not_exit.is_none();
         let infer_override = GenericsModifier::gen_inferoverride_for_ty(used);
         let fetch_generics = GenericsModifier::gen_fetch_for_ty(used, quote!(Set));
         let fetch_code = {
@@ -533,7 +535,7 @@ impl<'a> CoteGenerator<'a> {
                     parser.display_sub_help(names, &help_context)?;
 
                     // process exit, or force not exit
-                    if exit {
+                    if exit && #exit_after_display_help {
                         std::process::exit(0);
                     }
                 }
