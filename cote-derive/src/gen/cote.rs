@@ -559,7 +559,7 @@ impl<'a> CoteGenerator<'a> {
                 let cote::prelude::CoteRes { mut ret, mut parser, .. } = Self::parse_args(args)?;
 
                 if let Some(mut error) = ret.take_failure() {
-                    let mut rctx = parser.service_mut().sve_take_val::<cote::prelude::RunningCtx>()?;
+                    let mut rctx = cote::prelude::ServicesValExt::sve_take_val::<cote::prelude::RunningCtx>(parser.service_mut())?;
                     let mut failures = rctx.frames_mut().iter_mut().map(|v|v.failure.as_mut().unwrap());
                     let ctx = ret.take_ctx();
                     let mut cmd = None;
