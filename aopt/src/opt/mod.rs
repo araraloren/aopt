@@ -356,4 +356,32 @@ pub trait Opt: Debug {
     fn mat_index(&self, index: Option<(usize, usize)>) -> bool;
 
     fn init(&mut self) -> Result<(), Error>;
+
+    fn set_name(&mut self, name: impl Into<String>) -> &mut Self;
+
+    fn set_type(&mut self, r#type: TypeId) -> &mut Self;
+
+    fn set_value(&mut self, value: ValAccessor) -> &mut Self;
+
+    fn set_hint(&mut self, hint: impl Into<String>) -> &mut Self;
+
+    fn set_help(&mut self, help: impl Into<String>) -> &mut Self;
+
+    fn set_action(&mut self, action: Action) -> &mut Self;
+
+    fn set_style(&mut self, styles: Vec<Style>) -> &mut Self;
+
+    fn set_index(&mut self, index: Option<Index>) -> &mut Self;
+
+    fn set_force(&mut self, force: bool) -> &mut Self;
+
+    fn add_alias(&mut self, name: impl Into<String>) -> &mut Self;
+
+    fn rem_alias(&mut self, name: &str) -> &mut Self;
+
+    fn set_ignore_name(&mut self, ignore_name: bool) -> &mut Self;
+
+    fn set_ignore_alias(&mut self, ignore_alias: bool) -> &mut Self;
+
+    fn set_ignore_index(&mut self, ignore_index: bool) -> &mut Self;
 }
