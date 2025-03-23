@@ -560,6 +560,26 @@ impl<'a> CoteGenerator<'a> {
             where #fetch_code {
                 let cote::prelude::CoteRes { mut ret, mut parser, .. } = Self::parse_args(args)?;
 
+                Self::from(ret, parser)
+            }
+
+            pub fn parse_env_args_with<'inv, Set, P>(policy: &mut P) -> cote::Result<cote::prelude::CoteRes<&mut P, P>>
+                where #where_clause {
+                Self::parse_args_with(cote::prelude::Args::from_env(), policy)
+            }
+
+            pub fn parse_env_args<'inv>() -> cote::Result<cote::prelude::CoteRes<#policy_def_ty, #policy_def_ty>>
+                where #fetch_code {
+                Self::parse_args(cote::prelude::Args::from_env())
+            }
+
+            pub fn parse_env() -> cote::Result<Self>
+            where #fetch_code {
+                Self::parse(cote::prelude::Args::from_env())
+            }
+
+            pub fn from<'inv, S>(mut ret: cote::prelude::Return, mut parser: cote::prelude::Parser<'inv, S>) -> cote::Result<Self> where S: cote::prelude::SetValueFindExt,
+            cote::prelude::SetCfg<S>: cote::prelude::ConfigValue + Default {
                 if let Some(mut error) = ret.take_failure() {
                     let mut rctx = cote::prelude::AppStorage::take_app_data::<cote::prelude::RunningCtx>(parser.ctx_service())?;
                     let mut failures = rctx.frames_mut().iter_mut().map(|v|v.failure.as_mut().unwrap());
@@ -603,23 +623,8 @@ impl<'a> CoteGenerator<'a> {
                     Err(e)
                 }
                 else {
-                    <Self as cote::ExtractFromSetDerive::<cote::prelude::CoteSet>>::try_extract(parser.optset_mut())
+                    <Self as cote::ExtractFromSetDerive::<S>>::try_extract(parser.optset_mut())
                 }
-            }
-
-            pub fn parse_env_args_with<'inv, Set, P>(policy: &mut P) -> cote::Result<cote::prelude::CoteRes<&mut P, P>>
-                where #where_clause {
-                Self::parse_args_with(cote::prelude::Args::from_env(), policy)
-            }
-
-            pub fn parse_env_args<'inv>() -> cote::Result<cote::prelude::CoteRes<#policy_def_ty, #policy_def_ty>>
-                where #fetch_code {
-                Self::parse_args(cote::prelude::Args::from_env())
-            }
-
-            pub fn parse_env() -> cote::Result<Self>
-            where #fetch_code {
-                Self::parse(cote::prelude::Args::from_env())
             }
         })
     }
