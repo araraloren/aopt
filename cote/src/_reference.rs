@@ -35,8 +35,6 @@
 //!     2. [`Cote` Configurations list](#cote-configurations-list)
 //!     3. [`CoteOpt` Configurations list](#coteopt-configurations-list)
 //!     4. [`CoteVal` Configurations list](#coteval-configurations-list)
-//! 8. [Note about errors](#note-about-errors)
-//!     1. [RunningCtx](#runningctx)
 //!
 //! ## Quick Start
 //!
@@ -978,58 +976,3 @@
 //! ```rust
 #![doc = include_str!("../tests/19_map.rs")]
 //! ```
-//!
-//! ## Note about errors
-//!
-//! ### RunningCtx
-//!
-//! If you got error like this:
-//!
-//! ```txt
-//!  Got error:
-//!  0: can not find reference(mut) for type `"cote::rctx::RunningCtx"` in UsrValService
-//! ```
-//!
-//! Make sure you have set up [`RunningCtx`](crate::prelude::RunningCtx) before parsing.
-//!
-//! ```rust
-//! # use cote::prelude::*;
-//!
-//! #[derive(Debug, Clone, Cote)]
-//! struct Cli {
-//!     #[sub()]
-//!     list: Option<List>,
-//! }
-//!
-//! #[derive(Debug, Clone, Cote)]
-//! struct List {}
-//!
-//! #[tokio::main]
-//! async fn main() -> color_eyre::Result<()> {
-//!     color_eyre::install()?;
-//!
-//!     {
-//!         let mut parser = Cli::into_parser()?;
-//!         let mut policy = Cli::into_policy();
-//!
-//!         // in sub command, the code generate by cote will access RunningCtx
-//!         let ret = parser.parse_policy(Args::from(["app", "list"]), &mut policy);
-//!
-//!         assert!(ret.is_err());
-//!     }
-//!     {
-//!         let mut parser = Cli::into_parser()?;
-//!         let mut policy = Cli::into_policy();
-//!         let rctx = RunningCtx::default().with_name(parser.name().clone());
-//!
-//!         // insert a RunningCtx before parse
-//!         parser.ctx_service().set_app_data(rctx);
-//!         let ret = parser.parse_policy(Args::from(["app", "list"]), &mut policy);
-//!
-//!         assert!(ret.is_ok());
-//!     }
-//!
-//!    Ok(())
-//! }
-//! ```
-//!

@@ -90,27 +90,33 @@ pub mod prelude {
     pub use crate::parser::Parser;
     pub use crate::rctx::Failure;
     pub use crate::rctx::Frame;
+    pub use crate::rctx::HideValue;
     pub use crate::rctx::RunningCtx;
     pub use crate::valid;
     pub use crate::value::fetch_uid_impl;
     pub use crate::value::fetch_vec_uid_impl;
     pub use crate::value::Fetch;
     pub use crate::CoteRes;
-    pub use crate::DelayPolicy;
     pub use crate::ExtractFromSetDerive;
-    pub use crate::FwdPolicy;
     pub use crate::IntoParserDerive;
     pub use crate::NullPolicy;
-    pub use crate::PrePolicy;
     pub use crate::Status;
     pub use aopt::prelude::ASet as CoteSet;
+
+    pub type PrePolicy<'inv, S> =
+        aopt::prelude::PrePolicy<Parser<'inv, S>, DefaultSetChecker<Parser<'inv, S>>>;
+
+    pub type FwdPolicy<'inv, S> =
+        aopt::prelude::FwdPolicy<Parser<'inv, S>, DefaultSetChecker<Parser<'inv, S>>>;
+
+    pub type DelayPolicy<'inv, S> =
+        aopt::prelude::DelayPolicy<Parser<'inv, S>, DefaultSetChecker<Parser<'inv, S>>>;
 }
 
 use std::marker::PhantomData;
 
 use aopt::args::Args;
 use aopt::ctx::Invoker;
-use aopt::parser::DefaultSetChecker;
 use aopt::parser::Policy;
 use aopt::parser::PolicySettings;
 use aopt::parser::Return;
@@ -167,15 +173,6 @@ impl Status for Return {
         Return::status(self)
     }
 }
-
-pub type PrePolicy<'inv, S> =
-    aopt::prelude::PrePolicy<Parser<'inv, S>, DefaultSetChecker<Parser<'inv, S>>>;
-
-pub type FwdPolicy<'inv, S> =
-    aopt::prelude::FwdPolicy<Parser<'inv, S>, DefaultSetChecker<Parser<'inv, S>>>;
-
-pub type DelayPolicy<'inv, S> =
-    aopt::prelude::DelayPolicy<Parser<'inv, S>, DefaultSetChecker<Parser<'inv, S>>>;
 
 #[derive(Debug, Clone)]
 pub struct NullPolicy<'inv, S> {

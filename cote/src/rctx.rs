@@ -231,3 +231,7 @@ impl RunningCtx {
         }
     }
 }
+
+#[doc(hidden)]
+#[derive(Debug, Clone, Copy, Default)]
+pub struct HideValue<T>(pub T);

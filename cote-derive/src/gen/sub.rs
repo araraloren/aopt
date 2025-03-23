@@ -107,9 +107,11 @@ impl<'a> SubGenerator<'a> {
             quote! {
                 if let Ok(value) = cote::prelude::OptValueExt::val::<bool>(cote::prelude::SetExt::opt(set, #uid_literal)?) {
                     if *value {
-                        let help_val = set.app_data::<std::ffi::OsString>()?.clone();
+                        let help_val = cote::prelude::AppStorage::app_data::<
+                            cote::prelude::HideValue<std::ffi::OsString> >(set)?.clone();
+
                         // if help set, pass original value to sub parser
-                        args.push(help_val);
+                        args.push(help_val.0);
                     }
                 }
             }
@@ -132,7 +134,7 @@ impl<'a> SubGenerator<'a> {
                     let mut policy = #policy_new;
 
                     // checking running ctx
-                    let mut rctx = cote::prelude::AppStorage::app_data_mut::<cote::prelude::RunningCtx>(set.ctx_service())?;
+                    let mut rctx = set.running_ctx();
                     let sub_level = rctx.sub_level() as usize;
 
                     // if other sub command successed, skip the sub command
@@ -150,7 +152,7 @@ impl<'a> SubGenerator<'a> {
                         rctx.inc_sub_level().push_frame(frame);
 
                         // set running ctx for sub parser
-                        cote::prelude::AppStorage::set_app_data(set.parser_mut(#sub_index)?.ctx_service(), rctx);
+                        set.parser_mut(#sub_index)?.set_running_ctx(rctx);
 
                         // apply policy settings
                         <#inner_ty>::apply_policy_settings(&mut policy);
@@ -165,9 +167,7 @@ impl<'a> SubGenerator<'a> {
                         set.transfer_appser_from_subparser(#sub_index);
 
                         // take running ctx from sub parser
-                        let mut rctx = cote::prelude::AppStorage::take_app_data::<cote::prelude::RunningCtx>(
-                            set.parser_mut(#sub_index)?.ctx_service()
-                        )?;
+                        let mut rctx = std::mem::take(set.parser_mut(#sub_index)?.running_ctx());
 
                         // decrement sub level
                         rctx.dec_sub_level();
@@ -184,7 +184,7 @@ impl<'a> SubGenerator<'a> {
 
                         if okay {
                             // pass running ctx to other sub command
-                            cote::prelude::AppStorage::set_app_data(set.ctx_service(), rctx);
+                            set.set_running_ctx(rctx);
                             <#inner_ty as cote::ExtractFromSetDerive::<Set>>::try_extract(
                                 set.parser_mut(#sub_index)?.optset_mut()
                             ).ok()
@@ -195,7 +195,7 @@ impl<'a> SubGenerator<'a> {
                                     frame.failure = Some(cote::prelude::Failure::new(cmd.to_owned(), ret));
                                 }
                                 // replace the running ctx with current one
-                                cote::prelude::AppStorage::set_app_data(set.ctx_service(), rctx);
+                                set.set_running_ctx(rctx);
                             }
                             None
                         }

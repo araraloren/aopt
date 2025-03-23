@@ -27,13 +27,10 @@ use aopt::Error;
 use aopt::Uid;
 
 use crate::prelude::HelpContext;
+use crate::rctx::RunningCtx;
 use crate::ExtractFromSetDerive;
 ///
-/// # Note
-///
-/// When the [`Parser`] has sub [`Parser`],
-/// if you wish to directly use the current [`Parser`] type through the interface of [`PolicyParser`],
-/// you must set up the required [`RunningCtx`](crate::prelude::RunningCtx) before invoking the interface of [`PolicyParser`].
+/// A [`Parser`] using for generate code for struct.
 ///
 /// ```
 /// # use cote::prelude::*;
@@ -51,27 +48,12 @@ use crate::ExtractFromSetDerive;
 /// async fn main() -> color_eyre::Result<()> {
 ///     color_eyre::install()?;
 ///
-///     {
-///         let mut parser = Cli::into_parser()?;
-///         let mut policy = Cli::into_policy();
+///    let mut parser = Cli::into_parser()?;
+///    let mut policy = Cli::into_policy();
 ///
-///         // in sub command, the code generate by cote will access RunningCtx
-///         let ret = parser.parse_policy(Args::from(["app", "list"]), &mut policy);
+///    let ret = parser.parse_policy(Args::from(["app", "list"]), &mut policy);
 ///
-///         assert!(ret.is_err());
-///     }
-///     {
-///         let mut parser = Cli::into_parser()?;
-///         let mut policy = Cli::into_policy();
-///         let rctx = RunningCtx::default().with_name(parser.name().clone());
-///
-///         // insert a RunningCtx before parse
-///         parser.ctx_service().set_app_data(rctx);
-///         let ret = parser.parse_policy(Args::from(["app", "list"]), &mut policy);
-///
-///         assert!(ret.is_ok());
-///     }
-///
+///    assert!(ret.is_ok());
 ///    Ok(())
 /// }
 /// ```
@@ -79,7 +61,7 @@ use crate::ExtractFromSetDerive;
 pub struct Parser<'a, S> {
     name: String,
     set: S,
-    ctx_ser: AppServices,
+    rctx: RunningCtx,
     app_ser: AppServices,
     inv: Option<Invoker<'a, Self>>,
     sub_parsers: Vec<Self>,
@@ -93,7 +75,7 @@ where
         Self {
             name: String::from("CoteParser"),
             set: Default::default(),
-            ctx_ser: AppServices::default(),
+            rctx: RunningCtx::default(),
             app_ser: AppServices::default(),
             inv: Some(Invoker::default()),
             sub_parsers: Default::default(),
@@ -106,7 +88,7 @@ impl<'a, S> Parser<'a, S> {
         Self {
             name: name.into(),
             set,
-            ctx_ser: AppServices::default(),
+            rctx: RunningCtx::default(),
             app_ser: AppServices::default(),
             inv: None,
             sub_parsers: vec![],
@@ -167,8 +149,14 @@ impl<'a, S> Parser<'a, S> {
         self.set_service(appser);
     }
 
-    pub fn ctx_service(&mut self) -> &mut AppServices {
-        &mut self.ctx_ser
+    #[doc(hidden)]
+    pub fn set_running_ctx(&mut self, rctx: RunningCtx) {
+        self.rctx = rctx;
+    }
+
+    #[doc(hidden)]
+    pub fn running_ctx(&mut self) -> &mut RunningCtx {
+        &mut self.rctx
     }
 
     pub fn invoker(&self) -> &Invoker<'a, Self> {

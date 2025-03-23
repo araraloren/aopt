@@ -359,9 +359,8 @@ impl<'a> CoteGenerator<'a> {
                         let args = ctx.args();
                         let index = ctx.idx()?;
 
-                        cote::prelude::AppStorage::set_app_data::<std::ffi::OsString>(
-                            set.ctx_service(),
-                            args[index].to_os_string()
+                        cote::prelude::AppStorage::set_app_data( set,
+                            cote::prelude::HideValue(args[index].to_os_string())
                         );
                         Ok(Some(true))
                     }
@@ -510,13 +509,10 @@ impl<'a> CoteGenerator<'a> {
                 #(#method_calls)* // todo! do we need apply this in sub handler ?
 
                 // setup a new running ctx, set name of parser
-                cote::prelude::AppStorage::set_app_data(
-                    parser.ctx_service(),
-                    cote::prelude::RunningCtx::default().with_name(#parser_name)
-                );
+                parser.running_ctx().set_name(#parser_name);
 
                 let ret = cote::prelude::PolicyParser::parse_policy(&mut parser, args, policy);
-                let mut rctx = cote::prelude::AppStorage::take_app_data::<cote::prelude::RunningCtx>(parser.ctx_service())?;
+                let mut rctx = std::mem::take(parser.running_ctx());
 
                 // process help
                 if !rctx.display_help() {
@@ -543,7 +539,7 @@ impl<'a> CoteGenerator<'a> {
                 }
 
                 // insert back running ctx
-                cote::prelude::AppStorage::set_app_data(parser.ctx_service(), rctx);
+                parser.set_running_ctx(rctx);
 
                 Ok(cote::prelude::CoteRes{ ret: ret?, parser, policy })
             }
@@ -581,7 +577,7 @@ impl<'a> CoteGenerator<'a> {
             pub fn from<'inv, S>(mut ret: cote::prelude::Return, mut parser: cote::prelude::Parser<'inv, S>) -> cote::Result<Self> where S: cote::prelude::SetValueFindExt,
             cote::prelude::SetCfg<S>: cote::prelude::ConfigValue + Default {
                 if let Some(mut error) = ret.take_failure() {
-                    let mut rctx = cote::prelude::AppStorage::take_app_data::<cote::prelude::RunningCtx>(parser.ctx_service())?;
+                    let mut rctx = std::mem::take(parser.running_ctx());
                     let mut failures = rctx.frames_mut().iter_mut().map(|v|v.failure.as_mut().unwrap());
                     let ctx = ret.take_ctx();
                     let mut cmd = None;
