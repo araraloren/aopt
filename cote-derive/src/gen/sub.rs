@@ -128,8 +128,8 @@ impl<'a> SubGenerator<'a> {
                     #pass_help_to
 
                     let args = cote::prelude::Args::from(args);
-                    let parser = set.parser_mut(#sub_index)?;
-                    let name = parser.name().clone();
+                    let sub_parser = set.parser_mut(#sub_index)?;
+                    let name = sub_parser.name().clone();
                     let mut policy = #policy_new;
 
                     // checking running ctx
@@ -150,27 +150,27 @@ impl<'a> SubGenerator<'a> {
                         // incrment sub level and push frame to running ctx
                         rctx.inc_sub_level().push_frame(frame);
                         // set running ctx
-                        ser.sve_insert(rctx);
+                        sub_parser.service_mut().sve_insert(rctx);
 
                         // apply policy settings
                         <#inner_ty>::apply_policy_settings(&mut policy);
 
                         // transfer app data ser
-                        ser.transfer_app_ser_to(parser.service_mut())?;
+                        ser.transfer_app_ser_to(sub_parser.service_mut())?;
 
                         // parsing
-                        let ret = cote::prelude::PolicyParser::parse_policy(parser, args, &mut policy);
+                        let ret = cote::prelude::PolicyParser::parse_policy(sub_parser, args, &mut policy);
 
                         // transfer app data ser back
-                        parser.service_mut().transfer_app_ser_to(ser)?;
+                        sub_parser.service_mut().transfer_app_ser_to(ser)?;
 
-                        let mut rctx = ser.sve_take_val::<cote::prelude::RunningCtx>()?;
+                        let mut rctx = sub_parser.service_mut().sve_take_val::<cote::prelude::RunningCtx>()?;
 
                         // decrement sub level
                         rctx.dec_sub_level();
                         // skip if the sub parser has already set the help flag
                         if !rctx.display_help() {
-                            <#inner_ty>::sync_rctx(&mut rctx, &ret, parser.optset(), true)?;
+                            <#inner_ty>::sync_rctx(&mut rctx, &ret, sub_parser.optset(), true)?;
                             if rctx.display_help() {
                                 rctx.set_help_context(<#inner_ty>::new_help_context());
                             }
@@ -182,7 +182,7 @@ impl<'a> SubGenerator<'a> {
                         if okay {
                             // pass running ctx to other sub command
                             ser.sve_insert(rctx);
-                            <#inner_ty as cote::ExtractFromSetDerive::<Set>>::try_extract(parser.optset_mut()).ok()
+                            <#inner_ty as cote::ExtractFromSetDerive::<Set>>::try_extract(sub_parser.optset_mut()).ok()
                         }
                         else {
                             if rctx.frames().len() > frame_len {
