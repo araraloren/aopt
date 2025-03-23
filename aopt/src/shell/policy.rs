@@ -20,17 +20,17 @@ use crate::shell::CompleteGuess;
 use crate::trace;
 use crate::Error;
 
-pub struct CompletePolicy<Set, Ser> {
+pub struct CompletePolicy<S> {
     strict: bool,
 
     process_pos: bool,
 
     style_manager: OptStyleManager,
 
-    marker_s: PhantomData<(Set, Ser)>,
+    marker_s: PhantomData<S>,
 }
 
-impl<Set, Ser> Clone for CompletePolicy<Set, Ser> {
+impl<S> Clone for CompletePolicy<S> {
     fn clone(&self) -> Self {
         Self {
             strict: self.strict,
@@ -41,7 +41,7 @@ impl<Set, Ser> Clone for CompletePolicy<Set, Ser> {
     }
 }
 
-impl<Set, Ser> Debug for CompletePolicy<Set, Ser> {
+impl<S> Debug for CompletePolicy<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("FwdPolicy")
             .field("strict", &self.strict)
@@ -51,7 +51,7 @@ impl<Set, Ser> Debug for CompletePolicy<Set, Ser> {
     }
 }
 
-impl<Set, Ser> Default for CompletePolicy<Set, Ser> {
+impl<S> Default for CompletePolicy<S> {
     fn default() -> Self {
         Self {
             strict: true,
@@ -62,7 +62,7 @@ impl<Set, Ser> Default for CompletePolicy<Set, Ser> {
     }
 }
 
-impl<Set, Ser> CompletePolicy<Set, Ser> {
+impl<S> CompletePolicy<S> {
     pub fn new(strict: bool, style: OptStyleManager) -> Self {
         Self {
             strict,
@@ -72,7 +72,7 @@ impl<Set, Ser> CompletePolicy<Set, Ser> {
     }
 }
 
-impl<Set, Ser> CompletePolicy<Set, Ser> {
+impl<S> CompletePolicy<S> {
     /// In strict mode, if an argument looks like an option (it matched any option prefix),
     /// then it must matched.
     pub fn with_strict(mut self, strict: bool) -> Self {
@@ -107,7 +107,7 @@ impl<Set, Ser> CompletePolicy<Set, Ser> {
     }
 }
 
-impl<Set, Ser> PolicySettings for CompletePolicy<Set, Ser> {
+impl<S> PolicySettings for CompletePolicy<S> {
     fn style_manager(&self) -> &OptStyleManager {
         &self.style_manager
     }
@@ -151,16 +151,15 @@ impl<Set, Ser> PolicySettings for CompletePolicy<Set, Ser> {
     }
 }
 
-impl<Set, Ser> CompletePolicy<Set, Ser>
+impl<S> CompletePolicy<S>
 where
-    SetOpt<Set>: Opt,
-    Set: crate::set::Set + OptParser + OptValidator,
+    SetOpt<S>: Opt,
+    S: crate::set::Set + OptParser + OptValidator,
 {
     pub(crate) fn parse_impl<'a>(
         &mut self,
         set: &mut <Self as Policy>::Set,
         inv: &mut <Self as Policy>::Inv<'_>,
-        ser: &mut <Self as Policy>::Ser,
         orig: &'a Args,
         ctx: &mut Ctx<'a>,
     ) -> Result<(), <Self as Policy>::Error> {
@@ -191,7 +190,6 @@ where
                         arg,
                         set,
                         inv,
-                        ser,
                         total,
                         ctx,
                         next,
@@ -227,7 +225,6 @@ where
             let mut guess = CompleteGuess {
                 set,
                 inv,
-                ser,
                 total,
                 name,
                 ctx,
@@ -242,7 +239,6 @@ where
                 let mut guess = CompleteGuess {
                     set,
                     inv,
-                    ser,
                     total,
                     ctx,
                     name: None,
@@ -263,7 +259,6 @@ where
         let mut guess = CompleteGuess {
             set,
             inv,
-            ser,
             total,
             name,
             ctx,
@@ -277,18 +272,16 @@ where
     }
 }
 
-impl<Set, Ser> Policy for CompletePolicy<Set, Ser>
+impl<S> Policy for CompletePolicy<S>
 where
-    SetOpt<Set>: Opt,
-    Set: crate::set::Set + OptParser + OptValidator,
+    SetOpt<S>: Opt,
+    S: crate::set::Set + OptParser + OptValidator,
 {
     type Ret = Return;
 
-    type Set = Set;
+    type Set = S;
 
-    type Inv<'a> = Invoker<'a, Set, Ser>;
-
-    type Ser = Ser;
+    type Inv<'a> = Invoker<'a, S>;
 
     type Error = Error;
 
@@ -296,12 +289,11 @@ where
         &mut self,
         set: &mut Self::Set,
         inv: &mut Self::Inv<'_>,
-        ser: &mut Self::Ser,
         orig: Args,
     ) -> Result<Self::Ret, Self::Error> {
         let mut ctx = Ctx::default().with_orig(orig.clone());
 
-        match self.parse_impl(set, inv, ser, &orig, &mut ctx) {
+        match self.parse_impl(set, inv, &orig, &mut ctx) {
             Ok(_) => Ok(Return::new(ctx)),
             Err(e) => {
                 if e.is_failure() {

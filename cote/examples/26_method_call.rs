@@ -16,7 +16,7 @@ where
     cfg.set_storer(ValStorer::new_validator(ValValidator::new(Box::new(func))));
 }
 
-fn parser_mod<Set, Ser>(_parser: &mut Parser<'_, Set, Ser>) -> Result<(), cote::Error> {
+fn parser_mod<S>(_parser: &mut Parser<'_, S>) -> Result<(), cote::Error> {
     Ok(())
 }
 

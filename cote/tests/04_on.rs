@@ -7,9 +7,9 @@ pub struct Cli;
 
 static FLAG: OnceLock<bool> = OnceLock::new();
 
-fn cli_main<Set, Ser>(set: &mut Set, _: &mut Ser, _: &Ctx) -> cote::Result<Option<()>>
+fn cli_main<S>(set: &mut S, _: &mut Ctx) -> cote::Result<Option<()>>
 where
-    Set: cote::prelude::Set,
+    S: Set,
 {
     FLAG.get_or_init(|| true);
     assert_eq!(set.len(), 1, "there is only one option here");

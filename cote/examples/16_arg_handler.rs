@@ -43,7 +43,7 @@ fn main() -> color_eyre::Result<()> {
     Ok(())
 }
 
-fn display_cli<Set, Ser>(set: &mut Set, _: &mut Ser, _: &Ctx) -> Result<Option<()>, aopt::Error>
+fn display_cli<Set>(set: &mut Set, _: &mut Ctx) -> Result<Option<()>, aopt::Error>
 where
     Set: SetValueFindExt + cote::prelude::Set,
     SetCfg<Set>: ConfigValue + Default,
@@ -52,18 +52,13 @@ where
     Ok(None)
 }
 
-fn empty_handler<Set, Ser>(
-    _: &mut Set,
-    _: &mut Ser,
-    ctx: &Ctx,
-) -> Result<Option<u64>, aopt::Error> {
+fn empty_handler<Set>(_: &mut Set, ctx: &mut Ctx) -> Result<Option<u64>, aopt::Error> {
     Ok(ctx.value::<u64>().ok())
 }
 
-fn foo_storer<Set, Ser>(
+fn foo_storer<Set>(
     uid: Uid,
     set: &mut Set,
-    _: &mut Ser,
     raw: Option<&OsStr>,
     val: Option<u64>,
 ) -> Result<bool, aopt::Error>
@@ -90,7 +85,7 @@ where
     Ok(has_value)
 }
 
-fn debug_of_bar<Set, Ser>(_: &mut Set, _: &mut Ser, ctx: &Ctx) -> Result<Option<()>, aopt::Error> {
+fn debug_of_bar<Set>(_: &mut Set, ctx: &mut Ctx) -> Result<Option<()>, aopt::Error> {
     let raw = ctx.arg()?.unwrap();
     let value = ctx.value::<bool>()?;
 
@@ -99,7 +94,7 @@ fn debug_of_bar<Set, Ser>(_: &mut Set, _: &mut Ser, ctx: &Ctx) -> Result<Option<
     Ok(None)
 }
 
-fn process_qux<Set, Ser>(_: &mut Set, _: &mut Ser, _: &Ctx) -> Result<Option<()>, aopt::Error>
+fn process_qux<Set>(_: &mut Set, _: &mut Ctx) -> Result<Option<()>, aopt::Error>
 where
     Set: SetValueFindExt + cote::prelude::Set,
     SetCfg<Set>: ConfigValue + Default,
@@ -108,10 +103,9 @@ where
     Ok(None)
 }
 
-fn unreachable_storer<Set, Ser>(
+fn unreachable_storer<Set>(
     _: Uid,
     _: &mut Set,
-    _: &mut Ser,
     _: Option<&OsStr>,
     _: Option<()>,
 ) -> Result<bool, aopt::Error>

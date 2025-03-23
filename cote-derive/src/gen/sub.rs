@@ -107,8 +107,9 @@ impl<'a> SubGenerator<'a> {
             quote! {
                 if let Ok(value) = cote::prelude::OptValueExt::val::<bool>(cote::prelude::SetExt::opt(set, #uid_literal)?) {
                     if *value {
+                        let help_val = set.app_data::<std::ffi::OsString>()?.clone();
                         // if help set, pass original value to sub parser
-                        args.push(ser.sve_val::<std::ffi::OsString>()?.clone());
+                        args.push(help_val);
                     }
                 }
             }
@@ -116,7 +117,7 @@ impl<'a> SubGenerator<'a> {
 
         Ok(Some(quote! {
             parser.entry(#uid_ident)?.on(
-                move |set: &mut cote::prelude::Parser<'inv, Set, Ser>, ser: &mut Ser, ctx: &cote::prelude::Ctx| {
+                move |set: &mut cote::prelude::Parser<'inv, Set>, ctx: &mut cote::prelude::Ctx| {
                     let index = ctx.idx()?;
                     let mut args: Vec<_> = ctx.args().iter().map(|v|v.to_os_string()).collect();
                     let cmd = args.remove(index);
@@ -128,12 +129,10 @@ impl<'a> SubGenerator<'a> {
                     #pass_help_to
 
                     let args = cote::prelude::Args::from(args);
-                    let sub_parser = set.parser_mut(#sub_index)?;
-                    let name = sub_parser.name().clone();
                     let mut policy = #policy_new;
 
                     // checking running ctx
-                    let mut rctx = ser.sve_val_mut::<cote::prelude::RunningCtx>()?;
+                    let mut rctx = cote::prelude::AppStorage::app_data_mut::<cote::prelude::RunningCtx>(set.ctx_service())?;
                     let sub_level = rctx.sub_level() as usize;
 
                     // if other sub command successed, skip the sub command
@@ -145,32 +144,36 @@ impl<'a> SubGenerator<'a> {
                         // clone a running ctx, make a new frame
                         let frame_len = rctx.frames().len();
                         let mut rctx = rctx.reset_at(sub_level as u8);
-                        let mut frame = cote::prelude::Frame::new(name);
+                        let mut frame = cote::prelude::Frame::new(set.parser_mut(#sub_index)?.name().clone());
 
                         // incrment sub level and push frame to running ctx
                         rctx.inc_sub_level().push_frame(frame);
-                        // set running ctx
-                        sub_parser.service_mut().sve_insert(rctx);
+
+                        // set running ctx for sub parser
+                        cote::prelude::AppStorage::set_app_data(set.parser_mut(#sub_index)?.ctx_service(), rctx);
 
                         // apply policy settings
                         <#inner_ty>::apply_policy_settings(&mut policy);
 
-                        // transfer app data ser
-                        ser.transfer_app_ser_to(sub_parser.service_mut())?;
+                        // transfer app data to sub parser
+                        set.transfer_appser_to_subparser(#sub_index);
 
                         // parsing
-                        let ret = cote::prelude::PolicyParser::parse_policy(sub_parser, args, &mut policy);
+                        let ret = cote::prelude::PolicyParser::parse_policy(set.parser_mut(#sub_index)?, args, &mut policy);
 
-                        // transfer app data ser back
-                        sub_parser.service_mut().transfer_app_ser_to(ser)?;
+                        // transfer app data from sub parser
+                        set.transfer_appser_from_subparser(#sub_index);
 
-                        let mut rctx = sub_parser.service_mut().sve_take_val::<cote::prelude::RunningCtx>()?;
+                        // take running ctx from sub parser
+                        let mut rctx = cote::prelude::AppStorage::take_app_data::<cote::prelude::RunningCtx>(
+                            set.parser_mut(#sub_index)?.ctx_service()
+                        )?;
 
                         // decrement sub level
                         rctx.dec_sub_level();
                         // skip if the sub parser has already set the help flag
                         if !rctx.display_help() {
-                            <#inner_ty>::sync_rctx(&mut rctx, &ret, sub_parser.optset(), true)?;
+                            <#inner_ty>::sync_rctx(&mut rctx, &ret, set.parser_mut(#sub_index)?.optset(), true)?;
                             if rctx.display_help() {
                                 rctx.set_help_context(<#inner_ty>::new_help_context());
                             }
@@ -181,8 +184,10 @@ impl<'a> SubGenerator<'a> {
 
                         if okay {
                             // pass running ctx to other sub command
-                            ser.sve_insert(rctx);
-                            <#inner_ty as cote::ExtractFromSetDerive::<Set>>::try_extract(sub_parser.optset_mut()).ok()
+                            cote::prelude::AppStorage::set_app_data(set.ctx_service(), rctx);
+                            <#inner_ty as cote::ExtractFromSetDerive::<Set>>::try_extract(
+                                set.parser_mut(#sub_index)?.optset_mut()
+                            ).ok()
                         }
                         else {
                             if rctx.frames().len() > frame_len {
@@ -190,7 +195,7 @@ impl<'a> SubGenerator<'a> {
                                     frame.failure = Some(cote::prelude::Failure::new(cmd.to_owned(), ret));
                                 }
                                 // replace the running ctx with current one
-                                ser.sve_insert(rctx);
+                                cote::prelude::AppStorage::set_app_data(set.ctx_service(), rctx);
                             }
                             None
                         }
@@ -308,9 +313,9 @@ impl<'a> SubGenerator<'a> {
                         quote! { <#ty>::default() }
                     })
                     .unwrap_or_else(|| {
-                        quote! { <<#policy_ty>::<'inv, Set, Ser>>::default() }
+                        quote! { <<#policy_ty>::<'inv, Set>>::default() }
                     })
             })
-            .unwrap_or_else(|| quote! { <#inner_ty>::into_policy_with::<'inv, Set, Ser>() }))
+            .unwrap_or_else(|| quote! { <#inner_ty>::into_policy_with::<'inv, Set>() }))
     }
 }

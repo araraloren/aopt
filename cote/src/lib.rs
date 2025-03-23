@@ -5,12 +5,12 @@ pub(crate) mod infer;
 pub(crate) mod meta;
 pub(crate) mod parser;
 pub(crate) mod rctx;
-pub(crate) mod ser;
 pub(crate) mod value;
 
 pub mod valid;
 
 pub use aopt;
+use aopt::set::Set;
 pub use aopt::Error;
 pub use aopt_help;
 pub use cote_derive;
@@ -18,7 +18,6 @@ pub use cote_derive;
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub mod prelude {
-
     pub use aopt::opt::AnyOpt;
     pub use aopt::opt::Cmd;
     pub use aopt::opt::Main;
@@ -27,9 +26,10 @@ pub mod prelude {
     pub use aopt::parser::UserStyle;
     pub use aopt::prelude::ctor_default_name;
     pub use aopt::prelude::AOpt;
-    pub use aopt::prelude::APolicyExt;
     pub use aopt::prelude::ARef;
     pub use aopt::prelude::Action;
+    pub use aopt::prelude::AppServices;
+    pub use aopt::prelude::AppStorage;
     pub use aopt::prelude::Args;
     pub use aopt::prelude::Commit;
     pub use aopt::prelude::ConfigBuild;
@@ -61,7 +61,6 @@ pub mod prelude {
     pub use aopt::prelude::PrefixedValidator;
     pub use aopt::prelude::RawValParser;
     pub use aopt::prelude::Return;
-    pub use aopt::prelude::ServicesValExt;
     pub use aopt::prelude::Set;
     pub use aopt::prelude::SetCfg;
     pub use aopt::prelude::SetChecker;
@@ -92,9 +91,6 @@ pub mod prelude {
     pub use crate::rctx::Failure;
     pub use crate::rctx::Frame;
     pub use crate::rctx::RunningCtx;
-    pub use crate::ser::ASerTransfer;
-    pub use crate::ser::AppStorage;
-    pub use crate::ser::CoteSer;
     pub use crate::valid;
     pub use crate::value::fetch_uid_impl;
     pub use crate::value::fetch_vec_uid_impl;
@@ -110,10 +106,10 @@ pub mod prelude {
     pub use aopt::prelude::ASet as CoteSet;
 }
 
-use crate::prelude::Parser;
+use std::marker::PhantomData;
+
 use aopt::args::Args;
 use aopt::ctx::Invoker;
-use aopt::ext::APolicyExt;
 use aopt::parser::DefaultSetChecker;
 use aopt::parser::Policy;
 use aopt::parser::PolicySettings;
@@ -123,30 +119,29 @@ use aopt::prelude::ConfigValue;
 use aopt::prelude::OptParser;
 use aopt::prelude::OptStyleManager;
 use aopt::prelude::OptValidator;
-use aopt::prelude::ServicesValExt;
 use aopt::prelude::SetCfg;
 use aopt::prelude::SetValueFindExt;
-use std::marker::PhantomData;
 
-pub trait IntoParserDerive<'inv, Set, Ser>
+use crate::prelude::Parser;
+
+pub trait IntoParserDerive<'inv, S>
 where
-    Ser: ServicesValExt + Default,
-    SetCfg<Set>: ConfigValue + Default,
-    Set: crate::prelude::Set + OptParser + OptValidator + Default,
+    SetCfg<S>: ConfigValue + Default,
+    S: Set + OptParser + OptValidator + Default,
 {
-    fn into_parser() -> Result<Parser<'inv, Set, Ser>> {
+    fn into_parser() -> Result<Parser<'inv, S>> {
         let mut parser = Parser::default();
         Self::update(&mut parser)?;
         Ok(parser)
     }
-    fn update(parser: &mut Parser<'inv, Set, Ser>) -> Result<()>;
+    fn update(parser: &mut Parser<'inv, S>) -> Result<()>;
 }
 
-pub trait ExtractFromSetDerive<'set, Set: SetValueFindExt>
+pub trait ExtractFromSetDerive<'set, S: SetValueFindExt>
 where
-    SetCfg<Set>: ConfigValue + Default,
+    SetCfg<S>: ConfigValue + Default,
 {
-    fn try_extract(set: &'set mut Set) -> Result<Self>
+    fn try_extract(set: &'set mut S) -> Result<Self>
     where
         Self: Sized;
 }
@@ -173,32 +168,23 @@ impl Status for Return {
     }
 }
 
-pub type PrePolicy<'inv, Set, Ser> = aopt::prelude::PrePolicy<
-    Parser<'inv, Set, Ser>,
-    Ser,
-    DefaultSetChecker<Parser<'inv, Set, Ser>>,
->;
+pub type PrePolicy<'inv, S> =
+    aopt::prelude::PrePolicy<Parser<'inv, S>, DefaultSetChecker<Parser<'inv, S>>>;
 
-pub type FwdPolicy<'inv, Set, Ser> = aopt::prelude::FwdPolicy<
-    Parser<'inv, Set, Ser>,
-    Ser,
-    DefaultSetChecker<Parser<'inv, Set, Ser>>,
->;
+pub type FwdPolicy<'inv, S> =
+    aopt::prelude::FwdPolicy<Parser<'inv, S>, DefaultSetChecker<Parser<'inv, S>>>;
 
-pub type DelayPolicy<'inv, Set, Ser> = aopt::prelude::DelayPolicy<
-    Parser<'inv, Set, Ser>,
-    Ser,
-    DefaultSetChecker<Parser<'inv, Set, Ser>>,
->;
+pub type DelayPolicy<'inv, S> =
+    aopt::prelude::DelayPolicy<Parser<'inv, S>, DefaultSetChecker<Parser<'inv, S>>>;
 
 #[derive(Debug, Clone)]
-pub struct NullPolicy<'inv, Set, Ser> {
+pub struct NullPolicy<'inv, S> {
     style_manager: OptStyleManager,
 
-    marker: PhantomData<(Set, Ser, &'inv ())>,
+    marker: PhantomData<(S, &'inv ())>,
 }
 
-impl<Set, Ser> Default for NullPolicy<'_, Set, Ser> {
+impl<S> Default for NullPolicy<'_, S> {
     fn default() -> Self {
         Self {
             style_manager: OptStyleManager::default(),
@@ -207,29 +193,21 @@ impl<Set, Ser> Default for NullPolicy<'_, Set, Ser> {
     }
 }
 
-impl<'inv, Set, Ser> Policy for NullPolicy<'inv, Set, Ser> {
+impl<'inv, S> Policy for NullPolicy<'inv, S> {
     type Ret = Return;
 
-    type Set = Parser<'inv, Set, Ser>;
+    type Set = Parser<'inv, S>;
 
-    type Inv<'a> = Invoker<'a, Parser<'inv, Set, Ser>, Ser>;
-
-    type Ser = Ser;
+    type Inv<'a> = Invoker<'a, Parser<'inv, S>>;
 
     type Error = crate::Error;
 
-    fn parse(
-        &mut self,
-        _: &mut Self::Set,
-        _: &mut Self::Inv<'_>,
-        _: &mut Self::Ser,
-        _: Args,
-    ) -> Result<Self::Ret> {
+    fn parse(&mut self, _: &mut Self::Set, _: &mut Self::Inv<'_>, _: Args) -> Result<Self::Ret> {
         Ok(Return::default())
     }
 }
 
-impl<Set, Ser> PolicySettings for NullPolicy<'_, Set, Ser> {
+impl<S> PolicySettings for NullPolicy<'_, S> {
     fn style_manager(&self) -> &OptStyleManager {
         &self.style_manager
     }
@@ -268,24 +246,6 @@ impl<Set, Ser> PolicySettings for NullPolicy<'_, Set, Ser> {
 
     fn set_overload(&mut self, _: bool) -> &mut Self {
         self
-    }
-}
-
-impl<'inv, Set, Ser> APolicyExt<NullPolicy<'inv, Set, Ser>> for NullPolicy<'inv, Set, Ser>
-where
-    Set: Default,
-    Ser: Default,
-{
-    fn default_ser(&self) -> <NullPolicy<'inv, Set, Ser> as Policy>::Ser {
-        Ser::default()
-    }
-
-    fn default_set(&self) -> <NullPolicy<'inv, Set, Ser> as Policy>::Set {
-        Parser::default()
-    }
-
-    fn default_inv<'a>(&self) -> <NullPolicy<'inv, Set, Ser> as Policy>::Inv<'a> {
-        Invoker::default()
     }
 }
 
@@ -403,11 +363,7 @@ mod test {
         }
 
         #[allow(dead_code)]
-        fn search<Set, Ser>(
-            _: &mut Set,
-            _: &mut Ser,
-            _: &Ctx,
-        ) -> Result<Option<Vec<String>>, aopt::Error> {
+        fn search<Set>(_: &mut Set, _: &mut Ctx) -> Result<Option<Vec<String>>, aopt::Error> {
             Ok(Some(
                 ["file1", "file2", "dir1", "dir2"]
                     .into_iter()
@@ -416,11 +372,7 @@ mod test {
             ))
         }
 
-        fn find_main<Set, Ser>(
-            set: &mut Set,
-            _: &mut Ser,
-            _: &Ctx,
-        ) -> Result<Option<()>, aopt::Error>
+        fn find_main<Set>(set: &mut Set, _: &mut Ctx) -> Result<Option<()>, aopt::Error>
         where
             Set: SetValueFindExt,
             SetCfg<Set>: ConfigValue + Default,

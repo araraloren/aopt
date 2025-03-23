@@ -6,6 +6,7 @@ pub(crate) mod policy_delay;
 pub(crate) mod policy_fwd;
 pub(crate) mod policy_pre;
 pub(crate) mod returnval;
+pub(crate) mod storage;
 pub(crate) mod style;
 
 pub use self::checker::DefaultSetChecker;
@@ -17,6 +18,9 @@ pub use self::policy_delay::DelayPolicy;
 pub use self::policy_fwd::FwdPolicy;
 pub use self::policy_pre::PrePolicy;
 pub use self::returnval::Return;
+pub use self::storage::AppServices;
+pub use self::storage::AppStorage;
+pub use self::storage::UsrValService;
 pub use self::style::OptStyleManager;
 pub use self::style::UserStyle;
 
@@ -26,7 +30,7 @@ use std::ops::DerefMut;
 
 use crate::args::Args;
 use crate::ctx::InnerCtx;
-use crate::ext::APolicyExt;
+use crate::ctx::Invoker;
 use crate::set::OptValidator;
 use crate::set::PrefixedValidator;
 use crate::set::Set;
@@ -51,17 +55,15 @@ pub struct CtxSaver<'a> {
 /// ```ignore
 ///
 /// #[derive(Debug)]
-/// pub struct EmptyPolicy<Set, Ser>(PhantomData<(Set, Ser)>);
+/// pub struct EmptyPolicy<Set>(PhantomData<(Set)>);
 ///
 /// // An empty policy do nothing.
-/// impl<S: Set, Ser> Policy for EmptyPolicy<S, Ser> {
+/// impl<S: Set> Policy for EmptyPolicy<S> {
 ///     type Ret = bool;
 ///
 ///     type Set = S;
 ///
-///     type Inv<'a> = Invoker<'a, S, Ser>;
-///
-///     type Ser = Ser;
+///     type Inv<'a> = Invoker<'a, S>;
 ///
 ///     type Error = Error;
 ///
@@ -69,7 +71,6 @@ pub struct CtxSaver<'a> {
 ///         &mut self,
 ///         _: &mut Self::Set,
 ///         _: &mut Self::Inv<'a>,
-///         _: &mut Self::Ser,
 ///         _: Args,
 ///    ) -> Result<bool, Error> {
 ///         // ... parsing logical code
@@ -81,14 +82,12 @@ pub trait Policy {
     type Ret;
     type Set;
     type Inv<'a>;
-    type Ser;
     type Error: Into<Error>;
 
     fn parse(
         &mut self,
         set: &mut Self::Set,
         inv: &mut Self::Inv<'_>,
-        ser: &mut Self::Ser,
         args: Args,
     ) -> Result<Self::Ret, Self::Error>;
 }
@@ -173,7 +172,7 @@ where
 /// parser2.add_opt("Who=c")?;
 /// parser2.add_opt("question=m")?.on(question)?;
 ///
-/// fn question(_: &mut ASet, _: &mut ASer, ctx: &Ctx) -> Result<Option<()>, Error> {
+/// fn question(_: &mut AHCSet, ctx: &mut Ctx) -> Result<Option<()>, Error> {
 ///     let args = ctx.args();
 ///     // Output: The question is: Where are you from ?
 ///     println!(
@@ -206,54 +205,28 @@ where
 /// Using it with macro [`getopt`](crate::getopt),
 /// which can process multiple [`Parser`] with same type [`Policy`].
 #[derive(Debug, Default)]
-pub struct Parser<'a, P: Policy> {
-    policy: P,
-    optset: HCOptSet<P::Set, P::Inv<'a>, P::Ser>,
+pub struct Parser<S, P: Policy<Set = S>> {
+    pub policy: P,
+    pub optset: S,
 }
 
-impl<'a, P: Policy> Deref for Parser<'a, P> {
-    type Target = HCOptSet<P::Set, P::Inv<'a>, P::Ser>;
+impl<S, P: Policy<Set = S>> Deref for Parser<S, P> {
+    type Target = S;
 
     fn deref(&self) -> &Self::Target {
         &self.optset
     }
 }
 
-impl<P: Policy> DerefMut for Parser<'_, P> {
+impl<S, P: Policy<Set = S>> DerefMut for Parser<S, P> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.optset
     }
 }
 
-impl<P> Parser<'_, P>
-where
-    P: Policy + APolicyExt<P>,
-{
-    pub fn new_policy(policy: P) -> Self {
-        let optset = policy.default_set();
-        let valser = policy.default_ser();
-        let invoker = policy.default_inv();
-
-        Self {
-            policy,
-            optset: HCOptSet::new(optset, invoker, valser),
-        }
-    }
-}
-
-impl<'a, P: Policy> Parser<'a, P> {
-    pub fn new(
-        policy: P,
-        optset: HCOptSet<<P as Policy>::Set, <P as Policy>::Inv<'a>, <P as Policy>::Ser>,
-    ) -> Self {
+impl<S, P: Policy<Set = S>> Parser<S, P> {
+    pub fn new(policy: P, optset: S) -> Self {
         Self { optset, policy }
-    }
-
-    pub fn new_with(policy: P, optset: P::Set, invoker: P::Inv<'a>, valser: P::Ser) -> Self {
-        Self {
-            policy,
-            optset: HCOptSet::new(optset, invoker, valser),
-        }
     }
 
     pub fn policy(&self) -> &P {
@@ -269,24 +242,41 @@ impl<'a, P: Policy> Parser<'a, P> {
         self
     }
 
-    pub fn optset(&self) -> &HCOptSet<P::Set, P::Inv<'a>, P::Ser> {
+    pub fn optset(&self) -> &S {
         &self.optset
     }
 
-    pub fn optset_mut(&mut self) -> &mut HCOptSet<P::Set, P::Inv<'a>, P::Ser> {
+    pub fn optset_mut(&mut self) -> &mut S {
         &mut self.optset
     }
 
-    pub fn set_optset(&mut self, optset: HCOptSet<P::Set, P::Inv<'a>, P::Ser>) -> &mut Self {
+    pub fn set_optset(&mut self, optset: S) -> &mut Self {
         self.optset = optset;
         self
     }
 }
 
-impl<P> Parser<'_, P>
+impl<'a, S, P> Parser<HCOptSet<'a, S>, P>
 where
-    P::Set: Set,
-    P: Policy,
+    S: Default,
+    P: Policy<Set = HCOptSet<'a, S>, Inv<'a> = Invoker<'a, HCOptSet<'a, S>>>,
+{
+    pub fn new_policy(policy: P) -> Self {
+        Self::new_with(policy, S::default(), Invoker::default())
+    }
+
+    pub fn new_with(policy: P, optset: S, invoker: Invoker<'a, HCOptSet<'a, S>>) -> Self {
+        Self {
+            policy,
+            optset: HCOptSet::new(optset, invoker),
+        }
+    }
+}
+
+impl<'a, S, P> Parser<HCOptSet<'a, S>, P>
+where
+    S: Set,
+    P: Policy<Set = HCOptSet<'a, S>, Inv<'a> = Invoker<'a, HCOptSet<'a, S>>>,
 {
     /// Reset the option set.
     pub fn reset(&mut self) -> Result<&mut Self, Error> {
@@ -304,9 +294,9 @@ where
     }
 }
 
-impl<P> PolicySettings for Parser<'_, P>
+impl<S, P> PolicySettings for Parser<S, P>
 where
-    P: Policy + PolicySettings,
+    P: Policy<Set = S> + PolicySettings,
 {
     fn style_manager(&self) -> &OptStyleManager {
         self.policy().style_manager()
@@ -353,10 +343,10 @@ where
     }
 }
 
-impl<P> OptValidator for Parser<'_, P>
+impl<S, P> OptValidator for Parser<S, P>
 where
-    P: Policy,
-    P::Set: OptValidator,
+    S: OptValidator,
+    P: Policy<Set = S>,
 {
     type Error = Error;
 
@@ -364,18 +354,18 @@ where
         OptValidator::check(&mut self.optset, name).map_err(Into::into)
     }
 
-    fn split<'a>(
+    fn split<'b>(
         &self,
-        name: &std::borrow::Cow<'a, str>,
-    ) -> Result<(std::borrow::Cow<'a, str>, std::borrow::Cow<'a, str>), Self::Error> {
+        name: &std::borrow::Cow<'b, str>,
+    ) -> Result<(std::borrow::Cow<'b, str>, std::borrow::Cow<'b, str>), Self::Error> {
         OptValidator::split(&self.optset, name).map_err(Into::into)
     }
 }
 
-impl<P> PrefixedValidator for Parser<'_, P>
+impl<S, P: Policy<Set = S>> PrefixedValidator for Parser<S, P>
 where
-    P: Policy,
-    P::Set: PrefixedValidator,
+    S: PrefixedValidator,
+    P: Policy<Set = S>,
 {
     type Error = Error;
 
@@ -388,9 +378,9 @@ where
     }
 }
 
-impl<P> Parser<'_, P>
+impl<S, P> Parser<S, P>
 where
-    P: Policy + PolicySettings,
+    P: Policy<Set = S> + PolicySettings,
 {
     /// Enable [`CombinedOption`](UserStyle::CombinedOption) option set style.
     /// This can support option style like `-abc` which set `-a`, `-b` and `-c` both.
@@ -416,9 +406,9 @@ where
     }
 }
 
-impl<P: Policy> PolicyParser<P> for Parser<'_, P>
+impl<S, P: Policy<Set = S>> PolicyParser<P> for Parser<S, P>
 where
-    P::Set: crate::set::Set,
+    S: Set + PolicyParser<P, Error = Error>,
 {
     type Error = Error;
 

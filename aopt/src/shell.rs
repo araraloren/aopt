@@ -11,10 +11,6 @@ pub use self::policy::CompletePolicy;
 use crate::args::Args;
 use crate::ctx::Ctx;
 use crate::ctx::Invoker;
-use crate::ext::AFwdParser;
-use crate::ext::APolicyExt;
-use crate::ext::ASer;
-use crate::ext::ASet;
 use crate::opt::Action;
 use crate::opt::ConfigBuildInfer;
 use crate::opt::Opt;
@@ -23,9 +19,12 @@ use crate::opt::Style;
 use crate::parser::Parser;
 use crate::parser::Policy;
 use crate::parser::PolicyParser;
+use crate::prelude::AFwdParser;
+use crate::prelude::ASet;
 use crate::prelude::MutOpt;
 use crate::prelude::SetValueFindExt;
 use crate::set::OptValidator;
+use crate::set::Set;
 use crate::set::SetOpt;
 use crate::value::raw2str;
 use crate::value::RawValParser;
@@ -57,31 +56,13 @@ impl RawValParser for Shell {
     }
 }
 
-pub type ACompletePolicy = CompletePolicy<ASet, ASer>;
+pub type ACompletePolicy = CompletePolicy<ASet>;
 
-pub type ACompleteParser<'a> = Parser<'a, ACompletePolicy>;
-
-impl<Set, Ser> APolicyExt<CompletePolicy<Set, Ser>> for CompletePolicy<Set, Ser>
-where
-    Ser: Default,
-    Set: crate::set::Set + OptParser + OptValidator + Default,
-{
-    fn default_set(&self) -> Set {
-        Set::default()
-    }
-
-    fn default_ser(&self) -> Ser {
-        Ser::default()
-    }
-
-    fn default_inv<'a>(&self) -> <CompletePolicy<Set, Ser> as Policy>::Inv<'a> {
-        Invoker::<Set, Ser>::default()
-    }
-}
+pub type ACompleteParser<'a> = Parser<ASet, ACompletePolicy>;
 
 #[derive(Debug, Clone, Default)]
-pub struct CompleteService<Set, Ser> {
-    compl_policy: CompletePolicy<Set, Ser>,
+pub struct CompleteService<S> {
+    compl_policy: CompletePolicy<S>,
 
     avail_cmd: Vec<Uid>,
 
@@ -94,7 +75,7 @@ pub struct CompleteService<Set, Ser> {
     incomplete_opt: Option<Uid>,
 }
 
-impl<Set, Ser> CompleteService<Set, Ser> {
+impl<S> CompleteService<S> {
     pub fn display_cmd(&self) -> bool {
         self.display_cmd
     }
@@ -124,9 +105,9 @@ impl<Set, Ser> CompleteService<Set, Ser> {
     }
 }
 
-impl<Set, Ser> CompleteService<Set, Ser>
+impl<S> CompleteService<S>
 where
-    Set: crate::set::Set + OptParser + OptValidator,
+    S: Set + OptParser + OptValidator,
 {
     pub fn parse_with<P>(
         &mut self,
@@ -134,19 +115,19 @@ where
         parser: &mut P,
     ) -> Result<<Self as Policy>::Ret, P::Error>
     where
-        P: PolicyParser<CompleteService<Set, Ser>>,
+        P: PolicyParser<CompleteService<S>>,
     {
         parser.parse_policy(args, self)
     }
 
     pub fn write_complete_to<R: Write>(
         &mut self,
-        set: &Set,
+        set: &S,
         writer: &mut R,
         shell: Shell,
     ) -> Result<(), Error>
     where
-        SetOpt<Set>: Opt,
+        SetOpt<S>: Opt,
     {
         use crate::set::SetExt;
 
@@ -279,18 +260,16 @@ where
     }
 }
 
-impl<Set, Ser> Policy for CompleteService<Set, Ser>
+impl<S> Policy for CompleteService<S>
 where
-    SetOpt<Set>: Opt,
-    Set: crate::set::Set + OptParser + OptValidator,
+    SetOpt<S>: Opt,
+    S: Set + OptParser + OptValidator,
 {
-    type Ret = <CompletePolicy<Set, Ser> as Policy>::Ret;
+    type Ret = <CompletePolicy<S> as Policy>::Ret;
 
-    type Set = Set;
+    type Set = S;
 
-    type Inv<'a> = <CompletePolicy<Set, Ser> as Policy>::Inv<'a>;
-
-    type Ser = Ser;
+    type Inv<'a> = <CompletePolicy<S> as Policy>::Inv<'a>;
 
     type Error = Error;
 
@@ -298,18 +277,11 @@ where
         &mut self,
         set: &mut Self::Set,
         inv: &mut Self::Inv<'_>,
-        ser: &mut Self::Ser,
         args: Args,
     ) -> Result<Self::Ret, Self::Error> {
         let tot = args.len();
         let last = args.last().cloned();
-        let ret = <CompletePolicy<Set, Ser> as Policy>::parse(
-            &mut self.compl_policy,
-            set,
-            inv,
-            ser,
-            args,
-        )?;
+        let ret = <CompletePolicy<S> as Policy>::parse(&mut self.compl_policy, set, inv, args)?;
         let mut need_cmd = true;
 
         for opt in set.iter() {

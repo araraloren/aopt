@@ -4,6 +4,8 @@ use std::ops::DerefMut;
 
 use aopt::ctx::Ctx;
 use aopt::ctx::HandlerEntry;
+use aopt::parser::AppServices;
+use aopt::parser::AppStorage;
 use aopt::prelude::Args;
 use aopt::prelude::ConfigBuild;
 use aopt::prelude::ConfigValue;
@@ -15,6 +17,7 @@ use aopt::prelude::OptParser;
 use aopt::prelude::OptValidator;
 use aopt::prelude::Policy;
 use aopt::prelude::PolicyParser;
+use aopt::prelude::Set;
 use aopt::prelude::SetCfg;
 use aopt::prelude::SetOpt;
 use aopt::raise_error;
@@ -63,7 +66,7 @@ use crate::ExtractFromSetDerive;
 ///         let rctx = RunningCtx::default().with_name(parser.name().clone());
 ///
 ///         // insert a RunningCtx before parse
-///         parser.service_mut().sve_insert(rctx);
+///         parser.ctx_service().set_app_data(rctx);
 ///         let ret = parser.parse_policy(Args::from(["app", "list"]), &mut policy);
 ///
 ///         assert!(ret.is_ok());
@@ -73,36 +76,38 @@ use crate::ExtractFromSetDerive;
 /// }
 /// ```
 #[derive(Debug)]
-pub struct Parser<'a, Set, Ser> {
+pub struct Parser<'a, S> {
     name: String,
-    set: Set,
-    ser: Option<Ser>,
-    inv: Option<Invoker<'a, Self, Ser>>,
+    set: S,
+    ctx_ser: AppServices,
+    app_ser: AppServices,
+    inv: Option<Invoker<'a, Self>>,
     sub_parsers: Vec<Self>,
 }
 
-impl<Set, Ser> Default for Parser<'_, Set, Ser>
+impl<S> Default for Parser<'_, S>
 where
-    Set: Default,
-    Ser: Default,
+    S: Default,
 {
     fn default() -> Self {
         Self {
             name: String::from("CoteParser"),
             set: Default::default(),
-            ser: Some(Ser::default()),
+            ctx_ser: AppServices::default(),
+            app_ser: AppServices::default(),
             inv: Some(Invoker::default()),
             sub_parsers: Default::default(),
         }
     }
 }
 
-impl<'a, Set, Ser> Parser<'a, Set, Ser> {
-    pub fn new(name: impl Into<String>, set: Set) -> Self {
+impl<'a, S> Parser<'a, S> {
+    pub fn new(name: impl Into<String>, set: S) -> Self {
         Self {
             name: name.into(),
             set,
-            ser: None,
+            ctx_ser: AppServices::default(),
+            app_ser: AppServices::default(),
             inv: None,
             sub_parsers: vec![],
         }
@@ -122,45 +127,61 @@ impl<'a, Set, Ser> Parser<'a, Set, Ser> {
         self
     }
 
-    pub fn optset(&self) -> &Set {
+    pub fn optset(&self) -> &S {
         &self.set
     }
 
-    pub fn optset_mut(&mut self) -> &mut Set {
+    pub fn optset_mut(&mut self) -> &mut S {
         &mut self.set
     }
 
-    pub fn set_optset(&mut self, set: Set) -> &mut Self {
+    pub fn set_optset(&mut self, set: S) -> &mut Self {
         self.set = set;
         self
     }
 
-    pub fn service(&self) -> &Ser {
-        assert!(self.ser.is_some());
-        self.ser.as_ref().unwrap()
+    pub fn service(&self) -> &AppServices {
+        &self.app_ser
     }
 
-    pub fn service_mut(&mut self) -> &mut Ser {
-        assert!(self.ser.is_some());
-        self.ser.as_mut().unwrap()
+    pub fn service_mut(&mut self) -> &mut AppServices {
+        &mut self.app_ser
     }
 
-    pub fn set_service(&mut self, ser: Ser) -> &mut Self {
-        self.ser = Some(ser);
+    pub fn set_service(&mut self, ser: AppServices) -> &mut Self {
+        self.app_ser = ser;
         self
     }
 
-    pub fn invoker(&self) -> &Invoker<'a, Self, Ser> {
+    #[doc(hidden)]
+    pub fn transfer_appser_to_subparser(&mut self, index: usize) {
+        let appser = std::mem::take(&mut self.app_ser);
+
+        self.sub_parsers[index].set_service(appser);
+    }
+
+    #[doc(hidden)]
+    pub fn transfer_appser_from_subparser(&mut self, index: usize) {
+        let appser = std::mem::take(self.sub_parsers[index].service_mut());
+
+        self.set_service(appser);
+    }
+
+    pub fn ctx_service(&mut self) -> &mut AppServices {
+        &mut self.ctx_ser
+    }
+
+    pub fn invoker(&self) -> &Invoker<'a, Self> {
         assert!(self.inv.is_some());
         self.inv.as_ref().unwrap()
     }
 
-    pub fn invoker_mut(&mut self) -> &mut Invoker<'a, Self, Ser> {
+    pub fn invoker_mut(&mut self) -> &mut Invoker<'a, Self> {
         assert!(self.inv.is_some());
         self.inv.as_mut().unwrap()
     }
 
-    pub fn set_invoker(&mut self, inv: Invoker<'a, Self, Ser>) -> &mut Self {
+    pub fn set_invoker(&mut self, inv: Invoker<'a, Self>) -> &mut Self {
         self.inv = Some(inv);
         self
     }
@@ -210,29 +231,29 @@ impl<'a, Set, Ser> Parser<'a, Set, Ser> {
     }
 }
 
-impl<Set, Ser> Deref for Parser<'_, Set, Ser>
+impl<S> Deref for Parser<'_, S>
 where
-    Set: aopt::set::Set,
+    S: Set,
 {
-    type Target = Set;
+    type Target = S;
 
     fn deref(&self) -> &Self::Target {
         &self.set
     }
 }
 
-impl<Set, Ser> DerefMut for Parser<'_, Set, Ser>
+impl<S> DerefMut for Parser<'_, S>
 where
-    Set: aopt::set::Set,
+    S: Set,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.set
     }
 }
 
-impl<Set, Ser> Parser<'_, Set, Ser>
+impl<S> Parser<'_, S>
 where
-    Set: aopt::set::Set,
+    S: Set,
 {
     /// Reset the option set.
     pub fn reset(&mut self) -> Result<&mut Self, Error> {
@@ -251,19 +272,19 @@ where
     }
 }
 
-impl<'a, Set, Ser> Parser<'a, Set, Ser>
+impl<'a, S> Parser<'a, S>
 where
-    Set: aopt::set::Set,
+    S: Set,
 {
     #[cfg(feature = "sync")]
     #[allow(clippy::type_complexity)]
     pub fn entry<O, H>(
         &mut self,
         uid: Uid,
-    ) -> Result<HandlerEntry<'a, '_, Invoker<'a, Self, Ser>, Self, Ser, H, O>, Error>
+    ) -> Result<HandlerEntry<'a, '_, Invoker<'a, Self>, Self, H, O>, Error>
     where
         O: ErasedTy,
-        H: FnMut(&mut Self, &mut Ser, &Ctx) -> Result<Option<O>, Error> + Send + Sync + 'a,
+        H: FnMut(&mut Self, &mut Ctx) -> Result<Option<O>, Error> + Send + Sync + 'a,
     {
         Ok(HandlerEntry::new(self.inv.as_mut().unwrap(), uid))
     }
@@ -273,24 +294,24 @@ where
     pub fn entry<O, H>(
         &mut self,
         uid: Uid,
-    ) -> Result<HandlerEntry<'a, '_, Invoker<'a, Self, Ser>, Self, Ser, H, O>, Error>
+    ) -> Result<HandlerEntry<'a, '_, Invoker<'a, Self>, Self, H, O>, Error>
     where
         O: ErasedTy,
-        H: FnMut(&mut Self, &mut Ser, &Ctx) -> Result<Option<O>, Error> + 'a,
+        H: FnMut(&mut Self, &mut Ctx) -> Result<Option<O>, Error> + 'a,
     {
         Ok(HandlerEntry::new(self.inv.as_mut().unwrap(), uid))
     }
 }
 
-impl<'a, 'b, Set, Ser> Parser<'a, Set, Ser>
+impl<'a, 'b, S> Parser<'a, S>
 where
     'a: 'b,
-    Set: SetValueFindExt,
-    SetCfg<Set>: ConfigValue + Default,
+    S: SetValueFindExt,
+    SetCfg<S>: ConfigValue + Default,
 {
     pub fn extract_type<T>(&'b mut self) -> Result<T, Error>
     where
-        T: ExtractFromSetDerive<'b, Set>,
+        T: ExtractFromSetDerive<'b, S>,
     {
         let set = self.optset_mut();
 
@@ -298,63 +319,63 @@ where
     }
 }
 
-impl<Set, Ser> aopt::set::Set for Parser<'_, Set, Ser>
+impl<S> Set for Parser<'_, S>
 where
-    Set: aopt::set::Set,
+    S: Set,
 {
-    type Ctor = Set::Ctor;
+    type Ctor = S::Ctor;
 
     fn register(&mut self, ctor: Self::Ctor) -> Option<Self::Ctor> {
-        Set::register(&mut self.set, ctor)
+        S::register(&mut self.set, ctor)
     }
 
     fn get_ctor(&self, name: &str) -> Option<&Self::Ctor> {
-        Set::get_ctor(&self.set, name)
+        S::get_ctor(&self.set, name)
     }
 
     fn get_ctor_mut(&mut self, name: &str) -> Option<&mut Self::Ctor> {
-        Set::get_ctor_mut(&mut self.set, name)
+        S::get_ctor_mut(&mut self.set, name)
     }
 
     fn reset(&mut self) {
-        Set::reset(&mut self.set)
+        S::reset(&mut self.set)
     }
 
     fn len(&self) -> usize {
-        Set::len(&self.set)
+        S::len(&self.set)
     }
 
     fn iter(&self) -> std::slice::Iter<'_, SetOpt<Self>> {
-        Set::iter(&self.set)
+        S::iter(&self.set)
     }
 
     fn iter_mut(&mut self) -> std::slice::IterMut<'_, SetOpt<Self>> {
-        Set::iter_mut(&mut self.set)
+        S::iter_mut(&mut self.set)
     }
 
     fn insert(&mut self, opt: SetOpt<Self>) -> Uid {
-        Set::insert(&mut self.set, opt)
+        S::insert(&mut self.set, opt)
     }
 }
 
-impl<Set, Ser> OptParser for Parser<'_, Set, Ser>
+impl<S> OptParser for Parser<'_, S>
 where
-    Set: OptParser,
+    S: OptParser,
 {
-    type Output = Set::Output;
+    type Output = S::Output;
 
-    type Error = Set::Error;
+    type Error = S::Error;
 
     fn parse_opt(&self, pattern: &str) -> Result<Self::Output, Self::Error> {
         OptParser::parse_opt(&self.set, pattern)
     }
 }
 
-impl<Set, Ser> OptValidator for Parser<'_, Set, Ser>
+impl<S> OptValidator for Parser<'_, S>
 where
-    Set: OptValidator,
+    S: OptValidator,
 {
-    type Error = Set::Error;
+    type Error = S::Error;
 
     fn check(&mut self, name: &str) -> Result<bool, Self::Error> {
         OptValidator::check(&mut self.set, name)
@@ -365,11 +386,11 @@ where
     }
 }
 
-impl<Set, Ser> PrefixedValidator for Parser<'_, Set, Ser>
+impl<S> PrefixedValidator for Parser<'_, S>
 where
-    Set: PrefixedValidator,
+    S: PrefixedValidator,
 {
-    type Error = Set::Error;
+    type Error = S::Error;
 
     fn reg_prefix(&mut self, val: &str) -> Result<(), Self::Error> {
         PrefixedValidator::reg_prefix(&mut self.set, val)
@@ -380,10 +401,10 @@ where
     }
 }
 
-impl<Set, Ser> SetValueFindExt for Parser<'_, Set, Ser>
+impl<S> SetValueFindExt for Parser<'_, S>
 where
-    Set: SetValueFindExt,
-    SetCfg<Set>: ConfigValue + Default,
+    S: SetValueFindExt,
+    SetCfg<S>: ConfigValue + Default,
 {
     fn find_uid(&self, cb: impl ConfigBuild<SetCfg<Self>>) -> Result<Uid, Error> {
         SetValueFindExt::find_uid(&self.set, cb)
@@ -401,10 +422,10 @@ where
     }
 }
 
-impl<'a, P, Set, Ser> PolicyParser<P> for Parser<'a, Set, Ser>
+impl<'a, P, S> PolicyParser<P> for Parser<'a, S>
 where
-    Set: aopt::set::Set + OptParser + OptValidator,
-    P: Policy<Set = Self, Ser = Ser, Inv<'a> = Invoker<'a, Self, Ser>>,
+    S: Set + OptParser + OptValidator,
+    P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self>>,
 {
     type Error = Error;
 
@@ -414,30 +435,42 @@ where
         policy: &mut P,
     ) -> Result<<P as Policy>::Ret, Self::Error> {
         assert!(self.inv.is_some());
-        assert!(self.ser.is_some());
 
         self.init()?;
 
         let mut inv = self.inv.take().unwrap();
-        let mut ser = self.ser.take().unwrap();
 
-        let ret = policy
-            .parse(self, &mut inv, &mut ser, args)
-            .map_err(Into::into);
+        let ret = policy.parse(self, &mut inv, args).map_err(Into::into);
 
         self.inv = Some(inv);
-        self.ser = Some(ser);
 
         ret
     }
 }
 
-impl<'a, Set, Ser> Parser<'a, Set, Ser>
+impl<S> AppStorage for Parser<'_, S> {
+    fn set_app_data<T: ErasedTy>(&mut self, val: T) -> Option<T> {
+        AppStorage::set_app_data(&mut self.app_ser, val)
+    }
+
+    fn app_data<T: ErasedTy>(&self) -> Result<&T, Error> {
+        AppStorage::app_data(&self.app_ser)
+    }
+
+    fn app_data_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
+        AppStorage::app_data_mut(&mut self.app_ser)
+    }
+
+    fn take_app_data<T: ErasedTy>(&mut self) -> Result<T, Error> {
+        AppStorage::take_app_data(&mut self.app_ser)
+    }
+}
+
+impl<'a, S> Parser<'a, S>
 where
-    SetOpt<Set>: Opt,
-    Set: aopt::set::Set + OptValidator + OptParser,
-    <Set as OptParser>::Output: Information,
-    SetCfg<Set>: ConfigValue + Default,
+    SetOpt<S>: Opt,
+    SetCfg<S>: ConfigValue + Default,
+    S: Set + OptValidator + OptParser<Output: Information>,
 {
     /// Running function after parsing.
     ///
@@ -449,7 +482,7 @@ where
     /// #
     /// # fn main() -> Result<(), Error> {
     ///     let mut policy = FwdPolicy::default();
-    ///     let mut parser = Parser::<CoteSet, CoteSer>::default().with_name("example");
+    ///     let mut parser = Parser::<CoteSet>::default().with_name("example");
     ///
     ///     parser.add_opt("-a!".infer::<bool>())?;
     ///     parser.add_opt("-b".infer::<i64>())?;
@@ -477,7 +510,7 @@ where
         mut r: F,
     ) -> Result<R, Error>
     where
-        P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
+        P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self>>,
         F: FnMut(P::Ret, &mut Self) -> Result<R, Error>,
     {
         let ret = self.parse_policy(args.into(), policy)?;
@@ -488,7 +521,7 @@ where
     /// Call [`run_mut_with`](Parser::run_mut_with) with default arguments [`args()`](std::env::args).
     pub fn run_mut<R, F, P>(&mut self, policy: &mut P, r: F) -> Result<R, Error>
     where
-        P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
+        P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self>>,
         F: FnMut(P::Ret, &mut Self) -> Result<R, Error>,
     {
         self.run_mut_with(Args::from_env(), policy, r)
@@ -505,7 +538,7 @@ where
     /// #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
     ///     let mut policy = FwdPolicy::default();
-    ///     let mut parser = Parser::<CoteSet, CoteSer>::default().with_name("example");
+    ///     let mut parser = Parser::<CoteSet>::default().with_name("example");
     ///
     ///     parser.add_opt("-a!".infer::<bool>())?;
     ///     parser.add_opt("-b".infer::<i64>())?;
@@ -535,7 +568,7 @@ where
     ) -> Result<R, Error>
     where
         F: AsyncFnMut(P::Ret, &mut Self) -> Result<R, Error>,
-        P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
+        P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self>>,
     {
         match self.parse_policy(args.into(), policy) {
             Ok(ret) => r(ret, self).await,
@@ -547,7 +580,7 @@ where
     pub async fn run_async_mut<R, F, P>(&mut self, policy: &mut P, r: F) -> Result<R, Error>
     where
         F: AsyncFnMut(P::Ret, &mut Self) -> Result<R, Error>,
-        P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
+        P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self>>,
     {
         self.run_async_mut_with(Args::from_env(), policy, r).await
     }
@@ -562,7 +595,7 @@ where
     /// #
     /// # fn main() -> Result<(), Error> {
     ///     let mut policy = FwdPolicy::default();
-    ///     let mut parser = Parser::<CoteSet, CoteSer>::default().with_name("example");
+    ///     let mut parser = Parser::<CoteSet>::default().with_name("example");
     ///
     ///     parser.add_opt("-a!".infer::<bool>())?;
     ///     parser.add_opt("-b".infer::<i64>())?;
@@ -590,7 +623,7 @@ where
         mut r: F,
     ) -> Result<R, Error>
     where
-        P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
+        P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self>>,
         F: FnMut(P::Ret, &Self) -> Result<R, Error>,
     {
         let ret = self.parse_policy(args.into(), policy)?;
@@ -601,7 +634,7 @@ where
     /// Call [`run_with`](Self::run_with) with default arguments [`args()`](std::env::args).
     pub fn run<R, F, P>(&mut self, policy: &mut P, r: F) -> Result<R, Error>
     where
-        P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
+        P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self>>,
         F: FnMut(P::Ret, &Self) -> Result<R, Error>,
     {
         self.run_with(Args::from_env(), policy, r)
@@ -618,7 +651,7 @@ where
     /// #[tokio::main]
     /// # async fn main() -> Result<(), Error> {
     ///     let mut policy = FwdPolicy::default();
-    ///     let mut parser = Parser::<CoteSet, CoteSer>::default().with_name("example");
+    ///     let mut parser = Parser::<CoteSet>::default().with_name("example");
     ///
     ///     parser.add_opt("-a!".infer::<bool>())?;
     ///     parser.add_opt("-b".infer::<i64>())?;
@@ -648,7 +681,7 @@ where
     ) -> Result<R, Error>
     where
         F: AsyncFnMut(P::Ret, &Self) -> Result<R, Error>,
-        P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
+        P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self>>,
     {
         match self.parse_policy(args.into(), policy) {
             Ok(ret) => r(ret, self).await,
@@ -660,15 +693,15 @@ where
     pub async fn run_async<R, F, P>(&mut self, policy: &mut P, r: F) -> Result<R, Error>
     where
         F: AsyncFnMut(P::Ret, &Self) -> Result<R, Error>,
-        P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self, Ser>, Ser = Ser>,
+        P: Policy<Set = Self, Inv<'a> = Invoker<'a, Self>>,
     {
         self.run_async_with(Args::from_env(), policy, r).await
     }
 }
 
-impl<Set, Ser> Parser<'_, Set, Ser>
+impl<S> Parser<'_, S>
 where
-    Set: aopt::set::Set,
+    S: Set,
 {
     pub const DEFAULT_OPTION_WIDTH: usize = 40;
     pub const DEFAULT_USAGE_WIDTH: usize = 10;
@@ -751,14 +784,14 @@ where
     }
 }
 
-impl<Set, Ser> Parser<'_, Set, Ser>
+impl<S> Parser<'_, S>
 where
-    Set: SetValueFindExt,
-    SetCfg<Set>: ConfigValue + Default,
+    S: SetValueFindExt,
+    SetCfg<S>: ConfigValue + Default,
 {
     pub fn display_help_if(
         &self,
-        option: impl ConfigBuild<SetCfg<Set>>,
+        option: impl ConfigBuild<SetCfg<S>>,
         author: &str,
         version: &str,
         description: &str,
@@ -775,7 +808,7 @@ where
 
     pub fn display_help_if_ctx(
         &self,
-        option: impl ConfigBuild<SetCfg<Set>>,
+        option: impl ConfigBuild<SetCfg<S>>,
         ctx: &HelpContext,
     ) -> Result<bool, Error> {
         let set = self.optset();
@@ -801,7 +834,7 @@ where
 
     pub fn display_help_if_width(
         &self,
-        option: impl ConfigBuild<SetCfg<Set>>,
+        option: impl ConfigBuild<SetCfg<S>>,
         author: &str,
         version: &str,
         description: &str,

@@ -1023,7 +1023,7 @@
 //!         let rctx = RunningCtx::default().with_name(parser.name().clone());
 //!
 //!         // insert a RunningCtx before parse
-//!         parser.service_mut().sve_insert(rctx);
+//!         parser.ctx_service().set_app_data(rctx);
 //!         let ret = parser.parse_policy(Args::from(["app", "list"]), &mut policy);
 //!
 //!         assert!(ret.is_ok());

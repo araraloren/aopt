@@ -1,6 +1,6 @@
 [package]
 name = "ff"
-version = "0.5.2"
+version = "0.5.3"
 authors = [
     "araraloren <blackcatoverwall@gmail.com>",
 ]

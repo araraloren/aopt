@@ -64,12 +64,13 @@ pub struct DelayCtxSaver<'a> {
 /// # use std::path::PathBuf;
 /// #
 /// # fn main() -> Result<(), Error> {
-/// let filter = |f: fn(&PathBuf) -> bool| {
-///     move |set: &mut ASet, _: &mut ASer, _: &Ctx| {
-///         set["directory"].filter::<PathBuf>(f)?;
-///         Ok(Some(true))
-///     }
-/// };
+/// fn filter( f: fn(&PathBuf) -> bool)
+///     -> impl Fn(&mut AHCSet, &mut Ctx) -> Result<Option<bool>, Error> {
+///    move |set: &mut AHCSet, _| {
+///        set["directory"].filter::<PathBuf>(f)?;
+///        Ok(Some(true))
+///    }
+/// }
 ///
 /// let mut parser = ADelayParser::default();
 ///
@@ -77,7 +78,7 @@ pub struct DelayCtxSaver<'a> {
 /// parser
 ///     .add_opt("directory=p@1")?
 ///     .set_pos_type::<PathBuf>()
-///     .on(|_: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+///     .on(|_, ctx| {
 ///         let path = ctx.value::<PathBuf>()?;
 ///
 ///         Ok(Some(
@@ -108,7 +109,7 @@ pub struct DelayCtxSaver<'a> {
 /// // Main will be process latest, display the items
 /// parser
 ///     .add_opt("main=m")?
-///     .on(move |set: &mut ASet, _: &mut ASer, _: &Ctx| {
+///     .on(move |set, _| {
 ///         if let Ok(vals) = set["directory"].vals::<PathBuf>() {
 ///             for val in vals {
 ///                 println!("{:?}", val);
@@ -122,7 +123,7 @@ pub struct DelayCtxSaver<'a> {
 /// # Ok(())
 /// # }
 /// ```
-pub struct DelayPolicy<Set, Ser, Chk> {
+pub struct DelayPolicy<S, Chk> {
     strict: bool,
 
     overload: bool,
@@ -133,10 +134,10 @@ pub struct DelayPolicy<Set, Ser, Chk> {
 
     no_delay_opt: Vec<String>,
 
-    marker_s: PhantomData<(Set, Ser)>,
+    marker_s: PhantomData<S>,
 }
 
-impl<Set, Ser, Chk> Clone for DelayPolicy<Set, Ser, Chk>
+impl<S, Chk> Clone for DelayPolicy<S, Chk>
 where
     Chk: Clone,
 {
@@ -152,7 +153,7 @@ where
     }
 }
 
-impl<Set, Ser, Chk> Debug for DelayPolicy<Set, Ser, Chk>
+impl<S, Chk> Debug for DelayPolicy<S, Chk>
 where
     Chk: Debug,
 {
@@ -167,7 +168,7 @@ where
     }
 }
 
-impl<Set, Ser, Chk> Default for DelayPolicy<Set, Ser, Chk>
+impl<S, Chk> Default for DelayPolicy<S, Chk>
 where
     Chk: Default,
 {
@@ -183,7 +184,7 @@ where
     }
 }
 
-impl<Set, Ser, Chk> DelayPolicy<Set, Ser, Chk>
+impl<S, Chk> DelayPolicy<S, Chk>
 where
     Chk: Default,
 {
@@ -196,7 +197,7 @@ where
     }
 }
 
-impl<Set, Ser, Chk> DelayPolicy<Set, Ser, Chk> {
+impl<S, Chk> DelayPolicy<S, Chk> {
     /// Enable strict mode, if argument is an option, it must be matched.
     pub fn with_strict(mut self, strict: bool) -> Self {
         self.strict = strict;
@@ -249,7 +250,7 @@ impl<Set, Ser, Chk> DelayPolicy<Set, Ser, Chk> {
     }
 }
 
-impl<Set, Ser, Chk> PolicySettings for DelayPolicy<Set, Ser, Chk> {
+impl<S, Chk> PolicySettings for DelayPolicy<S, Chk> {
     fn style_manager(&self) -> &OptStyleManager {
         &self.style_manager
     }
@@ -295,11 +296,11 @@ impl<Set, Ser, Chk> PolicySettings for DelayPolicy<Set, Ser, Chk> {
     }
 }
 
-impl<Set, Ser, Chk> DelayPolicy<Set, Ser, Chk>
+impl<S, Chk> DelayPolicy<S, Chk>
 where
-    SetOpt<Set>: Opt,
-    Chk: SetChecker<Set>,
-    Set: crate::set::Set + OptParser,
+    SetOpt<S>: Opt,
+    Chk: SetChecker<S>,
+    S: crate::set::Set + OptParser,
 {
     // ignore failure
     #[allow(clippy::too_many_arguments)]
@@ -308,14 +309,14 @@ where
         &mut self,
         uid: Uid,
         ctx: &mut Ctx<'a>,
-        set: &mut Set,
+        set: &mut S,
         inv: &mut Inv,
-        ser: &mut Ser,
+
         fail: &mut FailManager,
         inner_ctx: InnerCtx<'a>,
     ) -> Result<bool, Error>
     where
-        Inv: HandlerCollection<'b, Set, Ser>,
+        Inv: HandlerCollection<'b, S>,
     {
         let fail = |e: Error| {
             fail.push(e);
@@ -323,7 +324,7 @@ where
         };
 
         ctx.set_inner_ctx(Some(inner_ctx.with_uid(uid)));
-        let ret = process_handler_ret(inv.invoke_fb(&uid, set, ser, ctx), |_| Ok(()), fail)?;
+        let ret = process_handler_ret(inv.invoke_fb(&uid, set, ctx), |_| Ok(()), fail)?;
 
         set.opt_mut(uid)?.set_matched(ret);
         Ok(ret)
@@ -332,14 +333,14 @@ where
     pub fn process_delay_ctx<'a, 'b, Inv>(
         &mut self,
         ctx: &mut Ctx<'a>,
-        set: &mut Set,
+        set: &mut S,
         inv: &mut Inv,
-        ser: &mut Ser,
+
         fail: &mut FailManager,
         saver: DelayCtxSaver<'a>,
     ) -> Result<SimpleMatRet, Error>
     where
-        Inv: HandlerCollection<'b, Set, Ser>,
+        Inv: HandlerCollection<'b, S>,
     {
         let any_match = saver.any_match;
         let consume = saver.consume;
@@ -358,7 +359,6 @@ where
                         ctx,
                         set,
                         inv,
-                        ser,
                         fail,
                         inner_ctx.clone().with_uid(*uid),
                     )?
@@ -382,12 +382,12 @@ where
 
     pub fn save_or_call<'a, 'b, 'c, Inv>(
         &mut self,
-        guess: &mut InvokeGuess<'a, 'b, Set, Inv, Ser>,
+        guess: &mut InvokeGuess<'a, 'b, S, Inv>,
         saver: InnerCtxSaver<'b>,
         contexts: &mut Vec<DelayCtxSaver<'b>>,
     ) -> Result<Option<SimpleMatRet>, Error>
     where
-        Inv: HandlerCollection<'c, Set, Ser>,
+        Inv: HandlerCollection<'c, S>,
     {
         let any_match = saver.any_match;
         let consume = saver.consume;
@@ -407,7 +407,6 @@ where
                         guess.ctx,
                         guess.set,
                         guess.inv,
-                        guess.ser,
                         guess.fail,
                         inner_ctx.clone().with_uid(*uid),
                     )?;
@@ -446,18 +445,16 @@ where
     }
 }
 
-impl<Set, Ser, Chk> DelayPolicy<Set, Ser, Chk>
+impl<S, Chk> DelayPolicy<S, Chk>
 where
-    SetOpt<Set>: Opt,
-    Chk: SetChecker<Set>,
-    Set: crate::set::Set + OptParser + OptValidator,
+    SetOpt<S>: Opt,
+    Chk: SetChecker<S>,
+    S: crate::set::Set + OptParser + OptValidator,
 {
     pub(crate) fn parse_impl<'a>(
         &mut self,
-
         set: &mut <Self as Policy>::Set,
         inv: &mut <Self as Policy>::Inv<'_>,
-        ser: &mut <Self as Policy>::Ser,
         orig: &'a Args,
         ctx: &mut Ctx<'a>,
     ) -> Result<(), <Self as Policy>::Error> {
@@ -496,7 +493,6 @@ where
                         arg,
                         set,
                         inv,
-                        ser,
                         total,
                         ctx,
                         next,
@@ -561,7 +557,7 @@ where
             let mut guess = InvokeGuess {
                 set,
                 inv,
-                ser,
+
                 total,
                 name,
                 ctx,
@@ -581,7 +577,7 @@ where
             let mut guess = InvokeGuess {
                 set,
                 inv,
-                ser,
+
                 total,
                 ctx,
                 name: None,
@@ -612,7 +608,7 @@ where
         trace!("in delay policy, invoke the handler of option");
         // after cmd and pos callback invoked, invoke the callback of option
         for saver in contexts {
-            let ret = self.process_delay_ctx(&mut prev_ctx, set, inv, ser, &mut opt_fail, saver)?;
+            let ret = self.process_delay_ctx(&mut prev_ctx, set, inv, &mut opt_fail, saver)?;
 
             match prev_ctx.policy_act() {
                 Action::Stop => {
@@ -639,7 +635,6 @@ where
         let mut guess = InvokeGuess {
             set,
             inv,
-            ser,
             total,
             name,
             ctx,
@@ -656,19 +651,17 @@ where
     }
 }
 
-impl<Set, Ser, Chk> Policy for DelayPolicy<Set, Ser, Chk>
+impl<S, Chk> Policy for DelayPolicy<S, Chk>
 where
-    SetOpt<Set>: Opt,
-    Chk: SetChecker<Set>,
-    Set: crate::set::Set + OptParser + OptValidator,
+    SetOpt<S>: Opt,
+    Chk: SetChecker<S>,
+    S: crate::set::Set + OptParser + OptValidator,
 {
     type Ret = Return;
 
-    type Set = Set;
+    type Set = S;
 
-    type Inv<'a> = Invoker<'a, Set, Ser>;
-
-    type Ser = Ser;
+    type Inv<'a> = Invoker<'a, S>;
 
     type Error = Error;
 
@@ -676,12 +669,11 @@ where
         &mut self,
         set: &mut Self::Set,
         inv: &mut Self::Inv<'_>,
-        ser: &mut Self::Ser,
         orig: Args,
     ) -> Result<Self::Ret, Self::Error> {
         let mut ctx = Ctx::default().with_orig(orig.clone());
 
-        match self.parse_impl(set, inv, ser, &orig, &mut ctx) {
+        match self.parse_impl(set, inv, &orig, &mut ctx) {
             Ok(_) => Ok(Return::new(ctx)),
             Err(e) => {
                 if e.is_failure() {
@@ -785,9 +777,8 @@ mod test {
         }
 
         let mut policy = ADelayPolicy::default();
-        let mut ser = policy.default_ser();
-        let mut inv = policy.default_inv();
-        let mut set = policy.default_set();
+        let mut inv = AInvoker::default();
+        let mut set = AHCSet::default();
 
         let args = Args::from([
             "app",
@@ -818,26 +809,26 @@ mod test {
             .run()?;
 
         inv.entry(set.add_opt("--no-delay".infer::<bool>())?.run()?)
-            .on(|set: &mut ASet, _: &mut ASer, _ctx: &Ctx| {
+            .on(|set, _| {
                 assert_eq!(set["filter"].val::<bool>()?, &false);
                 Ok(Some(true))
             });
         policy.set_no_delay("--no-delay");
 
         inv.entry(set.add_opt("--positive=b")?.add_alias("+>").run()?)
-            .on(|set: &mut ASet, _: &mut ASer, _ctx: &Ctx| {
+            .on(|set, _| {
                 set["args"].filter::<f64>(|v: &f64| v <= &0.0)?;
                 Ok(Some(true))
             });
         inv.entry(set.add_opt("--bigger-than=f")?.add_alias("+>").run()?)
-            .on(|set: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+            .on(|set, ctx| {
                 let val = ctx.value::<f64>()?;
                 assert_eq!(set["filter"].val::<bool>()?, &true);
                 // this is a vec![vec![], ..]
                 Ok(Some(set["args"].filter::<f64>(|v: &f64| v <= &val)?))
             });
-        inv.entry(set.add_opt("main=m")?.run()?).on(
-            move |set: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+        inv.entry(set.add_opt("main=m")?.run()?)
+            .on(move |set, ctx| {
                 let args = &set["args"];
                 let bopt = &set["--bigger-than"];
                 let app = ctx.value::<String>()?;
@@ -866,20 +857,17 @@ mod test {
                     None,
                 )?;
                 Ok(Some(()))
-            },
-        );
+            });
 
         for opt in set.iter_mut() {
             opt.init()?;
         }
-        assert!(!policy
-            .parse(&mut set, &mut inv, &mut ser, args.clone())?
-            .status());
+        assert!(!policy.parse(&mut set, &mut inv, args.clone())?.status());
         policy.set_strict(false);
         for opt in set.iter_mut() {
             opt.init()?;
         }
-        assert!(policy.parse(&mut set, &mut inv, &mut ser, args)?.status());
+        assert!(policy.parse(&mut set, &mut inv, args)?.status());
         Ok(())
     }
 }

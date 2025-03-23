@@ -2,12 +2,10 @@
 pub mod args;
 pub mod ctx;
 pub mod err;
-pub mod ext;
 pub mod guess;
 pub mod map;
 pub mod opt;
 pub mod parser;
-pub mod ser;
 pub mod set;
 #[cfg(feature = "shell")]
 pub mod shell;
@@ -74,7 +72,7 @@ pub struct GetoptRes<R, T> {
 ///     parser.add_opt("-a=b!")?;
 ///     parser.add_opt("--bopt=i")?;
 ///     parser.add_opt("c=p@-0")?.on(
-///         |_: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+///         |_, ctx: &mut Ctx| {
 ///             let val = ctx.value::<String>()?;
 ///             let args = ctx.args();
 ///             assert_eq!(args[0], OsStr::new("foo"));
@@ -145,8 +143,8 @@ macro_rules! getopt {
     };
     ($args:expr, $(&mut $parser_left:path),+) => {
         {
-            fn __check_p<'a, 'b, P: $crate::prelude::Policy<Error = $crate::Error>>
-                (p: &'b mut $crate::prelude::Parser<'a, P>) -> &'b mut $crate::prelude::Parser<'a, P>
+            fn __check_p<'b, S: $crate::prelude::Set, P: $crate::prelude::Policy<Set = S, Error = $crate::Error>>
+                (p: &'b mut $crate::prelude::Parser<S, P>) -> &'b mut $crate::prelude::Parser<S, P>
                 { p }
             fn __check_a(a: $crate::prelude::Args) -> $crate::prelude::Args { a }
 
@@ -183,8 +181,8 @@ macro_rules! getopt {
     };
     ($args:expr, $($parser_name:literal => &mut $parser_left:path),+) => {
         {
-            fn __check_p<'a, 'b, P: $crate::prelude::Policy<Error = $crate::Error>>
-                (p: &'b mut $crate::prelude::Parser<'a, P>) -> &'b mut $crate::prelude::Parser<'a, P>
+            fn __check_p<'b, S: $crate::prelude::Set, P: $crate::prelude::Policy<Set = S, Error = $crate::Error>>
+                (p: &'b mut $crate::prelude::Parser<S, P>) -> &'b mut $crate::prelude::Parser<S, P>
                 { p }
             fn __check_a(a: $crate::prelude::Args) -> $crate::prelude::Args { a }
 
@@ -230,7 +228,6 @@ pub mod prelude {
     pub use crate::ctx::NullStore;
     pub use crate::ctx::Store;
     pub use crate::ctx::VecStore;
-    pub use crate::ext::*;
     pub use crate::getopt;
     pub use crate::map::ErasedTy;
     pub use crate::opt::AOpt;
@@ -259,6 +256,8 @@ pub mod prelude {
     pub use crate::opt::Serde;
     pub use crate::opt::StrParser;
     pub use crate::opt::Style;
+    pub use crate::parser::AppServices;
+    pub use crate::parser::AppStorage;
     pub use crate::parser::DefaultSetChecker;
     pub use crate::parser::DelayPolicy;
     pub use crate::parser::FwdPolicy;
@@ -273,9 +272,7 @@ pub mod prelude {
     pub use crate::parser::PrePolicy;
     pub use crate::parser::Return;
     pub use crate::parser::UserStyle;
-    pub use crate::ser::AppServices;
-    pub use crate::ser::ServicesValExt;
-    pub use crate::ser::UsrValService;
+    pub use crate::parser::UsrValService;
     pub use crate::set::ctor_default_name;
     pub use crate::set::Commit;
     pub use crate::set::Ctor;
@@ -307,4 +304,24 @@ pub mod prelude {
     pub use crate::GetoptRes;
     pub use crate::Uid;
     pub use std::ffi::OsStr;
+
+    pub type ACreator = Creator<AOpt, OptConfig, crate::Error>;
+
+    pub type ASet = OptSet<StrParser, ACreator, PrefixOptValidator>;
+
+    pub type AHCSet<'a> = HCOptSet<'a, ASet>;
+
+    pub type AInvoker<'a> = Invoker<'a, AHCSet<'a>>;
+
+    pub type AFwdPolicy<'a> = FwdPolicy<AHCSet<'a>, DefaultSetChecker<AHCSet<'a>>>;
+
+    pub type APrePolicy<'a> = PrePolicy<AHCSet<'a>, DefaultSetChecker<AHCSet<'a>>>;
+
+    pub type ADelayPolicy<'a> = DelayPolicy<AHCSet<'a>, DefaultSetChecker<AHCSet<'a>>>;
+
+    pub type AFwdParser<'a> = Parser<AHCSet<'a>, AFwdPolicy<'a>>;
+
+    pub type APreParser<'a> = Parser<AHCSet<'a>, APrePolicy<'a>>;
+
+    pub type ADelayParser<'a> = Parser<AHCSet<'a>, ADelayPolicy<'a>>;
 }

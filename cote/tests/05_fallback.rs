@@ -7,18 +7,12 @@ pub struct Cli;
 
 static FLAG: OnceLock<bool> = OnceLock::new();
 
-fn cli_main<Set, Ser>(_: &mut Set, _: &mut Ser, _: &Ctx) -> cote::Result<Option<()>> {
+fn cli_main<S>(_: &mut S, _: &mut Ctx) -> cote::Result<Option<()>> {
     FLAG.get_or_init(|| true);
     Ok(None)
 }
 
-fn storer<Set, Ser>(
-    _: Uid,
-    _: &mut Set,
-    _: &mut Ser,
-    _: Option<&OsStr>,
-    _: Option<()>,
-) -> cote::Result<bool> {
+fn storer<S>(_: Uid, _: &mut S, _: Option<&OsStr>, _: Option<()>) -> cote::Result<bool> {
     unreachable!("not call here if cli_main returns None")
 }
 

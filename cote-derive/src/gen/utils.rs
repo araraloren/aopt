@@ -326,13 +326,13 @@ impl Utils {
     pub fn gen_policy_ty(policy_name: &str) -> Option<TokenStream> {
         match policy_name {
             POLICY_PRE => Some(quote! {
-                cote::prelude::PrePolicy<'inv, Set, Ser>
+                cote::prelude::PrePolicy<'inv, Set>
             }),
             POLICY_FWD => Some(quote! {
-                cote::prelude::FwdPolicy<'inv, Set, Ser>
+                cote::prelude::FwdPolicy<'inv, Set>
             }),
             POLICY_DELAY => Some(quote! {
-                cote::prelude::DelayPolicy<'inv, Set, Ser>
+                cote::prelude::DelayPolicy<'inv, Set>
             }),
             _ => None,
         }
@@ -341,13 +341,13 @@ impl Utils {
     pub fn gen_policy_default_ty(policy_name: &str) -> Option<TokenStream> {
         match policy_name {
             POLICY_PRE => Some(quote! {
-                cote::prelude::PrePolicy<'inv, cote::prelude::CoteSet, cote::prelude::CoteSer>
+                cote::prelude::PrePolicy<'inv, cote::prelude::CoteSet>
             }),
             POLICY_FWD => Some(quote! {
-                cote::prelude::FwdPolicy<'inv, cote::prelude::CoteSet, cote::prelude::CoteSer>
+                cote::prelude::FwdPolicy<'inv, cote::prelude::CoteSet>
             }),
             POLICY_DELAY => Some(quote! {
-                cote::prelude::DelayPolicy<'inv, cote::prelude::CoteSet, cote::prelude::CoteSer>
+                cote::prelude::DelayPolicy<'inv, cote::prelude::CoteSet>
             }),
             _ => None,
         }
@@ -426,10 +426,9 @@ impl GenericsModifier {
         let fetch = Self::gen_fetch_for_ty(used, quote!(Set));
         let new_where: WhereClause = parse_quote! {
             where
-            Set: cote::prelude::Set + cote::prelude::OptParser + cote::prelude::OptValidator + cote::prelude::SetValueFindExt + Default + 'inv,
-            Ser: cote::prelude::ServicesValExt + cote::prelude::AppStorage + cote::prelude::ASerTransfer + Default + 'inv,
+            Set: cote::prelude::Set + cote::prelude::OptParser<Output: cote::prelude::Information> +
+            cote::prelude::OptValidator + cote::prelude::SetValueFindExt + Default + 'inv,
             cote::prelude::SetCfg<Set>: cote::prelude::ConfigValue + Default,
-            <Set as cote::prelude::OptParser>::Output: cote::prelude::Information,
             #(#used: cote::prelude::Infer + cote::prelude::ErasedTy,)*
             #(<#used as cote::prelude::Infer>::Val: cote::prelude::RawValParser,)*
             #infer_override
@@ -440,7 +439,6 @@ impl GenericsModifier {
         self.0.where_clause = Some(new_where);
         self.insert_lifetime("'inv");
         self.append_type("Set");
-        self.append_type("Ser");
         self
     }
 

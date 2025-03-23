@@ -7,9 +7,9 @@ pub struct Cli {
     bar: usize,
 }
 
-fn parser_mod<Set, Ser>(parser: &mut Parser<'_, Set, Ser>) -> Result<(), cote::Error>
+fn parser_mod<S>(parser: &mut Parser<'_, S>) -> Result<(), cote::Error>
 where
-    Set: PrefixedValidator,
+    S: PrefixedValidator,
 {
     parser.reg_prefix("---").map_err(Into::into)?;
     Ok(())

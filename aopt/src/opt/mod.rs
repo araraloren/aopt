@@ -168,7 +168,7 @@ impl<T> DerefMut for Pos<T> {
 /// parser.add_opt("main_function: Call the main function".infer::<Main>())?
 ///       // Main do nothing in default, you must change the `Action` if you want save value
 ///       .set_action(Action::Set)
-///       .on(|_: &mut ASet, _: &mut ASer, ctx: &Ctx|{
+///       .on(|_, ctx: &mut Ctx|{
 ///             let val = ctx.arg()?;
 ///             assert_eq!(val.map(|v|v.as_ref()), Some(OsStr::new("app")));
 ///             Ok(Some(String::from("main_function called")))

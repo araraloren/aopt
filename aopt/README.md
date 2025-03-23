@@ -99,37 +99,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     parser
         .add_opt("--source=s!")? // ! means the option is force required
         .add_alias("+S")
-        .on(
-            |set: &mut ASet, _: &mut ASer, ctx: &Ctx| {
-                let val = ctx.value::<String>()?;
-                let depth: &i64 = set["--depth"].val()?;
-                println!("Adding location({}) with depth({})", val, depth);
-                Ok(Some((val, *depth)))
-            },
-        )?;
-    parser.add_opt("destination=p!@-0")?.on(
-        |_: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+        .on(|set, ctx| {
             let val = ctx.value::<String>()?;
-            println!("Save destination location({})", val);
-            Ok(Some(val))
-        },
-    )?;
-    parser.add_opt("main=m")?.on(
-        |set: &mut ASet, _: &mut ASer, ctx: &Ctx| {
-            let val = ctx.value::<String>()?;
-            let src = set["--source"].vals::<(String, i64)>()?;
-            let dest: &String = set["destination"].val()?;
+            let depth: &i64 = set["--depth"].val()?;
+            println!("Adding location({}) with depth({})", val, depth);
+            Ok(Some((val, *depth)))
+        })?;
+    parser.add_opt("destination=p!@-0")?.on(|_, ctx| {
+        let val = ctx.value::<String>()?;
+        println!("Save destination location({})", val);
+        Ok(Some(val))
+    })?;
+    parser.add_opt("main=m")?.on(|set, ctx| {
+        let val = ctx.value::<String>()?;
+        let src = set["--source"].vals::<(String, i64)>()?;
+        let dest: &String = set["destination"].val()?;
 
-            for (item, depth) in src {
-                println!(
-                    "Application {} will copy location({item}, depth={depth}) to destination({})",
-                    val,
-                    dest
-                );
-            }
-            Ok(Some(val))
-        },
-    )?;
+        for (item, depth) in src {
+            println!(
+                "Application {} will copy location({item}, depth={depth}) to destination({})",
+                val, dest
+            );
+        }
+        Ok(Some(val))
+    })?;
     parser.parse_env()?.unwrap();
 
     Ok(())
@@ -166,56 +159,51 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     list.add_opt("-source".infer::<String>())?
         .add_alias("-s")
         .set_value(String::from("lib.rs"));
-    list.add_opt("main=m")?
-        .fallback(|set: &mut ASet, _: &mut ASer, _: &Ctx| {
-            println!(
-                "invoke list command: debug={:?}, force={:?}, local-only={:?}, source={:?}",
-                set["-debug"].val::<bool>()?,
-                set["-force"].val::<bool>()?,
-                set["-local-only"].val::<bool>()?,
-                set["-source"].val::<String>()?,
-            );
-            Ok(None::<()>)
-        })?;
+    list.add_opt("main=m")?.fallback(|set, _| {
+        println!(
+            "invoke list command: debug={:?}, force={:?}, local-only={:?}, source={:?}",
+            set["-debug"].val::<bool>()?,
+            set["-force"].val::<bool>()?,
+            set["-local-only"].val::<bool>()?,
+            set["-source"].val::<String>()?,
+        );
+        Ok(None::<()>)
+    })?;
 
     update.add_opt("update=c")?;
     update.add_opt("up=c")?;
     update.add_opt("-debug=b")?;
     update.add_opt("-force=b")?.add_alias("-f");
     update.add_opt("-source=s")?.add_alias("-s");
-    update
-        .add_opt("main=m")?
-        .on(|set: &mut ASet, _: &mut ASer, _: &Ctx| {
-            println!(
-                "invoke update command: debug={:?}, force={:?}, source={:?}",
-                set["-debug"].val::<bool>()?,
-                set["-force"].val::<bool>()?,
-                set["-source"].val::<String>()?,
-            );
-            Ok(Some(true))
-        })?;
+    update.add_opt("main=m")?.on(|set, _| {
+        println!(
+            "invoke update command: debug={:?}, force={:?}, source={:?}",
+            set["-debug"].val::<bool>()?,
+            set["-force"].val::<bool>()?,
+            set["-source"].val::<String>()?,
+        );
+        Ok(Some(true))
+    })?;
 
     install.add_opt("install=c")?;
     install.add_opt("in=c")?;
     install.add_opt("-debug=b")?;
     install.add_opt("-/override=b")?.add_alias("-/o");
     install.add_opt("-source=s")?.add_alias("-s");
-    install.add_opt("name=p!@2")?.on(
-        |set: &mut ASet, _: &mut ASer, ctx: &Ctx| {
-            let val = ctx.value::<String>()?;
-            if val == "software" {
-                println!(
-                    "invoke install command: debug={:?}, override={:?}, source={:?}",
-                    set["-debug"].val::<bool>()?,
-                    set["-/override"].val::<bool>()?,
-                    set["-source"].val::<String>()?,
-                );
-                Ok(Some(val))
-            } else {
-                Err(aopt::raise_error!("command not matched"))
-            }
-        },
-    )?;
+    install.add_opt("name=p!@2")?.on(|set, ctx| {
+        let val = ctx.value::<String>()?;
+        if val == "software" {
+            println!(
+                "invoke install command: debug={:?}, override={:?}, source={:?}",
+                set["-debug"].val::<bool>()?,
+                set["-/override"].val::<bool>()?,
+                set["-source"].val::<String>()?,
+            );
+            Ok(Some(val))
+        } else {
+            Err(aopt::raise_error!("command not matched"))
+        }
+    })?;
 
     getopt!(Args::from_env(), &mut list, &mut update, &mut install)?;
     Ok(())

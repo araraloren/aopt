@@ -7,25 +7,24 @@ use crate::Error;
 use crate::Uid;
 
 /// The [`Store`] saving the value of given option.
-pub trait Store<Set, Ser, Value> {
+pub trait Store<S, Value> {
     type Ret;
     type Error: Into<Error>;
 
     fn process(
         &mut self,
         uid: Uid,
-        set: &mut Set,
-        ser: &mut Ser,
+        set: &mut S,
         raw: Option<&OsStr>,
         val: Option<Value>,
     ) -> Result<Self::Ret, Self::Error>;
 }
 
 #[cfg(not(feature = "sync"))]
-impl<Func, Set, Ser, Value, Ret, Err> Store<Set, Ser, Value> for Func
+impl<Func, Set, Value, Ret, Err> Store<Set, Value> for Func
 where
     Err: Into<Error>,
-    Func: FnMut(Uid, &mut Set, &mut Ser, Option<&OsStr>, Option<Value>) -> Result<Ret, Err>,
+    Func: FnMut(Uid, &mut Set, Option<&OsStr>, Option<Value>) -> Result<Ret, Err>,
 {
     type Ret = Ret;
     type Error = Err;
@@ -34,20 +33,17 @@ where
         &mut self,
         uid: Uid,
         set: &mut Set,
-        ser: &mut Ser,
         raw: Option<&OsStr>,
         val: Option<Value>,
     ) -> Result<Self::Ret, Self::Error> {
-        (self)(uid, set, ser, raw, val)
+        (self)(uid, set, raw, val)
     }
 }
 #[cfg(feature = "sync")]
-impl<Func, Set, Ser, Value, Ret, Err> Store<Set, Ser, Value> for Func
+impl<Func, S, Value, Ret, Err> Store<S, Value> for Func
 where
     Err: Into<Error>,
-    Func: FnMut(Uid, &mut Set, &mut Ser, Option<&OsStr>, Option<Value>) -> Result<Ret, Err>
-        + Send
-        + Sync,
+    Func: FnMut(Uid, &mut S, Option<&OsStr>, Option<Value>) -> Result<Ret, Err> + Send + Sync,
 {
     type Ret = Ret;
     type Error = Err;
@@ -55,19 +51,18 @@ where
     fn process(
         &mut self,
         uid: Uid,
-        set: &mut Set,
-        ser: &mut Ser,
+        set: &mut S,
         raw: Option<&OsStr>,
         val: Option<Value>,
     ) -> Result<Self::Ret, Self::Error> {
-        (self)(uid, set, ser, raw, val)
+        (self)(uid, set, raw, val)
     }
 }
 
 /// Null store, do nothing. See [`Action`](crate::opt::Action) for default store.
 pub struct NullStore;
 
-impl<Set, Ser, Value> Store<Set, Ser, Value> for NullStore {
+impl<Set, Value> Store<Set, Value> for NullStore {
     type Ret = bool;
 
     type Error = Error;
@@ -76,7 +71,6 @@ impl<Set, Ser, Value> Store<Set, Ser, Value> for NullStore {
         &mut self,
         _: Uid,
         _: &mut Set,
-        _: &mut Ser,
         _: Option<&OsStr>,
         _: Option<Value>,
     ) -> Result<Self::Ret, Self::Error> {
@@ -89,7 +83,7 @@ impl<Set, Ser, Value> Store<Set, Ser, Value> for NullStore {
 /// See [`Action`](crate::opt::Action) for default store.
 pub struct VecStore;
 
-impl<Set, Ser, Value: ErasedTy> Store<Set, Ser, Vec<Value>> for VecStore
+impl<Set, Value: ErasedTy> Store<Set, Vec<Value>> for VecStore
 where
     Set: crate::set::Set,
     SetOpt<Set>: Opt,
@@ -102,7 +96,6 @@ where
         &mut self,
         uid: Uid,
         set: &mut Set,
-        _: &mut Ser,
         raw: Option<&OsStr>,
         val: Option<Vec<Value>>,
     ) -> Result<Self::Ret, Self::Error> {

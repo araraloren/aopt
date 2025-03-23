@@ -133,7 +133,7 @@ impl Action {
 /// * [`Action::Clr`] : Clear all the value from value vector.
 ///
 /// * [`Action::Null`] : Do nothing.
-impl<Set, Ser, Val> Store<Set, Ser, Val> for Action
+impl<Set, Val> Store<Set, Val> for Action
 where
     Val: ErasedTy,
     SetOpt<Set>: Opt,
@@ -147,7 +147,6 @@ where
         &mut self,
         uid: Uid,
         set: &mut Set,
-        _: &mut Ser,
         raw: Option<&OsStr>,
         val: Option<Val>,
     ) -> Result<Self::Ret, Self::Error> {

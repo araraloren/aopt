@@ -18,7 +18,7 @@ fn main() -> color_eyre::Result<()> {
     parser
         .add_opt("directory=p!@1")?
         .set_help("The target directory will be search")
-        .on(|_: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+        .on(|_, ctx| {
             let dir = ctx.value::<String>()?;
 
             if !dir.is_empty() {
@@ -79,7 +79,7 @@ fn main() -> color_eyre::Result<()> {
             .add_opt(opt)?
             .set_help(help)
             .add_alias(format!("{}{}", alias_prefix, alias_name))
-            .fallback(move |set: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+            .fallback(move |set, ctx: &mut Ctx| {
                 let val = ctx.value::<String>()?;
                 let mut filter_type = filter_type.clone();
 
@@ -95,19 +95,17 @@ fn main() -> color_eyre::Result<()> {
         .add_opt("--help=b")?
         .add_alias("-h")
         .set_help("Show the help message")
-        .on(
-            |set: &mut ASet, _: &mut ASer, _: &Ctx| -> Result<Option<()>, Error> {
-                display_help(set).map_err(|e| {
-                    Error::raise_error(format!("can not write help to stdout: {:?}", e))
-                })?;
-                std::process::exit(0)
-            },
-        )?;
+        .on(|set, _| -> Result<Option<()>, Error> {
+            display_help(set).map_err(|e| {
+                Error::raise_error(format!("can not write help to stdout: {:?}", e))
+            })?;
+            std::process::exit(0)
+        })?;
 
     parser
         .add_opt("main=m")?
         .set_help("Main function")
-        .fallback(|set: &mut ASet, _: &mut ASer, _: &Ctx| {
+        .fallback(|set, _| {
             for file in set["directory"].vals::<String>()? {
                 println!("{}", file);
             }

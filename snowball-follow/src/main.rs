@@ -174,7 +174,7 @@ fn parser_command_line<'a>() -> Result<AFwdParser<'a>, Error> {
         .set_help("Get follow from single stock id")
         .set_pos_type::<String>()
         .set_values(vec![])
-        .on(|set: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+        .on(|set, ctx: &mut Ctx| {
             let val = ctx.value::<String>()?;
             let id = convert_line_to_stock_number(&val);
             let debug = *set["--debug"].val::<bool>()?;
@@ -195,7 +195,7 @@ fn parser_command_line<'a>() -> Result<AFwdParser<'a>, Error> {
         .set_help("Get follow from stock list in file")
         .set_pos_type::<String>()
         .set_values(vec![])
-        .on(|set: &mut ASet, _: &mut ASer, ctx: &Ctx| {
+        .on(|set, ctx: &mut Ctx| {
             let file = ctx.value::<PathBuf>()?;
             let mut ret = Ok(None);
             let debug = *set["--debug"].val::<bool>()?;

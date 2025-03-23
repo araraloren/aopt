@@ -9,18 +9,18 @@ use crate::map::ErasedTy;
 use crate::raise_error;
 use crate::Error;
 
-pub trait ServicesValExt {
+pub trait AppStorage {
     /// Get the user value reference of option `uid` from [`AppServices`].
-    fn sve_insert<T: ErasedTy>(&mut self, val: T) -> Option<T>;
+    fn set_app_data<T: ErasedTy>(&mut self, val: T) -> Option<T>;
 
     /// Get the user value reference of option `uid` from [`AppServices`].
-    fn sve_val<T: ErasedTy>(&self) -> Result<&T, Error>;
+    fn app_data<T: ErasedTy>(&self) -> Result<&T, Error>;
 
     /// Get the user value mutable reference of option `uid` from [`AppServices`].
-    fn sve_val_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error>;
+    fn app_data_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error>;
 
     /// Take the user value of option `uid` from [`AppServices`].
-    fn sve_take_val<T: ErasedTy>(&mut self) -> Result<T, Error>;
+    fn take_app_data<T: ErasedTy>(&mut self) -> Result<T, Error>;
 }
 
 /// A service can keep any type data, user can get the data inside [`hanlder`](crate::ctx::InvokeHandler) of option.
@@ -35,17 +35,17 @@ pub trait ServicesValExt {
 ///
 /// let mut services = AppServices::new();
 ///
-/// services.sve_insert(MyVec(vec![42]));
-/// services.sve_insert(42i64);
+/// services.set_app_data(MyVec(vec![42]));
+/// services.set_app_data(42i64);
 ///
 /// /// get value of MyVec from AppServices
-/// assert_eq!(services.sve_val::<MyVec>()?.0[0], 42);
+/// assert_eq!(services.app_data::<MyVec>()?.0[0], 42);
 /// /// modfify the value
-/// services.sve_val_mut::<MyVec>()?.0.push(18);
+/// services.app_data_mut::<MyVec>()?.0.push(18);
 /// /// check the value of MyVec
-/// assert_eq!(services.sve_val::<MyVec>()?.0[1], 18);
+/// assert_eq!(services.app_data::<MyVec>()?.0[1], 18);
 ///
-/// assert_eq!(services.sve_val::<i64>()?, &42);
+/// assert_eq!(services.app_data::<i64>()?, &42);
 /// #
 /// #    Ok(())
 /// # }
@@ -61,20 +61,20 @@ impl AppServices {
     }
 }
 
-impl ServicesValExt for AppServices {
-    fn sve_insert<T: ErasedTy>(&mut self, val: T) -> Option<T> {
+impl AppStorage for AppServices {
+    fn set_app_data<T: ErasedTy>(&mut self, val: T) -> Option<T> {
         self.0.insert(val)
     }
 
-    fn sve_val<T: ErasedTy>(&self) -> Result<&T, Error> {
+    fn app_data<T: ErasedTy>(&self) -> Result<&T, Error> {
         self.0.val::<T>()
     }
 
-    fn sve_val_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
+    fn app_data_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
         self.0.val_mut::<T>()
     }
 
-    fn sve_take_val<T: ErasedTy>(&mut self) -> Result<T, Error> {
+    fn take_app_data<T: ErasedTy>(&mut self) -> Result<T, Error> {
         self.0.remove::<T>().ok_or_else(|| {
             raise_error!(
                 "can not take value type `{}` from AppServices",
