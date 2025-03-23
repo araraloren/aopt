@@ -40,7 +40,7 @@ pub struct HCOptSet<'a, S> {
     ser: AppServices,
 }
 
-impl<'a, S: Default> Default for HCOptSet<'a, S> {
+impl<S: Default> Default for HCOptSet<'_, S> {
     fn default() -> Self {
         Self {
             set: Default::default(),
@@ -118,13 +118,13 @@ impl<S> Deref for HCOptSet<'_, S> {
     }
 }
 
-impl<'a, S> DerefMut for HCOptSet<'a, S> {
+impl<S> DerefMut for HCOptSet<'_, S> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.set
     }
 }
 
-impl<'a, S> HCOptSet<'a, S>
+impl<S> HCOptSet<'_, S>
 where
     S: Set,
 {
@@ -146,7 +146,7 @@ where
     }
 }
 
-impl<'a, S> AppStorage for HCOptSet<'a, S> {
+impl<S> AppStorage for HCOptSet<'_, S> {
     /// Set the value that can access in option handler.
     ///
     /// # Example 1
@@ -433,7 +433,7 @@ impl<'a, S: Set> HCOptSet<'a, S> {
     }
 }
 
-impl<'a, S: Set> crate::set::Set for HCOptSet<'a, S> {
+impl<S: Set> crate::set::Set for HCOptSet<'_, S> {
     type Ctor = S::Ctor;
 
     fn register(&mut self, ctor: Self::Ctor) -> Option<Self::Ctor> {
@@ -484,7 +484,7 @@ where
     }
 }
 
-impl<'a, S> PrefixedValidator for HCOptSet<'a, S>
+impl<S> PrefixedValidator for HCOptSet<'_, S>
 where
     S: PrefixedValidator,
 {
@@ -522,7 +522,7 @@ where
     }
 }
 
-impl<'a, S> OptParser for HCOptSet<'a, S>
+impl<S> OptParser for HCOptSet<'_, S>
 where
     S: OptParser,
 {
@@ -535,7 +535,7 @@ where
     }
 }
 
-impl<'a, S> SetValueFindExt for HCOptSet<'a, S>
+impl<S> SetValueFindExt for HCOptSet<'_, S>
 where
     S: SetValueFindExt,
     SetCfg<S>: ConfigValue + Default,

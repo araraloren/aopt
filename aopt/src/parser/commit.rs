@@ -44,7 +44,7 @@ where
     invoker: Option<&'b mut Invoker<'a, C>>,
 }
 
-impl<'a, C, S, U> Debug for ParserCommit<'a, '_, C, S, U>
+impl<C, S, U> Debug for ParserCommit<'_, '_, C, S, U>
 where
     C: Set + Debug,
     U: Infer + 'static,
@@ -61,7 +61,7 @@ where
     }
 }
 
-impl<'a, C, S, U> Commit<S> for ParserCommit<'a, '_, C, S, U>
+impl<C, S, U> Commit<S> for ParserCommit<'_, '_, C, S, U>
 where
     C: Set,
     S: Set,
@@ -250,7 +250,7 @@ where
     }
 }
 
-impl<'a, C, S, U> ParserCommit<'a, '_, C, S, U>
+impl<C, S, U> ParserCommit<'_, '_, C, S, U>
 where
     C: Set,
     S: Set,
@@ -270,7 +270,7 @@ where
     }
 }
 
-impl<'a, C, S, U> ParserCommit<'a, '_, C, S, U>
+impl<C, S, U> ParserCommit<'_, '_, C, S, U>
 where
     C: Set,
     S: Set,
@@ -378,7 +378,7 @@ where
     invoker: Option<&'b mut Invoker<'a, C>>,
 }
 
-impl<'a, C, S, U, T> Debug for ParserCommitWithValue<'a, '_, C, S, U, T>
+impl<C, S, U, T> Debug for ParserCommitWithValue<'_, '_, C, S, U, T>
 where
     C: Set + Debug,
     U: Infer + 'static,
@@ -533,7 +533,7 @@ where
     }
 }
 
-impl<'a, C, S, U, T> Commit<S> for ParserCommitWithValue<'a, '_, C, S, U, T>
+impl<C, S, U, T> Commit<S> for ParserCommitWithValue<'_, '_, C, S, U, T>
 where
     C: Set,
     S: Set,
@@ -552,7 +552,7 @@ where
     }
 }
 
-impl<'a, C, S, U, T> ParserCommitWithValue<'a, '_, C, S, U, T>
+impl<C, S, U, T> ParserCommitWithValue<'_, '_, C, S, U, T>
 where
     C: Set,
     S: Set,
@@ -569,7 +569,7 @@ where
     }
 }
 
-impl<'a, C, S, U, T> ParserCommitWithValue<'a, '_, C, S, U, T>
+impl<C, S, U, T> ParserCommitWithValue<'_, '_, C, S, U, T>
 where
     C: Set,
     S: Set,
@@ -591,7 +591,7 @@ where
     }
 }
 
-impl<'a, C, S, U, T> ParserCommitWithValue<'a, '_, C, S, U, T>
+impl<C, S, U, T> ParserCommitWithValue<'_, '_, C, S, U, T>
 where
     C: Set,
     S: Set,
@@ -614,7 +614,7 @@ where
     }
 }
 
-impl<'a, C, S, U, T> ParserCommitWithValue<'a, '_, C, S, U, T>
+impl<C, S, U, T> ParserCommitWithValue<'_, '_, C, S, U, T>
 where
     C: Set,
     S: Set,

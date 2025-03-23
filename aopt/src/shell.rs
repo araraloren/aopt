@@ -10,7 +10,6 @@ pub use self::policy::CompletePolicy;
 
 use crate::args::Args;
 use crate::ctx::Ctx;
-use crate::ctx::Invoker;
 use crate::opt::Action;
 use crate::opt::ConfigBuildInfer;
 use crate::opt::Opt;

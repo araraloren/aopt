@@ -144,7 +144,7 @@ impl<'a, 'b, S, Inv> CompleteGuess<'a, 'b, S, Inv> {
     }
 }
 
-impl<'a, 'c, 'b, S, Inv> CompleteGuess<'a, 'b, S, Inv>
+impl<'c, S, Inv> CompleteGuess<'_, '_, S, Inv>
 where
     S: crate::set::Set + OptValidator,
     Inv: HandlerCollection<'c, S>,
@@ -254,7 +254,7 @@ where
     }
 }
 
-impl<'a, 'b, S, Inv, T> GuessPolicy<EqualWithValuStyle, T> for CompleteGuess<'a, 'b, S, Inv>
+impl<'b, S, Inv, T> GuessPolicy<EqualWithValuStyle, T> for CompleteGuess<'_, 'b, S, Inv>
 where
     T: Default + PolicyBuild<'b>,
 {
@@ -277,7 +277,7 @@ where
     }
 }
 
-impl<'a, 'b, S, Inv, T> GuessPolicy<ArgumentStyle, T> for CompleteGuess<'a, 'b, S, Inv>
+impl<'b, S, Inv, T> GuessPolicy<ArgumentStyle, T> for CompleteGuess<'_, 'b, S, Inv>
 where
     T: Default + PolicyBuild<'b>,
 {
@@ -300,7 +300,7 @@ where
     }
 }
 
-impl<'a, 'b, S, Inv, T> GuessPolicy<EmbeddedValueStyle, T> for CompleteGuess<'a, 'b, S, Inv>
+impl<'b, S, Inv, T> GuessPolicy<EmbeddedValueStyle, T> for CompleteGuess<'_, 'b, S, Inv>
 where
     S: OptValidator,
     T: Default + PolicyBuild<'b>,
@@ -342,8 +342,8 @@ where
     }
 }
 
-impl<'a, 'b, S, Inv, T> GuessPolicy<EmbeddedValuePlusStyle, MultiOpt<T, S>>
-    for CompleteGuess<'a, 'b, S, Inv>
+impl<'b, S, Inv, T> GuessPolicy<EmbeddedValuePlusStyle, MultiOpt<T, S>>
+    for CompleteGuess<'_, 'b, S, Inv>
 where
     S: OptValidator,
     T: Default + PolicyBuild<'b>,
@@ -388,8 +388,8 @@ where
     }
 }
 
-impl<'a, 'b, S, Inv, T> GuessPolicy<CombinedOptionStyle, MultiOpt<T, S>>
-    for CompleteGuess<'a, 'b, S, Inv>
+impl<'b, S, Inv, T> GuessPolicy<CombinedOptionStyle, MultiOpt<T, S>>
+    for CompleteGuess<'_, 'b, S, Inv>
 where
     S: OptValidator,
     T: Default + PolicyBuild<'b>,
@@ -429,7 +429,7 @@ where
     }
 }
 
-impl<'a, 'b, S, Inv, T> GuessPolicy<BooleanStyle, T> for CompleteGuess<'a, 'b, S, Inv>
+impl<'b, S, Inv, T> GuessPolicy<BooleanStyle, T> for CompleteGuess<'_, 'b, S, Inv>
 where
     T: Default + PolicyBuild<'b>,
 {
@@ -454,7 +454,7 @@ where
     }
 }
 
-impl<'a, 'b, S, Inv, T> GuessPolicy<FlagStyle, T> for CompleteGuess<'a, 'b, S, Inv>
+impl<'b, S, Inv, T> GuessPolicy<FlagStyle, T> for CompleteGuess<'_, 'b, S, Inv>
 where
     T: Default + PolicyBuild<'b>,
 {
@@ -477,7 +477,7 @@ where
     }
 }
 
-impl<'a, 'b, S, Inv, T> GuessPolicy<MainStyle, T> for CompleteGuess<'a, 'b, S, Inv>
+impl<'b, S, Inv, T> GuessPolicy<MainStyle, T> for CompleteGuess<'_, 'b, S, Inv>
 where
     T: Default + PolicyBuild<'b>,
 {
@@ -502,7 +502,7 @@ where
     }
 }
 
-impl<'a, 'b, S, Inv, T> GuessPolicy<PosStyle, T> for CompleteGuess<'a, 'b, S, Inv>
+impl<'b, S, Inv, T> GuessPolicy<PosStyle, T> for CompleteGuess<'_, 'b, S, Inv>
 where
     T: Default + PolicyBuild<'b>,
 {
@@ -527,7 +527,7 @@ where
     }
 }
 
-impl<'a, 'b, S, Inv, T> GuessPolicy<CmdStyle, T> for CompleteGuess<'a, 'b, S, Inv>
+impl<'b, S, Inv, T> GuessPolicy<CmdStyle, T> for CompleteGuess<'_, 'b, S, Inv>
 where
     T: Default + PolicyBuild<'b>,
 {
@@ -551,7 +551,7 @@ where
     }
 }
 
-impl<'a, 'b, 'c, S, Inv> CompleteGuess<'a, 'b, S, Inv>
+impl<'b, 'c, S, Inv> CompleteGuess<'_, 'b, S, Inv>
 where
     S: crate::set::Set,
     Inv: HandlerCollection<'c, S>,
