@@ -1,9 +1,13 @@
 use aopt::opt::Opt;
 use aopt::opt::Style;
 use aopt::set::Set;
+use aopt::Error;
 use aopt_help::block::Block;
 use aopt_help::store::Store;
 use std::borrow::Cow;
+
+pub const DEFAULT_OPTION_WIDTH: usize = 40;
+pub const DEFAULT_USAGE_WIDTH: usize = 10;
 
 #[derive(Debug, Clone, Default)]
 pub struct HelpContext {
@@ -161,33 +165,23 @@ pub fn display_set_help<'a, T: Set>(
     Ok(())
 }
 
-/// Using for cote-derive display help message.
-#[macro_export]
-macro_rules! display_help {
-    ($set:ident, $name:expr, $head:expr, $foot:expr, $width:expr, $usage_width:expr) => {{
-        fn __check_set<S: aopt::prelude::Set>(a: &S) -> &S {
-            a
+pub trait HelpDisplay<S: Set> {
+    type Error: Into<Error>;
+
+    fn display_if(
+        &self,
+        ctx: HelpContext,
+        func: impl Fn(&Self) -> bool,
+    ) -> Result<bool, Self::Error> {
+        let ret = func(self);
+
+        if ret {
+            self.display(ctx)?;
         }
+        Ok(ret)
+    }
 
-        $crate::prelude::display_set_help(
-            __check_set($set),
-            $name,
-            $head,
-            $foot,
-            $width,
-            $usage_width,
-        )
-        .map_err(|e| aopt::Error::raise_error(format!("can not show help message: {:?}", e)))
-    }};
-    ($set:ident, $name:expr, $author:expr, $version:expr, $description:expr, $width:expr, $usage_width:expr) => {{
-        let foot = format!("Create by {} v{}", $author, $version,);
-        let head = format!("{}", $description);
+    fn display(&self, ctx: HelpContext) -> Result<(), Self::Error>;
 
-        fn __check_set<S: aopt::prelude::Set>(a: &S) -> &S {
-            a
-        }
-
-        $crate::help::display_set_help(__check_set($set), $name, head, foot, $width, $usage_width)
-            .map_err(|e| aopt::Error::raise_error(format!("can not show help message: {:?}", e)))
-    }};
+    fn display_sub(&self, names: Vec<&str>, ctx: &HelpContext) -> Result<(), Self::Error>;
 }

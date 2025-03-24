@@ -1,6 +1,20 @@
 
 # Relase note
 
+## 1.1.0
+
+- Remove Ser type parameter from Policy
+
+- Make the Ctx mutable
+
+- Add a new policy SeqPolicy
+
+- Pass Self to Invoker
+
+- Add a HelpDisplay trait for display help for Parser
+
+- Add a help function convert return value in cote-derive
+
 ## 1.0.0
 
 - Add prefixed option validator

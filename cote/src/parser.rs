@@ -26,6 +26,7 @@ use aopt::set::SetValueFindExt;
 use aopt::Error;
 use aopt::Uid;
 
+use crate::help::HelpDisplay;
 use crate::prelude::HelpContext;
 use crate::rctx::RunningCtx;
 use crate::ExtractFromSetDerive;
@@ -687,47 +688,31 @@ where
     }
 }
 
+impl<S: Set> HelpDisplay<S> for Parser<'_, S> {
+    type Error = crate::Error;
+
+    fn display(&self, ctx: HelpContext) -> Result<(), Self::Error> {
+        let set = self.optset();
+        let name = ctx.name();
+        let head = ctx.head();
+        let foot = ctx.foot();
+        let max_width = ctx.width();
+        let usage_width = ctx.usagew();
+
+        crate::help::display_set_help(set, name, head, foot, max_width, usage_width)
+            .map_err(|e| aopt::Error::raise_error(format!("Can not show help message: {:?}", e)))
+    }
+
+    fn display_sub(&self, names: Vec<&str>, ctx: &HelpContext) -> Result<(), Self::Error> {
+        self.display_sub_help(names, ctx)
+    }
+}
+
 impl<S> Parser<'_, S>
 where
     S: Set,
 {
-    pub const DEFAULT_OPTION_WIDTH: usize = 40;
-    pub const DEFAULT_USAGE_WIDTH: usize = 10;
-
-    pub fn display_help(
-        &self,
-        author: &str,
-        version: &str,
-        description: &str,
-    ) -> Result<(), Error> {
-        let set = self.optset();
-        let name = self.name.as_str();
-
-        crate::display_help!(
-            set,
-            name,
-            author,
-            version,
-            description,
-            Self::DEFAULT_OPTION_WIDTH,
-            Self::DEFAULT_USAGE_WIDTH
-        )
-    }
-
-    pub fn display_help_ctx(&self, ctx: HelpContext) -> Result<(), Error> {
-        let set = self.optset();
-
-        crate::display_help!(
-            set,
-            ctx.name(),
-            ctx.head(),
-            ctx.foot(),
-            ctx.width(),
-            ctx.usagew()
-        )
-    }
-
-    pub fn display_sub_help(&self, names: Vec<&str>, ctx: &HelpContext) -> Result<(), Error> {
+    fn display_sub_help(&self, names: Vec<&str>, ctx: &HelpContext) -> Result<(), Error> {
         self.display_sub_help_impl(names, ctx, 0)
     }
 
@@ -745,14 +730,24 @@ where
                     let name = names.join(" ");
                     let optset = self.optset();
 
-                    return crate::display_help!(
-                        optset,
-                        &name,
-                        ctx.head(),
-                        ctx.foot(),
-                        ctx.width(),
-                        ctx.usagew()
-                    );
+                    return {
+                        let head = ctx.head();
+                        let foot = ctx.foot();
+                        let max_width = ctx.width();
+                        let usage_width = ctx.usagew();
+
+                        crate::help::display_set_help(
+                            optset,
+                            name,
+                            head,
+                            foot,
+                            max_width,
+                            usage_width,
+                        )
+                        .map_err(|e| {
+                            aopt::Error::raise_error(format!("Can not show help message: {:?}", e))
+                        })
+                    };
                 } else if i < max && name == self.name() {
                     if let Some(name) = names.get(i + 1) {
                         let sub_parsers = self.parsers();
@@ -767,86 +762,7 @@ where
             }
         }
         Err(raise_error!(
-            "can not display help message for names `{names:?}` with context: {ctx:?}"
+            "Can not display help message for names `{names:?}` with context: {ctx:?}"
         ))
-    }
-}
-
-impl<S> Parser<'_, S>
-where
-    S: SetValueFindExt,
-    SetCfg<S>: ConfigValue + Default,
-{
-    pub fn display_help_if(
-        &self,
-        option: impl ConfigBuild<SetCfg<S>>,
-        author: &str,
-        version: &str,
-        description: &str,
-    ) -> Result<bool, Error> {
-        self.display_help_if_width(
-            option,
-            author,
-            version,
-            description,
-            Self::DEFAULT_OPTION_WIDTH,
-            Self::DEFAULT_USAGE_WIDTH,
-        )
-    }
-
-    pub fn display_help_if_ctx(
-        &self,
-        option: impl ConfigBuild<SetCfg<S>>,
-        ctx: &HelpContext,
-    ) -> Result<bool, Error> {
-        let set = self.optset();
-
-        if let Ok(help_option) = set.find_val::<bool>(option) {
-            if *help_option {
-                let set = self.optset();
-
-                crate::help::display_set_help(
-                    set,
-                    ctx.name(),
-                    ctx.head(),
-                    ctx.foot(),
-                    ctx.width(),
-                    ctx.usagew(),
-                )
-                .map_err(|e| aopt::raise_error!("can not show help message: {:?}", e))?;
-                return Ok(true);
-            }
-        }
-        Ok(false)
-    }
-
-    pub fn display_help_if_width(
-        &self,
-        option: impl ConfigBuild<SetCfg<S>>,
-        author: &str,
-        version: &str,
-        description: &str,
-        option_width: usize,
-        usage_width: usize,
-    ) -> Result<bool, Error> {
-        let set = self.optset();
-
-        if let Ok(help_option) = set.find_val::<bool>(option) {
-            if *help_option {
-                let name = self.name.as_str();
-
-                crate::display_help!(
-                    set,
-                    name,
-                    author,
-                    version,
-                    description,
-                    option_width,
-                    usage_width
-                )?;
-                return Ok(true);
-            }
-        }
-        Ok(false)
     }
 }

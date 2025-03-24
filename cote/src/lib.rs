@@ -85,6 +85,9 @@ pub mod prelude {
 
     pub use crate::help::display_set_help;
     pub use crate::help::HelpContext;
+    pub use crate::help::HelpDisplay;
+    pub use crate::help::DEFAULT_OPTION_WIDTH;
+    pub use crate::help::DEFAULT_USAGE_WIDTH;
     pub use crate::infer::InferOverride;
     pub use crate::meta::OptionMeta;
     pub use crate::parser::Parser;

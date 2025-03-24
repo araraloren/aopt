@@ -530,7 +530,7 @@ impl<'a> CoteGenerator<'a> {
                     let help_context = rctx.help_context().unwrap();
                     let exit = rctx.exit();
 
-                    parser.display_sub_help(names, &help_context)?;
+                    cote::prelude::HelpDisplay::display_sub(&parser, names, &help_context)?;
 
                     // process exit, or force not exit
                     if exit && #exit_after_display_help {
