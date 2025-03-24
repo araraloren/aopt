@@ -263,7 +263,6 @@ where
         &mut self,
         set: &mut <Self as Policy>::Set,
         inv: &mut <Self as Policy>::Inv<'_>,
-
         orig: &'a Args,
         ctx: &mut Ctx<'a>,
     ) -> Result<(), <Self as Policy>::Error> {
@@ -299,7 +298,6 @@ where
                         arg,
                         set,
                         inv,
-
                         total,
                         ctx,
                         next,
@@ -359,7 +357,6 @@ where
             let mut guess = InvokeGuess {
                 set,
                 inv,
-
                 total,
                 name,
                 ctx,
@@ -379,7 +376,6 @@ where
             let mut guess = InvokeGuess {
                 set,
                 inv,
-
                 total,
                 ctx,
                 name: None,
@@ -414,7 +410,6 @@ where
         let mut guess = InvokeGuess {
             set,
             inv,
-
             total,
             name,
             ctx,

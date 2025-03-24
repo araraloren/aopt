@@ -23,107 +23,86 @@ use crate::set::SetOpt;
 use crate::trace;
 use crate::Error;
 
-/// [`PrePolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
-/// [`PrePolicy`] will skip any special [`Error`] during [`parse`](Policy::parse) process.
-/// [`PrePolicy`] will return Some([`Return`]) if match successful.
-/// [`PrePolicy`] doesn’t consume the `NOA` when process [`guess_and_invoke`](crate::guess::InvokeGuess#method.guess_and_invoke).
+/// [`SeqPolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
+/// The option would match failed if any special [`Error`] raised during option processing.
+/// [`SeqPolicy`] will return Some([`Return`]) if match successful.
+/// [`SeqPolicy`] process the option before any
+/// NOA([`Cmd`](crate::opt::Style::Cmd), [`Pos`](crate::opt::Style::Pos) and [`Main`](crate::opt::Style::Main)).
+/// During parsing, you can get the value of any option in the handler of NOA.
 ///
-/// # Example
+/// # Examples
 /// ```rust
-/// # use aopt::getopt;
 /// # use aopt::prelude::*;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<(), Error> {
-/// let mut parser = AFwdParser::default();
-/// let mut cfg_loader = APreParser::default();
+/// let mut policy = AFwdPolicy::default();
+/// let mut set = AHCSet::default();
+/// let mut inv = AInvoker::default();
+/// let filter_id = set.add_opt("--/filter=b")?.run()?;
+/// let pos_id = set.add_opt("pos=p@*")?
+///                 .set_pos_type::<String>()
+///                 .set_values(vec![])
+///                 .run()?;
 ///
-/// parser
-///     .add_opt("-check=s")?
-///     .on(|set, ctx| {
-///         let ext = ctx.value::<String>()?;
-///         let mut found = false;
+/// inv.entry(pos_id).on(
+///     move |set, ctx| {
+///         let filter = set.app_data::<Vec<&str>>()?;
+///         let value = ctx.value::<String>()?;
+///         let not_filter = set[filter_id].val::<bool>()?;
+///         let valid = if !*not_filter {
+///             !filter.iter().any(|&v| v == value.as_str())
+///         } else {
+///             true
+///         };
 ///
-///         for name in ["-c", "-cxx"] {
-///             if let Ok(opt) = set.find(name) {
-///                 if let Ok(file) = opt.vals::<String>() {
-///                     if file.contains(&ext) {
-///                         found = true;
-///                     }
-///                 }
-///             }
-///         }
-///         Ok(Some(found))
-///     })?;
-/// cfg_loader.set_app_data(parser);
-/// cfg_loader.add_opt("--load=s")?.on(
-///     |set, ctx| {
-///         let cfg = ctx.value::<String>()?;
-///         let parser = set.app_data_mut::<AFwdParser>()?;
-///
-///         match cfg.as_str() {
-///             "cxx" => {
-///                 parser.add_opt("-cxx".infer::<String>())?.set_values(
-///                     ["cxx", "cpp", "c++", "cc", "hpp", "hxx", "h"]
-///                         .map(|v| v.to_owned())
-///                         .to_vec(),
-///                 );
-///             }
-///             "c" => {
-///                 parser
-///                     .add_opt("-c=s")?
-///                     .set_values_t(["c", "h"].map(|v| v.to_owned()).to_vec());
-///             }
-///             _ => {
-///                 panic!("Unknow configuration name")
-///             }
-///         }
-///
-///         Ok(Some(cfg))
+///         Ok(valid.then(|| value))
 ///     },
-/// )?;
+/// );
 ///
-/// let ret = getopt!(
-///     Args::from(["--load", "cxx", "-check", "cc"]),
-///     &mut cfg_loader
-/// )?;
-/// let next_args = ret.ret.clone_args();
-/// let mut parser = cfg_loader.take_app_data::<AFwdParser>()?;
+/// let args = Args::from(["app", "set", "42", "foo", "bar"]);
 ///
-/// getopt!(Args::from(next_args), &mut parser)?;
+/// for opt in set.iter_mut() {
+///     opt.init()?;
+/// }
+/// set.set_app_data(vec!["foo", "bar"]);
+/// policy.parse(&mut set, &mut inv, args)?;
 ///
-/// assert!(*parser.find_val::<bool>("-check")?);
+/// let values = set[pos_id].vals::<String>()?;
 ///
-/// // pass the parser to AppService
-/// cfg_loader.set_app_data(parser);
+/// assert_eq!(values[0], "set");
+/// assert_eq!(values[1], "42");
 ///
-/// let ret = getopt!(
-///     Args::from(["--load", "c", "-check", "c"]),
-///     &mut cfg_loader
-/// )?;
-/// let next_args = ret.ret.clone_args();
-/// let mut parser = cfg_loader.service_mut().take_app_data::<AFwdParser>()?;
+/// let args = Args::from(["app", "--/filter", "set", "42", "foo", "bar"]);
 ///
-/// getopt!(Args::from(next_args), &mut parser)?;
+/// for opt in set.iter_mut() {
+///     opt.init()?;
+/// }
 ///
-/// assert!(*parser.find_val::<bool>("-check")?);
+/// policy.parse(&mut set, &mut inv, args)?;
+/// let values = set[pos_id].vals::<String>()?;
+///
+/// assert_eq!(values[0], "set");
+/// assert_eq!(values[1], "42");
+/// assert_eq!(values[2], "foo");
+/// assert_eq!(values[3], "bar");
 /// #
 /// # Ok(())
 /// # }
 /// ```
-pub struct PrePolicy<S, Chk> {
+pub struct SeqPolicy<S, Chk> {
     strict: bool,
 
     overload: bool,
 
-    style_manager: OptStyleManager,
-
     checker: Chk,
+
+    style_manager: OptStyleManager,
 
     marker_s: PhantomData<S>,
 }
 
-impl<S, Chk> Clone for PrePolicy<S, Chk>
+impl<S, Chk> Clone for SeqPolicy<S, Chk>
 where
     Chk: Clone,
 {
@@ -131,34 +110,34 @@ where
         Self {
             strict: self.strict,
             overload: self.overload,
-            style_manager: self.style_manager.clone(),
             checker: self.checker.clone(),
+            style_manager: self.style_manager.clone(),
             marker_s: self.marker_s,
         }
     }
 }
 
-impl<S, Chk> Debug for PrePolicy<S, Chk>
+impl<S, Chk> Debug for SeqPolicy<S, Chk>
 where
     Chk: Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PrePolicy")
+        f.debug_struct("SeqPolicy")
             .field("strict", &self.strict)
             .field("overload", &self.overload)
-            .field("style_manager", &self.style_manager)
             .field("checker", &self.checker)
+            .field("style_manager", &self.style_manager)
             .finish()
     }
 }
 
-impl<S, Chk> Default for PrePolicy<S, Chk>
+impl<S, Chk> Default for SeqPolicy<S, Chk>
 where
     Chk: Default,
 {
     fn default() -> Self {
         Self {
-            strict: false,
+            strict: true,
             overload: false,
             style_manager: OptStyleManager::default(),
             checker: Chk::default(),
@@ -167,22 +146,22 @@ where
     }
 }
 
-impl<S, Chk> PrePolicy<S, Chk>
+impl<S, Chk> SeqPolicy<S, Chk>
 where
     Chk: Default,
 {
-    pub fn new(strict: bool, styles: OptStyleManager) -> Self {
+    pub fn new(strict: bool, style: OptStyleManager) -> Self {
         Self {
             strict,
-            style_manager: styles,
-            ..Self::default()
+            style_manager: style,
+            ..Default::default()
         }
     }
 }
 
-impl<S, Chk> PrePolicy<S, Chk> {
+impl<S, Chk> SeqPolicy<S, Chk> {
     /// In strict mode, if an argument looks like an option (it matched any option prefix),
-    /// then it must matched, otherwise it will be discarded.
+    /// then it must matched.
     pub fn with_strict(mut self, strict: bool) -> Self {
         self.strict = strict;
         self
@@ -216,20 +195,6 @@ impl<S, Chk> PrePolicy<S, Chk> {
         &mut self.checker
     }
 
-    /// Ignore failure when parsing.
-    pub fn ig_failure<T: Default>(res: Result<T, Error>) -> Result<Option<T>, Error> {
-        match res {
-            Ok(val) => Ok(Some(val)),
-            Err(e) => {
-                if e.is_failure() {
-                    Ok(None)
-                } else {
-                    Err(e)
-                }
-            }
-        }
-    }
-
     pub(crate) fn noa_cmd() -> usize {
         1
     }
@@ -243,7 +208,7 @@ impl<S, Chk> PrePolicy<S, Chk> {
     }
 }
 
-impl<S, Chk> PolicySettings for PrePolicy<S, Chk> {
+impl<Set, Chk> PolicySettings for SeqPolicy<Set, Chk> {
     fn style_manager(&self) -> &OptStyleManager {
         &self.style_manager
     }
@@ -288,7 +253,7 @@ impl<S, Chk> PolicySettings for PrePolicy<S, Chk> {
     }
 }
 
-impl<S, Chk> PrePolicy<S, Chk>
+impl<S, Chk> SeqPolicy<S, Chk>
 where
     SetOpt<S>: Opt,
     Chk: SetChecker<S>,
@@ -305,19 +270,22 @@ where
 
         let overload = self.overload();
         let opt_styles = &self.style_manager;
-        let args: Vec<_> = orig.iter().map(|v| v.as_os_str()).collect();
+        let mut args: Vec<_> = orig.iter().map(|v| v.as_os_str()).collect();
         let total = args.len();
+        let iter_args = args.clone();
         let mut lefts = vec![];
         let mut opt_fail = FailManager::default();
-        let mut iter2 = args::iter2(&args).enumerate();
+        let mut pos_fail = FailManager::default();
+        let mut cmd_fail = Some(FailManager::default());
+        let mut iter2 = args::iter2(&iter_args).enumerate();
+        let mut noa_index = 0;
 
-        trace!("parsing {ctx:?} using pre policy");
+        trace!("parsing {ctx:?} using seq policy");
         ctx.set_args(args.clone());
         while let Some((idx, (opt, next))) = iter2.next() {
             let mut matched = false;
             let mut consume = false;
             let mut stopped = false;
-            let mut like_opt = false;
 
             if let Ok(ArgInfo { name, value }) = ArgInfo::parse(opt) {
                 trace!(
@@ -326,42 +294,40 @@ where
                     value,
                     next
                 );
-                if let Some(valid) = Self::ig_failure(set.check(&name).map_err(Into::into))? {
-                    if valid {
-                        like_opt = true;
-                        let arg = value.clone();
-                        let next = next.map(|v| Cow::Borrowed(*v));
-                        let mut guess = InvokeGuess {
-                            idx,
-                            arg,
-                            set,
-                            inv,
-                            total,
-                            ctx,
-                            next,
-                            fail: &mut opt_fail,
-                            name: Some(name.clone()),
-                        };
+                if set.check(&name).map_err(Into::into)? {
+                    let arg = value.clone();
+                    let next = next.map(|v| Cow::Borrowed(*v));
+                    let mut guess = InvokeGuess {
+                        idx,
+                        arg,
+                        set,
+                        inv,
+                        total,
+                        ctx,
+                        next,
+                        fail: &mut opt_fail,
+                        name: Some(name.clone()),
+                    };
 
-                        for style in opt_styles.iter() {
-                            if let Some(Some(ret)) =
-                                Self::ig_failure(guess.guess_and_invoke(style, overload))?
-                            {
-                                (matched, consume) = (ret.matched, ret.consume);
-                            }
-                            match guess.ctx.policy_act() {
-                                Action::Stop => {
-                                    stopped = true;
-                                    guess.ctx.reset_policy_act();
-                                    break;
-                                }
-                                Action::Quit => return Ok(()),
-                                Action::Null => {}
-                            }
-                            if matched {
+                    for style in opt_styles.iter() {
+                        if let Some(ret) = guess.guess_and_invoke(style, overload)? {
+                            (matched, consume) = (ret.matched, ret.consume);
+                        }
+                        match guess.ctx.policy_act() {
+                            Action::Stop => {
+                                stopped = true;
+                                guess.ctx.reset_policy_act();
                                 break;
                             }
+                            Action::Quit => return Ok(()),
+                            Action::Null => {}
                         }
+                        if matched {
+                            break;
+                        }
+                    }
+                    if !stopped && !matched && self.strict() {
+                        return Err(opt_fail.cause(Error::sp_not_found(name)));
                     }
                 } else {
                     trace!("`{:?}` not like option", opt);
@@ -373,72 +339,75 @@ where
                 break;
             }
             // if consume the argument, skip it
-            if matched && consume {
-                iter2.next();
-            } else if !matched && !self.strict() || !like_opt {
-                // add it to NOA if current argument not matched
-                // and not in strict mode or the argument not like an option
-                lefts.push(*opt);
+            if matched {
+                args.remove(noa_index);
+                if consume {
+                    iter2.next();
+                    if noa_index < args.len() {
+                        args.remove(noa_index);
+                    }
+                }
+                ctx.set_args(args.clone());
+            } else {
+                // process it as NOA if current argument not matched
+                if noa_index == Self::noa_cmd() {
+                    if let Some(mut cmd_fail) = cmd_fail.take() {
+                        let name = crate::str::osstr_to_str_i(&args, Self::noa_cmd());
+                        let mut guess = InvokeGuess {
+                            set,
+                            inv,
+                            total: args.len(),
+                            name,
+                            ctx,
+                            arg: None,
+                            next: None,
+                            fail: &mut cmd_fail,
+                            idx: Self::noa_cmd(),
+                        };
+
+                        trace!("guess Cmd = {:?}", guess.name);
+                        guess.guess_and_invoke(&UserStyle::Cmd, overload)?;
+                        if let Action::Quit = ctx.policy_act() {
+                            return Ok(());
+                        }
+                        cmd_fail.process_check(self.checker().cmd_check(set))?;
+                    }
+                }
+                if noa_index >= 1 {
+                    let mut guess = InvokeGuess {
+                        set,
+                        inv,
+                        total: args.len(),
+                        ctx,
+                        name: None,
+                        arg: None,
+                        next: None,
+                        fail: &mut pos_fail,
+                        idx: Self::noa_pos(noa_index),
+                    };
+
+                    guess.name = crate::str::osstr_to_str_i(&args, Self::noa_pos(noa_index));
+                    trace!("guess Pos argument = {:?} @ {}", guess.name, guess.idx);
+                    guess.guess_and_invoke(&UserStyle::Pos, overload)?;
+                    match guess.ctx.policy_act() {
+                        Action::Stop => {
+                            guess.ctx.reset_policy_act();
+                            break;
+                        }
+                        Action::Quit => return Ok(()),
+                        Action::Null => {}
+                    }
+                }
+                noa_index += 1;
             }
+        }
+
+        // when style is pos, noa index is [1..=len]
+        if let Some(cmd_fail) = cmd_fail {
+            cmd_fail.process_check(self.checker().cmd_check(set))?;
         }
         opt_fail.process_check(self.checker().opt_check(set))?;
 
-        let args = lefts;
-        let total = args.len();
-        let mut pos_fail = FailManager::default();
-        let mut cmd_fail = FailManager::default();
-
-        ctx.set_args(args.clone());
-        if total > 0 {
-            let name = crate::str::osstr_to_str_i(&args, Self::noa_cmd());
-            let mut guess = InvokeGuess {
-                set,
-                inv,
-                total,
-                name,
-                ctx,
-                arg: None,
-                next: None,
-                fail: &mut cmd_fail,
-                idx: Self::noa_cmd(),
-            };
-
-            trace!("guess Cmd = {:?}", guess.name);
-            Self::ig_failure(guess.guess_and_invoke(&UserStyle::Cmd, overload))?;
-            if let Action::Quit = ctx.policy_act() {
-                return Ok(());
-            }
-            cmd_fail.process_check(self.checker().cmd_check(set))?;
-
-            let mut guess = InvokeGuess {
-                set,
-                inv,
-                total,
-                ctx,
-                name: None,
-                arg: None,
-                next: None,
-                fail: &mut pos_fail,
-                idx: Self::noa_cmd(),
-            };
-
-            for idx in 1..total {
-                guess.idx = Self::noa_pos(idx);
-                guess.name = crate::str::osstr_to_str_i(&args, Self::noa_pos(idx));
-                trace!("guess Pos argument = {:?} @ {}", guess.name, guess.idx);
-                Self::ig_failure(guess.guess_and_invoke(&UserStyle::Pos, overload))?;
-                match guess.ctx.policy_act() {
-                    Action::Stop => {
-                        guess.ctx.reset_policy_act();
-                        break;
-                    }
-                    Action::Quit => return Ok(()),
-                    Action::Null => {}
-                }
-            }
-        } else {
-            cmd_fail.process_check(self.checker().cmd_check(set))?;
-        }
         pos_fail.process_check(self.checker().pos_check(set))?;
 
         let name = crate::str::osstr_to_str_i(&ctx.args, Self::noa_main());
@@ -456,13 +425,13 @@ where
         };
 
         trace!("guess Main {:?}", guess.name);
-        Self::ig_failure(guess.guess_and_invoke(&UserStyle::Main, overload))?;
+        guess.guess_and_invoke(&UserStyle::Main, overload)?;
         main_fail.process_check(self.checker().post_check(set))?;
         Ok(())
     }
 }
 
-impl<S, Chk> Policy for PrePolicy<S, Chk>
+impl<S, Chk> Policy for SeqPolicy<S, Chk>
 where
     SetOpt<S>: Opt,
     Chk: SetChecker<S>,
@@ -480,6 +449,7 @@ where
         &mut self,
         set: &mut Self::Set,
         inv: &mut Self::Inv<'_>,
+
         orig: Args,
     ) -> Result<Self::Ret, Self::Error> {
         let mut ctx = Ctx::default().with_orig(orig.clone());
@@ -530,12 +500,13 @@ mod test {
             let opt_uid = opt.uid();
 
             assert_eq!(opt_uid, uid);
-            assert_eq!(opt.name(), name, "name not equal -{}-", opt_uid);
+            assert_eq!(opt.name(), name, "name not equal -{}({})-", opt_uid, name);
             assert_eq!(
                 opt.force(),
                 force,
-                "option force required not equal -{}-: {}",
+                "option force required not equal -{}({})-: {}",
                 opt_uid,
+                name,
                 force
             );
             assert_eq!(opt.action(), action, "action not equal for {}", opt_uid);
@@ -588,11 +559,11 @@ mod test {
             Ok(())
         }
 
-        let mut policy = APrePolicy::default();
+        let mut policy = AFwdPolicy::default();
         let mut set = AHCSet::default();
         let mut inv = AInvoker::default();
         let args = Args::from([
-            "app", // 0
+            "app",
             "--copt",
             "--iopt=63",
             "--/dopt",
@@ -627,12 +598,6 @@ mod test {
             "--qopt",
             "rust",
             "翻转", // 8
-            "left",
-            "--wopt=98",
-            "剩余的",
-            "--ropt=23",
-            "-r",
-            "--s我的",
         ]);
 
         // add '+' to the prefix validator
@@ -706,7 +671,7 @@ mod test {
             .set_validator(ValValidator::contains2(vec!["average", "plus"]))
             .run()?;
         let dpos_uid = set.add_opt("dpos=p@5..7")?.set_action(Action::Set).run()?;
-        let epos_uid = set.add_opt("epos=p@7..9")?.run()?;
+        let epos_uid = set.add_opt("epos=p@7..")?.run()?;
 
         inv.entry(set.add_opt("main=m")?.run()?)
             .on(move |set, ctx| {
@@ -729,7 +694,7 @@ mod test {
                     false,
                     &Action::App,
                     &TypeId::of::<Pos>(),
-                    Some(&Index::Range(7, Some(9))),
+                    Some(&Index::Range(7, None)),
                     None,
                 )?;
                 check_opt_val::<String>(
@@ -1055,7 +1020,7 @@ mod test {
                 None,
                 None,
             )?;
-            check_opt_val::<bool>(
+            check_opt_val::<String>(
                 apos,
                 set_uid,
                 "set",
@@ -1071,34 +1036,7 @@ mod test {
         for opt in set.iter_mut() {
             opt.init()?;
         }
-        let ret = policy.parse(&mut set, &mut inv, args.clone());
-
-        assert!(ret.is_ok());
-        let ret = ret.unwrap();
-        let args = ret.args();
-
-        for (idx, arg) in [
-            "app",
-            "set",
-            "8",
-            "16",
-            "average",
-            "program",
-            "software",
-            "反转",
-            "翻转",
-            "left",
-            "--wopt=98",
-            "剩余的",
-            "--ropt=23",
-            "-r",
-            "--s我的",
-        ]
-        .iter()
-        .enumerate()
-        {
-            assert_eq!(args[idx], OsStr::new(arg));
-        }
+        policy.parse(&mut set, &mut inv, args)?;
         Ok(())
     }
 }

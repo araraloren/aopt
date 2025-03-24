@@ -114,6 +114,9 @@ pub mod prelude {
 
     pub type DelayPolicy<'inv, S> =
         aopt::prelude::DelayPolicy<Parser<'inv, S>, DefaultSetChecker<Parser<'inv, S>>>;
+
+    pub type SeqPolicy<'inv, S> =
+        aopt::prelude::SeqPolicy<Parser<'inv, S>, DefaultSetChecker<Parser<'inv, S>>>;
 }
 
 use std::marker::PhantomData;

@@ -311,7 +311,6 @@ where
         ctx: &mut Ctx<'a>,
         set: &mut S,
         inv: &mut Inv,
-
         fail: &mut FailManager,
         inner_ctx: InnerCtx<'a>,
     ) -> Result<bool, Error>
@@ -335,7 +334,6 @@ where
         ctx: &mut Ctx<'a>,
         set: &mut S,
         inv: &mut Inv,
-
         fail: &mut FailManager,
         saver: DelayCtxSaver<'a>,
     ) -> Result<SimpleMatRet, Error>
@@ -557,7 +555,6 @@ where
             let mut guess = InvokeGuess {
                 set,
                 inv,
-
                 total,
                 name,
                 ctx,
@@ -577,7 +574,6 @@ where
             let mut guess = InvokeGuess {
                 set,
                 inv,
-
                 total,
                 ctx,
                 name: None,

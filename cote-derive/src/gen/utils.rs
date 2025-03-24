@@ -17,6 +17,7 @@ pub const CONFIG_ARG: &str = "arg";
 pub const CONFIG_CMD: &str = "cmd";
 pub const CONFIG_POS: &str = "pos";
 pub const CONFIG_DOC: &str = "doc";
+pub const POLICY_SEQ: &str = "seq";
 pub const POLICY_PRE: &str = "pre";
 pub const POLICY_FWD: &str = "fwd";
 pub const POLICY_DELAY: &str = "delay";
@@ -334,6 +335,9 @@ impl Utils {
             POLICY_DELAY => Some(quote! {
                 cote::prelude::DelayPolicy<'inv, Set>
             }),
+            POLICY_SEQ => Some(quote! {
+                cote::prelude::SeqPolicy<'inv, Set>
+            }),
             _ => None,
         }
     }
@@ -348,6 +352,9 @@ impl Utils {
             }),
             POLICY_DELAY => Some(quote! {
                 cote::prelude::DelayPolicy<'inv, cote::prelude::CoteSet>
+            }),
+            POLICY_SEQ => Some(quote! {
+                cote::prelude::SeqPolicy<'inv, cote::prelude::CoteSet>
             }),
             _ => None,
         }

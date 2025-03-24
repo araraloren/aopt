@@ -271,6 +271,7 @@ pub mod prelude {
     pub use crate::parser::PolicySettings;
     pub use crate::parser::PrePolicy;
     pub use crate::parser::Return;
+    pub use crate::parser::SeqPolicy;
     pub use crate::parser::UserStyle;
     pub use crate::parser::UsrValService;
     pub use crate::set::ctor_default_name;
@@ -319,9 +320,13 @@ pub mod prelude {
 
     pub type ADelayPolicy<'a> = DelayPolicy<AHCSet<'a>, DefaultSetChecker<AHCSet<'a>>>;
 
+    pub type ASeqPolicy<'a> = SeqPolicy<AHCSet<'a>, DefaultSetChecker<AHCSet<'a>>>;
+
     pub type AFwdParser<'a> = Parser<AHCSet<'a>, AFwdPolicy<'a>>;
 
     pub type APreParser<'a> = Parser<AHCSet<'a>, APrePolicy<'a>>;
 
     pub type ADelayParser<'a> = Parser<AHCSet<'a>, ADelayPolicy<'a>>;
+
+    pub type ASeqParser<'a> = Parser<AHCSet<'a>, ASeqPolicy<'a>>;
 }

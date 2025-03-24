@@ -132,10 +132,10 @@
 //!
 //! ### Configurating Policy
 //!
-//! Cote has three policy types built-in: [`fwd`](crate::FwdPolicy)、[`pre`](crate::PrePolicy)
-//! and [`delay`](crate::DelayPolicy).
-//! If no `policy` configuration specific, [`fwd`](crate::FwdPolicy) will be using if no sub command.
-//! Otherwise [`pre`](crate::PrePolicy) will be used.
+//! Cote support four policy types built-in: [`fwd`](crate::prelude::FwdPolicy)、[`pre`](crate::prelude::PrePolicy)、
+//! [`delay`](crate::prelude::DelayPolicy) and [`seq`](crate::prelude::SeqPolicy).
+//! If no `policy` configuration specific, [`fwd`](crate::prelude::FwdPolicy) will be using if no sub command.
+//! Otherwise [`pre`](crate::prelude::PrePolicy) will be used.
 //!
 //! ```rust
 #![doc = include_str!("../examples/02_config_policy.rs")]
@@ -469,8 +469,8 @@
 //!
 //! ### Configurating Policy
 //!
-//! The default [`Policy`](crate::Policy) of sub command is [`FwdPolicy`](crate::FwdPolicy).
-//! For the sub commands to have sub commands, you should use [`PrePolicy`](crate::PrePolicy) instead.
+//! The default [`Policy`](crate::Policy) of sub command is [`FwdPolicy`](crate::prelude::FwdPolicy).
+//! For the sub commands to have sub commands, you should use [`PrePolicy`](crate::prelude::PrePolicy) instead.
 //! For example, `sport` sub command does have two sub commands, it is configured with `#[sub(policy = pre)]`.
 //! _Without_ `policy = pre`, you will got output when running `cli -g=42 sport walk -d 4`:
 //!

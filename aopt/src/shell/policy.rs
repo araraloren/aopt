@@ -43,7 +43,7 @@ impl<S> Clone for CompletePolicy<S> {
 
 impl<S> Debug for CompletePolicy<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("FwdPolicy")
+        f.debug_struct("CompletePolicy")
             .field("strict", &self.strict)
             .field("process_pos", &self.process_pos)
             .field("style_manager", &self.style_manager)
