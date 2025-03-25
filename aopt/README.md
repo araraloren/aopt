@@ -84,11 +84,10 @@ If you want the utils of current crate implement `Send` and `Sync`, you can enab
 
 ## Example
 
-- Using [`AFwdParser`](crate::ext::AFwdParser) parsing process the command line.
+- Using [`AFwdParser`](crate::prelude::AFwdParser) parsing process the command line.
 
 ```rust ,no_run
 use aopt::prelude::*;
-use std::ops::Deref;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut parser = AFwdParser::default();
@@ -143,8 +142,6 @@ Application target\debug\example.exe will copy location(gitlab, depth=42) to des
 
 ```rust ,no_run
 use aopt::prelude::*;
-use aopt::Error;
-use std::ops::Deref;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut list = AFwdParser::default();

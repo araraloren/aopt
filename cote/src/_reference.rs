@@ -450,9 +450,9 @@
 //!
 //! ### Add "no delay" option
 //!
-//! When using [`DelayPolicy`](crate::DelayPolicy), the option process(invoke handler)
+//! When using [`DelayPolicy`](crate::prelude::DelayPolicy), the option process(invoke handler)
 //! after [`Cmd`](crate::UserStyle::Cmd) and [`Pos`](crate::UserStyle::Pos) style.
-//! Sometimes we need the option process like [`FwdPolicy`](crate::FwdPolicy) does,
+//! Sometimes we need the option process like [`FwdPolicy`](crate::prelude::FwdPolicy) does,
 //! that is process before [`Cmd`](crate::UserStyle::Cmd) and [`Pos`](crate::UserStyle::Pos).
 //!
 //!```rust
@@ -648,7 +648,7 @@
 //!
 //!| name      | need value | available value |
 //!|-----------|------------|-----------|
-//!| `policy`  |  true      | `"pre"`, `"fwd"`, `"delay"`, or type |
+//!| `policy`  |  true      | `"pre"`, `"fwd"`, `"delay"`, `"seq"` or type |
 //!| `name`    |  true      | string literal |
 //!| `help`    |  false     | |
 //!| `helpopt` |  true      | string literal |
@@ -666,7 +666,7 @@
 //!| `flag`    |  false     | |
 //! * `policy`
 //!
-//! Configure the policy of current struct, its value should be `fwd`, `pre` or `delay`.
+//! Configure the policy of current struct, its value should be `fwd`, `pre`, `seq` or `delay`.
 //! The default value is `fwd` if no sub command in the struct, otherwise it will be `pre`.
 //! ```rust
 #![doc = include_str!("../tests/01_policy.rs")]
@@ -836,14 +836,14 @@
 //! * `nodelay`
 //!
 //! Invoke the option's handler before any [`Cmd`](crate::UserStyle::Cmd) or [`Pos`](crate::UserStyle::Pos).
-//! Only work for [`DelayPolicy`](crate::DelayPolicy) currently.
+//! Only work for [`DelayPolicy`](crate::prelude::DelayPolicy) currently.
 //! See also [`Add "no delay" option`](#add-no-delay-option).
 //!
 //! #### `sub`
 //!
 //!| name      | need value | available value |
 //!|-----------|------------|-----------|
-//!| `policy`  |  true      | `"pre"`, `"fwd"`, `"delay"`, or type |
+//!| `policy`  |  true      | `"pre"`, `"fwd"`, `"delay"`, `"seq"` or type |
 //!| `name`    |  true      | string literal |
 //!| `hint`    |  true      | string literal |
 //!| `help`    |  true      | string literal |
