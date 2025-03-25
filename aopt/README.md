@@ -41,6 +41,8 @@ A flexible and typed getopt like command line framwork for rust.
 
     - [`PrePolicy`](crate::parser::PrePolicy) can help you process the options partial.
 
+    - [`SeqPolicy`](crate::parser::SeqPolicy) process all type arguments one by one.
+
 - Derive support
 
     - Checkout [`cote`](https://docs.rs/cote/latest/cote/index.html) crate for derive support and help message generate.
@@ -82,9 +84,9 @@ If you want the utils of current crate implement `Send` and `Sync`, you can enab
                                       +----------------------+
 ```
 
-## Example
+## Examples
 
-- Using [`AFwdParser`](crate::prelude::AFwdParser) parsing process the command line.
+### Using [`AFwdParser`](crate::prelude::AFwdParser) parsing process the command line.
 
 ```rust ,no_run
 use aopt::prelude::*;
@@ -138,7 +140,7 @@ Application target\debug\example.exe will copy location(github, depth=98) to des
 Application target\debug\example.exe will copy location(gitlab, depth=42) to destination(gitcode)
 ```
 
-- Using [`getopt!`](crate::getopt) parsing multiple sub command.
+### Using [`getopt!`](crate::getopt) parsing multiple sub command.
 
 ```rust ,no_run
 use aopt::prelude::*;
@@ -222,6 +224,105 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 * `app.exe in aopt` output
 
     Error: command not matched
+
+### Can support different policy 
+
+```rust
+use aopt::prelude::*;
+use aopt::raise_error;
+use aopt::value::raw2str;
+use aopt::Error;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    #[derive(Debug, Default, PartialEq, Eq)]
+    pub enum Magic {
+        Upper,
+        #[default]
+        Lower,
+        Camel,
+    }
+
+    impl Magic {
+        pub fn piu(&self, val: &str) -> String {
+            match self {
+                Magic::Upper => val.to_uppercase(),
+                Magic::Lower => val.to_lowercase(),
+                Magic::Camel => {
+                    let val = val.to_lowercase();
+                    let mut chars = val.chars();
+
+                    format!(
+                        "{}{}",
+                        chars.next().unwrap_or_default().to_uppercase(),
+                        chars.collect::<String>()
+                    )
+                }
+            }
+        }
+    }
+
+    // Implement RawValParser for type Magic
+    impl RawValParser for Magic {
+        type Error = Error;
+
+        fn parse(raw: Option<&OsStr>, _: &Ctx) -> Result<Self, Self::Error> {
+            let mode = raw2str(raw)?.to_lowercase();
+
+            match mode.as_str() {
+                "upper" => Ok(Self::Upper),
+                "lower" => Ok(Self::Lower),
+                "camel" => Ok(Self::Camel),
+                _ => Err(raise_error!("What do you want? wahaha")),
+            }
+        }
+    }
+
+    let mut set = AHCSet::default();
+
+    // using MutOpt for type only implement RawValParser
+    set.add_opt("-m;--magic".infer::<MutOpt<Magic>>())?;
+    set.add_opt("file@*".infer::<Pos<String>>())?
+        .on(|set, ctx| {
+            let val = ctx.value::<String>()?;
+            let magic = set.take_val::<Magic>("-m").unwrap_or_default();
+
+            Ok(Some(magic.piu(&val)))
+        })?;
+
+    let args = [
+        "app", "-mcamel", "html", "--magic", "lower", "png", "TXT", "-m=upper", "mp4",
+    ];
+
+    // using seq policy
+    let mut seq = ASeqPolicy::default();
+
+    assert!(set.parse_policy(Args::from(args), &mut seq)?.ok().is_ok());
+    assert_eq!(
+        set.take_vals::<String>("file")?,
+        &["Html", "png", "txt", "MP4"]
+    );
+
+    // using fwd policy
+    let mut fwd = AFwdPolicy::default();
+
+    assert!(set.parse_policy(Args::from(args), &mut fwd)?.ok().is_ok());
+    assert_eq!(
+        set.take_vals::<String>("file")?,
+        &["HTML", "png", "Txt", "mp4"]
+    );
+
+    // using delay policy
+    let mut delay = ADelayPolicy::default();
+
+    assert!(set.parse_policy(Args::from(args), &mut delay)?.ok().is_ok());
+    assert_eq!(
+        set.take_vals::<String>("file")?,
+        &["html", "png", "txt", "mp4"]
+    );
+
+    Ok(())
+}
+```
 
 ## More
 
