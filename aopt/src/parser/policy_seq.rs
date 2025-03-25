@@ -26,9 +26,9 @@ use crate::Error;
 /// [`SeqPolicy`] matching the command line arguments with [`Opt`] in the [`Set`](crate::set::Set).
 /// The option would match failed if any special [`Error`] raised during option processing.
 /// [`SeqPolicy`] will return Some([`Return`]) if match successful.
-/// [`SeqPolicy`] process the option before any
-/// NOA([`Cmd`](crate::opt::Style::Cmd), [`Pos`](crate::opt::Style::Pos) and [`Main`](crate::opt::Style::Main)).
-/// During parsing, you can get the value of any option in the handler of NOA.
+/// [`SeqPolicy`] will first try to parse the argument as an option, otherwise it will treat the argument as
+/// [`Cmd`](crate::opt::Style::Cmd) or [`Pos`](crate::opt::Style::Pos).
+/// Same as other policy, [`SeqPolicy`] will process [`Main`](crate::opt::Style::Main) in the last.
 ///
 /// # Examples
 /// ```rust
@@ -36,7 +36,7 @@ use crate::Error;
 /// # use aopt::Error;
 /// #
 /// # fn main() -> Result<(), Error> {
-/// let mut policy = AFwdPolicy::default();
+/// let mut policy = ASeqPolicy::default();
 /// let mut set = AHCSet::default();
 /// let mut inv = AInvoker::default();
 /// let filter_id = set.add_opt("--/filter=b")?.run()?;
@@ -559,7 +559,7 @@ mod test {
             Ok(())
         }
 
-        let mut policy = AFwdPolicy::default();
+        let mut policy = ASeqPolicy::default();
         let mut set = AHCSet::default();
         let mut inv = AInvoker::default();
         let args = Args::from([
@@ -572,8 +572,10 @@ mod test {
             "-42",
             "+eopt",
             "-/fopt",
-            "8",       // 2
-            "16",      // 3
+            "--alias-k=4",
+            "8",  // 2
+            "16", // 3
+            "-l2.79",
             "average", // 4
             "--りょう",
             "88",
@@ -585,16 +587,14 @@ mod test {
             "--hopt",
             "48",
             "--qopt=cpp",
-            "--alias-k=4",
-            "-l2.79",
             "--nopt",
             "3.12",
             "--开关",
             "-olily",
+            "--值=恍恍惚惚",
             "program",  // 5
             "software", // 6
             "反转",     //7
-            "--值=恍恍惚惚",
             "--qopt",
             "rust",
             "翻转", // 8
@@ -712,7 +712,7 @@ mod test {
                     cpos,
                     cpos_uid,
                     "cpos",
-                    Some(vec![2.31]),
+                    Some(vec![1.27]),
                     false,
                     &Action::App,
                     &TypeId::of::<Pos<String>>(),
@@ -819,7 +819,7 @@ mod test {
                 popt,
                 15,
                 "--popt",
-                Some(vec![String::from("cpp"), String::from("rust")]),
+                Some(vec![String::from("cpp")]),
                 false,
                 &Action::App,
                 &TypeId::of::<String>(),
@@ -850,11 +850,11 @@ mod test {
             let idx = ctx.idx()?;
             let val = ctx.value::<String>()?;
 
-            check_opt_val(
+            check_opt_val::<f64>(
                 nopt,
                 13,
                 "--nopt",
-                Some(vec![3.12]),
+                None,
                 false,
                 &Action::Set,
                 &TypeId::of::<f64>(),
@@ -888,7 +888,9 @@ mod test {
             let mut sum = 0.0;
 
             for uid in [lopt, mopt, nopt].iter().map(|v| v.uid()) {
-                sum += set[uid].val::<f64>()?;
+                if let Ok(val) = set[uid].val::<f64>() {
+                    sum += *val;
+                }
             }
 
             match val.as_str() {
@@ -907,7 +909,7 @@ mod test {
                 jopt,
                 9,
                 "--jopt",
-                Some(vec![2]),
+                None,
                 false,
                 &Action::App,
                 &TypeId::of::<u64>(),
@@ -946,7 +948,7 @@ mod test {
                 iopt,
                 8,
                 "--iopt",
-                Some(vec![84, -21, 21]),
+                Some(vec![84]),
                 false,
                 &Action::App,
                 &TypeId::of::<i64>(),
@@ -957,7 +959,7 @@ mod test {
                 hopt,
                 7,
                 "--hopt",
-                Some(vec![48]),
+                None,
                 true,
                 &Action::App,
                 &TypeId::of::<i64>(),
@@ -980,7 +982,7 @@ mod test {
                 fopt,
                 5,
                 "--/fopt",
-                Some(vec![true]),
+                Some(vec![false]),
                 false,
                 &Action::Set,
                 &TypeId::of::<bool>(),
@@ -991,7 +993,7 @@ mod test {
                 eopt,
                 4,
                 "--eopt",
-                Some(vec![true]),
+                Some(vec![false]),
                 false,
                 &Action::Set,
                 &TypeId::of::<bool>(),
