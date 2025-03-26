@@ -55,35 +55,6 @@ A flexible and typed getopt like command line framwork for rust.
 
 If you want the utils of current crate implement `Send` and `Sync`, you can enable `sync` feature.
 
-## Simple flow chart
-
-```txt
-                     +---------------------------------------+
-                     |             Policy                    |
-                     |                                       |
-+--------------+     |  +-----------+     +------------+     |                +-------------+
-|              |     |  |           |     |            |     |   Invoke       |             |
-|   Arguments  +---->|  |  Checker  |     |   Process  |<----+----------------+   Invoker   |
-|              |     |  |           |     |            |     |   the callback |             |
-+--------------+     |  +---^-------+     ++-----^-----+     |                +-------------+
-                     |      |              |     |           |
-                     |      |              |     |           |
-                     +------+--------------+-----+-----------+
-                            |              |     |
-                            |              |     |
-                            |  Save the values   |Process the arguments
-                            |              |     |
-                            |              |     |
-                Check the options          |     |
-                            |              |     |
-                            |              |     |
-                            |         +----v-----+-----------+
-                            |         |                      |
-                            +---------+      Option Set      |
-                                      |                      |
-                                      +----------------------+
-```
-
 ## Examples
 
 ### Using [`AFwdParser`](crate::prelude::AFwdParser) parsing process the command line.
@@ -324,7 +295,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-## More
+## Simple flow chart
+
+```txt
+                     +---------------------------------------+
+                     |             Policy                    |
+                     |                                       |
++--------------+     |  +-----------+     +------------+     |                +-------------+
+|              |     |  |           |     |            |     |   Invoke       |             |
+|   Arguments  +---->|  |  Checker  |     |   Process  |<----+----------------+   Invoker   |
+|              |     |  |           |     |            |     |   the callback |             |
++--------------+     |  +---^-------+     ++-----^-----+     |                +-------------+
+                     |      |              |     |           |
+                     |      |              |     |           |
+                     +------+--------------+-----+-----------+
+                            |              |     |
+                            |              |     |
+                            |  Save the values   |Process the arguments
+                            |              |     |
+                            |              |     |
+                Check the options          |     |
+                            |              |     |
+                            |              |     |
+                            |         +----v-----+-----------+
+                            |         |                      |
+                            +---------+      Option Set      |
+                                      |                      |
+                                      +----------------------+
+```
+
+## More examples
+
+- [`aopt examples`](https://docs.rs/crate/aopt/latest/source/examples/) or [`cote examples`](https://docs.rs/crate/cote/latest/source/examples/)
 
 - simple-find-file
 

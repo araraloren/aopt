@@ -21,7 +21,7 @@ serde = { workspace = true, optional = true }
 tracing = { workspace = true, optional = true }
 
 [features]
-default = ["sync", "shell"]
+default =[]
 sync = []
 shell = []
 log = ["tracing"]

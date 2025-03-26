@@ -19,7 +19,7 @@ use crate::parser::Parser;
 use crate::parser::Policy;
 use crate::parser::PolicyParser;
 use crate::prelude::AFwdParser;
-use crate::prelude::ASet;
+use crate::prelude::AHCSet;
 use crate::prelude::MutOpt;
 use crate::prelude::SetValueFindExt;
 use crate::set::OptValidator;
@@ -55,9 +55,9 @@ impl RawValParser for Shell {
     }
 }
 
-pub type ACompletePolicy = CompletePolicy<ASet>;
+pub type ACompletePolicy<'a> = CompletePolicy<AHCSet<'a>>;
 
-pub type ACompleteParser<'a> = Parser<ASet, ACompletePolicy>;
+pub type ACompleteParser<'a> = Parser<AHCSet<'a>, ACompletePolicy<'a>>;
 
 #[derive(Debug, Clone, Default)]
 pub struct CompleteService<S> {
