@@ -66,8 +66,9 @@ pub struct GetoptRes<R, T> {
 /// #
 /// # fn main() -> Result<()> {
 /// let mut parser = AFwdParser::default();
-/// let mut pre_parser = APreParser::default();
+/// let mut pre_parser = AFwdParser::default();
 ///
+/// pre_parser.set_prepolicy(true);
 /// {
 ///     parser.add_opt("-a=b!")?;
 ///     parser.add_opt("--bopt=i")?;
@@ -269,7 +270,6 @@ pub mod prelude {
     pub use crate::parser::Policy;
     pub use crate::parser::PolicyParser;
     pub use crate::parser::PolicySettings;
-    pub use crate::parser::PrePolicy;
     pub use crate::parser::Return;
     pub use crate::parser::SeqPolicy;
     pub use crate::parser::UserStyle;
@@ -316,15 +316,11 @@ pub mod prelude {
 
     pub type AFwdPolicy<'a> = FwdPolicy<AHCSet<'a>, DefaultSetChecker<AHCSet<'a>>>;
 
-    pub type APrePolicy<'a> = PrePolicy<AHCSet<'a>, DefaultSetChecker<AHCSet<'a>>>;
-
     pub type ADelayPolicy<'a> = DelayPolicy<AHCSet<'a>, DefaultSetChecker<AHCSet<'a>>>;
 
     pub type ASeqPolicy<'a> = SeqPolicy<AHCSet<'a>, DefaultSetChecker<AHCSet<'a>>>;
 
     pub type AFwdParser<'a> = Parser<AHCSet<'a>, AFwdPolicy<'a>>;
-
-    pub type APreParser<'a> = Parser<AHCSet<'a>, APrePolicy<'a>>;
 
     pub type ADelayParser<'a> = Parser<AHCSet<'a>, ADelayPolicy<'a>>;
 

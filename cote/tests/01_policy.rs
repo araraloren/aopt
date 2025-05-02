@@ -43,7 +43,8 @@ fn policy_impl() -> Result<(), Box<dyn std::error::Error>> {
 
     let button = Button::into_policy();
 
-    assert!(check_t::<PrePolicy<'_, CoteSet>>(&button));
+    assert!(check_t::<FwdPolicy<'_, CoteSet>>(&button));
+    assert!(button.prepolicy());
 
     let line_editor = LineEditor::into_policy();
 

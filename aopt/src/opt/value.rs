@@ -17,6 +17,10 @@ pub trait OptValueExt {
 
     fn vals_mut<T: ErasedTy>(&mut self) -> Result<&mut Vec<T>, Error>;
 
+    fn take_val<T: ErasedTy>(&mut self) -> Result<T, Error>;
+
+    fn take_vals<T: ErasedTy>(&mut self) -> Result<Vec<T>, Error>;
+
     fn entry<T: ErasedTy>(&mut self) -> Entry<'_, Vec<T>>;
 
     fn rawval(&self) -> Result<&OsString, Error>;
@@ -26,6 +30,10 @@ pub trait OptValueExt {
     fn rawvals(&self) -> Result<&Vec<OsString>, Error>;
 
     fn rawvals_mut(&mut self) -> Result<&mut Vec<OsString>, Error>;
+
+    fn take_rawval<T: ErasedTy>(&mut self) -> Result<OsString, Error>;
+
+    fn take_rawvals<T: ErasedTy>(&mut self) -> Result<Vec<OsString>, Error>;
 
     fn filter<T: ErasedTy>(&mut self, f: impl FnMut(&T) -> bool) -> Result<Vec<T>, Error>;
 }
@@ -71,6 +79,24 @@ impl<O: Opt> OptValueExt for O {
         self.accessor_mut().vals_mut().map_err(|e| e.cause(err))
     }
 
+    fn take_val<T: ErasedTy>(&mut self) -> Result<T, Error> {
+        let hint = self.hint();
+        let act = self.action();
+        let uid = self.uid();
+        let err = raise_error!("can not take value of `{}`({})", hint, act).with_uid(uid);
+
+        self.accessor_mut().take_val().map_err(|e| e.cause(err))
+    }
+
+    fn take_vals<T: ErasedTy>(&mut self) -> Result<Vec<T>, Error> {
+        let hint = self.hint();
+        let act = self.action();
+        let uid = self.uid();
+        let err = raise_error!("can not take values of `{}`({})", hint, act).with_uid(uid);
+
+        self.accessor_mut().take_vals().map_err(|e| e.cause(err))
+    }
+
     fn entry<T: ErasedTy>(&mut self) -> Entry<'_, Vec<T>> {
         self.accessor_mut().entry::<T>()
     }
@@ -107,6 +133,22 @@ impl<O: Opt> OptValueExt for O {
         let err = raise_error!("can not find raw values(mut) of `{}`", hint).with_uid(uid);
 
         self.accessor_mut().rawvals_mut().map_err(|e| e.cause(err))
+    }
+
+    fn take_rawval<T: ErasedTy>(&mut self) -> Result<OsString, Error> {
+        let hint = self.hint();
+        let uid = self.uid();
+        let err = raise_error!("can not take raw value of `{}`", hint).with_uid(uid);
+
+        self.accessor_mut().take_val().map_err(|e| e.cause(err))
+    }
+
+    fn take_rawvals<T: ErasedTy>(&mut self) -> Result<Vec<OsString>, Error> {
+        let hint = self.hint();
+        let uid = self.uid();
+        let err = raise_error!("can not take raw values of `{}`", hint).with_uid(uid);
+
+        self.accessor_mut().take_vals().map_err(|e| e.cause(err))
     }
 
     /// Filter the value from option values if `f` return true.

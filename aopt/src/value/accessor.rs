@@ -1,3 +1,4 @@
+use std::any::type_name;
 use std::ffi::{OsStr, OsString};
 use std::ops::{Deref, DerefMut};
 
@@ -252,6 +253,24 @@ impl ErasedValue for ValAccessor {
         self.any_value.vals_mut()
     }
 
+    fn take_val<U: ErasedTy>(&mut self) -> Result<U, Error> {
+        self.any_value.pop().ok_or_else(|| {
+            raise_error!(
+                "can not take more value for type `{:?}` in ErasedVal(take_val)",
+                type_name::<U>()
+            )
+        })
+    }
+
+    fn take_vals<U: ErasedTy>(&mut self) -> Result<Vec<U>, Error> {
+        self.any_value.remove().ok_or_else(|| {
+            raise_error!(
+                "can not take more values for type `{:?}` in ErasedVal(take_vals)",
+                type_name::<U>()
+            )
+        })
+    }
+
     fn rawval(&self) -> Result<&OsString, Error> {
         self.rawval
             .last()
@@ -270,6 +289,16 @@ impl ErasedValue for ValAccessor {
 
     fn rawvals_mut(&mut self) -> Result<&mut Vec<OsString>, Error> {
         Ok(&mut self.rawval)
+    }
+
+    fn take_rawval<U: ErasedTy>(&mut self) -> Result<OsString, Error> {
+        self.rawval
+            .pop()
+            .ok_or_else(|| raise_error!("no more raw value in accessor"))
+    }
+
+    fn take_rawvals<U: ErasedTy>(&mut self) -> Result<Vec<OsString>, Error> {
+        Ok(std::mem::take(&mut self.rawval))
     }
 }
 

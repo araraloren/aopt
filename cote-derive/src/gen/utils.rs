@@ -18,7 +18,6 @@ pub const CONFIG_CMD: &str = "cmd";
 pub const CONFIG_POS: &str = "pos";
 pub const CONFIG_DOC: &str = "doc";
 pub const POLICY_SEQ: &str = "seq";
-pub const POLICY_PRE: &str = "pre";
 pub const POLICY_FWD: &str = "fwd";
 pub const POLICY_DELAY: &str = "delay";
 pub const HELP_OPTION: &str = "--help;-h=b: Display help message";
@@ -326,9 +325,6 @@ impl Utils {
 
     pub fn gen_policy_ty(policy_name: &str) -> Option<TokenStream> {
         match policy_name {
-            POLICY_PRE => Some(quote! {
-                cote::prelude::PrePolicy<'inv, Set>
-            }),
             POLICY_FWD => Some(quote! {
                 cote::prelude::FwdPolicy<'inv, Set>
             }),
@@ -344,9 +340,6 @@ impl Utils {
 
     pub fn gen_policy_default_ty(policy_name: &str) -> Option<TokenStream> {
         match policy_name {
-            POLICY_PRE => Some(quote! {
-                cote::prelude::PrePolicy<'inv, cote::prelude::CoteSet>
-            }),
             POLICY_FWD => Some(quote! {
                 cote::prelude::FwdPolicy<'inv, cote::prelude::CoteSet>
             }),

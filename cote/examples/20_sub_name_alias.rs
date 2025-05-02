@@ -11,7 +11,7 @@ pub struct Cli {
     eat: Option<Eat>,
 
     /// Help message of sport sub command
-    #[sub(name = "sp", policy = pre)]
+    #[sub(name = "sp", prepolicy)]
     sport: Option<Sport>,
 }
 

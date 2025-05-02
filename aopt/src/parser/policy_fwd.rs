@@ -90,6 +90,94 @@ use crate::Error;
 /// # Ok(())
 /// # }
 /// ```
+///
+/// When [`prepolicy`](PolicySettings::prepolicy) is enabled,
+/// [`FwdPolicy`] will skip any special [`Error`] during [`parse`](Policy::parse) process.
+///
+/// # Example
+/// ```rust
+/// # use aopt::getopt;
+/// # use aopt::prelude::*;
+/// # use aopt::Error;
+/// #
+/// # fn main() -> Result<(), Error> {
+/// let mut parser = AFwdParser::default();
+/// let mut cfg_loader = AFwdParser::default();
+///
+/// cfg_loader.set_prepolicy(true);
+/// parser
+///     .add_opt("-check=s")?
+///     .on(|set, ctx| {
+///         let ext = ctx.value::<String>()?;
+///         let mut found = false;
+///
+///         for name in ["-c", "-cxx"] {
+///             if let Ok(opt) = set.find(name) {
+///                 if let Ok(file) = opt.vals::<String>() {
+///                     if file.contains(&ext) {
+///                         found = true;
+///                     }
+///                 }
+///             }
+///         }
+///         Ok(Some(found))
+///     })?;
+/// cfg_loader.set_app_data(parser);
+/// cfg_loader.add_opt("--load=s")?.on(
+///     |set, ctx| {
+///         let cfg = ctx.value::<String>()?;
+///         let parser = set.app_data_mut::<AFwdParser>()?;
+///
+///         match cfg.as_str() {
+///             "cxx" => {
+///                 parser.add_opt("-cxx".infer::<String>())?.set_values(
+///                     ["cxx", "cpp", "c++", "cc", "hpp", "hxx", "h"]
+///                         .map(|v| v.to_owned())
+///                         .to_vec(),
+///                 );
+///             }
+///             "c" => {
+///                 parser
+///                     .add_opt("-c=s")?
+///                     .set_values_t(["c", "h"].map(|v| v.to_owned()).to_vec());
+///             }
+///             _ => {
+///                 panic!("Unknow configuration name")
+///             }
+///         }
+///
+///         Ok(Some(cfg))
+///     },
+/// )?;
+///
+/// let ret = getopt!(
+///     Args::from(["--load", "cxx", "-check", "cc"]),
+///     &mut cfg_loader
+/// )?;
+/// let next_args = ret.ret.clone_args();
+/// let mut parser = cfg_loader.take_app_data::<AFwdParser>()?;
+///
+/// getopt!(Args::from(next_args), &mut parser)?;
+///
+/// assert!(*parser.find_val::<bool>("-check")?);
+///
+/// // pass the parser to AppService
+/// cfg_loader.set_app_data(parser);
+///
+/// let ret = getopt!(
+///     Args::from(["--load", "c", "-check", "c"]),
+///     &mut cfg_loader
+/// )?;
+/// let next_args = ret.ret.clone_args();
+/// let mut parser = cfg_loader.service_mut().take_app_data::<AFwdParser>()?;
+///
+/// getopt!(Args::from(next_args), &mut parser)?;
+///
+/// assert!(*parser.find_val::<bool>("-check")?);
+/// #
+/// # Ok(())
+/// # }
+/// ```
 pub struct FwdPolicy<S, Chk> {
     strict: bool,
 
@@ -532,81 +620,81 @@ mod test {
         assert!(testing_non_prepolicy().is_ok());
     }
 
-    fn testing_non_prepolicy() -> Result<(), Error> {
-        #[allow(clippy::too_many_arguments)]
-        fn check_opt_val<T: std::fmt::Debug + PartialEq + ErasedTy + 'static>(
-            opt: &AOpt,
-            uid: Uid,
-            name: &str,
-            vals: Option<Vec<T>>,
-            force: bool,
-            action: &Action,
-            type_id: &TypeId,
-            index: Option<&Index>,
-            alias: Option<Vec<&str>>,
-        ) -> Result<(), Error> {
-            let opt_uid = opt.uid();
+    #[allow(clippy::too_many_arguments)]
+    fn check_opt_val<T: std::fmt::Debug + PartialEq + ErasedTy + 'static>(
+        opt: &AOpt,
+        uid: Uid,
+        name: &str,
+        vals: Option<Vec<T>>,
+        force: bool,
+        action: &Action,
+        type_id: &TypeId,
+        index: Option<&Index>,
+        alias: Option<Vec<&str>>,
+    ) -> Result<(), Error> {
+        let opt_uid = opt.uid();
 
-            assert_eq!(opt_uid, uid);
-            assert_eq!(opt.name(), name, "name not equal -{}({})-", opt_uid, name);
-            assert_eq!(
-                opt.force(),
-                force,
-                "option force required not equal -{}({})-: {}",
-                opt_uid,
-                name,
-                force
-            );
-            assert_eq!(opt.action(), action, "action not equal for {}", opt_uid);
-            assert_eq!(
-                opt.r#type(),
-                type_id,
-                "type_id not equal for {}({})",
-                opt_uid,
-                opt.name(),
-            );
-            assert_eq!(opt.index(), index, "option index not equal: {:?}", index);
-            if let Ok(opt_vals) = opt.vals::<T>() {
-                if let Some(vals) = vals {
-                    assert_eq!(
-                        opt_vals.len(),
-                        vals.len(),
-                        "value length not equal for {}",
-                        opt_uid
-                    );
-                    for (l, r) in opt_vals.iter().zip(vals.iter()) {
-                        assert_eq!(
-                            l, r,
-                            "option value not equal -{}- : {:?} != {:?}",
-                            opt_uid, l, r
-                        );
-                    }
-                }
-            } else {
-                assert!(
-                    vals.is_none(),
-                    "found none, option value not equal: {:?}",
-                    vals
+        assert_eq!(opt_uid, uid);
+        assert_eq!(opt.name(), name, "name not equal -{}({})-", opt_uid, name);
+        assert_eq!(
+            opt.force(),
+            force,
+            "option force required not equal -{}({})-: {}",
+            opt_uid,
+            name,
+            force
+        );
+        assert_eq!(opt.action(), action, "action not equal for {}", opt_uid);
+        assert_eq!(
+            opt.r#type(),
+            type_id,
+            "type_id not equal for {}({})",
+            opt_uid,
+            opt.name(),
+        );
+        assert_eq!(opt.index(), index, "option index not equal: {:?}", index);
+        if let Ok(opt_vals) = opt.vals::<T>() {
+            if let Some(vals) = vals {
+                assert_eq!(
+                    opt_vals.len(),
+                    vals.len(),
+                    "value length not equal for {}",
+                    opt_uid
                 );
-            }
-            if let Some(opt_alias) = opt.alias() {
-                if let Some(alias) = alias {
-                    assert_eq!(opt_alias.len(), alias.len());
-                    for name in alias {
-                        assert!(
-                            opt_alias.iter().any(|n| n == name),
-                            "alias => {:?} <--> {}",
-                            &opt_alias,
-                            name,
-                        );
-                    }
+                for (l, r) in opt_vals.iter().zip(vals.iter()) {
+                    assert_eq!(
+                        l, r,
+                        "option value not equal -{}- : {:?} != {:?}",
+                        opt_uid, l, r
+                    );
                 }
-            } else {
-                assert!(alias.is_none());
             }
-            Ok(())
+        } else {
+            assert!(
+                vals.is_none(),
+                "found none, option value not equal: {:?}",
+                vals
+            );
         }
+        if let Some(opt_alias) = opt.alias() {
+            if let Some(alias) = alias {
+                assert_eq!(opt_alias.len(), alias.len());
+                for name in alias {
+                    assert!(
+                        opt_alias.iter().any(|n| n == name),
+                        "alias => {:?} <--> {}",
+                        &opt_alias,
+                        name,
+                    );
+                }
+            }
+        } else {
+            assert!(alias.is_none());
+        }
+        Ok(())
+    }
 
+    fn testing_non_prepolicy() -> Result<(), Error> {
         let mut policy = AFwdPolicy::default();
         let mut set = AHCSet::default();
         let mut inv = AInvoker::default();
@@ -1089,79 +1177,6 @@ mod test {
     }
 
     fn testing_prepolicy() -> Result<(), Error> {
-        #[allow(clippy::too_many_arguments)]
-        fn check_opt_val<T: std::fmt::Debug + PartialEq + ErasedTy + 'static>(
-            opt: &AOpt,
-            uid: Uid,
-            name: &str,
-            vals: Option<Vec<T>>,
-            force: bool,
-            action: &Action,
-            type_id: &TypeId,
-            index: Option<&Index>,
-            alias: Option<Vec<&str>>,
-        ) -> Result<(), Error> {
-            let opt_uid = opt.uid();
-
-            assert_eq!(opt_uid, uid);
-            assert_eq!(opt.name(), name, "name not equal -{}-", opt_uid);
-            assert_eq!(
-                opt.force(),
-                force,
-                "option force required not equal -{}-: {}",
-                opt_uid,
-                force
-            );
-            assert_eq!(opt.action(), action, "action not equal for {}", opt_uid);
-            assert_eq!(
-                opt.r#type(),
-                type_id,
-                "type_id not equal for {}({})",
-                opt_uid,
-                opt.name(),
-            );
-            assert_eq!(opt.index(), index, "option index not equal: {:?}", index);
-            if let Ok(opt_vals) = opt.vals::<T>() {
-                if let Some(vals) = vals {
-                    assert_eq!(
-                        opt_vals.len(),
-                        vals.len(),
-                        "value length not equal for {}",
-                        opt_uid
-                    );
-                    for (l, r) in opt_vals.iter().zip(vals.iter()) {
-                        assert_eq!(
-                            l, r,
-                            "option value not equal -{}- : {:?} != {:?}",
-                            opt_uid, l, r
-                        );
-                    }
-                }
-            } else {
-                assert!(
-                    vals.is_none(),
-                    "found none, option value not equal: {:?}",
-                    vals
-                );
-            }
-            if let Some(opt_alias) = opt.alias() {
-                if let Some(alias) = alias {
-                    assert_eq!(opt_alias.len(), alias.len());
-                    for name in alias {
-                        assert!(
-                            opt_alias.iter().any(|n| n == name),
-                            "alias => {:?} <--> {}",
-                            &opt_alias,
-                            name,
-                        );
-                    }
-                }
-            } else {
-                assert!(alias.is_none());
-            }
-            Ok(())
-        }
-
         let mut policy = AFwdPolicy::default().with_prepolicy(true);
         let mut set = AHCSet::default();
         let mut inv = AInvoker::default();

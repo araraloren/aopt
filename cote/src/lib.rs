@@ -106,9 +106,6 @@ pub mod prelude {
     pub use crate::Status;
     pub use aopt::prelude::ASet as CoteSet;
 
-    pub type PrePolicy<'inv, S> =
-        aopt::prelude::PrePolicy<Parser<'inv, S>, DefaultSetChecker<Parser<'inv, S>>>;
-
     pub type FwdPolicy<'inv, S> =
         aopt::prelude::FwdPolicy<Parser<'inv, S>, DefaultSetChecker<Parser<'inv, S>>>;
 
@@ -425,7 +422,7 @@ mod test {
         use std::path::PathBuf;
 
         #[derive(Debug, Cote, PartialEq, Default)]
-        #[cote(policy = pre, help, name = "app")]
+        #[cote(prepolicy, help, name = "app")]
         pub struct App {
             /// Set the count value
             #[arg(values = [1usize, 2, 3])]

@@ -29,7 +29,6 @@ use super::CONFIG_POS;
 use super::CONFIG_SUB;
 use super::HELP_OPTION;
 use super::POLICY_FWD;
-use super::POLICY_PRE;
 
 #[derive(Debug)]
 pub struct CoteGenerator<'a> {
@@ -665,8 +664,6 @@ impl<'a> CoteGenerator<'a> {
                     quote! { #policy_ty<'inv, Set> }
                 }
             })
-        } else if self.has_sub_command() {
-            ty_generator(POLICY_PRE).unwrap()
         } else {
             ty_generator(POLICY_FWD).unwrap()
         })
@@ -689,7 +686,11 @@ impl<'a> CoteGenerator<'a> {
             .configs
             .has_cfg(CoteKind::Overload)
             .then_some(quote! { cote::prelude::PolicySettings::set_overload(policy, true); });
-        let mod_strict = self.configs.find_value(CoteKind::Strict).map(|v| {
+        // if we have sub command, enable the prepolicy setting
+        let enable_prepolicy = (self.configs.has_cfg(CoteKind::PrePolicy)
+            || self.has_sub_command())
+        .then_some(quote! { cote::prelude::PolicySettings::set_prepolicy(policy, true); });
+        let enable_strict = self.configs.find_value(CoteKind::Strict).map(|v| {
             quote! {
                 cote::prelude::PolicySettings::set_strict(policy, #v);
             }
@@ -707,7 +708,8 @@ impl<'a> CoteGenerator<'a> {
             #enable_embedded_plus
             #enable_flag
             #enable_overload
-            #mod_strict
+            #enable_prepolicy
+            #enable_strict
             #(#nodelays)*
         })
     }

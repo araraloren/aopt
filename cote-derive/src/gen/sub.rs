@@ -99,6 +99,11 @@ impl<'a> SubGenerator<'a> {
         let inner_ty = self.inner_ty();
         let policy_new = self.gen_sub_policy_new()?;
         let uid_ident = self.uid_ident();
+        let enable_prepolicy = self.config.has_cfg(SubKind::PrePolicy).then(|| {
+            quote! {
+                cote::prelude::PolicySettings::set_prepolicy(&mut policy, true);
+            }
+        });
         // using for access sub parser
         let sub_index = syn::Index::from(self.sub_index());
         let pass_help_to = help_uid.map(|id| {
@@ -132,6 +137,9 @@ impl<'a> SubGenerator<'a> {
 
                     let args = cote::prelude::Args::from(args);
                     let mut policy = #policy_new;
+
+                    // try enable prepolicy
+                    #enable_prepolicy
 
                     // checking running ctx
                     let mut rctx = set.running_ctx();

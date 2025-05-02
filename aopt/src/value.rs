@@ -90,6 +90,10 @@ pub trait ErasedValue {
 
     fn vals_mut<U: ErasedTy>(&mut self) -> Result<&mut Vec<U>, Error>;
 
+    fn take_val<U: ErasedTy>(&mut self) -> Result<U, Error>;
+
+    fn take_vals<U: ErasedTy>(&mut self) -> Result<Vec<U>, Error>;
+
     fn rawval(&self) -> Result<&OsString, Error>;
 
     fn rawval_mut(&mut self) -> Result<&mut OsString, Error>;
@@ -97,6 +101,10 @@ pub trait ErasedValue {
     fn rawvals(&self) -> Result<&Vec<OsString>, Error>;
 
     fn rawvals_mut(&mut self) -> Result<&mut Vec<OsString>, Error>;
+
+    fn take_rawval<U: ErasedTy>(&mut self) -> Result<OsString, Error>;
+
+    fn take_rawvals<U: ErasedTy>(&mut self) -> Result<Vec<OsString>, Error>;
 }
 
 /// [`AnyValue`] can save values of any type. In internal it save the value into a vector of type T.

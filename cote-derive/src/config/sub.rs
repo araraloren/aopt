@@ -26,6 +26,8 @@ pub enum SubKind {
 
     Force,
 
+    PrePolicy,
+
     MethodCall(String),
 }
 
@@ -47,6 +49,7 @@ impl Kind for SubKind {
                 "refopt" => (Self::Ref, false),
                 "mutopt" => (Self::Mut, false),
                 "force" => (Self::Force, true),
+                "prepolicy" => (Self::PrePolicy, false),
                 method => (Self::MethodCall(method.to_owned()), true),
             })
         } else {
