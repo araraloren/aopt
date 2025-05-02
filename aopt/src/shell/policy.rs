@@ -132,6 +132,10 @@ impl<S> PolicySettings for CompletePolicy<S> {
         false
     }
 
+    fn prepolicy(&self) -> bool {
+        false
+    }
+
     fn set_strict(&mut self, strict: bool) -> &mut Self {
         self.strict = strict;
         self
@@ -147,6 +151,10 @@ impl<S> PolicySettings for CompletePolicy<S> {
     }
 
     fn set_overload(&mut self, _: bool) -> &mut Self {
+        self
+    }
+
+    fn set_prepolicy(&mut self, _: bool) -> &mut Self {
         self
     }
 }

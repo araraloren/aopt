@@ -268,6 +268,10 @@ impl<S, Chk> PolicySettings for PrePolicy<S, Chk> {
         self.overload
     }
 
+    fn prepolicy(&self) -> bool {
+        todo!()
+    }
+
     fn set_strict(&mut self, strict: bool) -> &mut Self {
         self.strict = strict;
         self
@@ -285,6 +289,10 @@ impl<S, Chk> PolicySettings for PrePolicy<S, Chk> {
     fn set_overload(&mut self, overload: bool) -> &mut Self {
         self.overload = overload;
         self
+    }
+
+    fn set_prepolicy(&mut self, prepolicy: bool) -> &mut Self {
+        todo!()
     }
 }
 

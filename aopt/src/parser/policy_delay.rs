@@ -128,6 +128,8 @@ pub struct DelayPolicy<S, Chk> {
 
     overload: bool,
 
+    prepolicy: bool,
+
     checker: Chk,
 
     style_manager: OptStyleManager,
@@ -145,6 +147,7 @@ where
         Self {
             strict: self.strict,
             overload: self.overload,
+            prepolicy: self.prepolicy,
             checker: self.checker.clone(),
             style_manager: self.style_manager.clone(),
             no_delay_opt: self.no_delay_opt.clone(),
@@ -161,6 +164,7 @@ where
         f.debug_struct("DelayPolicy")
             .field("strict", &self.strict)
             .field("overload", &self.overload)
+            .field("prepolicy", &self.prepolicy)
             .field("checker", &self.checker)
             .field("style_manager", &self.style_manager)
             .field("no_delay_opt", &self.no_delay_opt)
@@ -176,6 +180,7 @@ where
         Self {
             strict: true,
             overload: false,
+            prepolicy: false,
             checker: Chk::default(),
             style_manager: OptStyleManager::default(),
             no_delay_opt: vec![],
@@ -224,6 +229,11 @@ impl<S, Chk> DelayPolicy<S, Chk> {
         self
     }
 
+    pub fn with_prepolicy(mut self, prepolicy: bool) -> Self {
+        self.prepolicy = prepolicy;
+        self
+    }
+
     pub fn set_checker(&mut self, checker: Chk) -> &mut Self {
         self.checker = checker;
         self
@@ -247,6 +257,28 @@ impl<S, Chk> DelayPolicy<S, Chk> {
 
     pub(crate) fn noa_pos(idx: usize) -> usize {
         idx
+    }
+
+    pub(crate) fn filter<T, E: Into<Error>>(
+        prepolicy: bool,
+        res: Result<T, E>,
+    ) -> Result<Option<T>, Error> {
+        let res = res.map_err(Into::into);
+
+        if !prepolicy {
+            res.map(|v| Some(v))
+        } else {
+            match res {
+                Ok(val) => Ok(Some(val)),
+                Err(e) => {
+                    if e.is_failure() {
+                        Ok(None)
+                    } else {
+                        Err(e)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -275,6 +307,10 @@ impl<S, Chk> PolicySettings for DelayPolicy<S, Chk> {
         self.overload
     }
 
+    fn prepolicy(&self) -> bool {
+        self.prepolicy
+    }
+
     fn set_strict(&mut self, strict: bool) -> &mut Self {
         self.strict = strict;
         self
@@ -292,6 +328,11 @@ impl<S, Chk> PolicySettings for DelayPolicy<S, Chk> {
 
     fn set_overload(&mut self, overload: bool) -> &mut Self {
         self.overload = overload;
+        self
+    }
+
+    fn set_prepolicy(&mut self, prepolicy: bool) -> &mut Self {
+        self.prepolicy = prepolicy;
         self
     }
 }
@@ -459,6 +500,7 @@ where
         self.checker().pre_check(set).map_err(|e| e.into())?;
 
         let overload = self.overload();
+        let pre = self.prepolicy();
         let opt_styles = self.style_manager.clone();
         let args: Vec<_> = orig.iter().map(|v| v.as_os_str()).collect();
         let total = args.len();
@@ -474,6 +516,7 @@ where
             let mut matched = false;
             let mut consume = false;
             let mut stopped = false;
+            let mut like_opt = false;
 
             // parsing current argument
             if let Ok(ArgInfo { name, value }) = ArgInfo::parse(opt) {
@@ -483,7 +526,7 @@ where
                     value,
                     next
                 );
-                if set.check(&name).map_err(Into::into)? {
+                if let Some(true) = Self::filter(pre, set.check(&name))? {
                     let arg = value.clone();
                     let next = next.map(|v| Cow::Borrowed(*v));
                     let mut guess = InvokeGuess {
@@ -498,8 +541,11 @@ where
                         name: Some(name.clone()),
                     };
 
+                    like_opt = true;
                     for style in opt_styles.iter() {
-                        if let Some(ret) = guess.guess_and_collect(style, overload)? {
+                        if let Some(Some(ret)) =
+                            Self::filter(pre, guess.guess_and_collect(style, overload))?
+                        {
                             // pretend we are matched, cause it is delay
                             matched = true;
                             consume = ret.consume;
@@ -508,23 +554,24 @@ where
                                 (matched, consume) = (ret.matched, ret.consume);
                             }
                             if matched {
+                                match guess.ctx.policy_act() {
+                                    Action::Stop => {
+                                        stopped = true;
+                                        guess.ctx.reset_policy_act();
+                                        break;
+                                    }
+                                    Action::Quit => return Ok(()),
+                                    Action::Null => {}
+                                }
                                 break;
                             }
-                        }
-                        match guess.ctx.policy_act() {
-                            Action::Stop => {
-                                stopped = true;
-                                guess.ctx.reset_policy_act();
-                                break;
-                            }
-                            Action::Quit => return Ok(()),
-                            Action::Null => {}
                         }
                     }
-                    if !stopped && !matched && self.strict() {
+                    if !pre && !stopped && !matched && self.strict() {
                         return Err(opt_fail.cause(Error::sp_not_found(name)));
                     }
-                } else {
+                }
+                if !like_opt {
                     trace!("`{:?}` not like option", opt);
                 }
             }
@@ -565,7 +612,7 @@ where
             };
 
             trace!("guess Cmd = {:?}", guess.name);
-            guess.guess_and_invoke(&UserStyle::Cmd, overload)?;
+            Self::filter(pre, guess.guess_and_invoke(&UserStyle::Cmd, overload))?;
             if let Action::Quit = ctx.policy_act() {
                 return Ok(());
             }
@@ -587,7 +634,7 @@ where
                 guess.idx = Self::noa_pos(idx);
                 guess.name = crate::str::osstr_to_str_i(&args, Self::noa_pos(idx));
                 trace!("guess Pos argument = {:?} @ {}", guess.name, guess.idx);
-                guess.guess_and_invoke(&UserStyle::Pos, overload)?;
+                Self::filter(pre, guess.guess_and_invoke(&UserStyle::Pos, overload))?;
                 match guess.ctx.policy_act() {
                     Action::Stop => {
                         guess.ctx.reset_policy_act();
@@ -604,21 +651,26 @@ where
         trace!("in delay policy, invoke the handler of option");
         // after cmd and pos callback invoked, invoke the callback of option
         for saver in contexts {
-            let ret = self.process_delay_ctx(&mut prev_ctx, set, inv, &mut opt_fail, saver)?;
-
-            match prev_ctx.policy_act() {
-                Action::Stop => {
-                    prev_ctx.reset_policy_act();
-                    break;
+            if let Some(ret) = Self::filter(
+                pre,
+                self.process_delay_ctx(&mut prev_ctx, set, inv, &mut opt_fail, saver),
+            )? {
+                if ret.matched {
+                    match prev_ctx.policy_act() {
+                        Action::Stop => {
+                            prev_ctx.reset_policy_act();
+                            break;
+                        }
+                        Action::Quit => return Ok(()),
+                        Action::Null => {}
+                    }
                 }
-                Action::Quit => return Ok(()),
-                Action::Null => {}
-            }
-            if !ret.matched && self.strict() {
-                return Err(opt_fail.cause(crate::raise_error!(
-                    "option match failed, Ctx = {:?}",
-                    prev_ctx
-                )));
+                if !pre && !ret.matched && self.strict() {
+                    return Err(opt_fail.cause(crate::raise_error!(
+                        "option match failed, Ctx = {:?}",
+                        prev_ctx
+                    )));
+                }
             }
         }
 
@@ -641,7 +693,7 @@ where
         };
 
         trace!("guess Main {:?}", guess.name);
-        guess.guess_and_invoke(&UserStyle::Main, overload)?;
+        Self::filter(pre, guess.guess_and_invoke(&UserStyle::Main, overload))?;
         main_fail.process_check(self.checker().post_check(set))?;
         Ok(())
     }

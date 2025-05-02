@@ -235,6 +235,10 @@ impl<S> PolicySettings for NullPolicy<'_, S> {
         false
     }
 
+    fn prepolicy(&self) -> bool {
+        false
+    }
+
     fn set_strict(&mut self, _: bool) -> &mut Self {
         self
     }
@@ -248,6 +252,10 @@ impl<S> PolicySettings for NullPolicy<'_, S> {
     }
 
     fn set_overload(&mut self, _: bool) -> &mut Self {
+        self
+    }
+
+    fn set_prepolicy(&mut self, _: bool) -> &mut Self {
         self
     }
 }

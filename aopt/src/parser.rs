@@ -116,6 +116,8 @@ pub trait PolicySettings {
 
     fn overload(&self) -> bool;
 
+    fn prepolicy(&self) -> bool;
+
     fn set_strict(&mut self, strict: bool) -> &mut Self;
 
     fn set_styles(&mut self, styles: Vec<UserStyle>) -> &mut Self;
@@ -123,6 +125,8 @@ pub trait PolicySettings {
     fn set_no_delay(&mut self, name: impl Into<String>) -> &mut Self;
 
     fn set_overload(&mut self, overload: bool) -> &mut Self;
+
+    fn set_prepolicy(&mut self, prepolicy: bool) -> &mut Self;
 }
 
 pub trait PolicyParser<P>
@@ -324,6 +328,10 @@ where
         self.policy().overload()
     }
 
+    fn prepolicy(&self) -> bool {
+        self.policy().prepolicy()
+    }
+
     fn set_strict(&mut self, strict: bool) -> &mut Self {
         self.policy_mut().set_strict(strict);
         self
@@ -341,6 +349,11 @@ where
 
     fn set_overload(&mut self, overload: bool) -> &mut Self {
         self.policy_mut().set_overload(overload);
+        self
+    }
+
+    fn set_prepolicy(&mut self, ignore_failure: bool) -> &mut Self {
+        self.policy_mut().set_prepolicy(ignore_failure);
         self
     }
 }
