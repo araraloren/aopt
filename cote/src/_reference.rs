@@ -132,10 +132,9 @@
 //!
 //! ### Configurating Policy
 //!
-//! Cote support four policy types built-in: [`fwd`](crate::prelude::FwdPolicy)、[`pre`](crate::prelude::PrePolicy)、
-//! [`delay`](crate::prelude::DelayPolicy) and [`seq`](crate::prelude::SeqPolicy).
-//! If no `policy` configuration specific, [`fwd`](crate::prelude::FwdPolicy) will be using if no sub command.
-//! Otherwise [`pre`](crate::prelude::PrePolicy) will be used.
+//! Cote support three policy types built-in: [`fwd`](crate::prelude::FwdPolicy)、[`delay`](crate::prelude::DelayPolicy) and [`seq`](crate::prelude::SeqPolicy).
+//! If no `policy` configuration specific, [`fwd`](crate::prelude::FwdPolicy) will be using.
+//! And if the struct have sub commands, the [`prepolicy`](crate::prelude::PolicySettings#prepolicy) setting will be enable.
 //!
 //! ```rust
 #![doc = include_str!("../examples/02_config_policy.rs")]
@@ -470,35 +469,9 @@
 //! ### Configurating Policy
 //!
 //! The default [`Policy`](crate::Policy) of sub command is [`FwdPolicy`](crate::prelude::FwdPolicy).
-//! For the sub commands to have sub commands, you should use [`PrePolicy`](crate::prelude::PrePolicy) instead.
-//! For example, `sport` sub command does have two sub commands, it is configured with `#[sub(policy = pre)]`.
-//! _Without_ `policy = pre`, you will got output when running `cli -g=42 sport walk -d 4`:
-//!
-//! ```plaintext
-//! Usage: cli sport [-h,-?,--help] <COMMAND>
-//! Generate help message for command line program
-//!
-//! Commands:
-//!   walk@1      Go for a walk.
-//!   play@1      Play some games.
-//!
-//! Options:
-//!   -h,-?,--help      Display help message
-//!
-//! Create by araraloren <blackcatoverwall@gmail.com> v0.1.8
-//! Error:
-//!     0: Parsing command `sport` failed: None
-//!     1: Command `eat@1 | sport@1` are force required (uid = 1)
-//!     2: Can not find option `-d`
-//!
-//! Location:
-//!    src\main.rs:90
-//!
-//! Backtrace omitted.
-//! Run with RUST_BACKTRACE=1 environment variable to display it.
-//! Run with RUST_BACKTRACE=full to include source snippets.
-//! ```
-//! And the right output should be:
+//! For sub commands which also have sub commands, it will enable the [`prepolicy`](crate::prelude::PolicySettings#prepolicy)
+//! setting.
+//! When running `cli -g=42 sport walk -d 4`, the output is:
 //! ```plaintext
 //! You age is set to 42
 //! You are going to walk 4 kilometers
@@ -648,7 +621,7 @@
 //!
 //!| name      | need value | available value |
 //!|-----------|------------|-----------|
-//!| `policy`  |  true      | `"pre"`, `"fwd"`, `"delay"`, `"seq"` or type |
+//!| `policy`  |  true      | `"fwd"`, `"delay"`, `"seq"` or type |
 //!| `name`    |  true      | string literal |
 //!| `help`    |  false     | |
 //!| `helpopt` |  true      | string literal |
@@ -660,14 +633,17 @@
 //!| `on`      |  true      | function or closure |
 //!| `fallback`|  true      | function or closure |
 //!| `then`    |  true      | function or closure |
-//!| `strict`  |  true      | boolean |
+//!| `strict`  |  false     | boolean |
 //!| `combine` |  false     | |
 //!| `embedded`|  false     | |
 //!| `flag`    |  false     | |
+//!| `notexit` |  false     | |
+//!| `overload`|  false     | boolean |
+//!|`prepolicy`|  false     | boolean |
 //! * `policy`
 //!
-//! Configure the policy of current struct, its value should be `fwd`, `pre`, `seq` or `delay`.
-//! The default value is `fwd` if no sub command in the struct, otherwise it will be `pre`.
+//! Configure the policy of current struct, its value should be `fwd`, `seq` or `delay`.
+//! The default value is `fwd`.
 //! ```rust
 #![doc = include_str!("../tests/01_policy.rs")]
 //! ```
@@ -687,6 +663,10 @@
 //! * `aborthelp`
 //!
 //! Display help message if any error raised or command line parsing failed.
+//!
+//! * `notexit`
+//!
+//! Don't call [`exit`](std::process::exit) after display help message.
 //!
 //! * `head`, `foot`
 //!
@@ -722,9 +702,13 @@
 #![doc = include_str!("../tests/05_fallback.rs")]
 //! ```
 //!
-//! * `strict`
+//! * `strict`, `overload`, `prepolicy`
 //!
-//! Enable the strict mode of parser by calling the [`set_strict`](crate::PolicySettings::set_strict).
+//! Change the `strict` setting of parser by calling the [`set_strict`](crate::PolicySettings::set_strict).
+//!
+//! Change the `overload` setting of parser by calling the [`set_overload`](crate::PolicySettings::set_overload).
+//!
+//! Change the `prepolicy` setting of parser by calling the [`set_prepolicy`](crate::PolicySettings::set_prepolicy).
 //!
 //! ```rust
 #![doc = include_str!("../tests/03_strict.rs")]
@@ -843,14 +827,15 @@
 //!
 //!| name      | need value | available value |
 //!|-----------|------------|-----------|
-//!| `policy`  |  true      | `"pre"`, `"fwd"`, `"delay"`, `"seq"` or type |
+//!| `policy`  |  true      | `"fwd"`, `"delay"`, `"seq"` or type |
 //!| `name`    |  true      | string literal |
 //!| `hint`    |  true      | string literal |
 //!| `help`    |  true      | string literal |
 //!| `head`    |  true      | string literal |
 //!| `foot`    |  true      | string literal |
 //!| `alias`   |  true      | string literal |
-//!| `force`   |  true      | boolean |
+//!| `force`   |  false     | boolean |
+//!|`prepolicy`|  false     | boolean |
 //!
 //! * `policy`
 //!
@@ -884,6 +869,10 @@
 #![doc = include_str!("../tests/15_force.rs")]
 //! ```
 //!
+//! * `prepolicy`
+//!
+//! Change the `prepolicy` setting of parser by calling the [`set_prepolicy`](crate::PolicySettings::set_prepolicy).
+//!
 //! ### `CoteOpt` Configurations list
 //!
 //! `CoteOpt` derive the default behavior of [`Infer`](crate::prelude::Infer), [`Fetch`](crate::prelude::Fetch`);
@@ -906,7 +895,7 @@
 //!| `ty`      |  true      | [`TypeId`](std::any::TypeId) |
 //!| `tweak`   |  true      | function |
 //!| `fill`    |  true      | function |
-//!| `override`|  false
+//!| `override`|  false     | |
 //!
 //! `infer` can configure the behavior of [`Infer`](crate::prelude::Infer), the configures are mostly using to providing default value.
 //!

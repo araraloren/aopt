@@ -5,12 +5,12 @@ use std::any::Any;
 #[derive(Debug, Cote)]
 pub struct Widget;
 
-// Configure the policy with built-in `delay`, `pre` or `fwd`
+// Configure the policy with built-in `delay` or `fwd`, `seq`
 #[derive(Debug, Cote)]
 #[cote(policy = delay)]
 pub struct Windows;
 
-// Using `pre`(`PrePolicy`) if the struct has sub commands
+// Enable `prepolicy` if the struct has sub commands
 #[derive(Debug, Cote)]
 pub struct Button {
     #[sub()]

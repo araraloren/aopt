@@ -682,14 +682,19 @@ impl<'a> CoteGenerator<'a> {
             .configs
             .has_cfg(CoteKind::Flag)
             .then_some(quote! { style_manager.push(cote::prelude::UserStyle::Flag); });
-        let enable_overload = self
-            .configs
-            .has_cfg(CoteKind::Overload)
-            .then_some(quote! { cote::prelude::PolicySettings::set_overload(policy, true); });
+        let enable_overload = self.configs.find_value(CoteKind::Overload).map(|v| {
+            quote! { cote::prelude::PolicySettings::set_overload(policy, #v); }
+        });
         // if we have sub command, enable the prepolicy setting
-        let enable_prepolicy = (self.configs.has_cfg(CoteKind::PrePolicy)
-            || self.has_sub_command())
-        .then_some(quote! { cote::prelude::PolicySettings::set_prepolicy(policy, true); });
+        let enable_prepolicy = self
+            .configs
+            .find_value(CoteKind::PrePolicy)
+            .map(|v| {
+                quote! { cote::prelude::PolicySettings::set_prepolicy(policy, #v); }
+            })
+            .or(self
+                .has_sub_command()
+                .then_some(quote! { cote::prelude::PolicySettings::set_prepolicy(policy, true); }));
         let enable_strict = self.configs.find_value(CoteKind::Strict).map(|v| {
             quote! {
                 cote::prelude::PolicySettings::set_strict(policy, #v);

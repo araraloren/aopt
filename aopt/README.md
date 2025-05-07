@@ -39,8 +39,6 @@ A flexible and typed getopt like command line framwork for rust.
 
     - [`FwdPolicy`](crate::parser::FwdPolicy) process options before positional arguments.
 
-    - [`PrePolicy`](crate::parser::PrePolicy) can help you process the options partial.
-
     - [`SeqPolicy`](crate::parser::SeqPolicy) process all type arguments one by one.
 
 - Derive support

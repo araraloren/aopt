@@ -25,11 +25,18 @@ pub use self::infer::InferKind;
 pub use self::sub::SubKind;
 pub use self::value::ValueKind;
 
+#[derive(Debug)]
+pub enum Style {
+    Value,
+    Flag,
+    True,
+}
+
 pub trait Kind
 where
     Self: Sized,
 {
-    fn parse(input: &mut ParseStream) -> syn::Result<(Self, bool)>;
+    fn parse(input: &mut ParseStream) -> syn::Result<(Self, Style)>;
 }
 
 #[derive(Debug, Clone)]
@@ -51,14 +58,21 @@ impl<T> Config<T> {
 
 impl<T: Kind> Parse for Config<T> {
     fn parse(mut input: ParseStream) -> syn::Result<Self> {
-        let (kind, has_value) = T::parse(&mut input)?;
+        let (kind, style) = T::parse(&mut input)?;
 
         Ok(Self {
             kind,
-            value: if has_value {
-                input.parse()?
-            } else {
-                Value::Null
+            value: match style {
+                Style::Value => input.parse()?,
+                Style::Flag => Value::Null,
+                Style::True => {
+                    input
+                        .parse()
+                        .unwrap_or(Value::Literal(syn::Lit::Bool(syn::LitBool {
+                            value: true,
+                            span: input.span(),
+                        })))
+                }
             },
         })
     }

@@ -1,6 +1,12 @@
 
 # Relase note
 
+## 1.2.0
+
+- Remove PrePolicy
+
+- Add a prepolicy for PolicySettings
+
 ## 1.1.0
 
 - Remove Ser type parameter from Policy

@@ -99,9 +99,9 @@ impl<'a> SubGenerator<'a> {
         let inner_ty = self.inner_ty();
         let policy_new = self.gen_sub_policy_new()?;
         let uid_ident = self.uid_ident();
-        let enable_prepolicy = self.config.has_cfg(SubKind::PrePolicy).then(|| {
+        let enable_prepolicy = self.config.find_value(SubKind::PrePolicy).map(|v| {
             quote! {
-                cote::prelude::PolicySettings::set_prepolicy(&mut policy, true);
+                cote::prelude::PolicySettings::set_prepolicy(&mut policy, #v);
             }
         });
         // using for access sub parser

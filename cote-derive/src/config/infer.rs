@@ -1,6 +1,7 @@
 use syn::Ident;
 
 use super::Kind;
+use super::Style;
 use crate::error;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -41,28 +42,28 @@ pub enum InferKind {
 }
 
 impl Kind for InferKind {
-    fn parse(input: &mut syn::parse::ParseStream) -> syn::Result<(Self, bool)> {
+    fn parse(input: &mut syn::parse::ParseStream) -> syn::Result<(Self, Style)> {
         let ident: Ident = input.parse()?;
         let option = ident.to_string();
 
         match option.as_str() {
-            "val" => Ok((Self::Val, true)),
-            "action" => Ok((Self::Action, true)),
-            "force" => Ok((Self::Force, true)),
-            "ctor" => Ok((Self::Ctor, true)),
-            "index" => Ok((Self::Index, true)),
-            "style" => Ok((Self::Style, true)),
-            "igname" => Ok((Self::IgName, true)),
-            "igalias" => Ok((Self::IgAlias, true)),
-            "igindex" => Ok((Self::IgIndex, true)),
-            "valid" => Ok((Self::Valid, true)),
-            "init" => Ok((Self::Init, true)),
-            "ty" => Ok((Self::Type, true)),
-            "map" => Ok((Self::Map, true)),
-            "mutable" => Ok((Self::Mutable, true)),
-            "tweak" => Ok((Self::Tweak, true)),
-            "fill" => Ok((Self::Fill, true)),
-            "override" => Ok((Self::Override, false)),
+            "val" => Ok((Self::Val, Style::Value)),
+            "action" => Ok((Self::Action, Style::Value)),
+            "force" => Ok((Self::Force, Style::Value)),
+            "ctor" => Ok((Self::Ctor, Style::Value)),
+            "index" => Ok((Self::Index, Style::Value)),
+            "style" => Ok((Self::Style, Style::Value)),
+            "igname" => Ok((Self::IgName, Style::Value)),
+            "igalias" => Ok((Self::IgAlias, Style::Value)),
+            "igindex" => Ok((Self::IgIndex, Style::Value)),
+            "valid" => Ok((Self::Valid, Style::Value)),
+            "init" => Ok((Self::Init, Style::Value)),
+            "ty" => Ok((Self::Type, Style::Value)),
+            "map" => Ok((Self::Map, Style::Value)),
+            "mutable" => Ok((Self::Mutable, Style::Value)),
+            "tweak" => Ok((Self::Tweak, Style::Value)),
+            "fill" => Ok((Self::Fill, Style::Value)),
+            "override" => Ok((Self::Override, Style::Flag)),
             _ => Err(error(
                 input.span(),
                 format!(

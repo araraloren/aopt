@@ -3,6 +3,7 @@ use quote::{quote, ToTokens};
 use syn::{Ident, Path};
 
 use super::Kind;
+use super::Style;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ArgKind {
@@ -46,38 +47,38 @@ pub enum ArgKind {
 }
 
 impl Kind for ArgKind {
-    fn parse(input: &mut syn::parse::ParseStream) -> syn::Result<(Self, bool)> {
+    fn parse(input: &mut syn::parse::ParseStream) -> syn::Result<(Self, Style)> {
         let path: Path = input.parse()?;
 
         if let Some(ident) = path.get_ident() {
             let kind_str = ident.to_string();
 
             Ok(match kind_str.as_str() {
-                "name" => (Self::Name, true),
-                "ty" => (Self::Type, true),
-                "hint" => (Self::Hint, true),
-                "help" => (Self::Help, true),
-                "value" => (Self::Value, true),
-                "values" => (Self::Values, true),
-                "alias" => (Self::Alias, true),
-                "index" => (Self::Index, true),
-                "force" => (Self::Force, true),
-                "action" => (Self::Action, true),
-                "valid" => (Self::Validator, true),
-                "on" => (Self::On, true),
-                "fallback" => (Self::Fallback, true),
-                "then" => (Self::Then, true),
-                "nodelay" => (Self::NoDelay, false),
-                "fetch" => (Self::Fetch, true),
-                "append" => (Self::Append, false),
-                "count" => (Self::Count, false),
-                method => (Self::MethodCall(method.to_owned()), true),
+                "name" => (Self::Name, Style::Value),
+                "ty" => (Self::Type, Style::Value),
+                "hint" => (Self::Hint, Style::Value),
+                "help" => (Self::Help, Style::Value),
+                "value" => (Self::Value, Style::Value),
+                "values" => (Self::Values, Style::Value),
+                "alias" => (Self::Alias, Style::Value),
+                "index" => (Self::Index, Style::Value),
+                "force" => (Self::Force, Style::Value),
+                "action" => (Self::Action, Style::Value),
+                "valid" => (Self::Validator, Style::Value),
+                "on" => (Self::On, Style::Value),
+                "fallback" => (Self::Fallback, Style::Value),
+                "then" => (Self::Then, Style::Value),
+                "nodelay" => (Self::NoDelay, Style::Flag),
+                "fetch" => (Self::Fetch, Style::Value),
+                "append" => (Self::Append, Style::Flag),
+                "count" => (Self::Count, Style::Flag),
+                method => (Self::MethodCall(method.to_owned()), Style::Value),
             })
         } else {
             let method = path.to_token_stream().to_string();
             let method = method.replace(char::is_whitespace, "");
 
-            Ok((Self::MethodCall(method), true))
+            Ok((Self::MethodCall(method), Style::Value))
         }
     }
 }

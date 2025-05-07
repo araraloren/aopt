@@ -3,6 +3,7 @@ use quote::{quote, ToTokens};
 use syn::{Ident, Path};
 
 use super::Kind;
+use super::Style;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SubKind {
@@ -32,31 +33,31 @@ pub enum SubKind {
 }
 
 impl Kind for SubKind {
-    fn parse(input: &mut syn::parse::ParseStream) -> syn::Result<(Self, bool)> {
+    fn parse(input: &mut syn::parse::ParseStream) -> syn::Result<(Self, Style)> {
         let path: Path = input.parse()?;
 
         if let Some(ident) = path.get_ident() {
             let kind_str = ident.to_string();
 
             Ok(match kind_str.as_str() {
-                "policy" => (Self::Policy, true),
-                "name" => (Self::Name, true),
-                "alias" => (Self::Alias, true),
-                "hint" => (Self::Hint, true),
-                "help" => (Self::Help, true),
-                "head" => (Self::Head, true),
-                "foot" => (Self::Foot, true),
-                "refopt" => (Self::Ref, false),
-                "mutopt" => (Self::Mut, false),
-                "force" => (Self::Force, true),
-                "prepolicy" => (Self::PrePolicy, false),
-                method => (Self::MethodCall(method.to_owned()), true),
+                "policy" => (Self::Policy, Style::Value),
+                "name" => (Self::Name, Style::Value),
+                "alias" => (Self::Alias, Style::Value),
+                "hint" => (Self::Hint, Style::Value),
+                "help" => (Self::Help, Style::Value),
+                "head" => (Self::Head, Style::Value),
+                "foot" => (Self::Foot, Style::Value),
+                "refopt" => (Self::Ref, Style::Flag),
+                "mutopt" => (Self::Mut, Style::Flag),
+                "force" => (Self::Force, Style::True),
+                "prepolicy" => (Self::PrePolicy, Style::True),
+                method => (Self::MethodCall(method.to_owned()), Style::Value),
             })
         } else {
             let method = path.to_token_stream().to_string();
             let method = method.replace(char::is_whitespace, "");
 
-            Ok((Self::MethodCall(method), true))
+            Ok((Self::MethodCall(method), Style::Value))
         }
     }
 }
