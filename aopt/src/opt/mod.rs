@@ -1,17 +1,13 @@
-pub(crate) mod action;
 pub(crate) mod aopt;
 pub(crate) mod config;
 pub(crate) mod creator;
 pub(crate) mod help;
-pub(crate) mod index;
 pub(crate) mod info;
 pub(crate) mod parser;
 #[cfg(feature = "serde")]
 pub(crate) mod serialize;
-pub(crate) mod style;
 pub(crate) mod value;
 
-pub use self::action::Action;
 pub use self::aopt::AOpt;
 pub use self::config::ConfigBuild;
 pub use self::config::ConfigBuildInfer;
@@ -24,7 +20,6 @@ pub use self::config::OptConfig;
 pub use self::creator::Cid;
 pub use self::creator::Creator;
 pub use self::help::Help;
-pub use self::index::Index;
 pub use self::info::ConstrctInfo;
 pub use self::info::Information;
 pub use self::parser::StrParser;
@@ -34,21 +29,20 @@ pub use self::serialize::Deserialize;
 pub use self::serialize::Serde;
 #[cfg(feature = "serde")]
 pub use self::serialize::Serialize;
-pub use self::style::Style;
 pub use self::value::OptValueExt;
 
-use std::any::TypeId;
+pub use crate::acore::opt::Action;
+pub use crate::acore::opt::Index;
+pub use crate::acore::opt::Opt;
+pub use crate::acore::opt::Style;
+pub use crate::acore::opt::BOOL_FALSE;
+pub use crate::acore::opt::BOOL_TRUE;
+
 use std::fmt::Debug;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
-use crate::value::ValAccessor;
 use crate::Error;
-use crate::Uid;
-
-pub const BOOL_TRUE: &str = "true";
-
-pub const BOOL_FALSE: &str = "false";
 
 /// Cmd represents a sub command flag wrapped the `bool` option, it is force required in default.
 ///
@@ -295,93 +289,4 @@ pub trait OptParser {
     type Error: Into<Error>;
 
     fn parse_opt(&self, pattern: &str) -> Result<Self::Output, Self::Error>;
-}
-
-pub trait Opt: Debug {
-    fn reset(&mut self);
-
-    fn uid(&self) -> Uid;
-
-    /// The name of option.
-    fn name(&self) -> &str;
-
-    /// The type of option.
-    fn r#type(&self) -> &TypeId;
-
-    /// The help hint of option such as `--flag`.
-    fn hint(&self) -> &str;
-
-    /// The help message of option.
-    fn help(&self) -> &str;
-
-    fn valid(&self) -> bool;
-
-    /// If the option matched.
-    fn matched(&self) -> bool;
-
-    /// If the option is force required.
-    fn force(&self) -> bool;
-
-    /// The associaed action of option.
-    fn action(&self) -> &Action;
-
-    /// The index of option.
-    fn index(&self) -> Option<&Index>;
-
-    /// The alias the option.
-    fn alias(&self) -> Option<&Vec<String>>;
-
-    fn accessor(&self) -> &ValAccessor;
-
-    fn accessor_mut(&mut self) -> &mut ValAccessor;
-
-    fn ignore_alias(&self) -> bool;
-
-    fn ignore_name(&self) -> bool;
-
-    fn ignore_index(&self) -> bool;
-
-    fn set_uid(&mut self, uid: Uid);
-
-    fn set_matched(&mut self, matched: bool);
-
-    fn mat_style(&self, style: Style) -> bool;
-
-    fn mat_force(&self, force: bool) -> bool;
-
-    fn mat_name(&self, name: Option<&str>) -> bool;
-
-    fn mat_alias(&self, name: &str) -> bool;
-
-    fn mat_index(&self, index: Option<(usize, usize)>) -> bool;
-
-    fn init(&mut self) -> Result<(), Error>;
-
-    fn set_name(&mut self, name: impl Into<String>) -> &mut Self;
-
-    fn set_type(&mut self, r#type: TypeId) -> &mut Self;
-
-    fn set_value(&mut self, value: ValAccessor) -> &mut Self;
-
-    fn set_hint(&mut self, hint: impl Into<String>) -> &mut Self;
-
-    fn set_help(&mut self, help: impl Into<String>) -> &mut Self;
-
-    fn set_action(&mut self, action: Action) -> &mut Self;
-
-    fn set_style(&mut self, styles: Vec<Style>) -> &mut Self;
-
-    fn set_index(&mut self, index: Option<Index>) -> &mut Self;
-
-    fn set_force(&mut self, force: bool) -> &mut Self;
-
-    fn add_alias(&mut self, name: impl Into<String>) -> &mut Self;
-
-    fn rem_alias(&mut self, name: &str) -> &mut Self;
-
-    fn set_ignore_name(&mut self, ignore_name: bool) -> &mut Self;
-
-    fn set_ignore_alias(&mut self, ignore_alias: bool) -> &mut Self;
-
-    fn set_ignore_index(&mut self, ignore_index: bool) -> &mut Self;
 }

@@ -1,44 +1,33 @@
 [package]
-name = "cote"
-version = "0.14.2"
+name = "aopt-core"
+version = "1.0.0"
 authors = [
     "araraloren <blackcatoverwall@gmail.com>",
 ]
 edition = "2021"
 license = "MPL-2.0"
-description = "Quickly build your command line utils"
+description = "A flexible and typed getopt tools"
 repository = "https://github.com/araraloren/aopt/"
 keywords = ["getopt", "cli"]
 categories = ["command-line-interface"]
-
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aopt = { workspace = true }
-aopt-help.workspace = true
-cote-derive.workspace = true
+ahash.workspace = true
+neure.workspace = true
 serde = { workspace = true, optional = true }
-
-[dev-dependencies]
-color-eyre.workspace = true
-regex.workspace = true
-serde_json.workspace = true
-tokio.workspace = true
+tracing = { workspace = true, optional = true }
 
 [features]
 default = []
-sync = ["aopt/sync"]
-serde = ["aopt/serde", "serde/derive"]
-log = ["aopt/log"]
-shell = ["aopt/shell"]
+sync = []
+log = ["tracing"]
+serde = ["serde/derive"]
 
 [package.metadata.docs.rs]
 all-features = true
-cargo-args = [
-    "-Zunstable-options",
-    "-Zrustdoc-scrape-examples",
-]
 rustdoc-args = [
     "--cfg",
     "docsrs",

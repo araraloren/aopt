@@ -7,8 +7,8 @@ use std::ops::RangeInclusive;
 use std::ops::RangeTo;
 use std::ops::RangeToInclusive;
 
+use crate::err::Error;
 use crate::raise_error;
-use crate::Error;
 
 /// Index using for option match.
 ///

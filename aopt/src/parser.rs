@@ -24,6 +24,8 @@ pub use self::storage::UsrValService;
 pub use self::style::OptStyleManager;
 pub use self::style::UserStyle;
 
+pub use crate::acore::parser::Action;
+
 use std::fmt::Debug;
 use std::ops::Deref;
 use std::ops::DerefMut;
@@ -90,15 +92,6 @@ pub trait Policy {
         inv: &mut Self::Inv<'_>,
         args: Args,
     ) -> Result<Self::Ret, Self::Error>;
-}
-
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Debug, Clone, Default, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Action {
-    Stop,
-    Quit,
-    #[default]
-    Null,
 }
 
 pub trait PolicySettings {

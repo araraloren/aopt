@@ -1,44 +1,33 @@
 #![doc = include_str!("../README.md")]
-pub mod args;
 pub mod ctx;
-pub mod err;
 pub mod guess;
-pub mod map;
 pub mod opt;
 pub mod parser;
 pub mod set;
 #[cfg(feature = "shell")]
 pub mod shell;
-pub mod str;
 pub mod value;
 
-pub type Uid = u64;
-pub type HashMap<K, V> = ahash::HashMap<K, V>;
+pub use aopt_core as acore;
 
-#[cfg(feature = "sync")]
-pub type ARef<T> = std::sync::Arc<T>;
-#[cfg(not(feature = "sync"))]
-pub type ARef<T> = std::rc::Rc<T>;
+pub use crate::acore::args;
+pub use crate::acore::err;
+pub use crate::acore::map;
+pub use crate::acore::raise_error;
+pub use crate::acore::raise_failure;
+pub use crate::acore::str;
+pub use crate::acore::ARef;
+pub use crate::acore::HashMap;
+pub use crate::acore::Uid;
 
-#[cfg(feature = "log")]
-pub(crate) use tracing::trace;
-#[cfg(not(feature = "log"))]
-#[macro_use]
-pub(crate) mod log {
-    #[macro_export]
-    macro_rules! trace {
-        ($($arg:tt)*) => {};
-    }
-}
+pub(crate) use crate::acore::trace;
 
 pub use crate::err::Error;
 pub use crate::err::Result;
 
-use std::any::TypeId;
-
 /// Get the [`TypeId`](std::any::TypeId) of type `T`.
-pub(crate) fn typeid<T: ?Sized + 'static>() -> TypeId {
-    TypeId::of::<T>()
+pub(crate) fn typeid<T: ?Sized + 'static>() -> std::any::TypeId {
+    std::any::TypeId::of::<T>()
 }
 
 #[derive(Debug)]

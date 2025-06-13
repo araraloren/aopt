@@ -8,25 +8,19 @@ use crate::HashMap;
 
 #[cfg(all(feature = "sync", not(feature = "log")))]
 mod __erased_ty {
-    use crate::HashMap;
     use std::any::Any;
-    use std::any::TypeId;
 
     pub trait ErasedTy: Any + Sync + Send + 'static {}
 
     impl<T: Any + Sync + Send + 'static> ErasedTy for T {}
 
     pub type BoxedAny = Box<dyn Any + Send + Sync>;
-
-    #[derive(Default)]
-    pub struct AnyMap(pub(crate) HashMap<TypeId, BoxedAny>);
 }
 
 #[cfg(all(feature = "sync", feature = "log"))]
 mod __erased_ty {
-    use crate::HashMap;
+
     use std::any::Any;
-    use std::any::TypeId;
     use std::fmt::Debug;
 
     pub trait ErasedTy: Any + Debug + Sync + Send + 'static {}
@@ -34,32 +28,22 @@ mod __erased_ty {
     impl<T: Any + Debug + Sync + Send + 'static> ErasedTy for T {}
 
     pub type BoxedAny = Box<dyn Any + Send + Sync>;
-
-    #[derive(Default)]
-    pub struct AnyMap(pub(crate) HashMap<TypeId, BoxedAny>);
 }
 
 #[cfg(all(not(feature = "sync"), not(feature = "log")))]
 mod __erased_ty {
-    use crate::HashMap;
     use std::any::Any;
-    use std::any::TypeId;
 
     pub trait ErasedTy: Any + 'static {}
 
     impl<T: Any + 'static> ErasedTy for T {}
 
     pub type BoxedAny = Box<dyn Any>;
-
-    #[derive(Default)]
-    pub struct AnyMap(pub(crate) HashMap<TypeId, BoxedAny>);
 }
 
 #[cfg(all(not(feature = "sync"), feature = "log"))]
 mod __erased_ty {
-    use crate::HashMap;
     use std::any::Any;
-    use std::any::TypeId;
     use std::fmt::Debug;
 
     pub trait ErasedTy: Any + Debug + 'static {}
@@ -67,14 +51,12 @@ mod __erased_ty {
     impl<T: Any + Debug + 'static> ErasedTy for T {}
 
     pub type BoxedAny = Box<dyn Any>;
-
-    #[derive(Default)]
-    pub struct AnyMap(pub(crate) HashMap<TypeId, BoxedAny>);
 }
 
-pub use __erased_ty::AnyMap;
-pub use __erased_ty::BoxedAny;
-pub use __erased_ty::ErasedTy;
+pub use __erased_ty::*;
+
+#[derive(Default)]
+pub struct AnyMap(pub(crate) HashMap<TypeId, BoxedAny>);
 
 impl Debug for AnyMap {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

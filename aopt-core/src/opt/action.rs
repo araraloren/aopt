@@ -1,15 +1,8 @@
 use std::ffi::OsStr;
 use std::ffi::OsString;
 
-use crate::ctx::Store;
 use crate::map::ErasedTy;
-use crate::set::SetExt;
-use crate::set::SetOpt;
 use crate::value::AnyValue;
-use crate::Error;
-use crate::Uid;
-
-use super::Opt;
 
 /// The default action type for option value saving, see [`Action::process`].
 #[non_exhaustive]
@@ -114,48 +107,6 @@ impl Action {
             }
         }
         ret
-    }
-}
-
-/// Default store using for store value to [`ValStorer`](crate::value::ValStorer).
-/// It will store `OsString` and `Val` if `val` is `Some(Val)`, otherwise do nothing.
-///
-/// Note: The [`ValStorer`](crate::value::ValStorer) internal using an [`vec`] saving the option value.
-///
-/// * [`Action::Set`] : Set the option value to `vec![ val ]`.
-///
-/// * [`Action::App`] : Append the value to value vector.
-///
-/// * [`Action::Pop`] : Pop last value from value vector.
-///
-/// * [`Action::Cnt`] : Count the value and save the count as `vec![cnt]`.
-///
-/// * [`Action::Clr`] : Clear all the value from value vector.
-///
-/// * [`Action::Null`] : Do nothing.
-impl<Set, Val> Store<Set, Val> for Action
-where
-    Val: ErasedTy,
-    SetOpt<Set>: Opt,
-    Set: crate::set::Set,
-{
-    type Ret = bool;
-
-    type Error = Error;
-
-    fn process(
-        &mut self,
-        uid: Uid,
-        set: &mut Set,
-        raw: Option<&OsStr>,
-        val: Option<Val>,
-    ) -> Result<Self::Ret, Self::Error> {
-        let opt = set.opt_mut(uid)?;
-
-        crate::trace!("storing value of {} = `{:?}`", opt.name(), raw);
-        let (raw_handler, handler) = opt.accessor_mut().handlers();
-        // Set the value if return Some(Value)
-        Ok(self.store2(raw, val, raw_handler, handler))
     }
 }
 

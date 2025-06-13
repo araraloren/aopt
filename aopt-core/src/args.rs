@@ -4,7 +4,6 @@ use std::ffi::OsString;
 use std::fmt::Display;
 use std::ops::Deref;
 
-use crate::parser::Return;
 use crate::str::CowOsStrUtils;
 use crate::ARef;
 use crate::Error;
@@ -37,9 +36,9 @@ impl<'a> ArgInfo<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # use aopt::prelude::*;
-    /// # use aopt::Error;
-    /// # use aopt::args::ArgInfo;
+    /// # use aopt_core::args::Args;
+    /// # use aopt_core::Error;
+    /// # use aopt_core::args::ArgInfo;
     /// # use std::ffi::OsStr;
     /// #
     /// # fn main() -> Result<(), Error> {
@@ -125,24 +124,6 @@ impl<T: Into<OsString>, I: IntoIterator<Item = T>> From<I> for Args {
 impl From<Args> for Vec<OsString> {
     fn from(value: Args) -> Self {
         value.unwrap_or_clone()
-    }
-}
-
-impl From<Return> for Args {
-    fn from(mut value: Return) -> Self {
-        Self::new(value.take_args().into_iter())
-    }
-}
-
-impl From<&Return> for Args {
-    fn from(value: &Return) -> Self {
-        Self::new(value.clone_args().into_iter())
-    }
-}
-
-impl From<&mut Return> for Args {
-    fn from(value: &mut Return) -> Self {
-        Self::new(value.take_args().into_iter())
     }
 }
 

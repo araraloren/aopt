@@ -19,8 +19,10 @@ use crate::Error;
 ///
 /// # Example
 /// ```rust
-/// # use aopt::prelude::*;
-/// # use aopt::Error;
+/// # use aopt_core::ctx::*;
+/// # use aopt_core::opt::Action;
+/// # use aopt_core::value::*;
+/// # use aopt_core::Error;
 /// #
 /// # use std::ffi::OsStr;
 /// #
@@ -197,6 +199,20 @@ impl ValAccessor {
     }
 }
 
+impl Deref for ValAccessor {
+    type Target = AnyValue;
+
+    fn deref(&self) -> &Self::Target {
+        &self.any_value
+    }
+}
+
+impl DerefMut for ValAccessor {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.any_value
+    }
+}
+
 impl ErasedValue for ValAccessor {
     fn initialize(&mut self) -> Result<(), Error> {
         let handler = &mut self.any_value;
@@ -299,19 +315,5 @@ impl ErasedValue for ValAccessor {
 
     fn take_rawvals<U: ErasedTy>(&mut self) -> Result<Vec<OsString>, Error> {
         Ok(std::mem::take(&mut self.rawval))
-    }
-}
-
-impl Deref for ValAccessor {
-    type Target = AnyValue;
-
-    fn deref(&self) -> &Self::Target {
-        &self.any_value
-    }
-}
-
-impl DerefMut for ValAccessor {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.any_value
     }
 }

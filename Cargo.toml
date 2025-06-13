@@ -2,7 +2,9 @@
 
 members = [
     "aopt",
+    "aopt-core",
     "aopt-help",
+    "aopt-shell",
     "cote",
     "cote-derive",
     "index-constituent",
@@ -12,7 +14,9 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-aopt = { path = "aopt", version = "1.2" }
+aopt-core = { path = "aopt-core", version = "1.0" }
+aopt-shell = { path = "aopt-shell", version = "0.1" }
+aopt = { path = "aopt", version = "1.3" }
 aopt-help = { path = "aopt-help", version = "0.3" }
 cote = { path = "cote", version = "0.14" }
 cote-derive = { path = "cote-derive", version = "0.11" }
@@ -30,7 +34,7 @@ reqwest = { version = "0.12", features = [
     "cookies",
 ] }
 tracing = { version = "0.1" }
-tokio = { version = "1.23", features = ["full"] }
+tokio = { version = "1.45", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tracing-subscriber = { version = "0.3", features = [

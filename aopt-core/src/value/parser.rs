@@ -4,7 +4,6 @@ use std::io::Stdin;
 use std::path::PathBuf;
 
 use crate::ctx::Ctx;
-use crate::value::Stop;
 use crate::Error;
 
 /// Implement this if you want parsing the raw value into your type.
@@ -113,38 +112,6 @@ impl RawValParser for PathBuf {
     }
 }
 
-/// A special option value, using for implement `-`.
-///
-/// # Example
-/// ```
-/// use aopt::prelude::*;
-///
-/// fn main() -> Result<(), Box<dyn std::error::Error>> {
-///
-///     let mut parser = AFwdParser::default();
-///
-///     parser.set_strict(true);
-///     parser.add_opt("stdin=b".infer::<std::io::Stdin>())?;
-///
-///     // -w will processed, it is set before `--`
-///     parser.add_opt("-w=i")?;
-///
-///     // -o will not processed, it is set after `--`
-///     parser.add_opt("-o=s")?;
-///
-///     // fo will processed, it is not an option
-///     parser.add_opt("foo=p@1")?;
-///
-///     parser.parse(Args::from(
-///         ["app", "-w=42", "-", "foo"].into_iter(),
-///     ))?;
-///
-///     assert_eq!(parser.find_val::<i64>("-w")?, &42);
-///     assert!(parser.find_val::<std::io::Stdin>("-").is_ok());
-///     assert_eq!(parser.find_val::<bool>("foo")?, &true);
-///     Ok(())
-/// }
-/// ```
 impl RawValParser for Stdin {
     type Error = Error;
 
@@ -155,21 +122,6 @@ impl RawValParser for Stdin {
             Ok(std::io::stdin())
         } else {
             Err(Error::sp_rawval(raw, "except `-` for Stdin").with_uid(ctx.uid()?))
-        }
-    }
-}
-
-impl RawValParser for Stop {
-    type Error = Error;
-
-    fn parse(raw: Option<&OsStr>, ctx: &Ctx) -> Result<Self, Self::Error> {
-        const STOP: &str = "--";
-
-        if ctx.name()?.map(|v| v.as_ref()) == Some(STOP) {
-            ctx.set_policy_act(crate::parser::Action::Stop);
-            Ok(Stop)
-        } else {
-            Err(Error::sp_rawval(raw, "except `--` for Stop").with_uid(ctx.uid()?))
         }
     }
 }

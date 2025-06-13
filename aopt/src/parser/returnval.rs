@@ -142,3 +142,21 @@ impl From<&mut Return> for bool {
         value.status()
     }
 }
+
+impl From<Return> for Args {
+    fn from(mut value: Return) -> Self {
+        Self::new(value.take_args().into_iter())
+    }
+}
+
+impl From<&Return> for Args {
+    fn from(value: &Return) -> Self {
+        Self::new(value.clone_args().into_iter())
+    }
+}
+
+impl From<&mut Return> for Args {
+    fn from(value: &mut Return) -> Self {
+        Self::new(value.take_args().into_iter())
+    }
+}

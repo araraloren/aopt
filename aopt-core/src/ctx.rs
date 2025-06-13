@@ -141,11 +141,11 @@ impl Display for InnerCtx<'_> {
 /// It saved the option information and matched arguments.
 #[derive(Debug, Default)]
 pub struct Ctx<'a> {
-    pub(crate) orig: Args,
+    pub orig: Args,
 
-    pub(crate) args: Vec<&'a OsStr>,
+    pub args: Vec<&'a OsStr>,
 
-    pub(crate) inner_ctx: Option<InnerCtx<'a>>,
+    pub inner_ctx: Option<InnerCtx<'a>>,
 
     #[cfg(not(feature = "sync"))]
     action: std::cell::RefCell<Action>,

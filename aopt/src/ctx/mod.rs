@@ -1,11 +1,8 @@
-pub(crate) mod context;
 #[cfg_attr(feature = "sync", path = "../sync/ctx/invoke.rs")]
 #[cfg_attr(not(feature = "sync"), path = "invoke.rs")]
 pub(crate) mod invoke;
 pub(crate) mod store;
 
-pub use self::context::Ctx;
-pub use self::context::InnerCtx;
 pub use self::invoke::HandlerCollection;
 pub use self::invoke::HandlerEntry;
 pub use self::invoke::HandlerEntryThen;
@@ -14,6 +11,9 @@ pub use self::invoke::Invoker;
 pub use self::store::NullStore;
 pub use self::store::Store;
 pub use self::store::VecStore;
+
+pub use crate::acore::ctx::Ctx;
+pub use crate::acore::ctx::InnerCtx;
 
 use crate::opt::Opt;
 use crate::set::SetExt;
