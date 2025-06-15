@@ -280,7 +280,7 @@ macro_rules! ctors {
     };
     ($type:ident, $($creator:ident),+) => {
         {
-            let mut ret = $crate::HashMap::new();
+            let mut ret = $crate::HashMap::default();
 
             $(
                 ret.insert(

@@ -30,7 +30,7 @@ pub use crate::ashell::value;
 pub use crate::ashell::Context;
 
 #[derive(Debug)]
-pub struct Arguments {
+pub struct CompleteCli {
     pub args: Vec<OsString>,
 
     pub curr: OsString,
@@ -42,7 +42,7 @@ pub struct Arguments {
     pub script: bool,
 }
 
-impl Arguments {
+impl CompleteCli {
     pub fn parse_env() -> Result<Self, Error> {
         Self::parse(Args::from_env())
     }
@@ -63,7 +63,7 @@ impl Arguments {
 
         args.remove(0);
         if let Ok(shell) = parser.take_val("--_shell") {
-            let script = curr.is_ok() && prev.is_ok();
+            let script = curr.is_err() && prev.is_err();
             let curr = curr.unwrap_or_default();
             let prev = prev.unwrap_or_default();
 
@@ -81,6 +81,51 @@ impl Arguments {
 
     pub fn get_context<O: Opt>(&self) -> Result<Context<'_, O>, Error> {
         Ok(Context::new(&self.args, &self.curr, &self.prev))
+    }
+
+    pub fn gen_with<F>(&self, mut func: F) -> Result<(), Error>
+    where
+        F: FnMut(&mut Box<dyn crate::shell::script::Generator<Err = Error>>) -> Result<(), Error>,
+    {
+        if self.script {
+            let mut m = crate::ashell::script::Manager::default();
+
+            func(m.find_mut(&self.shell)?)
+        } else {
+            Err(crate::error!(
+                "can not generate string: script = {}",
+                self.script
+            ))
+        }
+    }
+
+    pub fn write_stdout(&self, name: &str, bin: &str) -> Result<(), Error> {
+        self.gen_with(|g| {
+            print!("{}", g.generate(name, bin)?);
+            std::io::Write::flush(&mut std::io::stdout())
+                .map_err(|e| crate::error!("can not flush stdout: {e:?}"))?;
+            Ok(())
+        })
+    }
+
+    pub fn complete<'a, O, W, F>(&self, mut func: F) -> Result<(), Error>
+    where
+        W: std::io::Write + 'a,
+        O: crate::opt::Opt + 'a,
+        F: FnMut(
+            &mut Box<dyn crate::shell::shell::Shell<O, W, Err = Error> + 'a>,
+        ) -> Result<(), Error>,
+    {
+        if !self.script {
+            let mut m = crate::ashell::shell::Manager::<'a, O, W>::default();
+
+            func(m.find_mut(&self.shell)?)
+        } else {
+            Err(crate::error!(
+                "can not perform completion: script = {}",
+                self.script
+            ))
+        }
     }
 }
 
@@ -262,6 +307,6 @@ where
 }
 
 /// Return [`Arguments`] if command line arguments has `--_shell` option.
-pub fn try_get_arguments() -> Result<Arguments, Error> {
-    Arguments::parse_env()
+pub fn get_complete_cli() -> Result<CompleteCli, Error> {
+    CompleteCli::parse_env()
 }

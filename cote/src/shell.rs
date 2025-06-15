@@ -13,13 +13,16 @@ use aopt::shell::shell::complete_cmd;
 use aopt::shell::shell::complete_eq;
 use aopt::shell::shell::complete_opt;
 use aopt::shell::shell::complete_val;
-use aopt::shell::shell::Complete;
 use aopt::shell::shell::Shell;
 use aopt::shell::Context;
 use aopt::trace;
 
 use crate::parser::Parser;
 use crate::Error;
+
+pub use aopt::shell::get_complete_cli;
+pub use aopt::shell::shell::Complete;
+pub use aopt::shell::CompleteCli;
 
 impl<'a, S> Complete<SetOpt<S>> for Parser<'a, S>
 where

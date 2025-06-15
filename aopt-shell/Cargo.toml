@@ -17,6 +17,12 @@ readme = "README.md"
 [dependencies]
 aopt-core.workspace = true
 
+[features]
+default = []
+sync = ["aopt-core/sync"]
+log = ["aopt-core/log"]
+serde = ["aopt-core/serde"]
+
 [package.metadata.docs.rs]
 all-features = true
 cargo-args = [

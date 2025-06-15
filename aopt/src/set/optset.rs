@@ -1,15 +1,13 @@
 use std::borrow::Cow;
 use std::fmt::Debug;
 
-use ahash::HashMapExt;
-
+use crate::error;
 use crate::opt::Cid;
 use crate::opt::ConfigBuild;
 use crate::opt::ConfigValue;
 use crate::opt::Information;
 use crate::opt::Opt;
 use crate::opt::OptParser;
-use crate::error;
 use crate::set::Ctor;
 use crate::set::Filter;
 use crate::set::FilterMatcher;
@@ -77,7 +75,7 @@ where
             parser,
             validator,
             opts: vec![],
-            creators: HashMap::new(),
+            creators: HashMap::default(),
         }
     }
 }

@@ -1,4 +1,4 @@
-use std::fmt::Write;
+use std::io::Write;
 use std::marker::PhantomData;
 
 use crate::acore::Error;

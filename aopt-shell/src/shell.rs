@@ -4,14 +4,14 @@ pub(crate) mod ps1;
 pub(crate) mod zsh;
 
 use std::ffi::OsStr;
-use std::fmt::Write;
+use std::io::Write;
 
-use crate::Error;
-use crate::acore::HashMap;
 use crate::acore::opt::Opt;
 use crate::acore::opt::Style;
 use crate::acore::trace;
+use crate::acore::HashMap;
 use crate::value::Values;
+use crate::Error;
 
 pub use bash::Bash;
 pub use fish::Fish;

@@ -1,8 +1,8 @@
-use std::fmt::Write;
+use std::io::Write;
 use std::marker::PhantomData;
 
-use crate::acore::Error;
 use crate::acore::opt::Opt;
+use crate::acore::Error;
 use crate::shell::Shell;
 
 pub struct Zsh<O, W> {

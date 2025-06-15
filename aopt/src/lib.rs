@@ -20,6 +20,8 @@ pub use crate::acore::HashMap;
 pub use crate::acore::Uid;
 
 pub(crate) use aopt_core as acore;
+
+#[cfg(feature = "shell")]
 pub(crate) use aopt_shell as ashell;
 
 pub use crate::err::Error;
