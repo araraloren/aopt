@@ -9,7 +9,6 @@ use aopt::prelude::SetOpt;
 use aopt::prelude::SetValueFindExt;
 use aopt::prelude::Style;
 use aopt::shell::shell;
-use aopt::shell::shell::complete_cmd;
 use aopt::shell::shell::complete_eq;
 use aopt::shell::shell::complete_opt;
 use aopt::shell::shell::complete_val;
@@ -74,16 +73,24 @@ where
             }
         }
 
+        let mut available_cmds = vec![];
+
         // find cmd if val is none
-        if val.is_none() {
-            if let Some(parser) = parsers.last() {
-                trace!("try complete cmd");
-                if complete_cmd(
-                    arg.to_str().unwrap_or_default(),
-                    parser.iter(),
-                    |cmd, opt| s.write_cmd(cmd, opt),
-                )? {
-                    return Ok(());
+        if let (Some(parser), None) = (parsers.last(), &val) {
+            trace!("try complete cmd");
+            let arg = arg.to_str().unwrap_or_default();
+
+            for opt in parser.iter().filter(|v| v.mat_style(Style::Cmd)) {
+                for name in std::iter::once(opt.name())
+                    .chain(
+                        opt.alias()
+                            .iter()
+                            .flat_map(|v| v.iter().map(|v| v.as_str())),
+                    )
+                    .filter(|v| v.starts_with(arg))
+                {
+                    trace!("available cmd -> {name}");
+                    available_cmds.push((name, opt));
                 }
             }
         }
@@ -103,6 +110,8 @@ where
             }
         }
 
+        let mut found_val = false;
+
         // find option value like [arg val]
         if let (Some(arg), Some(val)) = (prev.to_str(), Some(&arg)) {
             let bytes = val.as_encoded_bytes();
@@ -112,22 +121,28 @@ where
                 .iter()
                 .filter(|v| v.split(&Cow::Borrowed(arg)).is_ok())
             {
-                complete_val(arg, bytes, p.iter(), values, |val, opt| {
-                    s.write_val(val, opt)
-                })?;
+                found_val = found_val
+                    || complete_val(arg, bytes, p.iter(), values, |val, opt| {
+                        s.write_val(val, opt)
+                    })?;
             }
         }
 
+        if !found_val && !available_cmds.is_empty() {
+            for (cmd, opt) in available_cmds {
+                s.write_cmd(cmd, opt)?;
+            }
+            return s.finish();
+        }
+
         // find option if val is none
-        if val.is_none() {
-            if let Some(arg) = arg.to_str() {
-                trace!("search option with arg=`{}`", arg);
-                for p in parsers
-                    .iter()
-                    .filter(|v| v.split(&Cow::Borrowed(arg)).is_ok())
-                {
-                    complete_opt(arg, p.iter(), |name, opt| s.write_opt(name, opt))?;
-                }
+        if let (Some(arg), None) = (arg.to_str(), val) {
+            trace!("search option with arg=`{}`", arg);
+            for p in parsers
+                .iter()
+                .filter(|v| v.split(&Cow::Borrowed(arg)).is_ok())
+            {
+                complete_opt(arg, p.iter(), |name, opt| s.write_opt(name, opt))?;
             }
         }
 
