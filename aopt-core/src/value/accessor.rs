@@ -12,7 +12,7 @@ use super::ValValidator;
 use crate::ctx::Ctx;
 use crate::map::ErasedTy;
 use crate::opt::Action;
-use crate::raise_error;
+use crate::error;
 use crate::Error;
 
 /// [`ValAccessor`] manage the option value and raw value.
@@ -271,7 +271,7 @@ impl ErasedValue for ValAccessor {
 
     fn take_val<U: ErasedTy>(&mut self) -> Result<U, Error> {
         self.any_value.pop().ok_or_else(|| {
-            raise_error!(
+            error!(
                 "can not take more value for type `{:?}` in ErasedVal(take_val)",
                 type_name::<U>()
             )
@@ -280,7 +280,7 @@ impl ErasedValue for ValAccessor {
 
     fn take_vals<U: ErasedTy>(&mut self) -> Result<Vec<U>, Error> {
         self.any_value.remove().ok_or_else(|| {
-            raise_error!(
+            error!(
                 "can not take more values for type `{:?}` in ErasedVal(take_vals)",
                 type_name::<U>()
             )
@@ -290,13 +290,13 @@ impl ErasedValue for ValAccessor {
     fn rawval(&self) -> Result<&OsString, Error> {
         self.rawval
             .last()
-            .ok_or_else(|| raise_error!("no more raw value in accessor"))
+            .ok_or_else(|| error!("no more raw value in accessor"))
     }
 
     fn rawval_mut(&mut self) -> Result<&mut OsString, Error> {
         self.rawval
             .last_mut()
-            .ok_or_else(|| raise_error!("no more raw value in accessor"))
+            .ok_or_else(|| error!("no more raw value in accessor"))
     }
 
     fn rawvals(&self) -> Result<&Vec<OsString>, Error> {
@@ -310,7 +310,7 @@ impl ErasedValue for ValAccessor {
     fn take_rawval<U: ErasedTy>(&mut self) -> Result<OsString, Error> {
         self.rawval
             .pop()
-            .ok_or_else(|| raise_error!("no more raw value in accessor"))
+            .ok_or_else(|| error!("no more raw value in accessor"))
     }
 
     fn take_rawvals<U: ErasedTy>(&mut self) -> Result<Vec<OsString>, Error> {

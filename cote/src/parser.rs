@@ -4,6 +4,7 @@ use std::ops::DerefMut;
 
 use aopt::ctx::Ctx;
 use aopt::ctx::HandlerEntry;
+use aopt::error;
 use aopt::parser::AppServices;
 use aopt::parser::AppStorage;
 use aopt::prelude::Args;
@@ -20,7 +21,6 @@ use aopt::prelude::PolicyParser;
 use aopt::prelude::Set;
 use aopt::prelude::SetCfg;
 use aopt::prelude::SetOpt;
-use aopt::raise_error;
 use aopt::set::PrefixedValidator;
 use aopt::set::SetValueFindExt;
 use aopt::Error;
@@ -191,27 +191,27 @@ impl<'a, S> Parser<'a, S> {
     pub fn parser(&self, id: usize) -> Result<&Self, Error> {
         self.sub_parsers
             .get(id)
-            .ok_or_else(|| aopt::raise_error!("can not find parser at index {}", id))
+            .ok_or_else(|| aopt::error!("can not find parser at index {}", id))
     }
 
     pub fn parser_mut(&mut self, id: usize) -> Result<&mut Self, Error> {
         self.sub_parsers
             .get_mut(id)
-            .ok_or_else(|| aopt::raise_error!("can not find parser at index {}", id))
+            .ok_or_else(|| aopt::error!("can not find parser at index {}", id))
     }
 
     pub fn find_parser(&self, name: &str) -> Result<&Self, Error> {
         self.sub_parsers
             .iter()
             .find(|v| v.name() == name)
-            .ok_or_else(|| aopt::raise_error!("can not find parser named {}", name))
+            .ok_or_else(|| aopt::error!("can not find parser named {}", name))
     }
 
     pub fn find_parser_mut(&mut self, name: &str) -> Result<&mut Self, Error> {
         self.sub_parsers
             .iter_mut()
             .find(|v| v.name() == name)
-            .ok_or_else(|| aopt::raise_error!("can not find parser named {}", name))
+            .ok_or_else(|| aopt::error!("can not find parser named {}", name))
     }
 
     pub fn add_parser(&mut self, parser: Self) -> &mut Self {
@@ -700,7 +700,7 @@ impl<S: Set> HelpDisplay<S> for Parser<'_, S> {
         let usage_width = ctx.usagew();
 
         crate::help::display_set_help(set, name, head, foot, max_width, usage_width)
-            .map_err(|e| aopt::Error::raise_error(format!("Can not show help message: {:?}", e)))
+            .map_err(|e| aopt::error!("Can not show help message: {:?}", e))
     }
 
     fn display_sub(&self, names: Vec<&str>, ctx: &HelpContext) -> Result<(), Self::Error> {
@@ -744,9 +744,7 @@ where
                             max_width,
                             usage_width,
                         )
-                        .map_err(|e| {
-                            aopt::Error::raise_error(format!("Can not show help message: {:?}", e))
-                        })
+                        .map_err(|e| aopt::error!("Can not show help message: {:?}", e))
                     };
                 } else if i < max && name == self.name() {
                     if let Some(name) = names.get(i + 1) {
@@ -761,7 +759,7 @@ where
                 }
             }
         }
-        Err(raise_error!(
+        Err(error!(
             "Can not display help message for names `{names:?}` with context: {ctx:?}"
         ))
     }

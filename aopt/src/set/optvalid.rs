@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use crate::str::CowStrUtils;
-use crate::{raise_error, Error};
+use crate::{error, Error};
 
 pub trait OptValidator {
     type Error: Into<Error>;
@@ -85,7 +85,7 @@ impl OptValidator for PrefixOptValidator {
                 return Ok(name.split_at(prefix.len()));
             }
         }
-        Err(raise_error!(
+        Err(error!(
             "can not split the {}: invalid option name string",
             name
         ))
@@ -97,7 +97,7 @@ impl PrefixedValidator for PrefixOptValidator {
 
     fn reg_prefix(&mut self, val: &str) -> Result<(), Self::Error> {
         if self.0.iter().any(|v| v == val) {
-            Err(raise_error!("the prefix already exist"))
+            Err(error!("the prefix already exist"))
         } else {
             self.add_prefix(val);
             Ok(())
@@ -109,7 +109,7 @@ impl PrefixedValidator for PrefixOptValidator {
             self.0.remove(index);
             Ok(())
         } else {
-            Err(raise_error!("the prefix not exist"))
+            Err(error!("the prefix not exist"))
         }
     }
 }

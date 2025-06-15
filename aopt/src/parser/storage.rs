@@ -6,7 +6,7 @@ use std::ops::DerefMut;
 use crate::map::AnyMap;
 use crate::map::Entry;
 use crate::map::ErasedTy;
-use crate::raise_error;
+use crate::error;
 use crate::Error;
 
 pub trait AppStorage {
@@ -76,7 +76,7 @@ impl AppStorage for AppServices {
 
     fn take_app_data<T: ErasedTy>(&mut self) -> Result<T, Error> {
         self.0.remove::<T>().ok_or_else(|| {
-            raise_error!(
+            error!(
                 "can not take value type `{}` from AppServices",
                 type_name::<T>()
             )
@@ -182,7 +182,7 @@ impl UsrValService {
 
     pub fn val<T: ErasedTy>(&self) -> Result<&T, Error> {
         self.get::<T>().ok_or_else(|| {
-            raise_error!(
+            error!(
                 "can not find reference for type `{:?}` in UsrValService",
                 type_name::<T>()
             )
@@ -191,7 +191,7 @@ impl UsrValService {
 
     pub fn val_mut<T: ErasedTy>(&mut self) -> Result<&mut T, Error> {
         self.get_mut::<T>().ok_or_else(|| {
-            raise_error!(
+            error!(
                 "can not find reference(mut) for type `{:?}` in UsrValService",
                 type_name::<T>()
             )

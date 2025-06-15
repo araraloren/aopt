@@ -8,7 +8,7 @@ use std::ops::RangeTo;
 use std::ops::RangeToInclusive;
 
 use crate::err::Error;
-use crate::raise_error;
+use crate::error;
 
 /// Index using for option match.
 ///
@@ -262,7 +262,7 @@ impl Index {
             }
             (std::ops::Bound::Excluded(s), std::ops::Bound::Included(e)) => {
                 if *s == 0 {
-                    Err(raise_error!(
+                    Err(error!(
                         "start position of Index can't be negative: {:?}",
                         range.start_bound()
                     ))
@@ -272,7 +272,7 @@ impl Index {
             }
             (std::ops::Bound::Excluded(s), std::ops::Bound::Excluded(e)) => {
                 if *s == 0 {
-                    Err(raise_error!(
+                    Err(error!(
                         "start position of Index can't be negative: {:?}",
                         range.start_bound()
                     ))
@@ -282,7 +282,7 @@ impl Index {
             }
             (std::ops::Bound::Excluded(s), std::ops::Bound::Unbounded) => {
                 if *s == 0 {
-                    Err(raise_error!(
+                    Err(error!(
                         "start position of Index can't be negative: {:?}",
                         range.start_bound()
                     ))

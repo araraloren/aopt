@@ -14,7 +14,7 @@ use crate::opt::Opt;
 use crate::opt::OptParser;
 use crate::parser::ParserCommit;
 use crate::parser::Policy;
-use crate::raise_error;
+use crate::error;
 use crate::set::OptValidator;
 use crate::set::PrefixedValidator;
 use crate::set::Set;
@@ -62,13 +62,13 @@ impl<'a, S> HCOptSet<'a, S> {
     pub fn invoker(&self) -> Result<&Invoker<'a, Self>, Error> {
         self.inv
             .as_ref()
-            .ok_or_else(|| raise_error!("Can not access Invoker in callback"))
+            .ok_or_else(|| error!("Can not access Invoker in callback"))
     }
 
     pub fn invoker_mut(&mut self) -> Result<&mut Invoker<'a, Self>, Error> {
         self.inv
             .as_mut()
-            .ok_or_else(|| raise_error!("Can not access Invoker in callback"))
+            .ok_or_else(|| error!("Can not access Invoker in callback"))
     }
 
     pub fn set_invoker(&mut self, inv: Invoker<'a, Self>) -> &mut Self {

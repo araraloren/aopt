@@ -12,7 +12,7 @@ use crate::opt::ConfigValue;
 use crate::opt::Main;
 use crate::opt::Opt;
 use crate::opt::Pos;
-use crate::raise_error;
+use crate::error;
 use crate::set::Commit;
 use crate::set::Set;
 use crate::set::SetCfg;
@@ -136,13 +136,13 @@ where
     pub fn inner(&self) -> Result<&SetCommit<'b, S, U>, Error> {
         self.inner
             .as_ref()
-            .ok_or_else(|| raise_error!("must set inner data of ParserCommit(ref)"))
+            .ok_or_else(|| error!("must set inner data of ParserCommit(ref)"))
     }
 
     pub fn inner_mut(&mut self) -> Result<&mut SetCommit<'b, S, U>, Error> {
         self.inner
             .as_mut()
-            .ok_or_else(|| raise_error!("must set inner data of ParserCommit(mut)"))
+            .ok_or_else(|| error!("must set inner data of ParserCommit(mut)"))
     }
 
     /// Set the infer type of option.
@@ -419,13 +419,13 @@ where
     pub fn inner(&self) -> Result<&SetCommitWithValue<'b, S, U, T>, Error> {
         self.inner
             .as_ref()
-            .ok_or_else(|| raise_error!("must set inner data of ParserCommitWithValue(ref)"))
+            .ok_or_else(|| error!("must set inner data of ParserCommitWithValue(ref)"))
     }
 
     pub fn inner_mut(&mut self) -> Result<&mut SetCommitWithValue<'b, S, U, T>, Error> {
         self.inner
             .as_mut()
-            .ok_or_else(|| raise_error!("must set inner data of ParserCommitWithValue(mut)"))
+            .ok_or_else(|| error!("must set inner data of ParserCommitWithValue(mut)"))
     }
 
     /// Set the infer type of option.

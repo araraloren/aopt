@@ -6,11 +6,12 @@ pub(crate) mod meta;
 pub(crate) mod parser;
 pub(crate) mod rctx;
 pub(crate) mod value;
+#[cfg(feature = "shell")]
+pub mod shell;
 
 pub mod valid;
 
 pub use aopt;
-use aopt::set::Set;
 pub use aopt::Error;
 pub use aopt_help;
 pub use cote_derive;
@@ -18,6 +19,8 @@ pub use cote_derive;
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub mod prelude {
+    pub use aopt::error;
+    pub use aopt::failure;
     pub use aopt::opt::AnyOpt;
     pub use aopt::opt::Cmd;
     pub use aopt::opt::Main;
@@ -72,8 +75,6 @@ pub mod prelude {
     pub use aopt::prelude::ValStorer;
     pub use aopt::prelude::ValValidator;
     pub use aopt::prelude::VecStore;
-    pub use aopt::raise_error;
-    pub use aopt::raise_failure;
     pub use aopt::value::raw2str;
     pub use aopt::value::Placeholder;
     pub use aopt::value::Stop;
@@ -130,6 +131,7 @@ use aopt::prelude::OptStyleManager;
 use aopt::prelude::OptValidator;
 use aopt::prelude::SetCfg;
 use aopt::prelude::SetValueFindExt;
+use aopt::set::Set;
 
 use crate::prelude::Parser;
 

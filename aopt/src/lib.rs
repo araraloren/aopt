@@ -8,19 +8,19 @@ pub mod set;
 pub mod shell;
 pub mod value;
 
-pub use aopt_core as acore;
-
 pub use crate::acore::args;
 pub use crate::acore::err;
+pub use crate::acore::error;
+pub use crate::acore::failure;
 pub use crate::acore::map;
-pub use crate::acore::raise_error;
-pub use crate::acore::raise_failure;
 pub use crate::acore::str;
+pub use crate::acore::trace;
 pub use crate::acore::ARef;
 pub use crate::acore::HashMap;
 pub use crate::acore::Uid;
 
-pub(crate) use crate::acore::trace;
+pub(crate) use aopt_core as acore;
+pub(crate) use aopt_shell as ashell;
 
 pub use crate::err::Error;
 pub use crate::err::Result;

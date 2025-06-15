@@ -282,14 +282,14 @@ impl From<AccessError> for Error {
 }
 
 #[macro_export]
-macro_rules! raise_error {
+macro_rules! error {
     ($($arg:tt)*) => {
         $crate::Error::raise_error(format!($($arg)*))
     };
 }
 
 #[macro_export]
-macro_rules! raise_failure {
+macro_rules! failure {
     ($($arg:tt)*) => {
         $crate::Error::raise_failure(format!($($arg)*))
     };

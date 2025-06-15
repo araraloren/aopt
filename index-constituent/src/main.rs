@@ -1,5 +1,6 @@
 mod spyder;
 
+use aopt::error;
 use cote::prelude::*;
 use cote::Error;
 use spyder::cnindex::CNIndex;
@@ -244,27 +245,23 @@ async fn search_keyword(ctx: &SearchCtx<'_, '_>) -> Result<SpyderIndexData, Erro
     match ctx.get_type_() {
         SearchType::CS => {
             let csspyder = CSIndex::new(ctx.get_debug(), ctx.get_page_size())
-                .map_err(|e| Error::raise_error(format!("can not init CSIndexSpyder: {:?}", e)))?;
+                .map_err(|e| error!("can not init CSIndexSpyder: {:?}", e))?;
 
             let ret = csspyder
                 .search(ctx.get_arg(), ctx.get_page_number())
                 .await
-                .map_err(|e| {
-                    Error::raise_error(format!("can not search {}: {:?}", ctx.get_arg(), e))
-                })?;
+                .map_err(|e| error!("can not search {}: {:?}", ctx.get_arg(), e))?;
 
             Ok(ret)
         }
         SearchType::CN => {
             let cnspyder = CNIndex::new(ctx.get_debug(), ctx.get_page_size())
-                .map_err(|e| Error::raise_error(format!("can not init CSIndexSpyder: {:?}", e)))?;
+                .map_err(|e| error!("can not init CSIndexSpyder: {:?}", e))?;
 
             let ret = cnspyder
                 .search(ctx.get_arg(), ctx.get_page_number())
                 .await
-                .map_err(|e| {
-                    Error::raise_error(format!("can not search {}: {:?}", ctx.get_arg(), e))
-                })?;
+                .map_err(|e| error!("can not search {}: {:?}", ctx.get_arg(), e))?;
 
             Ok(ret)
         }
@@ -275,27 +272,23 @@ async fn display_cons_of(ctx: &SearchCtx<'_, '_>) -> Result<SpyderIndexData, Err
     match ctx.get_type_() {
         SearchType::CS => {
             let csspyder = CSIndex::new(ctx.get_debug(), ctx.get_page_size())
-                .map_err(|e| Error::raise_error(format!("can not init CSIndexSpyder: {:?}", e)))?;
+                .map_err(|e| error!("can not init CSIndexSpyder: {:?}", e))?;
 
             let ret = csspyder
                 .fetch_cons(ctx.get_arg(), ctx.get_page_number())
                 .await
-                .map_err(|e| {
-                    Error::raise_error(format!("can not fetch cons {}: {:?}", ctx.get_arg(), e))
-                })?;
+                .map_err(|e| error!("can not fetch cons {}: {:?}", ctx.get_arg(), e))?;
 
             Ok(ret)
         }
         SearchType::CN => {
             let cnspyder = CNIndex::new(ctx.get_debug(), ctx.get_page_size())
-                .map_err(|e| Error::raise_error(format!("can not init CSIndexSpyder: {:?}", e)))?;
+                .map_err(|e| error!("can not init CSIndexSpyder: {:?}", e))?;
 
             let ret = cnspyder
                 .fetch_cons(ctx.get_arg(), ctx.get_page_number())
                 .await
-                .map_err(|e| {
-                    Error::raise_error(format!("can not fetch cons {}: {:?}", ctx.get_arg(), e))
-                })?;
+                .map_err(|e| error!("can not fetch cons {}: {:?}", ctx.get_arg(), e))?;
 
             Ok(ret)
         }

@@ -227,13 +227,13 @@ impl<'a> Ctx<'a> {
     pub fn inner_ctx(&self) -> Result<&InnerCtx<'a>, Error> {
         self.inner_ctx
             .as_ref()
-            .ok_or_else(|| crate::raise_error!("InnerCtx not exist, try create a new one"))
+            .ok_or_else(|| crate::error!("InnerCtx not exist, try create a new one"))
     }
 
     pub fn inner_ctx_mut(&mut self) -> Result<&mut InnerCtx<'a>, Error> {
         self.inner_ctx
             .as_mut()
-            .ok_or_else(|| crate::raise_error!("InnerCtx(mutable) not exist, try create a new one"))
+            .ok_or_else(|| crate::error!("InnerCtx(mutable) not exist, try create a new one"))
     }
 
     /// The original arguments passed by user.

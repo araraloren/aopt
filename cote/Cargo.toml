@@ -1,6 +1,6 @@
 [package]
 name = "cote"
-version = "0.14.2"
+version = "0.15.0"
 authors = [
     "araraloren <blackcatoverwall@gmail.com>",
 ]

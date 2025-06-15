@@ -20,6 +20,7 @@ use std::fmt::Debug;
 use std::slice::Iter;
 use std::slice::IterMut;
 
+use crate::error;
 use crate::map::ErasedTy;
 use crate::opt::Action;
 use crate::opt::Cid;
@@ -28,7 +29,6 @@ use crate::opt::ConfigValue;
 use crate::opt::Index;
 use crate::opt::Opt;
 use crate::opt::OptValueExt;
-use crate::raise_error;
 use crate::value::ValInitializer;
 use crate::value::ValStorer;
 use crate::Error;
@@ -175,22 +175,22 @@ pub trait SetExt<C: Ctor> {
 impl<S: Set> SetExt<S::Ctor> for S {
     fn opt(&self, uid: Uid) -> Result<&<S::Ctor as Ctor>::Opt, Error> {
         self.get(uid)
-            .ok_or_else(|| raise_error!("can not find option `{}` by uid", uid).with_uid(uid))
+            .ok_or_else(|| error!("can not find option `{}` by uid", uid).with_uid(uid))
     }
 
     fn opt_mut(&mut self, uid: Uid) -> Result<&mut <S::Ctor as Ctor>::Opt, Error> {
         self.get_mut(uid)
-            .ok_or_else(|| raise_error!("can not find option(mut) `{}` by uid", uid).with_uid(uid))
+            .ok_or_else(|| error!("can not find option(mut) `{}` by uid", uid).with_uid(uid))
     }
 
     fn ctor(&self, name: &str) -> Result<&S::Ctor, Error> {
         self.get_ctor(name)
-            .ok_or_else(|| raise_error!("can not find creator `{}` by name", name))
+            .ok_or_else(|| error!("can not find creator `{}` by name", name))
     }
 
     fn ctor_mut(&mut self, name: &str) -> Result<&mut S::Ctor, Error> {
         self.get_ctor_mut(name)
-            .ok_or_else(|| raise_error!("can not find creator(mut) `{}` by name", name))
+            .ok_or_else(|| error!("can not find creator(mut) `{}` by name", name))
     }
 }
 
@@ -237,7 +237,7 @@ where
     fn take_val<T: ErasedTy>(&mut self, cb: impl ConfigBuild<SetCfg<Self>>) -> Result<T, Error> {
         let opt = self.opt_mut(self.find_uid(cb)?)?;
         let (name, uid) = (opt.name(), opt.uid());
-        let err = raise_error!(
+        let err = error!(
             "can not take value({}) of option `{name}`",
             type_name::<T>(),
         );
@@ -251,7 +251,7 @@ where
     ) -> Result<Vec<T>, Error> {
         let opt = self.opt_mut(self.find_uid(cb)?)?;
         let (name, uid) = (opt.name(), opt.uid());
-        let err = raise_error!(
+        let err = error!(
             "can not take values({}) of option `{name}`",
             type_name::<T>(),
         );

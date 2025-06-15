@@ -72,7 +72,7 @@ impl ValStorer {
                         val
                     );
                     Err(
-                        crate::raise_failure!("value check failed: `{:?}`", ctx.inner_ctx().ok(),)
+                        crate::failure!("value check failed: `{:?}`", ctx.inner_ctx().ok(),)
                             .with_uid(uid),
                     )
                 } else {

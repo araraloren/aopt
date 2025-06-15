@@ -23,7 +23,7 @@ tracing = { workspace = true, optional = true }
 aopt-shell = { workspace = true, optional = true }
 
 [features]
-default = []
+default = ["shell"]
 sync = ["aopt-core/sync"]
 shell = ["aopt-shell"]
 log = ["tracing", "aopt-core/tracing"]

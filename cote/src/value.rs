@@ -3,7 +3,7 @@ use aopt::opt::ConfigValue;
 use aopt::opt::OptValueExt;
 use aopt::set::SetCfg;
 
-use crate::prelude::raise_error;
+use crate::prelude::error;
 use crate::prelude::ErasedTy;
 use crate::prelude::Infer;
 use crate::prelude::Opt;
@@ -20,7 +20,7 @@ where
 {
     let opt = crate::prelude::SetExt::opt_mut(set, uid)?;
     let (name, uid) = (opt.name(), opt.uid());
-    let err = raise_error!(
+    let err = error!(
         "can not take value({}) of option `{name}`",
         std::any::type_name::<T>(),
     );
@@ -35,7 +35,7 @@ where
 {
     let opt = crate::prelude::SetExt::opt_mut(set, uid)?;
     let (name, uid) = (opt.name(), opt.uid());
-    let err = raise_error!(
+    let err = error!(
         "can not take values({}) of option `{name}`",
         std::any::type_name::<T>(),
     );

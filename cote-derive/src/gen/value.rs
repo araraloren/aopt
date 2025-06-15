@@ -111,7 +111,7 @@ impl<'a> ValueGenerator<'a> {
                     match name.as_ref() {
                         #(#branches)*
 
-                        _ => Err(cote::prelude::raise_failure!("Unknow value for enum type `{}`: {}", #ty_name, name).with_uid(uid)),
+                        _ => Err(cote::prelude::failure!("Unknow value for enum type `{}`: {}", #ty_name, name).with_uid(uid)),
                     }
                 }
             }

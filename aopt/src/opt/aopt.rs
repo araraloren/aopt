@@ -13,7 +13,7 @@ use crate::opt::Opt;
 #[allow(unused)]
 use crate::opt::Pos;
 use crate::opt::Style;
-use crate::raise_error;
+use crate::error;
 use crate::value::ErasedValue;
 use crate::value::ValAccessor;
 use crate::Error;
@@ -517,17 +517,17 @@ impl TryFrom<OptConfig> for AOpt {
         let force = force.unwrap_or(false);
         let action = action.unwrap_or(Action::App);
         let storer =
-            storer.ok_or_else(|| raise_error!("incomplete configuration: missing ValStorer"))?;
+            storer.ok_or_else(|| error!("incomplete configuration: missing ValStorer"))?;
         let initializer = initializer
-            .ok_or_else(|| raise_error!("incomplete configuration: missing ValInitializer"))?;
+            .ok_or_else(|| error!("incomplete configuration: missing ValInitializer"))?;
         let styles =
-            styles.ok_or_else(|| raise_error!("incomplete configuration: missing Style"))?;
+            styles.ok_or_else(|| error!("incomplete configuration: missing Style"))?;
         let name =
-            name.ok_or_else(|| raise_error!("incomplete configuration: missing option name"))?;
+            name.ok_or_else(|| error!("incomplete configuration: missing option name"))?;
         let hint = gen_hint(hint.as_ref(), &name, index.as_ref(), alias.as_ref());
         let help = help.unwrap_or_default();
         let r#type = r#type
-            .ok_or_else(|| raise_error!("incomplete configuration: missing option value type"))?;
+            .ok_or_else(|| error!("incomplete configuration: missing option value type"))?;
         let help = Help::default().with_help(help).with_hint(hint);
 
         if ignore_alias {

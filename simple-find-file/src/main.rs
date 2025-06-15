@@ -3,6 +3,7 @@ use std::ops::Deref;
 use std::path::Path;
 
 use aopt::ctx::VecStore;
+use aopt::error;
 use aopt::Error;
 use aopt::{getopt, prelude::*};
 use regex::Regex;
@@ -25,15 +26,10 @@ fn main() -> color_eyre::Result<()> {
                 if let Ok(files) = find_file_in_directory(dir.deref()) {
                     Ok(Some(files))
                 } else {
-                    Err(Error::raise_error(format!(
-                        "directory access error: {:?}",
-                        dir
-                    )))
+                    Err(error!("directory access error: {:?}", dir))
                 }
             } else {
-                Err(Error::raise_error(
-                    "directory can not be empty!".to_string(),
-                ))
+                Err(error!("directory can not be empty!" ))
             }
         })?
         .then(VecStore);
@@ -96,9 +92,7 @@ fn main() -> color_eyre::Result<()> {
         .add_alias("-h")
         .set_help("Show the help message")
         .on(|set, _| -> Result<Option<()>, Error> {
-            display_help(set).map_err(|e| {
-                Error::raise_error(format!("can not write help to stdout: {:?}", e))
-            })?;
+            display_help(set).map_err(|e| error!("can not write help to stdout: {:?}", e))?;
             std::process::exit(0)
         })?;
 

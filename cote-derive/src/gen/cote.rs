@@ -612,7 +612,7 @@ impl<'a> CoteGenerator<'a> {
                         };
 
                         // return failure with more detail error message
-                        cote::prelude::raise_failure!("{} failed: {}", failed_msg, guess).cause_by(error)
+                        cote::prelude::failure!("{} failed: {}", failed_msg, guess).cause_by(error)
                     };
 
                     Err(e)
@@ -776,6 +776,7 @@ impl<'a> CoteGenerator<'a> {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 pub enum FieldGenerator<'a> {
     Sub(SubGenerator<'a>),

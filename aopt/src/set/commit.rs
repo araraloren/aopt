@@ -157,9 +157,9 @@ where
             <U as Infer>::infer_fill_info(&mut info)?;
 
             let set = self.set.as_mut().unwrap();
-            let ctor = info.ctor().ok_or_else(|| {
-                crate::raise_error!("invalid configuration: missing creator name!")
-            })?;
+            let ctor = info
+                .ctor()
+                .ok_or_else(|| crate::error!("invalid configuration: missing creator name!"))?;
 
             trace!("register a opt {:?} with creator({})", info.name(), ctor);
 
@@ -351,13 +351,13 @@ where
     pub fn inner(&self) -> Result<&SetCommit<'a, S, U>, Error> {
         self.inner
             .as_ref()
-            .ok_or_else(|| crate::raise_error!("must set inner data of SetCommitWithValue(ref)"))
+            .ok_or_else(|| crate::error!("must set inner data of SetCommitWithValue(ref)"))
     }
 
     pub fn inner_mut(&mut self) -> Result<&mut SetCommit<'a, S, U>, Error> {
         self.inner
             .as_mut()
-            .ok_or_else(|| crate::raise_error!("must set inner data of SetCommitWithValue(mut)"))
+            .ok_or_else(|| crate::error!("must set inner data of SetCommitWithValue(mut)"))
     }
 
     /// Set the infer type of option.

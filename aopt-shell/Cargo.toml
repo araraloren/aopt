@@ -1,6 +1,30 @@
 [package]
 name = "aopt-shell"
 version = "0.1.0"
-edition = "2024"
+authors = [
+    "araraloren <blackcatoverwall@gmail.com>",
+]
+edition = "2021"
+license = "MPL-2.0"
+description = "A flexible and typed getopt tools"
+repository = "https://github.com/araraloren/aopt/"
+keywords = ["getopt", "cli"]
+categories = ["command-line-interface"]
+readme = "README.md"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+aopt-core.workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
+cargo-args = [
+    "-Zunstable-options",
+    "-Zrustdoc-scrape-examples",
+]
+rustdoc-args = [
+    "--cfg",
+    "docsrs",
+    "--generate-link-to-definition",
+]

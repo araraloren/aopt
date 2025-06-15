@@ -2,7 +2,7 @@ use std::ffi::OsString;
 
 use crate::map::Entry;
 use crate::map::ErasedTy;
-use crate::raise_error;
+use crate::error;
 use crate::value::ErasedValue;
 use crate::Error;
 
@@ -45,7 +45,7 @@ impl<O: Opt> OptValueExt for O {
         let uid = self.uid();
 
         self.accessor().val().map_err(|e| {
-            e.cause(raise_error!("can not find value(ref) of `{hint}`({act})"))
+            e.cause(error!("can not find value(ref) of `{hint}`({act})"))
                 .with_uid(uid)
         })
     }
@@ -54,7 +54,7 @@ impl<O: Opt> OptValueExt for O {
         let hint = self.hint();
         let act = self.action();
         let uid = self.uid();
-        let err = raise_error!("can not find value(mut) of `{}`({})", hint, act).with_uid(uid);
+        let err = error!("can not find value(mut) of `{}`({})", hint, act).with_uid(uid);
 
         self.accessor_mut().val_mut().map_err(|e| e.cause(err))
     }
@@ -65,7 +65,7 @@ impl<O: Opt> OptValueExt for O {
         let uid = self.uid();
 
         self.accessor().vals().map_err(|e| {
-            e.cause(raise_error!("can not find values(ref) of `{hint}`({act})"))
+            e.cause(error!("can not find values(ref) of `{hint}`({act})"))
                 .with_uid(uid)
         })
     }
@@ -74,7 +74,7 @@ impl<O: Opt> OptValueExt for O {
         let hint = self.hint();
         let act = self.action();
         let uid = self.uid();
-        let err = raise_error!("can not find values(mut) of `{}`({})", hint, act).with_uid(uid);
+        let err = error!("can not find values(mut) of `{}`({})", hint, act).with_uid(uid);
 
         self.accessor_mut().vals_mut().map_err(|e| e.cause(err))
     }
@@ -83,7 +83,7 @@ impl<O: Opt> OptValueExt for O {
         let hint = self.hint();
         let act = self.action();
         let uid = self.uid();
-        let err = raise_error!("can not take value of `{}`({})", hint, act).with_uid(uid);
+        let err = error!("can not take value of `{}`({})", hint, act).with_uid(uid);
 
         self.accessor_mut().take_val().map_err(|e| e.cause(err))
     }
@@ -92,7 +92,7 @@ impl<O: Opt> OptValueExt for O {
         let hint = self.hint();
         let act = self.action();
         let uid = self.uid();
-        let err = raise_error!("can not take values of `{}`({})", hint, act).with_uid(uid);
+        let err = error!("can not take values of `{}`({})", hint, act).with_uid(uid);
 
         self.accessor_mut().take_vals().map_err(|e| e.cause(err))
     }
@@ -106,7 +106,7 @@ impl<O: Opt> OptValueExt for O {
         let uid = self.uid();
 
         self.accessor().rawval().map_err(|e| {
-            e.cause(raise_error!("can not find raw value(ref) of `{hint}`",))
+            e.cause(error!("can not find raw value(ref) of `{hint}`",))
                 .with_uid(uid)
         })
     }
@@ -114,7 +114,7 @@ impl<O: Opt> OptValueExt for O {
     fn rawval_mut(&mut self) -> Result<&mut OsString, Error> {
         let hint = self.hint();
         let uid = self.uid();
-        let err = raise_error!("can not find raw value(mut) of `{}`", hint).with_uid(uid);
+        let err = error!("can not find raw value(mut) of `{}`", hint).with_uid(uid);
 
         self.accessor_mut().rawval_mut().map_err(|e| e.cause(err))
     }
@@ -124,13 +124,13 @@ impl<O: Opt> OptValueExt for O {
 
         self.accessor()
             .rawvals()
-            .map_err(|e| e.cause(raise_error!("can not find raw values(ref) of `{hint}`",)))
+            .map_err(|e| e.cause(error!("can not find raw values(ref) of `{hint}`",)))
     }
 
     fn rawvals_mut(&mut self) -> Result<&mut Vec<OsString>, Error> {
         let hint = self.hint();
         let uid = self.uid();
-        let err = raise_error!("can not find raw values(mut) of `{}`", hint).with_uid(uid);
+        let err = error!("can not find raw values(mut) of `{}`", hint).with_uid(uid);
 
         self.accessor_mut().rawvals_mut().map_err(|e| e.cause(err))
     }
@@ -138,7 +138,7 @@ impl<O: Opt> OptValueExt for O {
     fn take_rawval<T: ErasedTy>(&mut self) -> Result<OsString, Error> {
         let hint = self.hint();
         let uid = self.uid();
-        let err = raise_error!("can not take raw value of `{}`", hint).with_uid(uid);
+        let err = error!("can not take raw value of `{}`", hint).with_uid(uid);
 
         self.accessor_mut().take_val().map_err(|e| e.cause(err))
     }
@@ -146,7 +146,7 @@ impl<O: Opt> OptValueExt for O {
     fn take_rawvals<T: ErasedTy>(&mut self) -> Result<Vec<OsString>, Error> {
         let hint = self.hint();
         let uid = self.uid();
-        let err = raise_error!("can not take raw values of `{}`", hint).with_uid(uid);
+        let err = error!("can not take raw values of `{}`", hint).with_uid(uid);
 
         self.accessor_mut().take_vals().map_err(|e| e.cause(err))
     }

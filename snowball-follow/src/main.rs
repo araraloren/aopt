@@ -201,20 +201,16 @@ fn parser_command_line<'a>() -> Result<AFwdParser<'a>, Error> {
             let debug = *set["--debug"].val::<bool>()?;
 
             if file.is_file() {
-                let fh = File::open(file.as_path()).map_err(|e| {
-                    Error::raise_error(format!("can not read file {:?}: {:?}", file, e))
-                })?;
+                let fh = File::open(file.as_path())
+                    .map_err(|e| aopt::error!("can not read file {:?}: {:?}", file, e))?;
                 let mut reader = BufReader::new(fh);
                 let mut ids = vec![];
                 let mut line = String::default();
 
                 loop {
-                    let count = reader.read_line(&mut line).map_err(|e| {
-                        Error::raise_error(format!(
-                            "can not read line from file {:?}: {:?}",
-                            file, e
-                        ))
-                    })?;
+                    let count = reader
+                        .read_line(&mut line)
+                        .map_err(|e| aopt::error!("can not read line from file {file:?}: {e:?}"))?;
 
                     if count > 0 {
                         if let Some(stock_number) = convert_line_to_stock_number(line.trim()) {

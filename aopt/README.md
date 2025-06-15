@@ -169,7 +169,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
             Ok(Some(val))
         } else {
-            Err(aopt::raise_error!("command not matched"))
+            Err(aopt::error!("command not matched"))
         }
     })?;
 
@@ -198,7 +198,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```rust
 use aopt::prelude::*;
-use aopt::raise_error;
+use aopt::error;
 use aopt::value::raw2str;
 use aopt::Error;
 
@@ -241,7 +241,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "upper" => Ok(Self::Upper),
                 "lower" => Ok(Self::Lower),
                 "camel" => Ok(Self::Camel),
-                _ => Err(raise_error!("What do you want? wahaha")),
+                _ => Err(error!("What do you want? wahaha")),
             }
         }
     }

@@ -516,7 +516,7 @@ impl Infer for Placeholder {
         // it must have ctor here
         let ctor = cfg
             .ctor()
-            .ok_or_else(|| crate::raise_error!("incomplete configuration: missing `ctor`"))?;
+            .ok_or_else(|| crate::error!("incomplete configuration: missing `ctor`"))?;
         let cid = Cid::from(ctor);
 
         trace!("in default, fill info in Placeholder");
