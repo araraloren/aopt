@@ -1,6 +1,7 @@
 use super::Generator;
 
 use crate::acore::Error;
+use crate::SHELL_BASH;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Bash;
@@ -9,7 +10,7 @@ impl Generator for Bash {
     type Err = Error;
 
     fn is_avail(&self, name: &str) -> bool {
-        name == "bash"
+        name == SHELL_BASH
     }
 
     fn generate(&self, name: &str, bin: &str) -> Result<String, Self::Err> {
@@ -28,15 +29,18 @@ __completion_handle_NAME()
         _get_comp_words_by_ref -n '=' cur prev words cword
     fi
 
-    COMPREPLY=( $( PROGRAM --_shell bash --_curr "$cur" --_prev "$prev" "${words[@]}" ) )
+    COMPREPLY=( $( PROGRAM --_shell SHELL --_curr "$cur" --_prev "$prev" "${words[@]}" ) )
     if [[ $? != 0 ]]; then
         unset COMPREPLY
     fi
 }
 
 complete -o nospace -o default -F __completion_handle_NAME PROGRAM
-        "#;
+"#;
 
-        Ok(template.replace("NAME", name).replace("PROGRAM", bin))
+        Ok(template
+            .replace("NAME", name)
+            .replace("PROGRAM", bin)
+            .replace("SHELL", SHELL_BASH))
     }
 }

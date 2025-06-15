@@ -1,6 +1,7 @@
 use super::Generator;
 
 use crate::acore::Error;
+use crate::SHELL_ZSH;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Zsh;
@@ -9,7 +10,7 @@ impl Generator for Zsh {
     type Err = Error;
 
     fn is_avail(&self, name: &str) -> bool {
-        name == "powershell"
+        name == SHELL_ZSH
     }
 
     fn generate(&self, name: &str, bin: &str) -> Result<String, Self::Err> {
@@ -23,7 +24,7 @@ function __complete_handler_NAME() {
     curr="${words[$index]}"
     prev="${words[$index - 1]}"
 
-    local completions=("${(@f)$(PROGRAM --_shell zsh --_curr "$curr" --_prev "$prev" "${words[@]}")}")
+    local completions=("${(@f)$(PROGRAM --_shell SHELL --_curr "$curr" --_prev "$prev" "${words[@]}")}")
 
     if [[ -n $completions ]]; then
         _describe 'values' completions
@@ -41,6 +42,9 @@ else
 fi
 "#;
 
-        Ok(template.replace("NAME", name).replace("PROGRAM", bin))
+        Ok(template
+            .replace("NAME", name)
+            .replace("PROGRAM", bin)
+            .replace("SHELL", SHELL_ZSH))
     }
 }

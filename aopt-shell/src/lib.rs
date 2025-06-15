@@ -4,6 +4,11 @@ pub mod value;
 
 pub(crate) use aopt_core as acore;
 
+pub(crate) const SHELL_BASH: &str = "bash";
+pub(crate) const SHELL_FISH: &str = "fish";
+pub(crate) const SHELL_ZSH: &str = "zsh";
+pub(crate) const SHELL_PSH: &str = "powershell";
+
 pub use acore::error;
 pub use acore::failure;
 
@@ -11,9 +16,9 @@ use std::borrow::Cow;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 
+use acore::opt::Opt;
 use acore::Error;
 use acore::HashMap;
-use acore::opt::Opt;
 
 use crate::value::Values;
 

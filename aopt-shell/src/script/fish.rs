@@ -1,6 +1,7 @@
 use super::Generator;
 
 use crate::acore::Error;
+use crate::SHELL_FISH;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Fish;
@@ -9,13 +10,11 @@ impl Generator for Fish {
     type Err = Error;
 
     fn is_avail(&self, name: &str) -> bool {
-        name == "bash"
+        name == SHELL_FISH
     }
 
     fn generate(&self, name: &str, bin: &str) -> Result<String, Self::Err> {
-        let template = r#"#!/usr/bin/env fish
-
-function __complete_handler_NAME
+        let template = r#"function __complete_handler_NAME
     set -l words
     set -l curr
     set -l tokens
@@ -36,12 +35,21 @@ function __complete_handler_NAME
     set -l cword (count $words)
     set -l prev $tokens[-1]
 
-    PROGRAM --_shell fish --_curr "$curr" --_prev "$prev" (string split " " -- $words)
+    set -l completions (PROGRAM --_shell SHELL --_curr "$curr" --_prev "$prev" (string split " " -- $words))
+
+    if test -n "$completions"
+        string split '\n' -- $completions
+    else
+        __fish_complete_path "$curr" "paths"
+    end
 end
 
-complete -f -c fput -a '(__complete_handler_NAME)'
-        "#;
+complete -f -c PROGRAM -a '(__complete_handler_NAME)'
+"#;
 
-        Ok(template.replace("NAME", name).replace("PROGRAM", bin))
+        Ok(template
+            .replace("NAME", name)
+            .replace("PROGRAM", bin)
+            .replace("SHELL", SHELL_FISH))
     }
 }

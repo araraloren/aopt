@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 
 use crate::acore::Error;
 use crate::shell::Shell;
+use crate::SHELL_BASH;
 
 pub struct Bash<O, W> {
     w: Option<W>,
@@ -52,7 +53,7 @@ where
     type Err = Error;
 
     fn is_avail(&self, name: &str) -> bool {
-        name == "bash"
+        name == SHELL_BASH
     }
 
     fn set_buff(&mut self, w: W) {

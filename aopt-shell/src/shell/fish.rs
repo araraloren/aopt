@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 use crate::acore::opt::Opt;
 use crate::acore::Error;
 use crate::shell::Shell;
+use crate::SHELL_FISH;
 
 pub struct Fish<O, W> {
     w: Option<W>,
@@ -54,7 +55,7 @@ where
     type Err = Error;
 
     fn is_avail(&self, name: &str) -> bool {
-        name == "fish"
+        name == SHELL_FISH
     }
 
     fn set_buff(&mut self, w: W) {

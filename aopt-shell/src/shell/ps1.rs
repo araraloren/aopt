@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 use crate::acore::opt::Opt;
 use crate::acore::Error;
 use crate::shell::Shell;
+use crate::SHELL_PSH;
 
 pub struct PowerShell<O, W> {
     w: Option<W>,
@@ -54,7 +55,7 @@ where
     type Err = Error;
 
     fn is_avail(&self, name: &str) -> bool {
-        name == "powershell"
+        name == SHELL_PSH
     }
 
     fn set_buff(&mut self, w: W) {
