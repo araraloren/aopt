@@ -2,23 +2,84 @@
 
 Shell completion support for aopt framework.
 
-## Shell
+## Example
+
+```rust
+use std::ffi::OsString;
+use std::path::PathBuf;
+
+use cote::prelude::*;
+use cote::shell::get_complete_cli;
+use cote::shell::shell::Complete;
+use cote::shell::value::once_values;
+
+#[derive(Debug, Cote)]
+pub struct Cli {
+    /// Print debug message
+    debug: bool,
+
+    /// Set the count value of cli
+    count: Option<i64>,
+
+    /// Set the files of cli
+    files: Vec<PathBuf>,
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    match get_complete_cli() {
+        Ok(cli) => {
+            if cli.write_stdout("fput", "fput").is_err() {
+                cli.complete(|shell| {
+                    let mut ctx = cli.get_context()?;
+                    let parser = Cli::into_parser()?;
+
+                    shell.set_buff(std::io::stdout());
+                    ctx.set_values("--count", ["42", "56"]);
+                    ctx.set_values(
+                        "--files",
+                        once_values(|_| {
+                            Ok(["files/a.txt", "files/b.txt", "files/c.txt"]
+                                .map(OsString::from)
+                                .into_iter()
+                                .collect())
+                        }),
+                    );
+                    parser.complete(shell, &mut ctx)?;
+                    Ok(())
+                })?;
+            }
+        }
+        Err(_) => {
+            let cli = Cli::parse_env()?;
+
+            println!("doing normal cli things..: {cli:?}");
+        }
+    }
+
+    Ok(())
+}
+```
+
+## Deploy shell completions
 
 PROGRAM is the name of binary
 
 ### bash
 
 ```bash
+echo 'source <(PROGRAM --_shell bash)' >> ~/.bashrc
 ```
 
 ### fish
 
 ```fish
+echo 'PROGRAM --_shell fish | source' >> ~/.config/fish/config.fish
 ```
 
 ### Zsh
 
 ```zsh
+echo 'source <(PROGRAM --_shell zsh)' >> ~/.zshrc
 ```
 
 ### Powershell

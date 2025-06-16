@@ -6,8 +6,9 @@ pub(crate) mod meta;
 pub(crate) mod parser;
 pub(crate) mod rctx;
 pub(crate) mod value;
+
 #[cfg(feature = "shell")]
-pub mod shell;
+pub use aopt::shell;
 
 pub mod valid;
 

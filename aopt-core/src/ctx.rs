@@ -74,7 +74,7 @@ impl<'a> InnerCtx<'a> {
 
     /// The name of matched option.
     /// For option it is the option name, for NOA it is the argument,
-    /// which set in [`invoke`](crate::guess::InvokeGuess#method.invoke).
+    /// which set in [`invoke`](https://docs.rs/aopt/latest/aopt/guess/struct.InvokeGuess.html#method.invoke).
     pub fn name(&self) -> Option<&Cow<'a, str>> {
         self.name.as_ref()
     }
@@ -84,7 +84,7 @@ impl<'a> InnerCtx<'a> {
         self.style
     }
 
-    /// The argument which set in [`invoke`](crate::guess::InvokeGuess#method.invoke).
+    /// The argument which set in [`invoke`](https://docs.rs/aopt/latest/aopt/guess/struct.InvokeGuess.html#method.invoke).
     pub fn arg(&self) -> Option<&Cow<'a, OsStr>> {
         self.arg.as_ref()
     }
@@ -203,7 +203,7 @@ impl<'a> Ctx<'a> {
 
     /// The name of matched option.
     /// For option it is the option name, for NOA it is the argument,
-    /// which set in [`invoke`](crate::guess::InvokeGuess#method.invoke).
+    /// which set in [`invoke`](https://docs.rs/aopt/latest/aopt/guess/struct.InvokeGuess.html#method.invoke).
     pub fn name(&self) -> Result<Option<&Cow<'a, str>>, Error> {
         Ok(self.inner_ctx()?.name())
     }
@@ -219,7 +219,7 @@ impl<'a> Ctx<'a> {
         &self.args
     }
 
-    /// The argument which set in [`invoke`](crate::guess::InvokeGuess#method.invoke).
+    /// The argument which set in [`invoke`](https://docs.rs/aopt/latest/aopt/guess/struct.InvokeGuess.html#method.invoke).
     pub fn arg(&self) -> Result<Option<&Cow<'a, OsStr>>, Error> {
         Ok(self.inner_ctx()?.arg())
     }

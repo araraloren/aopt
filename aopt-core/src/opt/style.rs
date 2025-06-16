@@ -16,7 +16,7 @@ pub enum Style {
     Main,
 
     /// The style indicate option don't need argument, such as `--boolean`, `-b` or with no prefix `b`.
-    /// Using it with [`Boolean`](crate::parser::UserStyle::Boolean).
+    /// Using it with [`Boolean`](https://docs.rs/aopt/latest/aopt/parser/enum.UserStyle.html#variant.Boolean).
     Boolean,
 
     /// The style indicate the option need an argument, such as `--int=42`, `-i 42` or `--str=foo`.
@@ -26,7 +26,7 @@ pub enum Style {
     Combined,
 
     /// The style indicate option don't need argument, such as `--boolean`, `-b` or with no prefix `b`.
-    /// Using it with [`Flag`](crate::parser::UserStyle::Flag).
+    /// Using it with [`Flag`](https://docs.rs/aopt/latest/aopt/parser/enum.UserStyle.html#variant.Flag).
     Flag,
 }
 

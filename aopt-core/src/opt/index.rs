@@ -30,7 +30,7 @@ use crate::error;
 ///         option -a and its value
 /// ```
 ///
-/// For option check, see [`SetChecker`](crate::set::SetChecker) for more information.
+/// For option check, see [`SetChecker`](https://docs.rs/aopt/latest/aopt/set/trait.SetChecker.html) for more information.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default, PartialOrd, Ord)]
 pub enum Index {

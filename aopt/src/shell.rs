@@ -321,7 +321,7 @@ where
     }
 }
 
-/// Return [`Arguments`] if command line arguments has `--_shell` option.
+/// Return [`CompleteCli`] if command line arguments has `--_shell` option.
 pub fn get_complete_cli() -> Result<CompleteCli, Error> {
     CompleteCli::parse_env()
 }

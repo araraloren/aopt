@@ -4,7 +4,7 @@ use std::ffi::OsString;
 use crate::map::ErasedTy;
 use crate::value::AnyValue;
 
-/// The default action type for option value saving, see [`Action::process`].
+/// The default action type for option value saving, see [`process`](https://docs.rs/aopt/latest/aopt/opt/enum.Action.html#method.process).
 #[non_exhaustive]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
