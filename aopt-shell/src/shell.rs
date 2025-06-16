@@ -92,19 +92,22 @@ where
 
     for opt in opts.filter(|v| v.mat_style(Style::Argument)) {
         for name in name_iter!(opt).filter(|v| v == &arg) {
-            if let Some(getter) = values.get_mut(name) {
-                for val in getter.get_values(opt)? {
-                    if !val.is_empty() && bytes.is_empty()
-                        || bytes
-                            .iter()
-                            .zip(val.as_encoded_bytes())
-                            .all(|(a, b)| *a == *b)
-                    {
-                        trace!("available opt value -> {}", val.display());
-                        f(arg, val, opt)?;
-                        found = true;
+            if name == arg {
+                if let Some(getter) = values.get_mut(opt.name()) {
+                    for val in getter.get_values(opt)? {
+                        if !val.is_empty() && bytes.is_empty()
+                            || bytes
+                                .iter()
+                                .zip(val.as_encoded_bytes())
+                                .all(|(a, b)| *a == *b)
+                        {
+                            trace!("available opt value -> {}", val.display());
+                            f(arg, val, opt)?;
+                            found = true;
+                        }
                     }
                 }
+                break;
             }
         }
     }
