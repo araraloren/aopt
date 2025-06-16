@@ -1,6 +1,12 @@
 
 # Relase note
 
+## 1.3.0
+
+- Move some type into new crate aopt-core
+
+- Add dynamic shell completion support
+
 ## 1.2.0
 
 - Remove PrePolicy
