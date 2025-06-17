@@ -130,7 +130,7 @@ impl CompleteCli {
     }
 }
 
-pub struct HCOptSetManager<'a, S>
+pub struct CompletionManager<'a, S>
 where
     S: Set,
 {
@@ -138,10 +138,10 @@ where
 
     values: HashMap<Uid, Box<dyn Values<SetOpt<S>, Err = Error>>>,
 
-    suboptset: HashMap<String, HCOptSetManager<'a, S>>,
+    submanager: HashMap<String, CompletionManager<'a, S>>,
 }
 
-impl<'a, S> HCOptSetManager<'a, S>
+impl<'a, S> CompletionManager<'a, S>
 where
     S: Set,
     SetOpt<S>: Opt,
@@ -150,7 +150,7 @@ where
         Self {
             optset,
             values: HashMap::default(),
-            suboptset: HashMap::default(),
+            submanager: HashMap::default(),
         }
     }
 
@@ -167,8 +167,8 @@ where
         self
     }
 
-    pub fn with_submanager(mut self, name: &str, optset: HCOptSet<'a, S>) -> Result<Self, Error> {
-        self.add_submanager(name, optset)?;
+    pub fn with_manager(mut self, name: &str, optset: HCOptSet<'a, S>) -> Result<Self, Error> {
+        self.add_manager(name, optset)?;
         Ok(self)
     }
 
@@ -186,19 +186,15 @@ where
         self
     }
 
-    pub fn add_submanager(
-        &mut self,
-        name: &str,
-        optset: HCOptSet<'a, S>,
-    ) -> Result<&mut Self, Error> {
+    pub fn add_manager(&mut self, name: &str, optset: HCOptSet<'a, S>) -> Result<&mut Self, Error> {
         if self
             .optset
             .iter()
             .filter(|v| v.mat_style(aopt_core::opt::Style::Cmd))
             .any(|v| v.name() == name)
         {
-            self.suboptset
-                .insert(name.to_string(), HCOptSetManager::new(optset));
+            self.submanager
+                .insert(name.to_string(), CompletionManager::new(optset));
             Ok(self)
         } else {
             Err(crate::error!("not a sub command name: {name}"))
@@ -209,18 +205,36 @@ where
         &self.optset
     }
 
+    pub fn optset_mut(&mut self) -> &mut HCOptSet<'a, S> {
+        &mut self.optset
+    }
+
     pub fn values(&self) -> &HashMap<Uid, Box<dyn Values<SetOpt<S>, Err = Error>>> {
         &self.values
     }
 
-    pub fn find_submanager(&self, name: &str) -> Result<&HCOptSetManager<'a, S>, Error> {
-        self.suboptset
+    pub fn managers(&self) -> &HashMap<String, CompletionManager<'a, S>> {
+        &self.submanager
+    }
+
+    pub fn managers_mut(&mut self) -> &mut HashMap<String, CompletionManager<'a, S>> {
+        &mut self.submanager
+    }
+
+    pub fn find_manager(&self, name: &str) -> Result<&CompletionManager<'a, S>, Error> {
+        self.submanager
             .get(name)
-            .ok_or_else(|| crate::error!("can not find suboptset: {name}"))
+            .ok_or_else(|| crate::error!("can not find manager: {name}"))
+    }
+
+    pub fn find_manager_mut(&mut self, name: &str) -> Result<&mut CompletionManager<'a, S>, Error> {
+        self.submanager
+            .get_mut(name)
+            .ok_or_else(|| crate::error!("can not find manager: {name}"))
     }
 }
 
-impl<'a, S> Complete<SetOpt<S>> for HCOptSetManager<'a, S>
+impl<'a, S> Complete<SetOpt<S>> for CompletionManager<'a, S>
 where
     SetOpt<S>: Opt,
     SetCfg<S>: ConfigValue + Default,
@@ -230,7 +244,7 @@ where
     type Ctx<'b> = Context<'b>;
     type Err = Error;
 
-    fn complete<T, W>(&mut self, s: &mut T, ctx: &mut Self::Ctx<'_>) -> Result<Self::Out, Self::Err>
+    fn complete<T, W>(&self, s: &mut T, ctx: &mut Self::Ctx<'_>) -> Result<Self::Out, Self::Err>
     where
         T: Shell<SetOpt<S>, W>,
     {
@@ -247,10 +261,10 @@ where
         trace!("complete -> args = {:?}", args);
 
         let mut s = shell::wrapref(s);
-        let mut manager = &*self;
+        let mut manager = self;
         let mut flags = vec![false; args.len()];
         let mut cmds = vec![];
-        let mut sub_managers = vec![&*self];
+        let mut sub_managers = vec![self];
 
         for (idx, arg) in args.iter().enumerate() {
             if let Some(arg) = arg.to_str() {
@@ -258,7 +272,7 @@ where
                 for cmd in manager.optset().iter().filter(|v| v.mat_style(Style::Cmd)) {
                     trace!("checking `{}`", cmd.name());
                     if cmd.mat_name(Some(arg)) || cmd.mat_alias(arg) {
-                        manager = manager.find_submanager(cmd.name())?;
+                        manager = manager.find_manager(cmd.name())?;
 
                         flags[idx] = true;
                         cmds.push(cmd);

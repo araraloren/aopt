@@ -25,7 +25,7 @@ pub trait Complete<O> {
     type Err: Into<Error>;
 
     fn complete<'a, T, W>(
-        &mut self,
+        &self,
         s: &mut T,
         ctx: &mut Self::Ctx<'a>,
     ) -> Result<Self::Out, Self::Err>

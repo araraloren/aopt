@@ -12,6 +12,7 @@ use cote::prelude::*;
 use cote::shell::get_complete_cli;
 use cote::shell::shell::Complete;
 use cote::shell::value::once_values;
+use cote::shell::CompletionManager;
 
 #[derive(Debug, Cote)]
 pub struct Cli {
@@ -22,21 +23,24 @@ pub struct Cli {
     count: Option<i64>,
 
     /// Set the files of cli
+    #[arg(alias = "-f")]
     files: Vec<PathBuf>,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> color_eyre::Result<()> {
+    color_eyre::install()?;
+
     match get_complete_cli() {
         Ok(cli) => {
             if cli.write_stdout("fput", "fput").is_err() {
                 cli.complete(|shell| {
                     let mut ctx = cli.get_context()?;
-                    let parser = Cli::into_parser()?;
+                    let mut completion = CompletionManager::new(Cli::into_parser()?);
 
                     shell.set_buff(std::io::stdout());
-                    ctx.set_values("--count", ["42", "56"]);
-                    ctx.set_values(
-                        "--files",
+                    completion.set_values(completion.optset().find_uid("--count")?, ["42", "56"]);
+                    completion.set_values(
+                        completion.optset().find_uid("--files")?,
                         once_values(|_| {
                             Ok(["files/a.txt", "files/b.txt", "files/c.txt"]
                                 .map(OsString::from)
@@ -44,7 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 .collect())
                         }),
                     );
-                    parser.complete(shell, &mut ctx)?;
+                    completion.complete(shell, &mut ctx)?;
                     Ok(())
                 })?;
             }

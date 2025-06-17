@@ -766,7 +766,7 @@ where
 }
 
 #[cfg(feature = "shell")]
-mod shell {
+pub(crate) mod shell {
     use std::borrow::Cow;
 
     use aopt::prelude::ConfigValue;
@@ -783,20 +783,139 @@ mod shell {
     use aopt::shell::shell::complete_val;
     use aopt::shell::shell::Complete;
     use aopt::shell::shell::Shell;
+    use aopt::shell::value::Values;
     use aopt::shell::Context;
     use aopt::trace;
+    use aopt::HashMap;
+    use aopt::Uid;
 
     use crate::parser::Parser;
     use crate::Error;
 
-    impl<'a, S> Complete<SetOpt<S>> for Parser<'a, S>
+    pub struct CompletionManager<'a, S>
+    where
+        S: Set,
+    {
+        parser: Parser<'a, S>,
+
+        values: HashMap<Uid, Box<dyn Values<SetOpt<S>, Err = Error>>>,
+
+        submanager: HashMap<String, CompletionManager<'a, S>>,
+    }
+
+    impl<'a, S> CompletionManager<'a, S>
+    where
+        S: Set,
+        SetOpt<S>: Opt,
+    {
+        pub fn new(mut parser: Parser<'a, S>) -> Self {
+            let mut submanager = HashMap::default();
+
+            for sub_parser in std::mem::take(&mut parser.sub_parsers) {
+                submanager.insert(sub_parser.name().to_string(), Self::new(sub_parser));
+            }
+            Self {
+                parser,
+                values: HashMap::default(),
+                submanager,
+            }
+        }
+
+        pub fn with_values<V>(mut self, uid: Uid, v: V) -> Self
+        where
+            V: Values<SetOpt<S>> + 'static,
+        {
+            self.set_values(uid, v);
+            self
+        }
+
+        pub fn with_parser(mut self, parser: Parser<'a, S>) -> Self {
+            self.parser = parser;
+            self
+        }
+
+        pub fn with_manager(mut self, name: &str, parser: Parser<'a, S>) -> Result<Self, Error> {
+            self.add_manager(name, parser)?;
+            Ok(self)
+        }
+
+        pub fn set_parser(&mut self, parser: Parser<'a, S>) -> &mut Self {
+            self.parser = parser;
+            self
+        }
+
+        pub fn set_values<V>(&mut self, uid: Uid, v: V) -> &mut Self
+        where
+            V: Values<SetOpt<S>> + 'static,
+        {
+            self.values
+                .insert(uid, Box::new(aopt::shell::value::wrap(v)));
+            self
+        }
+
+        pub fn add_manager(
+            &mut self,
+            name: &str,
+            parser: Parser<'a, S>,
+        ) -> Result<&mut Self, Error> {
+            if self
+                .parser
+                .iter()
+                .filter(|v| v.mat_style(aopt::opt::Style::Cmd))
+                .any(|v| v.name() == name)
+            {
+                self.submanager
+                    .insert(name.to_string(), CompletionManager::new(parser));
+                Ok(self)
+            } else {
+                Err(aopt::error!("not a sub command name: {name}"))
+            }
+        }
+
+        pub fn parser(&self) -> &Parser<'a, S> {
+            &self.parser
+        }
+
+        pub fn parser_mut(&mut self) -> &mut Parser<'a, S> {
+            &mut self.parser
+        }
+
+        pub fn values(&self) -> &HashMap<Uid, Box<dyn Values<SetOpt<S>, Err = Error>>> {
+            &self.values
+        }
+
+        pub fn managers(&self) -> &HashMap<String, CompletionManager<'a, S>> {
+            &self.submanager
+        }
+
+        pub fn managers_mut(&mut self) -> &mut HashMap<String, CompletionManager<'a, S>> {
+            &mut self.submanager
+        }
+
+        pub fn find_manager(&self, name: &str) -> Result<&CompletionManager<'a, S>, Error> {
+            self.submanager
+                .get(name)
+                .ok_or_else(|| aopt::error!("can not find manager: {name}"))
+        }
+
+        pub fn find_manager_mut(
+            &mut self,
+            name: &str,
+        ) -> Result<&mut CompletionManager<'a, S>, Error> {
+            self.submanager
+                .get_mut(name)
+                .ok_or_else(|| aopt::error!("can not find manager: {name}"))
+        }
+    }
+
+    impl<'a, S> Complete<SetOpt<S>> for CompletionManager<'a, S>
     where
         SetOpt<S>: Opt,
         SetCfg<S>: ConfigValue + Default,
         S: Set + OptValidator + SetValueFindExt,
     {
         type Out = ();
-        type Ctx<'b> = Context<'b, SetOpt<S>>;
+        type Ctx<'b> = Context<'b>;
         type Err = Error;
 
         fn complete<T, W>(&self, s: &mut T, ctx: &mut Self::Ctx<'_>) -> Result<Self::Out, Self::Err>
@@ -808,7 +927,6 @@ mod shell {
                 arg,
                 val,
                 prev,
-                values,
             } = ctx;
 
             trace!("complete -> prev = {}", prev.display());
@@ -817,21 +935,22 @@ mod shell {
             trace!("complete -> args = {:?}", args);
 
             let mut s = shell::wrapref(s);
-            let mut parser = self;
+            let mut manager = self;
             let mut flags = vec![false; args.len()];
             let mut cmds = vec![];
-            let mut parsers = vec![self];
+            let mut sub_managers = vec![self];
 
             for (idx, arg) in args.iter().enumerate() {
                 if let Some(arg) = arg.to_str() {
-                    for cmd in parser.optset().iter().filter(|v| v.mat_style(Style::Cmd)) {
-                        trace!("finding `{}` in `{}`", arg, parser.name());
+                    trace!("finding `{}`", arg);
+                    for cmd in manager.parser().iter().filter(|v| v.mat_style(Style::Cmd)) {
+                        trace!("checking `{}`", cmd.name());
                         if cmd.mat_name(Some(arg)) || cmd.mat_alias(arg) {
-                            parser = parser.find_parser(cmd.name())?;
+                            manager = manager.find_manager(cmd.name())?;
 
                             flags[idx] = true;
                             cmds.push(cmd);
-                            parsers.push(parser);
+                            sub_managers.push(manager);
                             trace!("find cmd `{}` in args at `{}`", arg, idx);
                             break;
                         }
@@ -842,11 +961,12 @@ mod shell {
             let mut available_cmds = vec![];
 
             // find cmd if val is none
-            if let (Some(parser), None) = (parsers.last(), &val) {
+            if let (Some(manager), None) = (sub_managers.last(), &val) {
                 trace!("try complete cmd");
                 let arg = arg.to_str().unwrap_or_default();
+                let optset = manager.parser();
 
-                for opt in parser.iter().filter(|v| v.mat_style(Style::Cmd)) {
+                for opt in optset.iter().filter(|v| v.mat_style(Style::Cmd)) {
                     for name in std::iter::once(opt.name())
                         .chain(
                             opt.alias()
@@ -866,11 +986,14 @@ mod shell {
                 let bytes = val.as_encoded_bytes();
 
                 trace!("search.1 vals with arg=`{}`, val=`{}`", arg, val.display());
-                for p in parsers
+                for manager in sub_managers
                     .iter()
-                    .filter(|v| v.split(&Cow::Borrowed(arg)).is_ok())
+                    .filter(|v| v.parser().split(&Cow::Borrowed(arg)).is_ok())
                 {
-                    complete_eq(arg, bytes, p.iter(), values, |name, val, opt| {
+                    let optset = manager.parser();
+                    let values = manager.values();
+
+                    complete_eq(arg, bytes, optset.iter(), values, |name, val, opt| {
                         s.write_eq(name, val, opt)
                     })?;
                 }
@@ -883,12 +1006,15 @@ mod shell {
                 let bytes = val.as_encoded_bytes();
 
                 trace!("search.2 vals with arg=`{}`, val=`{}`", arg, val.display());
-                for p in parsers
+                for manager in sub_managers
                     .iter()
-                    .filter(|v| v.split(&Cow::Borrowed(arg)).is_ok())
+                    .filter(|v| v.parser().split(&Cow::Borrowed(arg)).is_ok())
                 {
+                    let optset = manager.parser();
+                    let values = manager.values();
+
                     found_val = found_val
-                        || complete_val(arg, bytes, p.iter(), values, |val, opt| {
+                        || complete_val(arg, bytes, optset.iter(), values, |val, opt| {
                             s.write_val(val, opt)
                         })?;
                 }
@@ -904,8 +1030,9 @@ mod shell {
             // find option if val is none
             if let (Some(arg), None) = (arg.to_str(), val) {
                 trace!("search option with arg=`{}`", arg);
-                for p in parsers
+                for p in sub_managers
                     .iter()
+                    .map(|v| v.parser())
                     .filter(|v| v.split(&Cow::Borrowed(arg)).is_ok())
                 {
                     complete_opt(arg, p.iter(), |name, opt| s.write_opt(name, opt))?;

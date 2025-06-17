@@ -8,7 +8,10 @@ pub(crate) mod rctx;
 pub(crate) mod value;
 
 #[cfg(feature = "shell")]
-pub use aopt::shell;
+pub mod shell {
+    pub use crate::parser::shell::CompletionManager;
+    pub use aopt::shell::*;
+}
 
 pub mod valid;
 
