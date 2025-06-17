@@ -16,16 +16,9 @@ use std::borrow::Cow;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 
-use acore::opt::Opt;
-use acore::Error;
-use acore::HashMap;
+pub(crate) use acore::Error;
 
-use crate::value::Values;
-
-pub struct Context<'a, O>
-where
-    O: Opt,
-{
+pub struct Context<'a> {
     pub args: &'a [OsString],
 
     /// Current argument passed by shell
@@ -36,15 +29,9 @@ where
 
     /// Previous argument passed by shell
     pub prev: Cow<'a, OsStr>,
-
-    /// Values of options
-    pub values: HashMap<String, Box<dyn Values<O, Err = Error>>>,
 }
 
-impl<'a, O> Context<'a, O>
-where
-    O: Opt,
-{
+impl<'a> Context<'a> {
     pub fn new(args: &'a [OsString], curr: &'a OsString, prev: &'a OsString) -> Self {
         use std::borrow::Cow;
 
@@ -61,24 +48,6 @@ where
             arg: incomplete_arg,
             val: incomplete_val,
             prev: std::borrow::Cow::Borrowed(prev),
-            values: HashMap::default(),
         }
-    }
-
-    pub fn with_values<V>(mut self, name: &str, v: V) -> Self
-    where
-        V: Values<O> + 'static,
-    {
-        self.set_values(name, v);
-        self
-    }
-
-    pub fn set_values<V>(&mut self, name: &str, v: V) -> &mut Self
-    where
-        V: Values<O> + 'static,
-    {
-        self.values
-            .insert(name.to_string(), Box::new(crate::value::wrap(v)));
-        self
     }
 }
