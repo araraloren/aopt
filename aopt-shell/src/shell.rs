@@ -10,6 +10,7 @@ use crate::acore::opt::Opt;
 use crate::acore::opt::Style;
 use crate::acore::trace;
 use crate::acore::HashMap;
+use crate::acore::Uid;
 use crate::value::Values;
 use crate::Error;
 
@@ -24,7 +25,7 @@ pub trait Complete<O> {
     type Err: Into<Error>;
 
     fn complete<'a, T, W>(
-        &self,
+        &mut self,
         s: &mut T,
         ctx: &mut Self::Ctx<'a>,
     ) -> Result<Self::Out, Self::Err>
@@ -65,7 +66,7 @@ pub fn complete_val<'a, O, I, F>(
     arg: &str,
     bytes: &[u8],
     opts: I,
-    values: &mut HashMap<String, Box<dyn Values<O, Err = Error>>>,
+    values: &HashMap<Uid, Box<dyn Values<O, Err = Error>>>,
     mut f: F,
 ) -> Result<bool, Error>
 where
@@ -80,7 +81,7 @@ pub fn complete_eq<'a, O, I, F>(
     arg: &str,
     bytes: &[u8],
     opts: I,
-    values: &mut HashMap<String, Box<dyn Values<O, Err = Error>>>,
+    values: &HashMap<Uid, Box<dyn Values<O, Err = Error>>>,
     mut f: F,
 ) -> Result<bool, Error>
 where
@@ -93,7 +94,7 @@ where
     for opt in opts.filter(|v| v.mat_style(Style::Argument)) {
         for name in name_iter!(opt).filter(|v| v == &arg) {
             if name == arg {
-                if let Some(getter) = values.get_mut(opt.name()) {
+                if let Some(getter) = values.get(&opt.uid()) {
                     for val in getter.get_values(opt)? {
                         if !val.is_empty() && bytes.is_empty()
                             || bytes
@@ -102,7 +103,7 @@ where
                                 .all(|(a, b)| *a == *b)
                         {
                             trace!("available opt value -> {}", val.display());
-                            f(arg, val, opt)?;
+                            f(arg, &val, opt)?;
                             found = true;
                         }
                     }

@@ -5,11 +5,13 @@ use crate::acore::args::Args;
 use crate::acore::opt::Opt;
 use crate::acore::Error;
 use crate::acore::HashMap;
+use crate::acore::Uid;
 use crate::ashell::shell::complete_eq;
 use crate::ashell::shell::complete_opt;
 use crate::ashell::shell::complete_val;
 use crate::ashell::shell::Complete;
 use crate::ashell::shell::Shell;
+use crate::ashell::value::Values;
 use crate::opt::ConfigBuildInfer;
 use crate::opt::ConfigValue;
 use crate::opt::Style;
@@ -78,7 +80,7 @@ impl CompleteCli {
         }
     }
 
-    pub fn get_context<O: Opt>(&self) -> Result<Context<'_, O>, Error> {
+    pub fn get_context(&self) -> Result<Context<'_>, Error> {
         Ok(Context::new(&self.args, &self.curr, &self.prev))
     }
 
@@ -128,9 +130,14 @@ impl CompleteCli {
     }
 }
 
-#[derive(Debug)]
-pub struct HCOptSetManager<'a, S> {
+pub struct HCOptSetManager<'a, S>
+where
+    S: Set,
+{
     optset: HCOptSet<'a, S>,
+
+    values: HashMap<Uid, Box<dyn Values<SetOpt<S>, Err = Error>>>,
+
     suboptset: HashMap<String, HCOptSetManager<'a, S>>,
 }
 
@@ -142,8 +149,17 @@ where
     pub fn new(optset: HCOptSet<'a, S>) -> Self {
         Self {
             optset,
+            values: HashMap::default(),
             suboptset: HashMap::default(),
         }
+    }
+
+    pub fn with_values<V>(mut self, uid: Uid, v: V) -> Self
+    where
+        V: Values<SetOpt<S>> + 'static,
+    {
+        self.set_values(uid, v);
+        self
     }
 
     pub fn with_optset(mut self, optset: HCOptSet<'a, S>) -> Self {
@@ -158,6 +174,15 @@ where
 
     pub fn set_optset(&mut self, optset: HCOptSet<'a, S>) -> &mut Self {
         self.optset = optset;
+        self
+    }
+
+    pub fn set_values<V>(&mut self, uid: Uid, v: V) -> &mut Self
+    where
+        V: Values<SetOpt<S>> + 'static,
+    {
+        self.values
+            .insert(uid, Box::new(crate::ashell::value::wrap(v)));
         self
     }
 
@@ -184,6 +209,10 @@ where
         &self.optset
     }
 
+    pub fn values(&self) -> &HashMap<Uid, Box<dyn Values<SetOpt<S>, Err = Error>>> {
+        &self.values
+    }
+
     pub fn find_submanager(&self, name: &str) -> Result<&HCOptSetManager<'a, S>, Error> {
         self.suboptset
             .get(name)
@@ -198,10 +227,10 @@ where
     S: Set + OptValidator + SetValueFindExt,
 {
     type Out = ();
-    type Ctx<'b> = Context<'b, SetOpt<S>>;
+    type Ctx<'b> = Context<'b>;
     type Err = Error;
 
-    fn complete<T, W>(&self, s: &mut T, ctx: &mut Self::Ctx<'_>) -> Result<Self::Out, Self::Err>
+    fn complete<T, W>(&mut self, s: &mut T, ctx: &mut Self::Ctx<'_>) -> Result<Self::Out, Self::Err>
     where
         T: Shell<SetOpt<S>, W>,
     {
@@ -210,7 +239,6 @@ where
             arg,
             val,
             prev,
-            values,
         } = ctx;
 
         trace!("complete -> prev = {}", prev.display());
@@ -219,10 +247,10 @@ where
         trace!("complete -> args = {:?}", args);
 
         let mut s = shell::wrapref(s);
-        let mut manager = self;
+        let mut manager = &*self;
         let mut flags = vec![false; args.len()];
         let mut cmds = vec![];
-        let mut sub_managers = vec![self];
+        let mut sub_managers = vec![&*self];
 
         for (idx, arg) in args.iter().enumerate() {
             if let Some(arg) = arg.to_str() {
@@ -242,13 +270,13 @@ where
             }
         }
 
-        let optsets: Vec<_> = sub_managers.iter().map(|v| v.optset()).collect();
         let mut available_cmds = vec![];
 
         // find cmd if val is none
-        if let (Some(optset), None) = (optsets.last(), &val) {
+        if let (Some(manager), None) = (sub_managers.last(), &val) {
             trace!("try complete cmd");
             let arg = arg.to_str().unwrap_or_default();
+            let optset = manager.optset();
 
             for opt in optset.iter().filter(|v| v.mat_style(Style::Cmd)) {
                 for name in std::iter::once(opt.name())
@@ -270,11 +298,14 @@ where
             let bytes = val.as_encoded_bytes();
 
             trace!("search.1 vals with arg=`{}`, val=`{}`", arg, val.display());
-            for p in optsets
+            for manager in sub_managers
                 .iter()
-                .filter(|v| v.split(&Cow::Borrowed(arg)).is_ok())
+                .filter(|v| v.optset().split(&Cow::Borrowed(arg)).is_ok())
             {
-                complete_eq(arg, bytes, p.iter(), values, |name, val, opt| {
+                let optset = manager.optset();
+                let values = manager.values();
+
+                complete_eq(arg, bytes, optset.iter(), values, |name, val, opt| {
                     s.write_eq(name, val, opt)
                 })?;
             }
@@ -287,12 +318,15 @@ where
             let bytes = val.as_encoded_bytes();
 
             trace!("search.2 vals with arg=`{}`, val=`{}`", arg, val.display());
-            for p in optsets
+            for manager in sub_managers
                 .iter()
-                .filter(|v| v.split(&Cow::Borrowed(arg)).is_ok())
+                .filter(|v| v.optset().split(&Cow::Borrowed(arg)).is_ok())
             {
+                let optset = manager.optset();
+                let values = manager.values();
+
                 found_val = found_val
-                    || complete_val(arg, bytes, p.iter(), values, |val, opt| {
+                    || complete_val(arg, bytes, optset.iter(), values, |val, opt| {
                         s.write_val(val, opt)
                     })?;
             }
@@ -306,11 +340,11 @@ where
         }
 
         // find option if val is none
-
         if let (Some(arg), None) = (arg.to_str(), val) {
             trace!("search option with arg=`{}`", arg);
-            for p in optsets
+            for p in sub_managers
                 .iter()
+                .map(|v| v.optset())
                 .filter(|v| v.split(&Cow::Borrowed(arg)).is_ok())
             {
                 complete_opt(arg, p.iter(), |name, opt| s.write_opt(name, opt))?;
