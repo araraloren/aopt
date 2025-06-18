@@ -109,11 +109,11 @@ impl CompleteCli {
         })
     }
 
-    pub fn complete<'a, O, W, F>(&self, mut func: F) -> Result<(), Error>
+    pub fn complete<'a, O, W, F>(&self, func: F) -> Result<(), Error>
     where
         W: std::io::Write + 'a,
         O: crate::opt::Opt + 'a,
-        F: FnMut(
+        F: FnOnce(
             &mut Box<dyn crate::shell::shell::Shell<O, W, Err = Error> + 'a>,
         ) -> Result<(), Error>,
     {

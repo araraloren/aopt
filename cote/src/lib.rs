@@ -72,6 +72,7 @@ pub mod prelude {
     pub use aopt::prelude::SetCfg;
     pub use aopt::prelude::SetChecker;
     pub use aopt::prelude::SetExt;
+    pub use aopt::prelude::SetOpt;
     pub use aopt::prelude::SetValueFindExt;
     pub use aopt::prelude::Store;
     pub use aopt::prelude::Style;

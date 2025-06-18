@@ -19,6 +19,8 @@ pub enum ArgKind {
 
     Values,
 
+    SCValues,
+
     Alias,
 
     Index,
@@ -60,6 +62,7 @@ impl Kind for ArgKind {
                 "help" => (Self::Help, Style::Value),
                 "value" => (Self::Value, Style::Value),
                 "values" => (Self::Values, Style::Value),
+                "scvalues" => (Self::SCValues, Style::Value),
                 "alias" => (Self::Alias, Style::Value),
                 "index" => (Self::Index, Style::Value),
                 "force" => (Self::Force, Style::Value),

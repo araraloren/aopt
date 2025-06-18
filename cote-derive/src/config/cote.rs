@@ -44,6 +44,8 @@ pub enum CoteKind {
 
     PrePolicy,
 
+    ShellCompletion,
+
     MethodCall(String),
 }
 
@@ -74,6 +76,7 @@ impl Kind for CoteKind {
                 "flag" => (Self::Flag, Style::Flag),
                 "overload" => (Self::Overload, Style::True),
                 "prepolicy" => (Self::PrePolicy, Style::True),
+                "shellcomp" => (Self::ShellCompletion, Style::True),
                 method => (Self::MethodCall(method.to_owned()), Style::Value),
             })
         } else {

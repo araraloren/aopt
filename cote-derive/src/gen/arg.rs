@@ -210,6 +210,9 @@ impl<'a> ArgGenerator<'a> {
                 ArgKind::Fetch => {
                     // will process in try extract
                 },
+                ArgKind::SCValues => {
+                    // will process it in cote shell completion generator
+                }
             }
         }
         // if we have value, set the force to false
@@ -293,5 +296,16 @@ impl<'a> ArgGenerator<'a> {
                 cote::prelude::PolicySettings::set_no_delay(policy, #name);
             }
         }))
+    }
+
+    pub fn gen_inject_completion_values(&self) -> Option<TokenStream> {
+        let uid = self.uid();
+
+        self.config.find_cfg(ArgKind::SCValues).map(|v| {
+            let values = v.value();
+            quote! {
+                manager.set_values(#uid, #values);
+            }
+        })
     }
 }

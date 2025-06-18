@@ -326,4 +326,17 @@ impl<'a> SubGenerator<'a> {
             })
             .unwrap_or_else(|| quote! { <#inner_ty>::into_policy_with::<'inv, Set>() }))
     }
+
+    pub fn gen_inject_completion_values(&self) -> Option<TokenStream> {
+        let inner_ty = self.inner_ty();
+        let name = self.name();
+
+        self.config.has_cfg(SubKind::SCValues).then_some(quote! {
+            {
+                let sub_manager_name = String::from(#name);
+
+                <#inner_ty>::inject_completion_values(manager.find_manager_mut(&sub_manager_name)?)?;
+            }
+        })
+    }
 }

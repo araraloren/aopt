@@ -419,6 +419,13 @@ impl<'a> CoteGenerator<'a> {
         let policy_ret_ty = self.gen_policy_ty(false)?;
         let policy_setting_mod = self.gen_policy_setting_mod()?;
         let method_calls = self.gen_method_call()?;
+        let shell_where_clause = quote! {
+            cote::prelude::SetOpt<S>: cote::prelude::Opt + 'static,
+            cote::prelude::SetCfg<S>: cote::prelude::ConfigValue + Default,
+            S: cote::prelude::Set + cote::prelude::OptValidator + cote::prelude::SetValueFindExt,
+        };
+        let try_complete_impl = self.gen_try_complete_with()?;
+        let inject_values_func = self.gen_inject_completion_values(&shell_where_clause);
         let parser_name = &self.name;
         let abort = self.configs.find_cfg(CoteKind::AbortHelp);
         let help = self.configs.find_cfg(CoteKind::Help);
@@ -456,6 +463,9 @@ impl<'a> CoteGenerator<'a> {
             pub fn new_help_context() -> cote::prelude::HelpContext {
                 #help_context
             }
+
+            // inject the values into shell completion manager
+            #inject_values_func
 
             #[doc(hidden)]
             pub fn sync_rctx<'a, Set, Ret>(rctx: &'a mut cote::prelude::RunningCtx, ret: &cote::Result<Ret>, set: &Set, sub_parser: bool)
@@ -571,6 +581,16 @@ impl<'a> CoteGenerator<'a> {
             pub fn parse_env() -> cote::Result<Self>
             where #fetch_code {
                 Self::parse(cote::prelude::Args::from_env())
+            }
+
+            // add shell completion if shellcomp set
+            pub fn try_complete() -> cote::Result<()> {
+                Self::try_complete_with(Self::into_parser()?)
+            }
+
+            pub fn try_complete_with<'inv, S>(parser: cote::prelude::Parser<'inv, S>)
+                -> cote::Result<()> where #shell_where_clause {
+                #try_complete_impl
             }
 
             pub fn from<'inv, S>(mut ret: cote::prelude::Return, mut parser: cote::prelude::Parser<'inv, S>) -> cote::Result<Self> where S: cote::prelude::SetValueFindExt,
@@ -752,6 +772,68 @@ impl<'a> CoteGenerator<'a> {
             }
         }
         Ok(ret)
+    }
+
+    pub fn gen_try_complete_with(&self) -> syn::Result<TokenStream> {
+        if self.configs.has_cfg(CoteKind::ShellCompletion) {
+            let binname = &self.name;
+
+            Ok(quote! {
+                let ccli = cote::shell::get_complete_cli()?;
+                let binary_name = #binname;
+
+                if ccli.write_stdout(&binary_name, &binary_name).is_ok() {
+                    return Ok(())
+                }
+                ccli.complete(|shell| {
+                    let mut ctx = ccli.get_context()?;
+                    let mut manager = cote::shell::CompletionManager::new(parser);
+
+                    shell.set_buff(std::io::stdout());
+                    Self::inject_completion_values(&mut manager)?;
+                    cote::shell::shell::Complete::complete(&manager, shell, &mut ctx)?;
+                    Ok(())
+                })?;
+                Ok(())
+            })
+        } else {
+            Ok(quote! { Err(cote::prelude::error!("not support shell completion")) })
+        }
+    }
+
+    pub fn gen_inject_completion_values(&self, where_clause: &TokenStream) -> Option<TokenStream> {
+        let force_inject = self.configs.has_cfg(CoteKind::ShellCompletion);
+        let mut arg_injects = vec![];
+        let mut sub_injects = vec![];
+
+        for fg in self.field_generators.iter() {
+            match fg {
+                FieldGenerator::Sub(sg) => {
+                    if let Some(sub_inject) = sg.gen_inject_completion_values() {
+                        sub_injects.push(sub_inject);
+                    }
+                }
+                FieldGenerator::Arg(ag) => {
+                    if let Some(arg_inject) = ag.gen_inject_completion_values() {
+                        arg_injects.push(arg_inject);
+                    }
+                }
+            }
+        }
+
+        if force_inject || !arg_injects.is_empty() || !sub_injects.is_empty() {
+            Some(quote! {
+                #[doc(hidden)]
+                pub fn inject_completion_values<'inv, S>(manager: &mut cote::shell::CompletionManager<'inv, S>)
+                    -> cote::Result<()> where #where_clause {
+                    #(#arg_injects)*
+                    #(#sub_injects)*
+                    Ok(())
+                }
+            })
+        } else {
+            None
+        }
     }
 
     pub fn find_generics_t<'b>(
