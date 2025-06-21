@@ -1,5 +1,6 @@
 use std::any::TypeId;
 
+use crate::error;
 use crate::opt::Action;
 #[allow(unused)]
 use crate::opt::Cmd;
@@ -13,7 +14,6 @@ use crate::opt::Opt;
 #[allow(unused)]
 use crate::opt::Pos;
 use crate::opt::Style;
-use crate::error;
 use crate::value::ErasedValue;
 use crate::value::ValAccessor;
 use crate::Error;
@@ -382,59 +382,59 @@ impl Opt for AOpt {
         self.accessor.initialize()
     }
 
-     fn set_name(&mut self, name: impl Into<String>) -> &mut Self {
+    fn set_name(&mut self, name: impl Into<String>) -> &mut Self {
         self.name = name.into();
         self
     }
 
-     fn set_type(&mut self, r#type: TypeId) -> &mut Self {
+    fn set_type(&mut self, r#type: TypeId) -> &mut Self {
         self.r#type = r#type;
         self
     }
 
-     fn set_value(&mut self, value: ValAccessor) -> &mut Self {
+    fn set_value(&mut self, value: ValAccessor) -> &mut Self {
         self.accessor = value;
         self
     }
 
-     fn set_hint(&mut self, hint: impl Into<String>) -> &mut Self {
+    fn set_hint(&mut self, hint: impl Into<String>) -> &mut Self {
         self.help.set_hint(hint);
         self
     }
 
-     fn set_help(&mut self, help: impl Into<String>) -> &mut Self {
+    fn set_help(&mut self, help: impl Into<String>) -> &mut Self {
         self.help.set_help(help);
         self
     }
 
-     fn set_action(&mut self, action: Action) -> &mut Self {
+    fn set_action(&mut self, action: Action) -> &mut Self {
         self.action = action;
         self
     }
 
-     fn set_style(&mut self, styles: Vec<Style>) -> &mut Self {
+    fn set_style(&mut self, styles: Vec<Style>) -> &mut Self {
         self.styles = styles;
         self
     }
 
-     fn set_index(&mut self, index: Option<Index>) -> &mut Self {
+    fn set_index(&mut self, index: Option<Index>) -> &mut Self {
         self.index = index;
         self
     }
 
-     fn set_force(&mut self, force: bool) -> &mut Self {
+    fn set_force(&mut self, force: bool) -> &mut Self {
         self.force = force;
         self
     }
 
-     fn add_alias(&mut self, name: impl Into<String>) -> &mut Self {
+    fn add_alias(&mut self, name: impl Into<String>) -> &mut Self {
         if let Some(alias) = &mut self.alias {
             alias.push(name.into());
         }
         self
     }
 
-     fn rem_alias(&mut self, name: &str) -> &mut Self {
+    fn rem_alias(&mut self, name: &str) -> &mut Self {
         if let Some(alias) = &mut self.alias {
             if let Some((i, _)) = alias.iter().enumerate().find(|(_, v)| v == &name) {
                 alias.remove(i);
@@ -443,17 +443,17 @@ impl Opt for AOpt {
         self
     }
 
-     fn set_ignore_name(&mut self, ignore_name: bool) -> &mut Self {
+    fn set_ignore_name(&mut self, ignore_name: bool) -> &mut Self {
         self.ignore_name = ignore_name;
         self
     }
 
-     fn set_ignore_alias(&mut self, ignore_alias: bool) -> &mut Self {
+    fn set_ignore_alias(&mut self, ignore_alias: bool) -> &mut Self {
         self.ignore_alias = ignore_alias;
         self
     }
 
-     fn set_ignore_index(&mut self, ignore_index: bool) -> &mut Self {
+    fn set_ignore_index(&mut self, ignore_index: bool) -> &mut Self {
         self.ignore_index = ignore_index;
         self
     }
@@ -516,18 +516,15 @@ impl TryFrom<OptConfig> for AOpt {
 
         let force = force.unwrap_or(false);
         let action = action.unwrap_or(Action::App);
-        let storer =
-            storer.ok_or_else(|| error!("incomplete configuration: missing ValStorer"))?;
+        let storer = storer.ok_or_else(|| error!("incomplete configuration: missing ValStorer"))?;
         let initializer = initializer
             .ok_or_else(|| error!("incomplete configuration: missing ValInitializer"))?;
-        let styles =
-            styles.ok_or_else(|| error!("incomplete configuration: missing Style"))?;
-        let name =
-            name.ok_or_else(|| error!("incomplete configuration: missing option name"))?;
+        let styles = styles.ok_or_else(|| error!("incomplete configuration: missing Style"))?;
+        let name = name.ok_or_else(|| error!("incomplete configuration: missing option name"))?;
         let hint = gen_hint(hint.as_ref(), &name, index.as_ref(), alias.as_ref());
         let help = help.unwrap_or_default();
-        let r#type = r#type
-            .ok_or_else(|| error!("incomplete configuration: missing option value type"))?;
+        let r#type =
+            r#type.ok_or_else(|| error!("incomplete configuration: missing option value type"))?;
         let help = Help::default().with_help(help).with_hint(hint);
 
         if ignore_alias {

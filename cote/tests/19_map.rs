@@ -42,14 +42,16 @@ impl Point {
             let mut y = 0;
 
             if let Some(mat) = captures.get(1) {
-                x = mat.as_str().parse::<i32>().map_err(|_| {
-                    error!("Point.x must be a valid number: `{}`", mat.as_str())
-                })?;
+                x = mat
+                    .as_str()
+                    .parse::<i32>()
+                    .map_err(|_| error!("Point.x must be a valid number: `{}`", mat.as_str()))?;
             }
             if let Some(mat) = captures.get(2) {
-                y = mat.as_str().parse::<i32>().map_err(|_| {
-                    error!("Point.y must be a valid number: `{}`", mat.as_str())
-                })?;
+                y = mat
+                    .as_str()
+                    .parse::<i32>()
+                    .map_err(|_| error!("Point.y must be a valid number: `{}`", mat.as_str()))?;
             }
             return Ok(Point { x, y });
         }

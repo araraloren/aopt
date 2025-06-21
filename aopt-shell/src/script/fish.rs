@@ -17,25 +17,22 @@ impl Generator for Fish {
         let template = r#"function __complete_handler_NAME
     set -l words
     set -l curr
-    set -l tokens
-    set -l tokenCount
+    set -l prevs
 
     if commandline -x >/dev/null 2>&1
         set curr (commandline -xpt)
         set words (commandline -xp)
-
-        set tokens (commandline -xc)
+        set prevs (commandline -xc)
     else
         set curr (commandline -opt)
         set words (commandline -op)
-
-        set tokens (commandline -oc)
+        set prevs (commandline -oc)
     end
 
-    set -l cword (count $words)
-    set -l prev $tokens[-1]
+    set -l cword (count $prevs)
+    set -l prev $prevs[-1]
 
-    set -l completions (PROGRAM --_shell SHELL --_curr "$curr" --_prev "$prev" (string split " " -- $words))
+    set -l completions (PROGRAM --_shell SHELL --_curr "$curr" --_prev "$prev" --_cword "$cword" (string split " " -- $words))
 
     if test -n "$completions"
         string split '\n' -- $completions

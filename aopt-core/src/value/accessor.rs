@@ -10,9 +10,9 @@ use super::ValStorer;
 use super::ValValidator;
 
 use crate::ctx::Ctx;
+use crate::error;
 use crate::map::ErasedTy;
 use crate::opt::Action;
-use crate::error;
 use crate::Error;
 
 /// [`ValAccessor`] manage the option value and raw value.

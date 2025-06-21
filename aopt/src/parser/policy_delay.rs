@@ -666,10 +666,9 @@ where
                     }
                 }
                 if !pre && !ret.matched && self.strict() {
-                    return Err(opt_fail.cause(crate::error!(
-                        "option match failed, Ctx = {:?}",
-                        prev_ctx
-                    )));
+                    return Err(
+                        opt_fail.cause(crate::error!("option match failed, Ctx = {:?}", prev_ctx))
+                    );
                 }
             }
         }

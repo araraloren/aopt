@@ -17,14 +17,13 @@ impl Generator for Zsh {
         let template = r#"#compdef NAME
 
 function __complete_handler_NAME() {
-    local curr prev index cword
+    local curr prev cword
 
-    cword=${#words[@]}
-    index=$CURRENT
-    curr="${words[$index]}"
-    prev="${words[$index - 1]}"
+    cword=$CURRENT
+    curr="${words[$cword]}"
+    prev="${words[$cword - 1]}"
 
-    local completions=("${(@f)$(PROGRAM --_shell SHELL --_curr "$curr" --_prev "$prev" "${words[@]}")}")
+    local completions=("${(@f)$(PROGRAM --_shell SHELL --_curr "$curr" --_prev "$prev" --_cword "$cword" "${words[@]}")}")
 
     if [[ -n $completions ]]; then
         _describe 'values' completions

@@ -924,21 +924,31 @@ pub(crate) mod shell {
         {
             let Context {
                 args,
-                arg,
-                val,
+                curr,
                 prev,
+                cword,
             } = ctx;
 
-            trace!("complete -> prev = {}", prev.display());
-            trace!("complete -> arg = {}", arg.display());
-            trace!("complete -> val = {:?}", val.as_ref().map(|v| v.display()));
-            trace!("complete -> args = {:?}", args);
+            let mut incomp_arg = Cow::Borrowed(curr.as_ref());
+            let mut incomp_val = None;
+
+            if let Some((opt, val)) = crate::aopt::str::split_once(curr, '=') {
+                incomp_arg = opt;
+                incomp_val = Some(val);
+            }
+
+            trace!("complete start ...",);
+            trace!("curr={}", curr.display());
+            trace!("prev={}", prev.display());
+            trace!("arg={}", incomp_arg.display());
+            trace!("val={:?}", incomp_val.as_ref().map(|v| v.display()));
+            trace!("args = {:?}", args);
 
             let mut s = shell::wrapref(s);
             let mut manager = self;
             let mut flags = vec![false; args.len()];
             let mut cmds = vec![];
-            let mut sub_managers = vec![self];
+            let mut manager_list = vec![self];
 
             for (idx, arg) in args.iter().enumerate() {
                 if let Some(arg) = arg.to_str() {
@@ -950,7 +960,7 @@ pub(crate) mod shell {
 
                             flags[idx] = true;
                             cmds.push(cmd);
-                            sub_managers.push(manager);
+                            manager_list.push(manager);
                             trace!("find cmd `{}` in args at `{}`", arg, idx);
                             break;
                         }
@@ -961,9 +971,9 @@ pub(crate) mod shell {
             let mut available_cmds = vec![];
 
             // find cmd if val is none
-            if let (Some(manager), None) = (sub_managers.last(), &val) {
+            if let (Some(manager), None) = (manager_list.last(), &incomp_val) {
                 trace!("try complete cmd");
-                let arg = arg.to_str().unwrap_or_default();
+                let arg = incomp_arg.to_str().unwrap_or_default();
                 let optset = manager.parser();
 
                 for opt in optset.iter().filter(|v| v.mat_style(Style::Cmd)) {
@@ -982,11 +992,11 @@ pub(crate) mod shell {
             }
 
             // find option value like [arg=val]
-            if let (Some(arg), Some(val)) = (arg.to_str(), val.as_ref()) {
+            if let (Some(arg), Some(val)) = (incomp_arg.to_str(), incomp_val.as_ref()) {
                 let bytes = val.as_encoded_bytes();
 
                 trace!("search.1 vals with arg=`{}`, val=`{}`", arg, val.display());
-                for manager in sub_managers
+                for manager in manager_list
                     .iter()
                     .filter(|v| v.parser().split(&Cow::Borrowed(arg)).is_ok())
                 {
@@ -1002,11 +1012,11 @@ pub(crate) mod shell {
             let mut found_val = false;
 
             // find option value like [arg val]
-            if let (Some(arg), Some(val)) = (prev.to_str(), Some(&arg)) {
+            if let (Some(arg), Some(val)) = (prev.to_str(), Some(&curr)) {
                 let bytes = val.as_encoded_bytes();
 
                 trace!("search.2 vals with arg=`{}`, val=`{}`", arg, val.display());
-                for manager in sub_managers
+                for manager in manager_list
                     .iter()
                     .filter(|v| v.parser().split(&Cow::Borrowed(arg)).is_ok())
                 {
@@ -1020,6 +1030,7 @@ pub(crate) mod shell {
                 }
             }
 
+            // if we not found any val, print cmd if available
             if !found_val && !available_cmds.is_empty() {
                 for (cmd, opt) in available_cmds {
                     s.write_cmd(cmd, opt)?;
@@ -1027,15 +1038,101 @@ pub(crate) mod shell {
                 return s.finish();
             }
 
+            let mut found_opt = false;
+
             // find option if val is none
-            if let (Some(arg), None) = (arg.to_str(), val) {
+            if let (Some(arg), None) = (incomp_arg.to_str(), incomp_val) {
                 trace!("search option with arg=`{}`", arg);
-                for p in sub_managers
+                for p in manager_list
                     .iter()
                     .map(|v| v.parser())
                     .filter(|v| v.split(&Cow::Borrowed(arg)).is_ok())
                 {
-                    complete_opt(arg, p.iter(), |name, opt| s.write_opt(name, opt))?;
+                    found_opt = found_opt
+                        || complete_opt(arg, p.iter(), |name, opt| s.write_opt(name, opt))?;
+                }
+            }
+
+            // if we not found any opt
+            if !found_opt && !found_val {
+                // complete pos value in last manager
+                if let Some(manager) = manager_list.last() {
+                    let optset = manager.parser();
+
+                    if optset.iter().any(|v| v.mat_style(Style::Pos)) {
+                        let values = manager.values();
+                        let mut noa_index = if cmds.is_empty() { 1 } else { 2 };
+                        let mut index = 0;
+
+                        while index < args.len() && index < *cword {
+                            if !flags[index] {
+                                // check if current is option
+                                let mut like_opt = false;
+                                let mut found_opt = false;
+                                let mut need_val = false;
+                                let (mut arg, mut val) =
+                                    (Cow::Borrowed(args[index].as_os_str()), None);
+
+                                if let Some((a, b)) =
+                                    crate::aopt::str::split_once(&args[index], '=')
+                                {
+                                    arg = a;
+                                    val = Some(b);
+                                }
+                                // if arg is valid str
+                                if let Some(arg) = arg.to_str() {
+                                    // like an option
+                                    for p in manager_list
+                                        .iter()
+                                        .map(|v| v.parser())
+                                        .filter(|v| v.split(&Cow::Borrowed(arg)).is_ok())
+                                    {
+                                        like_opt = true;
+
+                                        for opt in p.iter() {
+                                            if opt.mat_name(Some(arg)) || opt.mat_alias(arg) {
+                                                found_opt = true;
+                                                if opt.mat_style(Style::Argument) && val.is_none() {
+                                                    need_val = true;
+                                                }
+                                                break;
+                                            }
+                                        }
+                                        if found_opt {
+                                            break;
+                                        }
+                                    }
+                                }
+                                if !like_opt {
+                                    noa_index += 1;
+                                }
+                                if need_val && val.is_none() {
+                                    index += 1;
+                                }
+                            }
+                            index += 1;
+                        }
+
+                        let bytes = curr.as_encoded_bytes();
+
+                        for pos in optset.iter().filter(|v| v.mat_style(Style::Pos)) {
+                            if pos.mat_index(Some((noa_index, noa_index + 1))) {
+                                if let Some(getter) = values.get(&pos.uid()) {
+                                    for val in getter.get_values(pos)? {
+                                        if !val.is_empty() && bytes.is_empty()
+                                            || bytes
+                                                .iter()
+                                                .zip(val.as_encoded_bytes())
+                                                .all(|(a, b)| *a == *b)
+                                        {
+                                            trace!("available pos value -> {}", val.display());
+                                            s.write_val(val.as_os_str(), pos)?;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 

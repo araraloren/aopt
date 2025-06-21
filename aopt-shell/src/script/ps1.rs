@@ -14,15 +14,25 @@ impl Generator for PowerShell {
     }
 
     fn generate(&self, name: &str, bin: &str) -> Result<String, Self::Err> {
-        let template = r#"Register-ArgumentCompleter -CommandName PROGRAM -ScriptBlock {
+        let template = r#"Register-ArgumentCompleter -Native -CommandName PROGRAM -ScriptBlock {
     param($wordToComplete, $commandAst, $cursorPosition)
 
     $words = $commandAst.CommandElements;
-    $currentWord = $wordToComplete;
-    $prevWord = if ($words.Count -gt 1 -and $words[-2]) { $words[-2] } else { 'PROGRAM' };
-
+    $curr = $wordToComplete;
+    $prev = if ($words.Count -gt 1 -and $words[-2]) { $words[-2] } else { 'PROGRAM' };
+    $cword = 0
+    $index = 0
+    $commandline = $commandAst.ToString()
+    for (; $index -lt $cursorPosition; $index++) {
+        if ($commandline[$index] -match '\s+') {
+            $cword++
+        }
+    }
+    if (-not [char]::IsWhiteSpace($commandline[$cursorPosition]) -and [string]::IsNullOrWhiteSpace($curr)) {
+        $cword ++
+    }
     try {
-        $completions = & PROGRAM --_shell SHELL --_curr "`"$currentWord`"" --_prev "`"$prevWord`"" $words;
+        $completions = & PROGRAM --_shell SHELL --_curr "`"$curr`"" --_prev "`"$prev`"" --_cword "`"$cword`"" $words;
 
         if ($LASTEXITCODE -eq 0) {
             return $completions | ForEach-Object {

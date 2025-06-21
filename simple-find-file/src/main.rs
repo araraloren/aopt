@@ -29,7 +29,7 @@ fn main() -> color_eyre::Result<()> {
                     Err(error!("directory access error: {:?}", dir))
                 }
             } else {
-                Err(error!("directory can not be empty!" ))
+                Err(error!("directory can not be empty!"))
             }
         })?
         .then(VecStore);

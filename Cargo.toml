@@ -15,7 +15,7 @@ resolver = "2"
 
 [workspace.dependencies]
 aopt-core = { path = "aopt-core", version = "1.0" }
-aopt-shell = { path = "aopt-shell", version = "0.2" }
+aopt-shell = { path = "aopt-shell", version = "0.3" }
 aopt = { path = "aopt", version = "1.4" }
 aopt-help = { path = "aopt-help", version = "0.3" }
 cote = { path = "cote", version = "0.17" }

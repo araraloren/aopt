@@ -58,8 +58,7 @@ impl RawValParser for Direction {
             "left" => Ok(Direction::Left),
             "right" => Ok(Direction::Right),
             _ => Err(
-                failure!("Unknow value for enum type `{0}`: {1}", "Direction", name)
-                    .with_uid(uid),
+                failure!("Unknow value for enum type `{0}`: {1}", "Direction", name).with_uid(uid),
             ),
         }
     }

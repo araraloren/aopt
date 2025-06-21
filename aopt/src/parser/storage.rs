@@ -3,10 +3,10 @@ use std::fmt::Debug;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
+use crate::error;
 use crate::map::AnyMap;
 use crate::map::Entry;
 use crate::map::ErasedTy;
-use crate::error;
 use crate::Error;
 
 pub trait AppStorage {

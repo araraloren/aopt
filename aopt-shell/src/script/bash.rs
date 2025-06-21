@@ -29,7 +29,7 @@ __completion_handle_NAME()
         _get_comp_words_by_ref -n '=' cur prev words cword
     fi
 
-    COMPREPLY=( $( PROGRAM --_shell SHELL --_curr "$cur" --_prev "$prev" "${words[@]}" ) )
+    COMPREPLY=( $( PROGRAM --_shell SHELL --_curr "$cur" --_prev "$prev" --_cword "$cword" "${words[@]}" ) )
     if [[ $? != 0 ]]; then
         unset COMPREPLY
     fi

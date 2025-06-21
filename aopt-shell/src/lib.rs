@@ -22,31 +22,21 @@ pub struct Context<'a> {
     pub args: &'a [OsString],
 
     /// Current argument passed by shell
-    pub arg: Cow<'a, OsStr>,
-
-    /// Value of current argument passed by shell
-    pub val: Option<Cow<'a, OsStr>>,
+    pub curr: Cow<'a, OsStr>,
 
     /// Previous argument passed by shell
     pub prev: Cow<'a, OsStr>,
+
+    /// Index of current word
+    pub cword: usize,
 }
 
 impl<'a> Context<'a> {
-    pub fn new(args: &'a [OsString], curr: &'a OsString, prev: &'a OsString) -> Self {
-        use std::borrow::Cow;
-
-        let mut incomplete_arg = Cow::Borrowed(curr.as_ref());
-        let mut incomplete_val = None;
-
-        if let Some((opt, val)) = aopt_core::str::split_once(curr, '=') {
-            incomplete_arg = opt;
-            incomplete_val = Some(val);
-        }
-
+    pub fn new(args: &'a [OsString], curr: &'a OsString, prev: &'a OsString, cword: usize) -> Self {
         Self {
             args,
-            arg: incomplete_arg,
-            val: incomplete_val,
+            curr: std::borrow::Cow::Borrowed(curr),
+            cword,
             prev: std::borrow::Cow::Borrowed(prev),
         }
     }

@@ -1,8 +1,8 @@
 use std::ffi::OsString;
 
+use crate::error;
 use crate::map::Entry;
 use crate::map::ErasedTy;
-use crate::error;
 use crate::value::ErasedValue;
 use crate::Error;
 

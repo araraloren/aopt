@@ -10,11 +10,11 @@ use std::ffi::OsString;
 use std::fmt::Debug;
 
 use crate::ctx::Ctx;
+use crate::error;
 use crate::map::AnyMap;
 use crate::map::Entry;
 use crate::map::ErasedTy;
 use crate::opt::Action;
-use crate::error;
 use crate::Error;
 
 pub use self::accessor::ValAccessor;
