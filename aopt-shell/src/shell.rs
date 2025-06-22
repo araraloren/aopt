@@ -19,6 +19,8 @@ pub use fish::Fish;
 pub use ps1::PowerShell;
 pub use zsh::Zsh;
 
+pub type PowerShell7<O, W> = PowerShell<O, W>;
+
 pub trait Complete<O> {
     type Out;
     type Ctx<'a>;
@@ -312,6 +314,7 @@ where
                 Box::new(Fish::new()),
                 Box::new(PowerShell::new()),
                 Box::new(Zsh::new()),
+                Box::new(PowerShell7::new7()),
             ],
         }
     }

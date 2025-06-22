@@ -8,6 +8,7 @@ pub(crate) const SHELL_BASH: &str = "bash";
 pub(crate) const SHELL_FISH: &str = "fish";
 pub(crate) const SHELL_ZSH: &str = "zsh";
 pub(crate) const SHELL_PSH: &str = "powershell";
+pub(crate) const SHELL_PSH7: &str = "powershell7";
 
 pub use acore::error;
 pub use acore::failure;

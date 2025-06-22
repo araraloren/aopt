@@ -27,10 +27,12 @@
 //!     2. [Configurating name and alias](#configurating-name-and-alias)
 //!     3. [Configurating help message](#configurating-help-message)
 //!     4. [Optional Sub commands](#optional-sub-commands)
-//! 6. [How to do in cote](#how-to-do)
+//! 6. [Shell Completion](#shell-completion)
+//!     
+//! 7. [How to do in cote](#how-to-do)
 //!     1. [How to capture trailing arguments](#capture-arguments)
 //!     2. [How to remove/add option prefix](#manage-prefix)
-//! 7. [Implementation details](#how-it-works)
+//! 8. [Implementation details](#how-it-works)
 //!     1. [Traits](#traits)
 //!     2. [`Cote` Configurations list](#cote-configurations-list)
 //!     3. [`CoteOpt` Configurations list](#coteopt-configurations-list)
@@ -547,6 +549,24 @@
 //! You age is set to 8
 //! ```
 //!
+//! ## Shell Completion
+//!
+//! Configuring `shellcomp` in `cote` attribute enables dynamic shell completion support for shells.
+//! Configuring `scvalues` in `arg` or `pos` allows you to add completion candidates for option or positional arguments.
+//!
+//! ```no_run
+#![doc = include_str!("../examples/32_shell_completion.rs")]
+//! ```
+//!
+//! ### `scvalues` on sub command
+//!
+//! If you need to add support for completion candidates on sub command, you should add `scvalues` flag on `sub` attribute
+//! to specified sub field.
+//!
+//! ```no_run
+#![doc = include_str!("../examples/33_sub_shell_completion.rs")]
+//! ```
+//!
 //! ## How to do
 //!
 //! ### Capture arguments
@@ -640,6 +660,7 @@
 //!| `notexit` |  false     | |
 //!| `overload`|  false     | boolean |
 //!|`prepolicy`|  false     | boolean |
+//!|`shellcomp`|  false     | |
 //! * `policy`
 //!
 //! Configure the policy of current struct, its value should be `fwd`, `seq` or `delay`.
@@ -714,6 +735,14 @@
 #![doc = include_str!("../tests/03_strict.rs")]
 //! ```
 //!
+//! * `shellcomp`
+//!
+//! Enable shell completion support for current struct.
+//!
+//! ```
+#![doc = include_str!("../tests/22_completion.rs")]
+//! ```
+//!
 //! * `combine`, `embedded`, `flag`
 //!
 //! Enable some extra [`user style`](crate::UserStyle) of policy. See also [`Configurating User Style`](#configurating-user-style).
@@ -740,6 +769,7 @@
 //!| `fetch`   |  true      | function |
 //!| `append`  |  false     | |
 //!| `count`   |  false     | |
+//!| `scvalues`|  true      | [`Values`](crate::shell::value::Values) |
 //!
 //! * `name`, `alias`
 //!
@@ -823,6 +853,14 @@
 //! Only work for [`DelayPolicy`](crate::prelude::DelayPolicy) currently.
 //! See also [`Add "no delay" option`](#add-no-delay-option).
 //!
+//! * `scvalues`
+//!
+//! Add completion candidates for current field, only support option need arguments.
+//!
+//! ```
+#![doc = include_str!("../tests/20_completion.rs")]
+//! ```
+//!
 //! #### `sub`
 //!
 //!| name      | need value | available value |
@@ -836,6 +874,7 @@
 //!| `alias`   |  true      | string literal |
 //!| `force`   |  false     | boolean |
 //!|`prepolicy`|  false     | boolean |
+//!|`scvalues` |  false     | boolean |
 //!
 //! * `policy`
 //!
@@ -872,6 +911,14 @@
 //! * `prepolicy`
 //!
 //! Change the `prepolicy` setting of parser by calling the [`set_prepolicy`](crate::PolicySettings::set_prepolicy).
+//!
+//! * `scvalues`
+//!
+//! Enable completion candidates support for sub command.
+//!
+//! ```
+#![doc = include_str!("../tests/21_sub_completion.rs")]
+//! ```
 //!
 //! ### `CoteOpt` Configurations list
 //!

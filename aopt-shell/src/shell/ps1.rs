@@ -5,8 +5,10 @@ use crate::acore::opt::Opt;
 use crate::acore::Error;
 use crate::shell::Shell;
 use crate::SHELL_PSH;
+use crate::SHELL_PSH7;
 
 pub struct PowerShell<O, W> {
+    name: &'static str,
     w: Option<W>,
     __marker: PhantomData<O>,
 }
@@ -14,6 +16,7 @@ pub struct PowerShell<O, W> {
 impl<O, W> Default for PowerShell<O, W> {
     fn default() -> Self {
         Self {
+            name: SHELL_PSH,
             w: Default::default(),
             __marker: Default::default(),
         }
@@ -23,6 +26,15 @@ impl<O, W> Default for PowerShell<O, W> {
 impl<O, W> PowerShell<O, W> {
     pub fn new() -> Self {
         Self {
+            name: SHELL_PSH,
+            w: None,
+            __marker: PhantomData,
+        }
+    }
+
+    pub fn new7() -> Self {
+        Self {
+            name: SHELL_PSH7,
             w: None,
             __marker: PhantomData,
         }
@@ -55,7 +67,7 @@ where
     type Err = Error;
 
     fn is_avail(&self, name: &str) -> bool {
-        name == SHELL_PSH
+        name == self.name
     }
 
     fn set_buff(&mut self, w: W) {

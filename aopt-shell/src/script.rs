@@ -1,6 +1,7 @@
 pub(crate) mod bash;
 pub(crate) mod fish;
 pub(crate) mod ps1;
+pub(crate) mod ps7;
 pub(crate) mod zsh;
 
 use std::io::Write;
@@ -9,6 +10,7 @@ use crate::Error;
 pub use bash::Bash;
 pub use fish::Fish;
 pub use ps1::PowerShell;
+pub use ps7::PowerShell7;
 pub use zsh::Zsh;
 
 pub trait Generator {
@@ -79,6 +81,7 @@ impl Default for Manager {
                 Box::new(Fish),
                 Box::new(PowerShell),
                 Box::new(Zsh),
+                Box::new(PowerShell7),
             ],
         }
     }

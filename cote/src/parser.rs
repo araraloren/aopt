@@ -938,11 +938,11 @@ pub(crate) mod shell {
             }
 
             trace!("complete start ...",);
-            trace!("curr={}", curr.display());
-            trace!("prev={}", prev.display());
-            trace!("arg={}", incomp_arg.display());
-            trace!("val={:?}", incomp_val.as_ref().map(|v| v.display()));
-            trace!("args = {:?}", args);
+            trace!("curr=`{}`", curr.display());
+            trace!("prev=`{}`", prev.display());
+            trace!("arg=`{}`", incomp_arg.display());
+            trace!("val=`{:?}`", incomp_val.as_ref().map(|v| v.display()));
+            trace!("args = `{:?}`", args);
 
             let mut s = shell::wrapref(s);
             let mut manager = self;
@@ -1059,11 +1059,13 @@ pub(crate) mod shell {
                 if let Some(manager) = manager_list.last() {
                     let optset = manager.parser();
 
+                    trace!("search pos value ...");
                     if optset.iter().any(|v| v.mat_style(Style::Pos)) {
                         let values = manager.values();
-                        let mut noa_index = if cmds.is_empty() { 1 } else { 2 };
-                        let mut index = 0;
+                        let mut noa_index = 1;
+                        let mut index = 1;
 
+                        trace!("start calc noa index ...");
                         while index < args.len() && index < *cword {
                             if !flags[index] {
                                 // check if current is option
@@ -1115,6 +1117,10 @@ pub(crate) mod shell {
 
                         let bytes = curr.as_encoded_bytes();
 
+                        if optset.iter().any(|v| v.mat_style(Style::Cmd)) {
+                            noa_index += 1;
+                        }
+                        trace!("noa index = {noa_index}");
                         for pos in optset.iter().filter(|v| v.mat_style(Style::Pos)) {
                             if pos.mat_index(Some((noa_index, noa_index + 1))) {
                                 if let Some(getter) = values.get(&pos.uid()) {
@@ -1125,7 +1131,11 @@ pub(crate) mod shell {
                                                 .zip(val.as_encoded_bytes())
                                                 .all(|(a, b)| *a == *b)
                                         {
-                                            trace!("available pos value -> {}", val.display());
+                                            trace!(
+                                                "available pos(uid = {}) value=`{}`",
+                                                pos.uid(),
+                                                val.display()
+                                            );
                                             s.write_val(val.as_os_str(), pos)?;
                                         }
                                     }
