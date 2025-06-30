@@ -32,7 +32,6 @@ pub trait Complete<O> {
         ctx: &mut Self::Ctx<'a>,
     ) -> Result<Self::Out, Self::Err>
     where
-        W: Write,
         T: Shell<O, W>;
 }
 
