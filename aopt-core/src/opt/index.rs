@@ -124,36 +124,36 @@ impl Index {
     pub fn parse(dat: &str) -> Result<Self, Error> {
         use neure::prelude::*;
 
-        let start = re::start();
-        let end = re::end();
-        let sign = "+".or("-").opt().map(|v| Ok(v != Some("-")));
-        let num = char::is_ascii_digit.repeat_one_more();
-        let num = num.map(map::from_str::<usize>());
+        let pos = "+".opt();
+        let neg = "-";
+        let num = char::is_ascii_digit.many1();
+        let num = num.try_map(map::from_str::<usize>());
 
-        let any_parser = "*".map(|_| Ok(Index::anywhere()));
-        let seq_parser = sign
-            .then(num.sep(",").quote("[", "]"))
-            .map(|(s, v)| Ok(if s { Index::list(v) } else { Index::except(v) }));
-        let range_parser = num
+        let anywhere = "*".map(|_| Index::anywhere());
+
+        let num_vector = num.sep(",").enclose("[", "]");
+        let except = num_vector.prefix(neg).map(Index::except);
+        let list = num_vector.prefix(pos).map(Index::list);
+
+        let range = num
             .opt()
             .sep_once("..", num.opt())
-            .map(|(beg, end)| Ok(Index::range(beg, end)));
-        let pos_parser = sign.then(num).map(|(s, v)| {
-            Ok(if s {
-                Index::forward(v)
-            } else {
-                Index::backward(v)
-            })
-        });
+            .map(|(beg, end)| Index::range(beg, end));
 
-        let parser = start
-            .then(any_parser.or(seq_parser).or(range_parser).or(pos_parser))
-            ._1()
-            .then(end)
-            ._0();
+        let backward = num.prefix(neg).map(Index::backward);
+        let forward = num.prefix(pos).map(Index::forward);
+
+        let parser = anywhere
+            .or(except)
+            .or(list)
+            .or(range)
+            .or(backward)
+            .or(forward)
+            .suffix(regex::end())
+            .prefix(regex::start());
 
         CharsCtx::new(dat)
-            .ignore(char::is_ascii_whitespace.repeat_full())
+            .skip_ascii_whitespace()
             .ctor(&parser)
             .map_err(|_| Error::index_parse(dat, "failed parsing index"))
     }

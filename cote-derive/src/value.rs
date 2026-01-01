@@ -13,7 +13,7 @@ use syn::Token;
 
 use crate::error;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub enum Value {
     Literal(Lit),
 
@@ -21,6 +21,7 @@ pub enum Value {
 
     Call(Vec<Expr>),
 
+    #[default]
     Null,
 }
 
@@ -51,12 +52,6 @@ impl ToTokens for Value {
             }
             Self::Null => {}
         }
-    }
-}
-
-impl Default for Value {
-    fn default() -> Self {
-        Self::Null
     }
 }
 

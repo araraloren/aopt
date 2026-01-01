@@ -2,8 +2,9 @@ use std::fmt::Display;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub enum Error {
+    #[default]
     Null,
 
     InvalidBlockName(String),
@@ -17,12 +18,6 @@ pub enum Error {
     DuplicatedCommandName(String),
 
     Error(String),
-}
-
-impl Default for Error {
-    fn default() -> Self {
-        Self::Null
-    }
 }
 
 impl std::fmt::Debug for Error {

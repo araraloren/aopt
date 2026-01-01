@@ -445,7 +445,7 @@ impl GenericsModifier {
     pub fn split_for_impl_ipd(
         &mut self,
         used: &[&Ident],
-    ) -> (ImplGenerics, TypeGenerics, Option<&WhereClause>) {
+    ) -> (ImplGenerics<'_>, TypeGenerics<'_>, Option<&WhereClause>) {
         self.mod_for_ipd(used);
         self.0.split_for_impl()
     }
@@ -470,7 +470,7 @@ impl GenericsModifier {
     pub fn split_for_impl_esd(
         &mut self,
         used: &[&Ident],
-    ) -> (ImplGenerics, TypeGenerics, Option<&WhereClause>) {
+    ) -> (ImplGenerics<'_>, TypeGenerics<'_>, Option<&WhereClause>) {
         self.mod_for_esd(used);
         self.0.split_for_impl()
     }
@@ -491,7 +491,7 @@ impl GenericsModifier {
     pub fn split_for_impl_pi(
         &mut self,
         used: &[&Ident],
-    ) -> (ImplGenerics, TypeGenerics, Option<&WhereClause>) {
+    ) -> (ImplGenerics<'_>, TypeGenerics<'_>, Option<&WhereClause>) {
         self.mod_for_pi(used);
         self.0.split_for_impl()
     }
@@ -516,7 +516,7 @@ impl GenericsModifier {
     pub fn split_for_impl_fetch(
         &mut self,
         used: &[&Ident],
-    ) -> (ImplGenerics, TypeGenerics, Option<&WhereClause>) {
+    ) -> (ImplGenerics<'_>, TypeGenerics<'_>, Option<&WhereClause>) {
         self.mod_for_fetch(used);
         self.0.split_for_impl()
     }

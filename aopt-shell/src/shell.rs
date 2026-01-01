@@ -329,7 +329,7 @@ impl<'a, O: 'a, W: 'a> Manager<'a, O, W> {
         self
     }
 
-    pub fn find(&self, shell: &str) -> Result<&(dyn Shell<O, W, Err = Error>), Error> {
+    pub fn find(&self, shell: &str) -> Result<&dyn Shell<O, W, Err = Error>, Error> {
         self.gens
             .iter()
             .find(|v| v.as_ref().is_avail(shell))

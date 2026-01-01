@@ -123,20 +123,15 @@ fn find_file_in_directory(dir: &str) -> color_eyre::Result<Vec<String>> {
     Ok(ret)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 enum FilterType {
+    #[default]
     All,
     Dir,
     Link,
     File,
     Size(u64),
     Regex(String),
-}
-
-impl Default for FilterType {
-    fn default() -> Self {
-        Self::All
-    }
 }
 
 impl FilterType {

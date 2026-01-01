@@ -70,29 +70,27 @@ impl StrParser {
     pub fn parse_creator_string(&self, dat: &str) -> Result<ConstrctInfo, Error> {
         use neure::prelude::*;
 
-        let start = re::start();
-        let end = re::end();
-        let name = ['=', '!', '*', '@', ';', ':'].not().repeat_one_more();
+        let name = ['=', '!', '*', '@', ';', ':'].not().many1();
         let aliases = name.sep(";");
         let parser = name.opt().if_then(";", aliases);
 
-        let ctor = neu::alphabetic().repeat_one_more();
+        let ctor = neu::alphabetic().many1();
         let parser = parser.if_then("=", ctor);
 
         let opt = "!".or("*").opt();
         let parser = parser.then(opt);
 
-        let index = '@'.or(':').not().repeat_one_more();
+        let index = '@'.or(':').not().many1();
         let parser = parser.if_then("@", index);
 
-        let help = re::consume_all();
+        let help = regex::consume_all();
         let parser = parser.if_then(":", help);
 
-        let parser = start.then(parser).then(end);
+        let parser = parser.suffix(regex::end()).prefix(regex::start());
 
         let to_string = |v: &str| v.trim().to_string();
 
-        let ((_, (((((name, aliases), ctor), opt), index), help)), _) = CharsCtx::new(dat)
+        let (((((name, aliases), ctor), opt), index), help) = CharsCtx::new(dat)
             .ctor(&parser)
             .map_err(|_| Error::create_str(dat, "can not parsing string"))?;
 

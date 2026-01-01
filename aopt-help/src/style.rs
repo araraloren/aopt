@@ -1,13 +1,8 @@
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub enum Align {
+    #[default]
     Left,
     Right,
-}
-
-impl Default for Align {
-    fn default() -> Self {
-        Self::Left
-    }
 }
 
 #[derive(Debug, Clone)]

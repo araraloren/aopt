@@ -2,8 +2,9 @@
 ///
 #[non_exhaustive]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Style {
+    #[default]
     Null,
 
     /// The style indicate the `NOA` are set base on position.
@@ -28,12 +29,6 @@ pub enum Style {
     /// The style indicate option don't need argument, such as `--boolean`, `-b` or with no prefix `b`.
     /// Using it with [`Flag`](https://docs.rs/aopt/latest/aopt/parser/enum.UserStyle.html#variant.Flag).
     Flag,
-}
-
-impl Default for Style {
-    fn default() -> Self {
-        Self::Null
-    }
 }
 
 impl std::fmt::Display for Style {
