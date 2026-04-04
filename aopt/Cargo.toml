@@ -1,6 +1,6 @@
 [package]
 name = "aopt"
-version = "1.4.2"
+version = "1.4.3"
 authors = [
     "araraloren <blackcatoverwall@gmail.com>",
 ]
