@@ -17,7 +17,7 @@ fn fetch() {
 fn fetch_impl() -> color_eyre::Result<()> {
     color_eyre::install()?;
     let names = ["lily", "lucy", "bob", "joe"];
-    let cli = Cli::parse(Args::from(["app"].into_iter().chain(names.into_iter())))?;
+    let cli = Cli::parse(Args::from(["app"].into_iter().chain(names)))?;
 
     assert!(names.contains(&cli.name.as_str()));
     Ok(())
